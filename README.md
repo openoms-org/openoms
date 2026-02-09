@@ -2,24 +2,24 @@
 
 **Open-source Order Management System for Polish e-commerce.**
 
-OpenOMS is a self-hostable, API-first OMS built for Polish online sellers. Connect your sales channels (Allegro, BaseLinker, WooCommerce, Shopify), manage orders, inventory, and shipping from one place — without vendor lock-in.
+OpenOMS is a self-hostable, API-first OMS built for Polish online sellers. Connect your sales channels (Allegro, Base, WooCommerce, Shopify), manage orders, inventory, and shipping from one place — without vendor lock-in.
 
 > **Status: Early Stage** — We're validating the idea and building the MVP. The codebase will appear here soon. Want to be notified? [Join the waitlist.](https://openoms.org)
 
 ## Why OpenOMS?
 
-Polish e-commerce sellers rely on closed, proprietary platforms that control their data and pricing. When those platforms raise prices or change terms, sellers have no alternative.
+Polish e-commerce sellers use closed OMS platforms (Base (formerly BaseLinker), Sellasist, Apilo) that control their data, integrations, and pricing. When those platforms raise prices — and they do — sellers have no real alternative because migration is painful and data is locked in.
 
-OpenOMS is different:
+There's no open-source OMS built specifically for the Polish market. OpenOMS fills that gap:
 
-- **Open source (AGPLv3)** — full code transparency, no hidden components
-- **Self-hostable** — run it on your own infrastructure, or use our managed cloud
+- **Open source (AGPLv3)** — full code transparency, no hidden components, no vendor lock-in
+- **Self-hostable** — run it on your own infrastructure for free, or use our managed cloud
 - **API-first** — integrate with anything, automate everything
-- **Built for Poland** — Allegro, InPost, Polish VAT, PLN-first
+- **Built for Poland** — Allegro, InPost, Polish VAT, PLN-first, Polish invoicing
 
 ## Planned Features
 
-- Multi-channel order aggregation (Allegro, BaseLinker, WooCommerce, Shopify)
+- Multi-channel order aggregation (Allegro, Base, WooCommerce, Shopify)
 - Real-time inventory sync across all channels
 - Shipping automation (InPost, DPD, DHL, Poczta Polska)
 - Polish invoicing & VAT compliance
