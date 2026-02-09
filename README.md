@@ -30,10 +30,10 @@ OpenOMS is different:
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python (FastAPI) |
-| Database | PostgreSQL |
-| Queue | Redis / Celery |
-| Frontend | React (dashboard) |
+| Backend | Go 1.22+ |
+| Database | PostgreSQL 16+ (Row-Level Security) |
+| Cache/Queue | Redis 7+ |
+| Frontend | React 18+ / TypeScript / Tailwind CSS |
 | Deployment | Docker Compose |
 | License | AGPLv3 |
 
