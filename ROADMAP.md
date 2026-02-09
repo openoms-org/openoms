@@ -22,7 +22,7 @@
 
 ## Phase 2: Beta
 
-- [ ] Multi-channel support (WooCommerce, Shopify, BaseLinker import)
+- [ ] Multi-channel support (WooCommerce, Shopify, Base import)
 - [ ] Multi-carrier shipping (DPD, DHL, Poczta Polska)
 - [ ] Polish invoicing & VAT
 - [ ] Webhook system for external integrations
