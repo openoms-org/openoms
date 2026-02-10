@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,6 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGenerateLabel } from "@/hooks/use-shipments";
+import { InPostGeowidget } from "@/components/shipments/inpost-geowidget";
+import { PaczkomatSearch } from "@/components/shipments/paczkomat-search";
 import type { Order, GenerateLabelRequest } from "@/types/api";
 
 interface GenerateLabelDialogProps {
@@ -49,6 +50,7 @@ export function GenerateLabelDialog({
   const [labelFormat, setLabelFormat] = useState<"pdf" | "zpl" | "epl">("pdf");
 
   const isLocker = serviceType === "inpost_locker_standard";
+  const hasGeowidgetToken = !!process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN;
   const isSubmitDisabled =
     generateLabel.isPending || (isLocker && targetPoint.trim() === "");
 
@@ -76,7 +78,7 @@ export function GenerateLabelDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={isLocker && hasGeowidgetToken ? "max-w-3xl" : ""}>
         <DialogHeader>
           <DialogTitle>Generuj etykiete InPost</DialogTitle>
           <DialogDescription>
@@ -117,13 +119,25 @@ export function GenerateLabelDialog({
           {/* Target point (only for locker) */}
           {isLocker && (
             <div className="space-y-2">
-              <Label htmlFor="target_point">Paczkomat docelowy</Label>
-              <Input
-                id="target_point"
-                placeholder="np. WAW123M"
-                value={targetPoint}
-                onChange={(e) => setTargetPoint(e.target.value)}
-              />
+              <Label>Paczkomat docelowy</Label>
+              {hasGeowidgetToken ? (
+                <>
+                  {targetPoint && (
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-sm">{targetPoint}</span>
+                    </div>
+                  )}
+                  <InPostGeowidget
+                    onPointSelect={(name) => setTargetPoint(name)}
+                  />
+                </>
+              ) : (
+                <PaczkomatSearch
+                  value={targetPoint}
+                  onValueChange={setTargetPoint}
+                />
+              )}
             </div>
           )}
 

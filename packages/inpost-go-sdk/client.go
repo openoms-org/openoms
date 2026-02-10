@@ -23,6 +23,7 @@ type Client struct {
 
 	Shipments *ShipmentService
 	Labels    *LabelService
+	Points    *PointService
 }
 
 // Option configures a Client.
@@ -64,6 +65,7 @@ func NewClient(token, organizationID string, opts ...Option) *Client {
 
 	c.Shipments = &ShipmentService{client: c}
 	c.Labels = &LabelService{client: c}
+	c.Points = &PointService{client: c}
 
 	return c
 }

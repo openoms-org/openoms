@@ -89,3 +89,53 @@ type ParcelResponse struct {
 	Dimensions Dimensions `json:"dimensions"`
 	Weight     Weight     `json:"weight"`
 }
+
+// PointType identifies the type of InPost point.
+type PointType string
+
+const (
+	PointTypeParcelLocker PointType = "parcel_locker"
+	PointTypePOP          PointType = "pop"
+)
+
+// PointAddress is the address of an InPost point.
+type PointAddress struct {
+	Line1 string `json:"line1"`
+	Line2 string `json:"line2"`
+}
+
+// PointLocation holds GPS coordinates.
+type PointLocation struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+// PointAddressDetails contains structured address fields.
+type PointAddressDetails struct {
+	City           string `json:"city"`
+	Province       string `json:"province"`
+	PostCode       string `json:"post_code"`
+	Street         string `json:"street"`
+	BuildingNumber string `json:"building_number"`
+}
+
+// Point represents an InPost pickup/delivery point (paczkomat).
+type Point struct {
+	Name                string               `json:"name"`
+	Type                []string             `json:"type"`
+	Address             PointAddress         `json:"address"`
+	AddressDetails      *PointAddressDetails `json:"address_details,omitempty"`
+	Location            PointLocation        `json:"location"`
+	LocationDescription string               `json:"location_description"`
+	OpeningHours        string               `json:"opening_hours"`
+	Status              string               `json:"status"`
+}
+
+// PointSearchResponse is the paginated response from the points search endpoint.
+type PointSearchResponse struct {
+	Items      []Point `json:"items"`
+	Count      int     `json:"count"`
+	Page       int     `json:"page"`
+	PerPage    int     `json:"per_page"`
+	TotalPages int     `json:"total_pages"`
+}

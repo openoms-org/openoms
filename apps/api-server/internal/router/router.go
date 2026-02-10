@@ -30,6 +30,7 @@ func New(
 	auditHandler *handler.AuditHandler,
 	webhookDeliveryHandler *handler.WebhookDeliveryHandler,
 	returnHandler *handler.ReturnHandler,
+	inpostPointHandler *handler.InPostPointHandler,
 ) *chi.Mux {
 
 	r := chi.NewRouter()
@@ -169,6 +170,9 @@ func New(
 
 		// Stats — any authenticated user
 		r.Get("/stats/dashboard", statsHandler.GetDashboard)
+
+		// InPost points search (proxy)
+		r.Get("/inpost/points", inpostPointHandler.Search)
 	})
 
 	return r
