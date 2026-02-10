@@ -25,7 +25,7 @@ interface OrderFiltersProps {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  manual: "Reczne",
+  manual: "Ręczne",
   allegro: "Allegro",
   woocommerce: "WooCommerce",
 };
@@ -35,7 +35,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-4">
       <Input
         placeholder="Szukaj klienta (imię, email, telefon)..."
         value={filters.search || ""}
@@ -66,7 +66,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
         </Select>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Zrodlo:</span>
+        <span className="text-sm text-muted-foreground">Źródło:</span>
         <Select
           value={filters.source || "all"}
           onValueChange={(value) =>
@@ -87,7 +87,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
         </Select>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Platnosc:</span>
+        <span className="text-sm text-muted-foreground">Płatność:</span>
         <Select
           value={filters.payment_status || "all"}
           onValueChange={(v) =>
@@ -95,10 +95,10 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           }
         >
           <SelectTrigger className="w-[180px]" size="sm">
-            <SelectValue placeholder="Platnosc" />
+            <SelectValue placeholder="Płatność" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie platnosci</SelectItem>
+            <SelectItem value="all">Wszystkie płatności</SelectItem>
             {Object.entries(PAYMENT_STATUSES).map(([key, { label }]) => (
               <SelectItem key={key} value={key}>
                 {label}

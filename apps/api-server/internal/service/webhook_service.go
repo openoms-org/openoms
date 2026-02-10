@@ -23,14 +23,14 @@ var (
 )
 
 type WebhookService struct {
-	webhookRepo          *repository.WebhookRepository
+	webhookRepo          repository.WebhookRepo
 	pool                 *pgxpool.Pool
 	allegroWebhookSecret string
 	inpostWebhookSecret  string
 }
 
 func NewWebhookService(
-	webhookRepo *repository.WebhookRepository,
+	webhookRepo repository.WebhookRepo,
 	pool *pgxpool.Pool,
 	allegroWebhookSecret string,
 	inpostWebhookSecret string,

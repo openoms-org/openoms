@@ -140,7 +140,7 @@ func (r *ReturnRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, 
 	args = append(args, id)
 
 	query := fmt.Sprintf("UPDATE returns SET %s WHERE id = $%d",
-		joinStrings(setClauses, ", "), argIdx)
+		JoinStrings(setClauses, ", "), argIdx)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

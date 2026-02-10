@@ -94,7 +94,7 @@ export function OrderStatusActions({
         <>
           {normalTransitions.length > 0 && <Separator className="my-3" />}
           <p className="text-xs text-muted-foreground mb-2">
-            Wymus zmiane (niezgodne z flow)
+            Wymuś zmianę (niezgodne z flow)
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {forceTransitions.map((status) => {
@@ -126,8 +126,8 @@ export function OrderStatusActions({
             </DialogTitle>
             <DialogDescription>
               {confirmDialog?.force
-                ? `Ta zmiana jest niezgodna z normalnym flow zamowienia. Czy na pewno chcesz wymusic zmiane statusu na "${confirmLabel}"?`
-                : `Czy na pewno chcesz zmienic status zamowienia na "${confirmLabel}"? Ta operacja moze byc nieodwracalna.`}
+                ? `Ta zmiana jest niezgodna z normalnym flow zamówienia. Czy na pewno chcesz wymusić zmianę statusu na "${confirmLabel}"?`
+                : `Czy na pewno chcesz zmienić status zamówienia na "${confirmLabel}"? Ta operacja może być nieodwracalna.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -139,7 +139,7 @@ export function OrderStatusActions({
               onClick={handleConfirm}
               disabled={isLoading}
             >
-              {confirmDialog?.force ? "Wymus zmiane" : "Potwierdz"}
+              {confirmDialog?.force ? "Wymuś zmianę" : "Potwierdź"}
             </Button>
           </DialogFooter>
         </DialogContent>

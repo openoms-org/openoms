@@ -30,6 +30,8 @@ type Order struct {
 	OrderedAt       *time.Time       `json:"ordered_at,omitempty"`
 	ShippedAt       *time.Time       `json:"shipped_at,omitempty"`
 	DeliveredAt     *time.Time       `json:"delivered_at,omitempty"`
+	DeliveryMethod  *string          `json:"delivery_method,omitempty"`
+	PickupPointID   *string          `json:"pickup_point_id,omitempty"`
 	PaymentStatus   string           `json:"payment_status"`
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
 	PaidAt          *time.Time       `json:"paid_at,omitempty"`
@@ -52,6 +54,8 @@ type CreateOrderRequest struct {
 	Notes           *string          `json:"notes,omitempty"`
 	Metadata        json.RawMessage  `json:"metadata,omitempty"`
 	Tags            []string         `json:"tags,omitempty"`
+	DeliveryMethod  *string          `json:"delivery_method,omitempty"`
+	PickupPointID   *string          `json:"pickup_point_id,omitempty"`
 	OrderedAt       *time.Time       `json:"ordered_at,omitempty"`
 	PaymentStatus   *string          `json:"payment_status,omitempty"`
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
@@ -61,11 +65,8 @@ func (r *CreateOrderRequest) Validate() error {
 	if strings.TrimSpace(r.CustomerName) == "" {
 		return errors.New("customer_name is required")
 	}
-	switch r.Source {
-	case "allegro", "woocommerce", "manual":
-		// valid
-	default:
-		return errors.New("source must be one of: allegro, woocommerce, manual")
+	if r.Source == "" {
+		r.Source = "manual"
 	}
 	if r.TotalAmount < 0 {
 		return errors.New("total_amount must be non-negative")
@@ -89,6 +90,8 @@ type UpdateOrderRequest struct {
 	Notes           *string          `json:"notes,omitempty"`
 	Metadata        json.RawMessage  `json:"metadata,omitempty"`
 	Tags            *[]string        `json:"tags,omitempty"`
+	DeliveryMethod  *string          `json:"delivery_method,omitempty"`
+	PickupPointID   *string          `json:"pickup_point_id,omitempty"`
 	PaymentStatus   *string          `json:"payment_status,omitempty"`
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
 	PaidAt          *time.Time       `json:"paid_at,omitempty"`
@@ -99,6 +102,7 @@ func (r *UpdateOrderRequest) Validate() error {
 		r.CustomerPhone == nil && r.ShippingAddress == nil && r.BillingAddress == nil &&
 		r.Items == nil && r.TotalAmount == nil && r.Currency == nil &&
 		r.Notes == nil && r.Metadata == nil && r.Tags == nil &&
+		r.DeliveryMethod == nil && r.PickupPointID == nil &&
 		r.PaymentStatus == nil && r.PaymentMethod == nil && r.PaidAt == nil {
 		return errors.New("at least one field must be provided")
 	}

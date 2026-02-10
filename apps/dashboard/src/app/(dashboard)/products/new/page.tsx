@@ -16,11 +16,11 @@ export default function NewProductPage() {
   const handleSubmit = (data: Parameters<typeof createProduct.mutate>[0]) => {
     createProduct.mutate(data, {
       onSuccess: (product) => {
-        toast.success("Produkt zostal utworzony");
+        toast.success("Produkt został utworzony");
         router.push(`/products/${product.id}`);
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udalo sie utworzyc produktu");
+        toast.error(error.message || "Nie udało się utworzyć produktu");
       },
     });
   };

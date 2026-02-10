@@ -19,15 +19,15 @@ var (
 )
 
 type ProductService struct {
-	productRepo     *repository.ProductRepository
-	auditRepo       *repository.AuditRepository
+	productRepo     repository.ProductRepo
+	auditRepo       repository.AuditRepo
 	pool            *pgxpool.Pool
 	webhookDispatch *WebhookDispatchService
 }
 
 func NewProductService(
-	productRepo *repository.ProductRepository,
-	auditRepo *repository.AuditRepository,
+	productRepo repository.ProductRepo,
+	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
 ) *ProductService {

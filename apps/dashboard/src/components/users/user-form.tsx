@@ -126,7 +126,7 @@ export function UserForm({
             ? "Zapisywanie..."
             : isEdit
               ? "Zapisz zmiany"
-              : "Utworz uzytkownika"}
+              : "Utwórz użytkownika"}
         </Button>
       </div>
     </form>

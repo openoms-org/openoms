@@ -72,17 +72,17 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
         force: isForce,
       });
       if (result.failed === 0) {
-        toast.success(`Zmieniono status ${result.succeeded} zamowien`);
+        toast.success(`Zmieniono status ${result.succeeded} zamówień`);
       } else {
         toast.warning(
-          `Zmieniono: ${result.succeeded}, bledy: ${result.failed}`
+          `Zmieniono: ${result.succeeded}, błędy: ${result.failed}`
         );
       }
       setTargetStatus("");
       onClearSelection();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas zmiany statusu"
+        error instanceof Error ? error.message : "Błąd podczas zmiany statusu"
       );
     }
   };
@@ -91,7 +91,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
     <>
       <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
         <span className="text-sm font-medium">
-          Zaznaczono {selectedOrders.length} zamowien
+          Zaznaczono {selectedOrders.length} zamówień
         </span>
 
         <Select value={targetStatus} onValueChange={setTargetStatus}>
@@ -112,7 +112,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
               <>
                 {commonTransitions.length > 0 && (
                   <SelectItem value="__separator" disabled>
-                    ── Wymus zmiane ──
+                    ── Wymuś zmianę ──
                   </SelectItem>
                 )}
                 {forceTransitions.map((status) => (
@@ -134,8 +134,8 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
           {bulkTransition.isPending
             ? "Zmieniam..."
             : isForce
-              ? "Wymus zmiane"
-              : "Zmien status"}
+              ? "Wymuś zmianę"
+              : "Zmień status"}
         </Button>
 
         <Button size="sm" variant="ghost" onClick={onClearSelection}>
@@ -151,8 +151,8 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
             </DialogTitle>
             <DialogDescription>
               {isForce
-                ? `Ta zmiana jest niezgodna z normalnym flow. Czy na pewno chcesz wymusic zmiane statusu ${selectedOrders.length} zamowien na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
-                : `Czy na pewno chcesz zmienic status ${selectedOrders.length} zamowien na "${orderStatuses[targetStatus]?.label || targetStatus}"?`}
+                ? `Ta zmiana jest niezgodna z normalnym flow. Czy na pewno chcesz wymusić zmianę statusu ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
+                : `Czy na pewno chcesz zmienić status ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -164,7 +164,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
               onClick={executeBulkTransition}
               disabled={bulkTransition.isPending}
             >
-              {bulkTransition.isPending ? "Zmieniam..." : "Potwierdz"}
+              {bulkTransition.isPending ? "Zmieniam..." : "Potwierdź"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -95,7 +95,7 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
           onValueChange={(value) => setValue("provider", value, { shouldValidate: true })}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz dostawce" />
+            <SelectValue placeholder="Wybierz dostawcę" />
           </SelectTrigger>
           <SelectContent>
             {INTEGRATION_PROVIDERS.map((provider) => (
@@ -138,7 +138,7 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
 
       <div className="flex justify-end gap-3">
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Tworzenie..." : "Utworz integracje"}
+          {isLoading ? "Tworzenie..." : "Utwórz integrację"}
         </Button>
       </div>
     </form>

@@ -14,11 +14,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
+import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 import type { Shipment } from "@/types/api";
 
 const shipmentSchema = z.object({
-  order_id: z.string().min(1, "ID zamowienia jest wymagane"),
-  provider: z.enum(["inpost", "dhl", "dpd", "manual"], "Wybierz dostawce"),
+  order_id: z.string().min(1, "ID zamówienia jest wymagane"),
+  provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "manual"], "Wybierz dostawcę"),
   tracking_number: z.string().optional(),
   label_url: z.string().optional(),
 });
@@ -59,11 +60,12 @@ export function ShipmentForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="order_id">ID zamowienia</Label>
-        <Input
-          id="order_id"
-          placeholder="UUID zamowienia"
-          {...register("order_id")}
+        <Label>Zamówienie</Label>
+        <OrderSearchCombobox
+          value={watch("order_id")}
+          onValueChange={(id) =>
+            setValue("order_id", id, { shouldValidate: true })
+          }
           disabled={!!shipment}
         />
         {errors.order_id && (
@@ -82,7 +84,7 @@ export function ShipmentForm({
           }
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz dostawce" />
+            <SelectValue placeholder="Wybierz dostawcę" />
           </SelectTrigger>
           <SelectContent>
             {SHIPMENT_PROVIDERS.map((provider) => (
@@ -98,10 +100,10 @@ export function ShipmentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="tracking_number">Numer sledzenia</Label>
+        <Label htmlFor="tracking_number">Numer śledzenia</Label>
         <Input
           id="tracking_number"
-          placeholder="Opcjonalny numer sledzenia"
+          placeholder="Opcjonalny numer śledzenia"
           {...register("tracking_number")}
         />
       </div>
@@ -116,7 +118,7 @@ export function ShipmentForm({
       </div>
 
       <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Zapisywanie..." : shipment ? "Zapisz zmiany" : "Utworz przesylke"}
+        {isLoading ? "Zapisywanie..." : shipment ? "Zapisz zmiany" : "Utwórz przesyłkę"}
       </Button>
     </form>
   );

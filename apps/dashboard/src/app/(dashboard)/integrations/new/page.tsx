@@ -33,7 +33,7 @@ export default function NewIntegrationPage() {
         router.push("/integrations");
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Blad tworzenia integracji");
+        toast.error(error instanceof Error ? error.message : "Błąd tworzenia integracji");
       },
     });
   };

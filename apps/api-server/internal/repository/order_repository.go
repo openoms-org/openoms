@@ -68,7 +68,9 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 		        customer_name, customer_email, customer_phone,
 		        shipping_address, billing_address, items,
 		        total_amount, currency, notes, metadata, tags,
-		        ordered_at, shipped_at, delivered_at, payment_status, payment_method, paid_at, created_at, updated_at
+		        ordered_at, shipped_at, delivered_at,
+		        delivery_method, pickup_point_id,
+		        payment_status, payment_method, paid_at, created_at, updated_at
 		 FROM orders %s
 		 %s
 		 LIMIT $%d OFFSET $%d`,
@@ -90,7 +92,9 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 			&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
 			&o.ShippingAddress, &o.BillingAddress, &o.Items,
 			&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
-			&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt, &o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
+			&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
+			&o.DeliveryMethod, &o.PickupPointID,
+			&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan order: %w", err)
 		}
@@ -106,14 +110,18 @@ func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 		        customer_name, customer_email, customer_phone,
 		        shipping_address, billing_address, items,
 		        total_amount, currency, notes, metadata, tags,
-		        ordered_at, shipped_at, delivered_at, payment_status, payment_method, paid_at, created_at, updated_at
+		        ordered_at, shipped_at, delivered_at,
+		        delivery_method, pickup_point_id,
+		        payment_status, payment_method, paid_at, created_at, updated_at
 		 FROM orders WHERE id = $1`, id,
 	).Scan(
 		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
 		&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
 		&o.ShippingAddress, &o.BillingAddress, &o.Items,
 		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
-		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt, &o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
+		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
+		&o.DeliveryMethod, &o.PickupPointID,
+		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -135,13 +143,15 @@ func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Or
 			customer_name, customer_email, customer_phone,
 			shipping_address, billing_address, items,
 			total_amount, currency, notes, metadata, tags, ordered_at,
+			delivery_method, pickup_point_id,
 			payment_status, payment_method
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 		RETURNING created_at, updated_at`,
 		order.ID, order.TenantID, order.ExternalID, order.Source, order.IntegrationID, order.Status,
 		order.CustomerName, order.CustomerEmail, order.CustomerPhone,
 		order.ShippingAddress, order.BillingAddress, order.Items,
 		order.TotalAmount, order.Currency, order.Notes, order.Metadata, tags, order.OrderedAt,
+		order.DeliveryMethod, order.PickupPointID,
 		order.PaymentStatus, order.PaymentMethod,
 	).Scan(&order.CreatedAt, &order.UpdatedAt)
 }
@@ -211,6 +221,16 @@ func (r *OrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, r
 		args = append(args, *req.Tags)
 		argIdx++
 	}
+	if req.DeliveryMethod != nil {
+		setClauses = append(setClauses, fmt.Sprintf("delivery_method = $%d", argIdx))
+		args = append(args, *req.DeliveryMethod)
+		argIdx++
+	}
+	if req.PickupPointID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("pickup_point_id = $%d", argIdx))
+		args = append(args, *req.PickupPointID)
+		argIdx++
+	}
 	if req.PaymentStatus != nil {
 		setClauses = append(setClauses, fmt.Sprintf("payment_status = $%d", argIdx))
 		args = append(args, *req.PaymentStatus)
@@ -235,7 +255,7 @@ func (r *OrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, r
 	args = append(args, id)
 
 	query := fmt.Sprintf("UPDATE orders SET %s WHERE id = $%d",
-		joinStrings(setClauses, ", "), argIdx)
+		JoinStrings(setClauses, ", "), argIdx)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -263,6 +283,35 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.U
 	return nil
 }
 
+func (r *OrderRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, source, externalID string) (*model.Order, error) {
+	var o model.Order
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, external_id, source, integration_id, status,
+		        customer_name, customer_email, customer_phone,
+		        shipping_address, billing_address, items,
+		        total_amount, currency, notes, metadata, tags,
+		        ordered_at, shipped_at, delivered_at,
+		        delivery_method, pickup_point_id,
+		        payment_status, payment_method, paid_at, created_at, updated_at
+		 FROM orders WHERE source = $1 AND metadata->>'external_id' = $2`, source, externalID,
+	).Scan(
+		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
+		&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
+		&o.ShippingAddress, &o.BillingAddress, &o.Items,
+		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
+		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
+		&o.DeliveryMethod, &o.PickupPointID,
+		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find order by external id: %w", err)
+	}
+	return &o, nil
+}
+
 func (r *OrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM orders WHERE id = $1", id)
 	if err != nil {
@@ -274,13 +323,3 @@ func (r *OrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) e
 	return nil
 }
 
-func joinStrings(s []string, sep string) string {
-	result := ""
-	for i, v := range s {
-		if i > 0 {
-			result += sep
-		}
-		result += v
-	}
-	return result
-}

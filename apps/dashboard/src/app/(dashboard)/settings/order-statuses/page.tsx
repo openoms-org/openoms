@@ -75,14 +75,14 @@ export default function OrderStatusesPage() {
     // Validate
     for (const s of statuses) {
       if (!s.key || !s.label) {
-        toast.error("Wszystkie statusy musza miec klucz i etykiete");
+        toast.error("Wszystkie statusy muszą mieć klucz i etykietę");
         return;
       }
     }
 
     const keys = statuses.map((s) => s.key);
     if (new Set(keys).size !== keys.length) {
-      toast.error("Klucze statusow musza byc unikalne");
+      toast.error("Klucze statusów muszą być unikalne");
       return;
     }
 
@@ -93,10 +93,10 @@ export default function OrderStatusesPage() {
 
     try {
       await updateStatuses.mutateAsync(configToSave);
-      toast.success("Statusy zamowien zostaly zapisane");
+      toast.success("Statusy zamówień zostały zapisane");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas zapisywania"
+        error instanceof Error ? error.message : "Błąd podczas zapisywania"
       );
     }
   };
@@ -108,9 +108,9 @@ export default function OrderStatusesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Statusy zamowien</h1>
+        <h1 className="text-2xl font-bold">Statusy zamówień</h1>
         <p className="text-muted-foreground mt-1">
-          Zdefiniuj statusy i przejscia dla zamowien
+          Zdefiniuj statusy i przejścia dla zamówień
         </p>
       </div>
 

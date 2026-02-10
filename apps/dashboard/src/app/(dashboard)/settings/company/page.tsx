@@ -49,7 +49,7 @@ export default function CompanySettingsPage() {
       toast.success("Dane firmy zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac danych firmy";
+        err instanceof Error ? err.message : "Nie udało się zapisać danych firmy";
       toast.error(message);
     }
   };
@@ -65,7 +65,7 @@ export default function CompanySettingsPage() {
       toast.success("Logo wgrane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie wgrac logo";
+        err instanceof Error ? err.message : "Nie udało się wgrać logo";
       toast.error(message);
     } finally {
       setUploading(false);
@@ -168,7 +168,7 @@ export default function CompanySettingsPage() {
                 onChange={(e) =>
                   setForm({ ...form, address: e.target.value })
                 }
-                placeholder="ul. Przykladowa 1"
+                placeholder="ul. Przykładowa 1"
               />
             </div>
             <div className="space-y-2">

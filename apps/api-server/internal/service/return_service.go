@@ -21,17 +21,17 @@ var (
 )
 
 type ReturnService struct {
-	returnRepo      *repository.ReturnRepository
-	orderRepo       *repository.OrderRepository
-	auditRepo       *repository.AuditRepository
+	returnRepo      repository.ReturnRepo
+	orderRepo       repository.OrderRepo
+	auditRepo       repository.AuditRepo
 	pool            *pgxpool.Pool
 	webhookDispatch *WebhookDispatchService
 }
 
 func NewReturnService(
-	returnRepo *repository.ReturnRepository,
-	orderRepo *repository.OrderRepository,
-	auditRepo *repository.AuditRepository,
+	returnRepo repository.ReturnRepo,
+	orderRepo repository.OrderRepo,
+	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
 ) *ReturnService {
@@ -200,7 +200,7 @@ func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID
 			return err
 		}
 
-		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
 			UserID:     actorID,
 			Action:     "return.status_changed",
@@ -208,7 +208,20 @@ func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID
 			EntityID:   returnID,
 			Changes:    map[string]string{"from": existing.Status, "to": req.Status},
 			IPAddress:  ip,
-		})
+		}); err != nil {
+			return err
+		}
+
+		// Auto-update order payment_status when return is refunded
+		if req.Status == "refunded" {
+			refunded := "refunded"
+			updateReq := model.UpdateOrderRequest{PaymentStatus: &refunded}
+			if err := s.orderRepo.Update(ctx, tx, existing.OrderID, updateReq); err != nil {
+				return fmt.Errorf("sync order payment status to refunded: %w", err)
+			}
+		}
+
+		return nil
 	})
 	if err == nil && ret != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.status_changed", map[string]any{"return_id": returnID.String(), "from": oldStatus, "to": req.Status})

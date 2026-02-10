@@ -1,0 +1,94 @@
+package repository
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+)
+
+type SyncJobRepository struct{}
+
+func NewSyncJobRepository() *SyncJobRepository {
+	return &SyncJobRepository{}
+}
+
+func (r *SyncJobRepository) Create(ctx context.Context, tx pgx.Tx, job *model.SyncJob) error {
+	return tx.QueryRow(ctx,
+		`INSERT INTO sync_jobs (
+			id, tenant_id, integration_id, job_type, status,
+			started_at, items_processed, items_failed, error_message, metadata
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING created_at`,
+		job.ID, job.TenantID, job.IntegrationID, job.JobType, job.Status,
+		job.StartedAt, job.ItemsProcessed, job.ItemsFailed, job.ErrorMessage, job.Metadata,
+	).Scan(&job.CreatedAt)
+}
+
+func (r *SyncJobRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, itemsProcessed, itemsFailed int, errorMsg *string) error {
+	ct, err := tx.Exec(ctx,
+		`UPDATE sync_jobs
+		 SET status = $1, items_processed = $2, items_failed = $3, error_message = $4,
+		     finished_at = CASE WHEN $1 IN ('completed', 'failed') THEN NOW() ELSE finished_at END
+		 WHERE id = $5`,
+		status, itemsProcessed, itemsFailed, errorMsg, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update sync job status: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("sync job not found")
+	}
+	return nil
+}
+
+func (r *SyncJobRepository) GetByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.SyncJob, error) {
+	var j model.SyncJob
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, integration_id, job_type, status,
+		        started_at, finished_at, items_processed, items_failed,
+		        error_message, metadata, created_at
+		 FROM sync_jobs WHERE id = $1`, id,
+	).Scan(
+		&j.ID, &j.TenantID, &j.IntegrationID, &j.JobType, &j.Status,
+		&j.StartedAt, &j.FinishedAt, &j.ItemsProcessed, &j.ItemsFailed,
+		&j.ErrorMessage, &j.Metadata, &j.CreatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find sync job by id: %w", err)
+	}
+	return &j, nil
+}
+
+func (r *SyncJobRepository) ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID, limit int) ([]*model.SyncJob, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, integration_id, job_type, status,
+		        started_at, finished_at, items_processed, items_failed,
+		        error_message, metadata, created_at
+		 FROM sync_jobs WHERE integration_id = $1
+		 ORDER BY created_at DESC LIMIT $2`, integrationID, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list sync jobs by integration: %w", err)
+	}
+	defer rows.Close()
+
+	var jobs []*model.SyncJob
+	for rows.Next() {
+		var j model.SyncJob
+		if err := rows.Scan(
+			&j.ID, &j.TenantID, &j.IntegrationID, &j.JobType, &j.Status,
+			&j.StartedAt, &j.FinishedAt, &j.ItemsProcessed, &j.ItemsFailed,
+			&j.ErrorMessage, &j.Metadata, &j.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan sync job: %w", err)
+		}
+		jobs = append(jobs, &j)
+	}
+	return jobs, rows.Err()
+}

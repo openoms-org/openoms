@@ -13,11 +13,11 @@ export default function NewOrderPage() {
   const handleSubmit = async (data: CreateOrderRequest) => {
     try {
       const order = await createOrder.mutateAsync(data);
-      toast.success("Zamowienie zostalo utworzone");
+      toast.success("Zamówienie zostało utworzone");
       router.push(`/orders/${order.id}`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas tworzenia zamowienia"
+        error instanceof Error ? error.message : "Błąd podczas tworzenia zamówienia"
       );
     }
   };
@@ -25,9 +25,9 @@ export default function NewOrderPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Nowe zamowienie</h1>
+        <h1 className="text-2xl font-bold">Nowe zamówienie</h1>
         <p className="text-muted-foreground mt-1">
-          Wypelnij formularz, aby utworzyc nowe zamowienie
+          Wypełnij formularz, aby utworzyć nowe zamówienie
         </p>
       </div>
 

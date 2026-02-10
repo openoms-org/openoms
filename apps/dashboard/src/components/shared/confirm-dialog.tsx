@@ -26,7 +26,7 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Potwierdz",
+  confirmLabel = "Potwierdź",
   variant = "default",
   onConfirm,
   isLoading = false,

@@ -13,11 +13,11 @@ import (
 )
 
 type WebhookDeliveryHandler struct {
-	deliveryRepo *repository.WebhookDeliveryRepository
+	deliveryRepo repository.WebhookDeliveryRepo
 	pool         *pgxpool.Pool
 }
 
-func NewWebhookDeliveryHandler(deliveryRepo *repository.WebhookDeliveryRepository, pool *pgxpool.Pool) *WebhookDeliveryHandler {
+func NewWebhookDeliveryHandler(deliveryRepo repository.WebhookDeliveryRepo, pool *pgxpool.Pool) *WebhookDeliveryHandler {
 	return &WebhookDeliveryHandler{deliveryRepo: deliveryRepo, pool: pool}
 }
 

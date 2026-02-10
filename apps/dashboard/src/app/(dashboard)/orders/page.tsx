@@ -17,7 +17,7 @@ import { Download } from "lucide-react";
 import type { Order } from "@/types/api";
 
 const SOURCE_LABELS: Record<string, string> = {
-  manual: "Reczne",
+  manual: "Ręczne",
   allegro: "Allegro",
   woocommerce: "WooCommerce",
 };
@@ -67,7 +67,7 @@ export default function OrdersPage() {
       sortable: true,
     },
     {
-      header: "Zrodlo",
+      header: "Źródło",
       accessorKey: "source",
       cell: (row) => SOURCE_LABELS[row.source] || row.source,
       sortable: true,
@@ -85,7 +85,7 @@ export default function OrdersPage() {
       sortable: true,
     },
     {
-      header: "Platnosc",
+      header: "Płatność",
       accessorKey: "payment_status",
       cell: (row) => <StatusBadge status={row.payment_status} statusMap={PAYMENT_STATUSES} />,
       sortable: true,
@@ -132,9 +132,9 @@ export default function OrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Zamowienia</h1>
+          <h1 className="text-2xl font-bold">Zamówienia</h1>
           <p className="text-muted-foreground mt-1">
-            Zarzadzaj zamowieniami w systemie
+            Zarządzaj zamówieniami w systemie
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export default function OrdersPage() {
             Eksportuj CSV
           </Button>
           <Button asChild>
-            <Link href="/orders/new">Nowe zamowienie</Link>
+            <Link href="/orders/new">Nowe zamówienie</Link>
           </Button>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function OrdersPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak zamowien do wyswietlenia"
+          emptyMessage="Brak zamówień do wyświetlenia"
           onRowClick={(row) => router.push(`/orders/${row.id}`)}
           selectable
           selectedIds={selectedIds}

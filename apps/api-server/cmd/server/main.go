@@ -10,12 +10,21 @@ import (
 	"syscall"
 	"time"
 
+	// Register marketplace providers via init().
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/amazon"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/erli"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/mirakl"
+	// Register carrier providers via init().
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/carriers"
+
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+	"github.com/openoms-org/openoms/apps/api-server/internal/worker"
 	inpost "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
 
@@ -87,6 +96,10 @@ func main() {
 	statsRepo := repository.NewStatsRepository()
 
 	returnRepo := repository.NewReturnRepository()
+	supplierRepo := repository.NewSupplierRepository()
+	supplierProductRepo := repository.NewSupplierProductRepository()
+	_ = repository.NewProductListingRepository()
+	_ = repository.NewSyncJobRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -103,6 +116,7 @@ func main() {
 	)
 	webhookService := service.NewWebhookService(webhookRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
 	statsService := service.NewStatsService(statsRepo, pool)
+	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment())
@@ -115,7 +129,7 @@ func main() {
 	webhookHandler := handler.NewWebhookHandler(webhookService)
 	statsHandler := handler.NewStatsHandler(statsService)
 	uploadHandler := handler.NewUploadHandler(cfg.UploadDir, cfg.MaxUploadSize, cfg.BaseURL)
-	settingsHandler := handler.NewSettingsHandler(tenantRepo, emailService, pool)
+	settingsHandler := handler.NewSettingsHandler(tenantRepo, auditRepo, emailService, pool)
 	auditHandler := handler.NewAuditHandler(auditRepo, pool)
 	webhookDeliveryHandler := handler.NewWebhookDeliveryHandler(webhookDeliveryRepo, pool)
 
@@ -123,20 +137,50 @@ func main() {
 	inpostClient := inpost.NewClient(cfg.InPostAPIToken, cfg.InPostOrgID)
 	inpostPointHandler := handler.NewInPostPointHandler(inpostClient)
 
+	// Allegro OAuth handler
+	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey)
+
+	// Amazon auth handler
+	amazonAuthHandler := handler.NewAmazonAuthHandler(integrationService, encryptionKey)
+
+	// Supplier handler
+	supplierHandler := handler.NewSupplierHandler(supplierService)
+
 	// Setup router
-	r := router.New(pool, cfg, tokenSvc,
-		authHandler, userHandler,
-		orderHandler, shipmentHandler,
-		productHandler, integrationHandler,
-		webhookHandler,
-		statsHandler,
-		uploadHandler,
-		settingsHandler,
-		auditHandler,
-		webhookDeliveryHandler,
-		returnHandler,
-		inpostPointHandler,
-	)
+	r := router.New(router.RouterDeps{
+		Pool:            pool,
+		Config:          cfg,
+		TokenSvc:        tokenSvc,
+		Auth:            authHandler,
+		User:            userHandler,
+		Order:           orderHandler,
+		Shipment:        shipmentHandler,
+		Product:         productHandler,
+		Integration:     integrationHandler,
+		Webhook:         webhookHandler,
+		Stats:           statsHandler,
+		Upload:          uploadHandler,
+		Settings:        settingsHandler,
+		Audit:           auditHandler,
+		WebhookDelivery: webhookDeliveryHandler,
+		Return:          returnHandler,
+		InPostPoint:     inpostPointHandler,
+		AllegroAuth:     allegroAuthHandler,
+		AmazonAuth:      amazonAuthHandler,
+		Supplier:         supplierHandler,
+	})
+
+	// Start background workers
+	workerMgr := worker.NewManager(pool, slog.Default())
+	workerMgr.Register(worker.NewOAuthRefresher(pool, encryptionKey, slog.Default()))
+	workerMgr.Register(worker.NewAllegroOrderPoller(pool, encryptionKey, orderRepo, slog.Default()))
+	workerMgr.Register(worker.NewStockSyncWorker(pool, encryptionKey, slog.Default()))
+	workerMgr.Register(worker.NewTrackingPoller(pool, encryptionKey, shipmentRepo, slog.Default()))
+	workerMgr.Register(worker.NewAmazonOrderPoller(pool, encryptionKey, orderRepo, slog.Default()))
+	workerMgr.Register(worker.NewSupplierSyncWorker(pool, supplierService, slog.Default()))
+	if cfg.WorkersEnabled {
+		go workerMgr.Start(context.Background())
+	}
 
 	// Start server
 	srv := &http.Server{
@@ -167,5 +211,6 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		slog.Error("server shutdown error", "error", err)
 	}
+	workerMgr.Stop()
 	slog.Info("server stopped")
 }

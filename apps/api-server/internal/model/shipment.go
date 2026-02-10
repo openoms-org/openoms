@@ -36,11 +36,8 @@ func (r *CreateShipmentRequest) Validate() error {
 	if r.OrderID == uuid.Nil {
 		return errors.New("order_id is required")
 	}
-	switch r.Provider {
-	case "inpost", "dhl", "dpd", "manual":
-		// valid
-	default:
-		return errors.New("provider must be one of: inpost, dhl, dpd, manual")
+	if r.Provider == "" {
+		return errors.New("provider is required")
 	}
 	return nil
 }
@@ -70,25 +67,21 @@ func (r *ShipmentStatusTransitionRequest) Validate() error {
 }
 
 type GenerateLabelRequest struct {
-	ServiceType string `json:"service_type"`
-	ParcelSize  string `json:"parcel_size"`
-	TargetPoint string `json:"target_point"`
-	LabelFormat string `json:"label_format"`
+	ServiceType  string  `json:"service_type"`
+	ParcelSize   string  `json:"parcel_size,omitempty"`
+	TargetPoint  string  `json:"target_point,omitempty"`
+	LabelFormat  string  `json:"label_format"`
+	WeightKg     float64 `json:"weight_kg,omitempty"`
+	WidthCm      float64 `json:"width_cm,omitempty"`
+	HeightCm     float64 `json:"height_cm,omitempty"`
+	DepthCm      float64 `json:"depth_cm,omitempty"`
+	CODAmount    float64 `json:"cod_amount,omitempty"`
+	InsuredValue float64 `json:"insured_value,omitempty"`
 }
 
 func (r *GenerateLabelRequest) Validate() error {
-	switch r.ServiceType {
-	case "inpost_locker_standard", "inpost_courier_standard":
-		// valid
-	default:
-		return errors.New("service_type must be one of: inpost_locker_standard, inpost_courier_standard")
-	}
-
-	switch r.ParcelSize {
-	case "small", "medium", "large":
-		// valid
-	default:
-		return errors.New("parcel_size must be one of: small, medium, large")
+	if strings.TrimSpace(r.ServiceType) == "" {
+		return errors.New("service_type is required")
 	}
 
 	if r.ServiceType == "inpost_locker_standard" && strings.TrimSpace(r.TargetPoint) == "" {

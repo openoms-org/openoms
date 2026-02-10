@@ -125,14 +125,14 @@ export async function exportOrdersCSV(params: OrderListParams) {
   );
 
   if (!response.ok) {
-    throw new Error("Blad podczas eksportu");
+    throw new Error("Błąd podczas eksportu");
   }
 
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `zamowienia-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `zamówienia-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

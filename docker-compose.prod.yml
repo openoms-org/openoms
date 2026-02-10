@@ -1,0 +1,56 @@
+# OpenOMS — Production deployment
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: openoms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openoms_dev}
+      POSTGRES_DB: openoms
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openoms"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api-server:
+    build:
+      context: .
+      dockerfile: apps/api-server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://openoms_app:${POSTGRES_APP_PASSWORD:-openoms_app_dev}@postgres:5432/openoms?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      PORT: "8080"
+      ENV: production
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      UPLOAD_DIR: /uploads
+    volumes:
+      - uploads:/uploads
+    ports:
+      - "8080:8080"
+
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    restart: unless-stopped
+    depends_on:
+      - api-server
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  uploads:

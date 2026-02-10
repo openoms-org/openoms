@@ -39,14 +39,14 @@ export default function ProductCategoriesPage() {
   const handleSave = async () => {
     for (const c of categories) {
       if (!c.key || !c.label) {
-        toast.error("Wszystkie kategorie musza miec klucz i etykiete");
+        toast.error("Wszystkie kategorie muszą mieć klucz i etykietę");
         return;
       }
     }
 
     const keys = categories.map((c) => c.key);
     if (new Set(keys).size !== keys.length) {
-      toast.error("Klucze kategorii musza byc unikalne");
+      toast.error("Klucze kategorii muszą być unikalne");
       return;
     }
 
@@ -54,10 +54,10 @@ export default function ProductCategoriesPage() {
       await updateCategories.mutateAsync({
         categories: categories.map((c, i) => ({ ...c, position: i + 1 })),
       });
-      toast.success("Kategorie produktow zostaly zapisane");
+      toast.success("Kategorie produktów zostały zapisane");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas zapisywania"
+        error instanceof Error ? error.message : "Błąd podczas zapisywania"
       );
     }
   };
@@ -71,7 +71,7 @@ export default function ProductCategoriesPage() {
       <div>
         <h1 className="text-2xl font-bold">Kategorie produktów</h1>
         <p className="text-muted-foreground mt-1">
-          Zdefiniuj kategorie dla produktow
+          Zdefiniuj kategorie dla produktów
         </p>
       </div>
 

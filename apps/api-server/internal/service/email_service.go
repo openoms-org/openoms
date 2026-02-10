@@ -17,11 +17,11 @@ import (
 )
 
 type EmailService struct {
-	tenantRepo *repository.TenantRepository
+	tenantRepo repository.TenantRepo
 	pool       *pgxpool.Pool
 }
 
-func NewEmailService(tenantRepo *repository.TenantRepository, pool *pgxpool.Pool) *EmailService {
+func NewEmailService(tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *EmailService {
 	return &EmailService{tenantRepo: tenantRepo, pool: pool}
 }
 
@@ -68,8 +68,18 @@ func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.U
 	}
 
 	var emailCfg model.EmailSettings
-	if err := json.Unmarshal(settings, &emailCfg); err != nil {
+	var allSettings map[string]json.RawMessage
+	if err := json.Unmarshal(settings, &allSettings); err != nil {
 		slog.Debug("email: no email settings configured", "tenant_id", tenantID)
+		return
+	}
+	emailRaw, ok := allSettings["email"]
+	if !ok {
+		slog.Debug("email: no email settings configured", "tenant_id", tenantID)
+		return
+	}
+	if err := json.Unmarshal(emailRaw, &emailCfg); err != nil {
+		slog.Debug("email: invalid email settings", "tenant_id", tenantID)
 		return
 	}
 
