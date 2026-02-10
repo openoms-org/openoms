@@ -7,7 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useProducts } from "@/hooks/use-products";
+import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Product } from "@/types/api";
 
@@ -21,11 +29,31 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
+  const [sortBy, setSortBy] = useState<string>("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+    setPagination((prev) => ({ ...prev, offset: 0 }));
+  };
+
+  const { data: categoriesConfig } = useProductCategories();
 
   const { data, isLoading } = useProducts({
     ...pagination,
     name: search || undefined,
+    tag: tagFilter || undefined,
+    category: categoryFilter || undefined,
+    sort_by: sortBy,
+    sort_order: sortOrder,
   });
 
   const columns = [
@@ -50,6 +78,7 @@ export default function ProductsPage() {
     {
       header: "Nazwa",
       accessorKey: "name" as const,
+      sortable: true,
       cell: (product: Product) => (
         <Link
           href={`/products/${product.id}`}
@@ -62,6 +91,7 @@ export default function ProductsPage() {
     {
       header: "SKU",
       accessorKey: "sku" as const,
+      sortable: true,
       cell: (product: Product) => (
         <span className="font-mono text-sm">{product.sku || "-"}</span>
       ),
@@ -69,6 +99,7 @@ export default function ProductsPage() {
     {
       header: "Cena",
       accessorKey: "price" as const,
+      sortable: true,
       cell: (product: Product) => (
         <span className="text-sm">{formatCurrency(product.price)}</span>
       ),
@@ -76,6 +107,7 @@ export default function ProductsPage() {
     {
       header: "Stan",
       accessorKey: "stock_quantity" as const,
+      sortable: true,
       cell: (product: Product) => (
         <span
           className={`text-sm font-medium ${
@@ -100,8 +132,41 @@ export default function ProductsPage() {
       ),
     },
     {
+      header: "Kategoria",
+      accessorKey: "category" as const,
+      cell: (product: Product) => {
+        if (!product.category) return null;
+        const cat = categoriesConfig?.categories?.find((c) => c.key === product.category);
+        return (
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{
+              backgroundColor: cat?.color ? `${cat.color}20` : undefined,
+              color: cat?.color,
+            }}
+          >
+            {cat?.label || product.category}
+          </span>
+        );
+      },
+    },
+    {
+      header: "Tagi",
+      accessorKey: "tags" as const,
+      cell: (product: Product) => (
+        <div className="flex flex-wrap gap-1">
+          {product.tags?.map((tag) => (
+            <span key={tag} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {tag}
+            </span>
+          ))}
+        </div>
+      ),
+    },
+    {
       header: "Data utworzenia",
       accessorKey: "created_at" as const,
+      sortable: true,
       cell: (product: Product) => (
         <span className="text-sm text-muted-foreground">
           {formatDate(product.created_at)}
@@ -127,23 +192,58 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex items-center gap-4">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Szukaj po nazwie..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPagination((prev) => ({ ...prev, offset: 0 }));
+            }}
+            className="pl-9"
+          />
+        </div>
         <Input
-          placeholder="Szukaj po nazwie..."
-          value={search}
+          placeholder="Filtruj po tagu..."
+          value={tagFilter}
           onChange={(e) => {
-            setSearch(e.target.value);
+            setTagFilter(e.target.value);
             setPagination((prev) => ({ ...prev, offset: 0 }));
           }}
-          className="pl-9"
+          className="w-[180px]"
         />
+        <Select
+          value={categoryFilter}
+          onValueChange={(value) => {
+            setCategoryFilter(value === "__all__" ? "" : value);
+            setPagination((prev) => ({ ...prev, offset: 0 }));
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Kategoria..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Wszystkie kategorie</SelectItem>
+            {categoriesConfig?.categories
+              ?.sort((a, b) => a.position - b.position)
+              .map((cat) => (
+                <SelectItem key={cat.key} value={cat.key}>
+                  {cat.label}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <DataTable
         columns={columns}
         data={data?.items ?? []}
         isLoading={isLoading}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
       />
 
       {data && (

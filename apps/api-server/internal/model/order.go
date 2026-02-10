@@ -26,6 +26,7 @@ type Order struct {
 	Currency        string           `json:"currency"`
 	Notes           *string          `json:"notes,omitempty"`
 	Metadata        json.RawMessage  `json:"metadata,omitempty"`
+	Tags            []string         `json:"tags"`
 	OrderedAt       *time.Time       `json:"ordered_at,omitempty"`
 	ShippedAt       *time.Time       `json:"shipped_at,omitempty"`
 	DeliveredAt     *time.Time       `json:"delivered_at,omitempty"`
@@ -50,6 +51,7 @@ type CreateOrderRequest struct {
 	Currency        string           `json:"currency"`
 	Notes           *string          `json:"notes,omitempty"`
 	Metadata        json.RawMessage  `json:"metadata,omitempty"`
+	Tags            []string         `json:"tags,omitempty"`
 	OrderedAt       *time.Time       `json:"ordered_at,omitempty"`
 	PaymentStatus   *string          `json:"payment_status,omitempty"`
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
@@ -86,6 +88,7 @@ type UpdateOrderRequest struct {
 	Currency        *string          `json:"currency,omitempty"`
 	Notes           *string          `json:"notes,omitempty"`
 	Metadata        json.RawMessage  `json:"metadata,omitempty"`
+	Tags            *[]string        `json:"tags,omitempty"`
 	PaymentStatus   *string          `json:"payment_status,omitempty"`
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
 	PaidAt          *time.Time       `json:"paid_at,omitempty"`
@@ -95,7 +98,7 @@ func (r *UpdateOrderRequest) Validate() error {
 	if r.ExternalID == nil && r.CustomerName == nil && r.CustomerEmail == nil &&
 		r.CustomerPhone == nil && r.ShippingAddress == nil && r.BillingAddress == nil &&
 		r.Items == nil && r.TotalAmount == nil && r.Currency == nil &&
-		r.Notes == nil && r.Metadata == nil &&
+		r.Notes == nil && r.Metadata == nil && r.Tags == nil &&
 		r.PaymentStatus == nil && r.PaymentMethod == nil && r.PaidAt == nil {
 		return errors.New("at least one field must be provided")
 	}
@@ -122,6 +125,7 @@ type OrderListFilter struct {
 	Source        *string
 	Search        *string
 	PaymentStatus *string
+	Tag           *string
 	PaginationParams
 }
 
@@ -154,4 +158,138 @@ type BulkStatusTransitionResponse struct {
 	Results   []BulkStatusResult `json:"results"`
 	Succeeded int                `json:"succeeded"`
 	Failed    int                `json:"failed"`
+}
+
+// --- Custom Order Statuses ---
+
+type StatusDef struct {
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+	Color    string `json:"color"`
+	Position int    `json:"position"`
+}
+
+type OrderStatusConfig struct {
+	Statuses    []StatusDef         `json:"statuses"`
+	Transitions map[string][]string `json:"transitions"`
+}
+
+func (c *OrderStatusConfig) IsValidStatus(key string) bool {
+	for _, s := range c.Statuses {
+		if s.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *OrderStatusConfig) CanTransition(from, to string) bool {
+	targets, ok := c.Transitions[from]
+	if !ok {
+		return false
+	}
+	for _, t := range targets {
+		if t == to {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *OrderStatusConfig) GetStatusDef(key string) *StatusDef {
+	for _, s := range c.Statuses {
+		if s.Key == key {
+			return &s
+		}
+	}
+	return nil
+}
+
+var ColorPresetHex = map[string]string{
+	"blue":       "#3b82f6",
+	"indigo":     "#6366f1",
+	"yellow":     "#eab308",
+	"orange":     "#f97316",
+	"purple":     "#a855f7",
+	"teal":       "#14b8a6",
+	"green":      "#22c55e",
+	"green-dark": "#16a34a",
+	"gray":       "#6b7280",
+	"red":        "#ef4444",
+	"red-dark":   "#dc2626",
+}
+
+// --- Custom Fields on Orders ---
+
+type CustomFieldDef struct {
+	Key      string   `json:"key"`
+	Label    string   `json:"label"`
+	Type     string   `json:"type"` // "text", "number", "select", "date", "checkbox"
+	Required bool     `json:"required"`
+	Position int      `json:"position"`
+	Options  []string `json:"options,omitempty"` // only for type="select"
+}
+
+type CustomFieldsConfig struct {
+	Fields []CustomFieldDef `json:"fields"`
+}
+
+var validFieldTypes = map[string]bool{
+	"text": true, "number": true, "select": true, "date": true, "checkbox": true,
+}
+
+func IsValidFieldType(t string) bool {
+	return validFieldTypes[t]
+}
+
+// --- Product Categories ---
+
+type CategoryDef struct {
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+	Color    string `json:"color"`
+	Position int    `json:"position"`
+}
+
+type ProductCategoriesConfig struct {
+	Categories []CategoryDef `json:"categories"`
+}
+
+func DefaultProductCategoriesConfig() ProductCategoriesConfig {
+	return ProductCategoriesConfig{
+		Categories: []CategoryDef{},
+	}
+}
+
+func DefaultOrderStatusConfig() OrderStatusConfig {
+	return OrderStatusConfig{
+		Statuses: []StatusDef{
+			{Key: "new", Label: "Nowe", Color: "blue", Position: 1},
+			{Key: "confirmed", Label: "Potwierdzone", Color: "indigo", Position: 2},
+			{Key: "processing", Label: "W realizacji", Color: "yellow", Position: 3},
+			{Key: "ready_to_ship", Label: "Gotowe do wysylki", Color: "orange", Position: 4},
+			{Key: "shipped", Label: "Wyslane", Color: "purple", Position: 5},
+			{Key: "in_transit", Label: "W transporcie", Color: "purple", Position: 6},
+			{Key: "out_for_delivery", Label: "W doreczeniu", Color: "teal", Position: 7},
+			{Key: "delivered", Label: "Dostarczone", Color: "green", Position: 8},
+			{Key: "completed", Label: "Zakonczone", Color: "green-dark", Position: 9},
+			{Key: "on_hold", Label: "Wstrzymane", Color: "gray", Position: 10},
+			{Key: "cancelled", Label: "Anulowane", Color: "red", Position: 11},
+			{Key: "refunded", Label: "Zwrocone", Color: "red-dark", Position: 12},
+		},
+		Transitions: map[string][]string{
+			"new":              {"confirmed", "cancelled", "on_hold"},
+			"confirmed":        {"processing", "cancelled", "on_hold"},
+			"processing":       {"ready_to_ship", "cancelled", "on_hold"},
+			"ready_to_ship":    {"shipped", "cancelled", "on_hold"},
+			"shipped":          {"in_transit", "delivered", "refunded"},
+			"in_transit":       {"out_for_delivery", "delivered", "refunded"},
+			"out_for_delivery": {"delivered", "refunded"},
+			"delivered":        {"completed", "refunded"},
+			"completed":        {"refunded"},
+			"on_hold":          {"confirmed", "processing", "cancelled"},
+			"cancelled":        {"refunded"},
+			"refunded":         {},
+		},
+	}
 }

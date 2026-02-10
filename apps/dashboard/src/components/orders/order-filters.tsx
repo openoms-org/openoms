@@ -9,12 +9,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ORDER_STATUSES, ORDER_SOURCES, PAYMENT_STATUSES } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 
 interface OrderFilters {
   status?: string;
   source?: string;
   search?: string;
   payment_status?: string;
+  tag?: string;
 }
 
 interface OrderFiltersProps {
@@ -29,6 +31,9 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+
   return (
     <div className="flex items-center gap-4">
       <Input
@@ -52,7 +57,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Wszystkie</SelectItem>
-            {Object.entries(ORDER_STATUSES).map(([key, config]) => (
+            {Object.entries(orderStatuses).map(([key, config]) => (
               <SelectItem key={key} value={key}>
                 {config.label}
               </SelectItem>
@@ -102,6 +107,14 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           </SelectContent>
         </Select>
       </div>
+      <Input
+        placeholder="Filtruj po tagu..."
+        value={filters.tag || ""}
+        onChange={(e) =>
+          onFilterChange({ ...filters, tag: e.target.value || undefined })
+        }
+        className="w-[180px]"
+      />
     </div>
   );
 }

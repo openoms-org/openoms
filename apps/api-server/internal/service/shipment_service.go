@@ -23,10 +23,11 @@ var (
 )
 
 type ShipmentService struct {
-	shipmentRepo *repository.ShipmentRepository
-	orderRepo    *repository.OrderRepository
-	auditRepo    *repository.AuditRepository
-	pool         *pgxpool.Pool
+	shipmentRepo    *repository.ShipmentRepository
+	orderRepo       *repository.OrderRepository
+	auditRepo       *repository.AuditRepository
+	pool            *pgxpool.Pool
+	webhookDispatch *WebhookDispatchService
 }
 
 func NewShipmentService(
@@ -34,12 +35,14 @@ func NewShipmentService(
 	orderRepo *repository.OrderRepository,
 	auditRepo *repository.AuditRepository,
 	pool *pgxpool.Pool,
+	webhookDispatch *WebhookDispatchService,
 ) *ShipmentService {
 	return &ShipmentService{
-		shipmentRepo: shipmentRepo,
-		orderRepo:    orderRepo,
-		auditRepo:    auditRepo,
-		pool:         pool,
+		shipmentRepo:    shipmentRepo,
+		orderRepo:       orderRepo,
+		auditRepo:       auditRepo,
+		pool:            pool,
+		webhookDispatch: webhookDispatch,
 	}
 }
 
@@ -127,6 +130,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	if err != nil {
 		return nil, err
 	}
+	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.created", shipment)
 	return shipment, nil
 }
 
@@ -163,6 +167,9 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 			IPAddress:  ip,
 		})
 	})
+	if err == nil && shipment != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.updated", shipment)
+	}
 	return shipment, err
 }
 

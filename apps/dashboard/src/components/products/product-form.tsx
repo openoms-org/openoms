@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Plus, Trash2, ImageIcon, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -15,9 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TagInput } from "@/components/shared/tag-input";
 import type { Product } from "@/types/api";
 import { uploadFile } from "@/lib/api-client";
 import { toast } from "sonner";
+import { useProductCategories } from "@/hooks/use-product-categories";
 
 const PRODUCT_SOURCES = ["manual", "allegro", "woocommerce"] as const;
 
@@ -37,6 +40,12 @@ const productSchema = z.object({
     .int("Ilosc musi byc liczba calkowita")
     .min(0, "Ilosc musi byc wieksza lub rowna 0"),
   source: z.enum(["manual", "allegro", "woocommerce"]),
+  description_short: z.string().optional(),
+  description_long: z.string().optional(),
+  weight: z.number().min(0).optional(),
+  width: z.number().min(0).optional(),
+  height: z.number().min(0).optional(),
+  depth: z.number().min(0).optional(),
   image_url: z.string(),
 });
 
@@ -52,10 +61,13 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   const [imageList, setImageList] = useState<{ url: string; alt: string }[]>(
     product?.images?.map((img) => ({ url: img.url, alt: img.alt || "" })) ?? []
   );
+  const [tags, setTags] = useState<string[]>(product?.tags || []);
+  const [selectedCategory, setSelectedCategory] = useState<string>(product?.category || "");
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const mainFileRef = useRef<HTMLInputElement>(null);
   const galleryFileRef = useRef<HTMLInputElement>(null);
+  const { data: categoriesConfig } = useProductCategories();
 
   const {
     register,
@@ -72,6 +84,12 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       price: product?.price ?? 0,
       stock_quantity: product?.stock_quantity ?? 0,
       source: (product?.source as ProductFormValues["source"]) ?? "manual",
+      description_short: product?.description_short || "",
+      description_long: product?.description_long || "",
+      weight: product?.weight ?? undefined,
+      width: product?.width ?? undefined,
+      height: product?.height ?? undefined,
+      depth: product?.depth ?? undefined,
       image_url: product?.image_url ?? "",
     },
   });
@@ -82,10 +100,18 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   const handleFormSubmit = (data: ProductFormValues) => {
     onSubmit({
       ...data,
+      description_short: data.description_short || undefined,
+      description_long: data.description_long || undefined,
+      weight: isNaN(data.weight as number) ? undefined : data.weight,
+      width: isNaN(data.width as number) ? undefined : data.width,
+      height: isNaN(data.height as number) ? undefined : data.height,
+      depth: isNaN(data.depth as number) ? undefined : data.depth,
       image_url: data.image_url || undefined,
       images: imageList
         .filter((img) => img.url.trim() !== "")
         .map((img, i) => ({ url: img.url, alt: img.alt || undefined, position: i + 1 })),
+      tags: tags.length > 0 ? tags : undefined,
+      category: selectedCategory && selectedCategory !== "__none__" ? selectedCategory : undefined,
     });
   };
 
@@ -196,6 +222,66 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         {errors.source && (
           <p className="text-sm text-destructive">{errors.source.message}</p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="category">Kategoria</Label>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger>
+            <SelectValue placeholder="Wybierz kategorię" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Brak kategorii</SelectItem>
+            {categoriesConfig?.categories
+              ?.sort((a, b) => a.position - b.position)
+              .map((cat) => (
+                <SelectItem key={cat.key} value={cat.key}>
+                  {cat.label}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description_short">Krotki opis</Label>
+        <Input
+          id="description_short"
+          placeholder="Krotki opis produktu..."
+          {...register("description_short")}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description_long">Opis</Label>
+        <Textarea
+          id="description_long"
+          placeholder="Pelny opis produktu..."
+          rows={5}
+          {...register("description_long")}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium">Wymiary i waga</h3>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="space-y-2">
+            <Label htmlFor="weight">Waga (kg)</Label>
+            <Input id="weight" type="number" step="0.001" min="0" placeholder="0.000" {...register("weight", { valueAsNumber: true })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="width">Szerokosc (cm)</Label>
+            <Input id="width" type="number" step="0.01" min="0" placeholder="0.00" {...register("width", { valueAsNumber: true })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="height">Wysokosc (cm)</Label>
+            <Input id="height" type="number" step="0.01" min="0" placeholder="0.00" {...register("height", { valueAsNumber: true })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="depth">Glebokosc (cm)</Label>
+            <Input id="depth" type="number" step="0.01" min="0" placeholder="0.00" {...register("depth", { valueAsNumber: true })} />
+          </div>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -326,6 +412,11 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             }}
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Tagi</Label>
+        <TagInput tags={tags} onChange={setTags} />
       </div>
 
       <Button type="submit" disabled={isLoading}>

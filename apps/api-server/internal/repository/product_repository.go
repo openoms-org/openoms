@@ -31,6 +31,16 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		args = append(args, *filter.SKU)
 		argIdx++
 	}
+	if filter.Tag != nil {
+		conditions = append(conditions, fmt.Sprintf("tags @> ARRAY[$%d]::text[]", argIdx))
+		args = append(args, *filter.Tag)
+		argIdx++
+	}
+	if filter.Category != nil {
+		conditions = append(conditions, fmt.Sprintf("category = $%d", argIdx))
+		args = append(args, *filter.Category)
+		argIdx++
+	}
 
 	where := ""
 	if len(conditions) > 0 {
@@ -43,10 +53,19 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		return nil, 0, fmt.Errorf("count products: %w", err)
 	}
 
+	allowedSortColumns := map[string]string{
+		"created_at":     "created_at",
+		"name":           "name",
+		"sku":            "sku",
+		"price":          "price",
+		"stock_quantity": "stock_quantity",
+	}
+	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
+
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, image_url, images, created_at, updated_at
-		 FROM products %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d`,
-		where, argIdx, argIdx+1,
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, created_at, updated_at
+		 FROM products %s %s LIMIT $%d OFFSET $%d`,
+		where, orderByClause, argIdx, argIdx+1,
 	)
 	args = append(args, filter.Limit, filter.Offset)
 
@@ -60,7 +79,9 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 	for rows.Next() {
 		var p model.Product
 		if err := rows.Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
-			&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata,
+			&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
+			&p.DescriptionShort, &p.DescriptionLong,
+			&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
 			&p.ImageURL, &p.Images, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan product: %w", err)
 		}
@@ -72,10 +93,12 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Product, error) {
 	var p model.Product
 	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, image_url, images, created_at, updated_at
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, created_at, updated_at
 		 FROM products WHERE id = $1`, id,
 	).Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
-		&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata,
+		&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
+		&p.DescriptionShort, &p.DescriptionLong,
+		&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
 		&p.ImageURL, &p.Images, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -87,12 +110,18 @@ func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 }
 
 func (r *ProductRepository) Create(ctx context.Context, tx pgx.Tx, product *model.Product) error {
+	tags := product.Tags
+	if tags == nil {
+		tags = []string{}
+	}
 	return tx.QueryRow(ctx,
-		`INSERT INTO products (id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, image_url, images)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		`INSERT INTO products (id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		 RETURNING created_at, updated_at`,
 		product.ID, product.TenantID, product.ExternalID, product.Source, product.Name,
-		product.SKU, product.EAN, product.Price, product.StockQuantity, product.Metadata,
+		product.SKU, product.EAN, product.Price, product.StockQuantity, product.Metadata, tags,
+		product.DescriptionShort, product.DescriptionLong,
+		product.Weight, product.Width, product.Height, product.Depth, product.Category,
 		product.ImageURL, product.Images,
 	).Scan(&product.CreatedAt, &product.UpdatedAt)
 }
@@ -140,6 +169,46 @@ func (r *ProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID,
 	if req.Metadata != nil {
 		setClauses = append(setClauses, fmt.Sprintf("metadata = $%d", argIdx))
 		args = append(args, *req.Metadata)
+		argIdx++
+	}
+	if req.Tags != nil {
+		setClauses = append(setClauses, fmt.Sprintf("tags = $%d", argIdx))
+		args = append(args, *req.Tags)
+		argIdx++
+	}
+	if req.DescriptionShort != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description_short = $%d", argIdx))
+		args = append(args, *req.DescriptionShort)
+		argIdx++
+	}
+	if req.DescriptionLong != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description_long = $%d", argIdx))
+		args = append(args, *req.DescriptionLong)
+		argIdx++
+	}
+	if req.Weight != nil {
+		setClauses = append(setClauses, fmt.Sprintf("weight = $%d", argIdx))
+		args = append(args, *req.Weight)
+		argIdx++
+	}
+	if req.Width != nil {
+		setClauses = append(setClauses, fmt.Sprintf("width = $%d", argIdx))
+		args = append(args, *req.Width)
+		argIdx++
+	}
+	if req.Height != nil {
+		setClauses = append(setClauses, fmt.Sprintf("height = $%d", argIdx))
+		args = append(args, *req.Height)
+		argIdx++
+	}
+	if req.Depth != nil {
+		setClauses = append(setClauses, fmt.Sprintf("depth = $%d", argIdx))
+		args = append(args, *req.Depth)
+		argIdx++
+	}
+	if req.Category != nil {
+		setClauses = append(setClauses, fmt.Sprintf("category = $%d", argIdx))
+		args = append(args, *req.Category)
 		argIdx++
 	}
 	if req.ImageURL != nil {

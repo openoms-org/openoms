@@ -21,10 +21,24 @@ export default function ShipmentsPage() {
     provider?: string;
   }>({});
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
+  const [sortBy, setSortBy] = useState<string>("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+    setPagination((prev) => ({ ...prev, offset: 0 }));
+  };
 
   const { data, isLoading } = useShipments({
     ...pagination,
     ...filters,
+    sort_by: sortBy,
+    sort_order: sortOrder,
   });
 
   const columns = [
@@ -55,6 +69,7 @@ export default function ShipmentsPage() {
     {
       header: "Dostawca",
       accessorKey: "provider" as const,
+      sortable: true,
       cell: (shipment: Shipment) => (
         <span className="uppercase text-sm">{shipment.provider}</span>
       ),
@@ -62,6 +77,7 @@ export default function ShipmentsPage() {
     {
       header: "Status",
       accessorKey: "status" as const,
+      sortable: true,
       cell: (shipment: Shipment) => (
         <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
       ),
@@ -78,6 +94,7 @@ export default function ShipmentsPage() {
     {
       header: "Data utworzenia",
       accessorKey: "created_at" as const,
+      sortable: true,
       cell: (shipment: Shipment) => (
         <span className="text-sm text-muted-foreground">
           {formatDate(shipment.created_at)}
@@ -115,6 +132,9 @@ export default function ShipmentsPage() {
         columns={columns}
         data={data?.items ?? []}
         isLoading={isLoading}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
       />
 
       {data && (

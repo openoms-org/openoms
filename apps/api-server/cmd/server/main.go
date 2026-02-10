@@ -82,14 +82,19 @@ func main() {
 	productRepo := repository.NewProductRepository()
 	integrationRepo := repository.NewIntegrationRepository()
 	webhookRepo := repository.NewWebhookRepository()
+	webhookDeliveryRepo := repository.NewWebhookDeliveryRepository()
 	statsRepo := repository.NewStatsRepository()
+
+	returnRepo := repository.NewReturnRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	emailService := service.NewEmailService(tenantRepo, pool)
-	orderService := service.NewOrderService(orderRepo, auditRepo, pool, emailService)
-	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, auditRepo, pool)
-	productService := service.NewProductService(productRepo, auditRepo, pool)
+	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
+	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService)
+	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
+	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, auditRepo, pool, webhookDispatchService)
+	productService := service.NewProductService(productRepo, auditRepo, pool, webhookDispatchService)
 	integrationService := service.NewIntegrationService(integrationRepo, auditRepo, pool, encryptionKey)
 	labelService := service.NewLabelService(
 		shipmentRepo, orderRepo, integrationRepo, auditRepo,
@@ -101,14 +106,17 @@ func main() {
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment())
 	userHandler := handler.NewUserHandler(userService)
-	orderHandler := handler.NewOrderHandler(orderService)
+	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
 	productHandler := handler.NewProductHandler(productService)
 	integrationHandler := handler.NewIntegrationHandler(integrationService)
+	returnHandler := handler.NewReturnHandler(returnService)
 	webhookHandler := handler.NewWebhookHandler(webhookService)
 	statsHandler := handler.NewStatsHandler(statsService)
 	uploadHandler := handler.NewUploadHandler(cfg.UploadDir, cfg.MaxUploadSize, cfg.BaseURL)
 	settingsHandler := handler.NewSettingsHandler(tenantRepo, emailService, pool)
+	auditHandler := handler.NewAuditHandler(auditRepo, pool)
+	webhookDeliveryHandler := handler.NewWebhookDeliveryHandler(webhookDeliveryRepo, pool)
 
 	// Setup router
 	r := router.New(pool, cfg, tokenSvc,
@@ -119,6 +127,9 @@ func main() {
 		statsHandler,
 		uploadHandler,
 		settingsHandler,
+		auditHandler,
+		webhookDeliveryHandler,
+		returnHandler,
 	)
 
 	// Start server

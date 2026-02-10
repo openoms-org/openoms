@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	engine "github.com/openoms-org/openoms/packages/order-engine"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -18,28 +17,58 @@ import (
 )
 
 var (
-	ErrOrderNotFound = errors.New("order not found")
+	ErrOrderNotFound     = errors.New("order not found")
+	ErrInvalidTransition = errors.New("invalid status transition")
+	ErrUnknownStatus     = errors.New("unknown status")
 )
 
 type OrderService struct {
-	orderRepo    *repository.OrderRepository
-	auditRepo    *repository.AuditRepository
-	pool         *pgxpool.Pool
-	emailService *EmailService
+	orderRepo       *repository.OrderRepository
+	auditRepo       *repository.AuditRepository
+	tenantRepo      *repository.TenantRepository
+	pool            *pgxpool.Pool
+	emailService    *EmailService
+	webhookDispatch *WebhookDispatchService
 }
 
 func NewOrderService(
 	orderRepo *repository.OrderRepository,
 	auditRepo *repository.AuditRepository,
+	tenantRepo *repository.TenantRepository,
 	pool *pgxpool.Pool,
 	emailService *EmailService,
+	webhookDispatch *WebhookDispatchService,
 ) *OrderService {
 	return &OrderService{
-		orderRepo:    orderRepo,
-		auditRepo:    auditRepo,
-		pool:         pool,
-		emailService: emailService,
+		orderRepo:       orderRepo,
+		auditRepo:       auditRepo,
+		tenantRepo:      tenantRepo,
+		pool:            pool,
+		emailService:    emailService,
+		webhookDispatch: webhookDispatch,
 	}
+}
+
+func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
+	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	if settings != nil {
+		var allSettings map[string]json.RawMessage
+		if err := json.Unmarshal(settings, &allSettings); err == nil {
+			if raw, ok := allSettings["order_statuses"]; ok {
+				var config model.OrderStatusConfig
+				if err := json.Unmarshal(raw, &config); err == nil && len(config.Statuses) > 0 {
+					return &config, nil
+				}
+			}
+		}
+	}
+
+	cfg := model.DefaultOrderStatusConfig()
+	return &cfg, nil
 }
 
 func (s *OrderService) List(ctx context.Context, tenantID uuid.UUID, filter model.OrderListFilter) (model.ListResponse[model.Order], error) {
@@ -103,6 +132,11 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		orderedAt = &now
 	}
 
+	tags := req.Tags
+	if tags == nil {
+		tags = []string{}
+	}
+
 	order := &model.Order{
 		ID:              uuid.New(),
 		TenantID:        tenantID,
@@ -120,6 +154,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		Currency:        req.Currency,
 		Notes:           req.Notes,
 		Metadata:        metadata,
+		Tags:            tags,
 		OrderedAt:       orderedAt,
 	}
 
@@ -149,6 +184,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	if err != nil {
 		return nil, err
 	}
+	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order)
 	return order, nil
 }
 
@@ -189,7 +225,7 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 }
 
 func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uuid.UUID, ip string) error {
-	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		order, err := s.orderRepo.FindByID(ctx, tx, orderID)
 		if err != nil {
 			return err
@@ -212,6 +248,10 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 			IPAddress:  ip,
 		})
 	})
+	if err == nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()})
+	}
+	return err
 }
 
 func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID uuid.UUID, req model.StatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
@@ -231,30 +271,36 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		}
 		oldStatus = existing.Status
 
+		config, err := s.loadStatusConfig(ctx, tx, tenantID)
+		if err != nil {
+			return fmt.Errorf("load status config: %w", err)
+		}
+
+		if !config.IsValidStatus(req.Status) {
+			return fmt.Errorf("%w: %q", ErrUnknownStatus, req.Status)
+		}
+
 		var setShippedAt, setDeliveredAt *time.Time
 
 		if req.Force {
-			// Force mode: skip transition validation, just validate target is a known status
-			if _, err := engine.ParseOrderStatus(req.Status); err != nil {
-				return err
-			}
+			// Force mode: skip transition validation
 		} else {
-			currentStatus, err := engine.ParseOrderStatus(existing.Status)
-			if err != nil {
-				return err
+			if !config.IsValidStatus(existing.Status) {
+				return fmt.Errorf("%w: current %q", ErrUnknownStatus, existing.Status)
 			}
+			if !config.CanTransition(existing.Status, req.Status) {
+				return fmt.Errorf("%w: %s -> %s", ErrInvalidTransition, existing.Status, req.Status)
+			}
+		}
 
-			targetStatus, err := engine.ParseOrderStatus(req.Status)
-			if err != nil {
-				return err
-			}
-
-			result, err := engine.TransitionOrder(currentStatus, targetStatus, time.Now())
-			if err != nil {
-				return err
-			}
-			setShippedAt = result.SetShippedAt
-			setDeliveredAt = result.SetDeliveredAt
+		// Set timestamps for special statuses
+		if req.Status == "shipped" {
+			now := time.Now()
+			setShippedAt = &now
+		}
+		if req.Status == "delivered" {
+			now := time.Now()
+			setDeliveredAt = &now
 		}
 
 		if err := s.orderRepo.UpdateStatus(ctx, tx, orderID, req.Status, setShippedAt, setDeliveredAt); err != nil {
@@ -278,6 +324,7 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 	})
 	if err == nil && order != nil {
 		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
 	}
 	return order, err
 }
@@ -292,9 +339,13 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		targetStatus, err := engine.ParseOrderStatus(req.Status)
+		config, err := s.loadStatusConfig(ctx, tx, tenantID)
 		if err != nil {
-			return fmt.Errorf("validation: invalid target status: %w", err)
+			return fmt.Errorf("load status config: %w", err)
+		}
+
+		if !config.IsValidStatus(req.Status) {
+			return fmt.Errorf("%w: %q", ErrUnknownStatus, req.Status)
 		}
 
 		for _, orderID := range req.OrderIDs {
@@ -313,23 +364,21 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 			if req.Force {
 				// Force mode: skip transition validation
 			} else {
-				currentStatus, err := engine.ParseOrderStatus(existing.Status)
-				if err != nil {
-					result.Error = fmt.Sprintf("invalid current status: %s", existing.Status)
+				if !config.CanTransition(existing.Status, req.Status) {
+					result.Error = fmt.Sprintf("invalid transition: %s -> %s", existing.Status, req.Status)
 					resp.Results = append(resp.Results, result)
 					resp.Failed++
 					continue
 				}
+			}
 
-				transitionResult, err := engine.TransitionOrder(currentStatus, targetStatus, time.Now())
-				if err != nil {
-					result.Error = err.Error()
-					resp.Results = append(resp.Results, result)
-					resp.Failed++
-					continue
-				}
-				setShippedAt = transitionResult.SetShippedAt
-				setDeliveredAt = transitionResult.SetDeliveredAt
+			if req.Status == "shipped" {
+				now := time.Now()
+				setShippedAt = &now
+			}
+			if req.Status == "delivered" {
+				now := time.Now()
+				setDeliveredAt = &now
 			}
 
 			oldStatus := existing.Status

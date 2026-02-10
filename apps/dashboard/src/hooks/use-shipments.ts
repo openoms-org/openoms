@@ -17,6 +17,8 @@ export function useShipments(params: ShipmentListParams = {}) {
   if (params.status) query.set("status", params.status);
   if (params.provider) query.set("provider", params.provider);
   if (params.order_id) query.set("order_id", params.order_id);
+  if (params.sort_by) query.set("sort_by", params.sort_by);
+  if (params.sort_order) query.set("sort_order", params.sort_order);
 
   const qs = query.toString();
 

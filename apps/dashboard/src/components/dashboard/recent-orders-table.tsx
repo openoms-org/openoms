@@ -15,6 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ORDER_STATUSES } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import type { OrderSummary } from "@/types/api";
 
 interface RecentOrdersTableProps {
@@ -23,6 +24,9 @@ interface RecentOrdersTableProps {
 }
 
 export function RecentOrdersTable({ orders, isLoading }: RecentOrdersTableProps) {
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+
   return (
     <Card>
       <CardHeader>
@@ -62,7 +66,7 @@ export function RecentOrdersTable({ orders, isLoading }: RecentOrdersTableProps)
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={order.status} statusMap={ORDER_STATUSES} />
+                    <StatusBadge status={order.status} statusMap={orderStatuses} />
                   </TableCell>
                   <TableCell className="capitalize">{order.source}</TableCell>
                   <TableCell>

@@ -27,6 +27,9 @@ func New(
 	statsHandler *handler.StatsHandler,
 	uploadHandler *handler.UploadHandler,
 	settingsHandler *handler.SettingsHandler,
+	auditHandler *handler.AuditHandler,
+	webhookDeliveryHandler *handler.WebhookDeliveryHandler,
+	returnHandler *handler.ReturnHandler,
 ) *chi.Mux {
 
 	r := chi.NewRouter()
@@ -68,6 +71,10 @@ func New(
 
 		r.Post("/uploads", uploadHandler.Upload)
 
+		r.Get("/order-statuses", settingsHandler.GetOrderStatuses)
+		r.Get("/custom-fields", settingsHandler.GetCustomFields)
+		r.Get("/product-categories", settingsHandler.GetProductCategories)
+
 		// Settings — admin only
 		r.Route("/settings", func(r chi.Router) {
 			r.Use(middleware.RequireRole("admin"))
@@ -76,6 +83,21 @@ func New(
 			r.Post("/email/test", settingsHandler.SendTestEmail)
 			r.Get("/company", settingsHandler.GetCompanySettings)
 			r.Put("/company", settingsHandler.UpdateCompanySettings)
+			r.Get("/order-statuses", settingsHandler.GetOrderStatuses)
+			r.Put("/order-statuses", settingsHandler.UpdateOrderStatuses)
+			r.Get("/custom-fields", settingsHandler.GetCustomFields)
+			r.Put("/custom-fields", settingsHandler.UpdateCustomFields)
+			r.Get("/product-categories", settingsHandler.GetProductCategories)
+			r.Put("/product-categories", settingsHandler.UpdateProductCategories)
+			r.Get("/webhooks", settingsHandler.GetWebhooks)
+			r.Put("/webhooks", settingsHandler.UpdateWebhooks)
+		})
+
+		// Admin-only audit log and webhook deliveries
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequireRole("admin"))
+			r.Get("/audit", auditHandler.List)
+			r.Get("/webhook-deliveries", webhookDeliveryHandler.List)
 		})
 
 		// Any authenticated user
@@ -112,6 +134,18 @@ func New(
 			r.Delete("/{id}", shipmentHandler.Delete)
 			r.Post("/{id}/status", shipmentHandler.TransitionStatus)
 			r.Post("/{id}/label", shipmentHandler.GenerateLabel)
+		})
+
+		// Returns — any authenticated user
+		r.Route("/returns", func(r chi.Router) {
+			r.Get("/", returnHandler.List)
+			r.Post("/", returnHandler.Create)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", returnHandler.Get)
+				r.Patch("/", returnHandler.Update)
+				r.Delete("/", returnHandler.Delete)
+				r.Post("/status", returnHandler.TransitionStatus)
+			})
 		})
 
 		// Products — any authenticated user

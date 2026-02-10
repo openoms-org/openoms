@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductForm } from "@/components/products/product-form";
 import {
@@ -27,6 +28,7 @@ import {
   useUpdateProduct,
   useDeleteProduct,
 } from "@/hooks/use-products";
+import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -42,6 +44,7 @@ export default function ProductDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { data: product, isLoading } = useProduct(params.id);
+  const { data: categoriesConfig } = useProductCategories();
   const updateProduct = useUpdateProduct(params.id);
   const deleteProduct = useDeleteProduct();
 
@@ -54,8 +57,16 @@ export default function ProductDetailPage() {
         price: data.price,
         stock_quantity: data.stock_quantity,
         source: data.source || undefined,
+        description_short: data.description_short || undefined,
+        description_long: data.description_long || undefined,
+        weight: data.weight,
+        width: data.width,
+        height: data.height,
+        depth: data.depth,
         image_url: data.image_url,
         images: data.images,
+        tags: data.tags,
+        category: data.category,
       },
       {
         onSuccess: () => {
@@ -234,6 +245,23 @@ export default function ProductDetailPage() {
                   {SOURCE_LABELS[product.source] ?? product.source}
                 </p>
               </div>
+              {product.category && (() => {
+                const cat = categoriesConfig?.categories?.find((c) => c.key === product.category);
+                return (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Kategoria</p>
+                    <span
+                      className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium mt-1"
+                      style={{
+                        backgroundColor: cat?.color ? `${cat.color}20` : undefined,
+                        color: cat?.color,
+                      }}
+                    >
+                      {cat?.label || product.category}
+                    </span>
+                  </div>
+                );
+              })()}
               <div>
                 <p className="text-sm text-muted-foreground">
                   Identyfikator zewnetrzny
@@ -253,6 +281,68 @@ export default function ProductDetailPage() {
                 <p className="text-sm">{formatDate(product.updated_at)}</p>
               </div>
             </div>
+            {product.description_short && (
+              <div className="sm:col-span-2">
+                <p className="text-sm text-muted-foreground">Krotki opis</p>
+                <p className="mt-1 text-sm">{product.description_short}</p>
+              </div>
+            )}
+
+            {product.description_long && (
+              <div className="sm:col-span-2">
+                <Separator />
+                <div className="pt-4">
+                  <p className="text-sm text-muted-foreground">Opis</p>
+                  <p className="mt-1 text-sm whitespace-pre-wrap">{product.description_long}</p>
+                </div>
+              </div>
+            )}
+            {(product.weight || product.width || product.height || product.depth) && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Wymiary i waga</p>
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    {product.weight != null && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Waga</p>
+                        <p className="mt-1 font-medium">{product.weight} kg</p>
+                      </div>
+                    )}
+                    {product.width != null && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Szerokosc</p>
+                        <p className="mt-1 font-medium">{product.width} cm</p>
+                      </div>
+                    )}
+                    {product.height != null && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Wysokosc</p>
+                        <p className="mt-1 font-medium">{product.height} cm</p>
+                      </div>
+                    )}
+                    {product.depth != null && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Glebokosc</p>
+                        <p className="mt-1 font-medium">{product.depth} cm</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+            {product.tags && product.tags.length > 0 && (
+              <div className="pt-4">
+                <p className="text-sm text-muted-foreground">Tagi</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {product.tags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
         </>

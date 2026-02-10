@@ -11,6 +11,7 @@ import { OrderFilters } from "@/components/orders/order-filters";
 import { BulkActions } from "@/components/orders/bulk-actions";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { Download } from "lucide-react";
 import type { Order } from "@/types/api";
@@ -23,15 +24,31 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function OrdersPage() {
   const router = useRouter();
-  const [filters, setFilters] = useState<{ status?: string; source?: string; search?: string; payment_status?: string }>({});
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+  const [filters, setFilters] = useState<{ status?: string; source?: string; search?: string; payment_status?: string; tag?: string }>({});
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<string>("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+    setOffset(0);
+  };
 
   const { data, isLoading } = useOrders({
     ...filters,
     limit,
     offset,
+    sort_by: sortBy,
+    sort_order: sortOrder,
   });
 
   const selectedOrders = (data?.items || []).filter((o) => selectedIds.has(o.id));
@@ -47,35 +64,54 @@ export default function OrdersPage() {
     {
       header: "Klient",
       accessorKey: "customer_name",
+      sortable: true,
     },
     {
       header: "Zrodlo",
       accessorKey: "source",
       cell: (row) => SOURCE_LABELS[row.source] || row.source,
+      sortable: true,
     },
     {
       header: "Status",
       accessorKey: "status",
-      cell: (row) => <StatusBadge status={row.status} statusMap={ORDER_STATUSES} />,
+      cell: (row) => <StatusBadge status={row.status} statusMap={orderStatuses} />,
+      sortable: true,
     },
     {
       header: "Kwota",
       accessorKey: "total_amount",
       cell: (row) => formatCurrency(row.total_amount, row.currency),
+      sortable: true,
     },
     {
       header: "Platnosc",
       accessorKey: "payment_status",
       cell: (row) => <StatusBadge status={row.payment_status} statusMap={PAYMENT_STATUSES} />,
+      sortable: true,
+    },
+    {
+      header: "Tagi",
+      accessorKey: "tags" as const,
+      cell: (row: Order) => (
+        <div className="flex flex-wrap gap-1">
+          {row.tags?.map((tag) => (
+            <span key={tag} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {tag}
+            </span>
+          ))}
+        </div>
+      ),
     },
     {
       header: "Data",
       accessorKey: "created_at",
       cell: (row) => formatDate(row.created_at),
+      sortable: true,
     },
   ];
 
-  const handleFilterChange = (newFilters: { status?: string; source?: string; search?: string; payment_status?: string }) => {
+  const handleFilterChange = (newFilters: { status?: string; source?: string; search?: string; payment_status?: string; tag?: string }) => {
     setFilters(newFilters);
     setOffset(0);
     setSelectedIds(new Set());
@@ -132,6 +168,9 @@ export default function OrdersPage() {
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           rowId={(row) => row.id}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSort={handleSort}
         />
       </div>
 

@@ -1,0 +1,5 @@
+-- Migration 000009: Add weight and dimensions to products
+ALTER TABLE products ADD COLUMN weight DECIMAL(10,3) DEFAULT NULL;
+ALTER TABLE products ADD COLUMN width DECIMAL(10,2) DEFAULT NULL;
+ALTER TABLE products ADD COLUMN height DECIMAL(10,2) DEFAULT NULL;
+ALTER TABLE products ADD COLUMN depth DECIMAL(10,2) DEFAULT NULL;

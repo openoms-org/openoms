@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ORDER_STATUSES, ORDER_TRANSITIONS } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 
 interface OrderStatusActionsProps {
   currentStatus: string;
@@ -37,10 +38,14 @@ export function OrderStatusActions({
     force: boolean;
   } | null>(null);
 
-  const normalTransitions = ORDER_TRANSITIONS[currentStatus] || [];
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+  const orderTransitions = statusConfig?.transitions ?? ORDER_TRANSITIONS;
+
+  const normalTransitions = orderTransitions[currentStatus] || [];
 
   // All other statuses (excluding current and normal transitions) for force mode
-  const allStatuses = Object.keys(ORDER_STATUSES);
+  const allStatuses = Object.keys(orderStatuses);
   const forceTransitions = allStatuses.filter(
     (s) => s !== currentStatus && !normalTransitions.includes(s)
   );
@@ -61,7 +66,7 @@ export function OrderStatusActions({
   };
 
   const confirmLabel = confirmDialog
-    ? ORDER_STATUSES[confirmDialog.status]?.label || confirmDialog.status
+    ? orderStatuses[confirmDialog.status]?.label || confirmDialog.status
     : "";
 
   return (
@@ -69,7 +74,7 @@ export function OrderStatusActions({
       {normalTransitions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           {normalTransitions.map((status) => {
-            const config = ORDER_STATUSES[status];
+            const config = orderStatuses[status];
             return (
               <Button
                 key={status}
@@ -93,7 +98,7 @@ export function OrderStatusActions({
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {forceTransitions.map((status) => {
-              const config = ORDER_STATUSES[status];
+              const config = orderStatuses[status];
               return (
                 <Button
                   key={status}

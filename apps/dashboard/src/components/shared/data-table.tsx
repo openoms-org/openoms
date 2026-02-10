@@ -10,11 +10,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 export interface ColumnDef<T> {
   header: string;
   accessorKey: keyof T | string;
   cell?: (row: T) => React.ReactNode;
+  sortable?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -27,6 +29,9 @@ interface DataTableProps<T> {
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
   rowId?: (row: T) => string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  onSort?: (column: string) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +54,9 @@ export function DataTable<T>({
   selectedIds,
   onSelectionChange,
   rowId,
+  sortBy,
+  sortOrder,
+  onSort,
 }: DataTableProps<T>) {
   const getRowId = useCallback(
     (row: T) => (rowId ? rowId(row) : (row as Record<string, unknown>).id as string),
@@ -85,7 +93,27 @@ export function DataTable<T>({
               <TableHead className="w-10" />
             )}
             {columns.map((column) => (
-              <TableHead key={String(column.accessorKey)}>{column.header}</TableHead>
+              <TableHead key={String(column.accessorKey)}>
+                {column.sortable && onSort ? (
+                  <button
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => onSort(String(column.accessorKey))}
+                  >
+                    {column.header}
+                    {sortBy === String(column.accessorKey) ? (
+                      sortOrder === "asc" ? (
+                        <ArrowUp className="h-4 w-4" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="h-4 w-4 opacity-50" />
+                    )}
+                  </button>
+                ) : (
+                  column.header
+                )}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
@@ -135,7 +163,27 @@ export function DataTable<T>({
             </TableHead>
           )}
           {columns.map((column) => (
-            <TableHead key={String(column.accessorKey)}>{column.header}</TableHead>
+            <TableHead key={String(column.accessorKey)}>
+              {column.sortable && onSort ? (
+                <button
+                  className="flex items-center gap-1 hover:text-foreground"
+                  onClick={() => onSort(String(column.accessorKey))}
+                >
+                  {column.header}
+                  {sortBy === String(column.accessorKey) ? (
+                    sortOrder === "asc" ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4" />
+                    )
+                  ) : (
+                    <ArrowUpDown className="h-4 w-4 opacity-50" />
+                  )}
+                </button>
+              ) : (
+                column.header
+              )}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>

@@ -30,6 +30,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import type { CreateOrderRequest } from "@/types/api";
 
@@ -38,6 +40,10 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+  const { data: customFieldsConfig } = useCustomFields();
 
   const { data: order, isLoading } = useOrder(params.id);
   const updateOrder = useUpdateOrder(params.id);
@@ -156,7 +162,7 @@ export default function OrderDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
                   <div className="mt-1">
-                    <StatusBadge status={order.status} statusMap={ORDER_STATUSES} />
+                    <StatusBadge status={order.status} statusMap={orderStatuses} />
                   </div>
                 </div>
                 <div>
@@ -199,6 +205,19 @@ export default function OrderDetailPage() {
                 )}
               </div>
 
+              {order.tags && order.tags.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Tagi</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {order.tags.map((tag) => (
+                      <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {order.notes && (
                 <>
                   <Separator />
@@ -208,6 +227,49 @@ export default function OrderDetailPage() {
                   </div>
                 </>
               )}
+
+              {(() => {
+                const metadata = order.metadata as Record<string, unknown> | undefined;
+                const fields = customFieldsConfig?.fields || [];
+                const fieldsWithValues = fields.filter(
+                  (f) =>
+                    metadata?.[f.key] !== undefined &&
+                    metadata?.[f.key] !== null &&
+                    metadata?.[f.key] !== ""
+                );
+                if (fieldsWithValues.length === 0) return null;
+                return (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">
+                        Pola dodatkowe
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        {fieldsWithValues
+                          .sort((a, b) => a.position - b.position)
+                          .map((field) => {
+                            const value = metadata![field.key];
+                            let displayValue: string;
+                            if (field.type === "checkbox") {
+                              displayValue = value ? "Tak" : "Nie";
+                            } else if (field.type === "date" && typeof value === "string") {
+                              displayValue = new Date(value).toLocaleDateString("pl-PL");
+                            } else {
+                              displayValue = String(value);
+                            }
+                            return (
+                              <div key={field.key}>
+                                <p className="text-sm text-muted-foreground">{field.label}</p>
+                                <p className="mt-1 font-medium">{displayValue}</p>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
 

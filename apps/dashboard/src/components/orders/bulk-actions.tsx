@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ORDER_TRANSITIONS, ORDER_STATUSES } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import type { Order } from "@/types/api";
 
 interface BulkActionsProps {
@@ -34,16 +35,20 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const bulkTransition = useBulkTransitionStatus();
 
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+  const orderTransitions = statusConfig?.transitions ?? ORDER_TRANSITIONS;
+
   // Compute common valid transitions across all selected orders
   const commonTransitions = selectedOrders.reduce<string[]>((acc, order, index) => {
-    const transitions = ORDER_TRANSITIONS[order.status] || [];
+    const transitions = orderTransitions[order.status] || [];
     if (index === 0) return [...transitions];
     return acc.filter((t) => transitions.includes(t));
   }, []);
 
   // All other statuses for force mode (excluding statuses that are already in common transitions)
   const selectedStatuses = new Set(selectedOrders.map((o) => o.status));
-  const forceTransitions = Object.keys(ORDER_STATUSES).filter(
+  const forceTransitions = Object.keys(orderStatuses).filter(
     (s) => !commonTransitions.includes(s) && !selectedStatuses.has(s)
   );
 
@@ -98,7 +103,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
               <>
                 {commonTransitions.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {ORDER_STATUSES[status]?.label || status}
+                    {orderStatuses[status]?.label || status}
                   </SelectItem>
                 ))}
               </>
@@ -112,7 +117,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
                 )}
                 {forceTransitions.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {ORDER_STATUSES[status]?.label || status}
+                    {orderStatuses[status]?.label || status}
                   </SelectItem>
                 ))}
               </>
@@ -146,8 +151,8 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
             </DialogTitle>
             <DialogDescription>
               {isForce
-                ? `Ta zmiana jest niezgodna z normalnym flow. Czy na pewno chcesz wymusic zmiane statusu ${selectedOrders.length} zamowien na "${ORDER_STATUSES[targetStatus]?.label || targetStatus}"?`
-                : `Czy na pewno chcesz zmienic status ${selectedOrders.length} zamowien na "${ORDER_STATUSES[targetStatus]?.label || targetStatus}"?`}
+                ? `Ta zmiana jest niezgodna z normalnym flow. Czy na pewno chcesz wymusic zmiane statusu ${selectedOrders.length} zamowien na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
+                : `Czy na pewno chcesz zmienic status ${selectedOrders.length} zamowien na "${orderStatuses[targetStatus]?.label || targetStatus}"?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

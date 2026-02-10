@@ -19,20 +19,23 @@ var (
 )
 
 type ProductService struct {
-	productRepo *repository.ProductRepository
-	auditRepo   *repository.AuditRepository
-	pool        *pgxpool.Pool
+	productRepo     *repository.ProductRepository
+	auditRepo       *repository.AuditRepository
+	pool            *pgxpool.Pool
+	webhookDispatch *WebhookDispatchService
 }
 
 func NewProductService(
 	productRepo *repository.ProductRepository,
 	auditRepo *repository.AuditRepository,
 	pool *pgxpool.Pool,
+	webhookDispatch *WebhookDispatchService,
 ) *ProductService {
 	return &ProductService{
-		productRepo: productRepo,
-		auditRepo:   auditRepo,
-		pool:        pool,
+		productRepo:     productRepo,
+		auditRepo:       auditRepo,
+		pool:            pool,
+		webhookDispatch: webhookDispatch,
 	}
 }
 
@@ -78,6 +81,11 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		images = []byte("[]")
 	}
 
+	tags := req.Tags
+	if tags == nil {
+		tags = []string{}
+	}
+
 	product := &model.Product{
 		ID:            uuid.New(),
 		TenantID:      tenantID,
@@ -89,7 +97,15 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		Price:         req.Price,
 		StockQuantity: req.StockQty,
 		Metadata:      metadata,
-		ImageURL:      req.ImageURL,
+		Tags:             tags,
+		DescriptionShort: req.DescriptionShort,
+		DescriptionLong:  req.DescriptionLong,
+		Weight:           req.Weight,
+		Width:            req.Width,
+		Height:           req.Height,
+		Depth:            req.Depth,
+		Category:         req.Category,
+		ImageURL:         req.ImageURL,
 		Images:        images,
 	}
 
@@ -113,6 +129,7 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		}
 		return nil, err
 	}
+	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.created", product)
 	return product, nil
 }
 
@@ -157,11 +174,14 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 		}
 		return nil, err
 	}
+	if product != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.updated", product)
+	}
 	return product, err
 }
 
 func (s *ProductService) Delete(ctx context.Context, tenantID, productID uuid.UUID, actorID uuid.UUID, ip string) error {
-	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		product, err := s.productRepo.FindByID(ctx, tx, productID)
 		if err != nil {
 			return err
@@ -184,4 +204,8 @@ func (s *ProductService) Delete(ctx context.Context, tenantID, productID uuid.UU
 			IPAddress:  ip,
 		})
 	})
+	if err == nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.deleted", map[string]any{"product_id": productID.String()})
+	}
+	return err
 }

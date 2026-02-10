@@ -1,29 +1,36 @@
 package handler
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	engine "github.com/openoms-org/openoms/packages/order-engine"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 type OrderHandler struct {
 	orderService *service.OrderService
+	tenantRepo   *repository.TenantRepository
+	pool         *pgxpool.Pool
 }
 
-func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
-	return &OrderHandler{orderService: orderService}
+func NewOrderHandler(orderService *service.OrderService, tenantRepo *repository.TenantRepository, pool *pgxpool.Pool) *OrderHandler {
+	return &OrderHandler{orderService: orderService, tenantRepo: tenantRepo, pool: pool}
 }
 
 func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +51,9 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	if ps := r.URL.Query().Get("payment_status"); ps != "" {
 		filter.PaymentStatus = &ps
+	}
+	if t := r.URL.Query().Get("tag"); t != "" {
+		filter.Tag = &t
 	}
 
 	resp, err := h.orderService.List(r.Context(), tenantID, filter)
@@ -174,7 +184,7 @@ func (h *OrderHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) 
 		switch {
 		case errors.Is(err, service.ErrOrderNotFound):
 			writeError(w, http.StatusNotFound, "order not found")
-		case errors.Is(err, engine.ErrInvalidTransition), errors.Is(err, engine.ErrUnknownStatus):
+		case errors.Is(err, service.ErrInvalidTransition), errors.Is(err, service.ErrUnknownStatus):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		default:
 			if isValidationError(err) {
@@ -228,6 +238,29 @@ func (h *OrderHandler) GetAudit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, entries)
 }
 
+func (h *OrderHandler) loadCustomFieldsConfig(ctx context.Context, tenantID uuid.UUID) model.CustomFieldsConfig {
+	var config model.CustomFieldsConfig
+	_ = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+		settings, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
+		if err != nil {
+			return err
+		}
+		if settings != nil {
+			var allSettings map[string]json.RawMessage
+			if err := json.Unmarshal(settings, &allSettings); err == nil {
+				if raw, ok := allSettings["custom_fields"]; ok {
+					json.Unmarshal(raw, &config)
+				}
+			}
+		}
+		return nil
+	})
+	if config.Fields == nil {
+		config.Fields = []model.CustomFieldDef{}
+	}
+	return config
+}
+
 func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -246,6 +279,9 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	if ps := r.URL.Query().Get("payment_status"); ps != "" {
 		filter.PaymentStatus = &ps
 	}
+	if t := r.URL.Query().Get("tag"); t != "" {
+		filter.Tag = &t
+	}
 
 	resp, err := h.orderService.List(r.Context(), tenantID, filter)
 	if err != nil {
@@ -253,6 +289,9 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to export orders")
 		return
 	}
+
+	// Load custom field definitions
+	cfConfig := h.loadCustomFieldsConfig(r.Context(), tenantID)
 
 	filename := fmt.Sprintf("zamowienia-%s.csv", time.Now().Format("2006-01-02"))
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
@@ -264,11 +303,15 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
-	writer.Write([]string{
+	header := []string{
 		"ID", "Klient", "Email", "Telefon", "Zrodlo", "Status",
 		"Status platnosci", "Metoda platnosci", "Kwota", "Waluta",
-		"Data zamowienia", "Data oplacenia",
-	})
+		"Data zamowienia", "Data oplacenia", "Tagi",
+	}
+	for _, f := range cfConfig.Fields {
+		header = append(header, f.Label)
+	}
+	writer.Write(header)
 
 	for _, o := range resp.Items {
 		email := ""
@@ -292,7 +335,7 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			paidAt = o.PaidAt.Format("2006-01-02 15:04")
 		}
 
-		writer.Write([]string{
+		row := []string{
 			o.ID.String(),
 			o.CustomerName,
 			email,
@@ -305,6 +348,33 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			o.Currency,
 			orderedAt,
 			paidAt,
-		})
+			strings.Join(o.Tags, ";"),
+		}
+
+		// Parse order metadata and append custom field values
+		var metadata map[string]interface{}
+		if o.Metadata != nil {
+			json.Unmarshal(o.Metadata, &metadata)
+		}
+		for _, f := range cfConfig.Fields {
+			val := ""
+			if metadata != nil {
+				if v, ok := metadata[f.Key]; ok && v != nil {
+					switch f.Type {
+					case "checkbox":
+						if b, ok := v.(bool); ok && b {
+							val = "Tak"
+						} else {
+							val = "Nie"
+						}
+					default:
+						val = fmt.Sprintf("%v", v)
+					}
+				}
+			}
+			row = append(row, val)
+		}
+
+		writer.Write(row)
 	}
 }
