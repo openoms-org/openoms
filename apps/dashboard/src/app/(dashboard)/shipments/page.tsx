@@ -1,0 +1,135 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/shared/data-table";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { ShipmentFilters } from "@/components/shipments/shipment-filters";
+import { useShipments } from "@/hooks/use-shipments";
+import { SHIPMENT_STATUSES } from "@/lib/constants";
+import { formatDate } from "@/lib/utils";
+import type { Shipment } from "@/types/api";
+
+const DEFAULT_LIMIT = 20;
+
+export default function ShipmentsPage() {
+  const [filters, setFilters] = useState<{
+    status?: string;
+    provider?: string;
+  }>({});
+  const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
+
+  const { data, isLoading } = useShipments({
+    ...pagination,
+    ...filters,
+  });
+
+  const columns = [
+    {
+      header: "ID",
+      accessorKey: "id" as const,
+      cell: (shipment: Shipment) => (
+        <Link
+          href={`/shipments/${shipment.id}`}
+          className="font-mono text-sm text-primary hover:underline"
+        >
+          {shipment.id.slice(0, 8)}...
+        </Link>
+      ),
+    },
+    {
+      header: "Zamowienie",
+      accessorKey: "order_id" as const,
+      cell: (shipment: Shipment) => (
+        <Link
+          href={`/orders/${shipment.order_id}`}
+          className="font-mono text-sm text-primary hover:underline"
+        >
+          {shipment.order_id.slice(0, 8)}...
+        </Link>
+      ),
+    },
+    {
+      header: "Dostawca",
+      accessorKey: "provider" as const,
+      cell: (shipment: Shipment) => (
+        <span className="uppercase text-sm">{shipment.provider}</span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "status" as const,
+      cell: (shipment: Shipment) => (
+        <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
+      ),
+    },
+    {
+      header: "Numer sledzenia",
+      accessorKey: "tracking_number" as const,
+      cell: (shipment: Shipment) => (
+        <span className="text-sm">
+          {shipment.tracking_number ?? "-"}
+        </span>
+      ),
+    },
+    {
+      header: "Data utworzenia",
+      accessorKey: "created_at" as const,
+      cell: (shipment: Shipment) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDate(shipment.created_at)}
+        </span>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Przesylki</h1>
+          <p className="text-muted-foreground">
+            Zarzadzaj przesylkami zamowien
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/shipments/new">
+            <Plus className="h-4 w-4" />
+            Nowa przesylka
+          </Link>
+        </Button>
+      </div>
+
+      <ShipmentFilters
+        filters={filters}
+        onFilterChange={(newFilters) => {
+          setFilters(newFilters);
+          setPagination((prev) => ({ ...prev, offset: 0 }));
+        }}
+      />
+
+      <DataTable
+        columns={columns}
+        data={data?.items ?? []}
+        isLoading={isLoading}
+      />
+
+      {data && (
+        <DataTablePagination
+          total={data.total}
+          limit={data.limit}
+          offset={data.offset}
+          onPageChange={(offset) =>
+            setPagination((prev) => ({ ...prev, offset }))
+          }
+          onPageSizeChange={(limit) =>
+            setPagination({ limit, offset: 0 })
+          }
+        />
+      )}
+    </div>
+  );
+}

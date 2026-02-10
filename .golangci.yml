@@ -1,0 +1,29 @@
+version: "2"
+
+run:
+  go: "1.24"
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - revive
+    - gocritic
+    - modernize
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+    - unparam
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gocritic

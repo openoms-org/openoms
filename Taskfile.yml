@@ -1,0 +1,89 @@
+# OpenOMS — Task runner (https://taskfile.dev)
+version: "3"
+
+vars:
+  COMPOSE_FILE: docker-compose.dev.yml
+  POSTGRES_CONTAINER: openoms-postgres
+  MIGRATE_DSN: "postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable"
+
+tasks:
+  up:
+    desc: Start development containers
+    cmds:
+      - docker-compose -f {{.COMPOSE_FILE}} up -d
+      - echo "Waiting for PostgreSQL to be ready..."
+      - >
+        until docker exec {{.POSTGRES_CONTAINER}} pg_isready -U openoms > /dev/null 2>&1; do
+          sleep 1;
+        done
+      - echo "PostgreSQL is ready."
+
+  down:
+    desc: Stop development containers
+    cmds:
+      - docker-compose -f {{.COMPOSE_FILE}} down
+
+  clean:
+    desc: Stop containers and remove volumes
+    cmds:
+      - docker-compose -f {{.COMPOSE_FILE}} down -v
+
+  migrate:
+    desc: Run database migrations up
+    cmds:
+      - golang-migrate -path apps/api-server/migrations -database "{{.MIGRATE_DSN}}" up
+
+  migrate-down:
+    desc: Rollback the last migration
+    cmds:
+      - golang-migrate -path apps/api-server/migrations -database "{{.MIGRATE_DSN}}" down 1
+
+  seed:
+    desc: Load seed data into the database
+    cmds:
+      - docker cp apps/api-server/migrations/000002_seed_data.up.sql {{.POSTGRES_CONTAINER}}:/tmp/seed.sql
+      - docker exec {{.POSTGRES_CONTAINER}} psql -U openoms -d openoms -f /tmp/seed.sql
+
+  run:
+    desc: Run the API server
+    dir: apps/api-server
+    cmds:
+      - go run ./cmd/server
+
+  test:
+    desc: Run all tests with race detection and coverage
+    cmds:
+      - cd apps/api-server && go test -race -cover ./...
+      - cd packages/allegro-go-sdk && go test ./...
+      - cd packages/inpost-go-sdk && go test ./...
+      - cd packages/order-engine && go test ./...
+
+  lint:
+    desc: Run linter on all modules
+    cmds:
+      - cd apps/api-server && golangci-lint run ./...
+      - cd packages/allegro-go-sdk && golangci-lint run ./...
+      - cd packages/inpost-go-sdk && golangci-lint run ./...
+      - cd packages/order-engine && golangci-lint run ./...
+
+  fmt:
+    desc: Format all Go source files
+    cmds:
+      - gofmt -w -s .
+
+  dashboard:
+    desc: Start the dashboard dev server
+    dir: apps/dashboard
+    cmds:
+      - npm run dev
+
+  dev:
+    desc: Start API server + dashboard in parallel
+    deps: [run, dashboard]
+
+  setup:
+    desc: Full development setup (containers + migrations + seed)
+    cmds:
+      - task: up
+      - task: migrate
+      - task: seed

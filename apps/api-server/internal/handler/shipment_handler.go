@@ -1,0 +1,238 @@
+package handler
+
+import (
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	engine "github.com/openoms-org/openoms/packages/order-engine"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+)
+
+type ShipmentHandler struct {
+	shipmentService *service.ShipmentService
+	labelService    *service.LabelService
+}
+
+func NewShipmentHandler(shipmentService *service.ShipmentService, labelService *service.LabelService) *ShipmentHandler {
+	return &ShipmentHandler{shipmentService: shipmentService, labelService: labelService}
+}
+
+func (h *ShipmentHandler) List(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	pagination := model.ParsePagination(r)
+
+	filter := model.ShipmentListFilter{
+		PaginationParams: pagination,
+	}
+	if s := r.URL.Query().Get("status"); s != "" {
+		filter.Status = &s
+	}
+	if s := r.URL.Query().Get("provider"); s != "" {
+		filter.Provider = &s
+	}
+	if s := r.URL.Query().Get("order_id"); s != "" {
+		id, err := uuid.Parse(s)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid order_id filter")
+			return
+		}
+		filter.OrderID = &id
+	}
+
+	resp, err := h.shipmentService.List(r.Context(), tenantID, filter)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list shipments")
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *ShipmentHandler) Get(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	shipmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid shipment ID")
+		return
+	}
+
+	shipment, err := h.shipmentService.Get(r.Context(), tenantID, shipmentID)
+	if err != nil {
+		if errors.Is(err, service.ErrShipmentNotFound) {
+			writeError(w, http.StatusNotFound, "shipment not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to get shipment")
+		return
+	}
+	writeJSON(w, http.StatusOK, shipment)
+}
+
+func (h *ShipmentHandler) Create(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var req model.CreateShipmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	shipment, err := h.shipmentService.Create(r.Context(), tenantID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrOrderNotFoundForShipment):
+			writeError(w, http.StatusUnprocessableEntity, "order not found for shipment")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to create shipment")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, shipment)
+}
+
+func (h *ShipmentHandler) Update(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	shipmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid shipment ID")
+		return
+	}
+
+	var req model.UpdateShipmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	shipment, err := h.shipmentService.Update(r.Context(), tenantID, shipmentID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShipmentNotFound):
+			writeError(w, http.StatusNotFound, "shipment not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to update shipment")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, shipment)
+}
+
+func (h *ShipmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	shipmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid shipment ID")
+		return
+	}
+
+	err = h.shipmentService.Delete(r.Context(), tenantID, shipmentID, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShipmentNotFound):
+			writeError(w, http.StatusNotFound, "shipment not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to delete shipment")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"message": "shipment deleted"})
+}
+
+func (h *ShipmentHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	shipmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid shipment ID")
+		return
+	}
+
+	var req model.ShipmentStatusTransitionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	shipment, err := h.shipmentService.TransitionStatus(r.Context(), tenantID, shipmentID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShipmentNotFound):
+			writeError(w, http.StatusNotFound, "shipment not found")
+		case errors.Is(err, engine.ErrInvalidTransition), errors.Is(err, engine.ErrUnknownStatus):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		case errors.Is(err, service.ErrOrderNotFoundForShipment):
+			writeError(w, http.StatusUnprocessableEntity, "order not found for shipment")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to transition shipment status")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, shipment)
+}
+
+func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	shipmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid shipment ID")
+		return
+	}
+
+	var req model.GenerateLabelRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	shipment, err := h.labelService.GenerateLabel(r.Context(), tenantID, shipmentID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShipmentNotFound):
+			writeError(w, http.StatusNotFound, "shipment not found")
+		case errors.Is(err, service.ErrShipmentNotInPost):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		case errors.Is(err, service.ErrShipmentNotCreated):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		case errors.Is(err, service.ErrNoInPostIntegration):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		case errors.Is(err, service.ErrNoCustomerContact):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				slog.Error("label generation failed", "error", err)
+				writeError(w, http.StatusInternalServerError, "failed to generate label")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, shipment)
+}

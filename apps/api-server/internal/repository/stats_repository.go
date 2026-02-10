@@ -1,0 +1,114 @@
+package repository
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+)
+
+type StatsRepository struct{}
+
+func NewStatsRepository() *StatsRepository {
+	return &StatsRepository{}
+}
+
+func (r *StatsRepository) GetOrderCountByStatus(ctx context.Context, tx pgx.Tx) (map[string]int, error) {
+	rows, err := tx.Query(ctx, `SELECT status, COUNT(*) FROM orders GROUP BY status`)
+	if err != nil {
+		return nil, fmt.Errorf("count by status: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]int)
+	for rows.Next() {
+		var status string
+		var count int
+		if err := rows.Scan(&status, &count); err != nil {
+			return nil, fmt.Errorf("scan count by status: %w", err)
+		}
+		result[status] = count
+	}
+	return result, rows.Err()
+}
+
+func (r *StatsRepository) GetOrderCountBySource(ctx context.Context, tx pgx.Tx) (map[string]int, error) {
+	rows, err := tx.Query(ctx, `SELECT source, COUNT(*) FROM orders GROUP BY source`)
+	if err != nil {
+		return nil, fmt.Errorf("count by source: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]int)
+	for rows.Next() {
+		var source string
+		var count int
+		if err := rows.Scan(&source, &count); err != nil {
+			return nil, fmt.Errorf("scan count by source: %w", err)
+		}
+		result[source] = count
+	}
+	return result, rows.Err()
+}
+
+func (r *StatsRepository) GetTotalRevenue(ctx context.Context, tx pgx.Tx) (float64, error) {
+	var total float64
+	err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM orders`).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("total revenue: %w", err)
+	}
+	return total, nil
+}
+
+func (r *StatsRepository) GetDailyRevenue(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyRevenue, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT DATE(created_at) as date, SUM(total_amount) as amount, COUNT(*) as count
+		 FROM orders
+		 WHERE created_at >= NOW() - INTERVAL '1 day' * $1
+		 GROUP BY DATE(created_at)
+		 ORDER BY date ASC`, days)
+	if err != nil {
+		return nil, fmt.Errorf("daily revenue: %w", err)
+	}
+	defer rows.Close()
+
+	result := []model.DailyRevenue{}
+	for rows.Next() {
+		var dr model.DailyRevenue
+		var date time.Time
+		if err := rows.Scan(&date, &dr.Amount, &dr.Count); err != nil {
+			return nil, fmt.Errorf("scan daily revenue: %w", err)
+		}
+		dr.Date = date.Format("2006-01-02")
+		result = append(result, dr)
+	}
+	return result, rows.Err()
+}
+
+func (r *StatsRepository) GetRecentOrders(ctx context.Context, tx pgx.Tx, limit int) ([]model.OrderSummary, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT id, customer_name, status, source, total_amount, currency, created_at
+		 FROM orders
+		 ORDER BY created_at DESC
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("recent orders: %w", err)
+	}
+	defer rows.Close()
+
+	result := []model.OrderSummary{}
+	for rows.Next() {
+		var os model.OrderSummary
+		var id uuid.UUID
+		if err := rows.Scan(&id, &os.CustomerName, &os.Status, &os.Source, &os.TotalAmount, &os.Currency, &os.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan recent orders: %w", err)
+		}
+		os.ID = id.String()
+		result = append(result, os)
+	}
+	return result, rows.Err()
+}
