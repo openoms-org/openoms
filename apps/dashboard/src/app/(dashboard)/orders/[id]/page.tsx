@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
+import { Package, RotateCcw } from "lucide-react";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus } from "@/hooks/use-orders";
+import { useShipments } from "@/hooks/use-shipments";
+import { useReturns } from "@/hooks/use-returns";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { OrderForm } from "@/components/orders/order-form";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
@@ -29,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
+import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -50,14 +54,17 @@ export default function OrderDetailPage() {
   const deleteOrder = useDeleteOrder();
   const transitionStatus = useTransitionOrderStatus(params.id);
 
+  const { data: shipmentsData } = useShipments({ order_id: params.id });
+  const { data: returnsData } = useReturns({ order_id: params.id });
+
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
       await updateOrder.mutateAsync(data);
-      toast.success("Zamowienie zostalo zaktualizowane");
+      toast.success("Zamówienie zostało zaktualizowane");
       setIsEditing(false);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas aktualizacji zamowienia"
+        error instanceof Error ? error.message : "Błąd podczas aktualizacji zamówienia"
       );
     }
   };
@@ -65,11 +72,11 @@ export default function OrderDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteOrder.mutateAsync(params.id);
-      toast.success("Zamowienie zostalo usuniete");
+      toast.success("Zamówienie zostało usunięte");
       router.push("/orders");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas usuwania zamowienia"
+        error instanceof Error ? error.message : "Błąd podczas usuwania zamówienia"
       );
     }
   };
@@ -77,10 +84,10 @@ export default function OrderDetailPage() {
   const handleTransition = async (newStatus: string, force?: boolean) => {
     try {
       await transitionStatus.mutateAsync({ status: newStatus, force });
-      toast.success("Status zamowienia zostal zmieniony");
+      toast.success("Status zamówienia został zmieniony");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas zmiany statusu"
+        error instanceof Error ? error.message : "Błąd podczas zmiany statusu"
       );
     }
   };
@@ -101,9 +108,9 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono zamowienia</p>
+        <p className="text-muted-foreground">Nie znaleziono zamówienia</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/orders")}>
-          Wróc do listy
+          Wróć do listy
         </Button>
       </div>
     );
@@ -113,9 +120,9 @@ export default function OrderDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Edycja zamowienia</h1>
+          <h1 className="text-2xl font-bold">Edycja zamówienia</h1>
           <p className="text-muted-foreground mt-1">
-            Zamowienie {order.id.slice(0, 8)}
+            Zamówienie {order.id.slice(0, 8)}
           </p>
         </div>
         <div className="max-w-2xl">
@@ -135,18 +142,30 @@ export default function OrderDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">
-            Zamowienie {order.id.slice(0, 8)}
+            Zamówienie {order.id.slice(0, 8)}
           </h1>
           <p className="text-muted-foreground mt-1">
             Utworzone {formatDate(order.created_at)}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/shipments/new?order_id=${params.id}`}>
+              <Package className="mr-2 h-4 w-4" />
+              Utwórz przesyłkę
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={`/returns/new?order_id=${params.id}`}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Zgłoś zwrot
+            </Link>
+          </Button>
           <Button variant="outline" onClick={() => setIsEditing(true)}>
             Edytuj
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            Usun
+            Usuń
           </Button>
         </div>
       </div>
@@ -155,7 +174,7 @@ export default function OrderDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Dane zamowienia</CardTitle>
+              <CardTitle>Dane zamówienia</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -166,7 +185,7 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Zrodlo</p>
+                  <p className="text-sm text-muted-foreground">Źródło</p>
                   <p className="mt-1 font-medium">{order.source}</p>
                 </div>
                 <div>
@@ -180,26 +199,26 @@ export default function OrderDetailPage() {
                   <p className="mt-1 font-medium">{order.currency}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Platnosc</p>
+                  <p className="text-sm text-muted-foreground">Płatność</p>
                   <div className="mt-1">
                     <StatusBadge status={order.payment_status} statusMap={PAYMENT_STATUSES} />
                   </div>
                 </div>
                 {order.payment_method && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Metoda platnosci</p>
+                    <p className="text-sm text-muted-foreground">Metoda płatności</p>
                     <p className="mt-1 font-medium">{order.payment_method}</p>
                   </div>
                 )}
                 {order.paid_at && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Data oplacenia</p>
+                    <p className="text-sm text-muted-foreground">Data opłacenia</p>
                     <p className="mt-1 font-medium">{formatDate(order.paid_at)}</p>
                   </div>
                 )}
                 {order.external_id && (
                   <div>
-                    <p className="text-sm text-muted-foreground">ID zewnetrzne</p>
+                    <p className="text-sm text-muted-foreground">ID zewnętrzne</p>
                     <p className="mt-1 font-mono text-sm">{order.external_id}</p>
                   </div>
                 )}
@@ -276,7 +295,7 @@ export default function OrderDetailPage() {
           {order.items && order.items.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Pozycje zamowienia</CardTitle>
+                <CardTitle>Pozycje zamówienia</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -284,9 +303,9 @@ export default function OrderDetailPage() {
                     <TableRow>
                       <TableHead>Produkt</TableHead>
                       <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Ilosc</TableHead>
+                      <TableHead className="text-right">Ilość</TableHead>
                       <TableHead className="text-right">Cena</TableHead>
-                      <TableHead className="text-right">Wartosc</TableHead>
+                      <TableHead className="text-right">Wartość</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -333,6 +352,82 @@ export default function OrderDetailPage() {
               />
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Przesyłki</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {shipmentsData?.items && shipmentsData.items.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Numer śledzenia</TableHead>
+                      <TableHead>Dostawca</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Utworzono</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {shipmentsData.items.map((shipment) => (
+                      <TableRow key={shipment.id}>
+                        <TableCell>
+                          <Link href={`/shipments/${shipment.id}`} className="font-medium text-primary hover:underline">
+                            {shipment.tracking_number || shipment.id.slice(0, 8)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{shipment.provider}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
+                        </TableCell>
+                        <TableCell>{formatDate(shipment.created_at)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground">Brak przesyłek dla tego zamówienia.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Zwroty</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {returnsData?.items && returnsData.items.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Powód</TableHead>
+                      <TableHead>Kwota zwrotu</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {returnsData.items.map((ret) => (
+                      <TableRow key={ret.id}>
+                        <TableCell>
+                          <Link href={`/returns/${ret.id}`} className="font-medium text-primary hover:underline">
+                            {ret.id.slice(0, 8)}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={ret.status} statusMap={RETURN_STATUSES} />
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">{ret.reason}</TableCell>
+                        <TableCell>{formatCurrency(ret.refund_amount)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground">Brak zwrotów dla tego zamówienia.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -367,9 +462,9 @@ export default function OrderDetailPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Usuwanie zamowienia</DialogTitle>
+            <DialogTitle>Usuwanie zamówienia</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz usunac to zamowienie? Ta operacja jest nieodwracalna.
+              Czy na pewno chcesz usunąć to zamówienie? Ta operacja jest nieodwracalna.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -381,7 +476,7 @@ export default function OrderDetailPage() {
               onClick={handleDelete}
               disabled={deleteOrder.isPending}
             >
-              {deleteOrder.isPending ? "Usuwanie..." : "Usun zamowienie"}
+              {deleteOrder.isPending ? "Usuwanie..." : "Usuń zamówienie"}
             </Button>
           </DialogFooter>
         </DialogContent>

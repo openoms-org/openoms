@@ -33,8 +33,8 @@ import { RETURN_STATUSES, RETURN_TRANSITIONS } from "@/lib/constants";
 import { formatDate, formatCurrency } from "@/lib/utils";
 
 const editSchema = z.object({
-  reason: z.string().min(1, "Powod jest wymagany"),
-  refund_amount: z.number().min(0, "Kwota musi byc dodatnia"),
+  reason: z.string().min(1, "Powód jest wymagany"),
+  refund_amount: z.number().min(0, "Kwota musi być dodatnia"),
   notes: z.string().optional(),
 });
 
@@ -94,11 +94,11 @@ export default function ReturnDetailPage() {
         refund_amount: data.refund_amount,
         notes: data.notes || undefined,
       });
-      toast.success("Zwrot zostal zaktualizowany");
+      toast.success("Zwrot został zaktualizowany");
       setIsEditing(false);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas aktualizacji zwrotu"
+        error instanceof Error ? error.message : "Błąd podczas aktualizacji zwrotu"
       );
     }
   };
@@ -106,11 +106,11 @@ export default function ReturnDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteReturn.mutateAsync(params.id);
-      toast.success("Zwrot zostal usuniety");
+      toast.success("Zwrot został usunięty");
       router.push("/returns");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas usuwania zwrotu"
+        error instanceof Error ? error.message : "Błąd podczas usuwania zwrotu"
       );
     }
   };
@@ -118,10 +118,10 @@ export default function ReturnDetailPage() {
   const handleTransition = async (newStatus: string) => {
     try {
       await transitionStatus.mutateAsync({ status: newStatus });
-      toast.success("Status zwrotu zostal zmieniony");
+      toast.success("Status zwrotu został zmieniony");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas zmiany statusu"
+        error instanceof Error ? error.message : "Błąd podczas zmiany statusu"
       );
     }
   };
@@ -144,7 +144,7 @@ export default function ReturnDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">Nie znaleziono zwrotu</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/returns")}>
-          Wroc do listy
+          Wróć do listy
         </Button>
       </div>
     );
@@ -184,7 +184,7 @@ export default function ReturnDetailPage() {
           <CardContent>
             <form onSubmit={handleSubmit(handleUpdate)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="reason">Powod</Label>
+                <Label htmlFor="reason">Powód</Label>
                 <Textarea
                   id="reason"
                   {...register("reason")}
@@ -272,7 +272,7 @@ export default function ReturnDetailPage() {
                 <Separator />
 
                 <div>
-                  <p className="text-sm text-muted-foreground">Powod</p>
+                  <p className="text-sm text-muted-foreground">Powód</p>
                   <p className="mt-1 text-sm">{returnData.reason}</p>
                 </div>
 
@@ -318,7 +318,7 @@ export default function ReturnDetailPage() {
           <DialogHeader>
             <DialogTitle>Usuwanie zwrotu</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz usunac ten zwrot? Ta operacja jest nieodwracalna.
+              Czy na pewno chcesz usunąć ten zwrot? Ta operacja jest nieodwracalna.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -330,7 +330,7 @@ export default function ReturnDetailPage() {
               onClick={handleDelete}
               disabled={deleteReturn.isPending}
             >
-              {deleteReturn.isPending ? "Usuwanie..." : "Usun zwrot"}
+              {deleteReturn.isPending ? "Usuwanie..." : "Usuń zwrot"}
             </Button>
           </DialogFooter>
         </DialogContent>

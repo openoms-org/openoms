@@ -135,3 +135,36 @@ jobs:
       - name: Vet order-engine
         working-directory: packages/order-engine
         run: go vet ./...
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/dashboard
+        run: npm ci
+
+      - name: Build
+        working-directory: apps/dashboard
+        run: npx next build
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [lint, test, vet, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API server image
+        run: docker build -f apps/api-server/Dockerfile -t openoms-api:ci .
+
+      - name: Build Dashboard image
+        run: docker build -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard

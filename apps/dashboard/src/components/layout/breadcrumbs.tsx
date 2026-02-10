@@ -5,12 +5,22 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 
 const segmentLabels: Record<string, string> = {
-  orders: "Zamówienia",
+  orders: "Zamowienia",
   shipments: "Przesyłki",
   products: "Produkty",
   integrations: "Integracje",
   settings: "Ustawienia",
-  users: "Użytkownicy",
+  users: "Uzytkownicy",
+  returns: "Zwroty",
+  audit: "Audyt",
+  company: "Firma",
+  email: "E-mail",
+  "order-statuses": "Statusy",
+  "custom-fields": "Pola",
+  "product-categories": "Kategorie",
+  webhooks: "Webhooki",
+  allegro: "Allegro",
+  listings: "Oferty marketplace",
   new: "Nowe",
 };
 

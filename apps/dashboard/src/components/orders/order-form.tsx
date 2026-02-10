@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +19,39 @@ import {
 } from "@/components/ui/select";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { TagInput } from "@/components/shared/tag-input";
+import { PAYMENT_METHODS } from "@/lib/constants";
+import { formatCurrency } from "@/lib/utils";
 import type { Order, CreateOrderRequest, CustomFieldDef } from "@/types/api";
 
+interface OrderItemRow {
+  name: string;
+  sku: string;
+  quantity: number;
+  price: number;
+}
+
+interface AddressFields {
+  name: string;
+  street: string;
+  city: string;
+  postal_code: string;
+  country: string;
+}
+
+const emptyAddress: AddressFields = {
+  name: "",
+  street: "",
+  city: "",
+  postal_code: "",
+  country: "PL",
+};
+
 const orderSchema = z.object({
-  source: z.string().min(1, "Zrodlo jest wymagane"),
+  source: z.string().min(1, "Źródło jest wymagane"),
   customer_name: z.string().min(1, "Nazwa klienta jest wymagana"),
-  customer_email: z.string().email("Nieprawidlowy adres email").optional().or(z.literal("")),
+  customer_email: z.string().email("Nieprawidłowy adres email").optional().or(z.literal("")),
   customer_phone: z.string().optional(),
-  total_amount: z.number().min(0, "Kwota musi byc >= 0"),
+  total_amount: z.number().min(0, "Kwota musi być >= 0"),
   currency: z.string().min(1, "Waluta jest wymagana"),
   notes: z.string().optional(),
 });
@@ -39,10 +65,48 @@ interface OrderFormProps {
   onCancel?: () => void;
 }
 
+function parseAddress(addr: Record<string, unknown> | undefined): AddressFields {
+  if (!addr) return { ...emptyAddress };
+  return {
+    name: (addr.name as string) || "",
+    street: (addr.street as string) || "",
+    city: (addr.city as string) || "",
+    postal_code: (addr.postal_code as string) || "",
+    country: (addr.country as string) || "PL",
+  };
+}
+
+function parseItems(items: Order["items"]): OrderItemRow[] {
+  if (!items || items.length === 0) return [];
+  return items.map((item) => ({
+    name: item.name || "",
+    sku: item.sku || "",
+    quantity: item.quantity || 1,
+    price: item.price || 0,
+  }));
+}
+
 export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: OrderFormProps) {
   const { data: customFieldsConfig } = useCustomFields();
   const [customValues, setCustomValues] = useState<Record<string, unknown>>({});
   const [tags, setTags] = useState<string[]>(order?.tags || []);
+
+  const [orderItems, setOrderItems] = useState<OrderItemRow[]>(
+    parseItems(order?.items)
+  );
+
+  const [shippingAddress, setShippingAddress] = useState<AddressFields>(
+    parseAddress(order?.shipping_address)
+  );
+  const [billingAddress, setBillingAddress] = useState<AddressFields>(
+    parseAddress(order?.billing_address)
+  );
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(
+    !order?.billing_address || Object.keys(order.billing_address).length === 0
+  );
+
+  const [paymentStatus, setPaymentStatus] = useState(order?.payment_status || "pending");
+  const [paymentMethod, setPaymentMethod] = useState(order?.payment_method || "");
 
   useEffect(() => {
     if (order?.metadata && typeof order.metadata === "object") {
@@ -70,11 +134,49 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
   });
 
   const currentSource = watch("source");
+  const currency = watch("currency") || "PLN";
 
   const customFields = customFieldsConfig?.fields || [];
 
   const handleCustomFieldChange = (key: string, value: unknown) => {
     setCustomValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Order items
+  const addItem = () => {
+    setOrderItems([...orderItems, { name: "", sku: "", quantity: 1, price: 0 }]);
+  };
+
+  const removeItem = (index: number) => {
+    setOrderItems(orderItems.filter((_, i) => i !== index));
+  };
+
+  const updateItem = (index: number, field: keyof OrderItemRow, value: string | number) => {
+    setOrderItems(
+      orderItems.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const itemsTotal = orderItems.reduce(
+    (sum, item) => sum + item.quantity * item.price,
+    0
+  );
+
+  const recalcTotal = () => {
+    if (orderItems.length > 0) {
+      setValue("total_amount", Math.round(itemsTotal * 100) / 100);
+    }
+  };
+
+  // Shipping address handlers
+  const updateShipping = (field: keyof AddressFields, value: string) => {
+    setShippingAddress((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateBilling = (field: keyof AddressFields, value: string) => {
+    setBillingAddress((prev) => ({ ...prev, [field]: value }));
   };
 
   const renderCustomField = (field: CustomFieldDef) => {
@@ -154,6 +256,11 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       }
     }
 
+    const hasShipping = shippingAddress.street.trim() !== "";
+    const hasBilling = !billingSameAsShipping && billingAddress.street.trim() !== "";
+
+    const items = orderItems.filter((item) => item.name.trim() !== "");
+
     onSubmit({
       source: data.source,
       customer_name: data.customer_name,
@@ -164,23 +271,29 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       notes: data.notes || undefined,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       tags: tags.length > 0 ? tags : undefined,
+      items: items.length > 0 ? (items as unknown as Record<string, unknown>) : undefined,
+      shipping_address: hasShipping ? (shippingAddress as unknown as Record<string, unknown>) : undefined,
+      billing_address: hasBilling ? (billingAddress as unknown as Record<string, unknown>) : undefined,
+      payment_status: paymentStatus || undefined,
+      payment_method: paymentMethod || undefined,
     });
   };
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      {/* Basic info */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="source">Zrodlo</Label>
+          <Label htmlFor="source">Źródło</Label>
           <Select
             value={currentSource}
             onValueChange={(value) => setValue("source", value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Wybierz zrodlo" />
+              <SelectValue placeholder="Wybierz źródło" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="manual">Reczne</SelectItem>
+              <SelectItem value="manual">Ręczne</SelectItem>
               <SelectItem value="allegro">Allegro</SelectItem>
               <SelectItem value="woocommerce">WooCommerce</SelectItem>
             </SelectContent>
@@ -228,21 +341,6 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="total_amount">Kwota</Label>
-          <Input
-            id="total_amount"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            {...register("total_amount", { valueAsNumber: true })}
-          />
-          {errors.total_amount && (
-            <p className="text-sm text-destructive">{errors.total_amount.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
           <Label htmlFor="currency">Waluta</Label>
           <Input
             id="currency"
@@ -255,11 +353,260 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         </div>
       </div>
 
+      {/* Order items */}
+      <Separator />
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium">Pozycje zamówienia</h3>
+          <Button type="button" variant="outline" size="sm" onClick={addItem}>
+            <Plus className="h-4 w-4 mr-1" />
+            Dodaj pozycję
+          </Button>
+        </div>
+        {orderItems.length > 0 ? (
+          <div className="space-y-3">
+            {orderItems.map((item, index) => (
+              <div key={index} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-end">
+                <div className="space-y-1">
+                  {index === 0 && <Label className="text-xs text-muted-foreground">Nazwa</Label>}
+                  <Input
+                    placeholder="Nazwa produktu"
+                    value={item.name}
+                    onChange={(e) => updateItem(index, "name", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1 w-28">
+                  {index === 0 && <Label className="text-xs text-muted-foreground">SKU</Label>}
+                  <Input
+                    placeholder="SKU"
+                    value={item.sku}
+                    onChange={(e) => updateItem(index, "sku", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1 w-20">
+                  {index === 0 && <Label className="text-xs text-muted-foreground">Ilość</Label>}
+                  <Input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="space-y-1 w-28">
+                  {index === 0 && <Label className="text-xs text-muted-foreground">Cena</Label>}
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.price}
+                    onChange={(e) => updateItem(index, "price", parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  {index === 0 && <Label className="text-xs text-muted-foreground invisible">X</Label>}
+                  <span className="text-sm text-muted-foreground w-24 text-right">
+                    {formatCurrency(item.quantity * item.price, currency)}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => removeItem(index)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-end gap-4 pt-2 border-t">
+              <span className="text-sm font-medium">
+                Suma pozycji: {formatCurrency(itemsTotal, currency)}
+              </span>
+              <Button type="button" variant="outline" size="sm" onClick={recalcTotal}>
+                Przelicz kwotę
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Brak pozycji. Kliknij &quot;Dodaj pozycję&quot; aby dodać produkty.
+          </p>
+        )}
+      </div>
+
+      {/* Total amount */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="total_amount">Kwota całkowita</Label>
+          <Input
+            id="total_amount"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            {...register("total_amount", { valueAsNumber: true })}
+          />
+          {errors.total_amount && (
+            <p className="text-sm text-destructive">{errors.total_amount.message}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Payment */}
+      <Separator />
+      <div>
+        <h3 className="text-sm font-medium mb-4">Płatność</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Status płatności</Label>
+            <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wybierz status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Oczekuje</SelectItem>
+                <SelectItem value="paid">Opłacone</SelectItem>
+                <SelectItem value="refunded">Zwrócone</SelectItem>
+                <SelectItem value="failed">Nieudane</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Metoda płatności</Label>
+            <Select value={paymentMethod || "__none__"} onValueChange={(v) => setPaymentMethod(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wybierz metodę" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nie wybrano</SelectItem>
+                {PAYMENT_METHODS.map((method) => (
+                  <SelectItem key={method} value={method}>
+                    {method}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Shipping address */}
+      <Separator />
+      <div>
+        <h3 className="text-sm font-medium mb-4">Adres dostawy</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Imię i nazwisko</Label>
+            <Input
+              placeholder="Jan Kowalski"
+              value={shippingAddress.name}
+              onChange={(e) => updateShipping("name", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Ulica</Label>
+            <Input
+              placeholder="ul. Przykładowa 1"
+              value={shippingAddress.street}
+              onChange={(e) => updateShipping("street", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Miasto</Label>
+            <Input
+              placeholder="Warszawa"
+              value={shippingAddress.city}
+              onChange={(e) => updateShipping("city", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Kod pocztowy</Label>
+            <Input
+              placeholder="00-001"
+              value={shippingAddress.postal_code}
+              onChange={(e) => updateShipping("postal_code", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Kraj</Label>
+            <Input
+              placeholder="PL"
+              value={shippingAddress.country}
+              onChange={(e) => updateShipping("country", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Billing address */}
+      <Separator />
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            id="billing_same"
+            type="checkbox"
+            checked={billingSameAsShipping}
+            onChange={(e) => setBillingSameAsShipping(e.target.checked)}
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+          />
+          <Label htmlFor="billing_same" className="cursor-pointer">
+            Adres rozliczeniowy taki sam jak adres dostawy
+          </Label>
+        </div>
+        {!billingSameAsShipping && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Imię i nazwisko / Firma</Label>
+              <Input
+                placeholder="Jan Kowalski"
+                value={billingAddress.name}
+                onChange={(e) => updateBilling("name", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Ulica</Label>
+              <Input
+                placeholder="ul. Przykładowa 1"
+                value={billingAddress.street}
+                onChange={(e) => updateBilling("street", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Miasto</Label>
+              <Input
+                placeholder="Warszawa"
+                value={billingAddress.city}
+                onChange={(e) => updateBilling("city", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Kod pocztowy</Label>
+              <Input
+                placeholder="00-001"
+                value={billingAddress.postal_code}
+                onChange={(e) => updateBilling("postal_code", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Kraj</Label>
+              <Input
+                placeholder="PL"
+                value={billingAddress.country}
+                onChange={(e) => updateBilling("country", e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Notes */}
       <div className="space-y-2">
         <Label htmlFor="notes">Notatki</Label>
         <Textarea
           id="notes"
-          placeholder="Dodatkowe uwagi do zamowienia..."
+          placeholder="Dodatkowe uwagi do zamówienia..."
           rows={3}
           {...register("notes")}
         />
@@ -268,6 +615,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         )}
       </div>
 
+      {/* Custom fields */}
       {customFields.length > 0 && (
         <>
           <Separator />
@@ -290,18 +638,20 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         </>
       )}
 
+      {/* Tags */}
       <div className="space-y-2">
         <Label>Tagi</Label>
         <TagInput tags={tags} onChange={setTags} />
       </div>
 
+      {/* Actions */}
       <div className="flex items-center gap-4">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting
             ? "Zapisywanie..."
             : order
               ? "Zapisz zmiany"
-              : "Utworz zamowienie"}
+              : "Utwórz zamówienie"}
         </Button>
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>

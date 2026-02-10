@@ -23,15 +23,15 @@ import (
 )
 
 type WebhookDispatchService struct {
-	tenantRepo   *repository.TenantRepository
-	deliveryRepo *repository.WebhookDeliveryRepository
+	tenantRepo   repository.TenantRepo
+	deliveryRepo repository.WebhookDeliveryRepo
 	pool         *pgxpool.Pool
 	httpClient   *http.Client
 }
 
 func NewWebhookDispatchService(
-	tenantRepo *repository.TenantRepository,
-	deliveryRepo *repository.WebhookDeliveryRepository,
+	tenantRepo repository.TenantRepo,
+	deliveryRepo repository.WebhookDeliveryRepo,
 	pool *pgxpool.Pool,
 ) *WebhookDispatchService {
 	return &WebhookDispatchService{

@@ -55,7 +55,7 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Zamowienie",
+      header: "Zamówienie",
       accessorKey: "order_id" as const,
       cell: (shipment: Shipment) => (
         <Link
@@ -83,7 +83,7 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Numer sledzenia",
+      header: "Numer śledzenia",
       accessorKey: "tracking_number" as const,
       cell: (shipment: Shipment) => (
         <span className="text-sm">
@@ -107,15 +107,15 @@ export default function ShipmentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Przesylki</h1>
+          <h1 className="text-2xl font-bold">Przesyłki</h1>
           <p className="text-muted-foreground">
-            Zarzadzaj przesylkami zamowien
+            Zarządzaj przesyłkami zamówień
           </p>
         </div>
         <Button asChild>
           <Link href="/shipments/new">
             <Plus className="h-4 w-4" />
-            Nowa przesylka
+            Nowa przesyłka
           </Link>
         </Button>
       </div>

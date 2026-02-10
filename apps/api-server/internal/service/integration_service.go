@@ -20,15 +20,15 @@ var (
 )
 
 type IntegrationService struct {
-	integrationRepo *repository.IntegrationRepository
-	auditRepo       *repository.AuditRepository
+	integrationRepo repository.IntegrationRepo
+	auditRepo       repository.AuditRepo
 	pool            *pgxpool.Pool
 	encryptionKey   []byte
 }
 
 func NewIntegrationService(
-	integrationRepo *repository.IntegrationRepository,
-	auditRepo *repository.AuditRepository,
+	integrationRepo repository.IntegrationRepo,
+	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	encryptionKey []byte,
 ) *IntegrationService {
@@ -93,6 +93,7 @@ func (s *IntegrationService) Create(ctx context.Context, tenantID uuid.UUID, req
 		ID:             uuid.New(),
 		TenantID:       tenantID,
 		Provider:       req.Provider,
+		Label:          req.Label,
 		Status:         "active",
 		HasCredentials: true,
 		Settings:       settings,

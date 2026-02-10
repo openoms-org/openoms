@@ -30,6 +30,8 @@ type Config struct {
 	FeatureAllegro bool `env:"FEATURE_ALLEGRO" envDefault:"true"`
 	FeatureInPost  bool `env:"FEATURE_INPOST" envDefault:"true"`
 
+	WorkersEnabled bool   `env:"WORKERS_ENABLED" envDefault:"true"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 }

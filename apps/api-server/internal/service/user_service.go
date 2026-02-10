@@ -24,15 +24,15 @@ var (
 )
 
 type UserService struct {
-	userRepo    *repository.UserRepository
-	auditRepo   *repository.AuditRepository
+	userRepo    repository.UserRepo
+	auditRepo   repository.AuditRepo
 	passwordSvc *PasswordService
 	pool        *pgxpool.Pool
 }
 
 func NewUserService(
-	userRepo *repository.UserRepository,
-	auditRepo *repository.AuditRepository,
+	userRepo repository.UserRepo,
+	auditRepo repository.AuditRepo,
 	passwordSvc *PasswordService,
 	pool *pgxpool.Pool,
 ) *UserService {
@@ -116,11 +116,9 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 
-	// Log temp password (stub for email invite in Phase 4)
-	slog.Info("temporary password generated for new user",
+	slog.Info("new user created",
 		"user_id", user.ID,
 		"email", user.Email,
-		"temp_password", tempPass,
 	)
 
 	return user, nil

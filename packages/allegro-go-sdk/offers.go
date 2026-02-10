@@ -58,3 +58,35 @@ func (s *OfferService) Get(ctx context.Context, offerID string) (*Offer, error) 
 	}
 	return &result, nil
 }
+
+// UpdateStock updates the stock quantity for an offer.
+func (s *OfferService) UpdateStock(ctx context.Context, offerID string, quantity int) error {
+	body := map[string]any{
+		"stock": map[string]any{
+			"available": quantity,
+		},
+	}
+	return s.client.do(ctx, "PATCH", fmt.Sprintf("/sale/product-offers/%s", offerID), body, nil)
+}
+
+// UpdatePrice updates the selling price for an offer.
+func (s *OfferService) UpdatePrice(ctx context.Context, offerID string, amount float64, currency string) error {
+	body := map[string]any{
+		"sellingMode": map[string]any{
+			"price": map[string]any{
+				"amount":   fmt.Sprintf("%.2f", amount),
+				"currency": currency,
+			},
+		},
+	}
+	return s.client.do(ctx, "PATCH", fmt.Sprintf("/sale/product-offers/%s", offerID), body, nil)
+}
+
+// Create creates a new product offer.
+func (s *OfferService) Create(ctx context.Context, offer any) (*Offer, error) {
+	var result Offer
+	if err := s.client.do(ctx, "POST", "/sale/product-offers", offer, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

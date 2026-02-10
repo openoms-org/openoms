@@ -22,7 +22,7 @@ import type { Product } from "@/types/api";
 const DEFAULT_LIMIT = 20;
 
 const SOURCE_LABELS: Record<string, string> = {
-  manual: "Reczne",
+  manual: "Ręczne",
   allegro: "Allegro",
   woocommerce: "WooCommerce",
 };
@@ -123,7 +123,7 @@ export default function ProductsPage() {
       ),
     },
     {
-      header: "Zrodlo",
+      header: "Źródło",
       accessorKey: "source" as const,
       cell: (product: Product) => (
         <span className="text-sm">
@@ -181,7 +181,7 @@ export default function ProductsPage() {
         <div>
           <h1 className="text-2xl font-bold">Produkty</h1>
           <p className="text-muted-foreground">
-            Zarzadzaj katalogiem produktow
+            Zarządzaj katalogiem produktów
           </p>
         </div>
         <Button asChild>

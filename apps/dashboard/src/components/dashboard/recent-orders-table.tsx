@@ -16,7 +16,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ORDER_STATUSES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
+import { formatCurrency } from "@/lib/utils";
 import type { OrderSummary } from "@/types/api";
+
+const SOURCE_LABELS: Record<string, string> = {
+  manual: "Ręczne",
+  allegro: "Allegro",
+  woocommerce: "WooCommerce",
+};
 
 interface RecentOrdersTableProps {
   orders?: OrderSummary[];
@@ -68,9 +75,9 @@ export function RecentOrdersTable({ orders, isLoading }: RecentOrdersTableProps)
                   <TableCell>
                     <StatusBadge status={order.status} statusMap={orderStatuses} />
                   </TableCell>
-                  <TableCell className="capitalize">{order.source}</TableCell>
+                  <TableCell>{SOURCE_LABELS[order.source] || order.source}</TableCell>
                   <TableCell>
-                    {order.total_amount.toFixed(2)} {order.currency}
+                    {formatCurrency(order.total_amount, order.currency)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDistanceToNow(new Date(order.created_at), {

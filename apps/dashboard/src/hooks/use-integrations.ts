@@ -15,6 +15,14 @@ export function useIntegrations() {
   });
 }
 
+export function useIntegration(id: string) {
+  return useQuery({
+    queryKey: ["integrations", id],
+    queryFn: () => apiClient<Integration>(`/v1/integrations/${id}`),
+    enabled: !!id,
+  });
+}
+
 export function useCreateIntegration() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -39,6 +47,7 @@ export function useUpdateIntegration(id: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: ["integrations", id] });
     },
   });
 }

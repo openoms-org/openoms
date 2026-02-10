@@ -96,6 +96,8 @@ export interface Order {
   ordered_at?: string;
   shipped_at?: string;
   delivered_at?: string;
+  delivery_method?: string;
+  pickup_point_id?: string;
   payment_status: string;
   payment_method?: string;
   paid_at?: string;
@@ -119,6 +121,8 @@ export interface CreateOrderRequest {
   metadata?: Record<string, unknown>;
   tags?: string[];
   ordered_at?: string;
+  payment_status?: string;
+  payment_method?: string;
 }
 
 export interface UpdateOrderRequest {
@@ -186,10 +190,16 @@ export interface ShipmentListParams extends PaginationParams {
 }
 
 export interface GenerateLabelRequest {
-  service_type: "inpost_locker_standard" | "inpost_courier_standard";
-  parcel_size: "small" | "medium" | "large";
+  service_type: string;
+  parcel_size?: string;
   target_point?: string;
-  label_format: "pdf" | "zpl" | "epl";
+  label_format: string;
+  weight_kg?: number;
+  width_cm?: number;
+  height_cm?: number;
+  depth_cm?: number;
+  cod_amount?: number;
+  insured_value?: number;
 }
 
 // === Products ===
@@ -315,9 +325,12 @@ export interface Integration {
   id: string;
   tenant_id: string;
   provider: string;
+  label?: string;
   status: "active" | "inactive" | "error";
   has_credentials: boolean;
   settings?: Record<string, unknown>;
+  sync_cursor?: string;
+  error_message?: string;
   last_sync_at?: string;
   created_at: string;
   updated_at: string;
@@ -330,9 +343,12 @@ export interface CreateIntegrationRequest {
 }
 
 export interface UpdateIntegrationRequest {
+  label?: string;
   status?: "active" | "inactive" | "error";
   credentials?: Record<string, unknown>;
   settings?: Record<string, unknown>;
+  sync_cursor?: string;
+  error_message?: string;
 }
 
 // === Webhooks ===
@@ -541,4 +557,98 @@ export interface InPostPointSearchResponse {
   page: number;
   per_page: number;
   total_pages: number;
+}
+
+// === Product Listings ===
+export interface ProductListing {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  integration_id: string;
+  external_id?: string;
+  status: string;
+  url?: string;
+  price_override?: number;
+  stock_override?: number;
+  sync_status: string;
+  last_synced_at?: string;
+  error_message?: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+// === Sync Jobs ===
+export interface SyncJob {
+  id: string;
+  tenant_id: string;
+  integration_id: string;
+  job_type: string;
+  status: string;
+  started_at?: string;
+  finished_at?: string;
+  items_processed: number;
+  items_failed: number;
+  error_message?: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+// === Suppliers ===
+export interface Supplier {
+  id: string;
+  tenant_id: string;
+  name: string;
+  code?: string;
+  feed_url?: string;
+  feed_format: string;
+  status: string;
+  settings: Record<string, unknown>;
+  last_sync_at?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierProduct {
+  id: string;
+  tenant_id: string;
+  supplier_id: string;
+  product_id?: string;
+  external_id: string;
+  name: string;
+  ean?: string;
+  sku?: string;
+  price?: number;
+  stock_quantity: number;
+  metadata: Record<string, unknown>;
+  last_synced_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSupplierRequest {
+  name: string;
+  code?: string;
+  feed_url?: string;
+  feed_format?: string;
+  settings?: Record<string, unknown>;
+}
+
+export interface UpdateSupplierRequest {
+  name?: string;
+  code?: string;
+  feed_url?: string;
+  feed_format?: string;
+  status?: string;
+  settings?: Record<string, unknown>;
+}
+
+export interface SupplierListParams extends PaginationParams {
+  status?: string;
+}
+
+export interface SupplierProductListParams extends PaginationParams {
+  ean?: string;
+  linked?: boolean;
 }

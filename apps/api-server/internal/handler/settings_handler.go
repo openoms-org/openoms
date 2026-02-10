@@ -15,13 +15,14 @@ import (
 )
 
 type SettingsHandler struct {
-	tenantRepo   *repository.TenantRepository
+	tenantRepo   repository.TenantRepo
+	auditRepo    repository.AuditRepo
 	emailService *service.EmailService
 	pool         *pgxpool.Pool
 }
 
-func NewSettingsHandler(tenantRepo *repository.TenantRepository, emailService *service.EmailService, pool *pgxpool.Pool) *SettingsHandler {
-	return &SettingsHandler{tenantRepo: tenantRepo, emailService: emailService, pool: pool}
+func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.AuditRepo, emailService *service.EmailService, pool *pgxpool.Pool) *SettingsHandler {
+	return &SettingsHandler{tenantRepo: tenantRepo, auditRepo: auditRepo, emailService: emailService, pool: pool}
 }
 
 func (h *SettingsHandler) GetEmailSettings(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +85,7 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		// Load existing settings
 		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
@@ -116,7 +118,17 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 			return err
 		}
 
-		return h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings)
+		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.email_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save settings")
@@ -168,6 +180,7 @@ func (h *SettingsHandler) GetCompanySettings(w http.ResponseWriter, r *http.Requ
 
 func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
 
 	var companyCfg model.CompanySettings
 	if err := json.NewDecoder(r.Body).Decode(&companyCfg); err != nil {
@@ -198,7 +211,17 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 			return err
 		}
 
-		return h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings)
+		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.company_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save settings")
@@ -278,6 +301,7 @@ func (h *SettingsHandler) UpdateOrderStatuses(w http.ResponseWriter, r *http.Req
 		}
 	}
 
+	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
 		if err != nil {
@@ -300,7 +324,17 @@ func (h *SettingsHandler) UpdateOrderStatuses(w http.ResponseWriter, r *http.Req
 			return err
 		}
 
-		return h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings)
+		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.order_statuses_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
 	})
 
 	if err != nil {
@@ -375,6 +409,7 @@ func (h *SettingsHandler) UpdateCustomFields(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
+	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
 		if err != nil {
@@ -397,7 +432,17 @@ func (h *SettingsHandler) UpdateCustomFields(w http.ResponseWriter, r *http.Requ
 			return err
 		}
 
-		return h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings)
+		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.custom_fields_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
 	})
 
 	if err != nil {
@@ -464,6 +509,7 @@ func (h *SettingsHandler) UpdateProductCategories(w http.ResponseWriter, r *http
 		keys[c.Key] = true
 	}
 
+	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
 		if err != nil {
@@ -486,7 +532,17 @@ func (h *SettingsHandler) UpdateProductCategories(w http.ResponseWriter, r *http
 			return err
 		}
 
-		return h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings)
+		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.product_categories_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
 	})
 
 	if err != nil {
@@ -563,6 +619,7 @@ func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
 		if err != nil {
@@ -585,7 +642,17 @@ func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request)
 			return err
 		}
 
-		return h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings)
+		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.webhooks_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
 	})
 
 	if err != nil {

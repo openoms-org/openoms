@@ -62,11 +62,11 @@ export default function UsersPage() {
   const handleCreate = (formData: CreateUserRequest | UpdateUserRequest) => {
     createUser.mutate(formData as CreateUserRequest, {
       onSuccess: () => {
-        toast.success("Uzytkownik zostal utworzony");
+        toast.success("Użytkownik został utworzony");
         setCreateOpen(false);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Blad tworzenia uzytkownika");
+        toast.error(error instanceof Error ? error.message : "Błąd tworzenia użytkownika");
       },
     });
   };
@@ -79,12 +79,12 @@ export default function UsersPage() {
     };
     updateUser.mutate(updateData, {
       onSuccess: () => {
-        toast.success("Uzytkownik zostal zaktualizowany");
+        toast.success("Użytkownik został zaktualizowany");
         setEditUser(null);
       },
       onError: (error) => {
         toast.error(
-          error instanceof Error ? error.message : "Blad aktualizacji uzytkownika"
+          error instanceof Error ? error.message : "Błąd aktualizacji użytkownika"
         );
       },
     });
@@ -94,11 +94,11 @@ export default function UsersPage() {
     if (!deleteId) return;
     deleteUser.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Uzytkownik zostal usuniety");
+        toast.success("Użytkownik został usunięty");
         setDeleteId(null);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Blad usuwania uzytkownika");
+        toast.error(error instanceof Error ? error.message : "Błąd usuwania użytkownika");
       },
     });
   };
@@ -109,17 +109,17 @@ export default function UsersPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Uzytkownicy</h1>
           <p className="text-muted-foreground">
-            Zarzadzaj uzytkownikami w organizacji
+            Zarządzaj użytkownikami w organizacji
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>Nowy uzytkownik</Button>
+        <Button onClick={() => setCreateOpen(true)}>Nowy użytkownik</Button>
       </div>
 
       {users.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="Brak uzytkownikow"
-          description="Dodaj pierwszego uzytkownika do organizacji."
+          title="Brak użytkownikow"
+          description="Dodaj pierwszego użytkownika do organizacji."
         />
       ) : (
         <>
@@ -180,7 +180,7 @@ export default function UsersPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nowy uzytkownik</DialogTitle>
+            <DialogTitle>Nowy użytkownik</DialogTitle>
           </DialogHeader>
           <UserForm
             mode="create"
@@ -195,7 +195,7 @@ export default function UsersPage() {
       <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edytuj uzytkownika</DialogTitle>
+            <DialogTitle>Edytuj użytkownika</DialogTitle>
           </DialogHeader>
           {editUser && (
             <UserForm
@@ -217,9 +217,9 @@ export default function UsersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun uzytkownika"
-        description="Czy na pewno chcesz usunac tego uzytkownika? Ta operacja jest nieodwracalna."
-        confirmLabel="Usun"
+        title="Usuń użytkownika"
+        description="Czy na pewno chcesz usunąć tego użytkownika? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteUser.isPending}

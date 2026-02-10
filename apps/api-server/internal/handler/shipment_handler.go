@@ -216,11 +216,9 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 		switch {
 		case errors.Is(err, service.ErrShipmentNotFound):
 			writeError(w, http.StatusNotFound, "shipment not found")
-		case errors.Is(err, service.ErrShipmentNotInPost):
-			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		case errors.Is(err, service.ErrShipmentNotCreated):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
-		case errors.Is(err, service.ErrNoInPostIntegration):
+		case errors.Is(err, service.ErrNoCarrierIntegration):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		case errors.Is(err, service.ErrNoCustomerContact):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())

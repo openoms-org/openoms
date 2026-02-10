@@ -78,6 +78,25 @@ func (r *TenantRepository) GetSettings(ctx context.Context, tx pgx.Tx, id uuid.U
 	return settings, nil
 }
 
+// ListAllTenantIDs returns all tenant IDs (cross-tenant, runs on pool directly).
+func (r *TenantRepository) ListAllTenantIDs(ctx context.Context, pool *pgxpool.Pool) ([]uuid.UUID, error) {
+	rows, err := pool.Query(ctx, "SELECT id FROM tenants")
+	if err != nil {
+		return nil, fmt.Errorf("list all tenant ids: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan tenant id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (r *TenantRepository) UpdateSettings(ctx context.Context, tx pgx.Tx, id uuid.UUID, settings json.RawMessage) error {
 	ct, err := tx.Exec(ctx, "UPDATE tenants SET settings = $1, updated_at = NOW() WHERE id = $2", settings, id)
 	if err != nil {

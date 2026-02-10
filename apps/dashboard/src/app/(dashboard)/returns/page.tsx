@@ -51,7 +51,7 @@ export default function ReturnsPage() {
       ),
     },
     {
-      header: "Powod",
+      header: "Powód",
       accessorKey: "reason",
       cell: (row) => (
         <span className="text-sm">
@@ -91,7 +91,7 @@ export default function ReturnsPage() {
         <div>
           <h1 className="text-2xl font-bold">Zwroty</h1>
           <p className="text-muted-foreground mt-1">
-            Zarzadzaj zwrotami i reklamacjami
+            Zarządzaj zwrotami i reklamacjami
           </p>
         </div>
         <Button asChild>
@@ -110,7 +110,7 @@ export default function ReturnsPage() {
               <SelectItem value="requested">Zgloszone</SelectItem>
               <SelectItem value="approved">Zatwierdzone</SelectItem>
               <SelectItem value="received">Odebrane</SelectItem>
-              <SelectItem value="refunded">Zwrocone</SelectItem>
+              <SelectItem value="refunded">Zwrócone</SelectItem>
               <SelectItem value="rejected">Odrzucone</SelectItem>
               <SelectItem value="cancelled">Anulowane</SelectItem>
             </SelectContent>
@@ -123,7 +123,7 @@ export default function ReturnsPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak zwrotow do wyswietlenia"
+          emptyMessage="Brak zwrotów do wyświetlenia"
           onRowClick={(row) => router.push(`/returns/${row.id}`)}
         />
       </div>

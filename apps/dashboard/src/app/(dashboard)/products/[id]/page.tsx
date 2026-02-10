@@ -32,7 +32,7 @@ import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 const SOURCE_LABELS: Record<string, string> = {
-  manual: "Reczne",
+  manual: "Ręczne",
   allegro: "Allegro",
   woocommerce: "WooCommerce",
 };
@@ -70,11 +70,11 @@ export default function ProductDetailPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Produkt zostal zaktualizowany");
+          toast.success("Produkt został zaktualizowany");
           setIsEditing(false);
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udalo sie zaktualizowac produktu");
+          toast.error(error.message || "Nie udało się zaktualizować produktu");
         },
       }
     );
@@ -83,11 +83,11 @@ export default function ProductDetailPage() {
   const handleDelete = () => {
     deleteProduct.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Produkt zostal usuniety");
+        toast.success("Produkt został usunięty");
         router.push("/products");
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udalo sie usunac produktu");
+        toast.error(error.message || "Nie udało się usunąć produktu");
       },
     });
   };
@@ -106,7 +106,7 @@ export default function ProductDetailPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Nie znaleziono produktu</h1>
         <Button asChild variant="outline">
-          <Link href="/products">Wroc do listy</Link>
+          <Link href="/products">Wróć do listy</Link>
         </Button>
       </div>
     );
@@ -182,7 +182,7 @@ export default function ProductDetailPage() {
                       <img
                         key={i}
                         src={img.url}
-                        alt={img.alt || `Zdjecie ${i + 1}`}
+                        alt={img.alt || `Zdjęcie ${i + 1}`}
                         className="h-20 w-20 rounded border object-cover"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
@@ -199,7 +199,7 @@ export default function ProductDetailPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Szczegoly produktu</CardTitle>
+            <CardTitle>Szczegóły produktu</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -240,7 +240,7 @@ export default function ProductDetailPage() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Zrodlo</p>
+                <p className="text-sm text-muted-foreground">Źródło</p>
                 <p className="text-sm">
                   {SOURCE_LABELS[product.source] ?? product.source}
                 </p>
@@ -283,7 +283,7 @@ export default function ProductDetailPage() {
             </div>
             {product.description_short && (
               <div className="sm:col-span-2">
-                <p className="text-sm text-muted-foreground">Krotki opis</p>
+                <p className="text-sm text-muted-foreground">Krótki opis</p>
                 <p className="mt-1 text-sm">{product.description_short}</p>
               </div>
             )}
@@ -311,19 +311,19 @@ export default function ProductDetailPage() {
                     )}
                     {product.width != null && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Szerokosc</p>
+                        <p className="text-sm text-muted-foreground">Szerokość</p>
                         <p className="mt-1 font-medium">{product.width} cm</p>
                       </div>
                     )}
                     {product.height != null && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Wysokosc</p>
+                        <p className="text-sm text-muted-foreground">Wysokość</p>
                         <p className="mt-1 font-medium">{product.height} cm</p>
                       </div>
                     )}
                     {product.depth != null && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Glebokosc</p>
+                        <p className="text-sm text-muted-foreground">Głębokość</p>
                         <p className="mt-1 font-medium">{product.depth} cm</p>
                       </div>
                     )}
@@ -351,9 +351,9 @@ export default function ProductDetailPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Usun produkt</DialogTitle>
+            <DialogTitle>Usuń produkt</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz usunac produkt &quot;{product.name}&quot;? Ta
+              Czy na pewno chcesz usunąć produkt &quot;{product.name}&quot;? Ta
               operacja jest nieodwracalna.
             </DialogDescription>
           </DialogHeader>
@@ -369,7 +369,7 @@ export default function ProductDetailPage() {
               onClick={handleDelete}
               disabled={deleteProduct.isPending}
             >
-              {deleteProduct.isPending ? "Usuwanie..." : "Usun"}
+              {deleteProduct.isPending ? "Usuwanie..." : "Usuń"}
             </Button>
           </DialogFooter>
         </DialogContent>

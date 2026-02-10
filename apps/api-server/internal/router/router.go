@@ -13,26 +13,31 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
-func New(
-	pool *pgxpool.Pool,
-	cfg *config.Config,
-	tokenSvc *service.TokenService,
-	authHandler *handler.AuthHandler,
-	userHandler *handler.UserHandler,
-	orderHandler *handler.OrderHandler,
-	shipmentHandler *handler.ShipmentHandler,
-	productHandler *handler.ProductHandler,
-	integrationHandler *handler.IntegrationHandler,
-	webhookHandler *handler.WebhookHandler,
-	statsHandler *handler.StatsHandler,
-	uploadHandler *handler.UploadHandler,
-	settingsHandler *handler.SettingsHandler,
-	auditHandler *handler.AuditHandler,
-	webhookDeliveryHandler *handler.WebhookDeliveryHandler,
-	returnHandler *handler.ReturnHandler,
-	inpostPointHandler *handler.InPostPointHandler,
-) *chi.Mux {
+// RouterDeps holds all dependencies needed to construct the router.
+type RouterDeps struct {
+	Pool            *pgxpool.Pool
+	Config          *config.Config
+	TokenSvc        *service.TokenService
+	Auth            *handler.AuthHandler
+	User            *handler.UserHandler
+	Order           *handler.OrderHandler
+	Shipment        *handler.ShipmentHandler
+	Product         *handler.ProductHandler
+	Integration     *handler.IntegrationHandler
+	Webhook         *handler.WebhookHandler
+	Stats           *handler.StatsHandler
+	Upload          *handler.UploadHandler
+	Settings        *handler.SettingsHandler
+	Audit           *handler.AuditHandler
+	WebhookDelivery *handler.WebhookDeliveryHandler
+	Return          *handler.ReturnHandler
+	InPostPoint     *handler.InPostPointHandler
+	AllegroAuth     *handler.AllegroAuthHandler
+	AmazonAuth      *handler.AmazonAuthHandler
+	Supplier        *handler.SupplierHandler
+}
 
+func New(deps RouterDeps) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -40,14 +45,14 @@ func New(
 	r.Use(chimw.RealIP)
 	r.Use(middleware.Logging)
 	r.Use(chimw.Recoverer)
-	r.Use(middleware.CORS([]string{cfg.FrontendURL}))
+	r.Use(middleware.CORS([]string{deps.Config.FrontendURL}))
 
 	// Health check — no auth, no tenant required
-	healthHandler := &handler.HealthHandler{DB: pool}
+	healthHandler := &handler.HealthHandler{DB: deps.Pool}
 	r.Get("/health", healthHandler.ServeHTTP)
 
 	// Serve uploaded files (public, cached)
-	fileServer := http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir)))
+	fileServer := http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadDir)))
 	uploadFileHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000")
 		fileServer.ServeHTTP(w, req)
@@ -57,122 +62,145 @@ func New(
 
 	// Public auth routes — no JWT required
 	r.Route("/v1/auth", func(r chi.Router) {
-		r.Post("/register", authHandler.Register)
-		r.Post("/login", authHandler.Login)
-		r.Post("/refresh", authHandler.Refresh)
-		r.Post("/logout", authHandler.Logout)
+		r.Post("/register", deps.Auth.Register)
+		r.Post("/login", deps.Auth.Login)
+		r.Post("/refresh", deps.Auth.Refresh)
+		r.Post("/logout", deps.Auth.Logout)
 	})
 
 	// Public webhook routes — no JWT, signature-verified
-	r.Post("/v1/webhooks/{provider}/{tenant_id}", webhookHandler.Receive)
+	r.Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
 
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {
-		r.Use(middleware.JWTAuth(tokenSvc))
+		r.Use(middleware.JWTAuth(deps.TokenSvc))
 
-		r.Post("/uploads", uploadHandler.Upload)
+		r.Post("/uploads", deps.Upload.Upload)
 
-		r.Get("/order-statuses", settingsHandler.GetOrderStatuses)
-		r.Get("/custom-fields", settingsHandler.GetCustomFields)
-		r.Get("/product-categories", settingsHandler.GetProductCategories)
+		r.Get("/order-statuses", deps.Settings.GetOrderStatuses)
+		r.Get("/custom-fields", deps.Settings.GetCustomFields)
+		r.Get("/product-categories", deps.Settings.GetProductCategories)
 
 		// Settings — admin only
 		r.Route("/settings", func(r chi.Router) {
 			r.Use(middleware.RequireRole("admin"))
-			r.Get("/email", settingsHandler.GetEmailSettings)
-			r.Put("/email", settingsHandler.UpdateEmailSettings)
-			r.Post("/email/test", settingsHandler.SendTestEmail)
-			r.Get("/company", settingsHandler.GetCompanySettings)
-			r.Put("/company", settingsHandler.UpdateCompanySettings)
-			r.Get("/order-statuses", settingsHandler.GetOrderStatuses)
-			r.Put("/order-statuses", settingsHandler.UpdateOrderStatuses)
-			r.Get("/custom-fields", settingsHandler.GetCustomFields)
-			r.Put("/custom-fields", settingsHandler.UpdateCustomFields)
-			r.Get("/product-categories", settingsHandler.GetProductCategories)
-			r.Put("/product-categories", settingsHandler.UpdateProductCategories)
-			r.Get("/webhooks", settingsHandler.GetWebhooks)
-			r.Put("/webhooks", settingsHandler.UpdateWebhooks)
+			r.Get("/email", deps.Settings.GetEmailSettings)
+			r.Put("/email", deps.Settings.UpdateEmailSettings)
+			r.Post("/email/test", deps.Settings.SendTestEmail)
+			r.Get("/company", deps.Settings.GetCompanySettings)
+			r.Put("/company", deps.Settings.UpdateCompanySettings)
+			r.Get("/order-statuses", deps.Settings.GetOrderStatuses)
+			r.Put("/order-statuses", deps.Settings.UpdateOrderStatuses)
+			r.Get("/custom-fields", deps.Settings.GetCustomFields)
+			r.Put("/custom-fields", deps.Settings.UpdateCustomFields)
+			r.Get("/product-categories", deps.Settings.GetProductCategories)
+			r.Put("/product-categories", deps.Settings.UpdateProductCategories)
+			r.Get("/webhooks", deps.Settings.GetWebhooks)
+			r.Put("/webhooks", deps.Settings.UpdateWebhooks)
 		})
 
 		// Admin-only audit log and webhook deliveries
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireRole("admin"))
-			r.Get("/audit", auditHandler.List)
-			r.Get("/webhook-deliveries", webhookDeliveryHandler.List)
+			r.Get("/audit", deps.Audit.List)
+			r.Get("/webhook-deliveries", deps.WebhookDelivery.List)
 		})
 
 		// Any authenticated user
-		r.Get("/users/me", userHandler.Me)
+		r.Get("/users/me", deps.User.Me)
 
 		// Admin/owner only user management
 		r.Route("/users", func(r chi.Router) {
 			r.Use(middleware.RequireRole("admin"))
-			r.Get("/", userHandler.List)
-			r.Post("/", userHandler.Create)
-			r.Patch("/{id}", userHandler.Update)
-			r.Delete("/{id}", userHandler.Delete)
+			r.Get("/", deps.User.List)
+			r.Post("/", deps.User.Create)
+			r.Patch("/{id}", deps.User.Update)
+			r.Delete("/{id}", deps.User.Delete)
 		})
 
 		// Orders — any authenticated user
 		r.Route("/orders", func(r chi.Router) {
-			r.Get("/", orderHandler.List)
-			r.Post("/", orderHandler.Create)
-			r.Get("/export", orderHandler.ExportCSV)
-			r.Post("/bulk-status", orderHandler.BulkTransitionStatus)
-			r.Get("/{id}", orderHandler.Get)
-			r.Patch("/{id}", orderHandler.Update)
-			r.Delete("/{id}", orderHandler.Delete)
-			r.Post("/{id}/status", orderHandler.TransitionStatus)
-			r.Get("/{id}/audit", orderHandler.GetAudit)
+			r.Get("/", deps.Order.List)
+			r.Post("/", deps.Order.Create)
+			r.Get("/export", deps.Order.ExportCSV)
+			r.Post("/bulk-status", deps.Order.BulkTransitionStatus)
+			r.Get("/{id}", deps.Order.Get)
+			r.Patch("/{id}", deps.Order.Update)
+			r.Delete("/{id}", deps.Order.Delete)
+			r.Post("/{id}/status", deps.Order.TransitionStatus)
+			r.Get("/{id}/audit", deps.Order.GetAudit)
 		})
 
 		// Shipments — any authenticated user
 		r.Route("/shipments", func(r chi.Router) {
-			r.Get("/", shipmentHandler.List)
-			r.Post("/", shipmentHandler.Create)
-			r.Get("/{id}", shipmentHandler.Get)
-			r.Patch("/{id}", shipmentHandler.Update)
-			r.Delete("/{id}", shipmentHandler.Delete)
-			r.Post("/{id}/status", shipmentHandler.TransitionStatus)
-			r.Post("/{id}/label", shipmentHandler.GenerateLabel)
+			r.Get("/", deps.Shipment.List)
+			r.Post("/", deps.Shipment.Create)
+			r.Get("/{id}", deps.Shipment.Get)
+			r.Patch("/{id}", deps.Shipment.Update)
+			r.Delete("/{id}", deps.Shipment.Delete)
+			r.Post("/{id}/status", deps.Shipment.TransitionStatus)
+			r.Post("/{id}/label", deps.Shipment.GenerateLabel)
 		})
 
 		// Returns — any authenticated user
 		r.Route("/returns", func(r chi.Router) {
-			r.Get("/", returnHandler.List)
-			r.Post("/", returnHandler.Create)
+			r.Get("/", deps.Return.List)
+			r.Post("/", deps.Return.Create)
 			r.Route("/{id}", func(r chi.Router) {
-				r.Get("/", returnHandler.Get)
-				r.Patch("/", returnHandler.Update)
-				r.Delete("/", returnHandler.Delete)
-				r.Post("/status", returnHandler.TransitionStatus)
+				r.Get("/", deps.Return.Get)
+				r.Patch("/", deps.Return.Update)
+				r.Delete("/", deps.Return.Delete)
+				r.Post("/status", deps.Return.TransitionStatus)
 			})
 		})
 
 		// Products — any authenticated user
 		r.Route("/products", func(r chi.Router) {
-			r.Get("/", productHandler.List)
-			r.Post("/", productHandler.Create)
-			r.Get("/{id}", productHandler.Get)
-			r.Patch("/{id}", productHandler.Update)
-			r.Delete("/{id}", productHandler.Delete)
+			r.Get("/", deps.Product.List)
+			r.Post("/", deps.Product.Create)
+			r.Get("/{id}", deps.Product.Get)
+			r.Patch("/{id}", deps.Product.Update)
+			r.Delete("/{id}", deps.Product.Delete)
 		})
 
 		// Integrations — admin only
 		r.Route("/integrations", func(r chi.Router) {
 			r.Use(middleware.RequireRole("admin"))
-			r.Get("/", integrationHandler.List)
-			r.Post("/", integrationHandler.Create)
-			r.Get("/{id}", integrationHandler.Get)
-			r.Patch("/{id}", integrationHandler.Update)
-			r.Delete("/{id}", integrationHandler.Delete)
+
+			// Allegro OAuth2 (must be before /{id} to avoid chi treating "allegro" as an ID)
+			r.Route("/allegro", func(r chi.Router) {
+				r.Get("/auth-url", deps.AllegroAuth.GetAuthURL)
+				r.Post("/callback", deps.AllegroAuth.HandleCallback)
+			})
+
+			// Amazon SP-API setup
+			r.Post("/amazon/setup", deps.AmazonAuth.Setup)
+
+			r.Get("/", deps.Integration.List)
+			r.Post("/", deps.Integration.Create)
+			r.Get("/{id}", deps.Integration.Get)
+			r.Patch("/{id}", deps.Integration.Update)
+			r.Delete("/{id}", deps.Integration.Delete)
+		})
+
+		// Suppliers — admin only
+		r.Route("/suppliers", func(r chi.Router) {
+			r.Use(middleware.RequireRole("admin"))
+			r.Get("/", deps.Supplier.List)
+			r.Post("/", deps.Supplier.Create)
+			r.Get("/{id}", deps.Supplier.Get)
+			r.Patch("/{id}", deps.Supplier.Update)
+			r.Delete("/{id}", deps.Supplier.Delete)
+			r.Post("/{id}/sync", deps.Supplier.Sync)
+			r.Get("/{id}/products", deps.Supplier.ListProducts)
+			r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
 		})
 
 		// Stats — any authenticated user
-		r.Get("/stats/dashboard", statsHandler.GetDashboard)
+		r.Get("/stats/dashboard", deps.Stats.GetDashboard)
 
 		// InPost points search (proxy)
-		r.Get("/inpost/points", inpostPointHandler.Search)
+		r.Get("/inpost/points", deps.InPostPoint.Search)
 	})
 
 	return r

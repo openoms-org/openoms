@@ -13,12 +13,12 @@ import (
 )
 
 type StatsService struct {
-	statsRepo *repository.StatsRepository
+	statsRepo repository.StatsRepo
 	pool      *pgxpool.Pool
 }
 
 func NewStatsService(
-	statsRepo *repository.StatsRepository,
+	statsRepo repository.StatsRepo,
 	pool *pgxpool.Pool,
 ) *StatsService {
 	return &StatsService{

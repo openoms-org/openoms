@@ -33,7 +33,7 @@ import {
   useTransitionShipmentStatus,
 } from "@/hooks/use-shipments";
 import { useOrder } from "@/hooks/use-orders";
-import { SHIPMENT_STATUSES } from "@/lib/constants";
+import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
 export default function ShipmentDetailPage() {
@@ -57,11 +57,11 @@ export default function ShipmentDetailPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Przesylka zostala zaktualizowana");
+          toast.success("Przesyłka została zaktualizowana");
           setIsEditing(false);
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udalo sie zaktualizowac przesylki");
+          toast.error(error.message || "Nie udało się zaktualizować przesyłki");
         },
       }
     );
@@ -70,11 +70,11 @@ export default function ShipmentDetailPage() {
   const handleDelete = () => {
     deleteShipment.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Przesylka zostala usunieta");
+        toast.success("Przesyłka została usunięta");
         router.push("/shipments");
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udalo sie usunac przesylki");
+        toast.error(error.message || "Nie udało się usunąć przesyłki");
       },
     });
   };
@@ -84,10 +84,10 @@ export default function ShipmentDetailPage() {
       { status },
       {
         onSuccess: () => {
-          toast.success("Status przesylki zostal zmieniony");
+          toast.success("Status przesyłki został zmieniony");
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udalo sie zmienic statusu");
+          toast.error(error.message || "Nie udało się zmienić statusu");
         },
       }
     );
@@ -105,9 +105,9 @@ export default function ShipmentDetailPage() {
   if (!shipment) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Nie znaleziono przesylki</h1>
+        <h1 className="text-2xl font-bold">Nie znaleziono przesyłki</h1>
         <Button asChild variant="outline">
-          <Link href="/shipments">Wrocdo listy</Link>
+          <Link href="/shipments">Wróć do listy</Link>
         </Button>
       </div>
     );
@@ -124,7 +124,7 @@ export default function ShipmentDetailPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
-              Przesylka {shipment.id.slice(0, 8)}...
+              Przesyłka {shipment.id.slice(0, 8)}...
             </h1>
             <p className="text-muted-foreground">
               Utworzona {formatDate(shipment.created_at)}
@@ -132,21 +132,21 @@ export default function ShipmentDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {shipment.provider === "inpost" && shipment.status === "created" && (
+          {shipment.provider !== "manual" && shipment.status === "created" && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowLabelDialog(true)}
             >
               <Tag className="h-4 w-4" />
-              Generuj etykiete InPost
+              Generuj etykietę {SHIPMENT_PROVIDER_LABELS[shipment.provider] ?? shipment.provider.toUpperCase()}
             </Button>
           )}
           {shipment.label_url && (
             <Button variant="outline" size="sm" asChild>
               <a href={shipment.label_url} target="_blank" rel="noopener noreferrer">
                 <FileDown className="h-4 w-4" />
-                Pobierz etykiete
+                Pobierz etykietę
               </a>
             </Button>
           )}
@@ -156,7 +156,7 @@ export default function ShipmentDetailPage() {
             onClick={() => setIsEditing(!isEditing)}
           >
             <Pencil className="h-4 w-4" />
-            {isEditing ? "Anuluj edycje" : "Edytuj"}
+            {isEditing ? "Anuluj edycję" : "Edytuj"}
           </Button>
           <Button
             variant="destructive"
@@ -164,15 +164,15 @@ export default function ShipmentDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Usun
-          </Button>
+            Usuń
+       </Button>
         </div>
       </div>
 
       {isEditing ? (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja przesylki</CardTitle>
+            <CardTitle>Edycja przesyłki</CardTitle>
           </CardHeader>
           <CardContent>
             <ShipmentForm
@@ -186,7 +186,7 @@ export default function ShipmentDetailPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Szczegoly przesylki</CardTitle>
+              <CardTitle>Szczegóły przesyłki</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -194,7 +194,7 @@ export default function ShipmentDetailPage() {
                 <p className="font-mono text-sm">{shipment.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Zamowienie</p>
+                <p className="text-sm text-muted-foreground">Zamówienie</p>
                 <Link
                   href={`/orders/${shipment.order_id}`}
                   className="inline-flex items-center gap-1 font-mono text-sm text-primary hover:underline"
@@ -205,7 +205,7 @@ export default function ShipmentDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Dostawca</p>
-                <p className="text-sm uppercase">{shipment.provider}</p>
+                <p className="text-sm">{SHIPMENT_PROVIDER_LABELS[shipment.provider] ?? shipment.provider.toUpperCase()}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
@@ -215,7 +215,7 @@ export default function ShipmentDetailPage() {
                 />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Numer sledzenia</p>
+                <p className="text-sm text-muted-foreground">Numer śledzenia</p>
                 <p className="text-sm">
                   {shipment.tracking_number || "-"}
                 </p>
@@ -229,7 +229,7 @@ export default function ShipmentDetailPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                   >
-                    Otworz etykiete
+                    Otwórz etykietę
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
@@ -253,7 +253,7 @@ export default function ShipmentDetailPage() {
             <CardHeader>
               <CardTitle>Zmiana statusu</CardTitle>
               <CardDescription>
-                Dostepne przejscia statusu dla tej przesylki
+                Dostępne przejścia statusu dla tej przesyłki
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -270,9 +270,9 @@ export default function ShipmentDetailPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Usun przesylke</DialogTitle>
+            <DialogTitle>Usuń przesyłkę</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz usunac te przesylke? Ta operacja jest
+              Czy na pewno chcesz usunąć tę przesyłkę? Ta operacja jest
               nieodwracalna.
             </DialogDescription>
           </DialogHeader>
@@ -288,7 +288,7 @@ export default function ShipmentDetailPage() {
               onClick={handleDelete}
               disabled={deleteShipment.isPending}
             >
-              {deleteShipment.isPending ? "Usuwanie..." : "Usun"}
+              {deleteShipment.isPending ? "Usuwanie..." : "Usuń"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -296,6 +296,7 @@ export default function ShipmentDetailPage() {
 
       <GenerateLabelDialog
         shipmentId={params.id}
+        provider={shipment.provider}
         order={order}
         open={showLabelDialog}
         onOpenChange={setShowLabelDialog}

@@ -25,11 +25,11 @@ import (
 
 type OrderHandler struct {
 	orderService *service.OrderService
-	tenantRepo   *repository.TenantRepository
+	tenantRepo   repository.TenantRepo
 	pool         *pgxpool.Pool
 }
 
-func NewOrderHandler(orderService *service.OrderService, tenantRepo *repository.TenantRepository, pool *pgxpool.Pool) *OrderHandler {
+func NewOrderHandler(orderService *service.OrderService, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *OrderHandler {
 	return &OrderHandler{orderService: orderService, tenantRepo: tenantRepo, pool: pool}
 }
 

@@ -23,17 +23,17 @@ var (
 )
 
 type ShipmentService struct {
-	shipmentRepo    *repository.ShipmentRepository
-	orderRepo       *repository.OrderRepository
-	auditRepo       *repository.AuditRepository
+	shipmentRepo    repository.ShipmentRepo
+	orderRepo       repository.OrderRepo
+	auditRepo       repository.AuditRepo
 	pool            *pgxpool.Pool
 	webhookDispatch *WebhookDispatchService
 }
 
 func NewShipmentService(
-	shipmentRepo *repository.ShipmentRepository,
-	orderRepo *repository.OrderRepository,
-	auditRepo *repository.AuditRepository,
+	shipmentRepo repository.ShipmentRepo,
+	orderRepo repository.OrderRepo,
+	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
 ) *ShipmentService {
@@ -174,7 +174,7 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 }
 
 func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, actorID uuid.UUID, ip string) error {
-	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		shipment, err := s.shipmentRepo.FindByID(ctx, tx, shipmentID)
 		if err != nil {
 			return err
@@ -197,6 +197,10 @@ func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, acto
 			IPAddress:  ip,
 		})
 	})
+	if err == nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.deleted", map[string]any{"shipment_id": shipmentID.String()})
+	}
+	return err
 }
 
 func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.ShipmentStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
@@ -237,7 +241,7 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 			return err
 		}
 
-		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
 			UserID:     actorID,
 			Action:     "shipment.status_changed",
@@ -245,7 +249,29 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 			EntityID:   shipmentID,
 			Changes:    map[string]string{"from": existing.Status, "to": req.Status},
 			IPAddress:  ip,
-		})
+		}); err != nil {
+			return err
+		}
+
+		// Order-shipment status sync
+		if req.Status == "delivered" {
+			if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "delivered", nil, func() *time.Time { t := time.Now(); return &t }()); err != nil {
+				return fmt.Errorf("sync order status to delivered: %w", err)
+			}
+		} else if req.Status == "picked_up" || req.Status == "in_transit" {
+			order, err := s.orderRepo.FindByID(ctx, tx, existing.OrderID)
+			if err == nil && order != nil && order.Status != "shipped" && order.Status != "delivered" {
+				now := time.Now()
+				if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "shipped", &now, nil); err != nil {
+					return fmt.Errorf("sync order status to shipped: %w", err)
+				}
+			}
+		}
+
+		return nil
 	})
+	if err == nil && shipment != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment)
+	}
 	return shipment, err
 }

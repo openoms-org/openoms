@@ -32,7 +32,7 @@ export function ShipmentStatusActions({
   if (availableTransitions.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Brak dostepnych zmian statusu.
+        Brak dostępnych zmian statusu.
       </p>
     );
   }
@@ -81,13 +81,13 @@ export function ShipmentStatusActions({
           <DialogHeader>
             <DialogTitle>Potwierdzenie zmiany statusu</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz zmienic status przesylki na{" "}
+              Czy na pewno chcesz zmienić status przesyłki na{" "}
               <strong>
                 {confirmStatus
                   ? SHIPMENT_STATUSES[confirmStatus]?.label ?? confirmStatus
                   : ""}
               </strong>
-              ? Ta operacja moze byc nieodwracalna.
+              ? Ta operacja może być nieodwracalna.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -102,7 +102,7 @@ export function ShipmentStatusActions({
               onClick={handleConfirm}
               disabled={isLoading}
             >
-              Potwierdz
+              Potwierdź
             </Button>
           </DialogFooter>
         </DialogContent>

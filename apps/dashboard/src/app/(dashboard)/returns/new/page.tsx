@@ -13,11 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 
 const returnSchema = z.object({
-  order_id: z.string().min(1, "ID zamowienia jest wymagane"),
-  reason: z.string().min(1, "Powod zwrotu jest wymagany"),
-  refund_amount: z.number().min(0, "Kwota musi byc dodatnia"),
+  order_id: z.string().min(1, "ID zamówienia jest wymagane"),
+  reason: z.string().min(1, "Powód zwrotu jest wymagany"),
+  refund_amount: z.number().min(0, "Kwota musi być dodatnia"),
   notes: z.string().optional(),
 });
 
@@ -30,6 +31,8 @@ export default function NewReturnPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ReturnFormValues>({
     resolver: zodResolver(returnSchema),
@@ -49,11 +52,11 @@ export default function NewReturnPage() {
         refund_amount: data.refund_amount,
         notes: data.notes || undefined,
       });
-      toast.success("Zwrot zostal utworzony");
+      toast.success("Zwrot został utworzony");
       router.push(`/returns/${result.id}`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas tworzenia zwrotu"
+        error instanceof Error ? error.message : "Błąd podczas tworzenia zwrotu"
       );
     }
   };
@@ -69,7 +72,7 @@ export default function NewReturnPage() {
         <div>
           <h1 className="text-2xl font-bold">Nowy zwrot</h1>
           <p className="text-muted-foreground">
-            Wypelnij formularz, aby zglosic nowy zwrot
+            Wypełnij formularz, aby zgłosić nowy zwrot
           </p>
         </div>
       </div>
@@ -81,11 +84,12 @@ export default function NewReturnPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="order_id">Zamowienie</Label>
-              <Input
-                id="order_id"
-                placeholder="ID zamowienia"
-                {...register("order_id")}
+              <Label>Zamówienie</Label>
+              <OrderSearchCombobox
+                value={watch("order_id")}
+                onValueChange={(id) =>
+                  setValue("order_id", id, { shouldValidate: true })
+                }
               />
               {errors.order_id && (
                 <p className="text-sm text-destructive">{errors.order_id.message}</p>
@@ -93,10 +97,10 @@ export default function NewReturnPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Powod</Label>
+              <Label htmlFor="reason">Powód</Label>
               <Textarea
                 id="reason"
-                placeholder="Podaj powod zwrotu"
+                placeholder="Podaj powód zwrotu"
                 {...register("reason")}
               />
               {errors.reason && (
@@ -132,7 +136,7 @@ export default function NewReturnPage() {
 
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={createReturn.isPending}>
-                {createReturn.isPending ? "Tworzenie..." : "Utworz zwrot"}
+                {createReturn.isPending ? "Tworzenie..." : "Utwórz zwrot"}
               </Button>
               <Button variant="outline" type="button" onClick={() => router.push("/returns")}>
                 Anuluj

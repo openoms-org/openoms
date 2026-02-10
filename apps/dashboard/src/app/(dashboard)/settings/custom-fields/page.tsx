@@ -69,14 +69,14 @@ export default function CustomFieldsPage() {
   const handleSave = async () => {
     for (const f of fields) {
       if (!f.key || !f.label) {
-        toast.error("Wszystkie pola musza miec klucz i etykiete");
+        toast.error("Wszystkie pola muszą mieć klucz i etykietę");
         return;
       }
     }
 
     const keys = fields.map((f) => f.key);
     if (new Set(keys).size !== keys.length) {
-      toast.error("Klucze pol musza byc unikalne");
+      toast.error("Klucze pól muszą być unikalne");
       return;
     }
 
@@ -86,10 +86,10 @@ export default function CustomFieldsPage() {
 
     try {
       await updateCustomFields.mutateAsync(configToSave);
-      toast.success("Pola dodatkowe zostaly zapisane");
+      toast.success("Pola dodatkowe zostały zapisane");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas zapisywania"
+        error instanceof Error ? error.message : "Błąd podczas zapisywania"
       );
     }
   };
@@ -103,7 +103,7 @@ export default function CustomFieldsPage() {
       <div>
         <h1 className="text-2xl font-bold">Pola dodatkowe</h1>
         <p className="text-muted-foreground mt-1">
-          Zdefiniuj dodatkowe pola dla zamowien.
+          Zdefiniuj dodatkowe pola dla zamówień.
         </p>
       </div>
 

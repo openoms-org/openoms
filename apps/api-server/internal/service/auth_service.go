@@ -22,18 +22,18 @@ var (
 )
 
 type AuthService struct {
-	userRepo     *repository.UserRepository
-	tenantRepo   *repository.TenantRepository
-	auditRepo    *repository.AuditRepository
+	userRepo     repository.UserRepo
+	tenantRepo   repository.TenantRepo
+	auditRepo    repository.AuditRepo
 	tokenService *TokenService
 	passwordSvc  *PasswordService
 	pool         *pgxpool.Pool
 }
 
 func NewAuthService(
-	userRepo *repository.UserRepository,
-	tenantRepo *repository.TenantRepository,
-	auditRepo *repository.AuditRepository,
+	userRepo repository.UserRepo,
+	tenantRepo repository.TenantRepo,
+	auditRepo repository.AuditRepo,
 	tokenSvc *TokenService,
 	passwordSvc *PasswordService,
 	pool *pgxpool.Pool,

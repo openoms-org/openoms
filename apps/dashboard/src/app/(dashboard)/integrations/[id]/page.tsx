@@ -1,0 +1,368 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  useIntegration,
+  useUpdateIntegration,
+  useDeleteIntegration,
+} from "@/hooks/use-integrations";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { INTEGRATION_STATUSES } from "@/lib/constants";
+import { formatDate } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const credentialsSchema = z.object({
+  credentials: z
+    .string()
+    .min(1, "Dane uwierzytelniajace sa wymagane")
+    .refine(
+      (val) => {
+        try {
+          JSON.parse(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Nieprawidlowy format JSON" }
+    ),
+});
+
+type CredentialsFormValues = z.infer<typeof credentialsSchema>;
+
+export default function IntegrationDetailPage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const { isAdmin, isLoading: authLoading } = useAuth();
+  const { data: integration, isLoading } = useIntegration(params.id);
+  const updateIntegration = useUpdateIntegration(params.id);
+  const deleteIntegration = useDeleteIntegration();
+
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CredentialsFormValues>({
+    resolver: zodResolver(credentialsSchema),
+    defaultValues: {
+      credentials: "",
+    },
+  });
+
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.push("/");
+    }
+  }, [authLoading, isAdmin, router]);
+
+  if (authLoading || !isAdmin) {
+    return <LoadingSkeleton />;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!integration) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Nie znaleziono integracji</h1>
+        <Button asChild variant="outline">
+          <Link href="/integrations">Wróć do listy</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const handleStatusChange = (newStatus: string) => {
+    updateIntegration.mutate(
+      { status: newStatus as "active" | "inactive" | "error" },
+      {
+        onSuccess: () => {
+          toast.success("Status integracji został zmieniony");
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Błąd podczas zmiany statusu"
+          );
+        },
+      }
+    );
+  };
+
+  const handleCredentialsUpdate = (data: CredentialsFormValues) => {
+    updateIntegration.mutate(
+      { credentials: JSON.parse(data.credentials) },
+      {
+        onSuccess: () => {
+          toast.success("Dane uwierzytelniajace zostały zaktualizowane");
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Błąd podczas aktualizacji danych"
+          );
+        },
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    deleteIntegration.mutate(params.id, {
+      onSuccess: () => {
+        toast.success("Integracja zostala usunieta");
+        router.push("/integrations");
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Błąd podczas usuwania integracji"
+        );
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/integrations">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {integration.provider.charAt(0).toUpperCase() +
+                integration.provider.slice(1)}
+            </h1>
+            <p className="text-muted-foreground">
+              Utworzona {formatDate(integration.created_at)}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+          >
+            Usun
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Szczegóły</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Dostawca</p>
+                <p className="mt-1 font-medium">
+                  {integration.provider.charAt(0).toUpperCase() +
+                    integration.provider.slice(1)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className="mt-1">
+                  <StatusBadge
+                    status={integration.status}
+                    statusMap={INTEGRATION_STATUSES}
+                  />
+                </div>
+              </div>
+              {integration.label && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Etykieta</p>
+                  <p className="mt-1 font-medium">{integration.label}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Dane uwierzytelniajace
+                </p>
+                <p className="mt-1 font-medium">
+                  {integration.has_credentials ? "Skonfigurowane" : "Brak"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Ostatnia synchronizacja
+                </p>
+                <p className="mt-1 font-medium">
+                  {integration.last_sync_at
+                    ? formatDate(integration.last_sync_at)
+                    : "---"}
+                </p>
+              </div>
+              {integration.sync_cursor && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Kursor synchronizacji</p>
+                  <p className="mt-1 font-mono text-xs truncate">
+                    {integration.sync_cursor}
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">ID</p>
+                <p className="mt-1 font-mono text-sm">{integration.id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Ostatnia aktualizacja
+                </p>
+                <p className="mt-1 font-medium">
+                  {formatDate(integration.updated_at)}
+                </p>
+              </div>
+            </div>
+
+            {integration.status === "error" && integration.error_message && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
+                <p className="text-sm font-medium text-destructive">Błąd integracji</p>
+                <p className="mt-1 text-sm text-destructive/80">
+                  {integration.error_message}
+                </p>
+              </div>
+            )}
+
+            {integration.provider === "allegro" && (
+              <div className="pt-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/integrations/allegro">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Zarządzaj połączeniem Allegro
+                  </Link>
+                </Button>
+              </div>
+            )}
+
+            {integration.settings &&
+              Object.keys(integration.settings).length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Ustawienia
+                  </p>
+                  <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-auto max-h-40">
+                    {JSON.stringify(integration.settings, null, 2)}
+                  </pre>
+                </div>
+              )}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Zmien status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={integration.status}
+                onValueChange={handleStatusChange}
+                disabled={updateIntegration.isPending}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Aktywna</SelectItem>
+                  <SelectItem value="inactive">Nieaktywna</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Aktualizuj dane uwierzytelniajace</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={handleSubmit(handleCredentialsUpdate)}
+                className="space-y-4"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="credentials">
+                    Nowe dane uwierzytelniajace (JSON)
+                  </Label>
+                  <Textarea
+                    id="credentials"
+                    placeholder='{"api_key": "...", "secret": "..."}'
+                    className="min-h-32 font-mono text-sm"
+                    {...register("credentials")}
+                  />
+                  {errors.credentials && (
+                    <p className="text-sm text-destructive">
+                      {errors.credentials.message}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  type="submit"
+                  disabled={updateIntegration.isPending}
+                >
+                  {updateIntegration.isPending
+                    ? "Aktualizowanie..."
+                    : "Zaktualizuj dane"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Usuń integrację"
+        description="Czy na pewno chcesz usunąć tę integrację? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń"
+        variant="destructive"
+        onConfirm={handleDelete}
+        isLoading={deleteIntegration.isPending}
+      />
+    </div>
+  );
+}

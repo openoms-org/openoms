@@ -14,11 +14,11 @@ import (
 )
 
 type AuditHandler struct {
-	auditRepo *repository.AuditRepository
+	auditRepo repository.AuditRepo
 	pool      *pgxpool.Pool
 }
 
-func NewAuditHandler(auditRepo *repository.AuditRepository, pool *pgxpool.Pool) *AuditHandler {
+func NewAuditHandler(auditRepo repository.AuditRepo, pool *pgxpool.Pool) *AuditHandler {
 	return &AuditHandler{auditRepo: auditRepo, pool: pool}
 }
 

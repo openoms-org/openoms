@@ -53,7 +53,7 @@ export default function IntegrationsPage() {
         setDeleteId(null);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Blad usuwania integracji");
+        toast.error(error instanceof Error ? error.message : "Błąd usuwania integracji");
       },
     });
   };
@@ -62,7 +62,7 @@ export default function IntegrationsPage() {
     <>
       <PageHeader
         title="Integracje"
-        description="Zarzadzaj polaczeniami z zewnetrznymi serwisami"
+        description="Zarządzaj polaczeniami z zewnetrznymi serwisami"
         action={{ label: "Nowa integracja", href: "/integrations/new" }}
       />
 
@@ -70,7 +70,7 @@ export default function IntegrationsPage() {
         <EmptyState
           icon={Plug}
           title="Brak integracji"
-          description="Dodaj pierwsza integracje, aby polaczyc sie z zewnetrznymi serwisami."
+          description="Dodaj pierwszą integrację, aby połączyć się z zewnętrznymi serwisami."
           action={{ label: "Nowa integracja", href: "/integrations/new" }}
         />
       ) : (
@@ -88,7 +88,11 @@ export default function IntegrationsPage() {
             </TableHeader>
             <TableBody>
               {integrations.map((integration) => (
-                <TableRow key={integration.id}>
+                <TableRow
+                  key={integration.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/integrations/${integration.id}`)}
+                >
                   <TableCell className="font-medium">
                     {integration.provider.charAt(0).toUpperCase() +
                       integration.provider.slice(1)}
@@ -131,9 +135,9 @@ export default function IntegrationsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun integracje"
-        description="Czy na pewno chcesz usunac te integracje? Ta operacja jest nieodwracalna."
-        confirmLabel="Usun"
+        title="Usuń integrację"
+        description="Czy na pewno chcesz usunąć tę integrację? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteIntegration.isPending}

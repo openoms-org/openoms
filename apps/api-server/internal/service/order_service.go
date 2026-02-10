@@ -23,18 +23,18 @@ var (
 )
 
 type OrderService struct {
-	orderRepo       *repository.OrderRepository
-	auditRepo       *repository.AuditRepository
-	tenantRepo      *repository.TenantRepository
+	orderRepo       repository.OrderRepo
+	auditRepo       repository.AuditRepo
+	tenantRepo      repository.TenantRepo
 	pool            *pgxpool.Pool
 	emailService    *EmailService
 	webhookDispatch *WebhookDispatchService
 }
 
 func NewOrderService(
-	orderRepo *repository.OrderRepository,
-	auditRepo *repository.AuditRepository,
-	tenantRepo *repository.TenantRepository,
+	orderRepo repository.OrderRepo,
+	auditRepo repository.AuditRepo,
+	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
 	emailService *EmailService,
 	webhookDispatch *WebhookDispatchService,
@@ -155,6 +155,8 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		Notes:           req.Notes,
 		Metadata:        metadata,
 		Tags:            tags,
+		DeliveryMethod:  req.DeliveryMethod,
+		PickupPointID:   req.PickupPointID,
 		OrderedAt:       orderedAt,
 	}
 
@@ -221,6 +223,9 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 			IPAddress:  ip,
 		})
 	})
+	if err == nil && order != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order)
+	}
 	return order, err
 }
 
@@ -408,6 +413,8 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 			result.Success = true
 			resp.Results = append(resp.Results, result)
 			resp.Succeeded++
+
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
 		}
 
 		return nil

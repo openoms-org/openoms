@@ -3,27 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LayoutDashboard, ShoppingCart, Truck, Package, Plug, Users } from "lucide-react";
+import { Menu, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth";
+import { navItems } from "@/lib/nav-items";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  adminOnly?: boolean;
-}
-
-const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/orders", label: "Zamówienia", icon: ShoppingCart },
-  { href: "/shipments", label: "Przesyłki", icon: Truck },
-  { href: "/products", label: "Produkty", icon: Package },
-  { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true },
-  { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true },
-];
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -40,7 +25,7 @@ export function MobileNav() {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="md:hidden">
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Otwórz menu</span>
+          <span className="sr-only">Otworz menu</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">

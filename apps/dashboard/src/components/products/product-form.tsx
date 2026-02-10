@@ -25,7 +25,7 @@ import { useProductCategories } from "@/hooks/use-product-categories";
 const PRODUCT_SOURCES = ["manual", "allegro", "woocommerce"] as const;
 
 const PRODUCT_SOURCE_LABELS: Record<string, string> = {
-  manual: "Reczne",
+  manual: "Ręczne",
   allegro: "Allegro",
   woocommerce: "WooCommerce",
 };
@@ -34,11 +34,11 @@ const productSchema = z.object({
   name: z.string().min(1, "Nazwa produktu jest wymagana"),
   sku: z.string().optional(),
   ean: z.string().optional(),
-  price: z.number().min(0, "Cena musi byc wieksza lub rowna 0"),
+  price: z.number().min(0, "Cena musi być większa lub równa 0"),
   stock_quantity: z
     .number()
-    .int("Ilosc musi byc liczba calkowita")
-    .min(0, "Ilosc musi byc wieksza lub rowna 0"),
+    .int("Ilość musi być liczbą całkowitą")
+    .min(0, "Ilość musi być większa lub równa 0"),
   source: z.enum(["manual", "allegro", "woocommerce"]),
   description_short: z.string().optional(),
   description_long: z.string().optional(),
@@ -199,7 +199,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="source">Zrodlo</Label>
+        <Label htmlFor="source">Źródło</Label>
         <Select
           value={sourceValue}
           onValueChange={(value) =>
@@ -209,7 +209,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
           }
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz zrodlo" />
+            <SelectValue placeholder="Wybierz źródło" />
           </SelectTrigger>
           <SelectContent>
             {PRODUCT_SOURCES.map((source) => (
@@ -244,10 +244,10 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description_short">Krotki opis</Label>
+        <Label htmlFor="description_short">Krótki opis</Label>
         <Input
           id="description_short"
-          placeholder="Krotki opis produktu..."
+          placeholder="Krótki opis produktu..."
           {...register("description_short")}
         />
       </div>
@@ -256,7 +256,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         <Label htmlFor="description_long">Opis</Label>
         <Textarea
           id="description_long"
-          placeholder="Pelny opis produktu..."
+          placeholder="Pełny opis produktu..."
           rows={5}
           {...register("description_long")}
         />
@@ -270,22 +270,22 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             <Input id="weight" type="number" step="0.001" min="0" placeholder="0.000" {...register("weight", { valueAsNumber: true })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="width">Szerokosc (cm)</Label>
+            <Label htmlFor="width">Szerokość (cm)</Label>
             <Input id="width" type="number" step="0.01" min="0" placeholder="0.00" {...register("width", { valueAsNumber: true })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="height">Wysokosc (cm)</Label>
+            <Label htmlFor="height">Wysokość (cm)</Label>
             <Input id="height" type="number" step="0.01" min="0" placeholder="0.00" {...register("height", { valueAsNumber: true })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="depth">Glebokosc (cm)</Label>
+            <Label htmlFor="depth">Głębokość (cm)</Label>
             <Input id="depth" type="number" step="0.01" min="0" placeholder="0.00" {...register("depth", { valueAsNumber: true })} />
           </div>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="image_url">Zdjecie glowne (URL)</Label>
+        <Label htmlFor="image_url">Zdjęcie główne (URL)</Label>
         <div className="flex gap-2">
           <Input
             id="image_url"
@@ -316,7 +316,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                 const { url } = await uploadFile(file);
                 setValue("image_url", url, { shouldValidate: true });
               } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Blad uploadu");
+                toast.error(err instanceof Error ? err.message : "Błąd uploadu");
               } finally {
                 setUploadingMain(false);
                 e.target.value = "";
@@ -327,7 +327,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         {imageUrlValue && imageUrlValue.trim() !== "" && (
           <img
             src={imageUrlValue}
-            alt="Podglad zdjecia glownego"
+            alt="Podgląd zdjęcia głównego"
             className="h-32 w-32 rounded-lg object-cover border"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
@@ -356,7 +356,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
               {img.url.trim() !== "" && (
                 <img
                   src={img.url}
-                  alt={img.alt || `Zdjecie ${index + 1}`}
+                  alt={img.alt || `Zdjęcie ${index + 1}`}
                   className="h-10 w-10 rounded border object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
@@ -404,7 +404,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                 const { url } = await uploadFile(file);
                 setImageList((prev) => [...prev, { url, alt: "" }]);
               } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Blad uploadu");
+                toast.error(err instanceof Error ? err.message : "Błąd uploadu");
               } finally {
                 setUploadingIdx(null);
                 e.target.value = "";
@@ -424,7 +424,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
           ? "Zapisywanie..."
           : product
             ? "Zapisz zmiany"
-            : "Utworz produkt"}
+            : "Utwórz produkt"}
       </Button>
     </form>
   );

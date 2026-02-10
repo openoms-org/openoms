@@ -34,9 +34,15 @@ type Order struct {
 
 // Buyer represents the buyer of an order.
 type Buyer struct {
-	ID    string `json:"id"`
-	Login string `json:"login"`
-	Email string `json:"email"`
+	ID    string      `json:"id"`
+	Login string      `json:"login"`
+	Email string      `json:"email"`
+	Phone *BuyerPhone `json:"phone,omitempty"`
+}
+
+// BuyerPhone represents the buyer's phone number.
+type BuyerPhone struct {
+	Number string `json:"number"`
 }
 
 // Payment represents payment information for an order.
@@ -59,8 +65,23 @@ type Fulfillment struct {
 
 // Delivery represents delivery details for an order.
 type Delivery struct {
-	Address Address        `json:"address"`
-	Method  DeliveryMethod `json:"method"`
+	Address     Address        `json:"address"`
+	Method      DeliveryMethod `json:"method"`
+	PickupPoint *PickupPoint   `json:"pickupPoint,omitempty"`
+}
+
+// PickupPoint represents an Allegro pickup/drop-off point.
+type PickupPoint struct {
+	ID      string         `json:"id"`
+	Name    string         `json:"name"`
+	Address *PickupAddress `json:"address,omitempty"`
+}
+
+// PickupAddress represents the address of a pickup point.
+type PickupAddress struct {
+	Street  string `json:"street"`
+	City    string `json:"city"`
+	ZipCode string `json:"zipCode"`
 }
 
 // Address represents a shipping address.
@@ -71,6 +92,8 @@ type Address struct {
 	City        string `json:"city"`
 	ZipCode     string `json:"zipCode"`
 	CountryCode string `json:"countryCode"`
+	Company     string `json:"companyName,omitempty"`
+	Phone       string `json:"phoneNumber,omitempty"`
 }
 
 // DeliveryMethod represents the delivery method.
@@ -86,10 +109,11 @@ type Invoice struct {
 
 // LineItem represents a single item in an order.
 type LineItem struct {
-	ID       string        `json:"id"`
-	Offer    LineItemOffer `json:"offer"`
-	Quantity int           `json:"quantity"`
-	Price    Amount        `json:"price"`
+	ID            string        `json:"id"`
+	Offer         LineItemOffer `json:"offer"`
+	Quantity      int           `json:"quantity"`
+	Price         Amount        `json:"price"`
+	OriginalPrice *Amount       `json:"originalPrice,omitempty"`
 }
 
 // LineItemOffer represents a reference to the offer within a line item.

@@ -75,11 +75,11 @@ export default function WebhooksPage() {
   const handleSave = async () => {
     for (const ep of endpoints) {
       if (!ep.name.trim()) {
-        toast.error("Nazwa endpointu nie moze byc pusta");
+        toast.error("Nazwa endpointu nie może być pusta");
         return;
       }
       if (!ep.url.trim()) {
-        toast.error("URL endpointu nie moze byc pusty");
+        toast.error("URL endpointu nie może być pusty");
         return;
       }
       if (ep.events.length === 0) {
@@ -95,7 +95,7 @@ export default function WebhooksPage() {
       toast.success("Konfiguracja webhooków została zapisana");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Blad podczas zapisywania"
+        error instanceof Error ? error.message : "Błąd podczas zapisywania"
       );
     }
   };

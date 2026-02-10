@@ -21,10 +21,10 @@ import { Loader2, Send, Save } from "lucide-react";
 import type { EmailSettings } from "@/types/api";
 
 const NOTIFICATION_STATUSES = [
-  { value: "confirmed", label: "Potwierdzenie zamowienia" },
-  { value: "shipped", label: "Wysylka zamowienia" },
-  { value: "delivered", label: "Dostarczenie zamowienia" },
-  { value: "cancelled", label: "Anulowanie zamowienia" },
+  { value: "confirmed", label: "Potwierdzenie zamówienia" },
+  { value: "shipped", label: "Wysyłka zamówienia" },
+  { value: "delivered", label: "Dostarczenie zamówienia" },
+  { value: "cancelled", label: "Anulowanie zamówienia" },
   { value: "refunded", label: "Zwrot srodkow" },
 ];
 
@@ -57,7 +57,7 @@ export default function EmailSettingsPage() {
       toast.success("Ustawienia zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac ustawien";
+        err instanceof Error ? err.message : "Nie udało się zapisać ustawien";
       toast.error(message);
     }
   };
@@ -68,7 +68,7 @@ export default function EmailSettingsPage() {
       toast.success("Testowy email wyslany");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie wyslac testowego emaila";
+        err instanceof Error ? err.message : "Nie udało się wysłać testowego emaila";
       toast.error(message);
     }
   };
@@ -86,7 +86,7 @@ export default function EmailSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">Powiadomienia email</h1>
         <p className="text-muted-foreground">
-          Konfiguracja wysylki emaili do klientow
+          Konfiguracja wysyłki emaili do klientów
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export default function EmailSettingsPage() {
             <div>
               <p className="font-medium">Powiadomienia email</p>
               <p className="text-sm text-muted-foreground">
-                Wysylaj automatyczne emaile przy zmianie statusu zamowienia
+                Wysyłaj automatyczne emaile przy zmianie statusu zamówienia
               </p>
             </div>
             <Switch
@@ -144,7 +144,7 @@ export default function EmailSettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Uzytkownik</Label>
+              <Label>Użytkownik</Label>
               <Input
                 value={form.smtp_user}
                 onChange={(e) =>
@@ -171,7 +171,7 @@ export default function EmailSettingsPage() {
                 onChange={(e) =>
                   setForm({ ...form, from_email: e.target.value })
                 }
-                placeholder="zamowienia@firma.pl"
+                placeholder="zamówienia@firma.pl"
               />
             </div>
             <div className="space-y-2">
@@ -246,7 +246,7 @@ export default function EmailSettingsPage() {
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              Wyslij
+              Wyślij
             </Button>
           </div>
         </CardContent>

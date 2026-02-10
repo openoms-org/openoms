@@ -1,0 +1,49 @@
+# Version control
+.git
+.gitignore
+
+# Dependencies
+**/node_modules
+
+# Build artifacts
+**/.next
+**/dist
+**/tmp
+
+# Development files
+**/__pycache__
+**/.DS_Store
+**/*.test.go
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Documentation (not needed in builds)
+*.md
+docs/
+*.docx
+
+# IDE
+.vscode
+.idea
+
+# Non-application directories
+mvp/
+weekend-challenge/
+deploy/
+scripts/
+prompts-obrazy.md
+
+# Images for landing page (not needed in builds)
+*.webp
+*.png
+openoms-landing-page.html
+
+# Taskfile (dev-only)
+Taskfile.yml
