@@ -16,6 +16,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+	inpost "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
 
 func main() {
@@ -118,6 +119,10 @@ func main() {
 	auditHandler := handler.NewAuditHandler(auditRepo, pool)
 	webhookDeliveryHandler := handler.NewWebhookDeliveryHandler(webhookDeliveryRepo, pool)
 
+	// InPost point search proxy
+	inpostClient := inpost.NewClient(cfg.InPostAPIToken, cfg.InPostOrgID)
+	inpostPointHandler := handler.NewInPostPointHandler(inpostClient)
+
 	// Setup router
 	r := router.New(pool, cfg, tokenSvc,
 		authHandler, userHandler,
@@ -130,6 +135,7 @@ func main() {
 		auditHandler,
 		webhookDeliveryHandler,
 		returnHandler,
+		inpostPointHandler,
 	)
 
 	// Start server

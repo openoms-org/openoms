@@ -510,3 +510,35 @@ export interface CategoryDef {
 export interface ProductCategoriesConfig {
   categories: CategoryDef[];
 }
+
+// === InPost Points ===
+export interface InPostPointAddress {
+  line1: string;
+  line2: string;
+}
+
+export interface InPostPointAddressDetails {
+  city: string;
+  province: string;
+  post_code: string;
+  street: string;
+  building_number: string;
+}
+
+export interface InPostPoint {
+  name: string;
+  type: string[];
+  address: InPostPointAddress;
+  address_details?: InPostPointAddressDetails;
+  location_description: string;
+  opening_hours: string;
+  status: string;
+}
+
+export interface InPostPointSearchResponse {
+  items: InPostPoint[];
+  count: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
