@@ -25,6 +25,32 @@ func NewEmailService(tenantRepo *repository.TenantRepository, pool *pgxpool.Pool
 	return &EmailService{tenantRepo: tenantRepo, pool: pool}
 }
 
+func (s *EmailService) loadStatusConfig(ctx context.Context, tenantID uuid.UUID) *model.OrderStatusConfig {
+	var config *model.OrderStatusConfig
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
+		if err != nil {
+			return err
+		}
+		if settings != nil {
+			var allSettings map[string]json.RawMessage
+			if err := json.Unmarshal(settings, &allSettings); err == nil {
+				if raw, ok := allSettings["order_statuses"]; ok {
+					var cfg model.OrderStatusConfig
+					if err := json.Unmarshal(raw, &cfg); err == nil && len(cfg.Statuses) > 0 {
+						config = &cfg
+						return nil
+					}
+				}
+			}
+		}
+		cfg := model.DefaultOrderStatusConfig()
+		config = &cfg
+		return nil
+	})
+	return config
+}
+
 func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.UUID, order *model.Order, oldStatus, newStatus string) {
 	if order.CustomerEmail == nil || *order.CustomerEmail == "" {
 		return
@@ -63,7 +89,8 @@ func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.U
 		return
 	}
 
-	subject, body := renderEmailTemplate(order, newStatus, emailCfg.FromName)
+	statusCfg := s.loadStatusConfig(ctx, tenantID)
+	subject, body := renderEmailTemplate(order, newStatus, emailCfg.FromName, statusCfg)
 	if err := sendMail(emailCfg, *order.CustomerEmail, subject, body); err != nil {
 		slog.Error("email: failed to send", "error", err, "to", *order.CustomerEmail, "status", newStatus, "order_id", order.ID)
 	} else {
@@ -84,42 +111,28 @@ func (s *EmailService) SendTestEmail(ctx context.Context, settings model.EmailSe
 	return sendMail(settings, toEmail, subject, body)
 }
 
-var statusLabels = map[string]string{
-	"confirmed":        "potwierdzone",
-	"processing":       "w realizacji",
-	"ready_to_ship":    "gotowe do wysylki",
-	"shipped":          "wyslane",
-	"in_transit":       "w transporcie",
-	"out_for_delivery": "w dostawie",
-	"delivered":        "dostarczone",
-	"completed":        "zrealizowane",
-	"cancelled":        "anulowane",
-	"refunded":         "zwrocone",
-	"on_hold":          "wstrzymane",
-}
-
-func renderEmailTemplate(order *model.Order, newStatus string, companyName string) (string, string) {
+func renderEmailTemplate(order *model.Order, newStatus string, companyName string, statusCfg *model.OrderStatusConfig) (string, string) {
 	orderShort := order.ID.String()[:8]
 	customerName := order.CustomerName
-	statusLabel := statusLabels[newStatus]
-	if statusLabel == "" {
-		statusLabel = newStatus
+
+	// Dynamic label lookup
+	statusLabel := newStatus
+	if statusCfg != nil {
+		if def := statusCfg.GetStatusDef(newStatus); def != nil {
+			statusLabel = def.Label
+		}
 	}
 
 	subject := fmt.Sprintf("Zamowienie #%s — %s", orderShort, statusLabel)
 
-	var statusColor string
-	switch newStatus {
-	case "confirmed", "delivered", "completed":
-		statusColor = "#16a34a"
-	case "shipped", "in_transit", "out_for_delivery":
-		statusColor = "#2563eb"
-	case "cancelled":
-		statusColor = "#dc2626"
-	case "refunded":
-		statusColor = "#d97706"
-	default:
-		statusColor = "#6b7280"
+	// Dynamic color lookup
+	statusColor := "#6b7280" // default gray
+	if statusCfg != nil {
+		if def := statusCfg.GetStatusDef(newStatus); def != nil {
+			if hex, ok := model.ColorPresetHex[def.Color]; ok {
+				statusColor = hex
+			}
+		}
 	}
 
 	var extraInfo string

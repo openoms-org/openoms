@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ORDER_STATUSES } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 
 interface OrderStatusChartProps {
   data?: Record<string, number>;
@@ -19,11 +20,14 @@ interface OrderStatusChartProps {
 }
 
 export function OrderStatusChart({ data, isLoading }: OrderStatusChartProps) {
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+
   const chartData = data
     ? Object.entries(data)
         .filter(([, count]) => count > 0)
         .map(([status, count]) => ({
-          name: ORDER_STATUSES[status]?.label ?? status,
+          name: orderStatuses[status]?.label ?? status,
           count,
         }))
         .sort((a, b) => b.count - a.count)

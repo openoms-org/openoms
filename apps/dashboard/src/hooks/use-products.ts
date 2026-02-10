@@ -14,6 +14,10 @@ export function useProducts(params: ProductListParams = {}) {
   if (params.offset) query.set("offset", String(params.offset));
   if (params.name) query.set("name", params.name);
   if (params.sku) query.set("sku", params.sku);
+  if (params.tag) query.set("tag", params.tag);
+  if (params.category) query.set("category", params.category);
+  if (params.sort_by) query.set("sort_by", params.sort_by);
+  if (params.sort_order) query.set("sort_order", params.sort_order);
 
   const qs = query.toString();
 

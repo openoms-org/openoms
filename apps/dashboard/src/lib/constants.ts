@@ -50,6 +50,24 @@ export const SHIPMENT_TRANSITIONS: Record<string, string[]> = {
   failed: ["created"],
 };
 
+export const RETURN_STATUSES: Record<string, { label: string; color: string }> = {
+  requested: { label: "Zgloszone", color: "bg-yellow-100 text-yellow-800" },
+  approved: { label: "Zatwierdzone", color: "bg-blue-100 text-blue-800" },
+  received: { label: "Odebrane", color: "bg-purple-100 text-purple-800" },
+  refunded: { label: "Zwrocone", color: "bg-green-100 text-green-800" },
+  rejected: { label: "Odrzucone", color: "bg-red-100 text-red-800" },
+  cancelled: { label: "Anulowane", color: "bg-gray-100 text-gray-800" },
+};
+
+export const RETURN_TRANSITIONS: Record<string, string[]> = {
+  requested: ["approved", "rejected", "cancelled"],
+  approved: ["received", "cancelled"],
+  received: ["refunded", "cancelled"],
+  refunded: [],
+  rejected: [],
+  cancelled: [],
+};
+
 export const INTEGRATION_STATUSES: Record<string, { label: string; color: string }> = {
   active: { label: "Aktywna", color: "bg-green-100 text-green-800" },
   inactive: { label: "Nieaktywna", color: "bg-gray-100 text-gray-800" },

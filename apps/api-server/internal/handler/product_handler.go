@@ -33,6 +33,12 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	if sku := r.URL.Query().Get("sku"); sku != "" {
 		filter.SKU = &sku
 	}
+	if t := r.URL.Query().Get("tag"); t != "" {
+		filter.Tag = &t
+	}
+	if c := r.URL.Query().Get("category"); c != "" {
+		filter.Category = &c
+	}
 
 	products, total, err := h.productService.List(r.Context(), tenantID, filter)
 	if err != nil {

@@ -22,6 +22,9 @@ export function useOrders(params: OrderListParams = {}) {
   if (params.source) searchParams.set("source", params.source);
   if (params.search) searchParams.set("search", params.search);
   if (params.payment_status) searchParams.set("payment_status", params.payment_status);
+  if (params.tag) searchParams.set("tag", params.tag);
+  if (params.sort_by) searchParams.set("sort_by", params.sort_by);
+  if (params.sort_order) searchParams.set("sort_order", params.sort_order);
 
   const query = searchParams.toString();
 
@@ -111,6 +114,7 @@ export async function exportOrdersCSV(params: OrderListParams) {
   if (params.source) searchParams.set("source", params.source);
   if (params.search) searchParams.set("search", params.search);
   if (params.payment_status) searchParams.set("payment_status", params.payment_status);
+  if (params.tag) searchParams.set("tag", params.tag);
 
   const token = useAuthStore.getState().token;
   const response = await fetch(

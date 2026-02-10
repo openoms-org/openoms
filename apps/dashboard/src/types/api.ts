@@ -63,6 +63,8 @@ export interface ListResponse<T> {
 export interface PaginationParams {
   limit?: number;
   offset?: number;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
 }
 
 // === Orders ===
@@ -90,6 +92,7 @@ export interface Order {
   currency: string;
   notes?: string;
   metadata?: Record<string, unknown>;
+  tags: string[];
   ordered_at?: string;
   shipped_at?: string;
   delivered_at?: string;
@@ -114,6 +117,7 @@ export interface CreateOrderRequest {
   currency?: string;
   notes?: string;
   metadata?: Record<string, unknown>;
+  tags?: string[];
   ordered_at?: string;
 }
 
@@ -129,6 +133,7 @@ export interface UpdateOrderRequest {
   currency?: string;
   notes?: string;
   metadata?: Record<string, unknown>;
+  tags?: string[];
 }
 
 export interface StatusTransitionRequest {
@@ -141,6 +146,7 @@ export interface OrderListParams extends PaginationParams {
   source?: string;
   search?: string;
   payment_status?: string;
+  tag?: string;
 }
 
 // === Shipments ===
@@ -204,6 +210,14 @@ export interface Product {
   price: number;
   stock_quantity: number;
   metadata?: Record<string, unknown>;
+  tags: string[];
+  category?: string;
+  description_short: string;
+  description_long: string;
+  weight?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
   image_url?: string;
   images: ProductImage[];
   created_at: string;
@@ -219,6 +233,14 @@ export interface CreateProductRequest {
   price: number;
   stock_quantity: number;
   metadata?: Record<string, unknown>;
+  tags?: string[];
+  category?: string;
+  description_short?: string;
+  description_long?: string;
+  weight?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
   image_url?: string;
   images?: ProductImage[];
 }
@@ -232,6 +254,14 @@ export interface UpdateProductRequest {
   price?: number;
   stock_quantity?: number;
   metadata?: Record<string, unknown>;
+  tags?: string[];
+  category?: string;
+  description_short?: string;
+  description_long?: string;
+  weight?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
   image_url?: string;
   images?: ProductImage[];
 }
@@ -239,6 +269,45 @@ export interface UpdateProductRequest {
 export interface ProductListParams extends PaginationParams {
   name?: string;
   sku?: string;
+  tag?: string;
+  category?: string;
+}
+
+// === Returns/RMA ===
+export interface Return {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  status: string;
+  reason: string;
+  items: Record<string, unknown>[];
+  refund_amount: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateReturnRequest {
+  order_id: string;
+  reason: string;
+  items?: Record<string, unknown>[];
+  refund_amount: number;
+  notes?: string;
+}
+
+export interface UpdateReturnRequest {
+  reason?: string;
+  refund_amount?: number;
+  notes?: string;
+}
+
+export interface ReturnStatusRequest {
+  status: string;
+}
+
+export interface ReturnListParams extends PaginationParams {
+  status?: string;
+  order_id?: string;
 }
 
 // === Integrations (NOT paginated, admin only) ===
@@ -275,6 +344,36 @@ export interface WebhookEvent {
   payload: Record<string, unknown>;
   status: string;
   created_at: string;
+}
+
+// === Outgoing Webhooks ===
+export interface WebhookEndpoint {
+  id: string;
+  name: string;
+  url: string;
+  secret: string;
+  events: string[];
+  active: boolean;
+}
+
+export interface WebhookConfig {
+  endpoints: WebhookEndpoint[];
+}
+
+export interface WebhookDelivery {
+  id: string;
+  url: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  response_code?: number;
+  error?: string;
+  created_at: string;
+}
+
+export interface WebhookDeliveryParams extends PaginationParams {
+  event_type?: string;
+  status?: string;
 }
 
 // === API Error ===
@@ -322,9 +421,17 @@ export interface AuditLogEntry {
   id: number;
   user_name?: string;
   action: string;
+  entity_type: string;
+  entity_id: string;
   changes: Record<string, string>;
   ip_address?: string;
   created_at: string;
+}
+
+export interface AuditListParams extends PaginationParams {
+  entity_type?: string;
+  action?: string;
+  user_id?: string;
 }
 
 // === Bulk Status ===
@@ -363,4 +470,43 @@ export interface CompanySettings {
   phone: string;
   email: string;
   website: string;
+}
+
+// === Order Status Config ===
+export interface StatusDef {
+  key: string;
+  label: string;
+  color: string; // preset name: "blue", "green", "red", etc.
+  position: number;
+}
+
+export interface OrderStatusConfig {
+  statuses: StatusDef[];
+  transitions: Record<string, string[]>;
+}
+
+// === Custom Fields Config ===
+export interface CustomFieldDef {
+  key: string;
+  label: string;
+  type: "text" | "number" | "select" | "date" | "checkbox";
+  required: boolean;
+  position: number;
+  options?: string[];
+}
+
+export interface CustomFieldsConfig {
+  fields: CustomFieldDef[];
+}
+
+// === Product Categories Config ===
+export interface CategoryDef {
+  key: string;
+  label: string;
+  color: string;
+  position: number;
+}
+
+export interface ProductCategoriesConfig {
+  categories: CategoryDef[];
 }

@@ -41,6 +41,11 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 		args = append(args, *filter.PaymentStatus)
 		argIdx++
 	}
+	if filter.Tag != nil {
+		where += fmt.Sprintf(" AND tags @> ARRAY[$%d]::text[]", argIdx)
+		args = append(args, *filter.Tag)
+		argIdx++
+	}
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM orders " + where
@@ -48,16 +53,26 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 		return nil, 0, fmt.Errorf("count orders: %w", err)
 	}
 
+	allowedSortColumns := map[string]string{
+		"created_at":     "created_at",
+		"customer_name":  "customer_name",
+		"total_amount":   "total_amount",
+		"status":         "status",
+		"source":         "source",
+		"payment_status": "payment_status",
+	}
+	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
+
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, external_id, source, integration_id, status,
 		        customer_name, customer_email, customer_phone,
 		        shipping_address, billing_address, items,
-		        total_amount, currency, notes, metadata,
+		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at, payment_status, payment_method, paid_at, created_at, updated_at
 		 FROM orders %s
-		 ORDER BY created_at DESC
+		 %s
 		 LIMIT $%d OFFSET $%d`,
-		where, argIdx, argIdx+1,
+		where, orderByClause, argIdx, argIdx+1,
 	)
 	args = append(args, filter.Limit, filter.Offset)
 
@@ -74,7 +89,7 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 			&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
 			&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
 			&o.ShippingAddress, &o.BillingAddress, &o.Items,
-			&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata,
+			&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 			&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt, &o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan order: %w", err)
@@ -90,14 +105,14 @@ func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 		`SELECT id, tenant_id, external_id, source, integration_id, status,
 		        customer_name, customer_email, customer_phone,
 		        shipping_address, billing_address, items,
-		        total_amount, currency, notes, metadata,
+		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at, payment_status, payment_method, paid_at, created_at, updated_at
 		 FROM orders WHERE id = $1`, id,
 	).Scan(
 		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
 		&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
 		&o.ShippingAddress, &o.BillingAddress, &o.Items,
-		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata,
+		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt, &o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
@@ -110,19 +125,23 @@ func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 }
 
 func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Order) error {
+	tags := order.Tags
+	if tags == nil {
+		tags = []string{}
+	}
 	return tx.QueryRow(ctx,
 		`INSERT INTO orders (
 			id, tenant_id, external_id, source, integration_id, status,
 			customer_name, customer_email, customer_phone,
 			shipping_address, billing_address, items,
-			total_amount, currency, notes, metadata, ordered_at,
+			total_amount, currency, notes, metadata, tags, ordered_at,
 			payment_status, payment_method
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		RETURNING created_at, updated_at`,
 		order.ID, order.TenantID, order.ExternalID, order.Source, order.IntegrationID, order.Status,
 		order.CustomerName, order.CustomerEmail, order.CustomerPhone,
 		order.ShippingAddress, order.BillingAddress, order.Items,
-		order.TotalAmount, order.Currency, order.Notes, order.Metadata, order.OrderedAt,
+		order.TotalAmount, order.Currency, order.Notes, order.Metadata, tags, order.OrderedAt,
 		order.PaymentStatus, order.PaymentMethod,
 	).Scan(&order.CreatedAt, &order.UpdatedAt)
 }
@@ -185,6 +204,11 @@ func (r *OrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, r
 	if req.Metadata != nil {
 		setClauses = append(setClauses, fmt.Sprintf("metadata = $%d", argIdx))
 		args = append(args, req.Metadata)
+		argIdx++
+	}
+	if req.Tags != nil {
+		setClauses = append(setClauses, fmt.Sprintf("tags = $%d", argIdx))
+		args = append(args, *req.Tags)
 		argIdx++
 	}
 	if req.PaymentStatus != nil {

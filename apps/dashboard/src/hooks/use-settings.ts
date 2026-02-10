@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { EmailSettings, CompanySettings } from "@/types/api";
+import type { EmailSettings, CompanySettings, OrderStatusConfig, CustomFieldsConfig } from "@/types/api";
 
 export function useEmailSettings() {
   return useQuery({
@@ -52,6 +52,34 @@ export function useUpdateCompanySettings() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "company"] });
+    },
+  });
+}
+
+export function useUpdateOrderStatuses() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: OrderStatusConfig) =>
+      apiClient<OrderStatusConfig>("/v1/settings/order-statuses", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order-statuses"] });
+    },
+  });
+}
+
+export function useUpdateCustomFields() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CustomFieldsConfig) =>
+      apiClient<CustomFieldsConfig>("/v1/settings/custom-fields", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom-fields"] });
     },
   });
 }

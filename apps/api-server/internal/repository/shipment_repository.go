@@ -42,14 +42,21 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 		return nil, 0, fmt.Errorf("count shipments: %w", err)
 	}
 
+	allowedSortColumns := map[string]string{
+		"created_at": "created_at",
+		"provider":   "provider",
+		"status":     "status",
+	}
+	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
+
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, order_id, provider, integration_id,
 		        tracking_number, status, label_url, carrier_data,
 		        created_at, updated_at
 		 FROM shipments %s
-		 ORDER BY created_at DESC
+		 %s
 		 LIMIT $%d OFFSET $%d`,
-		where, argIdx, argIdx+1,
+		where, orderByClause, argIdx, argIdx+1,
 	)
 	args = append(args, filter.Limit, filter.Offset)
 

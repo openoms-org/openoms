@@ -13,6 +13,7 @@ import { useOrderAudit } from "@/hooks/use-orders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ORDER_STATUSES } from "@/lib/constants";
+import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import type { AuditLogEntry } from "@/types/api";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -37,11 +38,7 @@ function getActionIcon(action: string) {
   }
 }
 
-function getStatusLabel(status: string): string {
-  return ORDER_STATUSES[status]?.label || status;
-}
-
-function EntryChanges({ entry }: { entry: AuditLogEntry }) {
+function EntryChanges({ entry, orderStatuses }: { entry: AuditLogEntry; orderStatuses: Record<string, { label: string; color: string }> }) {
   if (!entry.changes || Object.keys(entry.changes).length === 0) {
     return null;
   }
@@ -52,7 +49,7 @@ function EntryChanges({ entry }: { entry: AuditLogEntry }) {
     if (from && to) {
       return (
         <p className="text-xs text-muted-foreground mt-1">
-          {getStatusLabel(from)} &rarr; {getStatusLabel(to)}
+          {orderStatuses[from]?.label || from} &rarr; {orderStatuses[to]?.label || to}
         </p>
       );
     }
@@ -69,7 +66,7 @@ function EntryChanges({ entry }: { entry: AuditLogEntry }) {
   );
 }
 
-function TimelineEntry({ entry }: { entry: AuditLogEntry }) {
+function TimelineEntry({ entry, orderStatuses }: { entry: AuditLogEntry; orderStatuses: Record<string, { label: string; color: string }> }) {
   const label = ACTION_LABELS[entry.action] || entry.action;
   const relativeTime = formatDistanceToNow(new Date(entry.created_at), {
     addSuffix: true,
@@ -89,7 +86,7 @@ function TimelineEntry({ entry }: { entry: AuditLogEntry }) {
         {entry.user_name && (
           <p className="text-xs text-muted-foreground">{entry.user_name}</p>
         )}
-        <EntryChanges entry={entry} />
+        <EntryChanges entry={entry} orderStatuses={orderStatuses} />
         <p className="text-xs text-muted-foreground mt-1">{relativeTime}</p>
       </div>
     </div>
@@ -102,6 +99,8 @@ interface OrderTimelineProps {
 
 export function OrderTimeline({ orderId }: OrderTimelineProps) {
   const { data: entries, isLoading } = useOrderAudit(orderId);
+  const { data: statusConfig } = useOrderStatuses();
+  const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
 
   return (
     <Card>
@@ -120,7 +119,7 @@ export function OrderTimeline({ orderId }: OrderTimelineProps) {
         ) : (
           <div>
             {entries.map((entry) => (
-              <TimelineEntry key={entry.id} entry={entry} />
+              <TimelineEntry key={entry.id} entry={entry} orderStatuses={orderStatuses} />
             ))}
           </div>
         )}
