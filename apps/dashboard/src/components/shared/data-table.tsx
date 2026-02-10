@@ -1,0 +1,175 @@
+"use client";
+
+import { useCallback } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export interface ColumnDef<T> {
+  header: string;
+  accessorKey: keyof T | string;
+  cell?: (row: T) => React.ReactNode;
+}
+
+interface DataTableProps<T> {
+  columns: ColumnDef<T>[];
+  data: T[];
+  isLoading?: boolean;
+  emptyMessage?: string;
+  onRowClick?: (row: T) => void;
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
+  rowId?: (row: T) => string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getNestedValue(obj: any, path: string): unknown {
+  return path.split(".").reduce((acc, part) => {
+    if (acc && typeof acc === "object") {
+      return acc[part];
+    }
+    return undefined;
+  }, obj);
+}
+
+export function DataTable<T>({
+  columns,
+  data,
+  isLoading = false,
+  emptyMessage = "Brak danych",
+  onRowClick,
+  selectable = false,
+  selectedIds,
+  onSelectionChange,
+  rowId,
+}: DataTableProps<T>) {
+  const getRowId = useCallback(
+    (row: T) => (rowId ? rowId(row) : (row as Record<string, unknown>).id as string),
+    [rowId]
+  );
+
+  const allRowIds = data.map((row) => getRowId(row));
+  const allSelected = allRowIds.length > 0 && allRowIds.every((id) => selectedIds?.has(id));
+  const someSelected = allRowIds.some((id) => selectedIds?.has(id));
+
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    if (allSelected) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(allRowIds));
+    }
+  };
+
+  const toggleRow = (id: string) => {
+    if (!onSelectionChange || !selectedIds) return;
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onSelectionChange(next);
+  };
+
+  if (isLoading) {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {selectable && (
+              <TableHead className="w-10" />
+            )}
+            {columns.map((column) => (
+              <TableHead key={String(column.accessorKey)}>{column.header}</TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 5 }).map((_, rowIndex) => (
+            <TableRow key={rowIndex}>
+              {selectable && (
+                <TableCell className="w-10">
+                  <Skeleton className="h-4 w-4" />
+                </TableCell>
+              )}
+              {columns.map((column) => (
+                <TableCell key={String(column.accessorKey)}>
+                  <Skeleton className="h-4 w-full" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {selectable && (
+            <TableHead className="w-10">
+              <input
+                type="checkbox"
+                className="cursor-pointer"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected && !allSelected;
+                }}
+                onChange={toggleAll}
+              />
+            </TableHead>
+          )}
+          {columns.map((column) => (
+            <TableHead key={String(column.accessorKey)}>{column.header}</TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((row, rowIndex) => {
+          const id = getRowId(row);
+          return (
+            <TableRow
+              key={rowIndex}
+              className={onRowClick ? "cursor-pointer" : ""}
+              onClick={() => onRowClick?.(row)}
+            >
+              {selectable && (
+                <TableCell className="w-10">
+                  <input
+                    type="checkbox"
+                    className="cursor-pointer"
+                    checked={selectedIds?.has(id) || false}
+                    onChange={() => toggleRow(id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </TableCell>
+              )}
+              {columns.map((column) => (
+                <TableCell key={String(column.accessorKey)}>
+                  {column.cell
+                    ? column.cell(row)
+                    : String(getNestedValue(row, String(column.accessorKey)) ?? "")}
+                </TableCell>
+              ))}
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}

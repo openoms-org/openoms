@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  GO_VERSION: "1.24"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2
+          working-directory: apps/api-server
+          args: --timeout=5m
+
+      - name: Lint allegro-go-sdk
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2
+          working-directory: packages/allegro-go-sdk
+          args: --timeout=5m
+
+      - name: Lint inpost-go-sdk
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2
+          working-directory: packages/inpost-go-sdk
+          args: --timeout=5m
+
+      - name: Lint order-engine
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2
+          working-directory: packages/order-engine
+          args: --timeout=5m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openoms
+          POSTGRES_PASSWORD: openoms_dev
+          POSTGRES_DB: openoms_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U openoms"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgres://openoms:openoms_dev@localhost:5432/openoms_dev?sslmode=disable
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-test-jwt-secret-not-for-production
+      ENCRYPTION_KEY: ci-test-encryption-key-32bytes!
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run migrations
+        run: |
+          PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f apps/api-server/migrations/000001_init_schema.up.sql
+
+      - name: Test api-server
+        working-directory: apps/api-server
+        run: go test -race -cover ./...
+
+      - name: Test allegro-go-sdk
+        working-directory: packages/allegro-go-sdk
+        run: go test ./...
+
+      - name: Test inpost-go-sdk
+        working-directory: packages/inpost-go-sdk
+        run: go test ./...
+
+      - name: Test order-engine
+        working-directory: packages/order-engine
+        run: go test ./...
+
+  vet:
+    name: Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Vet api-server
+        working-directory: apps/api-server
+        run: go vet ./...
+
+      - name: Vet allegro-go-sdk
+        working-directory: packages/allegro-go-sdk
+        run: go vet ./...
+
+      - name: Vet inpost-go-sdk
+        working-directory: packages/inpost-go-sdk
+        run: go vet ./...
+
+      - name: Vet order-engine
+        working-directory: packages/order-engine
+        run: go vet ./...

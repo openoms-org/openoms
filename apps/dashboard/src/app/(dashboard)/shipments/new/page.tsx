@@ -1,0 +1,57 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ShipmentForm } from "@/components/shipments/shipment-form";
+import { useCreateShipment } from "@/hooks/use-shipments";
+
+export default function NewShipmentPage() {
+  const router = useRouter();
+  const createShipment = useCreateShipment();
+
+  const handleSubmit = (data: Parameters<typeof createShipment.mutate>[0]) => {
+    createShipment.mutate(data, {
+      onSuccess: (shipment) => {
+        toast.success("Przesylka zostala utworzona");
+        router.push(`/shipments/${shipment.id}`);
+      },
+      onError: (error) => {
+        toast.error(error.message || "Nie udalo sie utworzyc przesylki");
+      },
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/shipments">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Nowa przesylka</h1>
+          <p className="text-muted-foreground">
+            Utworz nowa przesylke dla zamowienia
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dane przesylki</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ShipmentForm
+            onSubmit={handleSubmit}
+            isLoading={createShipment.isPending}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
