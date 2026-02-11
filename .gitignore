@@ -47,6 +47,7 @@ uploads/
 # Binary output
 /bin/
 /tmp/
+apps/api-server/server
 
 # Legacy code (reference only, not part of new build)
 /mvp/
