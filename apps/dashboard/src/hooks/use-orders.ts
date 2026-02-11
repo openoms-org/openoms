@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
-import { useAuthStore } from "@/lib/auth";
+import { apiClient, apiFetch } from "@/lib/api-client";
 import type {
   Order,
   ListResponse,
@@ -60,6 +59,7 @@ export function useUpdateOrder(id: string) {
       apiClient<Order>(`/v1/orders/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", id] });
     },
   });
 }
@@ -69,8 +69,9 @@ export function useDeleteOrder() {
   return useMutation({
     mutationFn: (id: string) =>
       apiClient<void>(`/v1/orders/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", id] });
     },
   });
 }
@@ -82,6 +83,7 @@ export function useTransitionOrderStatus(id: string) {
       apiClient<Order>(`/v1/orders/${id}/status`, { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orders", id] });
     },
   });
 }
@@ -109,8 +111,6 @@ export function useOrderAudit(id: string) {
 }
 
 export async function exportOrdersCSV(params: OrderListParams) {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
   const searchParams = new URLSearchParams();
   if (params.status) searchParams.set("status", params.status);
   if (params.source) searchParams.set("source", params.source);
@@ -118,37 +118,7 @@ export async function exportOrdersCSV(params: OrderListParams) {
   if (params.payment_status) searchParams.set("payment_status", params.payment_status);
   if (params.tag) searchParams.set("tag", params.tag);
 
-  const token = useAuthStore.getState().token;
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  let response = await fetch(
-    `${API_URL}/v1/orders/export?${searchParams}`,
-    { headers, credentials: "include" }
-  );
-
-  // Auto-refresh on 401
-  if (response.status === 401 && token) {
-    const refreshRes = await fetch(`${API_URL}/v1/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-    if (refreshRes.ok) {
-      const data = await refreshRes.json();
-      useAuthStore.getState().setAuth(data.access_token, data.user, data.tenant);
-      headers["Authorization"] = `Bearer ${data.access_token}`;
-      response = await fetch(
-        `${API_URL}/v1/orders/export?${searchParams}`,
-        { headers, credentials: "include" }
-      );
-    }
-  }
-
-  if (!response.ok) {
-    throw new Error("Błąd podczas eksportu");
-  }
+  const response = await apiFetch(`/v1/orders/export?${searchParams}`);
 
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);

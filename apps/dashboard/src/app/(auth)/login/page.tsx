@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Package, Eye, EyeOff } from "lucide-react";
+import { getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ export default function LoginPage() {
     try {
       await login(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Błąd logowania");
+      toast.error(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

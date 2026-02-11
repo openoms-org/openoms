@@ -13,6 +13,7 @@ import {
 } from "@/hooks/use-warehouses";
 import { useProducts } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,9 +53,9 @@ import {
 } from "@/components/ui/select";
 
 export default function WarehouseDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = params.id as string;
+  const id = params.id;
   const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: warehouse, isLoading } = useWarehouse(id);
   const updateWarehouse = useUpdateWarehouse(id);
@@ -113,9 +114,7 @@ export default function WarehouseDetailPage() {
       {
         onSuccess: () => toast.success("Magazyn zaktualizowany"),
         onError: (error) =>
-          toast.error(
-            error instanceof Error ? error.message : "Blad aktualizacji"
-          ),
+          toast.error(getErrorMessage(error)),
       }
     );
   };
@@ -139,11 +138,7 @@ export default function WarehouseDetailPage() {
           setStockMinStock("0");
         },
         onError: (error) =>
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Blad aktualizacji stanu"
-          ),
+          toast.error(getErrorMessage(error)),
       }
     );
   };

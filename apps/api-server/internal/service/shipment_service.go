@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	engine "github.com/openoms-org/openoms/packages/order-engine"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -44,15 +43,7 @@ func (s *ShipmentService) SetAutomationService(automationSvc *AutomationService)
 }
 
 func (s *ShipmentService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
-	if s.automationService != nil {
-		s.automationService.ProcessEvent(context.Background(), automation.Event{
-			Type:       eventType,
-			TenantID:   tenantID,
-			EntityType: "shipment",
-			EntityID:   entityID,
-			Data:       data,
-		})
-	}
+	FireAutomationEvent(s.automationService, tenantID, "shipment", eventType, entityID, data)
 }
 
 func NewShipmentService(
@@ -128,6 +119,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		Status:         "created",
 		LabelURL:       req.LabelURL,
 		CarrierData:    carrierData,
+		WarehouseID:    req.WarehouseID,
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

@@ -135,6 +135,10 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 }
 
 func (p *MarketplaceOrderPoller) buildOrder(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order {
+	if p.mapOrder != nil {
+		return p.mapOrder(mo, ti, req)
+	}
+
 	order := model.Order{
 		ID:            uuid.New(),
 		TenantID:      ti.TenantID,
@@ -176,18 +180,13 @@ func (p *MarketplaceOrderPoller) buildOrder(mo integration.MarketplaceOrder, ti 
 
 	order.Tags = []string{}
 
-	// Allow provider-specific customization
-	if p.mapOrder != nil {
-		order = p.mapOrder(mo, ti, req)
-	} else {
-		// Default: extract delivery method from RawData
-		if mo.RawData != nil {
-			if dmName, ok := mo.RawData["delivery_method_name"].(string); ok {
-				order.DeliveryMethod = &dmName
-			}
-			if ppID, ok := mo.RawData["pickup_point_id"].(string); ok {
-				order.PickupPointID = &ppID
-			}
+	// Default: extract delivery method from RawData
+	if mo.RawData != nil {
+		if dmName, ok := mo.RawData["delivery_method_name"].(string); ok {
+			order.DeliveryMethod = &dmName
+		}
+		if ppID, ok := mo.RawData["pickup_point_id"].(string); ok {
+			order.PickupPointID = &ppID
 		}
 	}
 

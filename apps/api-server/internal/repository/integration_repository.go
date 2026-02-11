@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
@@ -36,7 +37,9 @@ func (r *IntegrationRepository) List(ctx context.Context, tx pgx.Tx) ([]model.In
 		}
 		// Extract the encrypted string from the JSON string value
 		if len(credsJSON) > 0 {
-			_ = json.Unmarshal(credsJSON, &i.EncryptedCredentials)
+			if err := json.Unmarshal(credsJSON, &i.EncryptedCredentials); err != nil {
+				slog.Warn("failed to unmarshal integration credentials", "error", err, "integration_id", i.ID)
+			}
 		}
 		integrations = append(integrations, i)
 	}
@@ -58,7 +61,9 @@ func (r *IntegrationRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid
 		return nil, fmt.Errorf("find integration by id: %w", err)
 	}
 	if len(credsJSON) > 0 {
-		_ = json.Unmarshal(credsJSON, &i.EncryptedCredentials)
+		if err := json.Unmarshal(credsJSON, &i.EncryptedCredentials); err != nil {
+				slog.Warn("failed to unmarshal integration credentials", "error", err, "integration_id", i.ID)
+			}
 	}
 	return &i, nil
 }
@@ -78,7 +83,9 @@ func (r *IntegrationRepository) FindByProvider(ctx context.Context, tx pgx.Tx, p
 		return nil, fmt.Errorf("find integration by provider: %w", err)
 	}
 	if len(credsJSON) > 0 {
-		_ = json.Unmarshal(credsJSON, &i.EncryptedCredentials)
+		if err := json.Unmarshal(credsJSON, &i.EncryptedCredentials); err != nil {
+				slog.Warn("failed to unmarshal integration credentials", "error", err, "integration_id", i.ID)
+			}
 	}
 	return &i, nil
 }

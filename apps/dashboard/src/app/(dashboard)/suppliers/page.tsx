@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,7 +62,7 @@ export default function SuppliersPage() {
         setDeleteId(null);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Bład usuwania dostawcy");
+        toast.error(getErrorMessage(error));
       },
     });
   };
@@ -73,7 +74,7 @@ export default function SuppliersPage() {
         toast.success("Synchronizacja zakończona");
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Bład synchronizacji");
+        toast.error(getErrorMessage(error));
       },
     });
   };

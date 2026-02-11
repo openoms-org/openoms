@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	amazonsdk "github.com/openoms-org/openoms/packages/amazon-sp-sdk"
@@ -55,7 +56,8 @@ func (h *AmazonAuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 	// Test the credentials by listing recent orders
 	_, err := client.Orders.List(r.Context(), "", []string{body.MarketplaceID}, "")
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "failed to verify Amazon credentials: "+err.Error())
+		slog.Error("failed to verify Amazon credentials", "error", err)
+		writeError(w, http.StatusBadGateway, "failed to verify Amazon credentials")
 		return
 	}
 

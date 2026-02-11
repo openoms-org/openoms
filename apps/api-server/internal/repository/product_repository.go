@@ -63,7 +63,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, created_at, updated_at
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, created_at, updated_at
 		 FROM products %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
@@ -82,7 +82,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 			&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 			&p.DescriptionShort, &p.DescriptionLong,
 			&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
-			&p.ImageURL, &p.Images, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			&p.ImageURL, &p.Images, &p.HasVariants, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan product: %w", err)
 		}
 		products = append(products, p)
@@ -93,13 +93,13 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Product, error) {
 	var p model.Product
 	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, created_at, updated_at
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, created_at, updated_at
 		 FROM products WHERE id = $1`, id,
 	).Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
 		&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 		&p.DescriptionShort, &p.DescriptionLong,
 		&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
-		&p.ImageURL, &p.Images, &p.CreatedAt, &p.UpdatedAt)
+		&p.ImageURL, &p.Images, &p.HasVariants, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

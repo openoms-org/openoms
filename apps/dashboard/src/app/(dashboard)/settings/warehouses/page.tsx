@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +70,7 @@ export default function WarehousesPage() {
         setDeleteId(null);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Blad usuwania magazynu");
+        toast.error(getErrorMessage(error));
       },
     });
   };
@@ -86,7 +87,7 @@ export default function WarehousesPage() {
           setNewCode("");
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : "Blad tworzenia magazynu");
+          toast.error(getErrorMessage(error));
         },
       }
     );

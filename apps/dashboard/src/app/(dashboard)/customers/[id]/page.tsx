@@ -64,6 +64,10 @@ export default function CustomerDetailPage() {
   };
 
   const handleUpdate = async () => {
+    if (!formData.name?.trim()) {
+      toast.error("Imię i nazwisko jest wymagane");
+      return;
+    }
     try {
       await updateCustomer.mutateAsync(formData);
       toast.success("Dane klienta zostaly zaktualizowane");

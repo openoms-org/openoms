@@ -17,6 +17,30 @@ func NewOrderRepository() *OrderRepository {
 	return &OrderRepository{}
 }
 
+// orderSelectColumns is the canonical list of columns selected from orders.
+const orderSelectColumns = `id, tenant_id, external_id, source, integration_id, status,
+		        customer_name, customer_email, customer_phone,
+		        shipping_address, billing_address, items,
+		        total_amount, currency, notes, metadata, tags,
+		        ordered_at, shipped_at, delivered_at,
+		        delivery_method, pickup_point_id,
+		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at`
+
+// scanOrder scans a row into a model.Order using the orderSelectColumns column order.
+func scanOrder(row pgx.Row) (model.Order, error) {
+	var o model.Order
+	err := row.Scan(
+		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
+		&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
+		&o.ShippingAddress, &o.BillingAddress, &o.Items,
+		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
+		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
+		&o.DeliveryMethod, &o.PickupPointID,
+		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
+	)
+	return o, err
+}
+
 func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.OrderListFilter) ([]model.Order, int, error) {
 	where := "WHERE 1=1"
 	args := []any{}
@@ -65,17 +89,11 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, external_id, source, integration_id, status,
-		        customer_name, customer_email, customer_phone,
-		        shipping_address, billing_address, items,
-		        total_amount, currency, notes, metadata, tags,
-		        ordered_at, shipped_at, delivered_at,
-		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at
+		`SELECT %s
 		 FROM orders %s
 		 %s
 		 LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		orderSelectColumns, where, orderByClause, argIdx, argIdx+1,
 	)
 	args = append(args, filter.Limit, filter.Offset)
 
@@ -87,16 +105,8 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 
 	var orders []model.Order
 	for rows.Next() {
-		var o model.Order
-		if err := rows.Scan(
-			&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
-			&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
-			&o.ShippingAddress, &o.BillingAddress, &o.Items,
-			&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
-			&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
-			&o.DeliveryMethod, &o.PickupPointID,
-			&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
-		); err != nil {
+		o, err := scanOrder(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan order: %w", err)
 		}
 		orders = append(orders, o)
@@ -105,25 +115,9 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 }
 
 func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Order, error) {
-	var o model.Order
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, external_id, source, integration_id, status,
-		        customer_name, customer_email, customer_phone,
-		        shipping_address, billing_address, items,
-		        total_amount, currency, notes, metadata, tags,
-		        ordered_at, shipped_at, delivered_at,
-		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at
-		 FROM orders WHERE id = $1`, id,
-	).Scan(
-		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
-		&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
-		&o.ShippingAddress, &o.BillingAddress, &o.Items,
-		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
-		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
-		&o.DeliveryMethod, &o.PickupPointID,
-		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
-	)
+	o, err := scanOrder(tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM orders WHERE id = $1`, orderSelectColumns), id,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -285,25 +279,9 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.U
 }
 
 func (r *OrderRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, source, externalID string) (*model.Order, error) {
-	var o model.Order
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, external_id, source, integration_id, status,
-		        customer_name, customer_email, customer_phone,
-		        shipping_address, billing_address, items,
-		        total_amount, currency, notes, metadata, tags,
-		        ordered_at, shipped_at, delivered_at,
-		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at
-		 FROM orders WHERE source = $1 AND metadata->>'external_id' = $2`, source, externalID,
-	).Scan(
-		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
-		&o.CustomerName, &o.CustomerEmail, &o.CustomerPhone,
-		&o.ShippingAddress, &o.BillingAddress, &o.Items,
-		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
-		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
-		&o.DeliveryMethod, &o.PickupPointID,
-		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
-	)
+	o, err := scanOrder(tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM orders WHERE source = $1 AND external_id = $2`, orderSelectColumns), source, externalID,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

@@ -13,6 +13,7 @@ import {
 } from "@/hooks/use-suppliers";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { getErrorMessage } from "@/lib/api-client";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,9 +49,9 @@ const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
 };
 
 export default function SupplierDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const id = params.id as string;
+  const id = params.id;
   const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: supplier, isLoading } = useSupplier(id);
   const updateSupplier = useUpdateSupplier(id);
@@ -93,7 +94,7 @@ export default function SupplierDetailPage() {
       {
         onSuccess: () => toast.success("Dostawca zaktualizowany"),
         onError: (error) =>
-          toast.error(error instanceof Error ? error.message : "Bład aktualizacji"),
+          toast.error(getErrorMessage(error)),
       }
     );
   };
@@ -102,7 +103,7 @@ export default function SupplierDetailPage() {
     syncSupplier.mutate(id, {
       onSuccess: () => toast.success("Synchronizacja zakończona"),
       onError: (error) =>
-        toast.error(error instanceof Error ? error.message : "Bład synchronizacji"),
+        toast.error(getErrorMessage(error)),
     });
   };
 

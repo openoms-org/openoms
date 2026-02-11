@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/google/uuid"
@@ -58,7 +59,9 @@ func (r *AuditRepository) ListByEntity(ctx context.Context, tx pgx.Tx, entityTyp
 			return nil, fmt.Errorf("scan audit entry: %w", err)
 		}
 		if len(changesJSON) > 0 {
-			_ = json.Unmarshal(changesJSON, &entry.Changes)
+			if err := json.Unmarshal(changesJSON, &entry.Changes); err != nil {
+				slog.Warn("failed to unmarshal audit entry changes", "error", err, "entry_id", entry.ID)
+			}
 		}
 		if entry.Changes == nil {
 			entry.Changes = map[string]string{}
@@ -132,7 +135,9 @@ func (r *AuditRepository) List(ctx context.Context, tx pgx.Tx, filter model.Audi
 			return nil, 0, fmt.Errorf("scan audit entry: %w", err)
 		}
 		if len(changesJSON) > 0 {
-			_ = json.Unmarshal(changesJSON, &entry.Changes)
+			if err := json.Unmarshal(changesJSON, &entry.Changes); err != nil {
+				slog.Warn("failed to unmarshal audit entry changes", "error", err, "entry_id", entry.ID)
+			}
 		}
 		if entry.Changes == nil {
 			entry.Changes = map[string]string{}

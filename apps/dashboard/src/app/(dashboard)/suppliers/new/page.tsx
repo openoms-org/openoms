@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useCreateSupplier } from "@/hooks/use-suppliers";
+import { getErrorMessage } from "@/lib/api-client";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +70,7 @@ export default function NewSupplierPage() {
         router.push("/suppliers");
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Bład tworzenia dostawcy");
+        toast.error(getErrorMessage(error));
       },
     });
   };

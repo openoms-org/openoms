@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
+import { loadInPostGeowidgetScript } from "@/components/shared/paczkomat-map";
 
 interface InPostGeowidgetProps {
   onPointSelect: (pointName: string) => void;
 }
-
-let scriptLoaded = false;
 
 export function InPostGeowidget({ onPointSelect }: InPostGeowidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,25 +26,9 @@ export function InPostGeowidget({ onPointSelect }: InPostGeowidgetProps) {
     };
   }, []);
 
-  // Load geowidget script + CSS once
-  const loadScript = useCallback(() => {
-    if (scriptLoaded) return;
-    scriptLoaded = true;
-
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://geowidget.inpost.pl/inpost-geowidget.css";
-    document.head.appendChild(link);
-
-    const script = document.createElement("script");
-    script.src = "https://geowidget.inpost.pl/inpost-geowidget.js";
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
-
   // Create the custom element via DOM API (avoids JSX type issues with web components)
   useEffect(() => {
-    loadScript();
+    loadInPostGeowidgetScript();
 
     if (!containerRef.current || !token) return;
 
@@ -65,7 +48,7 @@ export function InPostGeowidget({ onPointSelect }: InPostGeowidgetProps) {
         containerRef.current.removeChild(el);
       }
     };
-  }, [loadScript, token]);
+  }, [token]);
 
   if (!token) {
     return (

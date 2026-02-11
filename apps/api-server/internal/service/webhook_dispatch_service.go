@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -21,6 +20,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -29,6 +29,33 @@ type WebhookDispatchService struct {
 	deliveryRepo repository.WebhookDeliveryRepo
 	pool         *pgxpool.Pool
 	httpClient   *http.Client
+}
+
+// noPrivateDialer returns a DialContext function that refuses to connect to private IP addresses.
+// This prevents SSRF TOCTOU attacks by checking the resolved IP at connect time (atomically).
+func noPrivateDialer() func(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid address: %w", err)
+		}
+
+		ips, err := net.DefaultResolver.LookupHost(ctx, host)
+		if err != nil {
+			return nil, fmt.Errorf("DNS lookup failed: %w", err)
+		}
+
+		for _, ipStr := range ips {
+			ip := net.ParseIP(ipStr)
+			if ip != nil && netutil.IsPrivateIP(ip) {
+				return nil, fmt.Errorf("connection to private IP %s rejected", ipStr)
+			}
+		}
+
+		// Connect to the first resolved IP to avoid TOCTOU
+		return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0], port))
+	}
 }
 
 func NewWebhookDispatchService(
@@ -40,7 +67,12 @@ func NewWebhookDispatchService(
 		tenantRepo:   tenantRepo,
 		deliveryRepo: deliveryRepo,
 		pool:         pool,
-		httpClient:   &http.Client{Timeout: 10 * time.Second},
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				DialContext: noPrivateDialer(),
+			},
+		},
 	}
 }
 
@@ -116,14 +148,8 @@ func (s *WebhookDispatchService) sendWebhookWithRetry(ctx context.Context, tenan
 // trySendWebhook attempts a single webhook delivery. It logs the delivery only
 // on success or when isFinalAttempt is true. Returns true if successful.
 func (s *WebhookDispatchService) trySendWebhook(ctx context.Context, tenantID uuid.UUID, ep model.WebhookEndpoint, eventType string, payload []byte, isFinalAttempt bool) bool {
-	// SSRF protection: reject private/internal URLs
-	if isPrivateURL(ep.URL) {
-		slog.Warn("webhook: skipping dispatch to private/internal URL", "url", ep.URL, "tenant_id", tenantID)
-		if isFinalAttempt {
-			s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "failed", nil, "private/internal URL rejected")
-		}
-		return false
-	}
+	// SSRF protection is handled atomically by the custom dialer (noPrivateDialer)
+	// which checks the resolved IP at connect time, avoiding TOCTOU vulnerabilities.
 
 	// Compute HMAC-SHA256 signature
 	mac := hmac.New(sha256.New, []byte(ep.Secret))
@@ -185,58 +211,6 @@ func (s *WebhookDispatchService) logDelivery(ctx context.Context, tenantID uuid.
 	if err != nil {
 		slog.Error("webhook: failed to log delivery", "error", err)
 	}
-}
-
-// isPrivateURL checks whether a URL resolves to a private/internal IP address.
-func isPrivateURL(urlStr string) bool {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return true // reject unparseable URLs
-	}
-
-	hostname := u.Hostname()
-	if hostname == "" {
-		return true
-	}
-
-	ips, err := net.LookupHost(hostname)
-	if err != nil {
-		return true // reject unresolvable hostnames
-	}
-
-	privateRanges := []string{
-		"10.0.0.0/8",
-		"172.16.0.0/12",
-		"192.168.0.0/16",
-		"127.0.0.0/8",
-		"169.254.0.0/16",
-		"::1/128",
-		"fc00::/7",
-		"fe80::/10",
-	}
-
-	var cidrs []*net.IPNet
-	for _, cidr := range privateRanges {
-		_, ipNet, err := net.ParseCIDR(cidr)
-		if err != nil {
-			continue
-		}
-		cidrs = append(cidrs, ipNet)
-	}
-
-	for _, ipStr := range ips {
-		ip := net.ParseIP(ipStr)
-		if ip == nil {
-			continue
-		}
-		for _, cidr := range cidrs {
-			if cidr.Contains(ip) {
-				return true
-			}
-		}
-	}
-
-	return false
 }
 
 func matchesEvent(events []string, eventType string) bool {

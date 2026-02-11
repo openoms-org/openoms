@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useCreateIntegration } from "@/hooks/use-integrations";
+import { getErrorMessage } from "@/lib/api-client";
 import { PageHeader } from "@/components/shared/page-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { IntegrationForm } from "@/components/integrations/integration-form";
@@ -33,7 +34,7 @@ export default function NewIntegrationPage() {
         router.push("/integrations");
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Błąd tworzenia integracji");
+        toast.error(getErrorMessage(error));
       },
     });
   };

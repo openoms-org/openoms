@@ -52,8 +52,8 @@ import { ArrowLeft, Save, Plus, Trash2, Loader2, Play } from "lucide-react";
 import type { AutomationCondition, AutomationAction, AutomationRuleLog } from "@/types/api";
 
 export default function AutomationRuleDetailPage() {
-  const params = useParams();
-  const id = params.id as string;
+  const params = useParams<{ id: string }>();
+  const id = params.id;
   const router = useRouter();
   const { isAdmin, isLoading: authLoading } = useAuth();
 

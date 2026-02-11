@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -221,7 +222,9 @@ func (h *PrintHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenant
 	if !ok {
 		return nil
 	}
-	json.Unmarshal(raw, dest) //nolint:errcheck
+	if err := json.Unmarshal(raw, dest); err != nil {
+		slog.Warn("failed to unmarshal print settings section", "key", key, "error", err)
+	}
 	return nil
 }
 

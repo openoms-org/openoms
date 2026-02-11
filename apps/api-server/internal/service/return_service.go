@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -36,15 +35,7 @@ func (s *ReturnService) SetAutomationService(automationSvc *AutomationService) {
 }
 
 func (s *ReturnService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
-	if s.automationService != nil {
-		s.automationService.ProcessEvent(context.Background(), automation.Event{
-			Type:       eventType,
-			TenantID:   tenantID,
-			EntityType: "return",
-			EntityID:   entityID,
-			Data:       data,
-		})
-	}
+	FireAutomationEvent(s.automationService, tenantID, "return", eventType, entityID, data)
 }
 
 func NewReturnService(

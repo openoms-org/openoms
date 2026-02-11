@@ -33,13 +33,9 @@ func NewOrderHandler(orderService *service.OrderService, tenantRepo repository.T
 	return &OrderHandler{orderService: orderService, tenantRepo: tenantRepo, pool: pool}
 }
 
-func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
-	tenantID := middleware.TenantIDFromContext(r.Context())
-	pagination := model.ParsePagination(r)
-
-	filter := model.OrderListFilter{
-		PaginationParams: pagination,
-	}
+// parseOrderFilter extracts common order list filter parameters from the request.
+func parseOrderFilter(r *http.Request) model.OrderListFilter {
+	filter := model.OrderListFilter{}
 	if s := r.URL.Query().Get("status"); s != "" {
 		filter.Status = &s
 	}
@@ -55,6 +51,15 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	if t := r.URL.Query().Get("tag"); t != "" {
 		filter.Tag = &t
 	}
+	return filter
+}
+
+func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	pagination := model.ParsePagination(r)
+
+	filter := parseOrderFilter(r)
+	filter.PaginationParams = pagination
 
 	resp, err := h.orderService.List(r.Context(), tenantID, filter)
 	if err != nil {
@@ -249,7 +254,9 @@ func (h *OrderHandler) loadCustomFieldsConfig(ctx context.Context, tenantID uuid
 			var allSettings map[string]json.RawMessage
 			if err := json.Unmarshal(settings, &allSettings); err == nil {
 				if raw, ok := allSettings["custom_fields"]; ok {
-					json.Unmarshal(raw, &config)
+					if err := json.Unmarshal(raw, &config); err != nil {
+						slog.Warn("failed to unmarshal custom_fields config", "error", err, "tenant_id", tenantID)
+					}
 				}
 			}
 		}
@@ -266,24 +273,8 @@ func (h *OrderHandler) loadCustomFieldsConfig(ctx context.Context, tenantID uuid
 func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	filter := model.OrderListFilter{
-		PaginationParams: model.PaginationParams{Limit: 10000, Offset: 0},
-	}
-	if s := r.URL.Query().Get("status"); s != "" {
-		filter.Status = &s
-	}
-	if s := r.URL.Query().Get("source"); s != "" {
-		filter.Source = &s
-	}
-	if s := r.URL.Query().Get("search"); s != "" {
-		filter.Search = &s
-	}
-	if ps := r.URL.Query().Get("payment_status"); ps != "" {
-		filter.PaymentStatus = &ps
-	}
-	if t := r.URL.Query().Get("tag"); t != "" {
-		filter.Tag = &t
-	}
+	filter := parseOrderFilter(r)
+	filter.PaginationParams = model.PaginationParams{Limit: 10000, Offset: 0}
 
 	resp, err := h.orderService.List(r.Context(), tenantID, filter)
 	if err != nil {
@@ -359,7 +350,9 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		// Parse order metadata and append custom field values
 		var metadata map[string]interface{}
 		if o.Metadata != nil {
-			json.Unmarshal(o.Metadata, &metadata)
+			if err := json.Unmarshal(o.Metadata, &metadata); err != nil {
+				slog.Warn("csv export: failed to unmarshal order metadata", "error", err, "order_id", o.ID)
+			}
 		}
 		for _, f := range cfConfig.Fields {
 			val := ""

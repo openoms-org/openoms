@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
@@ -20,6 +21,8 @@ type AllegroAuthHandler struct {
 	cfg                *config.Config
 	integrationService *service.IntegrationService
 	encryptionKey      []byte
+	stateMu            sync.Mutex
+	stateStore         map[string]time.Time
 }
 
 func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte) *AllegroAuthHandler {
@@ -27,6 +30,7 @@ func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.Integ
 		cfg:                cfg,
 		integrationService: integrationService,
 		encryptionKey:      encryptionKey,
+		stateStore:         make(map[string]time.Time),
 	}
 }
 
@@ -38,6 +42,18 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	state := hex.EncodeToString(stateBytes)
+
+	// Store the state with a 10-minute TTL for CSRF validation
+	h.stateMu.Lock()
+	// Cleanup expired states while we hold the lock
+	now := time.Now()
+	for k, exp := range h.stateStore {
+		if now.After(exp) {
+			delete(h.stateStore, k)
+		}
+	}
+	h.stateStore[state] = now.Add(10 * time.Minute)
+	h.stateMu.Unlock()
 
 	client := allegrosdk.NewClient(
 		h.cfg.AllegroClientID,
@@ -55,11 +71,6 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 }
 
 // HandleCallback exchanges an OAuth2 authorization code for tokens and creates/updates the integration.
-// TODO: Validate the OAuth state parameter against a server-side store (Redis/DB)
-// to prevent CSRF attacks. Currently the state generated in GetAuthURL is returned
-// to the client but never verified on callback. A full fix requires persisting
-// the state (e.g. in Redis with a short TTL) and rejecting callbacks with
-// missing or mismatched state values.
 func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Code  string `json:"code"`
@@ -71,6 +82,23 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	}
 	if body.Code == "" {
 		writeError(w, http.StatusBadRequest, "code is required")
+		return
+	}
+	if body.State == "" {
+		writeError(w, http.StatusBadRequest, "state is required")
+		return
+	}
+
+	// Validate the state parameter against the server-side store (CSRF protection)
+	h.stateMu.Lock()
+	expiry, exists := h.stateStore[body.State]
+	if exists {
+		delete(h.stateStore, body.State)
+	}
+	h.stateMu.Unlock()
+
+	if !exists || time.Now().After(expiry) {
+		writeError(w, http.StatusBadRequest, "invalid or expired state parameter")
 		return
 	}
 
@@ -87,14 +115,14 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	expiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
+	tokenExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
 
 	credentials := map[string]any{
 		"client_id":     h.cfg.AllegroClientID,
 		"client_secret": h.cfg.AllegroClientSecret,
 		"access_token":  tok.AccessToken,
 		"refresh_token": tok.RefreshToken,
-		"token_expiry":  expiry.Format(time.RFC3339),
+		"token_expiry":  tokenExpiry.Format(time.RFC3339),
 	}
 	credJSON, err := json.Marshal(credentials)
 	if err != nil {
