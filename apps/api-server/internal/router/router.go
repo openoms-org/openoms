@@ -42,6 +42,8 @@ type RouterDeps struct {
 	Import          *handler.ImportHandler
 	Variant         *handler.VariantHandler
 	SyncJob         *handler.SyncJobHandler
+	Warehouse       *handler.WarehouseHandler
+	Customer        *handler.CustomerHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -201,6 +203,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}", deps.Product.Get)
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)
+				r.Get("/{id}/stock", deps.Warehouse.ListProductStock)
 
 				// Variants
 				r.Route("/{productId}/variants", func(r chi.Router) {
@@ -243,6 +246,28 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/sync", deps.Supplier.Sync)
 				r.Get("/{id}/products", deps.Supplier.ListProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
+			})
+
+			// Warehouses — admin only
+			r.Route("/warehouses", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.Warehouse.List)
+				r.Post("/", deps.Warehouse.Create)
+				r.Get("/{id}", deps.Warehouse.Get)
+				r.Patch("/{id}", deps.Warehouse.Update)
+				r.Delete("/{id}", deps.Warehouse.Delete)
+				r.Get("/{id}/stock", deps.Warehouse.ListStock)
+				r.Put("/{id}/stock", deps.Warehouse.UpsertStock)
+			})
+
+			// Customers — any authenticated user
+			r.Route("/customers", func(r chi.Router) {
+				r.Get("/", deps.Customer.List)
+				r.Post("/", deps.Customer.Create)
+				r.Get("/{id}", deps.Customer.Get)
+				r.Patch("/{id}", deps.Customer.Update)
+				r.Delete("/{id}", deps.Customer.Delete)
+				r.Get("/{id}/orders", deps.Customer.ListOrders)
 			})
 
 			// Automation rules — admin only

@@ -101,6 +101,7 @@ export interface Order {
   payment_status: string;
   payment_method?: string;
   paid_at?: string;
+  customer_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -900,4 +901,108 @@ export interface UpdateVariantRequest {
 
 export interface VariantListParams extends PaginationParams {
   active?: boolean;
+}
+
+// === Warehouses ===
+export interface Warehouse {
+  id: string;
+  tenant_id: string;
+  name: string;
+  code?: string;
+  address: Record<string, unknown>;
+  is_default: boolean;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WarehouseStock {
+  id: string;
+  tenant_id: string;
+  warehouse_id: string;
+  product_id: string;
+  variant_id?: string;
+  quantity: number;
+  reserved: number;
+  min_stock: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateWarehouseRequest {
+  name: string;
+  code?: string;
+  address?: Record<string, unknown>;
+  is_default?: boolean;
+  active?: boolean;
+}
+
+export interface UpdateWarehouseRequest {
+  name?: string;
+  code?: string;
+  address?: Record<string, unknown>;
+  is_default?: boolean;
+  active?: boolean;
+}
+
+export interface UpsertWarehouseStockRequest {
+  product_id: string;
+  variant_id?: string;
+  quantity: number;
+  reserved: number;
+  min_stock: number;
+}
+
+export interface WarehouseListParams extends PaginationParams {
+  active?: boolean;
+}
+
+export interface WarehouseStockListParams extends PaginationParams {}
+
+// === Customers ===
+export interface Customer {
+  id: string;
+  tenant_id: string;
+  email?: string;
+  phone?: string;
+  name: string;
+  company_name?: string;
+  nip?: string;
+  default_shipping_address?: Record<string, unknown>;
+  default_billing_address?: Record<string, unknown>;
+  tags: string[];
+  notes?: string;
+  total_orders: number;
+  total_spent: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCustomerRequest {
+  name: string;
+  email?: string;
+  phone?: string;
+  company_name?: string;
+  nip?: string;
+  default_shipping_address?: Record<string, unknown>;
+  default_billing_address?: Record<string, unknown>;
+  tags?: string[];
+  notes?: string;
+}
+
+export interface UpdateCustomerRequest {
+  name?: string;
+  email?: string;
+  phone?: string;
+  company_name?: string;
+  nip?: string;
+  default_shipping_address?: Record<string, unknown>;
+  default_billing_address?: Record<string, unknown>;
+  tags?: string[];
+  notes?: string;
+}
+
+export interface CustomerListParams extends PaginationParams {
+  search?: string;
+  tags?: string;
 }

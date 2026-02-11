@@ -440,6 +440,16 @@ export default function OrderDetailPage() {
                   <p className="mt-1 text-sm">{order.customer_phone}</p>
                 </div>
               )}
+              {order.customer_id && (
+                <div className="pt-2">
+                  <Link
+                    href={`/customers/${order.customer_id}`}
+                    className="text-sm text-primary hover:underline font-medium"
+                  >
+                    Zobacz profil klienta
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
 

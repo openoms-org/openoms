@@ -71,7 +71,7 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at,
 		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, created_at, updated_at
+		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at
 		 FROM orders %s
 		 %s
 		 LIMIT $%d OFFSET $%d`,
@@ -95,7 +95,7 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 			&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 			&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
 			&o.DeliveryMethod, &o.PickupPointID,
-			&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
+			&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan order: %w", err)
 		}
@@ -113,7 +113,7 @@ func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at,
 		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, created_at, updated_at
+		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at
 		 FROM orders WHERE id = $1`, id,
 	).Scan(
 		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
@@ -122,7 +122,7 @@ func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
 		&o.DeliveryMethod, &o.PickupPointID,
-		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
+		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -293,7 +293,7 @@ func (r *OrderRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, sourc
 		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at,
 		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, created_at, updated_at
+		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at
 		 FROM orders WHERE source = $1 AND metadata->>'external_id' = $2`, source, externalID,
 	).Scan(
 		&o.ID, &o.TenantID, &o.ExternalID, &o.Source, &o.IntegrationID, &o.Status,
@@ -302,7 +302,7 @@ func (r *OrderRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, sourc
 		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
 		&o.DeliveryMethod, &o.PickupPointID,
-		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CreatedAt, &o.UpdatedAt,
+		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
