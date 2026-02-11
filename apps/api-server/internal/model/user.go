@@ -53,6 +53,14 @@ type CompanySettings struct {
 	Website     string `json:"website"`
 }
 
+type SMSSettings struct {
+	Enabled   bool              `json:"enabled"`
+	APIToken  string            `json:"api_token"`
+	From      string            `json:"from"`
+	NotifyOn  []string          `json:"notify_on"`
+	Templates map[string]string `json:"templates"`
+}
+
 // AuditEntry represents an audit log record.
 type AuditEntry struct {
 	TenantID   uuid.UUID `json:"tenant_id"`

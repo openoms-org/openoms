@@ -11,6 +11,23 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// AutomationRuleRepo defines the interface for automation rule persistence.
+type AutomationRuleRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.AutomationRuleListFilter) ([]model.AutomationRule, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.AutomationRule, error)
+	FindByTenantAndEvent(ctx context.Context, tx pgx.Tx, event string) ([]model.AutomationRule, error)
+	Create(ctx context.Context, tx pgx.Tx, rule *model.AutomationRule) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateAutomationRuleRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	IncrementFireCount(ctx context.Context, tx pgx.Tx, id uuid.UUID, firedAt time.Time) error
+}
+
+// AutomationRuleLogRepo defines the interface for automation rule log persistence.
+type AutomationRuleLogRepo interface {
+	Create(ctx context.Context, tx pgx.Tx, log *model.AutomationRuleLog) error
+	ListByRuleID(ctx context.Context, tx pgx.Tx, ruleID uuid.UUID, limit, offset int) ([]model.AutomationRuleLog, int, error)
+}
+
 // OrderRepo defines the interface for order persistence operations.
 type OrderRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.OrderListFilter) ([]model.Order, int, error)

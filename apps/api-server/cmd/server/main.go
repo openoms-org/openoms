@@ -15,11 +15,13 @@ import (
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/amazon"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/erli"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/mirakl"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/woocommerce"
 	// Register carrier providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/carriers"
 	// Register invoicing providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/fakturownia"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
@@ -106,6 +108,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	emailService := service.NewEmailService(tenantRepo, pool)
+	smsService := service.NewSMSService(tenantRepo, pool)
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
 	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
@@ -120,7 +123,22 @@ func main() {
 	statsService := service.NewStatsService(statsRepo, pool)
 	invoiceService := service.NewInvoiceService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool, encryptionKey)
 	orderService.SetInvoiceService(invoiceService)
+	orderService.SetSMSService(smsService)
+	shipmentService.SetSMSService(smsService)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+
+	// Automation engine
+	automationRuleRepo := repository.NewAutomationRuleRepository()
+	automationRuleLogRepo := repository.NewAutomationRuleLogRepository()
+	automationExecutor := automation.NewDefaultActionExecutor(slog.Default())
+	automationEngine := automation.NewEngine(automationRuleRepo, automationRuleLogRepo, pool, automationExecutor, slog.Default())
+	automationService := service.NewAutomationService(automationRuleRepo, automationRuleLogRepo, pool, automationEngine, slog.Default())
+
+	// Wire automation service into entity services (setter pattern to avoid circular dependency)
+	orderService.SetAutomationService(automationService)
+	shipmentService.SetAutomationService(automationService)
+	returnService.SetAutomationService(automationService)
+	productService.SetAutomationService(automationService)
 
 	// Initialize token blacklist for server-side token revocation
 	tokenBlacklist := middleware.NewTokenBlacklist()
@@ -136,7 +154,7 @@ func main() {
 	webhookHandler := handler.NewWebhookHandler(webhookService)
 	statsHandler := handler.NewStatsHandler(statsService)
 	uploadHandler := handler.NewUploadHandler(cfg.UploadDir, cfg.MaxUploadSize, cfg.BaseURL)
-	settingsHandler := handler.NewSettingsHandler(tenantRepo, auditRepo, emailService, pool)
+	settingsHandler := handler.NewSettingsHandler(tenantRepo, auditRepo, emailService, smsService, pool)
 	auditHandler := handler.NewAuditHandler(auditRepo, pool)
 	webhookDeliveryHandler := handler.NewWebhookDeliveryHandler(webhookDeliveryRepo, pool)
 
@@ -155,6 +173,9 @@ func main() {
 
 	// Supplier handler
 	supplierHandler := handler.NewSupplierHandler(supplierService)
+
+	// Automation handler
+	automationHandler := handler.NewAutomationHandler(automationService)
 
 	// Setup router
 	r := router.New(router.RouterDeps{
@@ -180,6 +201,7 @@ func main() {
 		AmazonAuth:      amazonAuthHandler,
 		Supplier:         supplierHandler,
 		Invoice:          invoiceHandler,
+		Automation:       automationHandler,
 	})
 
 	// Start background workers
@@ -189,6 +211,7 @@ func main() {
 	workerMgr.Register(worker.NewStockSyncWorker(pool, encryptionKey, slog.Default()))
 	workerMgr.Register(worker.NewTrackingPoller(pool, encryptionKey, shipmentRepo, slog.Default()))
 	workerMgr.Register(worker.NewAmazonOrderPoller(pool, encryptionKey, orderRepo, slog.Default()))
+	workerMgr.Register(worker.NewWooCommerceOrderPoller(pool, encryptionKey, orderRepo, slog.Default()))
 	workerMgr.Register(worker.NewSupplierSyncWorker(pool, supplierService, slog.Default()))
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())

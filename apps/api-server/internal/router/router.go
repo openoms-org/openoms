@@ -38,6 +38,7 @@ type RouterDeps struct {
 	AmazonAuth      *handler.AmazonAuthHandler
 	Supplier        *handler.SupplierHandler
 	Invoice         *handler.InvoiceHandler
+	Automation      *handler.AutomationHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -109,6 +110,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Put("/webhooks", deps.Settings.UpdateWebhooks)
 				r.Get("/invoicing", deps.Settings.GetInvoicingSettings)
 				r.Put("/invoicing", deps.Settings.UpdateInvoicingSettings)
+				r.Get("/sms", deps.Settings.GetSMSSettings)
+				r.Put("/sms", deps.Settings.UpdateSMSSettings)
+				r.Post("/sms/test", deps.Settings.SendTestSMS)
 			})
 
 			// Admin-only audit log and webhook deliveries
@@ -218,6 +222,18 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/sync", deps.Supplier.Sync)
 				r.Get("/{id}/products", deps.Supplier.ListProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
+			})
+
+			// Automation rules — admin only
+			r.Route("/automation/rules", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.Automation.List)
+				r.Post("/", deps.Automation.Create)
+				r.Get("/{id}", deps.Automation.Get)
+				r.Patch("/{id}", deps.Automation.Update)
+				r.Delete("/{id}", deps.Automation.Delete)
+				r.Get("/{id}/logs", deps.Automation.GetLogs)
+				r.Post("/{id}/test", deps.Automation.TestRule)
 			})
 
 			// Stats — any authenticated user

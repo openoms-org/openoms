@@ -700,3 +700,97 @@ export interface InvoicingSettings {
   payment_days: number;
   credentials: Record<string, string>;
 }
+
+// === SMS Settings ===
+export interface SMSSettings {
+  enabled: boolean;
+  api_token: string;
+  from: string;
+  notify_on: string[];
+  templates: Record<string, string>;
+}
+
+export interface SendTestSMSRequest {
+  phone: string;
+}
+
+// === Automation Rules ===
+export interface AutomationCondition {
+  field: string;
+  operator: string;
+  value: unknown;
+}
+
+export interface AutomationAction {
+  type: string;
+  config: Record<string, unknown>;
+}
+
+export interface AutomationRule {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  enabled: boolean;
+  priority: number;
+  trigger_event: string;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+  last_fired_at?: string;
+  fire_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateAutomationRuleRequest {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  priority?: number;
+  trigger_event: string;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+}
+
+export interface UpdateAutomationRuleRequest {
+  name?: string;
+  description?: string;
+  enabled?: boolean;
+  priority?: number;
+  trigger_event?: string;
+  conditions?: AutomationCondition[];
+  actions?: AutomationAction[];
+}
+
+export interface AutomationRuleLog {
+  id: string;
+  tenant_id: string;
+  rule_id: string;
+  trigger_event: string;
+  entity_type: string;
+  entity_id: string;
+  conditions_met: boolean;
+  actions_executed: Record<string, unknown>[];
+  error_message?: string;
+  executed_at: string;
+}
+
+export interface AutomationRuleListParams extends PaginationParams {
+  trigger_event?: string;
+  enabled?: boolean;
+}
+
+export interface TestAutomationRuleRequest {
+  data: Record<string, unknown>;
+}
+
+export interface TestAutomationRuleResponse {
+  condition_results: ConditionResult[];
+  all_conditions_met: boolean;
+  actions_to_execute: AutomationAction[];
+}
+
+export interface ConditionResult {
+  condition: AutomationCondition;
+  met: boolean;
+}

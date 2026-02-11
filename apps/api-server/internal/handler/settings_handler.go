@@ -23,11 +23,12 @@ type SettingsHandler struct {
 	tenantRepo   repository.TenantRepo
 	auditRepo    repository.AuditRepo
 	emailService *service.EmailService
+	smsService   *service.SMSService
 	pool         *pgxpool.Pool
 }
 
-func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.AuditRepo, emailService *service.EmailService, pool *pgxpool.Pool) *SettingsHandler {
-	return &SettingsHandler{tenantRepo: tenantRepo, auditRepo: auditRepo, emailService: emailService, pool: pool}
+func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.AuditRepo, emailService *service.EmailService, smsService *service.SMSService, pool *pgxpool.Pool) *SettingsHandler {
+	return &SettingsHandler{tenantRepo: tenantRepo, auditRepo: auditRepo, emailService: emailService, smsService: smsService, pool: pool}
 }
 
 // getSettingsSection reads a specific section from the tenant's JSON settings blob.
@@ -601,6 +602,109 @@ func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http
 	}
 
 	writeJSON(w, http.StatusOK, invoicingCfg)
+}
+
+func (h *SettingsHandler) GetSMSSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	smsCfg := model.SMSSettings{
+		NotifyOn:  []string{"shipped", "delivered", "out_for_delivery"},
+		Templates: map[string]string{},
+	}
+
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		return h.getSettingsSection(r.Context(), tx, tenantID, "sms", &smsCfg)
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load SMS settings")
+		return
+	}
+
+	// Mask API token
+	if smsCfg.APIToken != "" {
+		smsCfg.APIToken = "••••••"
+	}
+
+	writeJSON(w, http.StatusOK, smsCfg)
+}
+
+func (h *SettingsHandler) UpdateSMSSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	var smsCfg model.SMSSettings
+	if err := json.NewDecoder(r.Body).Decode(&smsCfg); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	actorID := middleware.UserIDFromContext(r.Context())
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		// If API token is masked, keep the existing one
+		if smsCfg.APIToken == "••••••" {
+			var oldSMS model.SMSSettings
+			if err := h.getSettingsSection(r.Context(), tx, tenantID, "sms", &oldSMS); err != nil {
+				slog.Error("failed to load existing SMS settings for token preservation", "error", err, "tenant_id", tenantID)
+			}
+			smsCfg.APIToken = oldSMS.APIToken
+		}
+
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "sms", smsCfg); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.sms_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save SMS settings")
+		return
+	}
+
+	// Mask API token in response
+	if smsCfg.APIToken != "" {
+		smsCfg.APIToken = "••••••"
+	}
+	writeJSON(w, http.StatusOK, smsCfg)
+}
+
+func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	var req struct {
+		Phone string `json:"phone"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Phone == "" {
+		writeError(w, http.StatusBadRequest, "phone is required")
+		return
+	}
+
+	// Load SMS settings
+	var smsCfg model.SMSSettings
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "sms", &smsCfg); err != nil {
+			return err
+		}
+		if smsCfg.APIToken == "" {
+			return fmt.Errorf("SMS settings not configured")
+		}
+		return nil
+	})
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := h.smsService.SendTestSMS(r.Context(), smsCfg, req.Phone); err != nil {
+		writeError(w, http.StatusBadGateway, "failed to send test SMS: "+err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Test SMS sent successfully"})
 }
 
 // isPrivateWebhookURL checks whether a URL resolves to a private/internal IP address.

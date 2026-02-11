@@ -31,13 +31,7 @@ func NewMarketplaceProvider(provider string, credentials json.RawMessage, settin
 		return factory(credentials, settings)
 	}
 
-	switch provider {
-	case "woocommerce":
-		// TODO: return woocommerce.NewProvider(credentials, settings)
-		return nil, fmt.Errorf("marketplace provider %q: not implemented", provider)
-	default:
-		return nil, fmt.Errorf("unknown marketplace provider: %q", provider)
-	}
+	return nil, fmt.Errorf("unknown marketplace provider: %q", provider)
 }
 
 // CarrierProviderFactory is a constructor function for carrier providers.

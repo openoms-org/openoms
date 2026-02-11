@@ -13,7 +13,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { INTEGRATION_PROVIDERS } from "@/lib/constants";
+import { INTEGRATION_PROVIDERS, INTEGRATION_PROVIDER_LABELS } from "@/lib/constants";
+
+const CREDENTIAL_PLACEHOLDERS: Record<string, string> = {
+  woocommerce: `{
+  "store_url": "https://twoj-sklep.pl",
+  "consumer_key": "ck_...",
+  "consumer_secret": "cs_..."
+}`,
+  allegro: `{
+  "client_id": "...",
+  "client_secret": "..."
+}`,
+};
+
+const CREDENTIAL_HINTS: Record<string, string> = {
+  woocommerce:
+    "Klucze API WooCommerce znajdziesz w: WooCommerce > Ustawienia > Zaawansowane > REST API",
+};
 
 const integrationSchema = z.object({
   provider: z.string().min(1, "Dostawca jest wymagany"),
@@ -100,7 +117,7 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
           <SelectContent>
             {INTEGRATION_PROVIDERS.map((provider) => (
               <SelectItem key={provider} value={provider}>
-                {provider.charAt(0).toUpperCase() + provider.slice(1)}
+                {INTEGRATION_PROVIDER_LABELS[provider] ?? provider.charAt(0).toUpperCase() + provider.slice(1)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -114,10 +131,18 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
         <Label htmlFor="credentials">Dane uwierzytelniające (JSON)</Label>
         <Textarea
           id="credentials"
-          placeholder='{"api_key": "...", "secret": "..."}'
+          placeholder={
+            CREDENTIAL_PLACEHOLDERS[selectedProvider] ??
+            '{"api_key": "...", "secret": "..."}'
+          }
           className="min-h-32 font-mono text-sm"
           {...register("credentials")}
         />
+        {CREDENTIAL_HINTS[selectedProvider] && (
+          <p className="text-sm text-muted-foreground">
+            {CREDENTIAL_HINTS[selectedProvider]}
+          </p>
+        )}
         {errors.credentials && (
           <p className="text-sm text-destructive">{errors.credentials.message}</p>
         )}

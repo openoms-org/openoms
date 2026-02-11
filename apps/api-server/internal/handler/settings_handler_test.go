@@ -12,7 +12,7 @@ import (
 )
 
 func TestSettingsHandler_UpdateEmailSettings_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/email", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestSettingsHandler_UpdateEmailSettings_InvalidJSON(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateCompanySettings_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/company", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -38,7 +38,7 @@ func TestSettingsHandler_UpdateCompanySettings_InvalidJSON(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateOrderStatuses_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/order-statuses", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -49,7 +49,7 @@ func TestSettingsHandler_UpdateOrderStatuses_InvalidJSON(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateOrderStatuses_EmptyKey(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"statuses":[{"key":"","label":"Test","color":"blue","position":1}],"transitions":{}}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/order-statuses", strings.NewReader(body))
@@ -65,7 +65,7 @@ func TestSettingsHandler_UpdateOrderStatuses_EmptyKey(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateOrderStatuses_DuplicateKey(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"statuses":[{"key":"new","label":"New","color":"blue","position":1},{"key":"new","label":"Dupe","color":"red","position":2}],"transitions":{}}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/order-statuses", strings.NewReader(body))
@@ -81,7 +81,7 @@ func TestSettingsHandler_UpdateOrderStatuses_DuplicateKey(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateOrderStatuses_TransitionFromUnknown(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"statuses":[{"key":"new","label":"New","color":"blue","position":1}],"transitions":{"bogus":["new"]}}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/order-statuses", strings.NewReader(body))
@@ -97,7 +97,7 @@ func TestSettingsHandler_UpdateOrderStatuses_TransitionFromUnknown(t *testing.T)
 }
 
 func TestSettingsHandler_UpdateOrderStatuses_TransitionToUnknown(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"statuses":[{"key":"new","label":"New","color":"blue","position":1}],"transitions":{"new":["bogus"]}}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/order-statuses", strings.NewReader(body))
@@ -113,7 +113,7 @@ func TestSettingsHandler_UpdateOrderStatuses_TransitionToUnknown(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateCustomFields_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/custom-fields", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -124,7 +124,7 @@ func TestSettingsHandler_UpdateCustomFields_InvalidJSON(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateCustomFields_EmptyKey(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"fields":[{"key":"","label":"Test","type":"text","position":1}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/custom-fields", strings.NewReader(body))
@@ -136,7 +136,7 @@ func TestSettingsHandler_UpdateCustomFields_EmptyKey(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateCustomFields_DuplicateKey(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"fields":[{"key":"f1","label":"F1","type":"text","position":1},{"key":"f1","label":"F1 Dupe","type":"text","position":2}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/custom-fields", strings.NewReader(body))
@@ -152,7 +152,7 @@ func TestSettingsHandler_UpdateCustomFields_DuplicateKey(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateCustomFields_InvalidType(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"fields":[{"key":"f1","label":"F1","type":"invalid","position":1}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/custom-fields", strings.NewReader(body))
@@ -168,7 +168,7 @@ func TestSettingsHandler_UpdateCustomFields_InvalidType(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateCustomFields_SelectWithoutOptions(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"fields":[{"key":"f1","label":"F1","type":"select","position":1}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/custom-fields", strings.NewReader(body))
@@ -184,7 +184,7 @@ func TestSettingsHandler_UpdateCustomFields_SelectWithoutOptions(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateWebhooks_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/webhooks", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -195,7 +195,7 @@ func TestSettingsHandler_UpdateWebhooks_InvalidJSON(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateWebhooks_MissingName(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"endpoints":[{"url":"https://example.com","events":["order.created"],"active":true}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/webhooks", strings.NewReader(body))
@@ -211,7 +211,7 @@ func TestSettingsHandler_UpdateWebhooks_MissingName(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateWebhooks_MissingURL(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"endpoints":[{"name":"Test","events":["order.created"],"active":true}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/webhooks", strings.NewReader(body))
@@ -227,7 +227,7 @@ func TestSettingsHandler_UpdateWebhooks_MissingURL(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateWebhooks_NoEvents(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"endpoints":[{"name":"Test","url":"https://example.com","events":[],"active":true}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/webhooks", strings.NewReader(body))
@@ -243,7 +243,7 @@ func TestSettingsHandler_UpdateWebhooks_NoEvents(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateWebhooks_DuplicateID(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"endpoints":[
 		{"id":"ep1","name":"A","url":"https://example.com/hook1","events":["*"],"active":true},
@@ -262,7 +262,7 @@ func TestSettingsHandler_UpdateWebhooks_DuplicateID(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateWebhooks_PrivateURL(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"endpoints":[{"name":"Test","url":"http://127.0.0.1/hook","events":["*"],"active":true}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/webhooks", strings.NewReader(body))
@@ -278,7 +278,7 @@ func TestSettingsHandler_UpdateWebhooks_PrivateURL(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateProductCategories_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/product-categories", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -289,7 +289,7 @@ func TestSettingsHandler_UpdateProductCategories_InvalidJSON(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateProductCategories_EmptyKey(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"categories":[{"key":"","label":"Test","color":"blue","position":1}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/product-categories", strings.NewReader(body))
@@ -301,7 +301,7 @@ func TestSettingsHandler_UpdateProductCategories_EmptyKey(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateProductCategories_DuplicateKey(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	body := `{"categories":[{"key":"c1","label":"C1","color":"blue","position":1},{"key":"c1","label":"C1 dupe","color":"red","position":2}]}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/product-categories", strings.NewReader(body))
@@ -317,7 +317,7 @@ func TestSettingsHandler_UpdateProductCategories_DuplicateKey(t *testing.T) {
 }
 
 func TestSettingsHandler_SendTestEmail_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/settings/email/test", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -328,7 +328,7 @@ func TestSettingsHandler_SendTestEmail_InvalidJSON(t *testing.T) {
 }
 
 func TestSettingsHandler_SendTestEmail_MissingEmail(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/settings/email/test", strings.NewReader(`{"to_email":""}`))
 	rr := httptest.NewRecorder()
@@ -339,7 +339,7 @@ func TestSettingsHandler_SendTestEmail_MissingEmail(t *testing.T) {
 }
 
 func TestSettingsHandler_UpdateInvoicingSettings_InvalidJSON(t *testing.T) {
-	h := NewSettingsHandler(nil, nil, nil, nil)
+	h := NewSettingsHandler(nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/settings/invoicing", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
