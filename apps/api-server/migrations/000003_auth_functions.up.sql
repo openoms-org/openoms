@@ -13,11 +13,11 @@ AS $$
 $$ LANGUAGE sql STABLE;
 
 CREATE OR REPLACE FUNCTION public.find_user_for_auth(p_email TEXT, p_tenant_id UUID)
-RETURNS TABLE(id UUID, tenant_id UUID, email VARCHAR, name VARCHAR, password_hash VARCHAR, role user_role, role_id UUID, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)
+RETURNS TABLE(id UUID, tenant_id UUID, email VARCHAR, name VARCHAR, password_hash VARCHAR, role user_role, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)
 SECURITY DEFINER
 SET search_path = public
 AS $$
-    SELECT u.id, u.tenant_id, u.email, u.name, u.password_hash, u.role, u.role_id, u.created_at, u.updated_at
+    SELECT u.id, u.tenant_id, u.email, u.name, u.password_hash, u.role, u.created_at, u.updated_at
     FROM users u
     WHERE u.email = p_email AND u.tenant_id = p_tenant_id;
 $$ LANGUAGE sql STABLE;
