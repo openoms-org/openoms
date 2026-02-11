@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useAuditLog } from "@/hooks/use-audit";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -140,6 +141,7 @@ export default function AuditPage() {
   ];
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Dziennik aktywności</h1>
@@ -209,5 +211,6 @@ export default function AuditPage() {
         />
       )}
     </div>
+    </AdminGuard>
   );
 }

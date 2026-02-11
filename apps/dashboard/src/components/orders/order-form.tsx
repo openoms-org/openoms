@@ -310,7 +310,13 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             <SelectContent>
               <SelectItem value="manual">Ręczne</SelectItem>
               <SelectItem value="allegro">Allegro</SelectItem>
+              <SelectItem value="amazon">Amazon</SelectItem>
+              <SelectItem value="ebay">eBay</SelectItem>
+              <SelectItem value="erli">Erli</SelectItem>
               <SelectItem value="woocommerce">WooCommerce</SelectItem>
+              <SelectItem value="shopify">Shopify</SelectItem>
+              <SelectItem value="olx">OLX</SelectItem>
+              <SelectItem value="other">Inne</SelectItem>
             </SelectContent>
           </Select>
           {errors.source && (

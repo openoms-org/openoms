@@ -105,9 +105,14 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 			if tokenStr != "" {
 				tokenHash := middleware.HashToken(tokenStr)
-				// Blacklist the token for 1 hour (access token TTL)
 				h.tokenBlacklist.Revoke(tokenHash, time.Now().Add(1*time.Hour))
 			}
+		}
+	}
+
+	if cookie, err := r.Cookie("refresh_token"); err == nil && cookie.Value != "" {
+		if claims, err := h.authService.ValidateRefreshToken(cookie.Value); err == nil {
+			_ = h.authService.Logout(r.Context(), claims.UserID, claims.TenantID)
 		}
 	}
 

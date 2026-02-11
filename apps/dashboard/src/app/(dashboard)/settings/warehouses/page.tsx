@@ -55,7 +55,7 @@ export default function WarehousesPage() {
     if (!deleteId) return;
     deleteWarehouse.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Magazyn zostal usuniety");
+        toast.success("Magazyn został usunięty");
         setDeleteId(null);
       },
       onError: (error) => {
@@ -70,7 +70,7 @@ export default function WarehousesPage() {
       { name: newName, code: newCode || undefined },
       {
         onSuccess: () => {
-          toast.success("Magazyn zostal utworzony");
+          toast.success("Magazyn został utworzony");
           setShowCreate(false);
           setNewName("");
           setNewCode("");
@@ -88,7 +88,7 @@ export default function WarehousesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Magazyny</h1>
           <p className="text-muted-foreground">
-            Zarzadzaj magazynami i stanami magazynowymi
+            Zarządzaj magazynami i stanami magazynowymi
           </p>
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -136,7 +136,7 @@ export default function WarehousesPage() {
                 onClick={handleCreate}
                 disabled={!newName.trim() || createWarehouse.isPending}
               >
-                {createWarehouse.isPending ? "Tworzenie..." : "Utworz"}
+                {createWarehouse.isPending ? "Tworzenie..." : "Utwórz"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -146,7 +146,7 @@ export default function WarehousesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
           </p>
           <Button
             variant="outline"
@@ -154,7 +154,7 @@ export default function WarehousesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       )}
@@ -162,8 +162,8 @@ export default function WarehousesPage() {
       {warehouses.length === 0 ? (
         <EmptyState
           icon={Warehouse}
-          title="Brak magazynow"
-          description="Dodaj pierwszy magazyn, aby zarzadzac stanami magazynowymi produktow."
+          title="Brak magazynów"
+          description="Dodaj pierwszy magazyn, aby zarządzać stanami magazynowymi produktów."
         />
       ) : (
         <div className="rounded-md border">
@@ -172,7 +172,7 @@ export default function WarehousesPage() {
               <TableRow>
                 <TableHead>Nazwa</TableHead>
                 <TableHead>Kod</TableHead>
-                <TableHead>Domyslny</TableHead>
+                <TableHead>Domyślny</TableHead>
                 <TableHead>Aktywny</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[80px]" />
@@ -238,9 +238,9 @@ export default function WarehousesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun magazyn"
-        description="Czy na pewno chcesz usunac ten magazyn? Wszystkie stany magazynowe zostana usuniete."
-        confirmLabel="Usun"
+        title="Usuń magazyn"
+        description="Czy na pewno chcesz usunąć ten magazyn? Wszystkie stany magazynowe zostaną usunięte."
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteWarehouse.isPending}

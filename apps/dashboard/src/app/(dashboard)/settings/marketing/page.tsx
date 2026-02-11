@@ -45,19 +45,17 @@ export default function MarketingSettingsPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  // Load settings from tenant settings
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const settings = await apiClient<MailchimpSettings>("/v1/settings/company");
-        // Mailchimp settings are stored under 'mailchimp' key in tenant settings
-        // We fetch from the marketing status endpoint to check
-      } catch {
-        // ignore
-      }
-    };
-    loadSettings();
-  }, []);
+    const settings = companySettings as Record<string, unknown> | undefined;
+    const mc = settings?.mailchimp as MailchimpSettings | undefined;
+    if (mc) {
+      setForm({
+        api_key: mc.api_key ?? "",
+        list_id: mc.list_id ?? "",
+        enabled: mc.enabled ?? false,
+      });
+    }
+  }, [companySettings]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -74,7 +72,7 @@ export default function MarketingSettingsPage() {
       toast.success("Ustawienia Mailchimp zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac ustawien";
+        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
       toast.error(message);
     } finally {
       setSaving(false);
@@ -84,10 +82,10 @@ export default function MarketingSettingsPage() {
   const handleSync = async () => {
     try {
       const result = await syncCustomers.mutateAsync();
-      toast.success(`Synchronizacja zakonczona: ${result.synced} zsynchronizowanych, ${result.failed} bledow`);
+      toast.success(`Synchronizacja zakończona: ${result.synced} zsynchronizowanych, ${result.failed} błędów`);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zsynchronizowac";
+        err instanceof Error ? err.message : "Nie udało się zsynchronizować";
       toast.error(message);
     }
   };
@@ -99,7 +97,7 @@ export default function MarketingSettingsPage() {
       setCampaignForm({ name: "", subject: "", content: "" });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie utworzyc kampanii";
+        err instanceof Error ? err.message : "Nie udało się utworzyć kampanii";
       toast.error(message);
     }
   };
@@ -118,7 +116,7 @@ export default function MarketingSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">Marketing (Mailchimp)</h1>
           <p className="text-muted-foreground">
-            Synchronizuj klientow z Mailchimp i tworzenie kampanii email
+            Synchronizuj klientów z Mailchimp i tworzenie kampanii email
           </p>
         </div>
 
@@ -146,7 +144,7 @@ export default function MarketingSettingsPage() {
                   }`}
                 />
                 <span className="text-sm">
-                  {status?.enabled ? "Wlaczony" : "Wylaczony"}
+                  {status?.enabled ? "Włączony" : "Wyłączony"}
                 </span>
               </div>
             </div>
@@ -163,7 +161,7 @@ export default function MarketingSettingsPage() {
               <div>
                 <p className="font-medium">Aktywna integracja</p>
                 <p className="text-sm text-muted-foreground">
-                  Wlacz synchronizacje klientow z Mailchimp
+                  Włącz synchronizację klientów z Mailchimp
                 </p>
               </div>
               <Switch
@@ -218,11 +216,11 @@ export default function MarketingSettingsPage() {
         {/* Sync card */}
         <Card>
           <CardHeader>
-            <CardTitle>Synchronizacja klientow</CardTitle>
+            <CardTitle>Synchronizacja klientów</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Synchronizuj wszystkich klientow z adresem email do listy Mailchimp.
+              Synchronizuj wszystkich klientów z adresem email do listy Mailchimp.
             </p>
             <Button
               onClick={handleSync}
@@ -257,7 +255,7 @@ export default function MarketingSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Temat wiadomosci</Label>
+                <Label>Temat wiadomości</Label>
                 <Input
                   value={campaignForm.subject}
                   onChange={(e) =>
@@ -268,13 +266,13 @@ export default function MarketingSettingsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Tresc HTML</Label>
+              <Label>Treść HTML</Label>
               <Textarea
                 value={campaignForm.content}
                 onChange={(e) =>
                   setCampaignForm({ ...campaignForm, content: e.target.value })
                 }
-                placeholder="<html><body>Tresc kampanii...</body></html>"
+                placeholder="<html><body>Treść kampanii...</body></html>"
                 rows={6}
                 className="font-mono text-sm"
               />
@@ -294,7 +292,7 @@ export default function MarketingSettingsPage() {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Utworz kampanie
+                Utwórz kampanię
               </Button>
             </div>
           </CardContent>

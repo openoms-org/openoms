@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCreateWarehouseDocument } from "@/hooks/use-warehouse-documents";
 import { useWarehouses } from "@/hooks/use-warehouses";
 import { useSuppliers } from "@/hooks/use-suppliers";
+import { useProducts } from "@/hooks/use-products";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +26,99 @@ import type { CreateWarehouseDocItemRequest } from "@/types/api";
 
 interface ItemRow {
   product_id: string;
+  product_name?: string;
   variant_id?: string;
   quantity: number;
   unit_price?: number;
   notes?: string;
+}
+
+function ProductSearchInput({
+  value,
+  displayName,
+  onSelect,
+}: {
+  value: string;
+  displayName?: string;
+  onSelect: (id: string, name: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { data: productsData } = useProducts({
+    name: search || undefined,
+    limit: 10,
+  });
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  if (value && displayName) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex-1 rounded-md border px-3 py-2 text-sm bg-muted/50">
+          {displayName}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onSelect("", "")}
+          className="text-xs"
+        >
+          Zmień
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <Input
+        value={search}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder="Szukaj produktu..."
+      />
+      {open && search && (
+        <div className="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-md border bg-popover shadow-md">
+          {productsData?.items && productsData.items.length > 0 ? (
+            productsData.items.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50"
+                onClick={() => {
+                  onSelect(p.id, p.name);
+                  setSearch("");
+                  setOpen(false);
+                }}
+              >
+                <div className="font-medium">{p.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  SKU: {p.sku || "---"}
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-muted-foreground">
+              Brak wyników
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function NewWarehouseDocumentPage() {
@@ -66,7 +156,7 @@ export default function NewWarehouseDocumentPage() {
 
   const handleSubmit = () => {
     if (!docType || !warehouseId || items.some((i) => !i.product_id || i.quantity <= 0)) {
-      toast.error("Wypelnij wszystkie wymagane pola");
+      toast.error("Wypełnij wszystkie wymagane pola");
       return;
     }
 
@@ -89,7 +179,7 @@ export default function NewWarehouseDocumentPage() {
       },
       {
         onSuccess: (doc) => {
-          toast.success(`Dokument ${doc.document_number} zostal utworzony`);
+          toast.success(`Dokument ${doc.document_number} został utworzony`);
           router.push(`/settings/warehouse-documents/${doc.id}`);
         },
         onError: (error) => {
@@ -105,14 +195,14 @@ export default function NewWarehouseDocumentPage() {
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link href="/settings/warehouse-documents">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Powrot do listy
+            Powrót do listy
           </Link>
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">
           Nowy dokument magazynowy
         </h1>
         <p className="text-muted-foreground">
-          Utworz dokument PZ, WZ lub MM
+          Utwórz dokument PZ, WZ lub MM
         </p>
       </div>
 
@@ -124,16 +214,16 @@ export default function NewWarehouseDocumentPage() {
               <SelectValue placeholder="Wybierz typ" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="PZ">PZ - Przyjecie zewnetrzne</SelectItem>
-              <SelectItem value="WZ">WZ - Wydanie zewnetrzne</SelectItem>
-              <SelectItem value="MM">MM - Przesuniecie miedzymagazynowe</SelectItem>
+              <SelectItem value="PZ">PZ - Przyjęcie zewnętrzne</SelectItem>
+              <SelectItem value="WZ">WZ - Wydanie zewnętrzne</SelectItem>
+              <SelectItem value="MM">MM - Przesunięcie międzymagazynowe</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label>
-            {docType === "MM" ? "Magazyn zrodlowy *" : "Magazyn *"}
+            {docType === "MM" ? "Magazyn źródłowy *" : "Magazyn *"}
           </Label>
           <Select value={warehouseId} onValueChange={setWarehouseId}>
             <SelectTrigger>
@@ -177,7 +267,7 @@ export default function NewWarehouseDocumentPage() {
             <Label>Dostawca</Label>
             <Select value={supplierId} onValueChange={setSupplierId}>
               <SelectTrigger>
-                <SelectValue placeholder="Wybierz dostawce (opcjonalnie)" />
+                <SelectValue placeholder="Wybierz dostawcę (opcjonalnie)" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Brak</SelectItem>
@@ -206,7 +296,7 @@ export default function NewWarehouseDocumentPage() {
             <Label className="text-base font-semibold">Pozycje *</Label>
             <Button variant="outline" size="sm" onClick={addItem}>
               <Plus className="h-4 w-4 mr-1" />
-              Dodaj pozycje
+              Dodaj pozycję
             </Button>
           </div>
 
@@ -216,17 +306,19 @@ export default function NewWarehouseDocumentPage() {
               className="flex gap-3 items-end rounded-md border p-3"
             >
               <div className="flex-1 space-y-1">
-                <Label className="text-xs">ID Produktu</Label>
-                <Input
+                <Label className="text-xs">Produkt</Label>
+                <ProductSearchInput
                   value={item.product_id}
-                  onChange={(e) =>
-                    updateItem(index, "product_id", e.target.value)
-                  }
-                  placeholder="UUID produktu"
+                  displayName={item.product_name}
+                  onSelect={(id, name) => {
+                    const newItems = [...items];
+                    newItems[index] = { ...newItems[index], product_id: id, product_name: name };
+                    setItems(newItems);
+                  }}
                 />
               </div>
               <div className="w-24 space-y-1">
-                <Label className="text-xs">Ilosc</Label>
+                <Label className="text-xs">Ilość</Label>
                 <Input
                   type="number"
                   min={1}
@@ -278,7 +370,7 @@ export default function NewWarehouseDocumentPage() {
               items.some((i) => !i.product_id)
             }
           >
-            {createDocument.isPending ? "Tworzenie..." : "Utworz dokument"}
+            {createDocument.isPending ? "Tworzenie..." : "Utwórz dokument"}
           </Button>
         </div>
       </div>

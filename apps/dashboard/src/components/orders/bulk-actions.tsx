@@ -30,6 +30,15 @@ interface BulkActionsProps {
 
 const DESTRUCTIVE_STATUSES = ["cancelled", "refunded"];
 
+function pluralOrders(count: number): string {
+  if (count === 1) return "zamówienie";
+  const lastTwo = count % 100;
+  const lastOne = count % 10;
+  if (lastTwo >= 10 && lastTwo <= 20) return "zamówień";
+  if (lastOne >= 2 && lastOne <= 4) return "zamówienia";
+  return "zamówień";
+}
+
 export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsProps) {
   const [targetStatus, setTargetStatus] = useState<string>("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -91,7 +100,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
     <>
       <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
         <span className="text-sm font-medium">
-          Zaznaczono {selectedOrders.length} zamówień
+          Zaznaczono {selectedOrders.length} {pluralOrders(selectedOrders.length)}
         </span>
 
         <Select value={targetStatus} onValueChange={setTargetStatus}>

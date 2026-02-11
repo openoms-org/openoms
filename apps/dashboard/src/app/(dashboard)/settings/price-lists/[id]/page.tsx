@@ -91,7 +91,7 @@ export default function PriceListDetailPage() {
           className="mt-4"
           onClick={() => router.push("/settings/price-lists")}
         >
-          Powrot do listy
+          Powrót do listy
         </Button>
       </div>
     );
@@ -176,7 +176,7 @@ export default function PriceListDetailPage() {
     if (!deleteItemId) return;
     deleteItem.mutate(deleteItemId, {
       onSuccess: () => {
-        toast.success("Pozycja usunieta z cennika");
+        toast.success("Pozycja usunięta z cennika");
         setDeleteItemId(null);
       },
       onError: (err) => toast.error(getErrorMessage(err)),
@@ -197,14 +197,14 @@ export default function PriceListDetailPage() {
           onClick={() => router.push("/settings/price-lists")}
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Powrot
+          Powrót
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Szczegoly cennika</CardTitle>
+            <CardTitle>Szczegóły cennika</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -311,17 +311,17 @@ export default function PriceListDetailPage() {
               />
             </div>
             {priceList.is_default && (
-              <Badge variant="default">Domyslny cennik</Badge>
+              <Badge variant="default">Domyślny cennik</Badge>
             )}
             {priceList.valid_from && (
               <div>
-                <Label>Wazny od</Label>
+                <Label>Ważny od</Label>
                 <p className="text-sm">{formatDate(priceList.valid_from)}</p>
               </div>
             )}
             {priceList.valid_to && (
               <div>
-                <Label>Wazny do</Label>
+                <Label>Ważny do</Label>
                 <p className="text-sm">{formatDate(priceList.valid_to)}</p>
               </div>
             )}
@@ -344,7 +344,7 @@ export default function PriceListDetailPage() {
               <DialogHeader>
                 <DialogTitle>Dodaj produkt do cennika</DialogTitle>
                 <DialogDescription>
-                  Wybierz produkt i ustaw rabat lub cene
+                  Wybierz produkt i ustaw rabat lub cenę
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -398,7 +398,7 @@ export default function PriceListDetailPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Minimalna ilosc</Label>
+                  <Label>Minimalna ilość</Label>
                   <Input
                     type="number"
                     min="1"
@@ -429,7 +429,7 @@ export default function PriceListDetailPage() {
             <LoadingSkeleton />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              Brak pozycji w cenniku. Dodaj produkty, aby ustawic ceny.
+              Brak pozycji w cenniku. Dodaj produkty, aby ustawić ceny.
             </p>
           ) : (
             <div className="rounded-md border">
@@ -442,7 +442,7 @@ export default function PriceListDetailPage() {
                         ? "Cena"
                         : "Rabat"}
                     </TableHead>
-                    <TableHead>Min. ilosc</TableHead>
+                    <TableHead>Min. ilość</TableHead>
                     <TableHead>Dodano</TableHead>
                     <TableHead className="w-[60px]" />
                   </TableRow>
@@ -487,9 +487,9 @@ export default function PriceListDetailPage() {
       <ConfirmDialog
         open={!!deleteItemId}
         onOpenChange={(open) => !open && setDeleteItemId(null)}
-        title="Usun pozycje"
-        description="Czy na pewno chcesz usunac te pozycje z cennika?"
-        confirmLabel="Usun"
+        title="Usuń pozycję"
+        description="Czy na pewno chcesz usunąć tę pozycję z cennika?"
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDeleteItem}
         isLoading={deleteItem.isPending}

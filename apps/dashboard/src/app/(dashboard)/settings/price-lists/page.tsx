@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BadgePercent, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   usePriceLists,
   useDeletePriceList,
@@ -53,7 +53,6 @@ const discountTypeLabels: Record<string, string> = {
 
 export default function PriceListsPage() {
   const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data, isLoading, isError, refetch } = usePriceLists();
   const deletePriceList = useDeletePriceList();
   const createPriceList = useCreatePriceList();
@@ -65,16 +64,6 @@ export default function PriceListsPage() {
   const [newDiscountType, setNewDiscountType] = useState("percentage");
   const [newCurrency, setNewCurrency] = useState("PLN");
 
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
-
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -85,7 +74,7 @@ export default function PriceListsPage() {
     if (!deleteId) return;
     deletePriceList.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Cennik zostal usuniety");
+        toast.success("Cennik został usunięty");
         setDeleteId(null);
       },
       onError: (error) => {
@@ -105,7 +94,7 @@ export default function PriceListsPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Cennik zostal utworzony");
+          toast.success("Cennik został utworzony");
           setShowCreate(false);
           setNewName("");
           setNewDescription("");
@@ -120,12 +109,12 @@ export default function PriceListsPage() {
   };
 
   return (
-    <>
+    <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Cenniki B2B</h1>
           <p className="text-muted-foreground">
-            Zarzadzaj cennikami i rabatami dla klientow biznesowych
+            Zarządzaj cennikami i rabatami dla klientów biznesowych
           </p>
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -139,7 +128,7 @@ export default function PriceListsPage() {
             <DialogHeader>
               <DialogTitle>Nowy cennik</DialogTitle>
               <DialogDescription>
-                Utworz nowy cennik z rabatami dla klientow
+                Utwórz nowy cennik z rabatami dla klientów
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -198,7 +187,7 @@ export default function PriceListsPage() {
                 onClick={handleCreate}
                 disabled={!newName.trim() || createPriceList.isPending}
               >
-                {createPriceList.isPending ? "Tworzenie..." : "Utworz"}
+                {createPriceList.isPending ? "Tworzenie..." : "Utwórz"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -208,7 +197,7 @@ export default function PriceListsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
           </p>
           <Button
             variant="outline"
@@ -216,7 +205,7 @@ export default function PriceListsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       )}
@@ -224,8 +213,8 @@ export default function PriceListsPage() {
       {priceLists.length === 0 ? (
         <EmptyState
           icon={BadgePercent}
-          title="Brak cennikow"
-          description="Utworz pierwszy cennik, aby oferowac indywidualne ceny dla klientow biznesowych."
+          title="Brak cenników"
+          description="Utwórz pierwszy cennik, aby oferować indywidualne ceny dla klientów biznesowych."
         />
       ) : (
         <div className="rounded-md border">
@@ -235,7 +224,7 @@ export default function PriceListsPage() {
                 <TableHead>Nazwa</TableHead>
                 <TableHead>Typ rabatu</TableHead>
                 <TableHead>Waluta</TableHead>
-                <TableHead>Domyslny</TableHead>
+                <TableHead>Domyślny</TableHead>
                 <TableHead>Aktywny</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[80px]" />
@@ -311,13 +300,13 @@ export default function PriceListsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun cennik"
-        description="Czy na pewno chcesz usunac ten cennik? Wszystkie przypisane pozycje cennikowe zostana usuniete."
-        confirmLabel="Usun"
+        title="Usuń cennik"
+        description="Czy na pewno chcesz usunąć ten cennik? Wszystkie przypisane pozycje cennikowe zostaną usunięte."
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deletePriceList.isPending}
       />
-    </>
+    </AdminGuard>
   );
 }

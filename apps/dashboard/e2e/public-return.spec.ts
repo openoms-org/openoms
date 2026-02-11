@@ -7,7 +7,7 @@ test.describe('Public Return Request', () => {
     await page.goto('/return-request');
     await expect(page.getByText('Formularz zwrotu towaru')).toBeVisible({ timeout: 10000 });
     // "Zglos zwrot" appears as both CardTitle and Button — check the button specifically
-    await expect(page.getByRole('button', { name: /Zglos zwrot/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Zgłoś zwrot/ })).toBeVisible();
   });
 
   test('shows required form fields', async ({ page }) => {
@@ -21,7 +21,7 @@ test.describe('Public Return Request', () => {
   test('submit button is disabled when fields are empty', async ({ page }) => {
     await page.goto('/return-request');
     await expect(page.getByText('Formularz zwrotu towaru')).toBeVisible({ timeout: 10000 });
-    const submitButton = page.getByRole('button', { name: /Zglos zwrot/ });
+    const submitButton = page.getByRole('button', { name: /Zgłoś zwrot/ });
     await expect(submitButton).toBeDisabled();
   });
 

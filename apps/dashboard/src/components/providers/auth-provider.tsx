@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const data: TokenResponse = await res.json();
           setAuth(data.access_token, data.user, data.tenant);
-          document.cookie = "has_session=1; path=/";
+          document.cookie = "has_session=1; path=/; SameSite=Lax; max-age=2592000";
         } else if (res.status === 429) {
           // Rate-limited — keep existing session, don't log out
           setLoading(false);

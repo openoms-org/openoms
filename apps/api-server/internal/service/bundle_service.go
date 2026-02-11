@@ -185,6 +185,17 @@ func (s *BundleService) RemoveComponent(ctx context.Context, tenantID uuid.UUID,
 func (s *BundleService) CalculateBundleStock(ctx context.Context, tenantID, bundleProductID uuid.UUID) (int, error) {
 	var stock int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		product, err := s.productRepo.FindByID(ctx, tx, bundleProductID)
+		if err != nil {
+			return err
+		}
+		if product == nil {
+			return ErrProductNotBundle
+		}
+		if !product.IsBundle {
+			return ErrProductNotBundle
+		}
+
 		components, err := s.bundleRepo.ListByBundleProduct(ctx, tx, bundleProductID)
 		if err != nil {
 			return err

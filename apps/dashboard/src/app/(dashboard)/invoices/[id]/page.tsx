@@ -17,10 +17,8 @@ import {
   INVOICING_PROVIDER_LABELS,
 } from "@/lib/constants";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
-import { getErrorMessage } from "@/lib/api-client";
+import { getErrorMessage, apiFetch } from "@/lib/api-client";
 import { FileDown, XCircle } from "lucide-react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
@@ -39,8 +37,12 @@ export default function InvoiceDetailPage() {
     }
   };
 
-  const handleDownloadPDF = () => {
-    window.open(`${API_URL}/v1/invoices/${params.id}/pdf`, "_blank");
+  const handleDownloadPDF = async () => {
+    const res = await apiFetch(`/v1/invoices/${params.id}/pdf`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   if (isLoading) {

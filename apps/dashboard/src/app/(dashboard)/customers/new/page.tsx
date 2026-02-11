@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/card";
 
 const customerSchema = z.object({
-  name: z.string().min(1, "Imie i nazwisko jest wymagane"),
-  email: z.string().email("Nieprawidlowy adres e-mail").or(z.literal("")).optional(),
+  name: z.string().min(1, "Imię i nazwisko jest wymagane"),
+  email: z.string().email("Nieprawidłowy adres e-mail").or(z.literal("")).optional(),
   phone: z.string().optional(),
   company_name: z.string().optional(),
   nip: z.string().optional(),
@@ -55,7 +55,7 @@ export default function NewCustomerPage() {
 
     createCustomer.mutate(payload, {
       onSuccess: () => {
-        toast.success("Klient zostal utworzony");
+        toast.success("Klient został utworzony");
         router.push("/customers");
       },
       onError: (error) => {
@@ -81,7 +81,7 @@ export default function NewCustomerPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Imie i nazwisko *</Label>
+              <Label htmlFor="name">Imię i nazwisko *</Label>
               <Input id="name" {...register("name")} placeholder="np. Jan Kowalski" />
               {errors.name && (
                 <p className="text-sm text-destructive">{errors.name.message}</p>
@@ -130,7 +130,7 @@ export default function NewCustomerPage() {
             </div>
             <div className="flex gap-2 pt-4">
               <Button type="submit" disabled={createCustomer.isPending}>
-                {createCustomer.isPending ? "Tworzenie..." : "Utworz klienta"}
+                {createCustomer.isPending ? "Tworzenie..." : "Utwórz klienta"}
               </Button>
               <Button type="button" variant="outline" onClick={() => router.push("/customers")}>
                 Anuluj

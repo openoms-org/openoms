@@ -18,10 +18,10 @@ import type { PublicReturnStatus } from "@/types/api";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
-  requested: { label: "Zgloszone", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200", icon: Clock },
+  requested: { label: "Zgłoszone", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200", icon: Clock },
   approved: { label: "Zatwierdzone", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", icon: CheckCircle2 },
   received: { label: "Odebrane", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200", icon: Package },
-  refunded: { label: "Zwrocone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", icon: CheckCircle2 },
+  refunded: { label: "Zwrócone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", icon: CheckCircle2 },
   rejected: { label: "Odrzucone", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200", icon: XCircle },
   cancelled: { label: "Anulowane", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200", icon: XCircle },
 };
@@ -45,14 +45,14 @@ export default function PublicReturnStatusPage() {
           if (res.status === 404) {
             setError("Nie znaleziono zwrotu o podanym tokenie.");
           } else {
-            setError("Wystapil blad podczas ladowania statusu zwrotu.");
+            setError("Wystąpił błąd podczas ładowania statusu zwrotu.");
           }
           return;
         }
         const statusData: PublicReturnStatus = await res.json();
         setData(statusData);
       } catch {
-        setError("Nie udalo sie polaczyc z serwerem.");
+        setError("Nie udało się połączyć z serwerem.");
       } finally {
         setIsLoading(false);
       }
@@ -92,7 +92,7 @@ export default function PublicReturnStatusPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
               </div>
               <p className="text-center mt-4 text-muted-foreground">
-                Ladowanie...
+                Ładowanie...
               </p>
             </CardContent>
           </Card>
@@ -107,7 +107,7 @@ export default function PublicReturnStatusPage() {
                 <Button variant="outline" className="mt-4" asChild>
                   <Link href="/return-request">
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Powrot do formularza
+                    Powrót do formularza
                   </Link>
                 </Button>
               </div>
@@ -130,7 +130,7 @@ export default function PublicReturnStatusPage() {
                 })()}
               </div>
               <CardDescription>
-                Zgloszono: {formatDate(data.created_at)}
+                Zgłoszono: {formatDate(data.created_at)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -138,7 +138,7 @@ export default function PublicReturnStatusPage() {
               {!isTerminal && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-muted-foreground">
-                    Postep
+                    Postęp
                   </h3>
                   <div className="flex items-center gap-1">
                     {STATUS_ORDER.map((status, index) => {
@@ -173,8 +173,8 @@ export default function PublicReturnStatusPage() {
                 <div className="rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
                   <p className="text-sm text-red-800 dark:text-red-200">
                     {data.status === "rejected"
-                      ? "Twoje zgloszenie zwrotu zostalo odrzucone."
-                      : "Zwrot zostal anulowany."}
+                      ? "Twoje zgłoszenie zwrotu zostało odrzucone."
+                      : "Zwrot został anulowany."}
                   </p>
                 </div>
               )}
@@ -182,7 +182,7 @@ export default function PublicReturnStatusPage() {
               {/* Reason */}
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  Powod zwrotu
+                  Powód zwrotu
                 </h3>
                 <p className="text-sm">{data.reason}</p>
               </div>
@@ -216,7 +216,7 @@ export default function PublicReturnStatusPage() {
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/return-request">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Zglos kolejny zwrot
+                  Zgłoś kolejny zwrot
                 </Link>
               </Button>
             </CardContent>

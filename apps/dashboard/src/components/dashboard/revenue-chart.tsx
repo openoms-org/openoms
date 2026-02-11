@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { format, parseISO } from "date-fns";
+import { format, subDays, eachDayOfInterval } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,10 +52,22 @@ export function RevenueChart({ data, currency = "PLN", isLoading }: RevenueChart
   const axisColor = isDark ? "#a1a1aa" : "#71717a";
   const gridColor = isDark ? "#27272a" : "#e4e4e7";
 
-  const chartData = data?.map((d) => ({
-    ...d,
-    label: format(parseISO(d.date), "dd MMM", { locale: pl }),
-  }));
+  const chartData = (() => {
+    if (!data) return undefined;
+    const dataMap = new Map(data.map((d) => [d.date, d]));
+    const today = new Date();
+    const days = eachDayOfInterval({ start: subDays(today, 29), end: today });
+    return days.map((day) => {
+      const key = format(day, "yyyy-MM-dd");
+      const entry = dataMap.get(key);
+      return {
+        date: key,
+        amount: entry?.amount ?? 0,
+        count: entry?.count ?? 0,
+        label: format(day, "dd MMM", { locale: pl }),
+      };
+    });
+  })();
 
   return (
     <Card>

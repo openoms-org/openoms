@@ -42,10 +42,8 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES } 
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
-import { getErrorMessage } from "@/lib/api-client";
+import { getErrorMessage, apiFetch } from "@/lib/api-client";
 import type { CreateOrderRequest, UpdateOrderRequest } from "@/types/api";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -160,14 +158,26 @@ export default function OrderDetailPage() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => window.open(`${API_URL}/v1/orders/${params.id}/print`, "_blank")}
+            onClick={async () => {
+              const res = await apiFetch(`/v1/orders/${params.id}/print`);
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              window.open(url, "_blank");
+              setTimeout(() => URL.revokeObjectURL(url), 60000);
+            }}
           >
             <Printer className="mr-2 h-4 w-4" />
             Drukuj
           </Button>
           <Button
             variant="outline"
-            onClick={() => window.open(`${API_URL}/v1/orders/${params.id}/packing-slip`, "_blank")}
+            onClick={async () => {
+              const res = await apiFetch(`/v1/orders/${params.id}/packing-slip`);
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              window.open(url, "_blank");
+              setTimeout(() => URL.revokeObjectURL(url), 60000);
+            }}
           >
             <FileText className="mr-2 h-4 w-4" />
             List przewozowy
@@ -482,7 +492,7 @@ export default function OrderDetailPage() {
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Headphones className="h-4 w-4" />
-                  Zgloszenia
+                  Zgłoszenia
                 </span>
                 <Button
                   variant="outline"
@@ -490,7 +500,7 @@ export default function OrderDetailPage() {
                   onClick={() => setShowCreateTicketDialog(true)}
                 >
                   <Plus className="h-4 w-4" />
-                  Utworz zgloszenie
+                  Utwórz zgłoszenie
                 </Button>
               </CardTitle>
             </CardHeader>
@@ -512,7 +522,7 @@ export default function OrderDetailPage() {
                         <TableCell className="font-medium">{ticket.subject}</TableCell>
                         <TableCell>
                           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                            {ticket.status === 2 ? "Otwarty" : ticket.status === 3 ? "Oczekujacy" : ticket.status === 4 ? "Rozwiazany" : ticket.status === 5 ? "Zamkniety" : `Status ${ticket.status}`}
+                            {ticket.status === 2 ? "Otwarty" : ticket.status === 3 ? "Oczekujący" : ticket.status === 4 ? "Rozwiązany" : ticket.status === 5 ? "Zamknięty" : `Status ${ticket.status}`}
                           </span>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -524,7 +534,7 @@ export default function OrderDetailPage() {
                 </Table>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Brak zgloszen dla tego zamowienia.
+                  Brak zgłoszeń dla tego zamówienia.
                 </p>
               )}
             </CardContent>
@@ -674,7 +684,7 @@ export default function OrderDetailPage() {
         onSubmit={async (data) => {
           try {
             await createTicket.mutateAsync(data);
-            toast.success("Zgloszenie utworzone");
+            toast.success("Zgłoszenie utworzone");
             setShowCreateTicketDialog(false);
           } catch (error) {
             toast.error(getErrorMessage(error));
@@ -707,9 +717,9 @@ function CreateTicketDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Utworz zgloszenie</DialogTitle>
+          <DialogTitle>Utwórz zgłoszenie</DialogTitle>
           <DialogDescription>
-            Utworz zgloszenie w systemie Freshdesk dla tego zamowienia.
+            Utwórz zgłoszenie w systemie Freshdesk dla tego zamówienia.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -727,7 +737,7 @@ function CreateTicketDialog({
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Temat zgloszenia..."
+              placeholder="Temat zgłoszenia..."
             />
           </div>
           <div>
@@ -752,7 +762,7 @@ function CreateTicketDialog({
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : null}
-            Utworz zgloszenie
+            Utwórz zgłoszenie
           </Button>
         </DialogFooter>
       </DialogContent>

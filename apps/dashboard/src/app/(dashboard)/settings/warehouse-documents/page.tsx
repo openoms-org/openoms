@@ -34,9 +34,9 @@ import {
 import Link from "next/link";
 
 const DOC_TYPE_LABELS: Record<string, string> = {
-  PZ: "PZ - Przyjecie zewnetrzne",
-  WZ: "WZ - Wydanie zewnetrzne",
-  MM: "MM - Przesuniecie miedzymagazynowe",
+  PZ: "PZ - Przyjęcie zewnętrzne",
+  WZ: "WZ - Wydanie zewnętrzne",
+  MM: "MM - Przesunięcie międzymagazynowe",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -53,13 +53,13 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function WarehouseDocumentsPage() {
   const router = useRouter();
-  const [typeFilter, setTypeFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useWarehouseDocuments({
-    document_type: typeFilter || undefined,
-    status: statusFilter || undefined,
+    document_type: typeFilter === "all" ? undefined : typeFilter || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter || undefined,
     limit: 50,
   });
   const deleteDocument = useDeleteWarehouseDocument();
@@ -74,7 +74,7 @@ export default function WarehouseDocumentsPage() {
     if (!deleteId) return;
     deleteDocument.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Dokument zostal usuniety");
+        toast.success("Dokument został usunięty");
         setDeleteId(null);
       },
       onError: (error) => {
@@ -91,7 +91,7 @@ export default function WarehouseDocumentsPage() {
             Dokumenty magazynowe
           </h1>
           <p className="text-muted-foreground">
-            Zarzadzaj dokumentami PZ, WZ i MM
+            Zarządzaj dokumentami PZ, WZ i MM
           </p>
         </div>
         <Button asChild>
@@ -131,7 +131,7 @@ export default function WarehouseDocumentsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
           </p>
           <Button
             variant="outline"
@@ -139,7 +139,7 @@ export default function WarehouseDocumentsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       )}
@@ -147,8 +147,8 @@ export default function WarehouseDocumentsPage() {
       {documents.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="Brak dokumentow magazynowych"
-          description="Utworz pierwszy dokument PZ, WZ lub MM, aby zarzadzac ruchem towarow."
+          title="Brak dokumentów magazynowych"
+          description="Utwórz pierwszy dokument PZ, WZ lub MM, aby zarządzać ruchem towarów."
           action={{
             label: "Nowy dokument",
             href: "/settings/warehouse-documents/new",
@@ -220,9 +220,9 @@ export default function WarehouseDocumentsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun dokument"
-        description="Czy na pewno chcesz usunac ten dokument magazynowy?"
-        confirmLabel="Usun"
+        title="Usuń dokument"
+        description="Czy na pewno chcesz usunąć ten dokument magazynowy?"
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteDocument.isPending}

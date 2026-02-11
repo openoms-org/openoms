@@ -242,7 +242,7 @@ export default function ProductVariantsPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Nie znaleziono produktu</h1>
         <Button asChild variant="outline">
-          <Link href="/products">Wroc do listy</Link>
+          <Link href="/products">Wróć do listy</Link>
         </Button>
       </div>
     );
@@ -276,8 +276,8 @@ export default function ProductVariantsPage() {
       ) : !hasVariants ? (
         <EmptyState
           icon={Layers}
-          title="Brak wariantow"
-          description="Ten produkt nie posiada jeszcze wariantow. Dodaj warianty, aby zarzadzac rozmiarami, kolorami itp."
+          title="Brak wariantów"
+          description="Ten produkt nie posiada jeszcze wariantów. Dodaj warianty, aby zarządzać rozmiarami, kolorami itp."
         />
       ) : (
         <Card>
@@ -535,9 +535,9 @@ export default function ProductVariantsPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteVariantId(null);
         }}
-        title="Usun wariant"
-        description="Czy na pewno chcesz usunac ten wariant? Ta operacja jest nieodwracalna."
-        confirmLabel="Usun"
+        title="Usuń wariant"
+        description="Czy na pewno chcesz usunąć ten wariant? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteVariant.isPending}
