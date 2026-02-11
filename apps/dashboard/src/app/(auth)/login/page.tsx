@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Package, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { login } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -44,60 +46,82 @@ export default function LoginPage() {
   };
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Logowanie</CardTitle>
-        <CardDescription>Zaloguj się do panelu OpenOMS</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="tenant_slug">Organizacja (slug)</Label>
-            <Input
-              id="tenant_slug"
-              placeholder="moja-firma"
-              {...register("tenant_slug")}
-            />
-            {errors.tenant_slug && (
-              <p className="text-sm text-destructive">{errors.tenant_slug.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="jan@example.com"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Hasło</Label>
-            <Input
-              id="password"
-              type="password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Logowanie..." : "Zaloguj się"}
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Nie masz konta?{" "}
-            <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-              Zarejestruj się
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+    <div className="flex flex-col items-center">
+      <div className="mb-6 flex flex-col items-center gap-2">
+        <Package className="h-10 w-10 text-primary" />
+        <span className="text-2xl font-bold tracking-tight">OpenOMS</span>
+      </div>
+      <Card className="w-full">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Logowanie</CardTitle>
+          <CardDescription>Zaloguj się do panelu OpenOMS</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tenant_slug">Organizacja</Label>
+              <Input
+                id="tenant_slug"
+                placeholder="moja-firma"
+                {...register("tenant_slug")}
+              />
+              {errors.tenant_slug && (
+                <p className="text-sm text-destructive">{errors.tenant_slug.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="jan@example.com"
+                {...register("email")}
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Hasło</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  className="pr-10"
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Logowanie..." : "Zaloguj się"}
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Nie masz konta?{" "}
+              <Link href="/register" className="text-primary underline-offset-4 hover:underline">
+                Zarejestruj się
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
   );
 }

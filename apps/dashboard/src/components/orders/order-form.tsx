@@ -165,11 +165,14 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
     0
   );
 
-  const recalcTotal = () => {
-    if (orderItems.length > 0) {
+  const hasItems = orderItems.length > 0;
+
+  // Auto-calculate total when items change
+  useEffect(() => {
+    if (hasItems) {
       setValue("total_amount", Math.round(itemsTotal * 100) / 100);
     }
-  };
+  }, [itemsTotal, hasItems, setValue]);
 
   // Shipping address handlers
   const updateShipping = (field: keyof AddressFields, value: string) => {
@@ -301,7 +304,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             value={currentSource}
             onValueChange={(value) => setValue("source", value)}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-invalid={!!errors.source}>
               <SelectValue placeholder="Wybierz źródło" />
             </SelectTrigger>
             <SelectContent>
@@ -320,6 +323,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
           <Input
             id="customer_name"
             placeholder="Jan Kowalski"
+            aria-invalid={!!errors.customer_name}
             {...register("customer_name")}
           />
           {errors.customer_name && (
@@ -333,6 +337,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             id="customer_email"
             type="email"
             placeholder="jan@example.com"
+            aria-invalid={!!errors.customer_email}
             {...register("customer_email")}
           />
           {errors.customer_email && (
@@ -356,12 +361,11 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
           <Label htmlFor="currency">Waluta</Label>
           <Input
             id="currency"
-            placeholder="PLN"
-            {...register("currency")}
+            value={currency}
+            readOnly
+            disabled
+            className="bg-muted"
           />
-          {errors.currency && (
-            <p className="text-sm text-destructive">{errors.currency.message}</p>
-          )}
         </div>
       </div>
 
@@ -436,9 +440,6 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
               <span className="text-sm font-medium">
                 Suma pozycji: {formatCurrency(itemsTotal, currency)}
               </span>
-              <Button type="button" variant="outline" size="sm" onClick={recalcTotal}>
-                Przelicz kwotę
-              </Button>
             </div>
           </div>
         ) : (
@@ -452,14 +453,33 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="total_amount">Kwota całkowita</Label>
-          <Input
-            id="total_amount"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="0.00"
-            {...register("total_amount", { valueAsNumber: true })}
-          />
+          {hasItems ? (
+            <Input
+              id="total_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={watch("total_amount")}
+              readOnly
+              disabled
+              className="bg-muted"
+            />
+          ) : (
+            <Input
+              id="total_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              aria-invalid={!!errors.total_amount}
+              {...register("total_amount", { valueAsNumber: true })}
+            />
+          )}
+          {hasItems && (
+            <p className="text-xs text-muted-foreground">
+              Obliczane automatycznie z pozycji zamówienia
+            </p>
+          )}
           {errors.total_amount && (
             <p className="text-sm text-destructive">{errors.total_amount.message}</p>
           )}

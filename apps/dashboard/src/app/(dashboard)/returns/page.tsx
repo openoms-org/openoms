@@ -15,8 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RotateCcw } from "lucide-react";
 import { RETURN_STATUSES } from "@/lib/constants";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency, shortId } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/empty-state";
 import type { Return } from "@/types/api";
 
 export default function ReturnsPage() {
@@ -46,7 +48,7 @@ export default function ReturnsPage() {
           className="font-mono text-xs text-primary hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
-          {row.order_id.slice(0, 8)}
+          {shortId(row.order_id)}
         </Link>
       ),
     },
@@ -139,7 +141,14 @@ export default function ReturnsPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak zwrotów do wyświetlenia"
+          emptyState={
+            <EmptyState
+              icon={RotateCcw}
+              title="Brak zwrotów"
+              description="Nie znaleziono zwrotów do wyświetlenia."
+              action={{ label: "Nowy zwrot", href: "/returns/new" }}
+            />
+          }
           onRowClick={(row) => router.push(`/returns/${row.id}`)}
         />
       </div>

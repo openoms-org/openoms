@@ -13,6 +13,7 @@ import { format, parseISO } from "date-fns";
 import { pl } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/utils";
 import type { DailyRevenue } from "@/types/api";
 
 interface RevenueChartProps {
@@ -38,7 +39,7 @@ function CustomTooltip({
     <div className="rounded-lg border bg-background p-3 shadow-sm">
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="text-sm font-bold">
-        {payload[0].value.toFixed(2)} {currency}
+        {formatCurrency(payload[0].value, currency)}
       </p>
     </div>
   );
@@ -71,7 +72,7 @@ export function RevenueChart({ data, currency = "PLN", isLoading }: RevenueChart
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value: number) => `${value} ${currency}`}
+                tickFormatter={(value: number) => formatCurrency(value, currency)}
               />
               <Tooltip content={<CustomTooltip currency={currency} />} />
               <Area

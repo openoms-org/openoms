@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useCreateOrder } from "@/hooks/use-orders";
+import { getErrorMessage } from "@/lib/api-client";
 import { OrderForm } from "@/components/orders/order-form";
 import type { CreateOrderRequest } from "@/types/api";
 
@@ -16,9 +17,7 @@ export default function NewOrderPage() {
       toast.success("Zamówienie zostało utworzone");
       router.push(`/orders/${order.id}`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas tworzenia zamówienia"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 

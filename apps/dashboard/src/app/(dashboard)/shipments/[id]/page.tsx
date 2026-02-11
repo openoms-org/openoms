@@ -34,7 +34,7 @@ import {
 } from "@/hooks/use-shipments";
 import { useOrder } from "@/hooks/use-orders";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { formatDate, shortId } from "@/lib/utils";
 
 export default function ShipmentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -124,7 +124,7 @@ export default function ShipmentDetailPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
-              Przesyłka {shipment.id.slice(0, 8)}...
+              Przesyłka {shortId(shipment.id)}
             </h1>
             <p className="text-muted-foreground">
               Utworzona {formatDate(shipment.created_at)}
@@ -199,7 +199,7 @@ export default function ShipmentDetailPage() {
                   href={`/orders/${shipment.order_id}`}
                   className="inline-flex items-center gap-1 font-mono text-sm text-primary hover:underline"
                 >
-                  {shipment.order_id.slice(0, 8)}...
+                  {shortId(shipment.order_id)}
                   <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>

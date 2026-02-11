@@ -25,18 +25,12 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency, shortId } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/api-client";
 import type { CreateOrderRequest } from "@/types/api";
 
 export default function OrderDetailPage() {
@@ -63,9 +57,7 @@ export default function OrderDetailPage() {
       toast.success("Zamówienie zostało zaktualizowane");
       setIsEditing(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas aktualizacji zamówienia"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -75,9 +67,7 @@ export default function OrderDetailPage() {
       toast.success("Zamówienie zostało usunięte");
       router.push("/orders");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas usuwania zamówienia"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -86,9 +76,7 @@ export default function OrderDetailPage() {
       await transitionStatus.mutateAsync({ status: newStatus, force });
       toast.success("Status zamówienia został zmieniony");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas zmiany statusu"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -122,7 +110,7 @@ export default function OrderDetailPage() {
         <div>
           <h1 className="text-2xl font-bold">Edycja zamówienia</h1>
           <p className="text-muted-foreground mt-1">
-            Zamówienie {order.id.slice(0, 8)}
+            Zamówienie {shortId(order.id)}
           </p>
         </div>
         <div className="max-w-2xl">
@@ -142,7 +130,7 @@ export default function OrderDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">
-            Zamówienie {order.id.slice(0, 8)}
+            Zamówienie {shortId(order.id)}
           </h1>
           <p className="text-muted-foreground mt-1">
             Utworzone {formatDate(order.created_at)}
@@ -373,7 +361,7 @@ export default function OrderDetailPage() {
                       <TableRow key={shipment.id}>
                         <TableCell>
                           <Link href={`/shipments/${shipment.id}`} className="font-medium text-primary hover:underline">
-                            {shipment.tracking_number || shipment.id.slice(0, 8)}
+                            {shipment.tracking_number || shortId(shipment.id)}
                           </Link>
                         </TableCell>
                         <TableCell>{shipment.provider}</TableCell>
@@ -411,7 +399,7 @@ export default function OrderDetailPage() {
                       <TableRow key={ret.id}>
                         <TableCell>
                           <Link href={`/returns/${ret.id}`} className="font-medium text-primary hover:underline">
-                            {ret.id.slice(0, 8)}
+                            {shortId(ret.id)}
                           </Link>
                         </TableCell>
                         <TableCell>
@@ -459,28 +447,16 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usuwanie zamówienia</DialogTitle>
-            <DialogDescription>
-              Czy na pewno chcesz usunąć to zamówienie? Ta operacja jest nieodwracalna.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteOrder.isPending}
-            >
-              {deleteOrder.isPending ? "Usuwanie..." : "Usuń zamówienie"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Usuwanie zamówienia"
+        description="Czy na pewno chcesz usunąć to zamówienie? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń zamówienie"
+        variant="destructive"
+        onConfirm={handleDelete}
+        isLoading={deleteOrder.isPending}
+      />
     </div>
   );
 }

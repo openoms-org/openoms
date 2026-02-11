@@ -16,7 +16,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
+import { cn, shortId, formatCurrency } from "@/lib/utils";
 import { apiClient } from "@/lib/api-client";
 import type { Order, ListResponse } from "@/types/api";
 
@@ -86,10 +86,10 @@ export function OrderSearchCombobox({
 
   const getDisplayText = () => {
     if (selectedOrder) {
-      return `${selectedOrder.customer_name} (${selectedOrder.id.slice(0, 8)}...)`;
+      return `${selectedOrder.customer_name} (${shortId(selectedOrder.id)}...)`;
     }
     if (value) {
-      return `${value.slice(0, 8)}...`;
+      return `${shortId(value)}...`;
     }
     return "Wybierz zamówienie...";
   };
@@ -145,9 +145,9 @@ export function OrderSearchCombobox({
                         {order.customer_name}
                       </span>
                       <span className="text-xs text-muted-foreground truncate">
-                        {order.id.slice(0, 8)}... &middot;{" "}
+                        {shortId(order.id)}... &middot;{" "}
                         {formatDate(order.created_at)} &middot;{" "}
-                        {order.total_amount.toFixed(2)} {order.currency}
+                        {formatCurrency(order.total_amount, order.currency)}
                       </span>
                     </div>
                   </CommandItem>

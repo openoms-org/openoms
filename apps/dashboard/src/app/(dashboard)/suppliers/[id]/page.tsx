@@ -13,7 +13,7 @@ import {
 } from "@/hooks/use-suppliers";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -241,7 +241,7 @@ export default function SupplierDetailPage() {
                     <TableCell>{sp.ean || "---"}</TableCell>
                     <TableCell>{sp.sku || "---"}</TableCell>
                     <TableCell className="text-right">
-                      {sp.price != null ? `${sp.price.toFixed(2)} PLN` : "---"}
+                      {sp.price != null ? formatCurrency(sp.price) : "---"}
                     </TableCell>
                     <TableCell className="text-right">{sp.stock_quantity}</TableCell>
                     <TableCell>

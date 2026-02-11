@@ -21,16 +21,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RETURN_STATUSES, RETURN_TRANSITIONS } from "@/lib/constants";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency, shortId } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/api-client";
 
 const editSchema = z.object({
   reason: z.string().min(1, "Powód jest wymagany"),
@@ -97,9 +91,7 @@ export default function ReturnDetailPage() {
       toast.success("Zwrot został zaktualizowany");
       setIsEditing(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas aktualizacji zwrotu"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -109,9 +101,7 @@ export default function ReturnDetailPage() {
       toast.success("Zwrot został usunięty");
       router.push("/returns");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas usuwania zwrotu"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -120,9 +110,7 @@ export default function ReturnDetailPage() {
       await transitionStatus.mutateAsync({ status: newStatus });
       toast.success("Status zwrotu został zmieniony");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas zmiany statusu"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 
@@ -158,7 +146,7 @@ export default function ReturnDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">
-              Zwrot #{params.id.slice(0, 8)}
+              Zwrot #{shortId(params.id)}
             </h1>
             <StatusBadge status={returnData.status} statusMap={RETURN_STATUSES} />
           </div>
@@ -244,7 +232,7 @@ export default function ReturnDetailPage() {
                       href={`/orders/${returnData.order_id}`}
                       className="mt-1 font-mono text-sm text-primary hover:underline"
                     >
-                      {returnData.order_id.slice(0, 8)}
+                      {shortId(returnData.order_id)}
                     </Link>
                   </div>
                   <div>
@@ -313,28 +301,16 @@ export default function ReturnDetailPage() {
         </div>
       )}
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usuwanie zwrotu</DialogTitle>
-            <DialogDescription>
-              Czy na pewno chcesz usunąć ten zwrot? Ta operacja jest nieodwracalna.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteReturn.isPending}
-            >
-              {deleteReturn.isPending ? "Usuwanie..." : "Usuń zwrot"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Usuwanie zwrotu"
+        description="Czy na pewno chcesz usunąć ten zwrot? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń zwrot"
+        variant="destructive"
+        onConfirm={handleDelete}
+        isLoading={deleteReturn.isPending}
+      />
     </div>
   );
 }
