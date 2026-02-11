@@ -101,7 +101,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 	// Public auth routes — no JWT required, rate-limited
 	r.Route("/v1/auth", func(r chi.Router) {
-		r.Use(middleware.RateLimit(20, 1*time.Minute))
+		r.Use(middleware.RateLimit(100, 1*time.Minute))
 		r.Use(middleware.MaxBodySize(1 << 20)) // 1MB
 		r.Post("/register", deps.Auth.Register)
 		r.Post("/login", deps.Auth.Login)

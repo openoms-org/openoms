@@ -22,13 +22,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const data: TokenResponse = await res.json();
           setAuth(data.access_token, data.user, data.tenant);
           document.cookie = "has_session=1; path=/";
+        } else if (res.status === 429) {
+          // Rate-limited — keep existing session, don't log out
         } else {
           clearAuth();
           document.cookie = "has_session=; path=/; max-age=0";
         }
       } catch {
-        clearAuth();
-        document.cookie = "has_session=; path=/; max-age=0";
+        // Network error — keep session if cookie exists, don't log out eagerly
       }
     };
     hydrate();
