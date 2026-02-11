@@ -88,6 +88,31 @@ export function useSyncSupplier() {
   });
 }
 
+export function useLinkSupplierProduct(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      supplierProductId,
+      productId,
+    }: {
+      supplierProductId: string;
+      productId: string;
+    }) =>
+      apiClient<SupplierProduct>(
+        `/v1/suppliers/${supplierId}/products/${supplierProductId}/link`,
+        {
+          method: "POST",
+          body: JSON.stringify({ product_id: productId }),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-products", supplierId],
+      });
+    },
+  });
+}
+
 export function useSupplierProducts(
   supplierId: string,
   params: SupplierProductListParams = {}

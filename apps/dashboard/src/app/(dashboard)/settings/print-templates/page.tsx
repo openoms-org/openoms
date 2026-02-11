@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +22,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { Loader2, Save } from "lucide-react";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import type { PrintTemplatesConfig } from "@/types/api";
 
 const DEFAULT_CONFIG: PrintTemplatesConfig = {
@@ -55,18 +54,10 @@ function useUpdatePrintTemplates() {
 }
 
 export default function PrintTemplatesPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: templates, isLoading } = usePrintTemplates();
   const updateTemplates = useUpdatePrintTemplates();
 
   const [form, setForm] = useState<PrintTemplatesConfig>(DEFAULT_CONFIG);
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
 
   useEffect(() => {
     if (templates) {
@@ -76,10 +67,6 @@ export default function PrintTemplatesPage() {
       });
     }
   }, [templates]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleSave = async () => {
     try {
@@ -97,6 +84,7 @@ export default function PrintTemplatesPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -260,5 +248,6 @@ export default function PrintTemplatesPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </AdminGuard>
   );
 }

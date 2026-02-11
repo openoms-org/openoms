@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOrders, exportOrdersCSV } from "@/hooks/use-orders";
-import { DataTable, type ColumnDef } from "@/components/shared/data-table";
+import { DataTable, type ColumnDef, type EditableColumnConfig } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { OrderFilters } from "@/components/orders/order-filters";
@@ -13,12 +13,26 @@ import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
-import { Download, ShoppingCart } from "lucide-react";
+import { Download, ShoppingCart, Merge } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { apiClient } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/api-client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useMergeOrders } from "@/hooks/use-order-groups";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Order } from "@/types/api";
 
 export default function OrdersPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
   const [filters, setFilters] = useState<{ status?: string; source?: string; search?: string; payment_status?: string; tag?: string }>({});
@@ -27,6 +41,8 @@ export default function OrdersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const mergeOrders = useMergeOrders();
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -47,6 +63,42 @@ export default function OrdersPage() {
   });
 
   const selectedOrders = (data?.items || []).filter((o) => selectedIds.has(o.id));
+
+  const statusOptions = useMemo(() => {
+    return Object.entries(orderStatuses).map(([key, val]) => ({
+      value: key,
+      label: val.label,
+    }));
+  }, [orderStatuses]);
+
+  const editableColumns = useMemo<EditableColumnConfig<Order>[]>(
+    () => [
+      {
+        accessorKey: "status",
+        type: "select",
+        options: statusOptions,
+        onSave: async (row, value) => {
+          await apiClient<Order>(`/v1/orders/${row.id}/status`, {
+            method: "POST",
+            body: JSON.stringify({ status: value as string }),
+          });
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+      },
+      {
+        accessorKey: "notes",
+        type: "text",
+        onSave: async (row, value) => {
+          await apiClient<Order>(`/v1/orders/${row.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ notes: value as string }),
+          });
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+      },
+    ],
+    [statusOptions, queryClient]
+  );
 
   const columns: ColumnDef<Order>[] = [
     {
@@ -84,6 +136,15 @@ export default function OrdersPage() {
       accessorKey: "payment_status",
       cell: (row) => <StatusBadge status={row.payment_status} statusMap={PAYMENT_STATUSES} />,
       sortable: true,
+    },
+    {
+      header: "Notatki",
+      accessorKey: "notes",
+      cell: (row) => (
+        <span className="text-sm text-muted-foreground truncate max-w-[200px] inline-block">
+          {row.notes || "—"}
+        </span>
+      ),
     },
     {
       header: "Tagi",
@@ -162,10 +223,22 @@ export default function OrdersPage() {
       )}
 
       {selectedIds.size > 0 && (
-        <BulkActions
-          selectedOrders={selectedOrders}
-          onClearSelection={() => setSelectedIds(new Set())}
-        />
+        <div className="space-y-3">
+          <BulkActions
+            selectedOrders={selectedOrders}
+            onClearSelection={() => setSelectedIds(new Set())}
+          />
+          {selectedIds.size >= 2 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMergeDialog(true)}
+            >
+              <Merge className="mr-2 h-4 w-4" />
+              Scal zamówienia ({selectedIds.size})
+            </Button>
+          )}
+        </div>
       )}
 
       <div className="rounded-md border">
@@ -189,6 +262,7 @@ export default function OrdersPage() {
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSort={handleSort}
+          editableColumns={editableColumns}
         />
       </div>
 
@@ -201,6 +275,52 @@ export default function OrdersPage() {
           onPageSizeChange={handlePageSizeChange}
         />
       )}
+
+      <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Scal zamówienia</DialogTitle>
+            <DialogDescription>
+              Czy na pewno chcesz scalić {selectedIds.size} zamówień w jedno?
+              Pozycje ze wszystkich zamówień zostaną połączone, a kwoty
+              zsumowane. Oryginalne zamówienia otrzymają status
+              &quot;merged&quot;.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-sm text-muted-foreground">
+            <p className="font-medium mb-1">Wybrane zamówienia:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              {selectedOrders.map((o) => (
+                <li key={o.id}>
+                  {shortId(o.id)} - {o.customer_name} ({formatCurrency(o.total_amount, o.currency)})
+                </li>
+              ))}
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMergeDialog(false)}>
+              Anuluj
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  await mergeOrders.mutateAsync({
+                    order_ids: Array.from(selectedIds),
+                  });
+                  toast.success("Zamówienia zostały scalone");
+                  setShowMergeDialog(false);
+                  setSelectedIds(new Set());
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                }
+              }}
+              disabled={mergeOrders.isPending}
+            >
+              {mergeOrders.isPending ? "Scalanie..." : "Scal zamówienia"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

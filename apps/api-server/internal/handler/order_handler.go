@@ -274,14 +274,6 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
 	filter := parseOrderFilter(r)
-	filter.PaginationParams = model.PaginationParams{Limit: 10000, Offset: 0}
-
-	resp, err := h.orderService.List(r.Context(), tenantID, filter)
-	if err != nil {
-		slog.Error("csv export failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to export orders")
-		return
-	}
 
 	// Load custom field definitions
 	cfConfig := h.loadCustomFieldsConfig(r.Context(), tenantID)
@@ -309,73 +301,100 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, o := range resp.Items {
-		email := ""
-		if o.CustomerEmail != nil {
-			email = *o.CustomerEmail
-		}
-		phone := ""
-		if o.CustomerPhone != nil {
-			phone = *o.CustomerPhone
-		}
-		method := ""
-		if o.PaymentMethod != nil {
-			method = *o.PaymentMethod
-		}
-		orderedAt := ""
-		if o.OrderedAt != nil {
-			orderedAt = o.OrderedAt.Format("2006-01-02 15:04")
-		}
-		paidAt := ""
-		if o.PaidAt != nil {
-			paidAt = o.PaidAt.Format("2006-01-02 15:04")
-		}
+	const batchSize = 500
+	offset := 0
 
-		row := []string{
-			o.ID.String(),
-			o.CustomerName,
-			email,
-			phone,
-			o.Source,
-			o.Status,
-			o.PaymentStatus,
-			method,
-			fmt.Sprintf("%.2f", o.TotalAmount),
-			o.Currency,
-			orderedAt,
-			paidAt,
-			strings.Join(o.Tags, ";"),
-		}
-
-		// Parse order metadata and append custom field values
-		var metadata map[string]interface{}
-		if o.Metadata != nil {
-			if err := json.Unmarshal(o.Metadata, &metadata); err != nil {
-				slog.Warn("csv export: failed to unmarshal order metadata", "error", err, "order_id", o.ID)
-			}
-		}
-		for _, f := range cfConfig.Fields {
-			val := ""
-			if metadata != nil {
-				if v, ok := metadata[f.Key]; ok && v != nil {
-					switch f.Type {
-					case "checkbox":
-						if b, ok := v.(bool); ok && b {
-							val = "Tak"
-						} else {
-							val = "Nie"
-						}
-					default:
-						val = fmt.Sprintf("%v", v)
-					}
-				}
-			}
-			row = append(row, val)
-		}
-
-		if err := writer.Write(row); err != nil {
-			slog.Error("csv export: failed to write row", "error", err)
+	for {
+		filter.PaginationParams = model.PaginationParams{Limit: batchSize, Offset: offset}
+		resp, err := h.orderService.List(r.Context(), tenantID, filter)
+		if err != nil {
+			slog.Error("csv export failed", "error", err, "offset", offset)
 			break
 		}
+
+		if len(resp.Items) == 0 {
+			break
+		}
+
+		for _, o := range resp.Items {
+			email := ""
+			if o.CustomerEmail != nil {
+				email = *o.CustomerEmail
+			}
+			phone := ""
+			if o.CustomerPhone != nil {
+				phone = *o.CustomerPhone
+			}
+			method := ""
+			if o.PaymentMethod != nil {
+				method = *o.PaymentMethod
+			}
+			orderedAt := ""
+			if o.OrderedAt != nil {
+				orderedAt = o.OrderedAt.Format("2006-01-02 15:04")
+			}
+			paidAt := ""
+			if o.PaidAt != nil {
+				paidAt = o.PaidAt.Format("2006-01-02 15:04")
+			}
+
+			row := []string{
+				o.ID.String(),
+				o.CustomerName,
+				email,
+				phone,
+				o.Source,
+				o.Status,
+				o.PaymentStatus,
+				method,
+				fmt.Sprintf("%.2f", o.TotalAmount),
+				o.Currency,
+				orderedAt,
+				paidAt,
+				strings.Join(o.Tags, ";"),
+			}
+
+			// Parse order metadata and append custom field values
+			var metadata map[string]interface{}
+			if o.Metadata != nil {
+				if err := json.Unmarshal(o.Metadata, &metadata); err != nil {
+					slog.Warn("csv export: failed to unmarshal order metadata", "error", err, "order_id", o.ID)
+				}
+			}
+			for _, f := range cfConfig.Fields {
+				val := ""
+				if metadata != nil {
+					if v, ok := metadata[f.Key]; ok && v != nil {
+						switch f.Type {
+						case "checkbox":
+							if b, ok := v.(bool); ok && b {
+								val = "Tak"
+							} else {
+								val = "Nie"
+							}
+						default:
+							val = fmt.Sprintf("%v", v)
+						}
+					}
+				}
+				row = append(row, val)
+			}
+
+			if err := writer.Write(row); err != nil {
+				slog.Error("csv export: failed to write row", "error", err)
+				return
+			}
+		}
+
+		writer.Flush()
+		if err := writer.Error(); err != nil {
+			slog.Error("csv export: flush error", "error", err)
+			return
+		}
+
+		if len(resp.Items) < batchSize {
+			break
+		}
+		offset += batchSize
 	}
 }

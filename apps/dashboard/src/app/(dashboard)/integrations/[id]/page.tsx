@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useIntegration,
   useUpdateIntegration,
@@ -59,7 +59,6 @@ type CredentialsFormValues = z.infer<typeof credentialsSchema>;
 export default function IntegrationDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: integration, isLoading } = useIntegration(params.id);
   const updateIntegration = useUpdateIntegration(params.id);
   const deleteIntegration = useDeleteIntegration();
@@ -76,16 +75,6 @@ export default function IntegrationDetailPage() {
       credentials: "",
     },
   });
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   if (isLoading) {
     return (
@@ -160,6 +149,7 @@ export default function IntegrationDetailPage() {
   };
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -364,5 +354,6 @@ export default function IntegrationDetailPage() {
         isLoading={deleteIntegration.isPending}
       />
     </div>
+    </AdminGuard>
   );
 }

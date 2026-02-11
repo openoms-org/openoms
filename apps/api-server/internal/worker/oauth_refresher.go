@@ -95,7 +95,11 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			continue // token still valid, skip
 		}
 
-		w.logger.Info("refreshing token", "integration_id", ir.id, "provider", ir.provider, "expires_at", creds.TokenExpiry)
+		w.logger.Info("worker: refreshing token",
+			"operation", "integration.oauth_refresh",
+			"tenant_id", ir.tenantID,
+			"entity_id", ir.id,
+			"provider", ir.provider, "expires_at", creds.TokenExpiry)
 
 		// Create SDK client and refresh
 		var opts []allegrosdk.Option
@@ -143,12 +147,20 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			"UPDATE integrations SET credentials = $1::jsonb WHERE id = $2",
 			credsJSONB, ir.id,
 		); err != nil {
-			w.logger.Error("oauth refresh: update failed", "integration_id", ir.id, "error", err)
+			w.logger.Error("worker: oauth credential update failed",
+				"operation", "integration.oauth_refresh",
+				"tenant_id", ir.tenantID,
+				"entity_id", ir.id,
+				"error", err)
 			continue
 		}
 
 		refreshed++
-		w.logger.Info("token refreshed", "integration_id", ir.id, "new_expiry", newExpiry.Format(time.RFC3339))
+		w.logger.Info("worker: token refreshed",
+			"operation", "integration.oauth_refresh",
+			"tenant_id", ir.tenantID,
+			"entity_id", ir.id,
+			"new_expiry", newExpiry.Format(time.RFC3339))
 	}
 
 	w.logger.Info("oauth refresh completed", "checked", len(integrations), "refreshed", refreshed)

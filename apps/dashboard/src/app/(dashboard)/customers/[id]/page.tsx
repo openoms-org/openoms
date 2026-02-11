@@ -6,6 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { useCustomer, useUpdateCustomer, useDeleteCustomer, useCustomerOrders } from "@/hooks/use-customers";
+import { usePriceLists } from "@/hooks/use-price-lists";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -30,6 +31,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { UpdateCustomerRequest } from "@/types/api";
@@ -47,6 +55,8 @@ export default function CustomerDetailPage() {
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+  const { data: priceListsData } = usePriceLists({ limit: 100, active: true });
+  const priceLists = priceListsData?.items ?? [];
 
   const [formData, setFormData] = useState<UpdateCustomerRequest>({});
 
@@ -59,6 +69,7 @@ export default function CustomerDetailPage() {
       company_name: customer.company_name || "",
       nip: customer.nip || "",
       notes: customer.notes || "",
+      price_list_id: customer.price_list_id || undefined,
     });
     setIsEditing(true);
   };
@@ -195,6 +206,27 @@ export default function CustomerDetailPage() {
                   rows={3}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>Cennik</Label>
+                <Select
+                  value={formData.price_list_id || "none"}
+                  onValueChange={(val) =>
+                    setFormData({ ...formData, price_list_id: val === "none" ? undefined : val })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Brak cennika" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Brak cennika</SelectItem>
+                    {priceLists.map((pl) => (
+                      <SelectItem key={pl.id} value={pl.id}>
+                        {pl.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex gap-2 pt-2">
                 <Button onClick={handleUpdate} disabled={updateCustomer.isPending}>
                   {updateCustomer.isPending ? "Zapisywanie..." : "Zapisz"}
@@ -242,6 +274,14 @@ export default function CustomerDetailPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">NIP</p>
                     <p className="mt-1 font-mono text-sm">{customer.nip}</p>
+                  </div>
+                )}
+                {customer.price_list_id && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cennik</p>
+                    <p className="mt-1 text-sm">
+                      {priceLists.find((pl) => pl.id === customer.price_list_id)?.name ?? customer.price_list_id.slice(0, 8)}
+                    </p>
                   </div>
                 )}
               </div>

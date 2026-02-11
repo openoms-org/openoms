@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useAutomationRules, useDeleteAutomationRule } from "@/hooks/use-automation";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -33,7 +33,6 @@ import type { AutomationRule } from "@/types/api";
 
 export default function AutomationRulesPage() {
   const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const [triggerFilter, setTriggerFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
@@ -45,16 +44,6 @@ export default function AutomationRulesPage() {
   });
 
   const deleteRule = useDeleteAutomationRule();
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleTriggerChange = (value: string) => {
     setTriggerFilter(value === "all" ? "" : value);
@@ -74,6 +63,7 @@ export default function AutomationRulesPage() {
   };
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -205,5 +195,6 @@ export default function AutomationRulesPage() {
         />
       )}
     </div>
+    </AdminGuard>
   );
 }

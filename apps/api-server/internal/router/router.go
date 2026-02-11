@@ -47,6 +47,10 @@ type RouterDeps struct {
 	Print            *handler.PrintHandler
 	Docs             *handler.DocsHandler
 	MetricsCollector *middleware.MetricsCollector
+	OrderGroup       *handler.OrderGroupHandler
+	Bundle           *handler.BundleHandler
+	Barcode          *handler.BarcodeHandler
+	PriceList        *handler.PriceListHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -171,16 +175,20 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/", deps.Order.Create)
 				r.Get("/export", deps.Order.ExportCSV)
 				r.Post("/bulk-status", deps.Order.BulkTransitionStatus)
+				r.Post("/merge", deps.OrderGroup.MergeOrders)
 				r.Post("/import/preview", deps.Import.Preview)
 				r.Post("/import", deps.Import.Import)
 				r.Get("/{id}", deps.Order.Get)
 				r.Patch("/{id}", deps.Order.Update)
 				r.Delete("/{id}", deps.Order.Delete)
 				r.Post("/{id}/status", deps.Order.TransitionStatus)
+				r.Post("/{id}/split", deps.OrderGroup.SplitOrder)
+				r.Get("/{id}/groups", deps.OrderGroup.ListByOrder)
 				r.Get("/{id}/audit", deps.Order.GetAudit)
 				r.Get("/{id}/invoices", deps.Invoice.ListByOrder)
 				r.Get("/{id}/packing-slip", deps.Print.GetPackingSlip)
 				r.Get("/{id}/print", deps.Print.GetOrderSummary)
+				r.Post("/{id}/pack", deps.Barcode.PackOrder)
 			})
 
 			// Invoices — any authenticated user
@@ -226,6 +234,15 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)
 				r.Get("/{id}/stock", deps.Warehouse.ListProductStock)
+
+				// Bundles
+				r.Route("/{id}/bundle", func(r chi.Router) {
+					r.Get("/", deps.Bundle.ListComponents)
+					r.Post("/", deps.Bundle.AddComponent)
+					r.Get("/stock", deps.Bundle.GetBundleStock)
+					r.Put("/{componentId}", deps.Bundle.UpdateComponent)
+					r.Delete("/{componentId}", deps.Bundle.RemoveComponent)
+				})
 
 				// Variants
 				r.Route("/{productId}/variants", func(r chi.Router) {
@@ -311,6 +328,22 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/revenue/by-source", deps.Stats.GetRevenueBySource)
 				r.Get("/trends", deps.Stats.GetOrderTrends)
 				r.Get("/payment-methods", deps.Stats.GetPaymentMethodStats)
+			})
+
+			// Barcode lookup — any authenticated user
+			r.Get("/barcode/{code}", deps.Barcode.Lookup)
+
+			// Price lists — admin only
+			r.Route("/price-lists", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.PriceList.List)
+				r.Post("/", deps.PriceList.Create)
+				r.Get("/{id}", deps.PriceList.Get)
+				r.Patch("/{id}", deps.PriceList.Update)
+				r.Delete("/{id}", deps.PriceList.Delete)
+				r.Get("/{id}/items", deps.PriceList.ListItems)
+				r.Post("/{id}/items", deps.PriceList.CreateItem)
+				r.Delete("/{id}/items/{itemId}", deps.PriceList.DeleteItem)
 			})
 
 			// InPost points search (proxy)

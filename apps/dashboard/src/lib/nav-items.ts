@@ -24,6 +24,8 @@ import {
   Warehouse,
   Contact,
   Printer,
+  ScanBarcode,
+  BadgePercent,
 } from "lucide-react";
 
 export interface NavItem {
@@ -42,10 +44,12 @@ export const navItems: NavItem[] = [
   { href: "/invoices", label: "Faktury", icon: FileText, group: "Sprzedaż" },
   { href: "/orders/import", label: "Import", icon: Upload, group: "Sprzedaż" },
   { href: "/customers", label: "Klienci", icon: Contact, group: "Sprzedaż" },
+  { href: "/packing", label: "Pakowanie", icon: ScanBarcode, group: "Sprzedaż" },
   { href: "/reports", label: "Raporty", icon: BarChart3, group: "Sprzedaż" },
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
   { href: "/settings/warehouses", label: "Magazyny", icon: Warehouse, adminOnly: true, group: "Katalog" },
   { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
+  { href: "/settings/price-lists", label: "Cenniki", icon: BadgePercent, adminOnly: true, group: "Katalog" },
   { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true, group: "Połączenia" },
   { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true, group: "Połączenia" },
   { href: "/settings/webhooks", label: "Webhooki", icon: Webhook, adminOnly: true, group: "Połączenia" },

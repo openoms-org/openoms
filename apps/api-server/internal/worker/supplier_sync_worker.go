@@ -68,8 +68,12 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 		tenantID := ref.TenantID
 
 		if err := w.supplierService.SyncFeed(ctx, tenantID, supplierID); err != nil {
-			w.logger.Error("supplier sync failed",
-				"supplier_id", supplierID, "tenant_id", tenantID, "error", err)
+			w.logger.Error("worker: supplier sync failed",
+				"operation", "supplier.sync_feed",
+				"tenant_id", tenantID,
+				"entity_id", supplierID,
+				"error", err,
+			)
 
 			// Record error on supplier
 			errMsg := err.Error()
@@ -84,6 +88,11 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 			}
 			continue
 		}
+		w.logger.Info("worker: supplier synced",
+			"operation", "supplier.sync_feed",
+			"tenant_id", tenantID,
+			"entity_id", supplierID,
+		)
 		synced++
 	}
 

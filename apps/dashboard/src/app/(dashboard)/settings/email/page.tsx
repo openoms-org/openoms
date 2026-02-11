@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,8 +41,6 @@ const DEFAULT_SETTINGS: EmailSettings = {
 };
 
 export default function EmailSettingsPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: settings, isLoading } = useEmailSettings();
   const updateSettings = useUpdateEmailSettings();
   const sendTest = useSendTestEmail();
@@ -53,18 +49,8 @@ export default function EmailSettingsPage() {
   const [testEmail, setTestEmail] = useState("");
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
     if (settings) setForm(settings);
   }, [settings]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleSave = async () => {
     try {
@@ -97,6 +83,7 @@ export default function EmailSettingsPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Powiadomienia email</h1>
@@ -279,5 +266,6 @@ export default function EmailSettingsPage() {
         </Button>
       </div>
     </div>
+    </AdminGuard>
   );
 }

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,8 +33,6 @@ const DEFAULT_SETTINGS: CompanySettings = {
 };
 
 export default function CompanySettingsPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: settings, isLoading } = useCompanySettings();
   const updateSettings = useUpdateCompanySettings();
 
@@ -45,18 +41,8 @@ export default function CompanySettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
     if (settings) setForm(settings);
   }, [settings]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleSave = async () => {
     try {
@@ -99,6 +85,7 @@ export default function CompanySettingsPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Dane firmy</h1>
@@ -251,5 +238,6 @@ export default function CompanySettingsPage() {
         </Button>
       </div>
     </div>
+    </AdminGuard>
   );
 }

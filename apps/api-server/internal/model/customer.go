@@ -23,6 +23,7 @@ type Customer struct {
 	Notes                  *string         `json:"notes,omitempty"`
 	TotalOrders            int             `json:"total_orders"`
 	TotalSpent             float64         `json:"total_spent"`
+	PriceListID            *uuid.UUID      `json:"price_list_id,omitempty"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
 }
@@ -74,13 +75,14 @@ type UpdateCustomerRequest struct {
 	DefaultBillingAddress  json.RawMessage  `json:"default_billing_address,omitempty"`
 	Tags                   *[]string        `json:"tags,omitempty"`
 	Notes                  *string          `json:"notes,omitempty"`
+	PriceListID            *uuid.UUID       `json:"price_list_id,omitempty"`
 }
 
 func (r *UpdateCustomerRequest) Validate() error {
 	if r.Email == nil && r.Phone == nil && r.Name == nil &&
 		r.CompanyName == nil && r.NIP == nil &&
 		r.DefaultShippingAddress == nil && r.DefaultBillingAddress == nil &&
-		r.Tags == nil && r.Notes == nil {
+		r.Tags == nil && r.Notes == nil && r.PriceListID == nil {
 		return errors.New("at least one field must be provided")
 	}
 	if r.Name != nil {

@@ -158,7 +158,10 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 			})
 			if err != nil {
 				w.logger.Error("tracking poller: update status failed",
-					"shipment_id", ts.ID, "from", ts.Status, "to", omsStatus, "error", err)
+					"operation", "shipment.status_update",
+					"tenant_id", ts.TenantID,
+					"entity_id", ts.ID,
+					"from", ts.Status, "to", omsStatus, "error", err)
 				errCount++
 				continue
 			}

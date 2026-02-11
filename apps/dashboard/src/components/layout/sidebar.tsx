@@ -73,6 +73,12 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+      <div className="border-t px-4 py-3">
+        <kbd className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">Ctrl+K</span>
+          <span>&mdash; Szukaj</span>
+        </kbd>
+      </div>
     </aside>
   );
 }

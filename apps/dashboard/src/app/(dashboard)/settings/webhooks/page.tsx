@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useWebhookConfig, useUpdateWebhookConfig } from "@/hooks/use-webhooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,28 +37,16 @@ function createEmptyEndpoint(): WebhookEndpoint {
 }
 
 export default function WebhooksPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: config, isLoading } = useWebhookConfig();
   const updateConfig = useUpdateWebhookConfig();
 
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
     if (config) {
       setEndpoints(config.endpoints.map((e) => ({ ...e })));
     }
   }, [config]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleAddEndpoint = () => {
     setEndpoints([...endpoints, createEmptyEndpoint()]);
@@ -120,6 +107,7 @@ export default function WebhooksPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -239,5 +227,6 @@ export default function WebhooksPage() {
         </Button>
       </div>
     </div>
+    </AdminGuard>
   );
 }
