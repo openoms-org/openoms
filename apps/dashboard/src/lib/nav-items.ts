@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Warehouse,
   Contact,
+  Printer,
 } from "lucide-react";
 
 export interface NavItem {
@@ -58,4 +59,5 @@ export const navItems: NavItem[] = [
   { href: "/settings/custom-fields", label: "Pola", icon: TextCursorInput, adminOnly: true, group: "Administracja" },
   { href: "/settings/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Administracja" },
   { href: "/settings/automation", label: "Automatyzacja", icon: Zap, adminOnly: true, group: "Administracja" },
+  { href: "/settings/print-templates", label: "Szablony", icon: Printer, adminOnly: true, group: "Administracja" },
 ];

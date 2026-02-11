@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText } from "lucide-react";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus } from "@/hooks/use-orders";
 import { useShipments } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
@@ -32,6 +32,8 @@ import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { CreateOrderRequest } from "@/types/api";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -137,6 +139,20 @@ export default function OrderDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.open(`${API_URL}/v1/orders/${params.id}/print`, "_blank")}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Drukuj
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.open(`${API_URL}/v1/orders/${params.id}/packing-slip`, "_blank")}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            List przewozowy
+          </Button>
           <Button variant="outline" asChild>
             <Link href={`/shipments/new?order_id=${params.id}`}>
               <Package className="mr-2 h-4 w-4" />

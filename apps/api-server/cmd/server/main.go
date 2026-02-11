@@ -16,6 +16,9 @@ import (
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/erli"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/mirakl"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/woocommerce"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/ebay"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/kaufland"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/olx"
 	// Register carrier providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/carriers"
 	// Register invoicing providers via init().
@@ -213,6 +216,9 @@ func main() {
 	// Customer handler
 	customerHandler := handler.NewCustomerHandler(customerService)
 
+	// Print handler
+	printHandler := handler.NewPrintHandler(tenantRepo, orderRepo, returnRepo, pool)
+
 	// Sync job handler
 	syncJobHandler := handler.NewSyncJobHandler(syncJobRepo, pool)
 
@@ -246,6 +252,7 @@ func main() {
 		SyncJob:          syncJobHandler,
 		Warehouse:        warehouseHandler,
 		Customer:         customerHandler,
+		Print:            printHandler,
 	})
 
 	// Start background workers
