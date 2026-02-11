@@ -4,25 +4,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 )
 
 type UploadHandler struct {
-	uploadDir string
-	maxSize   int64
-	baseURL   string
+	storage storage.ObjectStorage
+	maxSize int64
 }
 
-func NewUploadHandler(uploadDir string, maxSize int64, baseURL string) *UploadHandler {
+func NewUploadHandler(store storage.ObjectStorage, maxSize int64) *UploadHandler {
 	return &UploadHandler{
-		uploadDir: uploadDir,
-		maxSize:   maxSize,
-		baseURL:   baseURL,
+		storage: store,
+		maxSize: maxSize,
 	}
 }
 
@@ -71,33 +67,16 @@ func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		seeker.Seek(0, io.SeekStart)
 	}
 
-	// Create tenant directory
-	tenantDir := filepath.Join(h.uploadDir, tenantID.String())
-	if err := os.MkdirAll(tenantDir, 0755); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create upload directory")
-		return
-	}
-
-	// Generate unique filename
+	// Generate unique filename and storage key
 	filename := uuid.New().String() + ext
-	filePath := filepath.Join(tenantDir, filename)
+	key := fmt.Sprintf("%s/%s", tenantID.String(), filename)
 
-	// Save file
-	dst, err := os.Create(filePath)
+	// Upload via storage backend
+	url, err := h.storage.Upload(r.Context(), key, file, contentType)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save file")
+		writeError(w, http.StatusInternalServerError, "failed to upload file")
 		return
 	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		os.Remove(filePath) // cleanup on error
-		writeError(w, http.StatusInternalServerError, "failed to write file")
-		return
-	}
-
-	// Build URL
-	url := fmt.Sprintf("%s/uploads/%s/%s", strings.TrimRight(h.baseURL, "/"), tenantID.String(), filename)
 
 	writeJSON(w, http.StatusCreated, map[string]string{"url": url})
 }

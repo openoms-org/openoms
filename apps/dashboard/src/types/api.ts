@@ -794,3 +794,84 @@ export interface ConditionResult {
   condition: AutomationCondition;
   met: boolean;
 }
+
+// === Import ===
+export interface ImportColumnMapping {
+  csv_column: string;
+  order_field: string;
+}
+
+export interface ImportPreviewRow {
+  row: number;
+  data: Record<string, unknown>;
+  errors?: string[];
+}
+
+export interface ImportPreviewResponse {
+  headers: string[];
+  total_rows: number;
+  sample_rows: ImportPreviewRow[];
+  mappings?: ImportColumnMapping[];
+}
+
+export interface ImportResult {
+  total_rows: number;
+  imported: number;
+  skipped: number;
+  errors: ImportError[];
+}
+
+export interface ImportError {
+  row: number;
+  field?: string;
+  message: string;
+}
+
+// === Product Variants ===
+export interface ProductVariant {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  sku?: string;
+  ean?: string;
+  name: string;
+  attributes: Record<string, string>;
+  price_override?: number;
+  stock_quantity: number;
+  weight?: number;
+  image_url?: string;
+  position: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateVariantRequest {
+  sku?: string;
+  ean?: string;
+  name: string;
+  attributes?: Record<string, string>;
+  price_override?: number;
+  stock_quantity: number;
+  weight?: number;
+  image_url?: string;
+  position?: number;
+  active?: boolean;
+}
+
+export interface UpdateVariantRequest {
+  sku?: string;
+  ean?: string;
+  name?: string;
+  attributes?: Record<string, string>;
+  price_override?: number;
+  stock_quantity?: number;
+  weight?: number;
+  image_url?: string;
+  position?: number;
+  active?: boolean;
+}
+
+export interface VariantListParams extends PaginationParams {
+  active?: boolean;
+}

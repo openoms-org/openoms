@@ -29,6 +29,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 	"github.com/openoms-org/openoms/apps/api-server/internal/worker"
 	inpost "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
@@ -65,10 +66,24 @@ func main() {
 	defer pool.Close()
 	slog.Info("connected to PostgreSQL")
 
-	// Create upload directory
-	if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
-		slog.Error("failed to create upload directory", "error", err)
-		os.Exit(1)
+	// Initialize storage backend
+	var objectStorage storage.ObjectStorage
+	if cfg.S3Enabled {
+		s3Store, err := storage.NewS3Storage(cfg.S3Region, cfg.S3Bucket, cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3PublicURL)
+		if err != nil {
+			slog.Error("failed to initialize S3 storage", "error", err)
+			os.Exit(1)
+		}
+		objectStorage = s3Store
+		slog.Info("using S3 storage", "bucket", cfg.S3Bucket)
+	} else {
+		// Create upload directory for local storage
+		if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
+			slog.Error("failed to create upload directory", "error", err)
+			os.Exit(1)
+		}
+		objectStorage = storage.NewLocalStorage(cfg.UploadDir, cfg.BaseURL)
+		slog.Info("using local storage", "dir", cfg.UploadDir)
 	}
 
 	// Decode encryption key
@@ -104,6 +119,7 @@ func main() {
 	invoiceRepo := repository.NewInvoiceRepository()
 	supplierRepo := repository.NewSupplierRepository()
 	supplierProductRepo := repository.NewSupplierProductRepository()
+	variantRepo := repository.NewVariantRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -126,6 +142,7 @@ func main() {
 	orderService.SetSMSService(smsService)
 	shipmentService.SetSMSService(smsService)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -153,7 +170,7 @@ func main() {
 	returnHandler := handler.NewReturnHandler(returnService)
 	webhookHandler := handler.NewWebhookHandler(webhookService)
 	statsHandler := handler.NewStatsHandler(statsService)
-	uploadHandler := handler.NewUploadHandler(cfg.UploadDir, cfg.MaxUploadSize, cfg.BaseURL)
+	uploadHandler := handler.NewUploadHandler(objectStorage, cfg.MaxUploadSize)
 	settingsHandler := handler.NewSettingsHandler(tenantRepo, auditRepo, emailService, smsService, pool)
 	auditHandler := handler.NewAuditHandler(auditRepo, pool)
 	webhookDeliveryHandler := handler.NewWebhookDeliveryHandler(webhookDeliveryRepo, pool)
@@ -174,8 +191,15 @@ func main() {
 	// Supplier handler
 	supplierHandler := handler.NewSupplierHandler(supplierService)
 
+	// Import service & handler
+	importService := service.NewImportService(orderRepo, auditRepo, pool)
+	importHandler := handler.NewImportHandler(importService)
+
 	// Automation handler
 	automationHandler := handler.NewAutomationHandler(automationService)
+
+	// Variant handler
+	variantHandler := handler.NewVariantHandler(variantService)
 
 	// Setup router
 	r := router.New(router.RouterDeps{
@@ -202,6 +226,8 @@ func main() {
 		Supplier:         supplierHandler,
 		Invoice:          invoiceHandler,
 		Automation:       automationHandler,
+		Import:           importHandler,
+		Variant:          variantHandler,
 	})
 
 	// Start background workers

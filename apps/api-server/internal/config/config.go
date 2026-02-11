@@ -34,6 +34,14 @@ type Config struct {
 
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
+
+	S3Enabled   bool   `env:"S3_ENABLED" envDefault:"false"`
+	S3Bucket    string `env:"S3_BUCKET"`
+	S3Region    string `env:"S3_REGION" envDefault:"eu-central-1"`
+	S3Endpoint  string `env:"S3_ENDPOINT"`  // for MinIO/DO Spaces
+	S3AccessKey string `env:"S3_ACCESS_KEY"`
+	S3SecretKey string `env:"S3_SECRET_KEY"`
+	S3PublicURL string `env:"S3_PUBLIC_URL"` // CDN URL prefix
 }
 
 func Load() (*Config, error) {

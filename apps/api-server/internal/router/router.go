@@ -39,6 +39,8 @@ type RouterDeps struct {
 	Supplier        *handler.SupplierHandler
 	Invoice         *handler.InvoiceHandler
 	Automation      *handler.AutomationHandler
+	Import          *handler.ImportHandler
+	Variant         *handler.VariantHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -140,6 +142,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/", deps.Order.Create)
 				r.Get("/export", deps.Order.ExportCSV)
 				r.Post("/bulk-status", deps.Order.BulkTransitionStatus)
+				r.Post("/import/preview", deps.Import.Preview)
+				r.Post("/import", deps.Import.Import)
 				r.Get("/{id}", deps.Order.Get)
 				r.Patch("/{id}", deps.Order.Update)
 				r.Delete("/{id}", deps.Order.Delete)
@@ -189,6 +193,15 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}", deps.Product.Get)
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)
+
+				// Variants
+				r.Route("/{productId}/variants", func(r chi.Router) {
+					r.Get("/", deps.Variant.List)
+					r.Post("/", deps.Variant.Create)
+					r.Get("/{id}", deps.Variant.Get)
+					r.Patch("/{id}", deps.Variant.Update)
+					r.Delete("/{id}", deps.Variant.Delete)
+				})
 			})
 
 			// Integrations — admin only

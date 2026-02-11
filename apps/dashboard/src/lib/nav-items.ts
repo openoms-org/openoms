@@ -18,6 +18,7 @@ import {
   Webhook,
   Factory,
   Zap,
+  Upload,
 } from "lucide-react";
 
 export interface NavItem {
@@ -34,6 +35,7 @@ export const navItems: NavItem[] = [
   { href: "/shipments", label: "Przesyłki", icon: Truck, group: "Sprzedaż" },
   { href: "/returns", label: "Zwroty", icon: RotateCcw, group: "Sprzedaż" },
   { href: "/invoices", label: "Faktury", icon: FileText, group: "Sprzedaż" },
+  { href: "/orders/import", label: "Import", icon: Upload, group: "Sprzedaż" },
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
   { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
   { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true, group: "Połączenia" },

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, ImageIcon, Package, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ImageIcon, Layers, Package, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -119,6 +119,12 @@ export default function ProductDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/products/${params.id}/variants`}>
+              <Layers className="h-4 w-4" />
+              Warianty
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
