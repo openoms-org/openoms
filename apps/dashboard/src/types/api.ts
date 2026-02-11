@@ -41,6 +41,7 @@ export interface User {
   role: "owner" | "admin" | "member";
   role_id?: string;
   last_login_at?: string;
+  last_logout_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -403,6 +404,7 @@ export interface WebhookConfig {
 
 export interface WebhookDelivery {
   id: string;
+  tenant_id: string;
   url: string;
   event_type: string;
   payload: Record<string, unknown>;

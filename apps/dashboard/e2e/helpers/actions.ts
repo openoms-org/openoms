@@ -26,5 +26,11 @@ export async function gotoWithAuth(page: Page, url: string) {
     { timeout: 15000 },
   );
   await page.goto(url);
-  await refreshDone;
+  try {
+    await refreshDone;
+  } catch {
+    // The refresh response may have arrived before the listener was set up
+    // (race condition observed in Firefox). If so, the page has already loaded
+    // with auth intact, so we can safely continue.
+  }
 }

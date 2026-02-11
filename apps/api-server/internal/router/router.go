@@ -169,6 +169,10 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Use(middleware.RequireRole("admin"))
 				r.Get("/audit", deps.Audit.List)
 				r.Get("/webhook-deliveries", deps.WebhookDelivery.List)
+
+				// Webhook configuration — mirrors /v1/settings/webhooks
+				r.Get("/webhooks", deps.Settings.GetWebhooks)
+				r.Put("/webhooks", deps.Settings.UpdateWebhooks)
 			})
 
 			// Sync jobs — admin only

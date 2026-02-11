@@ -28,8 +28,9 @@ test.describe('Products', () => {
   });
 
   test('clicking a product link navigates to detail', async ({ page }) => {
-    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
-    await page.locator('table tbody tr').first().locator('a').first().click();
+    const firstRow = page.locator('table tbody tr').first();
+    await expect(firstRow).toBeVisible({ timeout: 10000 });
+    await firstRow.getByRole('link').first().click();
     await expect(page).toHaveURL(/\/products\/[a-f0-9-]+/, { timeout: 10000 });
   });
 

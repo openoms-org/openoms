@@ -10,7 +10,7 @@ test.describe('Order Detail', () => {
   });
 
   test('displays order detail page', async ({ page }) => {
-    await expect(page.getByText(/Zamówienie/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: /Zamówienie/ })).toBeVisible({ timeout: 5000 });
   });
 
   test('shows customer information', async ({ page }) => {

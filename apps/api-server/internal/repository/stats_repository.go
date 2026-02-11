@@ -130,10 +130,20 @@ func (r *StatsRepository) GetRecentOrders(ctx context.Context, tx pgx.Tx, limit 
 
 func (r *StatsRepository) GetTopProducts(ctx context.Context, tx pgx.Tx, limit int) ([]model.TopProduct, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT items.name, SUM(items.quantity) as total_quantity, SUM(items.price * items.quantity) as total_revenue
-		 FROM orders, jsonb_to_recordset(orders.items) AS items(name text, quantity int, price numeric)
-		 WHERE orders.items IS NOT NULL AND orders.items != 'null'::jsonb AND jsonb_typeof(orders.items) = 'array'
-		 GROUP BY items.name
+		`WITH eligible_orders AS (
+		     SELECT items FROM orders
+		     WHERE items IS NOT NULL
+		       AND items != 'null'::jsonb
+		       AND jsonb_typeof(items) = 'array'
+		       AND jsonb_array_length(items) > 0
+		 )
+		 SELECT COALESCE(i.name, 'Bez nazwy'),
+		        SUM(COALESCE(i.quantity, 0))::int  AS total_quantity,
+		        SUM(COALESCE(i.price, 0) * COALESCE(i.quantity, 0)) AS total_revenue
+		 FROM eligible_orders,
+		      jsonb_to_recordset(eligible_orders.items) AS i(name text, quantity int, price numeric)
+		 WHERE i.name IS NOT NULL AND i.name != ''
+		 GROUP BY i.name
 		 ORDER BY total_revenue DESC
 		 LIMIT $1`, limit)
 	if err != nil {
