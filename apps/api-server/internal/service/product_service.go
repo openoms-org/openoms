@@ -156,6 +156,20 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 		return nil, NewValidationError(err)
 	}
 
+	// Sanitize user-facing text fields to prevent stored XSS
+	if req.Name != nil {
+		sanitized := model.StripHTMLTags(*req.Name)
+		req.Name = &sanitized
+	}
+	if req.DescriptionShort != nil {
+		sanitized := model.StripHTMLTags(*req.DescriptionShort)
+		req.DescriptionShort = &sanitized
+	}
+	if req.DescriptionLong != nil {
+		sanitized := model.StripHTMLTags(*req.DescriptionLong)
+		req.DescriptionLong = &sanitized
+	}
+
 	var product *model.Product
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error

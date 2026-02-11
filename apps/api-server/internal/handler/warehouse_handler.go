@@ -198,6 +198,8 @@ func (h *WarehouseHandler) UpsertStock(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrWarehouseNotFound):
 			writeError(w, http.StatusNotFound, "warehouse not found")
+		case service.IsForeignKeyError(err):
+			writeError(w, http.StatusBadRequest, "referenced product or variant does not exist")
 		default:
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())

@@ -118,7 +118,7 @@ func (s *FreshdeskService) CreateTicket(ctx context.Context, tenantID uuid.UUID,
 		return nil, err
 	}
 	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
-		return nil, fmt.Errorf("freshdesk nie jest skonfigurowany")
+		return nil, ErrFreshdeskNotConfigured
 	}
 
 	url := fmt.Sprintf("https://%s.freshdesk.com/api/v2/tickets", settings.Domain)
@@ -158,7 +158,7 @@ func (s *FreshdeskService) GetTickets(ctx context.Context, tenantID uuid.UUID, o
 		return nil, err
 	}
 	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
-		return nil, fmt.Errorf("freshdesk nie jest skonfigurowany")
+		return nil, ErrFreshdeskNotConfigured
 	}
 
 	// Search for tickets tagged with the order ID
@@ -189,7 +189,7 @@ func (s *FreshdeskService) ListAllTickets(ctx context.Context, tenantID uuid.UUI
 		return nil, err
 	}
 	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
-		return nil, fmt.Errorf("freshdesk nie jest skonfigurowany")
+		return nil, ErrFreshdeskNotConfigured
 	}
 
 	url := fmt.Sprintf("https://%s.freshdesk.com/api/v2/tickets?per_page=30&order_by=created_at&order_type=desc", settings.Domain)

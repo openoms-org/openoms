@@ -22,7 +22,7 @@ import type { Shipment } from "@/types/api";
 
 const shipmentSchema = z.object({
   order_id: z.string().min(1, "ID zamówienia jest wymagane"),
-  provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "manual"], "Wybierz dostawcę"),
+  provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"], "Wybierz dostawcę"),
   tracking_number: z.string().optional(),
   label_url: z.string().optional(),
   carrier_data: z.record(z.string(), z.unknown()).optional(),

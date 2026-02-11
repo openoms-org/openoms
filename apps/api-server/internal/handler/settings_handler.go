@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -172,13 +174,27 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
 
-	var companyCfg model.CompanySettings
-	if err := json.NewDecoder(r.Body).Decode(&companyCfg); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	// Read the raw request body so we can merge it onto existing settings.
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
 
-	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		// Load existing company settings first so that fields not present in the
+		// request body are preserved (merge instead of overwrite).
+		var companyCfg model.CompanySettings
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "company", &companyCfg); err != nil {
+			return err
+		}
+
+		// Unmarshal the request onto the existing struct — only provided fields
+		// are overwritten; omitted fields keep their current values.
+		if err := json.Unmarshal(rawBody, &companyCfg); err != nil {
+			return fmt.Errorf("invalid request body: %w", err)
+		}
+
 		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "company", companyCfg); err != nil {
 			return err
 		}
@@ -192,11 +208,21 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 		})
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "invalid request body") {
+			writeError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to save settings")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, companyCfg)
+	// Re-read final state to return to the client
+	var finalCfg model.CompanySettings
+	_ = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		return h.getSettingsSection(r.Context(), tx, tenantID, "company", &finalCfg)
+	})
+
+	writeJSON(w, http.StatusOK, finalCfg)
 }
 
 func (h *SettingsHandler) GetOrderStatuses(w http.ResponseWriter, r *http.Request) {

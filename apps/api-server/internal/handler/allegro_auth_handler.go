@@ -65,8 +65,8 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	authURL := client.AuthorizationURL(state)
 
 	writeJSON(w, http.StatusOK, map[string]string{
-		"url":   authURL,
-		"state": state,
+		"auth_url": authURL,
+		"state":    state,
 	})
 }
 

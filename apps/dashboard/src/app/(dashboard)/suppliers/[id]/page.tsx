@@ -75,6 +75,11 @@ export default function SupplierDetailPage() {
   const [feedFormat, setFeedFormat] = useState("iof");
   const [status, setStatus] = useState("active");
 
+  const { data: localProducts } = useProducts({
+    name: productSearch || undefined,
+    limit: 20,
+  });
+
   useEffect(() => {
     if (supplier) {
       setName(supplier.name);
@@ -111,11 +116,6 @@ export default function SupplierDetailPage() {
         toast.error(getErrorMessage(error)),
     });
   };
-
-  const { data: localProducts } = useProducts({
-    name: productSearch || undefined,
-    limit: 20,
-  });
 
   const handleLink = () => {
     if (!linkingProductId || !selectedProductId) return;

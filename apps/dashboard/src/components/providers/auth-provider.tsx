@@ -24,12 +24,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           document.cookie = "has_session=1; path=/";
         } else if (res.status === 429) {
           // Rate-limited — keep existing session, don't log out
+          setLoading(false);
         } else {
           clearAuth();
+          setLoading(false);
           document.cookie = "has_session=; path=/; max-age=0";
         }
       } catch {
         // Network error — keep session if cookie exists, don't log out eagerly
+        setLoading(false);
       }
     };
     hydrate();

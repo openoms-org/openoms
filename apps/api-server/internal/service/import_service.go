@@ -422,6 +422,12 @@ func (s *ImportService) importRow(
 		OrderedAt:     orderedAt,
 	}
 
+	order.Metadata = json.RawMessage(`{}`)
+	if order.OrderedAt == nil {
+		now := time.Now()
+		order.OrderedAt = &now
+	}
+
 	if externalID != "" {
 		order.ExternalID = &externalID
 	}
