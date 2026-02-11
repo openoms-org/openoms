@@ -44,7 +44,9 @@ type RouterDeps struct {
 	SyncJob         *handler.SyncJobHandler
 	Warehouse       *handler.WarehouseHandler
 	Customer        *handler.CustomerHandler
-	Print           *handler.PrintHandler
+	Print            *handler.PrintHandler
+	Docs             *handler.DocsHandler
+	MetricsCollector *middleware.MetricsCollector
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -53,6 +55,9 @@ func New(deps RouterDeps) *chi.Mux {
 	// Global middleware
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
+	if deps.MetricsCollector != nil {
+		r.Use(deps.MetricsCollector.Middleware())
+	}
 	r.Use(middleware.Logging)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS([]string{deps.Config.FrontendURL}))
@@ -60,6 +65,17 @@ func New(deps RouterDeps) *chi.Mux {
 	// Health check — no auth, no tenant required
 	healthHandler := &handler.HealthHandler{DB: deps.Pool}
 	r.Get("/health", healthHandler.ServeHTTP)
+
+	// Prometheus metrics — no auth
+	if deps.MetricsCollector != nil {
+		r.Get("/metrics", deps.MetricsCollector.Handler())
+	}
+
+	// OpenAPI spec and Swagger UI — no auth
+	if deps.Docs != nil {
+		r.Get("/v1/openapi.yaml", deps.Docs.ServeSpec)
+		r.Get("/v1/docs", deps.Docs.ServeSwaggerUI)
+	}
 
 	// Serve uploaded files (public, cached)
 	fileServer := http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadDir)))
