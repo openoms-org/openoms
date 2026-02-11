@@ -1006,3 +1006,10 @@ export interface CustomerListParams extends PaginationParams {
   search?: string;
   tags?: string;
 }
+
+// === Print Templates ===
+export interface PrintTemplatesConfig {
+  packing_slip_html: string;
+  order_summary_html: string;
+  return_slip_html: string;
+}

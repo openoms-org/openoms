@@ -80,7 +80,7 @@ export const ROLES: Record<string, string> = {
   member: "Członek",
 };
 
-export const ORDER_SOURCES = ["manual", "allegro", "amazon", "empik", "erli", "ebay", "kaufland", "woocommerce"] as const;
+export const ORDER_SOURCES = ["manual", "allegro", "amazon", "empik", "erli", "ebay", "kaufland", "olx", "woocommerce"] as const;
 
 export const PAYMENT_STATUSES: Record<string, { label: string; color: string }> = {
   pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
@@ -91,8 +91,8 @@ export const PAYMENT_STATUSES: Record<string, { label: string; color: string }> 
 };
 
 export const PAYMENT_METHODS = ["przelew", "pobranie", "karta", "PayU", "Przelewy24", "BLIK"] as const;
-export const SHIPMENT_PROVIDERS = ["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "manual"] as const;
-export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "empik", "erli", "inpost", "dhl", "dpd", "woocommerce"] as const;
+export const SHIPMENT_PROVIDERS = ["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"] as const;
+export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "empik", "erli", "ebay", "kaufland", "olx", "inpost", "dhl", "dpd", "woocommerce"] as const;
 
 export const ORDER_SOURCE_LABELS: Record<string, string> = {
   manual: "Ręczne",
@@ -102,6 +102,7 @@ export const ORDER_SOURCE_LABELS: Record<string, string> = {
   erli: "Erli",
   ebay: "eBay",
   kaufland: "Kaufland",
+  olx: "OLX",
   woocommerce: "WooCommerce",
 };
 
@@ -113,6 +114,7 @@ export const SHIPMENT_PROVIDER_LABELS: Record<string, string> = {
   ups: "UPS",
   poczta_polska: "Poczta Polska",
   orlen_paczka: "Orlen Paczka",
+  fedex: "FedEx",
   manual: "Ręczna",
 };
 
@@ -121,6 +123,9 @@ export const INTEGRATION_PROVIDER_LABELS: Record<string, string> = {
   amazon: "Amazon",
   empik: "Empik",
   erli: "Erli",
+  ebay: "eBay",
+  kaufland: "Kaufland",
+  olx: "OLX",
   inpost: "InPost",
   dhl: "DHL",
   dpd: "DPD",

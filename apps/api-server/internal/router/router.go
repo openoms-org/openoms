@@ -44,6 +44,7 @@ type RouterDeps struct {
 	SyncJob         *handler.SyncJobHandler
 	Warehouse       *handler.WarehouseHandler
 	Customer        *handler.CustomerHandler
+	Print           *handler.PrintHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -118,6 +119,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/sms", deps.Settings.GetSMSSettings)
 				r.Put("/sms", deps.Settings.UpdateSMSSettings)
 				r.Post("/sms/test", deps.Settings.SendTestSMS)
+				r.Get("/print-templates", deps.Print.GetPrintTemplates)
+				r.Put("/print-templates", deps.Print.UpdatePrintTemplates)
 			})
 
 			// Admin-only audit log and webhook deliveries
@@ -160,6 +163,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/status", deps.Order.TransitionStatus)
 				r.Get("/{id}/audit", deps.Order.GetAudit)
 				r.Get("/{id}/invoices", deps.Invoice.ListByOrder)
+				r.Get("/{id}/packing-slip", deps.Print.GetPackingSlip)
+				r.Get("/{id}/print", deps.Print.GetOrderSummary)
 			})
 
 			// Invoices — any authenticated user
@@ -193,6 +198,7 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Patch("/", deps.Return.Update)
 					r.Delete("/", deps.Return.Delete)
 					r.Post("/status", deps.Return.TransitionStatus)
+					r.Get("/print", deps.Print.GetReturnSlip)
 				})
 			})
 
