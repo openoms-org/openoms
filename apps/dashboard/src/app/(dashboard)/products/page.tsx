@@ -110,7 +110,7 @@ export default function ProductsPage() {
             product.stock_quantity === 0
               ? "text-destructive"
               : product.stock_quantity < 10
-                ? "text-yellow-600"
+                ? "text-yellow-600 dark:text-yellow-400"
                 : ""
           }`}
         >

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import {
   AreaChart,
   Area,
@@ -46,6 +47,11 @@ function CustomTooltip({
 }
 
 export function RevenueChart({ data, currency = "PLN", isLoading }: RevenueChartProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const axisColor = isDark ? "#a1a1aa" : "#71717a";
+  const gridColor = isDark ? "#27272a" : "#e4e4e7";
+
   const chartData = data?.map((d) => ({
     ...d,
     label: format(parseISO(d.date), "dd MMM", { locale: pl }),
@@ -66,12 +72,13 @@ export function RevenueChart({ data, currency = "PLN", isLoading }: RevenueChart
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" fontSize={12} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="label" fontSize={12} tickLine={false} axisLine={false} tick={{ fill: axisColor }} />
               <YAxis
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
+                tick={{ fill: axisColor }}
                 tickFormatter={(value: number) => formatCurrency(value, currency)}
               />
               <Tooltip content={<CustomTooltip currency={currency} />} />

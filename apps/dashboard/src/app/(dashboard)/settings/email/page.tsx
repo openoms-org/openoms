@@ -227,7 +227,7 @@ export default function EmailSettingsPage() {
                         : form.notify_on.filter((s) => s !== value),
                     });
                   }}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-border"
                 />
                 <label htmlFor={`notify-${value}`} className="text-sm">
                   {label}

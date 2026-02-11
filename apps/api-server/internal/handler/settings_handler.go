@@ -547,6 +547,62 @@ func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Test email sent successfully"})
 }
 
+func (h *SettingsHandler) GetInvoicingSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	var invoicingCfg map[string]any
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		return h.getSettingsSection(r.Context(), tx, tenantID, "invoicing", &invoicingCfg)
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load invoicing settings")
+		return
+	}
+
+	if invoicingCfg == nil {
+		invoicingCfg = map[string]any{
+			"provider":               "",
+			"auto_create_on_status":  []string{},
+			"default_tax_rate":       23,
+			"payment_days":           14,
+			"credentials":            map[string]any{},
+		}
+	}
+
+	writeJSON(w, http.StatusOK, invoicingCfg)
+}
+
+func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var invoicingCfg map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&invoicingCfg); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "invoicing", invoicingCfg); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.invoicing_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save invoicing settings")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, invoicingCfg)
+}
+
 // isPrivateWebhookURL checks whether a URL resolves to a private/internal IP address.
 func isPrivateWebhookURL(urlStr string) bool {
 	u, err := url.Parse(urlStr)

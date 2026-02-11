@@ -2,6 +2,7 @@
 
 import { Breadcrumbs } from "./breadcrumbs";
 import { UserMenu } from "./user-menu";
+import { ThemeToggle } from "./theme-toggle";
 import { MobileNav } from "./mobile-nav";
 import { Separator } from "@/components/ui/separator";
 
@@ -14,7 +15,7 @@ export function Header() {
         <Breadcrumbs />
       </div>
       <div className="flex items-center gap-2">
-        {/* ThemeToggle hidden — dark mode not fully implemented */}
+        <ThemeToggle />
         <UserMenu />
       </div>
     </header>

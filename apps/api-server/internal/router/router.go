@@ -37,6 +37,7 @@ type RouterDeps struct {
 	AllegroAuth     *handler.AllegroAuthHandler
 	AmazonAuth      *handler.AmazonAuthHandler
 	Supplier        *handler.SupplierHandler
+	Invoice         *handler.InvoiceHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -106,6 +107,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Put("/product-categories", deps.Settings.UpdateProductCategories)
 				r.Get("/webhooks", deps.Settings.GetWebhooks)
 				r.Put("/webhooks", deps.Settings.UpdateWebhooks)
+				r.Get("/invoicing", deps.Settings.GetInvoicingSettings)
+				r.Put("/invoicing", deps.Settings.UpdateInvoicingSettings)
 			})
 
 			// Admin-only audit log and webhook deliveries
@@ -138,6 +141,18 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}", deps.Order.Delete)
 				r.Post("/{id}/status", deps.Order.TransitionStatus)
 				r.Get("/{id}/audit", deps.Order.GetAudit)
+				r.Get("/{id}/invoices", deps.Invoice.ListByOrder)
+			})
+
+			// Invoices — any authenticated user
+			r.Route("/invoices", func(r chi.Router) {
+				r.Get("/", deps.Invoice.List)
+				r.Post("/", deps.Invoice.Create)
+				r.Route("/{id}", func(r chi.Router) {
+					r.Get("/", deps.Invoice.Get)
+					r.Get("/pdf", deps.Invoice.GetPDF)
+					r.Delete("/", deps.Invoice.Cancel)
+				})
 			})
 
 			// Shipments — any authenticated user

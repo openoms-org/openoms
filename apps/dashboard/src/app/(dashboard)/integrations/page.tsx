@@ -123,7 +123,7 @@ export default function IntegrationsPage() {
                   </TableCell>
                   <TableCell>
                     {integration.has_credentials ? (
-                      <Badge variant="outline" className="gap-1 border-green-200 bg-green-50 text-green-700">
+                      <Badge variant="outline" className="gap-1 border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
                         <KeyRound className="h-3 w-3" />
                         Skonfigurowane
                       </Badge>

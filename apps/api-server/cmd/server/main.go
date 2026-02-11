@@ -17,6 +17,8 @@ import (
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/mirakl"
 	// Register carrier providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/carriers"
+	// Register invoicing providers via init().
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/fakturownia"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
@@ -97,6 +99,7 @@ func main() {
 	statsRepo := repository.NewStatsRepository()
 
 	returnRepo := repository.NewReturnRepository()
+	invoiceRepo := repository.NewInvoiceRepository()
 	supplierRepo := repository.NewSupplierRepository()
 	supplierProductRepo := repository.NewSupplierProductRepository()
 
@@ -115,6 +118,8 @@ func main() {
 	)
 	webhookService := service.NewWebhookService(webhookRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
 	statsService := service.NewStatsService(statsRepo, pool)
+	invoiceService := service.NewInvoiceService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool, encryptionKey)
+	orderService.SetInvoiceService(invoiceService)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Initialize token blacklist for server-side token revocation
@@ -145,6 +150,9 @@ func main() {
 	// Amazon auth handler
 	amazonAuthHandler := handler.NewAmazonAuthHandler(integrationService, encryptionKey)
 
+	// Invoice handler
+	invoiceHandler := handler.NewInvoiceHandler(invoiceService)
+
 	// Supplier handler
 	supplierHandler := handler.NewSupplierHandler(supplierService)
 
@@ -171,6 +179,7 @@ func main() {
 		AllegroAuth:     allegroAuthHandler,
 		AmazonAuth:      amazonAuthHandler,
 		Supplier:         supplierHandler,
+		Invoice:          invoiceHandler,
 	})
 
 	// Start background workers

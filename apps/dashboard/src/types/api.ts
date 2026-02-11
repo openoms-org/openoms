@@ -652,3 +652,51 @@ export interface SupplierProductListParams extends PaginationParams {
   ean?: string;
   linked?: boolean;
 }
+
+// === Invoices ===
+export interface Invoice {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  provider: string;
+  external_id?: string;
+  external_number?: string;
+  status: string;
+  invoice_type: string;
+  total_net?: number;
+  total_gross?: number;
+  currency: string;
+  issue_date?: string;
+  due_date?: string;
+  pdf_url?: string;
+  metadata: Record<string, unknown>;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateInvoiceRequest {
+  order_id: string;
+  provider?: string;
+  invoice_type?: string;
+  customer_name?: string;
+  customer_email?: string;
+  nip?: string;
+  payment_method?: string;
+  notes?: string;
+}
+
+export interface InvoiceListParams extends PaginationParams {
+  status?: string;
+  provider?: string;
+  order_id?: string;
+}
+
+// === Invoicing Settings ===
+export interface InvoicingSettings {
+  provider: string;
+  auto_create_on_status: string[];
+  default_tax_rate: number;
+  payment_days: number;
+  credentials: Record<string, string>;
+}

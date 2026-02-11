@@ -42,9 +42,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
-  active: { label: "Aktywny", color: "bg-green-100 text-green-800" },
-  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800" },
-  error: { label: "Bład", color: "bg-red-100 text-red-800" },
+  active: { label: "Aktywny", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  error: { label: "Bład", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export default function SupplierDetailPage() {
@@ -128,7 +128,7 @@ export default function SupplierDetailPage() {
       </div>
 
       {supplier.error_message && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
           {supplier.error_message}
         </div>
       )}

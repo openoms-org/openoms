@@ -21,17 +21,17 @@ import {
 } from "@/components/ui/table";
 
 const LISTING_STATUSES: Record<string, { label: string; color: string }> = {
-  active: { label: "Aktywna", color: "bg-green-100 text-green-800" },
-  inactive: { label: "Nieaktywna", color: "bg-gray-100 text-gray-800" },
-  draft: { label: "Szkic", color: "bg-yellow-100 text-yellow-800" },
-  ended: { label: "Zakończona", color: "bg-red-100 text-red-800" },
+  active: { label: "Aktywna", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  inactive: { label: "Nieaktywna", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  draft: { label: "Szkic", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  ended: { label: "Zakończona", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 const SYNC_STATUSES: Record<string, { label: string; color: string }> = {
-  synced: { label: "Zsynchronizowana", color: "bg-green-100 text-green-800" },
-  pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800" },
-  error: { label: "Błąd", color: "bg-red-100 text-red-800" },
-  never: { label: "Nigdy", color: "bg-gray-100 text-gray-800" },
+  synced: { label: "Zsynchronizowana", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  error: { label: "Błąd", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  never: { label: "Nigdy", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
 };
 
 export default function ProductListingsPage() {

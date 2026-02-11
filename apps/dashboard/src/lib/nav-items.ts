@@ -3,6 +3,8 @@ import {
   ShoppingCart,
   Truck,
   RotateCcw,
+  FileText,
+  Receipt,
   Package,
   Plug,
   Users,
@@ -29,6 +31,7 @@ export const navItems: NavItem[] = [
   { href: "/orders", label: "Zamówienia", icon: ShoppingCart, group: "Sprzedaż" },
   { href: "/shipments", label: "Przesyłki", icon: Truck, group: "Sprzedaż" },
   { href: "/returns", label: "Zwroty", icon: RotateCcw, group: "Sprzedaż" },
+  { href: "/invoices", label: "Faktury", icon: FileText, group: "Sprzedaż" },
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
   { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
   { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true, group: "Połączenia" },
@@ -40,4 +43,5 @@ export const navItems: NavItem[] = [
   { href: "/settings/email", label: "Powiadomienia", icon: Mail, adminOnly: true, group: "Administracja" },
   { href: "/settings/order-statuses", label: "Statusy", icon: ListChecks, adminOnly: true, group: "Administracja" },
   { href: "/settings/custom-fields", label: "Pola", icon: TextCursorInput, adminOnly: true, group: "Administracja" },
+  { href: "/settings/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Administracja" },
 ];

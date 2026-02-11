@@ -197,7 +197,7 @@ export default function NewReturnPage() {
                               type="checkbox"
                               checked={item.selected}
                               onChange={(e) => toggleItem(index, e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300"
+                              className="h-4 w-4 rounded border-border"
                             />
                           </div>
                           <div className="px-3 py-2">

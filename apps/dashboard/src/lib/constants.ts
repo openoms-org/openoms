@@ -1,16 +1,16 @@
 export const ORDER_STATUSES: Record<string, { label: string; color: string }> = {
-  new: { label: "Nowe", color: "bg-blue-100 text-blue-800" },
-  confirmed: { label: "Potwierdzone", color: "bg-indigo-100 text-indigo-800" },
-  processing: { label: "W realizacji", color: "bg-yellow-100 text-yellow-800" },
-  ready_to_ship: { label: "Gotowe do wysyłki", color: "bg-orange-100 text-orange-800" },
-  shipped: { label: "Wysłane", color: "bg-violet-100 text-violet-800" },
-  in_transit: { label: "W transporcie", color: "bg-cyan-100 text-cyan-800" },
-  out_for_delivery: { label: "W doręczeniu", color: "bg-teal-100 text-teal-800" },
-  delivered: { label: "Dostarczone", color: "bg-green-100 text-green-800" },
-  completed: { label: "Zakończone", color: "bg-green-200 text-green-900" },
-  on_hold: { label: "Wstrzymane", color: "bg-gray-100 text-gray-800" },
-  cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800" },
-  refunded: { label: "Zwrócone", color: "bg-red-200 text-red-900" },
+  new: { label: "Nowe", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  confirmed: { label: "Potwierdzone", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  processing: { label: "W realizacji", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  ready_to_ship: { label: "Gotowe do wysyłki", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  shipped: { label: "Wysłane", color: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200" },
+  in_transit: { label: "W transporcie", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
+  out_for_delivery: { label: "W doręczeniu", color: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
+  delivered: { label: "Dostarczone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  completed: { label: "Zakończone", color: "bg-green-200 text-green-900 dark:bg-green-900 dark:text-green-200" },
+  on_hold: { label: "Wstrzymane", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  refunded: { label: "Zwrócone", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const ORDER_TRANSITIONS: Record<string, string[]> = {
@@ -29,14 +29,14 @@ export const ORDER_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const SHIPMENT_STATUSES: Record<string, { label: string; color: string }> = {
-  created: { label: "Utworzona", color: "bg-blue-100 text-blue-800" },
-  label_ready: { label: "Etykieta gotowa", color: "bg-indigo-100 text-indigo-800" },
-  picked_up: { label: "Odebrana", color: "bg-yellow-100 text-yellow-800" },
-  in_transit: { label: "W transporcie", color: "bg-cyan-100 text-cyan-800" },
-  out_for_delivery: { label: "W doręczeniu", color: "bg-teal-100 text-teal-800" },
-  delivered: { label: "Dostarczona", color: "bg-green-100 text-green-800" },
-  returned: { label: "Zwrócona", color: "bg-red-100 text-red-800" },
-  failed: { label: "Nieudana", color: "bg-red-200 text-red-900" },
+  created: { label: "Utworzona", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  label_ready: { label: "Etykieta gotowa", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  picked_up: { label: "Odebrana", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  in_transit: { label: "W transporcie", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
+  out_for_delivery: { label: "W doręczeniu", color: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
+  delivered: { label: "Dostarczona", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  returned: { label: "Zwrócona", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  failed: { label: "Nieudana", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const SHIPMENT_TRANSITIONS: Record<string, string[]> = {
@@ -51,12 +51,12 @@ export const SHIPMENT_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const RETURN_STATUSES: Record<string, { label: string; color: string }> = {
-  requested: { label: "Zgłoszone", color: "bg-yellow-100 text-yellow-800" },
-  approved: { label: "Zatwierdzone", color: "bg-blue-100 text-blue-800" },
-  received: { label: "Odebrane", color: "bg-purple-100 text-purple-800" },
-  refunded: { label: "Zwrócone", color: "bg-green-100 text-green-800" },
-  rejected: { label: "Odrzucone", color: "bg-red-100 text-red-800" },
-  cancelled: { label: "Anulowane", color: "bg-gray-100 text-gray-800" },
+  requested: { label: "Zgłoszone", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  approved: { label: "Zatwierdzone", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  received: { label: "Odebrane", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
+  refunded: { label: "Zwrócone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  rejected: { label: "Odrzucone", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  cancelled: { label: "Anulowane", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
 };
 
 export const RETURN_TRANSITIONS: Record<string, string[]> = {
@@ -69,9 +69,9 @@ export const RETURN_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const INTEGRATION_STATUSES: Record<string, { label: string; color: string }> = {
-  active: { label: "Aktywna", color: "bg-green-100 text-green-800" },
-  inactive: { label: "Nieaktywna", color: "bg-gray-100 text-gray-800" },
-  error: { label: "Błąd", color: "bg-red-100 text-red-800" },
+  active: { label: "Aktywna", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  inactive: { label: "Nieaktywna", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  error: { label: "Błąd", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const ROLES: Record<string, string> = {
@@ -83,11 +83,11 @@ export const ROLES: Record<string, string> = {
 export const ORDER_SOURCES = ["manual", "allegro", "amazon", "empik", "erli", "ebay", "kaufland", "woocommerce"] as const;
 
 export const PAYMENT_STATUSES: Record<string, { label: string; color: string }> = {
-  pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800" },
-  paid: { label: "Opłacone", color: "bg-green-100 text-green-800" },
-  partially_paid: { label: "Częściowo", color: "bg-orange-100 text-orange-800" },
-  refunded: { label: "Zwrócone", color: "bg-red-100 text-red-800" },
-  failed: { label: "Nieudane", color: "bg-red-200 text-red-900" },
+  pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  paid: { label: "Opłacone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  partially_paid: { label: "Częściowo", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  refunded: { label: "Zwrócone", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  failed: { label: "Nieudane", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const PAYMENT_METHODS = ["przelew", "pobranie", "karta", "PayU", "Przelewy24", "BLIK"] as const;
@@ -125,4 +125,37 @@ export const INTEGRATION_PROVIDER_LABELS: Record<string, string> = {
   dhl: "DHL",
   dpd: "DPD",
   woocommerce: "WooCommerce",
+};
+
+export const INVOICE_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  draft: { label: "Szkic", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  issued: { label: "Wystawiona", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  sent: { label: "Wysłana", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  paid: { label: "Opłacona", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  partially_paid: { label: "Częściowo opłacona", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  cancelled: { label: "Anulowana", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  error: { label: "Błąd", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
+};
+
+export const INVOICE_STATUS_COLORS: Record<string, string> = {
+  draft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+  issued: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  sent: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+  paid: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  partially_paid: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  error: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200",
+};
+
+export const INVOICE_TYPE_LABELS: Record<string, string> = {
+  vat: "Faktura VAT",
+  proforma: "Proforma",
+  correction: "Korekta",
+  receipt: "Paragon",
+};
+
+export const INVOICING_PROVIDERS = ["fakturownia"] as const;
+
+export const INVOICING_PROVIDER_LABELS: Record<string, string> = {
+  fakturownia: "Fakturownia",
 };
