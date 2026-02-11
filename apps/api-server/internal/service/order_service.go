@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -24,13 +25,15 @@ var (
 )
 
 type OrderService struct {
-	orderRepo       repository.OrderRepo
-	auditRepo       repository.AuditRepo
-	tenantRepo      repository.TenantRepo
-	pool            *pgxpool.Pool
-	emailService    *EmailService
-	webhookDispatch *WebhookDispatchService
-	invoiceService  *InvoiceService
+	orderRepo         repository.OrderRepo
+	auditRepo         repository.AuditRepo
+	tenantRepo        repository.TenantRepo
+	pool              *pgxpool.Pool
+	emailService      *EmailService
+	webhookDispatch   *WebhookDispatchService
+	invoiceService    *InvoiceService
+	smsService        *SMSService
+	automationService *AutomationService
 }
 
 func NewOrderService(
@@ -55,6 +58,29 @@ func NewOrderService(
 // Called after both services are constructed to avoid circular dependency.
 func (s *OrderService) SetInvoiceService(invoiceSvc *InvoiceService) {
 	s.invoiceService = invoiceSvc
+}
+
+// SetAutomationService sets the automation service for rule processing.
+// Called after construction to avoid circular dependency.
+func (s *OrderService) SetAutomationService(automationSvc *AutomationService) {
+	s.automationService = automationSvc
+}
+
+// SetSMSService sets the SMS service for sending SMS notifications on status change.
+func (s *OrderService) SetSMSService(smsSvc *SMSService) {
+	s.smsService = smsSvc
+}
+
+func (s *OrderService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
+	if s.automationService != nil {
+		s.automationService.ProcessEvent(context.Background(), automation.Event{
+			Type:       eventType,
+			TenantID:   tenantID,
+			EntityType: "order",
+			EntityID:   entityID,
+			Data:       data,
+		})
+	}
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
@@ -202,6 +228,11 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order)
+	s.fireAutomationEvent(tenantID, "order.created", order.ID, map[string]any{
+		"status": order.Status, "source": order.Source,
+		"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
+		"currency": order.Currency, "payment_status": order.PaymentStatus,
+	})
 	return order, nil
 }
 
@@ -240,6 +271,11 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 	})
 	if err == nil && order != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order)
+		s.fireAutomationEvent(tenantID, "order.updated", order.ID, map[string]any{
+			"status": order.Status, "source": order.Source,
+			"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
+			"currency": order.Currency, "payment_status": order.PaymentStatus,
+		})
 	}
 	return order, err
 }
@@ -348,6 +384,15 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		if s.invoiceService != nil {
 			go s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order)
 		}
+		if s.smsService != nil {
+			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, oldStatus, req.Status)
+		}
+		s.fireAutomationEvent(tenantID, "order.status_changed", order.ID, map[string]any{
+			"status": order.Status, "old_status": oldStatus, "new_status": req.Status,
+			"source": order.Source, "customer_name": order.CustomerName,
+			"total_amount": order.TotalAmount, "currency": order.Currency,
+			"payment_status": order.PaymentStatus,
+		})
 	}
 	return order, err
 }
@@ -466,6 +511,9 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 	for _, n := range pendingEmails {
 		n := n
 		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+		if s.smsService != nil {
+			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+		}
 	}
 	for _, n := range pendingWebhooks {
 		n := n

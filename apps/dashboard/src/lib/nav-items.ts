@@ -10,12 +10,14 @@ import {
   Users,
   Building2,
   Mail,
+  MessageSquare,
   ListChecks,
   TextCursorInput,
   FolderTree,
   ScrollText,
   Webhook,
   Factory,
+  Zap,
 } from "lucide-react";
 
 export interface NavItem {
@@ -41,7 +43,9 @@ export const navItems: NavItem[] = [
   { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Administracja" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Administracja" },
   { href: "/settings/email", label: "Powiadomienia", icon: Mail, adminOnly: true, group: "Administracja" },
+  { href: "/settings/sms", label: "SMS", icon: MessageSquare, adminOnly: true, group: "Administracja" },
   { href: "/settings/order-statuses", label: "Statusy", icon: ListChecks, adminOnly: true, group: "Administracja" },
   { href: "/settings/custom-fields", label: "Pola", icon: TextCursorInput, adminOnly: true, group: "Administracja" },
   { href: "/settings/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Administracja" },
+  { href: "/settings/automation", label: "Automatyzacja", icon: Zap, adminOnly: true, group: "Administracja" },
 ];

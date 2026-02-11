@@ -159,3 +159,72 @@ export const INVOICING_PROVIDERS = ["fakturownia"] as const;
 export const INVOICING_PROVIDER_LABELS: Record<string, string> = {
   fakturownia: "Fakturownia",
 };
+
+// === Automation ===
+export const AUTOMATION_TRIGGER_EVENTS = [
+  "order.created",
+  "order.status_changed",
+  "order.updated",
+  "shipment.created",
+  "shipment.status_changed",
+  "return.created",
+  "return.status_changed",
+  "product.created",
+  "product.updated",
+] as const;
+
+export const AUTOMATION_TRIGGER_LABELS: Record<string, string> = {
+  "order.created": "Zamówienie utworzone",
+  "order.status_changed": "Zmiana statusu zamówienia",
+  "order.updated": "Zamówienie zaktualizowane",
+  "shipment.created": "Przesyłka utworzona",
+  "shipment.status_changed": "Zmiana statusu przesyłki",
+  "return.created": "Zwrot utworzony",
+  "return.status_changed": "Zmiana statusu zwrotu",
+  "product.created": "Produkt utworzony",
+  "product.updated": "Produkt zaktualizowany",
+};
+
+export const AUTOMATION_OPERATORS = [
+  "eq",
+  "neq",
+  "in",
+  "not_in",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "contains",
+  "not_contains",
+  "starts_with",
+] as const;
+
+export const AUTOMATION_OPERATOR_LABELS: Record<string, string> = {
+  eq: "Równe (=)",
+  neq: "Różne (!=)",
+  in: "Zawiera się w",
+  not_in: "Nie zawiera się w",
+  gt: "Większe (>)",
+  gte: "Większe lub równe (>=)",
+  lt: "Mniejsze (<)",
+  lte: "Mniejsze lub równe (<=)",
+  contains: "Zawiera",
+  not_contains: "Nie zawiera",
+  starts_with: "Zaczyna się od",
+};
+
+export const AUTOMATION_ACTION_TYPES = [
+  "set_status",
+  "add_tag",
+  "send_email",
+  "create_invoice",
+  "webhook",
+] as const;
+
+export const AUTOMATION_ACTION_LABELS: Record<string, string> = {
+  set_status: "Ustaw status",
+  add_tag: "Dodaj tag",
+  send_email: "Wyślij e-mail",
+  create_invoice: "Utwórz fakturę",
+  webhook: "Wywołaj webhook",
+};

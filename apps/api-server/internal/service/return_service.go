@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -21,11 +22,29 @@ var (
 )
 
 type ReturnService struct {
-	returnRepo      repository.ReturnRepo
-	orderRepo       repository.OrderRepo
-	auditRepo       repository.AuditRepo
-	pool            *pgxpool.Pool
-	webhookDispatch *WebhookDispatchService
+	returnRepo        repository.ReturnRepo
+	orderRepo         repository.OrderRepo
+	auditRepo         repository.AuditRepo
+	pool              *pgxpool.Pool
+	webhookDispatch   *WebhookDispatchService
+	automationService *AutomationService
+}
+
+// SetAutomationService sets the automation service for rule processing.
+func (s *ReturnService) SetAutomationService(automationSvc *AutomationService) {
+	s.automationService = automationSvc
+}
+
+func (s *ReturnService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
+	if s.automationService != nil {
+		s.automationService.ProcessEvent(context.Background(), automation.Event{
+			Type:       eventType,
+			TenantID:   tenantID,
+			EntityType: "return",
+			EntityID:   entityID,
+			Data:       data,
+		})
+	}
 }
 
 func NewReturnService(
@@ -135,6 +154,10 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.created", ret)
+	s.fireAutomationEvent(tenantID, "return.created", ret.ID, map[string]any{
+		"status": ret.Status, "reason": ret.Reason, "order_id": ret.OrderID.String(),
+		"refund_amount": ret.RefundAmount,
+	})
 	return ret, nil
 }
 
@@ -232,6 +255,10 @@ func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID
 	})
 	if err == nil && ret != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.status_changed", map[string]any{"return_id": returnID.String(), "from": oldStatus, "to": req.Status})
+		s.fireAutomationEvent(tenantID, "return.status_changed", ret.ID, map[string]any{
+			"status": ret.Status, "old_status": oldStatus, "new_status": req.Status,
+			"order_id": ret.OrderID.String(), "refund_amount": ret.RefundAmount,
+		})
 	}
 	return ret, err
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -18,10 +19,28 @@ var (
 )
 
 type ProductService struct {
-	productRepo     repository.ProductRepo
-	auditRepo       repository.AuditRepo
-	pool            *pgxpool.Pool
-	webhookDispatch *WebhookDispatchService
+	productRepo       repository.ProductRepo
+	auditRepo         repository.AuditRepo
+	pool              *pgxpool.Pool
+	webhookDispatch   *WebhookDispatchService
+	automationService *AutomationService
+}
+
+// SetAutomationService sets the automation service for rule processing.
+func (s *ProductService) SetAutomationService(automationSvc *AutomationService) {
+	s.automationService = automationSvc
+}
+
+func (s *ProductService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
+	if s.automationService != nil {
+		s.automationService.ProcessEvent(context.Background(), automation.Event{
+			Type:       eventType,
+			TenantID:   tenantID,
+			EntityType: "product",
+			EntityID:   entityID,
+			Data:       data,
+		})
+	}
 }
 
 func NewProductService(
@@ -134,6 +153,10 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.created", product)
+	s.fireAutomationEvent(tenantID, "product.created", product.ID, map[string]any{
+		"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
+		"source": product.Source,
+	})
 	return product, nil
 }
 
@@ -180,6 +203,10 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 	}
 	if product != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.updated", product)
+		s.fireAutomationEvent(tenantID, "product.updated", product.ID, map[string]any{
+			"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
+			"source": product.Source,
+		})
 	}
 	return product, err
 }

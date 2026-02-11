@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	engine "github.com/openoms-org/openoms/packages/order-engine"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -23,11 +24,35 @@ var (
 )
 
 type ShipmentService struct {
-	shipmentRepo    repository.ShipmentRepo
-	orderRepo       repository.OrderRepo
-	auditRepo       repository.AuditRepo
-	pool            *pgxpool.Pool
-	webhookDispatch *WebhookDispatchService
+	shipmentRepo      repository.ShipmentRepo
+	orderRepo         repository.OrderRepo
+	auditRepo         repository.AuditRepo
+	pool              *pgxpool.Pool
+	webhookDispatch   *WebhookDispatchService
+	smsService        *SMSService
+	automationService *AutomationService
+}
+
+// SetSMSService sets the SMS service for sending SMS notifications on shipment status change.
+func (s *ShipmentService) SetSMSService(smsSvc *SMSService) {
+	s.smsService = smsSvc
+}
+
+// SetAutomationService sets the automation service for rule processing.
+func (s *ShipmentService) SetAutomationService(automationSvc *AutomationService) {
+	s.automationService = automationSvc
+}
+
+func (s *ShipmentService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
+	if s.automationService != nil {
+		s.automationService.ProcessEvent(context.Background(), automation.Event{
+			Type:       eventType,
+			TenantID:   tenantID,
+			EntityType: "shipment",
+			EntityID:   entityID,
+			Data:       data,
+		})
+	}
 }
 
 func NewShipmentService(
@@ -131,6 +156,9 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.created", shipment)
+	s.fireAutomationEvent(tenantID, "shipment.created", shipment.ID, map[string]any{
+		"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
+	})
 	return shipment, nil
 }
 
@@ -272,6 +300,12 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 	})
 	if err == nil && shipment != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment)
+		if s.smsService != nil {
+			go s.smsService.SendShipmentStatusSMS(context.Background(), tenantID, shipment, "")
+		}
+		s.fireAutomationEvent(tenantID, "shipment.status_changed", shipment.ID, map[string]any{
+			"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
+		})
 	}
 	return shipment, err
 }
