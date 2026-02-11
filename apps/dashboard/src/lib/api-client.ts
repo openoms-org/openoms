@@ -44,6 +44,35 @@ export class ApiClientError extends Error {
   }
 }
 
+/**
+ * Returns a user-friendly error message based on the HTTP status code.
+ */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof ApiClientError) {
+    switch (error.status) {
+      case 401:
+        return "Sesja wygasła. Zaloguj się ponownie.";
+      case 429:
+        return "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.";
+      case 500:
+        return "Błąd serwera. Spróbuj ponownie później.";
+      default:
+        return error.message || "Wystąpił nieoczekiwany błąd.";
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "Wystąpił nieoczekiwany błąd.";
+}
+
+/**
+ * Returns true if the error is a 401 Unauthorized error.
+ */
+export function isAuthError(error: unknown): boolean {
+  return error instanceof ApiClientError && error.status === 401;
+}
+
 export async function apiClient<T>(
   path: string,
   options: RequestInit = {}

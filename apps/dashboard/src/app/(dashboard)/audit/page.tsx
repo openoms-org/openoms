@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { shortId } from "@/lib/utils";
 import type { AuditLogEntry } from "@/types/api";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -111,6 +112,13 @@ export default function AuditPage() {
       ),
     },
     {
+      header: "ID encji",
+      accessorKey: "entity_id",
+      cell: (row) => (
+        <span className="font-mono text-xs">{shortId(row.entity_id)}</span>
+      ),
+    },
+    {
       header: "Szczegóły",
       accessorKey: "changes",
       cell: (row) => {
@@ -118,14 +126,12 @@ export default function AuditPage() {
           return <span className="text-muted-foreground">—</span>;
         }
         return (
-          <div className="flex flex-wrap gap-1">
+          <div className="max-w-[300px] space-y-0.5">
             {Object.entries(row.changes).map(([k, v]) => (
-              <span
-                key={k}
-                className="inline-block rounded bg-muted px-1.5 py-0.5 text-xs"
-              >
-                {k}: {v}
-              </span>
+              <div key={k} className="flex items-baseline gap-1 text-xs">
+                <span className="font-medium text-muted-foreground shrink-0">{k}:</span>
+                <span className="truncate text-foreground">{String(v)}</span>
+              </div>
             ))}
           </div>
         );

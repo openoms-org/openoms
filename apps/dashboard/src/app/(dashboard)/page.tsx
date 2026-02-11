@@ -1,6 +1,7 @@
 "use client";
 
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
+import { useAuthStore } from "@/lib/auth";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
@@ -10,12 +11,15 @@ import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const { data: stats, isLoading, isError, refetch } = useDashboardStats();
+  const user = useAuthStore((s) => s.user);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Panel główny</h1>
-        <p className="text-muted-foreground mt-1">Przegląd zamówień w systemie</p>
+        {user?.name && (
+          <p className="text-muted-foreground mt-1">Witaj, {user.name}!</p>
+        )}
       </div>
 
       {isError && (

@@ -127,7 +127,7 @@ export default function SuppliersPage() {
               {suppliers.map((supplier) => (
                 <TableRow
                   key={supplier.id}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => router.push(`/suppliers/${supplier.id}`)}
                 >
                   <TableCell className="font-medium">{supplier.name}</TableCell>

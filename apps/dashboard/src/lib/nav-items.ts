@@ -21,22 +21,23 @@ export interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  group?: string;
 }
 
 export const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/orders", label: "Zamówienia", icon: ShoppingCart },
-  { href: "/shipments", label: "Przesyłki", icon: Truck },
-  { href: "/returns", label: "Zwroty", icon: RotateCcw },
-  { href: "/products", label: "Produkty", icon: Package },
-  { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true },
-  { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true },
-  { href: "/audit", label: "Dziennik", icon: ScrollText, adminOnly: true },
-  { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true },
-  { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true },
-  { href: "/settings/email", label: "Powiadomienia", icon: Mail, adminOnly: true },
-  { href: "/settings/order-statuses", label: "Statusy", icon: ListChecks, adminOnly: true },
-  { href: "/settings/custom-fields", label: "Pola", icon: TextCursorInput, adminOnly: true },
-  { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, adminOnly: true },
-  { href: "/settings/webhooks", label: "Webhooki", icon: Webhook, adminOnly: true },
+  { href: "/orders", label: "Zamówienia", icon: ShoppingCart, group: "Sprzedaż" },
+  { href: "/shipments", label: "Przesyłki", icon: Truck, group: "Sprzedaż" },
+  { href: "/returns", label: "Zwroty", icon: RotateCcw, group: "Sprzedaż" },
+  { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
+  { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
+  { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true, group: "Połączenia" },
+  { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true, group: "Połączenia" },
+  { href: "/settings/webhooks", label: "Webhooki", icon: Webhook, adminOnly: true, group: "Połączenia" },
+  { href: "/audit", label: "Dziennik", icon: ScrollText, adminOnly: true, group: "Administracja" },
+  { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Administracja" },
+  { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Administracja" },
+  { href: "/settings/email", label: "Powiadomienia", icon: Mail, adminOnly: true, group: "Administracja" },
+  { href: "/settings/order-statuses", label: "Statusy", icon: ListChecks, adminOnly: true, group: "Administracja" },
+  { href: "/settings/custom-fields", label: "Pola", icon: TextCursorInput, adminOnly: true, group: "Administracja" },
 ];

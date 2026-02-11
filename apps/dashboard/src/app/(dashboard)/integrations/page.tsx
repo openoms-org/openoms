@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Check, X, Plug, Trash2 } from "lucide-react";
+import { KeyRound, Plug, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useIntegrations, useDeleteIntegration } from "@/hooks/use-integrations";
@@ -13,6 +13,8 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/api-client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -53,7 +55,7 @@ export default function IntegrationsPage() {
         setDeleteId(null);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Błąd usuwania integracji");
+        toast.error(getErrorMessage(error));
       },
     });
   };
@@ -106,7 +108,7 @@ export default function IntegrationsPage() {
               {integrations.map((integration) => (
                 <TableRow
                   key={integration.id}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => router.push(`/integrations/${integration.id}`)}
                 >
                   <TableCell className="font-medium">
@@ -121,9 +123,14 @@ export default function IntegrationsPage() {
                   </TableCell>
                   <TableCell>
                     {integration.has_credentials ? (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Badge variant="outline" className="gap-1 border-green-200 bg-green-50 text-green-700">
+                        <KeyRound className="h-3 w-3" />
+                        Skonfigurowane
+                      </Badge>
                     ) : (
-                      <X className="h-4 w-4 text-muted-foreground" />
+                      <Badge variant="secondary" className="text-muted-foreground">
+                        Brak
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -136,7 +143,10 @@ export default function IntegrationsPage() {
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      onClick={() => setDeleteId(integration.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteId(integration.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

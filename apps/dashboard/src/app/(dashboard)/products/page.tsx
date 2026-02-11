@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
+import { EmptyState } from "@/components/shared/empty-state";
 import {
   Select,
   SelectContent,
@@ -252,6 +253,14 @@ export default function ProductsPage() {
         columns={columns}
         data={data?.items ?? []}
         isLoading={isLoading}
+        emptyState={
+          <EmptyState
+            icon={Package}
+            title="Brak produktów"
+            description="Nie znaleziono produktów do wyświetlenia."
+            action={{ label: "Nowy produkt", href: "/products/new" }}
+          />
+        }
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSort={handleSort}

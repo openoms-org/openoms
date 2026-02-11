@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Truck } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -10,7 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ShipmentFilters } from "@/components/shipments/shipment-filters";
 import { useShipments } from "@/hooks/use-shipments";
 import { SHIPMENT_STATUSES } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { formatDate, shortId } from "@/lib/utils";
 import type { Shipment } from "@/types/api";
 
 const DEFAULT_LIMIT = 20;
@@ -48,9 +49,9 @@ export default function ShipmentsPage() {
       cell: (shipment: Shipment) => (
         <Link
           href={`/shipments/${shipment.id}`}
-          className="font-mono text-sm text-primary hover:underline"
+          className="font-mono text-xs text-primary hover:underline"
         >
-          {shipment.id.slice(0, 8)}...
+          {shortId(shipment.id)}
         </Link>
       ),
     },
@@ -60,9 +61,9 @@ export default function ShipmentsPage() {
       cell: (shipment: Shipment) => (
         <Link
           href={`/orders/${shipment.order_id}`}
-          className="font-mono text-sm text-primary hover:underline"
+          className="font-mono text-xs text-primary hover:underline"
         >
-          {shipment.order_id.slice(0, 8)}...
+          {shortId(shipment.order_id)}
         </Link>
       ),
     },
@@ -148,6 +149,14 @@ export default function ShipmentsPage() {
         columns={columns}
         data={data?.items ?? []}
         isLoading={isLoading}
+        emptyState={
+          <EmptyState
+            icon={Truck}
+            title="Brak przesyłek"
+            description="Nie znaleziono przesyłek do wyświetlenia."
+            action={{ label: "Nowa przesyłka", href: "/shipments/new" }}
+          />
+        }
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSort={handleSort}

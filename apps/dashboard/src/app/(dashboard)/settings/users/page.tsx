@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
 import { UserForm } from "@/components/users/user-form";
 import { formatDate } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -66,7 +67,7 @@ export default function UsersPage() {
         setCreateOpen(false);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Błąd tworzenia użytkownika");
+        toast.error(getErrorMessage(error));
       },
     });
   };
@@ -83,9 +84,7 @@ export default function UsersPage() {
         setEditUser(null);
       },
       onError: (error) => {
-        toast.error(
-          error instanceof Error ? error.message : "Błąd aktualizacji użytkownika"
-        );
+        toast.error(getErrorMessage(error));
       },
     });
   };
@@ -98,7 +97,7 @@ export default function UsersPage() {
         setDeleteId(null);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Błąd usuwania użytkownika");
+        toast.error(getErrorMessage(error));
       },
     });
   };

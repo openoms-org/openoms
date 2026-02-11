@@ -24,6 +24,7 @@ interface DataTableProps<T> {
   data: T[];
   isLoading?: boolean;
   emptyMessage?: string;
+  emptyState?: React.ReactNode;
   onRowClick?: (row: T) => void;
   selectable?: boolean;
   selectedIds?: Set<string>;
@@ -49,6 +50,7 @@ export function DataTable<T>({
   data,
   isLoading = false,
   emptyMessage = "Brak danych",
+  emptyState,
   onRowClick,
   selectable = false,
   selectedIds,
@@ -138,6 +140,9 @@ export function DataTable<T>({
   }
 
   if (!data || data.length === 0) {
+    if (emptyState) {
+      return <>{emptyState}</>;
+    }
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground text-sm">{emptyMessage}</p>
@@ -193,7 +198,7 @@ export function DataTable<T>({
           return (
             <TableRow
               key={rowIndex}
-              className={onRowClick ? "cursor-pointer" : ""}
+              className={`hover:bg-muted/50 transition-colors ${onRowClick ? "cursor-pointer" : ""}`}
               onClick={() => onRowClick?.(row)}
             >
               {selectable && (

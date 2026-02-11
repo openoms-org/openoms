@@ -12,8 +12,9 @@ import { BulkActions } from "@/components/orders/bulk-actions";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
-import { formatDate, formatCurrency } from "@/lib/utils";
-import { Download } from "lucide-react";
+import { formatDate, formatCurrency, shortId } from "@/lib/utils";
+import { Download, ShoppingCart } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
 import type { Order } from "@/types/api";
 
 export default function OrdersPage() {
@@ -52,7 +53,7 @@ export default function OrdersPage() {
       header: "ID",
       accessorKey: "id",
       cell: (row) => (
-        <span className="font-mono text-xs">{row.id.slice(0, 8)}</span>
+        <span className="font-mono text-xs">{shortId(row.id)}</span>
       ),
     },
     {
@@ -172,7 +173,14 @@ export default function OrdersPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak zamówień do wyświetlenia"
+          emptyState={
+            <EmptyState
+              icon={ShoppingCart}
+              title="Brak zamówień"
+              description="Nie znaleziono zamówień do wyświetlenia."
+              action={{ label: "Nowe zamówienie", href: "/orders/new" }}
+            />
+          }
           onRowClick={(row) => router.push(`/orders/${row.id}`)}
           selectable
           selectedIds={selectedIds}

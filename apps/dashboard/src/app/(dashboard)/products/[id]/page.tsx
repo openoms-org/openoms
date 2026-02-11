@@ -12,14 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductForm } from "@/components/products/product-form";
@@ -31,6 +24,7 @@ import {
 import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_SOURCE_LABELS } from "@/lib/constants";
+import { getErrorMessage } from "@/lib/api-client";
 import type { CreateProductRequest } from "@/types/api";
 
 export default function ProductDetailPage() {
@@ -70,7 +64,7 @@ export default function ProductDetailPage() {
           setIsEditing(false);
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udało się zaktualizować produktu");
+          toast.error(getErrorMessage(error));
         },
       }
     );
@@ -83,7 +77,7 @@ export default function ProductDetailPage() {
         router.push("/products");
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się usunąć produktu");
+        toast.error(getErrorMessage(error));
       },
     });
   };
@@ -344,32 +338,16 @@ export default function ProductDetailPage() {
         </>
       )}
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usuń produkt</DialogTitle>
-            <DialogDescription>
-              Czy na pewno chcesz usunąć produkt &quot;{product.name}&quot;? Ta
-              operacja jest nieodwracalna.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-            >
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteProduct.isPending}
-            >
-              {deleteProduct.isPending ? "Usuwanie..." : "Usuń"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Usuń produkt"
+        description={`Czy na pewno chcesz usunąć produkt "${product.name}"? Ta operacja jest nieodwracalna.`}
+        confirmLabel="Usuń"
+        variant="destructive"
+        onConfirm={handleDelete}
+        isLoading={deleteProduct.isPending}
+      />
     </div>
   );
 }
