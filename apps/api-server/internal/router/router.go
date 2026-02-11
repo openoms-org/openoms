@@ -41,6 +41,7 @@ type RouterDeps struct {
 	Automation      *handler.AutomationHandler
 	Import          *handler.ImportHandler
 	Variant         *handler.VariantHandler
+	SyncJob         *handler.SyncJobHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -122,6 +123,13 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Use(middleware.RequireRole("admin"))
 				r.Get("/audit", deps.Audit.List)
 				r.Get("/webhook-deliveries", deps.WebhookDelivery.List)
+			})
+
+			// Sync jobs — admin only
+			r.Route("/sync-jobs", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.SyncJob.List)
+				r.Get("/{id}", deps.SyncJob.Get)
 			})
 
 			// Any authenticated user
@@ -250,7 +258,13 @@ func New(deps RouterDeps) *chi.Mux {
 			})
 
 			// Stats — any authenticated user
-			r.Get("/stats/dashboard", deps.Stats.GetDashboard)
+			r.Route("/stats", func(r chi.Router) {
+				r.Get("/dashboard", deps.Stats.GetDashboard)
+				r.Get("/products/top", deps.Stats.GetTopProducts)
+				r.Get("/revenue/by-source", deps.Stats.GetRevenueBySource)
+				r.Get("/trends", deps.Stats.GetOrderTrends)
+				r.Get("/payment-methods", deps.Stats.GetPaymentMethodStats)
+			})
 
 			// InPost points search (proxy)
 			r.Get("/inpost/points", deps.InPostPoint.Search)

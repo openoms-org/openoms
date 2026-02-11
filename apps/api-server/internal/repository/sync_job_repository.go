@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -91,4 +92,77 @@ func (r *SyncJobRepository) ListByIntegration(ctx context.Context, tx pgx.Tx, in
 		jobs = append(jobs, &j)
 	}
 	return jobs, rows.Err()
+}
+
+func (r *SyncJobRepository) List(ctx context.Context, tx pgx.Tx, filter model.SyncJobListFilter) ([]*model.SyncJob, int, error) {
+	var conditions []string
+	var args []any
+	argIdx := 1
+
+	if filter.IntegrationID != nil {
+		conditions = append(conditions, fmt.Sprintf("integration_id = $%d", argIdx))
+		args = append(args, *filter.IntegrationID)
+		argIdx++
+	}
+	if filter.JobType != nil {
+		conditions = append(conditions, fmt.Sprintf("job_type = $%d", argIdx))
+		args = append(args, *filter.JobType)
+		argIdx++
+	}
+	if filter.Status != nil {
+		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
+		args = append(args, *filter.Status)
+		argIdx++
+	}
+
+	where := ""
+	if len(conditions) > 0 {
+		where = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM sync_jobs %s", where)
+	var total int
+	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count sync jobs: %w", err)
+	}
+
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	query := fmt.Sprintf(
+		`SELECT id, tenant_id, integration_id, job_type, status,
+		        started_at, finished_at, items_processed, items_failed,
+		        error_message, metadata, created_at
+		 FROM sync_jobs
+		 %s
+		 ORDER BY created_at DESC
+		 LIMIT $%d OFFSET $%d`,
+		where, argIdx, argIdx+1,
+	)
+	args = append(args, limit, filter.Offset)
+
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list sync jobs: %w", err)
+	}
+	defer rows.Close()
+
+	var jobs []*model.SyncJob
+	for rows.Next() {
+		var j model.SyncJob
+		if err := rows.Scan(
+			&j.ID, &j.TenantID, &j.IntegrationID, &j.JobType, &j.Status,
+			&j.StartedAt, &j.FinishedAt, &j.ItemsProcessed, &j.ItemsFailed,
+			&j.ErrorMessage, &j.Metadata, &j.CreatedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan sync job: %w", err)
+		}
+		jobs = append(jobs, &j)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	return jobs, total, nil
 }

@@ -129,6 +129,10 @@ type StatsRepo interface {
 	GetDailyRevenue(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyRevenue, error)
 	GetRecentOrders(ctx context.Context, tx pgx.Tx, limit int) ([]model.OrderSummary, error)
 	GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) (string, error)
+	GetTopProducts(ctx context.Context, tx pgx.Tx, limit int) ([]model.TopProduct, error)
+	GetRevenueBySource(ctx context.Context, tx pgx.Tx, days int) ([]model.SourceRevenue, error)
+	GetOrderTrends(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyOrderTrend, error)
+	GetPaymentMethodStats(ctx context.Context, tx pgx.Tx) (map[string]int, error)
 }
 
 // ProductListingRepo defines the interface for product listing persistence operations.
@@ -148,6 +152,7 @@ type SyncJobRepo interface {
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, itemsProcessed, itemsFailed int, errorMsg *string) error
 	GetByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.SyncJob, error)
 	ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID, limit int) ([]*model.SyncJob, error)
+	List(ctx context.Context, tx pgx.Tx, filter model.SyncJobListFilter) ([]*model.SyncJob, int, error)
 }
 
 // SupplierRepo defines the interface for supplier persistence operations.

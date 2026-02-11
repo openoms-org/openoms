@@ -19,6 +19,8 @@ import {
   Factory,
   Zap,
   Upload,
+  BarChart3,
+  RefreshCw,
 } from "lucide-react";
 
 export interface NavItem {
@@ -36,11 +38,13 @@ export const navItems: NavItem[] = [
   { href: "/returns", label: "Zwroty", icon: RotateCcw, group: "Sprzedaż" },
   { href: "/invoices", label: "Faktury", icon: FileText, group: "Sprzedaż" },
   { href: "/orders/import", label: "Import", icon: Upload, group: "Sprzedaż" },
+  { href: "/reports", label: "Raporty", icon: BarChart3, group: "Sprzedaż" },
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
   { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
   { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true, group: "Połączenia" },
   { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true, group: "Połączenia" },
   { href: "/settings/webhooks", label: "Webhooki", icon: Webhook, adminOnly: true, group: "Połączenia" },
+  { href: "/settings/sync-jobs", label: "Synchronizacja", icon: RefreshCw, adminOnly: true, group: "Połączenia" },
   { href: "/audit", label: "Dziennik", icon: ScrollText, adminOnly: true, group: "Administracja" },
   { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Administracja" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Administracja" },

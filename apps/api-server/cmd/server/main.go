@@ -120,6 +120,7 @@ func main() {
 	supplierRepo := repository.NewSupplierRepository()
 	supplierProductRepo := repository.NewSupplierProductRepository()
 	variantRepo := repository.NewVariantRepository()
+	syncJobRepo := repository.NewSyncJobRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -201,6 +202,9 @@ func main() {
 	// Variant handler
 	variantHandler := handler.NewVariantHandler(variantService)
 
+	// Sync job handler
+	syncJobHandler := handler.NewSyncJobHandler(syncJobRepo, pool)
+
 	// Setup router
 	r := router.New(router.RouterDeps{
 		Pool:            pool,
@@ -228,6 +232,7 @@ func main() {
 		Automation:       automationHandler,
 		Import:           importHandler,
 		Variant:          variantHandler,
+		SyncJob:          syncJobHandler,
 	})
 
 	// Start background workers

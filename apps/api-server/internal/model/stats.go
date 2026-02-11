@@ -35,3 +35,22 @@ type OrderSummary struct {
 	Currency     string    `json:"currency"`
 	CreatedAt    time.Time `json:"created_at"`
 }
+
+type TopProduct struct {
+	Name          string  `json:"name"`
+	SKU           string  `json:"sku,omitempty"`
+	TotalQuantity int     `json:"total_quantity"`
+	TotalRevenue  float64 `json:"total_revenue"`
+}
+
+type SourceRevenue struct {
+	Source  string  `json:"source"`
+	Revenue float64 `json:"revenue"`
+	Count   int     `json:"count"`
+}
+
+type DailyOrderTrend struct {
+	Date     string  `json:"date"`
+	Count    int     `json:"count"`
+	AvgValue float64 `json:"avg_value"`
+}

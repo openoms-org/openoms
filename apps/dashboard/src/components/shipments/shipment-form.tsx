@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
+import { PaczkomatMap } from "@/components/shared/paczkomat-map";
 import type { Shipment } from "@/types/api";
 
 const shipmentSchema = z.object({
@@ -22,6 +25,7 @@ const shipmentSchema = z.object({
   provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "manual"], "Wybierz dostawcę"),
   tracking_number: z.string().optional(),
   label_url: z.string().optional(),
+  carrier_data: z.record(z.string(), z.unknown()).optional(),
 });
 
 type ShipmentFormValues = z.infer<typeof shipmentSchema>;
@@ -39,6 +43,13 @@ export function ShipmentForm({
   onSubmit,
   isLoading,
 }: ShipmentFormProps) {
+  const existingTargetPoint =
+    (shipment?.carrier_data?.target_point as string | undefined) ??
+    (defaultValues?.carrier_data?.target_point as string | undefined) ??
+    "";
+
+  const [targetPoint, setTargetPoint] = useState(existingTargetPoint);
+
   const {
     register,
     handleSubmit,
@@ -52,10 +63,20 @@ export function ShipmentForm({
       provider: shipment?.provider as ShipmentFormValues["provider"] ?? defaultValues?.provider ?? undefined,
       tracking_number: shipment?.tracking_number ?? defaultValues?.tracking_number ?? "",
       label_url: shipment?.label_url ?? defaultValues?.label_url ?? "",
+      carrier_data: shipment?.carrier_data as Record<string, unknown> ?? defaultValues?.carrier_data ?? undefined,
     },
   });
 
   const providerValue = watch("provider");
+
+  const handlePointSelect = useCallback(
+    (pointName: string) => {
+      setTargetPoint(pointName);
+      const current = watch("carrier_data") ?? {};
+      setValue("carrier_data", { ...current, target_point: pointName });
+    },
+    [setValue, watch]
+  );
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -98,6 +119,22 @@ export function ShipmentForm({
           <p className="text-sm text-destructive">{errors.provider.message}</p>
         )}
       </div>
+
+      {providerValue === "inpost" && (
+        <div className="space-y-2">
+          <Label>Paczkomat docelowy</Label>
+          {targetPoint && (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">{targetPoint}</span>
+            </div>
+          )}
+          <PaczkomatMap
+            onSelect={handlePointSelect}
+            selectedPoint={targetPoint}
+          />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="tracking_number">Numer śledzenia</Label>

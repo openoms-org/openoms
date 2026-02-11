@@ -84,3 +84,10 @@ type SyncJob struct {
 	Metadata       json.RawMessage `json:"metadata"`
 	CreatedAt      time.Time       `json:"created_at"`
 }
+
+type SyncJobListFilter struct {
+	IntegrationID *uuid.UUID
+	JobType       *string
+	Status        *string
+	PaginationParams
+}
