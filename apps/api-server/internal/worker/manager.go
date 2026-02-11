@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -70,9 +71,18 @@ func (m *Manager) runWorker(ctx context.Context, w Worker) {
 			m.logger.Info("worker stopped", "name", w.Name())
 			return
 		case <-ticker.C:
-			if err := w.Run(ctx); err != nil {
-				m.logger.Error("worker run failed", "name", w.Name(), "error", err)
-			}
+			m.safeRun(ctx, w)
 		}
+	}
+}
+
+func (m *Manager) safeRun(ctx context.Context, w Worker) {
+	defer func() {
+		if r := recover(); r != nil {
+			m.logger.Error("worker panic recovered", "name", w.Name(), "panic", fmt.Sprintf("%v", r))
+		}
+	}()
+	if err := w.Run(ctx); err != nil {
+		m.logger.Error("worker run failed", "name", w.Name(), "error", err)
 	}
 }

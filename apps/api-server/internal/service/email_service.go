@@ -27,7 +27,7 @@ func NewEmailService(tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *Emai
 
 func (s *EmailService) loadStatusConfig(ctx context.Context, tenantID uuid.UUID) *model.OrderStatusConfig {
 	var config *model.OrderStatusConfig
-	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 		if err != nil {
 			return err
@@ -47,7 +47,9 @@ func (s *EmailService) loadStatusConfig(ctx context.Context, tenantID uuid.UUID)
 		cfg := model.DefaultOrderStatusConfig()
 		config = &cfg
 		return nil
-	})
+	}); err != nil {
+		slog.Error("email: failed to load status config", "error", err, "tenant_id", tenantID)
+	}
 	return config
 }
 

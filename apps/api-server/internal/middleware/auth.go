@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"strings"
 
@@ -17,7 +19,13 @@ type TokenValidator interface {
 
 // JWTAuth validates the Authorization: Bearer <token> header and sets
 // claims, tenant ID, and user ID in the request context.
-func JWTAuth(validator TokenValidator) func(http.Handler) http.Handler {
+// An optional TokenBlacklist can be provided to reject revoked tokens.
+func JWTAuth(validator TokenValidator, blacklists ...*TokenBlacklist) func(http.Handler) http.Handler {
+	var blacklist *TokenBlacklist
+	if len(blacklists) > 0 {
+		blacklist = blacklists[0]
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -35,6 +43,15 @@ func JWTAuth(validator TokenValidator) func(http.Handler) http.Handler {
 			if tokenStr == "" {
 				writeAuthError(w, "empty bearer token")
 				return
+			}
+
+			// Check if the token has been revoked
+			if blacklist != nil {
+				tokenHash := hashToken(tokenStr)
+				if blacklist.IsRevoked(tokenHash) {
+					writeAuthError(w, "token has been revoked")
+					return
+				}
 			}
 
 			claims, err := validator.ValidateToken(tokenStr)
@@ -65,6 +82,20 @@ func JWTAuth(validator TokenValidator) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// hashToken returns a SHA-256 hex hash of the token string.
+// We store hashes instead of raw tokens to avoid keeping sensitive
+// material in memory.
+func hashToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
+}
+
+// HashToken is the exported version of hashToken for use by handlers
+// that need to add tokens to the blacklist.
+func HashToken(token string) string {
+	return hashToken(token)
 }
 
 func writeAuthError(w http.ResponseWriter, message string) {

@@ -39,6 +39,12 @@ func (r *CreateShipmentRequest) Validate() error {
 	if r.Provider == "" {
 		return errors.New("provider is required")
 	}
+	if err := validateMaxLength("provider", r.Provider, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("tracking_number", r.TrackingNumber, 200); err != nil {
+		return err
+	}
 	return nil
 }
 

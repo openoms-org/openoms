@@ -139,3 +139,18 @@ type PointSearchResponse struct {
 	PerPage    int     `json:"per_page"`
 	TotalPages int     `json:"total_pages"`
 }
+
+// TrackingResponse is the response from the tracking endpoint.
+type TrackingResponse struct {
+	TrackingNumber  string           `json:"tracking_number"`
+	Service         string           `json:"service"`
+	TrackingDetails []TrackingDetail `json:"tracking_details"`
+}
+
+// TrackingDetail represents a single tracking event from InPost.
+type TrackingDetail struct {
+	Status       string `json:"status"`
+	OriginStatus string `json:"origin_status"`
+	Datetime     string `json:"datetime"`
+	Agency       string `json:"agency"`
+}

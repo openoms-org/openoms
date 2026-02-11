@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -121,7 +122,9 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 		// If password is masked, keep the existing one
 		if emailCfg.SMTPPass == "••••••" {
 			var oldEmail model.EmailSettings
-			_ = h.getSettingsSection(r.Context(), tx, tenantID, "email", &oldEmail)
+			if err := h.getSettingsSection(r.Context(), tx, tenantID, "email", &oldEmail); err != nil {
+				slog.Error("failed to load existing email settings for password preservation", "error", err, "tenant_id", tenantID)
+			}
 			emailCfg.SMTPPass = oldEmail.SMTPPass
 		}
 

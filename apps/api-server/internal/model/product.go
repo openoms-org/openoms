@@ -73,6 +73,24 @@ func (r *CreateProductRequest) Validate() error {
 	if r.StockQty < 0 {
 		return errors.New("stock_quantity must not be negative")
 	}
+	if err := validateMaxLength("name", r.Name, 500); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("sku", r.SKU, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("ean", r.EAN, 50); err != nil {
+		return err
+	}
+	if err := validateMaxLength("description_short", r.DescriptionShort, 1000); err != nil {
+		return err
+	}
+	if err := validateMaxLength("description_long", r.DescriptionLong, 10000); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("category", r.Category, 100); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -118,6 +136,24 @@ func (r *UpdateProductRequest) Validate() error {
 	}
 	if r.StockQuantity != nil && *r.StockQuantity < 0 {
 		return errors.New("stock_quantity must not be negative")
+	}
+	if err := validateMaxLengthPtr("name", r.Name, 500); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("sku", r.SKU, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("ean", r.EAN, 50); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("description_short", r.DescriptionShort, 1000); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("description_long", r.DescriptionLong, 10000); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("category", r.Category, 100); err != nil {
+		return err
 	}
 	return nil
 }

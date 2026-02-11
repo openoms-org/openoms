@@ -240,7 +240,7 @@ func (h *OrderHandler) GetAudit(w http.ResponseWriter, r *http.Request) {
 
 func (h *OrderHandler) loadCustomFieldsConfig(ctx context.Context, tenantID uuid.UUID) model.CustomFieldsConfig {
 	var config model.CustomFieldsConfig
-	_ = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
 		settings, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
 		if err != nil {
 			return err
@@ -254,7 +254,9 @@ func (h *OrderHandler) loadCustomFieldsConfig(ctx context.Context, tenantID uuid
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		slog.Error("failed to load custom fields config", "error", err, "tenant_id", tenantID)
+	}
 	if config.Fields == nil {
 		config.Fields = []model.CustomFieldDef{}
 	}

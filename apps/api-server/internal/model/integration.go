@@ -43,6 +43,12 @@ func (r *CreateIntegrationRequest) Validate() error {
 	if len(r.Credentials) == 0 {
 		return errors.New("credentials are required")
 	}
+	if err := validateMaxLength("provider", r.Provider, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("label", r.Label, 255); err != nil {
+		return err
+	}
 	return nil
 }
 

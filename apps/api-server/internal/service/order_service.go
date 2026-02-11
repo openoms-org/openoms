@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -111,6 +112,13 @@ func (s *OrderService) Get(ctx context.Context, tenantID, orderID uuid.UUID) (*m
 func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateOrderRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
+	}
+
+	// Sanitize user-facing text fields to prevent stored XSS
+	req.CustomerName = model.StripHTMLTags(req.CustomerName)
+	if req.Notes != nil {
+		sanitized := model.StripHTMLTags(*req.Notes)
+		req.Notes = &sanitized
 	}
 
 	// Default NOT NULL jsonb fields to avoid inserting NULL
@@ -409,7 +417,7 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 				continue
 			}
 
-			_ = s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
 				TenantID:   tenantID,
 				UserID:     actorID,
 				Action:     "order.status_changed",
@@ -417,7 +425,9 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 				EntityID:   orderID,
 				Changes:    map[string]string{"from": existing.Status, "to": req.Status},
 				IPAddress:  ip,
-			})
+			}); err != nil {
+				slog.Error("bulk status transition: failed to log audit", "order_id", orderID, "error", err)
+			}
 
 			updated, err := s.orderRepo.FindByID(ctx, tx, orderID)
 			if err == nil && updated != nil {

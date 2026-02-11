@@ -94,6 +94,9 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, NewValidationError(err)
 	}
 
+	// Sanitize user-facing text fields to prevent stored XSS
+	req.Name = model.StripHTMLTags(req.Name)
+
 	settings := req.Settings
 	if settings == nil {
 		settings = json.RawMessage("{}")
@@ -272,9 +275,11 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 	if err != nil {
 		// Record the error on the supplier
 		errMsg := err.Error()
-		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		})
+		}); dbErr != nil {
+			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+		}
 		return fmt.Errorf("parse feed: %w", err)
 	}
 
@@ -323,7 +328,10 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 					"SELECT id FROM products WHERE ean = $1 LIMIT 1", *ean,
 				).Scan(&productID)
 				if err == nil {
-					_ = s.supplierProdRepo.LinkToProduct(ctx, tx, sp.ID, productID)
+					if linkErr := s.supplierProdRepo.LinkToProduct(ctx, tx, sp.ID, productID); linkErr != nil {
+						s.logger.Error("failed to auto-link supplier product by EAN",
+							"supplier_product_id", sp.ID, "product_id", productID, "error", linkErr)
+					}
 				}
 			}
 		}

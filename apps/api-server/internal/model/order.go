@@ -74,6 +74,36 @@ func (r *CreateOrderRequest) Validate() error {
 	if r.Currency == "" {
 		r.Currency = "PLN"
 	}
+	if err := validateMaxLength("customer_name", r.CustomerName, 500); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("customer_email", r.CustomerEmail, 255); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("customer_phone", r.CustomerPhone, 50); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("notes", r.Notes, 5000); err != nil {
+		return err
+	}
+	if err := validateMaxLength("source", r.Source, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLength("currency", r.Currency, 10); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("payment_status", r.PaymentStatus, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("payment_method", r.PaymentMethod, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("delivery_method", r.DeliveryMethod, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("pickup_point_id", r.PickupPointID, 100); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -108,6 +138,33 @@ func (r *UpdateOrderRequest) Validate() error {
 	}
 	if r.TotalAmount != nil && *r.TotalAmount < 0 {
 		return errors.New("total_amount must be non-negative")
+	}
+	if err := validateMaxLengthPtr("customer_name", r.CustomerName, 500); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("customer_email", r.CustomerEmail, 255); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("customer_phone", r.CustomerPhone, 50); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("notes", r.Notes, 5000); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("currency", r.Currency, 10); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("payment_status", r.PaymentStatus, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("payment_method", r.PaymentMethod, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("delivery_method", r.DeliveryMethod, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("pickup_point_id", r.PickupPointID, 100); err != nil {
+		return err
 	}
 	return nil
 }
