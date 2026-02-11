@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -11,6 +11,8 @@ import { useCreateShipment } from "@/hooks/use-shipments";
 
 export default function NewShipmentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultOrderId = searchParams.get("order_id") ?? undefined;
   const createShipment = useCreateShipment();
 
   const handleSubmit = (data: Parameters<typeof createShipment.mutate>[0]) => {
@@ -47,6 +49,7 @@ export default function NewShipmentPage() {
         </CardHeader>
         <CardContent>
           <ShipmentForm
+            defaultValues={defaultOrderId ? { order_id: defaultOrderId } : undefined}
             onSubmit={handleSubmit}
             isLoading={createShipment.isPending}
           />

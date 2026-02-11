@@ -12,8 +12,8 @@ import type {
 
 export function useShipments(params: ShipmentListParams = {}) {
   const query = new URLSearchParams();
-  if (params.limit) query.set("limit", String(params.limit));
-  if (params.offset) query.set("offset", String(params.offset));
+  if (params.limit != null) query.set("limit", String(params.limit));
+  if (params.offset != null) query.set("offset", String(params.offset));
   if (params.status) query.set("status", params.status);
   if (params.provider) query.set("provider", params.provider);
   if (params.order_id) query.set("order_id", params.order_id);

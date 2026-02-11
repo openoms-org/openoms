@@ -30,7 +30,33 @@ func TestValidateStrength_TooShort(t *testing.T) {
 
 func TestValidateStrength_OK(t *testing.T) {
 	svc := NewPasswordService()
-	if err := svc.ValidateStrength("longpassword"); err != nil {
+	if err := svc.ValidateStrength("longpassword1"); err != nil {
 		t.Errorf("expected no error: %v", err)
+	}
+}
+
+func TestValidateStrength_TooLong(t *testing.T) {
+	svc := NewPasswordService()
+	long := make([]byte, 73)
+	for i := range long {
+		long[i] = 'a'
+	}
+	long[0] = '1' // include a digit
+	if err := svc.ValidateStrength(string(long)); err == nil {
+		t.Error("expected error for password exceeding 72 characters")
+	}
+}
+
+func TestValidateStrength_NoDigit(t *testing.T) {
+	svc := NewPasswordService()
+	if err := svc.ValidateStrength("longpassword"); err == nil {
+		t.Error("expected error for password without digit")
+	}
+}
+
+func TestValidateStrength_NoLetter(t *testing.T) {
+	svc := NewPasswordService()
+	if err := svc.ValidateStrength("12345678"); err == nil {
+		t.Error("expected error for password without letter")
 	}
 }

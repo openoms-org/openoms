@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -68,7 +67,7 @@ func (s *ProductService) Get(ctx context.Context, tenantID, productID uuid.UUID)
 
 func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateProductRequest, actorID uuid.UUID, ip string) (*model.Product, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	metadata := req.Metadata
@@ -135,7 +134,7 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 
 func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UUID, req model.UpdateProductRequest, actorID uuid.UUID, ip string) (*model.Product, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var product *model.Product

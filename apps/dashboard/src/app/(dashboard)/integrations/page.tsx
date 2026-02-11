@@ -26,7 +26,7 @@ import {
 export default function IntegrationsPage() {
   const router = useRouter();
   const { isAdmin, isLoading: authLoading } = useAuth();
-  const { data: integrations, isLoading } = useIntegrations();
+  const { data: integrations, isLoading, isError, refetch } = useIntegrations();
   const deleteIntegration = useDeleteIntegration();
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export default function IntegrationsPage() {
     if (!deleteId) return;
     deleteIntegration.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Integracja zostala usunieta");
+        toast.success("Integracja została usunięta");
         setDeleteId(null);
       },
       onError: (error) => {
@@ -62,9 +62,25 @@ export default function IntegrationsPage() {
     <>
       <PageHeader
         title="Integracje"
-        description="Zarządzaj polaczeniami z zewnetrznymi serwisami"
+        description="Zarządzaj połączeniami z zewnętrznymi serwisami"
         action={{ label: "Nowa integracja", href: "/integrations/new" }}
       />
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       {!integrations || integrations.length === 0 ? (
         <EmptyState
@@ -80,7 +96,7 @@ export default function IntegrationsPage() {
               <TableRow>
                 <TableHead>Dostawca</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Dane uwierzytelniajace</TableHead>
+                <TableHead>Dane uwierzytelniające</TableHead>
                 <TableHead>Ostatnia synchronizacja</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[60px]" />

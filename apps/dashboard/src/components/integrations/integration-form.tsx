@@ -17,7 +17,7 @@ import { INTEGRATION_PROVIDERS } from "@/lib/constants";
 
 const integrationSchema = z.object({
   provider: z.string().min(1, "Dostawca jest wymagany"),
-  credentials: z.string().min(1, "Dane uwierzytelniajace sa wymagane").refine(
+  credentials: z.string().min(1, "Dane uwierzytelniające są wymagane").refine(
     (val) => {
       try {
         JSON.parse(val);
@@ -26,7 +26,7 @@ const integrationSchema = z.object({
         return false;
       }
     },
-    { message: "Nieprawidlowy format JSON" }
+    { message: "Nieprawidłowy format JSON" }
   ),
   settings: z.string().optional().refine(
     (val) => {
@@ -38,7 +38,7 @@ const integrationSchema = z.object({
         return false;
       }
     },
-    { message: "Nieprawidlowy format JSON" }
+    { message: "Nieprawidłowy format JSON" }
   ),
 });
 
@@ -111,7 +111,7 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="credentials">Dane uwierzytelniajace (JSON)</Label>
+        <Label htmlFor="credentials">Dane uwierzytelniające (JSON)</Label>
         <Textarea
           id="credentials"
           placeholder='{"api_key": "...", "secret": "..."}'

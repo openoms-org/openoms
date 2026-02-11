@@ -135,7 +135,7 @@ func (h *SupplierHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "supplier deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {

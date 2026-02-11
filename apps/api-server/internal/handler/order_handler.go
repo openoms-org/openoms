@@ -160,7 +160,7 @@ func (h *OrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "order deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *OrderHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) {
@@ -311,7 +311,10 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	for _, f := range cfConfig.Fields {
 		header = append(header, f.Label)
 	}
-	writer.Write(header)
+	if err := writer.Write(header); err != nil {
+		slog.Error("csv export: failed to write header", "error", err)
+		return
+	}
 
 	for _, o := range resp.Items {
 		email := ""
@@ -375,6 +378,9 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			row = append(row, val)
 		}
 
-		writer.Write(row)
+		if err := writer.Write(row); err != nil {
+			slog.Error("csv export: failed to write row", "error", err)
+			break
+		}
 	}
 }

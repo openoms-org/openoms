@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 import { useProductCategories, useUpdateProductCategories } from "@/hooks/use-product-categories";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,16 +13,28 @@ import { Trash2, Plus } from "lucide-react";
 import type { CategoryDef } from "@/types/api";
 
 export default function ProductCategoriesPage() {
+  const router = useRouter();
+  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: config, isLoading } = useProductCategories();
   const updateCategories = useUpdateProductCategories();
 
   const [categories, setCategories] = useState<CategoryDef[]>([]);
 
   useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.replace("/");
+    }
+  }, [authLoading, isAdmin, router]);
+
+  useEffect(() => {
     if (config) {
       setCategories([...config.categories]);
     }
   }, [config]);
+
+  if (authLoading || !isAdmin) {
+    return <LoadingSkeleton />;
+  }
 
   const handleAddCategory = () => {
     const newPosition = categories.length + 1;
@@ -63,7 +78,7 @@ export default function ProductCategoriesPage() {
   };
 
   if (isLoading) {
-    return <div className="p-6">Ladowanie...</div>;
+    return <div className="p-6">Ładowanie...</div>;
   }
 
   return (
@@ -119,7 +134,7 @@ export default function ProductCategoriesPage() {
           ))}
           <Button variant="outline" size="sm" onClick={handleAddCategory}>
             <Plus className="mr-2 h-4 w-4" />
-            Dodaj kategorie
+            Dodaj kategorię
           </Button>
         </CardContent>
       </Card>

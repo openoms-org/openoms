@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 
 const segmentLabels: Record<string, string> = {
-  orders: "Zamowienia",
+  orders: "Zamówienia",
   shipments: "Przesyłki",
   products: "Produkty",
   integrations: "Integracje",
   settings: "Ustawienia",
-  users: "Uzytkownicy",
+  users: "Użytkownicy",
   returns: "Zwroty",
   audit: "Audyt",
   company: "Firma",

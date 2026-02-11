@@ -110,7 +110,7 @@ func (s *OrderService) Get(ctx context.Context, tenantID, orderID uuid.UUID) (*m
 
 func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateOrderRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	// Default NOT NULL jsonb fields to avoid inserting NULL
@@ -192,7 +192,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 
 func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, req model.UpdateOrderRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var order *model.Order
@@ -261,7 +261,7 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 
 func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID uuid.UUID, req model.StatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var order *model.Order
@@ -336,12 +336,26 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 
 func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.UUID, req model.BulkStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.BulkStatusTransitionResponse, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	resp := &model.BulkStatusTransitionResponse{
 		Results: make([]model.BulkStatusResult, 0, len(req.OrderIDs)),
 	}
+
+	// Collect notifications to dispatch after the transaction commits
+	type emailNotification struct {
+		order     *model.Order
+		oldStatus string
+		newStatus string
+	}
+	type webhookNotification struct {
+		orderID   uuid.UUID
+		oldStatus string
+		newStatus string
+	}
+	var pendingEmails []emailNotification
+	var pendingWebhooks []webhookNotification
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		config, err := s.loadStatusConfig(ctx, tx, tenantID)
@@ -407,14 +421,18 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 
 			updated, err := s.orderRepo.FindByID(ctx, tx, orderID)
 			if err == nil && updated != nil {
-				go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, updated, oldStatus, req.Status)
+				pendingEmails = append(pendingEmails, emailNotification{
+					order: updated, oldStatus: oldStatus, newStatus: req.Status,
+				})
 			}
 
 			result.Success = true
 			resp.Results = append(resp.Results, result)
 			resp.Succeeded++
 
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
+			pendingWebhooks = append(pendingWebhooks, webhookNotification{
+				orderID: orderID, oldStatus: oldStatus, newStatus: req.Status,
+			})
 		}
 
 		return nil
@@ -422,6 +440,16 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Dispatch notifications outside the transaction
+	for _, n := range pendingEmails {
+		n := n
+		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+	}
+	for _, n := range pendingWebhooks {
+		n := n
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
 	}
 
 	return resp, nil

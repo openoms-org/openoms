@@ -10,17 +10,12 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 
 interface OrderSourceChartProps {
   data?: Record<string, number>;
   isLoading: boolean;
 }
-
-const SOURCE_LABELS: Record<string, string> = {
-  allegro: "Allegro",
-  woocommerce: "WooCommerce",
-  manual: "Ręcznie",
-};
 
 const COLORS = ["#3b82f6", "#8b5cf6", "#10b981"];
 
@@ -59,7 +54,7 @@ export function OrderSourceChart({ data, isLoading }: OrderSourceChartProps) {
     ? Object.entries(data)
         .filter(([, count]) => count > 0)
         .map(([source, count]) => ({
-          name: SOURCE_LABELS[source] ?? source,
+          name: ORDER_SOURCE_LABELS[source] ?? source,
           value: count,
         }))
     : [];

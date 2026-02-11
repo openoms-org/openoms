@@ -89,6 +89,21 @@ func (r *StatsRepository) GetDailyRevenue(ctx context.Context, tx pgx.Tx, days i
 	return result, rows.Err()
 }
 
+func (r *StatsRepository) GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) (string, error) {
+	var currency *string
+	err := tx.QueryRow(ctx,
+		`SELECT currency FROM orders GROUP BY currency ORDER BY COUNT(*) DESC LIMIT 1`,
+	).Scan(&currency)
+	if err != nil {
+		// No orders at all — return empty string, not an error
+		return "", nil
+	}
+	if currency == nil {
+		return "", nil
+	}
+	return *currency, nil
+}
+
 func (r *StatsRepository) GetRecentOrders(ctx context.Context, tx pgx.Tx, limit int) ([]model.OrderSummary, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, customer_name, status, source, total_amount, currency, created_at

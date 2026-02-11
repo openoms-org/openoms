@@ -41,11 +41,11 @@ const editSchema = z.object({
 type EditFormValues = z.infer<typeof editSchema>;
 
 const TRANSITION_LABELS: Record<string, string> = {
-  approved: "Zatwierdz",
-  rejected: "Odrzuc",
+  approved: "Zatwierdź",
+  rejected: "Odrzuć",
   cancelled: "Anuluj",
   received: "Oznacz jako odebrane",
-  refunded: "Zwroc srodki",
+  refunded: "Zwróć środki",
 };
 
 const TRANSITION_VARIANTS: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
@@ -171,7 +171,7 @@ export default function ReturnDetailPage() {
             Edytuj
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            Usun
+            Usuń
           </Button>
         </div>
       </div>
@@ -239,7 +239,7 @@ export default function ReturnDetailPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Zamowienie</p>
+                    <p className="text-sm text-muted-foreground">Zamówienie</p>
                     <Link
                       href={`/orders/${returnData.order_id}`}
                       className="mt-1 font-mono text-sm text-primary hover:underline"

@@ -16,8 +16,8 @@ import type {
 
 export function useOrders(params: OrderListParams = {}) {
   const searchParams = new URLSearchParams();
-  if (params.limit) searchParams.set("limit", String(params.limit));
-  if (params.offset) searchParams.set("offset", String(params.offset));
+  if (params.limit != null) searchParams.set("limit", String(params.limit));
+  if (params.offset != null) searchParams.set("offset", String(params.offset));
   if (params.status) searchParams.set("status", params.status);
   if (params.source) searchParams.set("source", params.source);
   if (params.search) searchParams.set("search", params.search);
@@ -109,6 +109,8 @@ export function useOrderAudit(id: string) {
 }
 
 export async function exportOrdersCSV(params: OrderListParams) {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
   const searchParams = new URLSearchParams();
   if (params.status) searchParams.set("status", params.status);
   if (params.source) searchParams.set("source", params.source);
@@ -117,12 +119,32 @@ export async function exportOrdersCSV(params: OrderListParams) {
   if (params.tag) searchParams.set("tag", params.tag);
 
   const token = useAuthStore.getState().token;
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/v1/orders/export?${searchParams}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let response = await fetch(
+    `${API_URL}/v1/orders/export?${searchParams}`,
+    { headers, credentials: "include" }
   );
+
+  // Auto-refresh on 401
+  if (response.status === 401 && token) {
+    const refreshRes = await fetch(`${API_URL}/v1/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (refreshRes.ok) {
+      const data = await refreshRes.json();
+      useAuthStore.getState().setAuth(data.access_token, data.user, data.tenant);
+      headers["Authorization"] = `Bearer ${data.access_token}`;
+      response = await fetch(
+        `${API_URL}/v1/orders/export?${searchParams}`,
+        { headers, credentials: "include" }
+      );
+    }
+  }
 
   if (!response.ok) {
     throw new Error("Błąd podczas eksportu");

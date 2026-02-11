@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -72,7 +71,7 @@ func (s *UserService) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]mode
 
 func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req model.CreateUserRequest, actorID uuid.UUID, ip string) (*model.User, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	// Generate temp password
@@ -126,7 +125,7 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 
 func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID, req model.UpdateUserRequest, actorID uuid.UUID, ip string) (*model.User, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var user *model.User
@@ -209,10 +208,3 @@ func (s *UserService) DeleteUser(ctx context.Context, tenantID, targetID, actorI
 	})
 }
 
-// isDuplicateKeyError checks for PostgreSQL unique constraint violation (code 23505).
-func isDuplicateKeyError(err error) bool {
-	if err == nil {
-		return false
-	}
-	return strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "duplicate key")
-}

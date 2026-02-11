@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 import { useWebhookConfig, useUpdateWebhookConfig } from "@/hooks/use-webhooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Trash2, Plus, ExternalLink } from "lucide-react";
 import type { WebhookEndpoint, WebhookConfig } from "@/types/api";
 
@@ -35,16 +38,28 @@ function createEmptyEndpoint(): WebhookEndpoint {
 }
 
 export default function WebhooksPage() {
+  const router = useRouter();
+  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: config, isLoading } = useWebhookConfig();
   const updateConfig = useUpdateWebhookConfig();
 
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
 
   useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.replace("/");
+    }
+  }, [authLoading, isAdmin, router]);
+
+  useEffect(() => {
     if (config) {
       setEndpoints(config.endpoints.map((e) => ({ ...e })));
     }
   }, [config]);
+
+  if (authLoading || !isAdmin) {
+    return <LoadingSkeleton />;
+  }
 
   const handleAddEndpoint = () => {
     setEndpoints([...endpoints, createEmptyEndpoint()]);
@@ -83,7 +98,7 @@ export default function WebhooksPage() {
         return;
       }
       if (ep.events.length === 0) {
-        toast.error(`Endpoint "${ep.name}" musi miec co najmniej jedno zdarzenie`);
+        toast.error(`Endpoint "${ep.name}" musi mieć co najmniej jedno zdarzenie`);
         return;
       }
     }
@@ -101,7 +116,7 @@ export default function WebhooksPage() {
   };
 
   if (isLoading) {
-    return <div className="p-6">Ladowanie...</div>;
+    return <div className="p-6">Ładowanie...</div>;
   }
 
   return (
@@ -162,6 +177,7 @@ export default function WebhooksPage() {
             <div className="space-y-2">
               <Label>Secret</Label>
               <Input
+                type="password"
                 placeholder="Klucz tajny do podpisywania"
                 value={endpoint.secret}
                 onChange={(e) =>

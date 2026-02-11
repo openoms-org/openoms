@@ -9,8 +9,8 @@ export function useAuditLog(params: AuditListParams) {
     queryKey: ["audit", params],
     queryFn: () => {
       const query = new URLSearchParams();
-      if (params.limit) query.set("limit", params.limit.toString());
-      if (params.offset) query.set("offset", params.offset.toString());
+      if (params.limit != null) query.set("limit", params.limit.toString());
+      if (params.offset != null) query.set("offset", params.offset.toString());
       if (params.entity_type) query.set("entity_type", params.entity_type);
       if (params.action) query.set("action", params.action);
       if (params.user_id) query.set("user_id", params.user_id);

@@ -10,8 +10,8 @@ import type {
 
 export function useProducts(params: ProductListParams = {}) {
   const query = new URLSearchParams();
-  if (params.limit) query.set("limit", String(params.limit));
-  if (params.offset) query.set("offset", String(params.offset));
+  if (params.limit != null) query.set("limit", String(params.limit));
+  if (params.offset != null) query.set("offset", String(params.offset));
   if (params.name) query.set("name", params.name);
   if (params.sku) query.set("sku", params.sku);
   if (params.tag) query.set("tag", params.tag);

@@ -16,7 +16,7 @@ import {
 import { ROLES } from "@/lib/constants";
 
 const createUserSchema = z.object({
-  email: z.string().email("Nieprawidlowy adres email"),
+  email: z.string().email("Nieprawidłowy adres email"),
   name: z.string().min(1, "Nazwa jest wymagana"),
   role: z.enum(["owner", "admin", "member"], "Rola jest wymagana"),
 });
@@ -100,7 +100,7 @@ export function UserForm({
           }
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz role" />
+            <SelectValue placeholder="Wybierz rolę" />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(ROLES).map(([value, label]) => (

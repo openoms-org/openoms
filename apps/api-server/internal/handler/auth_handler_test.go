@@ -2,11 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,14 +104,8 @@ func TestClientIP(t *testing.T) {
 }
 
 func TestIsValidationError(t *testing.T) {
-	assert.True(t, isValidationError(errFromString("validation: email is required")))
-	assert.False(t, isValidationError(errFromString("some other error")))
+	assert.True(t, isValidationError(service.NewValidationError(errors.New("email is required"))))
+	assert.False(t, isValidationError(errors.New("some other error")))
 	assert.False(t, isValidationError(nil))
-	assert.False(t, isValidationError(errFromString("short")))
+	assert.False(t, isValidationError(errors.New("short")))
 }
-
-type simpleError string
-
-func (e simpleError) Error() string { return string(e) }
-
-func errFromString(s string) error { return simpleError(s) }

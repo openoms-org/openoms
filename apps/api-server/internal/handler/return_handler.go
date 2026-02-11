@@ -179,5 +179,5 @@ func (h *ReturnHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "return deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }

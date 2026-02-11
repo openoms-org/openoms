@@ -47,6 +47,7 @@ func (s *TokenService) GenerateAccessToken(user model.User) (string, error) {
 		TenantID: user.TenantID,
 		Email:    user.Email,
 		Role:     user.Role,
+		Type:     "access",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 	return token.SignedString(s.privateKey)
@@ -63,6 +64,7 @@ func (s *TokenService) GenerateRefreshToken(user model.User) (string, error) {
 			Issuer:    "openoms",
 		},
 		TenantID: user.TenantID,
+		Type:     "refresh",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 	return token.SignedString(s.privateKey)

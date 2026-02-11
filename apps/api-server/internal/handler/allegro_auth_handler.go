@@ -55,6 +55,11 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 }
 
 // HandleCallback exchanges an OAuth2 authorization code for tokens and creates/updates the integration.
+// TODO: Validate the OAuth state parameter against a server-side store (Redis/DB)
+// to prevent CSRF attacks. Currently the state generated in GetAuthURL is returned
+// to the client but never verified on callback. A full fix requires persisting
+// the state (e.g. in Redis with a short TTL) and rejecting callbacks with
+// missing or mismatched state values.
 func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Code  string `json:"code"`

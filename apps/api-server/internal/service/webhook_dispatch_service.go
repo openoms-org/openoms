@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -94,6 +96,12 @@ func (s *WebhookDispatchService) Dispatch(ctx context.Context, tenantID uuid.UUI
 }
 
 func (s *WebhookDispatchService) sendWebhook(ctx context.Context, tenantID uuid.UUID, ep model.WebhookEndpoint, eventType string, payload []byte) {
+	// SSRF protection: reject private/internal URLs
+	if isPrivateURL(ep.URL) {
+		slog.Warn("webhook: skipping dispatch to private/internal URL", "url", ep.URL, "tenant_id", tenantID)
+		return
+	}
+
 	// Compute HMAC-SHA256 signature
 	mac := hmac.New(sha256.New, []byte(ep.Secret))
 	mac.Write(payload)
@@ -146,6 +154,58 @@ func (s *WebhookDispatchService) logDelivery(ctx context.Context, tenantID uuid.
 	if err != nil {
 		slog.Error("webhook: failed to log delivery", "error", err)
 	}
+}
+
+// isPrivateURL checks whether a URL resolves to a private/internal IP address.
+func isPrivateURL(urlStr string) bool {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return true // reject unparseable URLs
+	}
+
+	hostname := u.Hostname()
+	if hostname == "" {
+		return true
+	}
+
+	ips, err := net.LookupHost(hostname)
+	if err != nil {
+		return true // reject unresolvable hostnames
+	}
+
+	privateRanges := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"127.0.0.0/8",
+		"169.254.0.0/16",
+		"::1/128",
+		"fc00::/7",
+		"fe80::/10",
+	}
+
+	var cidrs []*net.IPNet
+	for _, cidr := range privateRanges {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			continue
+		}
+		cidrs = append(cidrs, ipNet)
+	}
+
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			continue
+		}
+		for _, cidr := range cidrs {
+			if cidr.Contains(ip) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func matchesEvent(events []string, eventType string) bool {

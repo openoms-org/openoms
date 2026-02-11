@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import {
   Select,
   SelectContent,
@@ -8,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ORDER_STATUSES, ORDER_SOURCES, PAYMENT_STATUSES } from "@/lib/constants";
+import { ORDER_STATUSES, ORDER_SOURCES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 
 interface OrderFilters {
@@ -24,24 +25,43 @@ interface OrderFiltersProps {
   onFilterChange: (filters: OrderFilters) => void;
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  manual: "Ręczne",
-  allegro: "Allegro",
-  woocommerce: "WooCommerce",
-};
-
 export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+
+  const [localSearch, setLocalSearch] = useState(filters.search || "");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Sync local search when filters.search changes externally (e.g. reset)
+  useEffect(() => {
+    setLocalSearch(filters.search || "");
+  }, [filters.search]);
+
+  const handleSearchChange = (value: string) => {
+    setLocalSearch(value);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      onFilterChange({ ...filters, search: value || undefined });
+    }, 300);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex flex-wrap items-center gap-4">
       <Input
         placeholder="Szukaj klienta (imię, email, telefon)..."
-        value={filters.search || ""}
-        onChange={(e) =>
-          onFilterChange({ ...filters, search: e.target.value || undefined })
-        }
+        value={localSearch}
+        onChange={(e) => handleSearchChange(e.target.value)}
         className="w-[300px]"
       />
       <div className="flex items-center gap-2">
@@ -80,7 +100,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
             <SelectItem value="all">Wszystkie</SelectItem>
             {ORDER_SOURCES.map((source) => (
               <SelectItem key={source} value={source}>
-                {SOURCE_LABELS[source] || source}
+                {ORDER_SOURCE_LABELS[source] || source}
               </SelectItem>
             ))}
           </SelectContent>

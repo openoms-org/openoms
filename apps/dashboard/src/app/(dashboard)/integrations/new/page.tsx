@@ -29,7 +29,7 @@ export default function NewIntegrationPage() {
   const handleSubmit = (data: CreateIntegrationRequest) => {
     createIntegration.mutate(data, {
       onSuccess: () => {
-        toast.success("Integracja zostala utworzona");
+        toast.success("Integracja została utworzona");
         router.push("/integrations");
       },
       onError: (error) => {
@@ -42,7 +42,7 @@ export default function NewIntegrationPage() {
     <>
       <PageHeader
         title="Nowa integracja"
-        description="Dodaj nowe polaczenie z zewnetrznym serwisem"
+        description="Dodaj nowe połączenie z zewnętrznym serwisem"
       />
       <Card className="max-w-2xl">
         <CardContent className="pt-6">

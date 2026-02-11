@@ -91,7 +91,7 @@ func (s *SupplierService) Get(ctx context.Context, tenantID, supplierID uuid.UUI
 
 func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateSupplierRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	settings := req.Settings
@@ -133,7 +133,7 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 
 func (s *SupplierService) Update(ctx context.Context, tenantID, supplierID uuid.UUID, req model.UpdateSupplierRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var supplier *model.Supplier

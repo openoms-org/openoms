@@ -10,17 +10,11 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { OrderFilters } from "@/components/orders/order-filters";
 import { BulkActions } from "@/components/orders/bulk-actions";
 import { Button } from "@/components/ui/button";
-import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/constants";
+import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { Download } from "lucide-react";
 import type { Order } from "@/types/api";
-
-const SOURCE_LABELS: Record<string, string> = {
-  manual: "Ręczne",
-  allegro: "Allegro",
-  woocommerce: "WooCommerce",
-};
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -43,7 +37,7 @@ export default function OrdersPage() {
     setOffset(0);
   };
 
-  const { data, isLoading } = useOrders({
+  const { data, isLoading, isError, refetch } = useOrders({
     ...filters,
     limit,
     offset,
@@ -69,7 +63,7 @@ export default function OrdersPage() {
     {
       header: "Źródło",
       accessorKey: "source",
-      cell: (row) => SOURCE_LABELS[row.source] || row.source,
+      cell: (row) => ORDER_SOURCE_LABELS[row.source] || row.source,
       sortable: true,
     },
     {
@@ -149,6 +143,22 @@ export default function OrdersPage() {
       </div>
 
       <OrderFilters filters={filters} onFilterChange={handleFilterChange} />
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       {selectedIds.size > 0 && (
         <BulkActions

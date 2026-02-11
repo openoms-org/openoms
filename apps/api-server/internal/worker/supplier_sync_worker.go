@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -47,8 +48,8 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 	defer rows.Close()
 
 	type supplierRef struct {
-		ID       [16]byte
-		TenantID [16]byte
+		ID       uuid.UUID
+		TenantID uuid.UUID
 	}
 	var refs []supplierRef
 	for rows.Next() {

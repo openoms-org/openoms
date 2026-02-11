@@ -1,10 +1,14 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
@@ -25,46 +29,73 @@ func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.A
 	return &SettingsHandler{tenantRepo: tenantRepo, auditRepo: auditRepo, emailService: emailService, pool: pool}
 }
 
+// getSettingsSection reads a specific section from the tenant's JSON settings blob.
+// If the section or settings don't exist, dest is left at its zero value.
+func (h *SettingsHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, dest interface{}) error {
+	settings, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
+	if err != nil {
+		return err
+	}
+
+	if settings == nil {
+		return nil
+	}
+
+	var allSettings map[string]json.RawMessage
+	if err := json.Unmarshal(settings, &allSettings); err != nil {
+		return nil // settings is empty or not a map
+	}
+
+	raw, ok := allSettings[key]
+	if !ok {
+		return nil
+	}
+
+	// Ignore unmarshal errors — return zero value of dest
+	json.Unmarshal(raw, dest)
+	return nil
+}
+
+// updateSettingsSection merges a value into the tenant's JSON settings blob under the given key,
+// persists it, and writes an audit log entry.
+func (h *SettingsHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, value interface{}) error {
+	existing, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
+	if err != nil {
+		return err
+	}
+
+	var allSettings map[string]json.RawMessage
+	if err := json.Unmarshal(existing, &allSettings); err != nil {
+		allSettings = make(map[string]json.RawMessage)
+	}
+
+	valueJSON, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	allSettings[key] = valueJSON
+
+	newSettings, err := json.Marshal(allSettings)
+	if err != nil {
+		return err
+	}
+
+	return h.tenantRepo.UpdateSettings(ctx, tx, tenantID, newSettings)
+}
+
 func (h *SettingsHandler) GetEmailSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	var settings json.RawMessage
+	emailCfg := model.EmailSettings{
+		SMTPPort: 587,
+		NotifyOn: []string{"confirmed", "shipped", "delivered", "cancelled", "refunded"},
+	}
+
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		var err error
-		settings, err = h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		return err
+		return h.getSettingsSection(r.Context(), tx, tenantID, "email", &emailCfg)
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load settings")
-		return
-	}
-
-	// Parse full settings, extract email part
-	var allSettings map[string]json.RawMessage
-	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		// Settings is empty or not a map — return defaults
-		writeJSON(w, http.StatusOK, model.EmailSettings{
-			SMTPPort: 587,
-			NotifyOn: []string{"confirmed", "shipped", "delivered", "cancelled", "refunded"},
-		})
-		return
-	}
-
-	emailRaw, ok := allSettings["email"]
-	if !ok {
-		writeJSON(w, http.StatusOK, model.EmailSettings{
-			SMTPPort: 587,
-			NotifyOn: []string{"confirmed", "shipped", "delivered", "cancelled", "refunded"},
-		})
-		return
-	}
-
-	var emailCfg model.EmailSettings
-	if err := json.Unmarshal(emailRaw, &emailCfg); err != nil {
-		writeJSON(w, http.StatusOK, model.EmailSettings{
-			SMTPPort: 587,
-			NotifyOn: []string{"confirmed", "shipped", "delivered", "cancelled", "refunded"},
-		})
 		return
 	}
 
@@ -87,38 +118,14 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 
 	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		// Load existing settings
-		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
-			return err
-		}
-
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(existing, &allSettings); err != nil {
-			allSettings = make(map[string]json.RawMessage)
-		}
-
 		// If password is masked, keep the existing one
 		if emailCfg.SMTPPass == "••••••" {
 			var oldEmail model.EmailSettings
-			if oldRaw, ok := allSettings["email"]; ok {
-				json.Unmarshal(oldRaw, &oldEmail)
-				emailCfg.SMTPPass = oldEmail.SMTPPass
-			}
+			_ = h.getSettingsSection(r.Context(), tx, tenantID, "email", &oldEmail)
+			emailCfg.SMTPPass = oldEmail.SMTPPass
 		}
 
-		emailJSON, err := json.Marshal(emailCfg)
-		if err != nil {
-			return err
-		}
-		allSettings["email"] = emailJSON
-
-		newSettings, err := json.Marshal(allSettings)
-		if err != nil {
-			return err
-		}
-
-		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "email", emailCfg); err != nil {
 			return err
 		}
 		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
@@ -145,33 +152,12 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 func (h *SettingsHandler) GetCompanySettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	var settings json.RawMessage
+	var companyCfg model.CompanySettings
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		var err error
-		settings, err = h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		return err
+		return h.getSettingsSection(r.Context(), tx, tenantID, "company", &companyCfg)
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load settings")
-		return
-	}
-
-	// Parse full settings, extract company part
-	var allSettings map[string]json.RawMessage
-	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		writeJSON(w, http.StatusOK, model.CompanySettings{})
-		return
-	}
-
-	companyRaw, ok := allSettings["company"]
-	if !ok {
-		writeJSON(w, http.StatusOK, model.CompanySettings{})
-		return
-	}
-
-	var companyCfg model.CompanySettings
-	if err := json.Unmarshal(companyRaw, &companyCfg); err != nil {
-		writeJSON(w, http.StatusOK, model.CompanySettings{})
 		return
 	}
 
@@ -189,29 +175,7 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 	}
 
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		// Load existing settings
-		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
-			return err
-		}
-
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(existing, &allSettings); err != nil {
-			allSettings = make(map[string]json.RawMessage)
-		}
-
-		companyJSON, err := json.Marshal(companyCfg)
-		if err != nil {
-			return err
-		}
-		allSettings["company"] = companyJSON
-
-		newSettings, err := json.Marshal(allSettings)
-		if err != nil {
-			return err
-		}
-
-		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "company", companyCfg); err != nil {
 			return err
 		}
 		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
@@ -234,25 +198,15 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 func (h *SettingsHandler) GetOrderStatuses(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	var config model.OrderStatusConfig
+	config := model.DefaultOrderStatusConfig()
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		settings, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
+		var loaded model.OrderStatusConfig
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "order_statuses", &loaded); err != nil {
 			return err
 		}
-
-		if settings != nil {
-			var allSettings map[string]json.RawMessage
-			if err := json.Unmarshal(settings, &allSettings); err == nil {
-				if raw, ok := allSettings["order_statuses"]; ok {
-					if err := json.Unmarshal(raw, &config); err == nil && len(config.Statuses) > 0 {
-						return nil
-					}
-				}
-			}
+		if len(loaded.Statuses) > 0 {
+			config = loaded
 		}
-
-		config = model.DefaultOrderStatusConfig()
 		return nil
 	})
 
@@ -303,28 +257,7 @@ func (h *SettingsHandler) UpdateOrderStatuses(w http.ResponseWriter, r *http.Req
 
 	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
-			return err
-		}
-
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(existing, &allSettings); err != nil {
-			allSettings = make(map[string]json.RawMessage)
-		}
-
-		configJSON, err := json.Marshal(config)
-		if err != nil {
-			return err
-		}
-		allSettings["order_statuses"] = configJSON
-
-		newSettings, err := json.Marshal(allSettings)
-		if err != nil {
-			return err
-		}
-
-		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "order_statuses", config); err != nil {
 			return err
 		}
 		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
@@ -348,25 +281,15 @@ func (h *SettingsHandler) UpdateOrderStatuses(w http.ResponseWriter, r *http.Req
 func (h *SettingsHandler) GetCustomFields(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	var config model.CustomFieldsConfig
+	config := model.CustomFieldsConfig{Fields: []model.CustomFieldDef{}}
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		settings, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
+		var loaded model.CustomFieldsConfig
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "custom_fields", &loaded); err != nil {
 			return err
 		}
-
-		if settings != nil {
-			var allSettings map[string]json.RawMessage
-			if err := json.Unmarshal(settings, &allSettings); err == nil {
-				if raw, ok := allSettings["custom_fields"]; ok {
-					if err := json.Unmarshal(raw, &config); err == nil && len(config.Fields) > 0 {
-						return nil
-					}
-				}
-			}
+		if len(loaded.Fields) > 0 {
+			config = loaded
 		}
-
-		config = model.CustomFieldsConfig{Fields: []model.CustomFieldDef{}}
 		return nil
 	})
 
@@ -411,28 +334,7 @@ func (h *SettingsHandler) UpdateCustomFields(w http.ResponseWriter, r *http.Requ
 
 	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
-			return err
-		}
-
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(existing, &allSettings); err != nil {
-			allSettings = make(map[string]json.RawMessage)
-		}
-
-		configJSON, err := json.Marshal(config)
-		if err != nil {
-			return err
-		}
-		allSettings["custom_fields"] = configJSON
-
-		newSettings, err := json.Marshal(allSettings)
-		if err != nil {
-			return err
-		}
-
-		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "custom_fields", config); err != nil {
 			return err
 		}
 		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
@@ -456,25 +358,15 @@ func (h *SettingsHandler) UpdateCustomFields(w http.ResponseWriter, r *http.Requ
 func (h *SettingsHandler) GetProductCategories(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	var config model.ProductCategoriesConfig
+	config := model.DefaultProductCategoriesConfig()
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		settings, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
+		var loaded model.ProductCategoriesConfig
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "product_categories", &loaded); err != nil {
 			return err
 		}
-
-		if settings != nil {
-			var allSettings map[string]json.RawMessage
-			if err := json.Unmarshal(settings, &allSettings); err == nil {
-				if raw, ok := allSettings["product_categories"]; ok {
-					if err := json.Unmarshal(raw, &config); err == nil && len(config.Categories) > 0 {
-						return nil
-					}
-				}
-			}
+		if len(loaded.Categories) > 0 {
+			config = loaded
 		}
-
-		config = model.DefaultProductCategoriesConfig()
 		return nil
 	})
 
@@ -511,28 +403,7 @@ func (h *SettingsHandler) UpdateProductCategories(w http.ResponseWriter, r *http
 
 	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
-			return err
-		}
-
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(existing, &allSettings); err != nil {
-			allSettings = make(map[string]json.RawMessage)
-		}
-
-		configJSON, err := json.Marshal(config)
-		if err != nil {
-			return err
-		}
-		allSettings["product_categories"] = configJSON
-
-		newSettings, err := json.Marshal(allSettings)
-		if err != nil {
-			return err
-		}
-
-		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "product_categories", config); err != nil {
 			return err
 		}
 		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
@@ -556,25 +427,15 @@ func (h *SettingsHandler) UpdateProductCategories(w http.ResponseWriter, r *http
 func (h *SettingsHandler) GetWebhooks(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	var config model.WebhookConfig
+	config := model.DefaultWebhookConfig()
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		settings, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
+		var loaded model.WebhookConfig
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "webhooks", &loaded); err != nil {
 			return err
 		}
-
-		if settings != nil {
-			var allSettings map[string]json.RawMessage
-			if err := json.Unmarshal(settings, &allSettings); err == nil {
-				if raw, ok := allSettings["webhooks"]; ok {
-					if err := json.Unmarshal(raw, &config); err == nil && len(config.Endpoints) > 0 {
-						return nil
-					}
-				}
-			}
+		if len(loaded.Endpoints) > 0 {
+			config = loaded
 		}
-
-		config = model.DefaultWebhookConfig()
 		return nil
 	})
 
@@ -617,32 +478,17 @@ func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request)
 			}
 			ids[ep.ID] = true
 		}
+
+		// SSRF protection: reject private/internal webhook URLs
+		if isPrivateWebhookURL(ep.URL) {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("endpoint URL %q resolves to a private/internal address", ep.URL))
+			return
+		}
 	}
 
 	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
-			return err
-		}
-
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(existing, &allSettings); err != nil {
-			allSettings = make(map[string]json.RawMessage)
-		}
-
-		configJSON, err := json.Marshal(config)
-		if err != nil {
-			return err
-		}
-		allSettings["webhooks"] = configJSON
-
-		newSettings, err := json.Marshal(allSettings)
-		if err != nil {
-			return err
-		}
-
-		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "webhooks", config); err != nil {
 			return err
 		}
 		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
@@ -677,21 +523,13 @@ func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) 
 	// Load email settings
 	var emailCfg model.EmailSettings
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		settings, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
-		if err != nil {
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "email", &emailCfg); err != nil {
 			return err
 		}
-
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(settings, &allSettings); err != nil {
-			return err
-		}
-
-		emailRaw, ok := allSettings["email"]
-		if !ok {
+		if emailCfg.SMTPHost == "" {
 			return fmt.Errorf("email settings not configured")
 		}
-		return json.Unmarshal(emailRaw, &emailCfg)
+		return nil
 	})
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -704,4 +542,56 @@ func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Test email sent successfully"})
+}
+
+// isPrivateWebhookURL checks whether a URL resolves to a private/internal IP address.
+func isPrivateWebhookURL(urlStr string) bool {
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return true
+	}
+
+	hostname := u.Hostname()
+	if hostname == "" {
+		return true
+	}
+
+	ips, err := net.LookupHost(hostname)
+	if err != nil {
+		return true
+	}
+
+	privateRanges := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"127.0.0.0/8",
+		"169.254.0.0/16",
+		"::1/128",
+		"fc00::/7",
+		"fe80::/10",
+	}
+
+	var cidrs []*net.IPNet
+	for _, cidr := range privateRanges {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			continue
+		}
+		cidrs = append(cidrs, ipNet)
+	}
+
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			continue
+		}
+		for _, cidr := range cidrs {
+			if cidr.Contains(ip) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
