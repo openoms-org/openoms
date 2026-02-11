@@ -11,13 +11,15 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUploadHandler_Upload_MissingFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	h := NewUploadHandler(tmpDir, 1<<20, "http://localhost:8080")
+	store := storage.NewLocalStorage(tmpDir, "http://localhost:8080")
+	h := NewUploadHandler(store, 1<<20)
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -44,7 +46,8 @@ func TestUploadHandler_Upload_MissingFile(t *testing.T) {
 
 func TestUploadHandler_Upload_UnsupportedFileType(t *testing.T) {
 	tmpDir := t.TempDir()
-	h := NewUploadHandler(tmpDir, 1<<20, "http://localhost:8080")
+	store := storage.NewLocalStorage(tmpDir, "http://localhost:8080")
+	h := NewUploadHandler(store, 1<<20)
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -73,7 +76,8 @@ func TestUploadHandler_Upload_UnsupportedFileType(t *testing.T) {
 
 func TestUploadHandler_Upload_ValidPNG(t *testing.T) {
 	tmpDir := t.TempDir()
-	h := NewUploadHandler(tmpDir, 1<<20, "http://localhost:8080")
+	store := storage.NewLocalStorage(tmpDir, "http://localhost:8080")
+	h := NewUploadHandler(store, 1<<20)
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -123,7 +127,8 @@ func TestUploadHandler_Upload_ValidPNG(t *testing.T) {
 
 func TestUploadHandler_Upload_InvalidMultipartForm(t *testing.T) {
 	tmpDir := t.TempDir()
-	h := NewUploadHandler(tmpDir, 1<<20, "http://localhost:8080")
+	store := storage.NewLocalStorage(tmpDir, "http://localhost:8080")
+	h := NewUploadHandler(store, 1<<20)
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -139,6 +144,7 @@ func TestUploadHandler_Upload_InvalidMultipartForm(t *testing.T) {
 }
 
 func TestUploadHandler_NewUploadHandler(t *testing.T) {
-	h := NewUploadHandler("/tmp/uploads", 5*1024*1024, "http://example.com")
+	store := storage.NewLocalStorage("/tmp/uploads", "http://example.com")
+	h := NewUploadHandler(store, 5*1024*1024)
 	assert.NotNil(t, h)
 }

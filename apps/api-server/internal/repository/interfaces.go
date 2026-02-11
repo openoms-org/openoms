@@ -182,3 +182,13 @@ type SupplierProductRepo interface {
 	UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error
 	LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error
 }
+
+// VariantRepo defines the interface for product variant persistence operations.
+type VariantRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.VariantListFilter) ([]model.ProductVariant, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ProductVariant, error)
+	Create(ctx context.Context, tx pgx.Tx, variant *model.ProductVariant) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateVariantRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	CountByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (int, error)
+}
