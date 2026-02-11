@@ -3,11 +3,14 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 type Customer struct {
 	ID                     uuid.UUID       `json:"id"`
@@ -49,6 +52,9 @@ func (r *CreateCustomerRequest) Validate() error {
 	}
 	if err := validateMaxLengthPtr("email", r.Email, 255); err != nil {
 		return err
+	}
+	if r.Email != nil && *r.Email != "" && !emailRegex.MatchString(*r.Email) {
+		return errors.New("nieprawidłowy format adresu email")
 	}
 	if err := validateMaxLengthPtr("phone", r.Phone, 50); err != nil {
 		return err
@@ -95,6 +101,9 @@ func (r *UpdateCustomerRequest) Validate() error {
 	}
 	if err := validateMaxLengthPtr("email", r.Email, 255); err != nil {
 		return err
+	}
+	if r.Email != nil && *r.Email != "" && !emailRegex.MatchString(*r.Email) {
+		return errors.New("nieprawidłowy format adresu email")
 	}
 	if err := validateMaxLengthPtr("phone", r.Phone, 50); err != nil {
 		return err

@@ -41,7 +41,7 @@ export default function CustomersPage() {
     if (!deleteId) return;
     deleteCustomer.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Klient zostal usuniety");
+        toast.success("Klient został usunięty");
         setDeleteId(null);
       },
       onError: (error) => {
@@ -59,7 +59,7 @@ export default function CustomersPage() {
     <>
       <PageHeader
         title="Klienci"
-        description="Baza klientow i historia zamowien"
+        description="Baza klientów i historia zamówień"
         action={{ label: "Nowy klient", href: "/customers/new" }}
       />
 
@@ -81,7 +81,7 @@ export default function CustomersPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
           </p>
           <Button
             variant="outline"
@@ -89,7 +89,7 @@ export default function CustomersPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       )}
@@ -97,8 +97,8 @@ export default function CustomersPage() {
       {customers.length === 0 ? (
         <EmptyState
           icon={Contact}
-          title="Brak klientow"
-          description="Dodaj pierwszego klienta, aby sledzic zamowienia i historie zakupow."
+          title="Brak klientów"
+          description="Dodaj pierwszego klienta, aby śledzić zamówienia i historię zakupów."
           action={{ label: "Nowy klient", href: "/customers/new" }}
         />
       ) : (
@@ -106,12 +106,12 @@ export default function CustomersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Imie i nazwisko</TableHead>
+                <TableHead>Imię i nazwisko</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Telefon</TableHead>
                 <TableHead>Firma</TableHead>
-                <TableHead className="text-right">Zamowien</TableHead>
-                <TableHead className="text-right">Wydano lacznie</TableHead>
+                <TableHead className="text-right">Zamówień</TableHead>
+                <TableHead className="text-right">Wydano łącznie</TableHead>
                 <TableHead>Tagi</TableHead>
                 <TableHead className="w-[60px]" />
               </TableRow>
@@ -174,9 +174,9 @@ export default function CustomersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun klienta"
-        description="Czy na pewno chcesz usunac tego klienta? Ta operacja jest nieodwracalna."
-        confirmLabel="Usun"
+        title="Usuń klienta"
+        description="Czy na pewno chcesz usunąć tego klienta? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteCustomer.isPending}

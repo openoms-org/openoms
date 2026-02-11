@@ -75,6 +75,14 @@ func (s *OrderGroupService) MergeOrders(ctx context.Context, tenantID, userID uu
 			}
 		}
 
+		for i := 1; i < len(orders); i++ {
+			e0 := orders[0].CustomerEmail
+			ei := orders[i].CustomerEmail
+			if (e0 == nil) != (ei == nil) || (e0 != nil && *e0 != *ei) {
+				return NewValidationError(fmt.Errorf("wszystkie zamówienia muszą być od tego samego klienta"))
+			}
+		}
+
 		// Combine items from all orders
 		var combinedItems []json.RawMessage
 		for _, items := range allItems {

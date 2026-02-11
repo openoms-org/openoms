@@ -49,6 +49,7 @@ type UserRepo interface {
 	UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UUID, roleID *uuid.UUID) error
 	UpdateName(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string) error
 	UpdateLastLogin(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	UpdateLastLogout(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	CountByRole(ctx context.Context, tx pgx.Tx, role string) (int, error)
 }

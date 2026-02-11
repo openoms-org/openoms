@@ -17,14 +17,14 @@ test.describe('Customers', () => {
   test('new customer form renders correctly', async ({ page }) => {
     await page.goto('/customers/new');
     await expect(page.getByRole('heading', { name: 'Nowy klient' })).toBeVisible();
-    await expect(page.getByLabel('Imie i nazwisko')).toBeVisible();
+    await expect(page.getByLabel('Imię i nazwisko')).toBeVisible();
     await expect(page.getByLabel('E-mail')).toBeVisible();
     await expect(page.getByLabel('Telefon')).toBeVisible();
   });
 
   test('customer form validates required fields', async ({ page }) => {
     await page.goto('/customers/new');
-    await page.getByRole('button', { name: /Utworz klienta/ }).click();
+    await page.getByRole('button', { name: /Utwórz klienta/ }).click();
     await expect(page.getByText(/wymagane/i)).toBeVisible({ timeout: 3000 });
   });
 });

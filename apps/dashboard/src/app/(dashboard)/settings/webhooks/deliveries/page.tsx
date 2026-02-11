@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/utils";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useWebhookDeliveries } from "@/hooks/use-webhooks";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -133,6 +134,7 @@ export default function WebhookDeliveriesPage() {
   ];
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/settings/webhooks">
@@ -203,5 +205,6 @@ export default function WebhookDeliveriesPage() {
         />
       )}
     </div>
+    </AdminGuard>
   );
 }

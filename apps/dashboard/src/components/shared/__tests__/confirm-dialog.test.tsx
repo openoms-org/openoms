@@ -33,7 +33,7 @@ describe("ConfirmDialog", () => {
     expect(screen.queryByText("Confirm Delete")).not.toBeInTheDocument();
   });
 
-  it("shows default confirm label (Potwierdz)", () => {
+  it("shows default confirm label (Potwierdź)", () => {
     render(
       <ConfirmDialog
         open={true}
@@ -44,7 +44,7 @@ describe("ConfirmDialog", () => {
       />
     );
 
-    expect(screen.getByText("Potwierdz")).toBeInTheDocument();
+    expect(screen.getByText("Potwierdź")).toBeInTheDocument();
   });
 
   it("shows custom confirm label", () => {

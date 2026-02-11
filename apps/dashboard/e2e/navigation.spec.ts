@@ -4,7 +4,7 @@ import { gotoWithAuth } from './helpers/actions';
 test.describe('Navigation', () => {
   test('sidebar renders main navigation items', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Pulpit' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Zamówienia' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Produkty' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Przesyłki' })).toBeVisible();

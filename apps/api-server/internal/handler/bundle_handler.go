@@ -138,6 +138,10 @@ func (h *BundleHandler) GetBundleStock(w http.ResponseWriter, r *http.Request) {
 
 	stock, err := h.bundleService.CalculateBundleStock(r.Context(), tenantID, productID)
 	if err != nil {
+		if errors.Is(err, service.ErrProductNotBundle) {
+			writeError(w, http.StatusBadRequest, "produkt nie jest bundlem")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "failed to calculate bundle stock")
 		return
 	}

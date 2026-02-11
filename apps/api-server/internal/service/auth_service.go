@@ -212,6 +212,29 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 	}, refreshToken, nil
 }
 
+type RefreshTokenInfo struct {
+	UserID   uuid.UUID
+	TenantID uuid.UUID
+}
+
+func (s *AuthService) ValidateRefreshToken(tokenStr string) (*RefreshTokenInfo, error) {
+	claims, err := s.tokenService.ValidateToken(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return nil, err
+	}
+	return &RefreshTokenInfo{UserID: userID, TenantID: claims.TenantID}, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, userID, tenantID uuid.UUID) error {
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.userRepo.UpdateLastLogout(ctx, tx, userID)
+	})
+}
+
 // Refresh validates a refresh token and issues new tokens.
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.TokenResponse, string, error) {
 	claims, err := s.tokenService.ValidateToken(refreshToken)
@@ -244,6 +267,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 	}
 	if user == nil {
 		return nil, "", ErrUserNotFound
+	}
+
+	if user.LastLogoutAt != nil && claims.IssuedAt != nil && claims.IssuedAt.Time.Before(*user.LastLogoutAt) {
+		return nil, "", fmt.Errorf("refresh token revoked by logout")
 	}
 
 	accessToken, err := s.tokenService.GenerateAccessToken(*user)

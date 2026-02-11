@@ -32,7 +32,7 @@ export function Sidebar() {
     const isActive =
       item.href === "/"
         ? pathname === "/"
-        : pathname.startsWith(item.href);
+        : pathname === item.href || (pathname.startsWith(item.href + "/") && !filteredItems.some((other) => other.href !== item.href && other.href.startsWith(item.href + "/") && pathname.startsWith(other.href)));
 
     return (
       <Link

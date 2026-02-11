@@ -170,7 +170,7 @@ export default function WarehouseDetailPage() {
             {formatDate(warehouse.created_at)}
           </p>
         </div>
-        {warehouse.is_default && <Badge variant="default">Domyslny</Badge>}
+        {warehouse.is_default && <Badge variant="default">Domyślny</Badge>}
         {warehouse.active ? (
           <Badge
             variant="outline"
@@ -219,7 +219,7 @@ export default function WarehouseDetailPage() {
                   onCheckedChange={setIsDefault}
                   id="is-default"
                 />
-                <Label htmlFor="is-default">Domyslny</Label>
+                <Label htmlFor="is-default">Domyślny</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -266,7 +266,7 @@ export default function WarehouseDetailPage() {
           <div>
             <CardTitle>Stan magazynowy ({stockData?.total ?? 0})</CardTitle>
             <CardDescription>
-              Stany magazynowe produktow w tym magazynie
+              Stany magazynowe produktów w tym magazynie
             </CardDescription>
           </div>
           <Dialog open={showAddStock} onOpenChange={setShowAddStock}>
@@ -305,7 +305,7 @@ export default function WarehouseDetailPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="stock-qty">Ilosc</Label>
+                    <Label htmlFor="stock-qty">Ilość</Label>
                     <Input
                       id="stock-qty"
                       type="number"
@@ -358,17 +358,17 @@ export default function WarehouseDetailPage() {
             <LoadingSkeleton />
           ) : stocks.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Brak stanow magazynowych. Dodaj produkt, aby rozpoczac
-              zarzadzanie stanem.
+              Brak stanów magazynowych. Dodaj produkt, aby rozpocząć
+              zarządzanie stanem.
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Produkt</TableHead>
-                  <TableHead className="text-right">Ilosc</TableHead>
+                  <TableHead className="text-right">Ilość</TableHead>
                   <TableHead className="text-right">Zarezerwowane</TableHead>
-                  <TableHead className="text-right">Dostepne</TableHead>
+                  <TableHead className="text-right">Dostępne</TableHead>
                   <TableHead className="text-right">Min. stan</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>

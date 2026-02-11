@@ -36,14 +36,14 @@ const DEFAULT_SETTINGS: FreshdeskSettings = {
 
 const FRESHDESK_STATUS_LABELS: Record<number, string> = {
   2: "Otwarty",
-  3: "Oczekujacy",
-  4: "Rozwiazany",
-  5: "Zamkniety",
+  3: "Oczekujący",
+  4: "Rozwiązany",
+  5: "Zamknięty",
 };
 
 const FRESHDESK_PRIORITY_LABELS: Record<number, string> = {
   1: "Niski",
-  2: "Sredni",
+  2: "Średni",
   3: "Wysoki",
   4: "Pilny",
 };
@@ -71,7 +71,7 @@ export default function HelpdeskSettingsPage() {
       toast.success("Ustawienia Freshdesk zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac ustawien";
+        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
       toast.error(message);
     } finally {
       setSaving(false);
@@ -84,7 +84,7 @@ export default function HelpdeskSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">Helpdesk (Freshdesk)</h1>
           <p className="text-muted-foreground">
-            Integracja z Freshdesk do obslugi zgloszen klientow
+            Integracja z Freshdesk do obsługi zgłoszeń klientów
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function HelpdeskSettingsPage() {
               <div>
                 <p className="font-medium">Aktywna integracja</p>
                 <p className="text-sm text-muted-foreground">
-                  Wlacz tworzenie zgloszen w Freshdesk z poziomu zamowien
+                  Włącz tworzenie zgłoszeń w Freshdesk z poziomu zamówień
                 </p>
               </div>
               <Switch
@@ -153,7 +153,7 @@ export default function HelpdeskSettingsPage() {
         {/* Recent tickets card */}
         <Card>
           <CardHeader>
-            <CardTitle>Ostatnie zgloszenia</CardTitle>
+            <CardTitle>Ostatnie zgłoszenia</CardTitle>
           </CardHeader>
           <CardContent>
             {ticketsLoading ? (
@@ -199,7 +199,7 @@ export default function HelpdeskSettingsPage() {
               </Table>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Brak zgloszen. Skonfiguruj Freshdesk aby zobaczyc zgloszenia.
+                Brak zgłoszeń. Skonfiguruj Freshdesk aby zobaczyć zgłoszenia.
               </p>
             )}
           </CardContent>

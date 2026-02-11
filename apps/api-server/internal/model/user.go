@@ -15,9 +15,10 @@ type User struct {
 	Name        string     `json:"name"`
 	Role        string     `json:"role"`
 	RoleID      *uuid.UUID `json:"role_id,omitempty"`
-	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
+	LastLogoutAt *time.Time `json:"last_logout_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 // Tenant represents a tenant organization.

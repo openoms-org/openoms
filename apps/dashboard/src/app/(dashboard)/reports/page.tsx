@@ -16,8 +16,9 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { format, parseISO } from "date-fns";
+import { format, subDays, eachDayOfInterval } from "date-fns";
 import { pl } from "date-fns/locale";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,7 +61,7 @@ function RevenueBySourceChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Przychod wg zrodla (ostatnie 30 dni)</CardTitle>
+        <CardTitle>Przychód wg źródła (ostatnie 30 dni)</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -91,7 +92,7 @@ function RevenueBySourceChart() {
                 // @ts-expect-error Recharts formatter type mismatch
                 formatter={(value: number | string) => [
                   formatCurrency(Number(value), "PLN"),
-                  "Przychod",
+                  "Przychód",
                 ]}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -116,6 +117,23 @@ function RevenueBySourceChart() {
   );
 }
 
+function fillTrendGaps(data: { date: string; count: number; avg_value: number }[] | undefined, days: number) {
+  if (!data) return undefined;
+  const dataMap = new Map(data.map((d) => [d.date, d]));
+  const today = new Date();
+  const allDays = eachDayOfInterval({ start: subDays(today, days - 1), end: today });
+  return allDays.map((day) => {
+    const key = format(day, "yyyy-MM-dd");
+    const entry = dataMap.get(key);
+    return {
+      date: key,
+      count: entry?.count ?? 0,
+      avg_value: entry?.avg_value ?? 0,
+      label: format(day, "dd MMM", { locale: pl }),
+    };
+  });
+}
+
 function DailyRevenueTrendChart() {
   const { data, isLoading } = useOrderTrends(30);
   const { resolvedTheme } = useTheme();
@@ -123,15 +141,12 @@ function DailyRevenueTrendChart() {
   const axisColor = isDark ? "#a1a1aa" : "#71717a";
   const gridColor = isDark ? "#27272a" : "#e4e4e7";
 
-  const chartData = data?.map((d) => ({
-    ...d,
-    label: format(parseISO(d.date), "dd MMM", { locale: pl }),
-  }));
+  const chartData = fillTrendGaps(data, 30);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trend zamowien (ostatnie 30 dni)</CardTitle>
+        <CardTitle>Trend zamówień (ostatnie 30 dni)</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -163,7 +178,7 @@ function DailyRevenueTrendChart() {
                 formatter={(value: number | string, name: string) => {
                   const v = Number(value);
                   if (name === "avg_value")
-                    return [formatCurrency(v, "PLN"), "Srednia wartosc"];
+                    return [formatCurrency(v, "PLN"), "Średnia wartość"];
                   return [v, "Liczba"];
                 }}
                 contentStyle={{
@@ -175,8 +190,8 @@ function DailyRevenueTrendChart() {
               />
               <Legend
                 formatter={(value: string) => {
-                  if (value === "avg_value") return "Srednia wartosc";
-                  return "Liczba zamowien";
+                  if (value === "avg_value") return "Średnia wartość";
+                  return "Liczba zamówień";
                 }}
               />
               <Line
@@ -215,8 +230,8 @@ function TopProductsTable() {
               <TableRow>
                 <TableHead>Nazwa</TableHead>
                 <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Ilosc</TableHead>
-                <TableHead className="text-right">Przychod</TableHead>
+                <TableHead className="text-right">Ilość</TableHead>
+                <TableHead className="text-right">Przychód</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -249,15 +264,12 @@ function OrderTrendsChart() {
   const axisColor = isDark ? "#a1a1aa" : "#71717a";
   const gridColor = isDark ? "#27272a" : "#e4e4e7";
 
-  const chartData = data?.map((d) => ({
-    ...d,
-    label: format(parseISO(d.date), "dd MMM", { locale: pl }),
-  }));
+  const chartData = fillTrendGaps(data, 30);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trend zamowien</CardTitle>
+        <CardTitle>Trend zamówień</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -298,8 +310,8 @@ function OrderTrendsChart() {
                 formatter={(value: number | string, name: string) => {
                   const v = Number(value);
                   if (name === "avg_value")
-                    return [formatCurrency(v, "PLN"), "Srednia wartosc"];
-                  return [v, "Liczba zamowien"];
+                    return [formatCurrency(v, "PLN"), "Średnia wartość"];
+                  return [v, "Liczba zamówień"];
                 }}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -310,8 +322,8 @@ function OrderTrendsChart() {
               />
               <Legend
                 formatter={(value: string) => {
-                  if (value === "avg_value") return "Srednia wartosc";
-                  return "Liczba zamowien";
+                  if (value === "avg_value") return "Średnia wartość";
+                  return "Liczba zamówień";
                 }}
               />
               <Bar
@@ -354,7 +366,7 @@ function PaymentMethodChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Metody platnosci</CardTitle>
+        <CardTitle>Metody płatności</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -406,11 +418,12 @@ function PaymentMethodChart() {
 
 export default function ReportsPage() {
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Raporty</h1>
         <p className="text-muted-foreground mt-1">
-          Szczegolowe statystyki i analizy sprzedazy
+          Szczegółowe statystyki i analizy sprzedaży
         </p>
       </div>
 
@@ -419,7 +432,7 @@ export default function ReportsPage() {
           <TabsTrigger value="revenue">Przychody</TabsTrigger>
           <TabsTrigger value="products">Produkty</TabsTrigger>
           <TabsTrigger value="trends">Trendy</TabsTrigger>
-          <TabsTrigger value="payments">Platnosci</TabsTrigger>
+          <TabsTrigger value="payments">Płatności</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="space-y-6">
@@ -440,5 +453,6 @@ export default function ReportsPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </AdminGuard>
   );
 }

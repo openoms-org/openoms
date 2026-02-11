@@ -15,7 +15,7 @@ export function useAuth() {
       body: JSON.stringify(data),
     });
     useAuthStore.getState().setAuth(res.access_token, res.user, res.tenant);
-    document.cookie = "has_session=1; path=/; SameSite=Lax";
+    document.cookie = "has_session=1; path=/; SameSite=Lax; max-age=2592000";
     router.push("/");
   };
 
@@ -25,7 +25,7 @@ export function useAuth() {
       body: JSON.stringify(data),
     });
     useAuthStore.getState().setAuth(res.access_token, res.user, res.tenant);
-    document.cookie = "has_session=1; path=/; SameSite=Lax";
+    document.cookie = "has_session=1; path=/; SameSite=Lax; max-age=2592000";
     router.push("/");
   };
 

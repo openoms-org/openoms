@@ -113,7 +113,7 @@ func (h *InvoiceHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to cancel invoice")
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Faktura anulowana"})
 }
 
 func (h *InvoiceHandler) GetPDF(w http.ResponseWriter, r *http.Request) {

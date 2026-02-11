@@ -57,8 +57,8 @@ function PublicReturnForm() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Wystapil blad" }));
-        setError(data.error || "Wystapil blad podczas skladania zwrotu");
+        const data = await res.json().catch(() => ({ error: "Wystąpił błąd" }));
+        setError(data.error || "Wystąpił błąd podczas składania zwrotu");
         return;
       }
 
@@ -66,7 +66,7 @@ function PublicReturnForm() {
       setReturnToken(data.return_token);
       setStep("success");
     } catch {
-      setError("Nie udalo sie polaczyc z serwerem. Sprobuj ponownie.");
+      setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
     } finally {
       setIsSubmitting(false);
     }
@@ -77,17 +77,17 @@ function PublicReturnForm() {
       {step === "form" && (
         <Card>
           <CardHeader>
-            <CardTitle>Zglos zwrot</CardTitle>
+            <CardTitle>Zgłoś zwrot</CardTitle>
             <CardDescription>
-              Wypelnij formularz, aby zglosic zwrot zamowienia.
-              Podaj numer zamowienia i adres email, ktory zostal
-              uzyty przy skladaniu zamowienia.
+              Wypełnij formularz, aby zgłosić zwrot zamówienia.
+              Podaj numer zamówienia i adres email, który został
+              użyty przy składaniu zamówienia.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="order-id">Numer zamowienia (ID)</Label>
+                <Label htmlFor="order-id">Numer zamówienia (ID)</Label>
                 <Input
                   id="order-id"
                   value={orderId}
@@ -108,12 +108,12 @@ function PublicReturnForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reason">Powod zwrotu</Label>
+                <Label htmlFor="reason">Powód zwrotu</Label>
                 <Textarea
                   id="reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Opisz powod zwrotu..."
+                  placeholder="Opisz powód zwrotu..."
                   rows={3}
                   required
                 />
@@ -140,7 +140,7 @@ function PublicReturnForm() {
                 className="w-full"
                 disabled={isSubmitting || !orderId || !email || !reason}
               >
-                {isSubmitting ? "Wysylanie..." : "Zglos zwrot"}
+                {isSubmitting ? "Wysyłanie..." : "Zgłoś zwrot"}
                 {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
@@ -151,16 +151,16 @@ function PublicReturnForm() {
       {step === "success" && returnToken && (
         <Card>
           <CardHeader>
-            <CardTitle>Zwrot zostal zgloszony</CardTitle>
+            <CardTitle>Zwrot został zgłoszony</CardTitle>
             <CardDescription>
-              Twoje zgloszenie zwrotu zostalo przyjete. Mozesz sledzic
-              jego status pod ponizszym linkiem.
+              Twoje zgłoszenie zwrotu zostało przyjęte. Możesz śledzić
+              jego status pod poniższym linkiem.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
               <p className="text-sm text-green-800 dark:text-green-200">
-                Twoje zgloszenie zostalo zarejestrowane. Otrzymasz informacje o zmianach statusu.
+                Twoje zgłoszenie zostało zarejestrowane. Otrzymasz informacje o zmianach statusu.
               </p>
             </div>
 
@@ -168,7 +168,7 @@ function PublicReturnForm() {
               className="w-full"
               onClick={() => router.push(`/return-request/${returnToken}`)}
             >
-              Sprawdz status zwrotu
+              Sprawdź status zwrotu
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>
@@ -198,7 +198,7 @@ export default function PublicReturnPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                 </div>
                 <p className="text-center mt-4 text-muted-foreground">
-                  Ladowanie...
+                  Ładowanie...
                 </p>
               </CardContent>
             </Card>

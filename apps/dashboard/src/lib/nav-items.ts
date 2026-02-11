@@ -42,7 +42,7 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Pulpit", icon: LayoutDashboard },
   { href: "/orders", label: "Zamówienia", icon: ShoppingCart, group: "Sprzedaż" },
   { href: "/shipments", label: "Przesyłki", icon: Truck, group: "Sprzedaż" },
   { href: "/returns", label: "Zwroty", icon: RotateCcw, group: "Sprzedaż" },
@@ -62,7 +62,7 @@ export const navItems: NavItem[] = [
   { href: "/settings/sync-jobs", label: "Synchronizacja", icon: RefreshCw, adminOnly: true, group: "Połączenia" },
   { href: "/settings/marketing", label: "Marketing", icon: Send, adminOnly: true, group: "Połączenia" },
   { href: "/settings/helpdesk", label: "Helpdesk", icon: Headphones, adminOnly: true, group: "Połączenia" },
-  { href: "/audit", label: "Dziennik", icon: ScrollText, adminOnly: true, group: "Administracja" },
+  { href: "/audit", label: "Dziennik aktywności", icon: ScrollText, adminOnly: true, group: "Administracja" },
   { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Administracja" },
   { href: "/settings/roles", label: "Role", icon: Shield, adminOnly: true, group: "Administracja" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Administracja" },

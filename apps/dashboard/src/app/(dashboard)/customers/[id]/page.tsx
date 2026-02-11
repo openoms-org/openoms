@@ -81,7 +81,7 @@ export default function CustomerDetailPage() {
     }
     try {
       await updateCustomer.mutateAsync(formData);
-      toast.success("Dane klienta zostaly zaktualizowane");
+      toast.success("Dane klienta zostały zaktualizowane");
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -91,7 +91,7 @@ export default function CustomerDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteCustomer.mutateAsync(params.id);
-      toast.success("Klient zostal usuniety");
+      toast.success("Klient został usunięty");
       router.push("/customers");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -116,7 +116,7 @@ export default function CustomerDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">Nie znaleziono klienta</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/customers")}>
-          Wroc do listy
+          Wróć do listy
         </Button>
       </div>
     );
@@ -140,7 +140,7 @@ export default function CustomerDetailPage() {
             Edytuj
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            Usun
+            Usuń
           </Button>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function CustomerDetailPage() {
           <CardContent>
             <div className="space-y-4 max-w-xl">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Imie i nazwisko *</Label>
+                <Label htmlFor="edit-name">Imię i nazwisko *</Label>
                 <Input
                   id="edit-name"
                   value={formData.name || ""}
@@ -249,7 +249,7 @@ export default function CustomerDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Imie i nazwisko</p>
+                  <p className="text-sm text-muted-foreground">Imię i nazwisko</p>
                   <p className="mt-1 font-medium">{customer.name}</p>
                 </div>
                 {customer.email && (
@@ -319,7 +319,7 @@ export default function CustomerDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Historia zamowien</CardTitle>
+              <CardTitle>Historia zamówień</CardTitle>
             </CardHeader>
             <CardContent>
               {ordersData?.items && ordersData.items.length > 0 ? (
@@ -328,7 +328,7 @@ export default function CustomerDetailPage() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Zrodlo</TableHead>
+                      <TableHead>Źródło</TableHead>
                       <TableHead className="text-right">Kwota</TableHead>
                       <TableHead>Data</TableHead>
                     </TableRow>
@@ -358,7 +358,7 @@ export default function CustomerDetailPage() {
                 </Table>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Brak zamowien dla tego klienta.
+                  Brak zamówień dla tego klienta.
                 </p>
               )}
             </CardContent>
@@ -372,11 +372,11 @@ export default function CustomerDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground">Zamowien</p>
+                <p className="text-sm text-muted-foreground">Zamówień</p>
                 <p className="mt-1 text-2xl font-bold">{customer.total_orders}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Wydano lacznie</p>
+                <p className="text-sm text-muted-foreground">Wydano łącznie</p>
                 <p className="mt-1 text-2xl font-bold">
                   {formatCurrency(customer.total_spent)}
                 </p>
@@ -394,8 +394,8 @@ export default function CustomerDetailPage() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="Usuwanie klienta"
-        description="Czy na pewno chcesz usunac tego klienta? Ta operacja jest nieodwracalna."
-        confirmLabel="Usun klienta"
+        description="Czy na pewno chcesz usunąć tego klienta? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń klienta"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteCustomer.isPending}

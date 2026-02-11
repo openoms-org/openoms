@@ -53,7 +53,7 @@ import { Badge } from "@/components/ui/badge";
 const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
   active: { label: "Aktywny", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
   inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  error: { label: "Bład", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  error: { label: "Błąd", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export default function SupplierDetailPage() {
@@ -123,7 +123,7 @@ export default function SupplierDetailPage() {
       { supplierProductId: linkingProductId, productId: selectedProductId },
       {
         onSuccess: () => {
-          toast.success("Produkt powiazany");
+          toast.success("Produkt powiązany");
           setLinkingProductId(null);
           setSelectedProductId("");
           setProductSearch("");
@@ -289,7 +289,7 @@ export default function SupplierDetailPage() {
                           }}
                         >
                           <Link2 className="h-3 w-3 mr-1" />
-                          Powiaz
+                          Powiąż
                         </Button>
                       )}
                     </TableCell>
@@ -313,7 +313,7 @@ export default function SupplierDetailPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Powiaz z produktem OMS</DialogTitle>
+            <DialogTitle>Powiąż z produktem OMS</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -323,7 +323,7 @@ export default function SupplierDetailPage() {
                 <Input
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="Wpisz nazwe produktu..."
+                  placeholder="Wpisz nazwę produktu..."
                   className="pl-9"
                 />
               </div>
@@ -354,7 +354,7 @@ export default function SupplierDetailPage() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  {productSearch ? "Brak wynikow" : "Wpisz nazwe, aby wyszukac"}
+                  {productSearch ? "Brak wyników" : "Wpisz nazwę, aby wyszukać"}
                 </p>
               )}
             </div>
@@ -369,7 +369,7 @@ export default function SupplierDetailPage() {
                 onClick={handleLink}
                 disabled={!selectedProductId || linkProduct.isPending}
               >
-                {linkProduct.isPending ? "Laczenie..." : "Powiaz"}
+                {linkProduct.isPending ? "Łączenie..." : "Powiąż"}
               </Button>
             </div>
           </div>

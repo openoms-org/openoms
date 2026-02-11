@@ -23,8 +23,8 @@ func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
 func (r *TenantRepository) FindBySlug(ctx context.Context, slug string) (*model.Tenant, error) {
 	var t model.Tenant
 	err := r.pool.QueryRow(ctx,
-		"SELECT id, name, slug, plan FROM find_tenant_by_slug($1)", slug,
-	).Scan(&t.ID, &t.Name, &t.Slug, &t.Plan)
+		"SELECT id, name, slug, plan, settings, created_at, updated_at FROM find_tenant_by_slug($1)", slug,
+	).Scan(&t.ID, &t.Name, &t.Slug, &t.Plan, &t.Settings, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

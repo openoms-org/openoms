@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useSyncJobs } from "@/hooks/use-sync-jobs";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -149,6 +150,7 @@ export default function SyncJobsPage() {
   ];
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Historia synchronizacji</h1>
@@ -289,5 +291,6 @@ export default function SyncJobsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </AdminGuard>
   );
 }

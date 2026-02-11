@@ -8,9 +8,13 @@ import {
   useConfirmWarehouseDocument,
   useCancelWarehouseDocument,
 } from "@/hooks/use-warehouse-documents";
+import { useWarehouse } from "@/hooks/use-warehouses";
+import { useSupplier } from "@/hooks/use-suppliers";
+import { useOrder } from "@/hooks/use-orders";
+import { useProduct } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { getErrorMessage } from "@/lib/api-client";
-import { formatDate } from "@/lib/utils";
+import { formatDate, shortId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,10 +28,16 @@ import {
 import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 
+function ProductName({ productId }: { productId: string }) {
+  const { data: product } = useProduct(productId);
+  if (product) return <>{product.name}</>;
+  return <span className="font-mono text-xs">{shortId(productId)}</span>;
+}
+
 const DOC_TYPE_LABELS: Record<string, string> = {
-  PZ: "PZ - Przyjecie zewnetrzne",
-  WZ: "WZ - Wydanie zewnetrzne",
-  MM: "MM - Przesuniecie miedzymagazynowe",
+  PZ: "PZ - Przyjęcie zewnętrzne",
+  WZ: "WZ - Wydanie zewnętrzne",
+  MM: "MM - Przesunięcie międzymagazynowe",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -51,6 +61,11 @@ export default function WarehouseDocumentDetailPage() {
   const confirmDoc = useConfirmWarehouseDocument();
   const cancelDoc = useCancelWarehouseDocument();
 
+  const { data: warehouse } = useWarehouse(doc?.warehouse_id ?? "");
+  const { data: targetWarehouse } = useWarehouse(doc?.target_warehouse_id ?? "");
+  const { data: supplier } = useSupplier(doc?.supplier_id ?? "");
+  const { data: order } = useOrder(doc?.order_id ?? "");
+
   if (isLoading) {
     return <LoadingSkeleton />;
   }
@@ -60,7 +75,7 @@ export default function WarehouseDocumentDetailPage() {
       <AdminGuard>
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Nie udalo sie zaladowac dokumentu.
+            Nie udało się załadować dokumentu.
           </p>
           <Button
             variant="outline"
@@ -68,7 +83,7 @@ export default function WarehouseDocumentDetailPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       </AdminGuard>
@@ -78,7 +93,7 @@ export default function WarehouseDocumentDetailPage() {
   const handleConfirm = () => {
     confirmDoc.mutate(id, {
       onSuccess: () => {
-        toast.success("Dokument zostal zatwierdzony. Stany magazynowe zaktualizowane.");
+        toast.success("Dokument został zatwierdzony. Stany magazynowe zaktualizowane.");
         refetch();
       },
       onError: (error) => {
@@ -90,7 +105,7 @@ export default function WarehouseDocumentDetailPage() {
   const handleCancel = () => {
     cancelDoc.mutate(id, {
       onSuccess: () => {
-        toast.success("Dokument zostal anulowany");
+        toast.success("Dokument został anulowany");
         refetch();
       },
       onError: (error) => {
@@ -107,7 +122,7 @@ export default function WarehouseDocumentDetailPage() {
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link href="/settings/warehouse-documents">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Powrot do listy
+            Powrót do listy
           </Link>
         </Button>
 
@@ -134,7 +149,7 @@ export default function WarehouseDocumentDetailPage() {
                   disabled={confirmDoc.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {confirmDoc.isPending ? "Zatwierdzanie..." : "Zatwierdz"}
+                  {confirmDoc.isPending ? "Zatwierdzanie..." : "Zatwierdź"}
                 </Button>
                 <Button
                   variant="outline"
@@ -153,31 +168,33 @@ export default function WarehouseDocumentDetailPage() {
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="rounded-md border p-4 space-y-2">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase">
-            Szczegoly
+            Szczegóły
           </h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <span className="text-muted-foreground">Typ:</span>
             <span>{doc.document_type}</span>
             <span className="text-muted-foreground">Magazyn:</span>
-            <span className="font-mono text-xs">{doc.warehouse_id}</span>
+            <span>{warehouse?.name ?? shortId(doc.warehouse_id)}</span>
             {doc.target_warehouse_id && (
               <>
                 <span className="text-muted-foreground">Magazyn docelowy:</span>
-                <span className="font-mono text-xs">
-                  {doc.target_warehouse_id}
+                <span>
+                  {targetWarehouse?.name ?? shortId(doc.target_warehouse_id)}
                 </span>
               </>
             )}
             {doc.supplier_id && (
               <>
                 <span className="text-muted-foreground">Dostawca:</span>
-                <span className="font-mono text-xs">{doc.supplier_id}</span>
+                <span>{supplier?.name ?? shortId(doc.supplier_id)}</span>
               </>
             )}
             {doc.order_id && (
               <>
-                <span className="text-muted-foreground">Zamowienie:</span>
-                <span className="font-mono text-xs">{doc.order_id}</span>
+                <span className="text-muted-foreground">Zamówienie:</span>
+                <Link href={`/orders/${doc.order_id}`} className="text-primary hover:underline">
+                  {order ? `#${shortId(doc.order_id)}` : shortId(doc.order_id)}
+                </Link>
               </>
             )}
           </div>
@@ -217,9 +234,9 @@ export default function WarehouseDocumentDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID Produktu</TableHead>
-                  <TableHead>ID Wariantu</TableHead>
-                  <TableHead>Ilosc</TableHead>
+                  <TableHead>Produkt</TableHead>
+                  <TableHead>Wariant</TableHead>
+                  <TableHead>Ilość</TableHead>
                   <TableHead>Cena jedn.</TableHead>
                   <TableHead>Uwagi</TableHead>
                 </TableRow>
@@ -227,8 +244,8 @@ export default function WarehouseDocumentDetailPage() {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-mono text-xs">
-                      {item.product_id}
+                    <TableCell>
+                      <ProductName productId={item.product_id} />
                     </TableCell>
                     <TableCell className="font-mono text-xs">
                       {item.variant_id || "---"}

@@ -32,13 +32,13 @@ const NOTIFICATION_STATUSES = [
 
 const DEFAULT_TEMPLATES: Record<string, string> = {
   shipped:
-    "Twoje zamowienie {{.OrderNumber}} zostalo wyslane. Numer przesylki: {{.TrackingNumber}}",
-  delivered: "Twoje zamowienie {{.OrderNumber}} zostalo dostarczone.",
+    "Twoje zamówienie {{.OrderNumber}} zostało wysłane. Numer przesyłki: {{.TrackingNumber}}",
+  delivered: "Twoje zamówienie {{.OrderNumber}} zostało dostarczone.",
   out_for_delivery:
-    "Twoje zamowienie {{.OrderNumber}} jest w doreczeniu. Sledz: {{.TrackingURL}}",
+    "Twoje zamówienie {{.OrderNumber}} jest w doręczeniu. Śledź: {{.TrackingURL}}",
   in_transit:
-    "Twoje zamowienie {{.OrderNumber}} jest w transporcie. Numer przesylki: {{.TrackingNumber}}",
-  cancelled: "Twoje zamowienie {{.OrderNumber}} zostalo anulowane.",
+    "Twoje zamówienie {{.OrderNumber}} jest w transporcie. Numer przesyłki: {{.TrackingNumber}}",
+  cancelled: "Twoje zamówienie {{.OrderNumber}} zostało anulowane.",
 };
 
 const DEFAULT_SETTINGS: SMSSettings = {
@@ -74,7 +74,7 @@ export default function SMSSettingsPage() {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udalo sie zapisac ustawien SMS";
+          : "Nie udało się zapisać ustawień SMS";
       toast.error(message);
     }
   };
@@ -82,12 +82,12 @@ export default function SMSSettingsPage() {
   const handleTestSMS = async () => {
     try {
       await sendTest.mutateAsync(testPhone);
-      toast.success("Testowy SMS wyslany");
+      toast.success("Testowy SMS wysłany");
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udalo sie wyslac testowego SMS";
+          : "Nie udało się wysłać testowego SMS";
       toast.error(message);
     }
   };
@@ -106,7 +106,7 @@ export default function SMSSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">Powiadomienia SMS</h1>
         <p className="text-muted-foreground">
-          Konfiguracja wysylki SMS do klientow przez SMSAPI.pl
+          Konfiguracja wysyłki SMS do klientów przez SMSAPI.pl
         </p>
       </div>
 
@@ -120,7 +120,7 @@ export default function SMSSettingsPage() {
             <div>
               <p className="font-medium">Powiadomienia SMS</p>
               <p className="text-sm text-muted-foreground">
-                Wysylaj automatyczne SMS-y przy zmianie statusu zamowienia
+                Wysyłaj automatyczne SMS-y przy zmianie statusu zamówienia
               </p>
             </div>
             <Switch
@@ -176,7 +176,7 @@ export default function SMSSettingsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Wybierz przy jakich zmianach statusu wysylac SMS do klienta
+            Wybierz przy jakich zmianach statusu wysyłać SMS do klienta
           </p>
           <div className="space-y-3">
             {NOTIFICATION_STATUSES.map(({ value, label }) => (
@@ -207,11 +207,11 @@ export default function SMSSettingsPage() {
       {/* Templates card */}
       <Card>
         <CardHeader>
-          <CardTitle>Szablony wiadomosci</CardTitle>
+          <CardTitle>Szablony wiadomości</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Dostepne zmienne:{" "}
+            Dostępne zmienne:{" "}
             <code className="text-xs bg-muted px-1 py-0.5 rounded dark:bg-muted/50">
               {"{{.OrderNumber}}"}
             </code>{" "}
@@ -274,7 +274,7 @@ export default function SMSSettingsPage() {
               ) : (
                 <Send className="h-4 w-4" />
               )}
-              Wyslij
+              Wyślij
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
