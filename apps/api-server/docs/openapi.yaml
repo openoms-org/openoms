@@ -1,0 +1,4945 @@
+openapi: 3.1.0
+info:
+  title: OpenOMS API
+  version: 1.0.0
+  description: |
+    OpenOMS - Open-source Order Management System for Polish e-commerce.
+    Multi-tenant REST API for managing orders, shipments, returns, products,
+    invoices, customers, integrations, and more.
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Authentication and registration
+  - name: Users
+    description: User management
+  - name: Orders
+    description: Order CRUD and status management
+  - name: Shipments
+    description: Shipment CRUD, status transitions, and label generation
+  - name: Returns
+    description: Return CRUD and status transitions
+  - name: Products
+    description: Product CRUD and variants
+  - name: Invoices
+    description: Invoice creation and retrieval
+  - name: Customers
+    description: Customer CRUD
+  - name: Integrations
+    description: Marketplace integration management
+  - name: Suppliers
+    description: Supplier management and product feeds
+  - name: Warehouses
+    description: Warehouse and stock management
+  - name: Automation
+    description: Automation rules engine
+  - name: Stats
+    description: Dashboard statistics and analytics
+  - name: Settings
+    description: Tenant settings (admin only)
+  - name: Audit
+    description: Audit log
+  - name: Webhooks
+    description: Incoming webhook endpoints
+  - name: Print
+    description: Packing slips and print templates
+  - name: Uploads
+    description: File uploads
+  - name: InPost
+    description: InPost parcel locker search
+  - name: Health
+    description: Health check
+  - name: Import
+    description: CSV order import
+  - name: SyncJobs
+    description: Synchronization job monitoring
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from /v1/auth/login or /v1/auth/register
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    # -- Pagination --
+    PaginationParams:
+      type: object
+      properties:
+        limit:
+          type: integer
+          default: 20
+          maximum: 100
+        offset:
+          type: integer
+          default: 0
+        sort_by:
+          type: string
+        sort_order:
+          type: string
+          enum: [asc, desc]
+          default: desc
+
+    # -- Auth --
+    RegisterRequest:
+      type: object
+      required: [email, password, name, tenant_name, tenant_slug]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        name:
+          type: string
+        tenant_name:
+          type: string
+        tenant_slug:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password, tenant_slug]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        tenant_slug:
+          type: string
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+        user:
+          $ref: '#/components/schemas/User'
+        tenant:
+          $ref: '#/components/schemas/Tenant'
+
+    # -- User --
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member]
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Tenant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        plan:
+          type: string
+        settings:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateUserRequest:
+      type: object
+      required: [email, name, role]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member]
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member]
+
+    # -- Order --
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        external_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+        integration_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+          nullable: true
+        customer_phone:
+          type: string
+          nullable: true
+        shipping_address:
+          type: object
+        billing_address:
+          type: object
+        items:
+          type: array
+          items:
+            type: object
+        total_amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        ordered_at:
+          type: string
+          format: date-time
+          nullable: true
+        shipped_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivery_method:
+          type: string
+          nullable: true
+        pickup_point_id:
+          type: string
+          nullable: true
+        payment_status:
+          type: string
+        payment_method:
+          type: string
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        customer_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateOrderRequest:
+      type: object
+      required: [customer_name]
+      properties:
+        external_id:
+          type: string
+        source:
+          type: string
+          default: manual
+        integration_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+        customer_phone:
+          type: string
+        shipping_address:
+          type: object
+        billing_address:
+          type: object
+        items:
+          type: array
+          items:
+            type: object
+        total_amount:
+          type: number
+          format: double
+          default: 0
+        currency:
+          type: string
+          default: PLN
+        notes:
+          type: string
+        metadata:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        delivery_method:
+          type: string
+        pickup_point_id:
+          type: string
+        ordered_at:
+          type: string
+          format: date-time
+        payment_status:
+          type: string
+        payment_method:
+          type: string
+
+    UpdateOrderRequest:
+      type: object
+      properties:
+        external_id:
+          type: string
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+        customer_phone:
+          type: string
+        shipping_address:
+          type: object
+        billing_address:
+          type: object
+        items:
+          type: array
+          items:
+            type: object
+        total_amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        notes:
+          type: string
+        metadata:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        delivery_method:
+          type: string
+        pickup_point_id:
+          type: string
+        payment_status:
+          type: string
+        payment_method:
+          type: string
+        paid_at:
+          type: string
+          format: date-time
+
+    StatusTransitionRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+        force:
+          type: boolean
+          default: false
+
+    BulkStatusTransitionRequest:
+      type: object
+      required: [order_ids, status]
+      properties:
+        order_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 100
+        status:
+          type: string
+        force:
+          type: boolean
+          default: false
+
+    BulkStatusTransitionResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              order_id:
+                type: string
+                format: uuid
+              success:
+                type: boolean
+              error:
+                type: string
+        succeeded:
+          type: integer
+        failed:
+          type: integer
+
+    OrderListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Product --
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        external_id:
+          type: string
+          nullable: true
+        source:
+          type: string
+        name:
+          type: string
+        sku:
+          type: string
+          nullable: true
+        ean:
+          type: string
+          nullable: true
+        price:
+          type: number
+          format: double
+        stock_quantity:
+          type: integer
+        metadata:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        description_short:
+          type: string
+        description_long:
+          type: string
+        weight:
+          type: number
+          nullable: true
+        width:
+          type: number
+          nullable: true
+        height:
+          type: number
+          nullable: true
+        depth:
+          type: number
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        images:
+          type: array
+          items:
+            type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required: [name]
+      properties:
+        external_id:
+          type: string
+        source:
+          type: string
+          default: manual
+        name:
+          type: string
+        sku:
+          type: string
+        ean:
+          type: string
+        price:
+          type: number
+          format: double
+        stock_quantity:
+          type: integer
+        metadata:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        description_short:
+          type: string
+        description_long:
+          type: string
+        weight:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        depth:
+          type: number
+        category:
+          type: string
+        image_url:
+          type: string
+        images:
+          type: array
+          items:
+            type: object
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        external_id:
+          type: string
+        source:
+          type: string
+        name:
+          type: string
+        sku:
+          type: string
+        ean:
+          type: string
+        price:
+          type: number
+          format: double
+        stock_quantity:
+          type: integer
+        metadata:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        description_short:
+          type: string
+        description_long:
+          type: string
+        weight:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        depth:
+          type: number
+        category:
+          type: string
+        image_url:
+          type: string
+        images:
+          type: array
+          items:
+            type: object
+
+    ProductListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Product Variant --
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          nullable: true
+        ean:
+          type: string
+          nullable: true
+        name:
+          type: string
+        attributes:
+          type: object
+        price_override:
+          type: number
+          nullable: true
+        stock_quantity:
+          type: integer
+        weight:
+          type: number
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        position:
+          type: integer
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateVariantRequest:
+      type: object
+      required: [name]
+      properties:
+        sku:
+          type: string
+        ean:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: object
+        price_override:
+          type: number
+        stock_quantity:
+          type: integer
+          default: 0
+        weight:
+          type: number
+        image_url:
+          type: string
+        position:
+          type: integer
+        active:
+          type: boolean
+
+    UpdateVariantRequest:
+      type: object
+      properties:
+        sku:
+          type: string
+        ean:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: object
+        price_override:
+          type: number
+        stock_quantity:
+          type: integer
+        weight:
+          type: number
+        image_url:
+          type: string
+        position:
+          type: integer
+        active:
+          type: boolean
+
+    VariantListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Shipment --
+    Shipment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        integration_id:
+          type: string
+          format: uuid
+          nullable: true
+        tracking_number:
+          type: string
+          nullable: true
+        status:
+          type: string
+        label_url:
+          type: string
+          nullable: true
+        carrier_data:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateShipmentRequest:
+      type: object
+      required: [order_id, provider]
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        integration_id:
+          type: string
+          format: uuid
+        tracking_number:
+          type: string
+        label_url:
+          type: string
+        carrier_data:
+          type: object
+
+    UpdateShipmentRequest:
+      type: object
+      properties:
+        tracking_number:
+          type: string
+        label_url:
+          type: string
+        carrier_data:
+          type: object
+
+    ShipmentStatusTransitionRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    GenerateLabelRequest:
+      type: object
+      required: [service_type]
+      properties:
+        service_type:
+          type: string
+        parcel_size:
+          type: string
+        target_point:
+          type: string
+        label_format:
+          type: string
+          enum: [pdf, zpl, epl]
+          default: pdf
+        weight_kg:
+          type: number
+        width_cm:
+          type: number
+        height_cm:
+          type: number
+        depth_cm:
+          type: number
+        cod_amount:
+          type: number
+        insured_value:
+          type: number
+
+    ShipmentListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Shipment'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Return --
+    Return:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [requested, approved, rejected, received, refunded, cancelled]
+        reason:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+        refund_amount:
+          type: number
+          format: double
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateReturnRequest:
+      type: object
+      required: [order_id, reason]
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+        refund_amount:
+          type: number
+          format: double
+          default: 0
+        notes:
+          type: string
+
+    UpdateReturnRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+        refund_amount:
+          type: number
+          format: double
+        notes:
+          type: string
+
+    ReturnStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected, received, refunded, cancelled]
+
+    ReturnListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Return'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Invoice --
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        external_id:
+          type: string
+          nullable: true
+        external_number:
+          type: string
+          nullable: true
+        status:
+          type: string
+        invoice_type:
+          type: string
+        total_net:
+          type: number
+          nullable: true
+        total_gross:
+          type: number
+          nullable: true
+        currency:
+          type: string
+        issue_date:
+          type: string
+          format: date-time
+          nullable: true
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+        pdf_url:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+        error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateInvoiceRequest:
+      type: object
+      required: [order_id, provider]
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        invoice_type:
+          type: string
+          default: vat
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+        nip:
+          type: string
+        payment_method:
+          type: string
+        notes:
+          type: string
+
+    InvoiceListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invoice'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Customer --
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        name:
+          type: string
+        company_name:
+          type: string
+          nullable: true
+        nip:
+          type: string
+          nullable: true
+        default_shipping_address:
+          type: object
+        default_billing_address:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          nullable: true
+        total_orders:
+          type: integer
+        total_spent:
+          type: number
+          format: double
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateCustomerRequest:
+      type: object
+      required: [name]
+      properties:
+        email:
+          type: string
+        phone:
+          type: string
+        name:
+          type: string
+        company_name:
+          type: string
+        nip:
+          type: string
+        default_shipping_address:
+          type: object
+        default_billing_address:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        phone:
+          type: string
+        name:
+          type: string
+        company_name:
+          type: string
+        nip:
+          type: string
+        default_shipping_address:
+          type: object
+        default_billing_address:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+
+    CustomerListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Customer'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Integration --
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        label:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive, error]
+        has_credentials:
+          type: boolean
+        settings:
+          type: object
+        sync_cursor:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        last_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateIntegrationRequest:
+      type: object
+      required: [provider, credentials]
+      properties:
+        provider:
+          type: string
+        label:
+          type: string
+        credentials:
+          type: object
+        settings:
+          type: object
+
+    UpdateIntegrationRequest:
+      type: object
+      properties:
+        label:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, error]
+        credentials:
+          type: object
+        settings:
+          type: object
+        sync_cursor:
+          type: string
+        error_message:
+          type: string
+
+    IntegrationListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Integration'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Supplier --
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          nullable: true
+        feed_url:
+          type: string
+          nullable: true
+        feed_format:
+          type: string
+          enum: [iof, csv, custom]
+        status:
+          type: string
+          enum: [active, inactive]
+        settings:
+          type: object
+        last_sync_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateSupplierRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        feed_url:
+          type: string
+        feed_format:
+          type: string
+          enum: [iof, csv, custom]
+          default: iof
+        settings:
+          type: object
+
+    UpdateSupplierRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        feed_url:
+          type: string
+        feed_format:
+          type: string
+          enum: [iof, csv, custom]
+        status:
+          type: string
+          enum: [active, inactive]
+        settings:
+          type: object
+        error_message:
+          type: string
+
+    SupplierProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+          nullable: true
+        external_id:
+          type: string
+        name:
+          type: string
+        ean:
+          type: string
+          nullable: true
+        sku:
+          type: string
+          nullable: true
+        price:
+          type: number
+          nullable: true
+        stock_quantity:
+          type: integer
+        metadata:
+          type: object
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    LinkProductRequest:
+      type: object
+      required: [product_id]
+      properties:
+        product_id:
+          type: string
+          format: uuid
+
+    SupplierListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Supplier'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    SupplierProductListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupplierProduct'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Warehouse --
+    Warehouse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+          nullable: true
+        address:
+          type: object
+        is_default:
+          type: boolean
+        active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateWarehouseRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        address:
+          type: object
+        is_default:
+          type: boolean
+        active:
+          type: boolean
+
+    UpdateWarehouseRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        address:
+          type: object
+        is_default:
+          type: boolean
+        active:
+          type: boolean
+
+    WarehouseStock:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        warehouse_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+          nullable: true
+        quantity:
+          type: integer
+        reserved:
+          type: integer
+        min_stock:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UpsertWarehouseStockRequest:
+      type: object
+      required: [product_id]
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 0
+        reserved:
+          type: integer
+          minimum: 0
+        min_stock:
+          type: integer
+          minimum: 0
+
+    WarehouseListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Warehouse'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    WarehouseStockListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WarehouseStock'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Automation --
+    AutomationRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        priority:
+          type: integer
+        trigger_event:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationCondition'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationAction'
+        last_fired_at:
+          type: string
+          format: date-time
+          nullable: true
+        fire_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AutomationCondition:
+      type: object
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+          enum: [eq, neq, in, not_in, gt, gte, lt, lte, contains, not_contains, starts_with]
+        value: {}
+
+    AutomationAction:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [set_status, add_tag, send_email, create_invoice, webhook]
+        config:
+          type: object
+
+    CreateAutomationRuleRequest:
+      type: object
+      required: [name, trigger_event]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        priority:
+          type: integer
+        trigger_event:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationCondition'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationAction'
+
+    UpdateAutomationRuleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        priority:
+          type: integer
+        trigger_event:
+          type: string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationCondition'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationAction'
+
+    AutomationRuleLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        rule_id:
+          type: string
+          format: uuid
+        trigger_event:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        conditions_met:
+          type: boolean
+        actions_executed:
+          type: array
+          items:
+            type: object
+        error_message:
+          type: string
+          nullable: true
+        executed_at:
+          type: string
+          format: date-time
+
+    TestAutomationRuleRequest:
+      type: object
+      properties:
+        data:
+          type: object
+
+    TestAutomationRuleResponse:
+      type: object
+      properties:
+        condition_results:
+          type: array
+          items:
+            type: object
+            properties:
+              condition:
+                $ref: '#/components/schemas/AutomationCondition'
+              met:
+                type: boolean
+        all_conditions_met:
+          type: boolean
+        actions_to_execute:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationAction'
+
+    AutomationRuleListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutomationRule'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Stats --
+    DashboardStats:
+      type: object
+      properties:
+        order_counts:
+          type: object
+          properties:
+            total:
+              type: integer
+            by_status:
+              type: object
+              additionalProperties:
+                type: integer
+            by_source:
+              type: object
+              additionalProperties:
+                type: integer
+        revenue:
+          type: object
+          properties:
+            total:
+              type: number
+            currency:
+              type: string
+            daily:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                  amount:
+                    type: number
+                  count:
+                    type: integer
+        recent_orders:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              customer_name:
+                type: string
+              status:
+                type: string
+              source:
+                type: string
+              total_amount:
+                type: number
+              currency:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+
+    TopProduct:
+      type: object
+      properties:
+        name:
+          type: string
+        sku:
+          type: string
+        total_quantity:
+          type: integer
+        total_revenue:
+          type: number
+
+    SourceRevenue:
+      type: object
+      properties:
+        source:
+          type: string
+        revenue:
+          type: number
+        count:
+          type: integer
+
+    DailyOrderTrend:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+        avg_value:
+          type: number
+
+    # -- Audit --
+    AuditLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_name:
+          type: string
+          nullable: true
+        action:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        changes:
+          type: object
+          additionalProperties:
+            type: string
+        ip_address:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    AuditListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Webhook Delivery --
+    WebhookDelivery:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        event_type:
+          type: string
+        payload:
+          type: object
+        status:
+          type: string
+        response_code:
+          type: integer
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    WebhookDeliveryListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookDelivery'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- SyncJob --
+    SyncJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        integration_id:
+          type: string
+          format: uuid
+        job_type:
+          type: string
+        status:
+          type: string
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        items_processed:
+          type: integer
+        items_failed:
+          type: integer
+        error_message:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    SyncJobListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncJob'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    # -- Import --
+    ImportPreviewResponse:
+      type: object
+      properties:
+        headers:
+          type: array
+          items:
+            type: string
+        total_rows:
+          type: integer
+        sample_rows:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              data:
+                type: object
+              errors:
+                type: array
+                items:
+                  type: string
+        mappings:
+          type: array
+          items:
+            type: object
+            properties:
+              csv_column:
+                type: string
+              order_field:
+                type: string
+
+    ImportResult:
+      type: object
+      properties:
+        total_rows:
+          type: integer
+        imported:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              field:
+                type: string
+              message:
+                type: string
+
+    # -- Settings --
+    EmailSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        smtp_host:
+          type: string
+        smtp_port:
+          type: integer
+        smtp_user:
+          type: string
+        smtp_pass:
+          type: string
+        from_email:
+          type: string
+        from_name:
+          type: string
+        notify_on:
+          type: array
+          items:
+            type: string
+
+    CompanySettings:
+      type: object
+      properties:
+        company_name:
+          type: string
+        logo_url:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        post_code:
+          type: string
+        nip:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+
+    SMSSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        api_token:
+          type: string
+        from:
+          type: string
+        notify_on:
+          type: array
+          items:
+            type: string
+        templates:
+          type: object
+          additionalProperties:
+            type: string
+
+    InvoicingSettings:
+      type: object
+      properties:
+        provider:
+          type: string
+        auto_generate:
+          type: boolean
+
+    OrderStatusConfig:
+      type: object
+      properties:
+        statuses:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              color:
+                type: string
+              position:
+                type: integer
+        transitions:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    CustomFieldsConfig:
+      type: object
+      properties:
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              type:
+                type: string
+                enum: [text, number, select, date, checkbox]
+              required:
+                type: boolean
+              position:
+                type: integer
+              options:
+                type: array
+                items:
+                  type: string
+
+    ProductCategoriesConfig:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              color:
+                type: string
+              position:
+                type: integer
+
+    WebhookConfig:
+      type: object
+      properties:
+        endpoints:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              url:
+                type: string
+              secret:
+                type: string
+              events:
+                type: array
+                items:
+                  type: string
+              active:
+                type: boolean
+
+    PrintTemplates:
+      type: object
+      additionalProperties:
+        type: string
+
+    # -- Upload --
+    UploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+
+    # -- InPost --
+    InPostPoint:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: object
+        location:
+          type: object
+
+  parameters:
+    idParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    limitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+    offsetParam:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        default: 0
+    sortByParam:
+      name: sort_by
+      in: query
+      schema:
+        type: string
+    sortOrderParam:
+      name: sort_order
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+
+paths:
+  # ===== Health =====
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      security: []
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  # ===== Auth =====
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new tenant and admin user
+      security: []
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Tenant slug already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with email, password, and tenant slug
+      security: []
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh the access token using refresh_token cookie
+      security: []
+      operationId: refreshToken
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid or missing refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out (revokes access token and clears refresh cookie)
+      security: []
+      operationId: logout
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  # ===== Webhooks =====
+  /v1/webhooks/{provider}/{tenant_id}:
+    post:
+      tags: [Webhooks]
+      summary: Receive incoming webhook from marketplace provider
+      security: []
+      operationId: receiveWebhook
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook accepted
+        '400':
+          description: Invalid webhook
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Uploads =====
+  /v1/uploads:
+    post:
+      tags: [Uploads]
+      summary: Upload a file
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Users =====
+  /v1/users/me:
+    get:
+      tags: [Users]
+      summary: Get current authenticated user
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /v1/users:
+    get:
+      tags: [Users]
+      summary: List users (admin only)
+      operationId: listUsers
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [Users]
+      summary: Create a new user (admin only)
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/users/{id}:
+    patch:
+      tags: [Users]
+      summary: Update a user (admin only)
+      operationId: updateUser
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Users]
+      summary: Delete a user (admin only)
+      operationId: deleteUser
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: User deleted
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Lookup endpoints (any auth) =====
+  /v1/order-statuses:
+    get:
+      tags: [Settings]
+      summary: Get order status configuration
+      operationId: getOrderStatuses
+      responses:
+        '200':
+          description: Order status config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusConfig'
+
+  /v1/custom-fields:
+    get:
+      tags: [Settings]
+      summary: Get custom fields configuration
+      operationId: getCustomFields
+      responses:
+        '200':
+          description: Custom fields config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldsConfig'
+
+  /v1/product-categories:
+    get:
+      tags: [Settings]
+      summary: Get product categories configuration
+      operationId: getProductCategories
+      responses:
+        '200':
+          description: Product categories config
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCategoriesConfig'
+
+  # ===== Orders =====
+  /v1/orders:
+    get:
+      tags: [Orders]
+      summary: List orders
+      operationId: listOrders
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/sortByParam'
+        - $ref: '#/components/parameters/sortOrderParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: payment_status
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+    post:
+      tags: [Orders]
+      summary: Create a new order
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/orders/export:
+    get:
+      tags: [Orders]
+      summary: Export orders as CSV
+      operationId: exportOrdersCSV
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: payment_status
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  /v1/orders/bulk-status:
+    post:
+      tags: [Orders]
+      summary: Bulk status transition for multiple orders
+      operationId: bulkTransitionOrderStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkStatusTransitionRequest'
+      responses:
+        '200':
+          description: Bulk operation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkStatusTransitionResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/orders/import/preview:
+    post:
+      tags: [Import]
+      summary: Preview a CSV import
+      operationId: previewImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+
+  /v1/orders/import:
+    post:
+      tags: [Import]
+      summary: Import orders from CSV
+      operationId: importOrders
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+
+  /v1/orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Get order by ID
+      operationId: getOrder
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Orders]
+      summary: Update an order
+      operationId: updateOrder
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderRequest'
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Orders]
+      summary: Delete an order
+      operationId: deleteOrder
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Order deleted
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/orders/{id}/status:
+    post:
+      tags: [Orders]
+      summary: Transition order status
+      operationId: transitionOrderStatus
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusTransitionRequest'
+      responses:
+        '200':
+          description: Order with updated status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/orders/{id}/audit:
+    get:
+      tags: [Orders, Audit]
+      summary: Get audit log for a specific order
+      operationId: getOrderAudit
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Audit log entries for the order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLogEntry'
+
+  /v1/orders/{id}/invoices:
+    get:
+      tags: [Orders, Invoices]
+      summary: List invoices for a specific order
+      operationId: listOrderInvoices
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: List of invoices for the order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+
+  /v1/orders/{id}/packing-slip:
+    get:
+      tags: [Orders, Print]
+      summary: Get packing slip for an order
+      operationId: getPackingSlip
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Packing slip HTML
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /v1/orders/{id}/print:
+    get:
+      tags: [Orders, Print]
+      summary: Get printable order summary
+      operationId: getOrderSummary
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Order summary HTML
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # ===== Invoices =====
+  /v1/invoices:
+    get:
+      tags: [Invoices]
+      summary: List invoices
+      operationId: listInvoices
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: provider
+          in: query
+          schema:
+            type: string
+        - name: order_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated list of invoices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceListResponse'
+    post:
+      tags: [Invoices]
+      summary: Create an invoice
+      operationId: createInvoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceRequest'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/invoices/{id}:
+    get:
+      tags: [Invoices]
+      summary: Get invoice by ID
+      operationId: getInvoice
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Invoices]
+      summary: Cancel an invoice
+      operationId: cancelInvoice
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Invoice cancelled
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/invoices/{id}/pdf:
+    get:
+      tags: [Invoices]
+      summary: Get invoice PDF
+      operationId: getInvoicePDF
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Shipments =====
+  /v1/shipments:
+    get:
+      tags: [Shipments]
+      summary: List shipments
+      operationId: listShipments
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: provider
+          in: query
+          schema:
+            type: string
+        - name: order_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated list of shipments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentListResponse'
+    post:
+      tags: [Shipments]
+      summary: Create a new shipment
+      operationId: createShipment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShipmentRequest'
+      responses:
+        '201':
+          description: Shipment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/shipments/{id}:
+    get:
+      tags: [Shipments]
+      summary: Get shipment by ID
+      operationId: getShipment
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Shipment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '404':
+          description: Shipment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Shipments]
+      summary: Update a shipment
+      operationId: updateShipment
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShipmentRequest'
+      responses:
+        '200':
+          description: Shipment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Shipment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Shipments]
+      summary: Delete a shipment
+      operationId: deleteShipment
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Shipment deleted
+        '404':
+          description: Shipment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/shipments/{id}/status:
+    post:
+      tags: [Shipments]
+      summary: Transition shipment status
+      operationId: transitionShipmentStatus
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentStatusTransitionRequest'
+      responses:
+        '200':
+          description: Shipment with updated status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '404':
+          description: Shipment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/shipments/{id}/label:
+    post:
+      tags: [Shipments]
+      summary: Generate a shipping label
+      operationId: generateLabel
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateLabelRequest'
+      responses:
+        '200':
+          description: Label generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Returns =====
+  /v1/returns:
+    get:
+      tags: [Returns]
+      summary: List returns
+      operationId: listReturns
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: order_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated list of returns
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnListResponse'
+    post:
+      tags: [Returns]
+      summary: Create a new return
+      operationId: createReturn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReturnRequest'
+      responses:
+        '201':
+          description: Return created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/returns/{id}:
+    get:
+      tags: [Returns]
+      summary: Get return by ID
+      operationId: getReturn
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Return details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
+        '404':
+          description: Return not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Returns]
+      summary: Update a return
+      operationId: updateReturn
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReturnRequest'
+      responses:
+        '200':
+          description: Return updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Return not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Returns]
+      summary: Delete a return
+      operationId: deleteReturn
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Return deleted
+        '404':
+          description: Return not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/returns/{id}/status:
+    post:
+      tags: [Returns]
+      summary: Transition return status
+      operationId: transitionReturnStatus
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnStatusRequest'
+      responses:
+        '200':
+          description: Return with updated status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
+        '404':
+          description: Return not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/returns/{id}/print:
+    get:
+      tags: [Returns, Print]
+      summary: Get printable return slip
+      operationId: getReturnSlip
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Return slip HTML
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # ===== Products =====
+  /v1/products:
+    get:
+      tags: [Products]
+      summary: List products
+      operationId: listProducts
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/sortByParam'
+        - $ref: '#/components/parameters/sortOrderParam'
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: sku
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListResponse'
+    post:
+      tags: [Products]
+      summary: Create a new product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/products/{id}:
+    get:
+      tags: [Products]
+      summary: Get product by ID
+      operationId: getProduct
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Products]
+      summary: Update a product
+      operationId: updateProduct
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Products]
+      summary: Delete a product
+      operationId: deleteProduct
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Product deleted
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/products/{id}/stock:
+    get:
+      tags: [Products, Warehouses]
+      summary: List stock levels for a product across warehouses
+      operationId: listProductStock
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Stock levels for the product
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseStockListResponse'
+
+  /v1/products/{productId}/variants:
+    get:
+      tags: [Products]
+      summary: List variants for a product
+      operationId: listVariants
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+      responses:
+        '200':
+          description: Paginated list of variants
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantListResponse'
+    post:
+      tags: [Products]
+      summary: Create a product variant
+      operationId: createVariant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVariantRequest'
+      responses:
+        '201':
+          description: Variant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariant'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/products/{productId}/variants/{id}:
+    get:
+      tags: [Products]
+      summary: Get variant by ID
+      operationId: getVariant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Variant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariant'
+        '404':
+          description: Variant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Products]
+      summary: Update a variant
+      operationId: updateVariant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVariantRequest'
+      responses:
+        '200':
+          description: Variant updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariant'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Variant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Products]
+      summary: Delete a variant
+      operationId: deleteVariant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Variant deleted
+        '404':
+          description: Variant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Customers =====
+  /v1/customers:
+    get:
+      tags: [Customers]
+      summary: List customers
+      operationId: listCustomers
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: tags
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of customers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerListResponse'
+    post:
+      tags: [Customers]
+      summary: Create a new customer
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/customers/{id}:
+    get:
+      tags: [Customers]
+      summary: Get customer by ID
+      operationId: getCustomer
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Customers]
+      summary: Update a customer
+      operationId: updateCustomer
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: Customer updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Customers]
+      summary: Delete a customer
+      operationId: deleteCustomer
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Customer deleted
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/customers/{id}/orders:
+    get:
+      tags: [Customers, Orders]
+      summary: List orders for a customer
+      operationId: listCustomerOrders
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+      responses:
+        '200':
+          description: Paginated list of orders for the customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+
+  # ===== Integrations (admin only) =====
+  /v1/integrations:
+    get:
+      tags: [Integrations]
+      summary: List integrations (admin only)
+      operationId: listIntegrations
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+      responses:
+        '200':
+          description: Paginated list of integrations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationListResponse'
+    post:
+      tags: [Integrations]
+      summary: Create a new integration (admin only)
+      operationId: createIntegration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIntegrationRequest'
+      responses:
+        '201':
+          description: Integration created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/integrations/{id}:
+    get:
+      tags: [Integrations]
+      summary: Get integration by ID (admin only)
+      operationId: getIntegration
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Integration details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        '404':
+          description: Integration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Integrations]
+      summary: Update an integration (admin only)
+      operationId: updateIntegration
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIntegrationRequest'
+      responses:
+        '200':
+          description: Integration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Integration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Integrations]
+      summary: Delete an integration (admin only)
+      operationId: deleteIntegration
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Integration deleted
+        '404':
+          description: Integration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/integrations/allegro/auth-url:
+    get:
+      tags: [Integrations]
+      summary: Get Allegro OAuth2 authorization URL (admin only)
+      operationId: getAllegroAuthURL
+      responses:
+        '200':
+          description: Authorization URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auth_url:
+                    type: string
+
+  /v1/integrations/allegro/callback:
+    post:
+      tags: [Integrations]
+      summary: Handle Allegro OAuth2 callback (admin only)
+      operationId: handleAllegroCallback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+      responses:
+        '200':
+          description: Integration created/updated via OAuth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+
+  /v1/integrations/amazon/setup:
+    post:
+      tags: [Integrations]
+      summary: Set up Amazon SP-API integration (admin only)
+      operationId: setupAmazon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                selling_partner_id:
+                  type: string
+                marketplace_id:
+                  type: string
+                refresh_token:
+                  type: string
+      responses:
+        '201':
+          description: Amazon integration created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+
+  # ===== Suppliers (admin only) =====
+  /v1/suppliers:
+    get:
+      tags: [Suppliers]
+      summary: List suppliers (admin only)
+      operationId: listSuppliers
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of suppliers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierListResponse'
+    post:
+      tags: [Suppliers]
+      summary: Create a new supplier (admin only)
+      operationId: createSupplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupplierRequest'
+      responses:
+        '201':
+          description: Supplier created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/suppliers/{id}:
+    get:
+      tags: [Suppliers]
+      summary: Get supplier by ID (admin only)
+      operationId: getSupplier
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Supplier details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Suppliers]
+      summary: Update a supplier (admin only)
+      operationId: updateSupplier
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSupplierRequest'
+      responses:
+        '200':
+          description: Supplier updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Suppliers]
+      summary: Delete a supplier (admin only)
+      operationId: deleteSupplier
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Supplier deleted
+        '404':
+          description: Supplier not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/suppliers/{id}/sync:
+    post:
+      tags: [Suppliers]
+      summary: Trigger supplier sync (admin only)
+      operationId: syncSupplier
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Sync triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /v1/suppliers/{id}/products:
+    get:
+      tags: [Suppliers]
+      summary: List supplier products (admin only)
+      operationId: listSupplierProducts
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: ean
+          in: query
+          schema:
+            type: string
+        - name: linked
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated list of supplier products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProductListResponse'
+
+  /v1/suppliers/{id}/products/{spid}/link:
+    post:
+      tags: [Suppliers]
+      summary: Link a supplier product to an internal product (admin only)
+      operationId: linkSupplierProduct
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+        - name: spid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkProductRequest'
+      responses:
+        '200':
+          description: Product linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProduct'
+
+  # ===== Warehouses (admin only) =====
+  /v1/warehouses:
+    get:
+      tags: [Warehouses]
+      summary: List warehouses (admin only)
+      operationId: listWarehouses
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated list of warehouses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseListResponse'
+    post:
+      tags: [Warehouses]
+      summary: Create a new warehouse (admin only)
+      operationId: createWarehouse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWarehouseRequest'
+      responses:
+        '201':
+          description: Warehouse created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Warehouse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/warehouses/{id}:
+    get:
+      tags: [Warehouses]
+      summary: Get warehouse by ID (admin only)
+      operationId: getWarehouse
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Warehouse details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Warehouse'
+        '404':
+          description: Warehouse not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Warehouses]
+      summary: Update a warehouse (admin only)
+      operationId: updateWarehouse
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWarehouseRequest'
+      responses:
+        '200':
+          description: Warehouse updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Warehouse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Warehouse not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Warehouses]
+      summary: Delete a warehouse (admin only)
+      operationId: deleteWarehouse
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Warehouse deleted
+        '404':
+          description: Warehouse not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/warehouses/{id}/stock:
+    get:
+      tags: [Warehouses]
+      summary: List stock in a warehouse (admin only)
+      operationId: listWarehouseStock
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+      responses:
+        '200':
+          description: Paginated stock list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseStockListResponse'
+    put:
+      tags: [Warehouses]
+      summary: Upsert stock entry in a warehouse (admin only)
+      operationId: upsertWarehouseStock
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertWarehouseStockRequest'
+      responses:
+        '200':
+          description: Stock entry upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseStock'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== Automation (admin only) =====
+  /v1/automation/rules:
+    get:
+      tags: [Automation]
+      summary: List automation rules (admin only)
+      operationId: listAutomationRules
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: trigger_event
+          in: query
+          schema:
+            type: string
+        - name: enabled
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Paginated list of automation rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRuleListResponse'
+    post:
+      tags: [Automation]
+      summary: Create a new automation rule (admin only)
+      operationId: createAutomationRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAutomationRuleRequest'
+      responses:
+        '201':
+          description: Rule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/automation/rules/{id}:
+    get:
+      tags: [Automation]
+      summary: Get automation rule by ID (admin only)
+      operationId: getAutomationRule
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Rule details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags: [Automation]
+      summary: Update an automation rule (admin only)
+      operationId: updateAutomationRule
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAutomationRuleRequest'
+      responses:
+        '200':
+          description: Rule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRule'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Automation]
+      summary: Delete an automation rule (admin only)
+      operationId: deleteAutomationRule
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Rule deleted
+        '404':
+          description: Rule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/automation/rules/{id}/logs:
+    get:
+      tags: [Automation]
+      summary: Get execution logs for an automation rule (admin only)
+      operationId: getAutomationRuleLogs
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+      responses:
+        '200':
+          description: Paginated list of rule execution logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AutomationRuleLog'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /v1/automation/rules/{id}/test:
+    post:
+      tags: [Automation]
+      summary: Dry-run test an automation rule (admin only)
+      operationId: testAutomationRule
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestAutomationRuleRequest'
+      responses:
+        '200':
+          description: Test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestAutomationRuleResponse'
+
+  # ===== Stats =====
+  /v1/stats/dashboard:
+    get:
+      tags: [Stats]
+      summary: Get dashboard statistics
+      operationId: getDashboardStats
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+
+  /v1/stats/products/top:
+    get:
+      tags: [Stats]
+      summary: Get top-selling products
+      operationId: getTopProducts
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+      responses:
+        '200':
+          description: Top products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TopProduct'
+
+  /v1/stats/revenue/by-source:
+    get:
+      tags: [Stats]
+      summary: Get revenue broken down by source
+      operationId: getRevenueBySource
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 365
+      responses:
+        '200':
+          description: Revenue by source
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SourceRevenue'
+
+  /v1/stats/trends:
+    get:
+      tags: [Stats]
+      summary: Get order trends over time
+      operationId: getOrderTrends
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 365
+      responses:
+        '200':
+          description: Daily order trends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailyOrderTrend'
+
+  /v1/stats/payment-methods:
+    get:
+      tags: [Stats]
+      summary: Get payment method statistics
+      operationId: getPaymentMethodStats
+      responses:
+        '200':
+          description: Payment method statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    payment_method:
+                      type: string
+                    count:
+                      type: integer
+                    total:
+                      type: number
+
+  # ===== Settings (admin only) =====
+  /v1/settings/email:
+    get:
+      tags: [Settings]
+      summary: Get email settings (admin only)
+      operationId: getEmailSettings
+      responses:
+        '200':
+          description: Email settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailSettings'
+    put:
+      tags: [Settings]
+      summary: Update email settings (admin only)
+      operationId: updateEmailSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailSettings'
+      responses:
+        '200':
+          description: Email settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailSettings'
+
+  /v1/settings/email/test:
+    post:
+      tags: [Settings]
+      summary: Send a test email (admin only)
+      operationId: sendTestEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Test email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /v1/settings/company:
+    get:
+      tags: [Settings]
+      summary: Get company settings (admin only)
+      operationId: getCompanySettings
+      responses:
+        '200':
+          description: Company settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySettings'
+    put:
+      tags: [Settings]
+      summary: Update company settings (admin only)
+      operationId: updateCompanySettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanySettings'
+      responses:
+        '200':
+          description: Company settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySettings'
+
+  /v1/settings/order-statuses:
+    get:
+      tags: [Settings]
+      summary: Get order status config (admin only)
+      operationId: getOrderStatusSettings
+      responses:
+        '200':
+          description: Order status configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusConfig'
+    put:
+      tags: [Settings]
+      summary: Update order status config (admin only)
+      operationId: updateOrderStatusSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusConfig'
+      responses:
+        '200':
+          description: Order status configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusConfig'
+
+  /v1/settings/custom-fields:
+    get:
+      tags: [Settings]
+      summary: Get custom fields config (admin only)
+      operationId: getCustomFieldSettings
+      responses:
+        '200':
+          description: Custom fields configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldsConfig'
+    put:
+      tags: [Settings]
+      summary: Update custom fields config (admin only)
+      operationId: updateCustomFieldSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomFieldsConfig'
+      responses:
+        '200':
+          description: Custom fields configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldsConfig'
+
+  /v1/settings/product-categories:
+    get:
+      tags: [Settings]
+      summary: Get product categories config (admin only)
+      operationId: getProductCategorySettings
+      responses:
+        '200':
+          description: Product categories configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCategoriesConfig'
+    put:
+      tags: [Settings]
+      summary: Update product categories config (admin only)
+      operationId: updateProductCategorySettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCategoriesConfig'
+      responses:
+        '200':
+          description: Product categories configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductCategoriesConfig'
+
+  /v1/settings/webhooks:
+    get:
+      tags: [Settings]
+      summary: Get webhook settings (admin only)
+      operationId: getWebhookSettings
+      responses:
+        '200':
+          description: Webhook configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+    put:
+      tags: [Settings]
+      summary: Update webhook settings (admin only)
+      operationId: updateWebhookSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookConfig'
+      responses:
+        '200':
+          description: Webhook configuration updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookConfig'
+
+  /v1/settings/invoicing:
+    get:
+      tags: [Settings]
+      summary: Get invoicing settings (admin only)
+      operationId: getInvoicingSettings
+      responses:
+        '200':
+          description: Invoicing settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoicingSettings'
+    put:
+      tags: [Settings]
+      summary: Update invoicing settings (admin only)
+      operationId: updateInvoicingSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoicingSettings'
+      responses:
+        '200':
+          description: Invoicing settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoicingSettings'
+
+  /v1/settings/sms:
+    get:
+      tags: [Settings]
+      summary: Get SMS settings (admin only)
+      operationId: getSMSSettings
+      responses:
+        '200':
+          description: SMS settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SMSSettings'
+    put:
+      tags: [Settings]
+      summary: Update SMS settings (admin only)
+      operationId: updateSMSSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SMSSettings'
+      responses:
+        '200':
+          description: SMS settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SMSSettings'
+
+  /v1/settings/sms/test:
+    post:
+      tags: [Settings]
+      summary: Send a test SMS (admin only)
+      operationId: sendTestSMS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                to:
+                  type: string
+      responses:
+        '200':
+          description: Test SMS sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /v1/settings/print-templates:
+    get:
+      tags: [Settings, Print]
+      summary: Get print templates (admin only)
+      operationId: getPrintTemplates
+      responses:
+        '200':
+          description: Print template configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintTemplates'
+    put:
+      tags: [Settings, Print]
+      summary: Update print templates (admin only)
+      operationId: updatePrintTemplates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrintTemplates'
+      responses:
+        '200':
+          description: Print templates updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintTemplates'
+
+  # ===== Audit (admin only) =====
+  /v1/audit:
+    get:
+      tags: [Audit]
+      summary: List audit log entries (admin only)
+      operationId: listAuditLog
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated audit log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditListResponse'
+
+  # ===== Webhook Deliveries (admin only) =====
+  /v1/webhook-deliveries:
+    get:
+      tags: [Webhooks]
+      summary: List webhook delivery logs (admin only)
+      operationId: listWebhookDeliveries
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: event_type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated webhook delivery log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookDeliveryListResponse'
+
+  # ===== Sync Jobs (admin only) =====
+  /v1/sync-jobs:
+    get:
+      tags: [SyncJobs]
+      summary: List sync jobs (admin only)
+      operationId: listSyncJobs
+      parameters:
+        - $ref: '#/components/parameters/limitParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - name: integration_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: job_type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of sync jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncJobListResponse'
+
+  /v1/sync-jobs/{id}:
+    get:
+      tags: [SyncJobs]
+      summary: Get sync job by ID (admin only)
+      operationId: getSyncJob
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Sync job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncJob'
+        '404':
+          description: Sync job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== InPost =====
+  /v1/inpost/points:
+    get:
+      tags: [InPost]
+      summary: Search InPost parcel locker points
+      operationId: searchInPostPoints
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+          description: Search query (city, street, or point name)
+      responses:
+        '200':
+          description: List of InPost points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InPostPoint'

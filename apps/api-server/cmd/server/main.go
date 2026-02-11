@@ -24,6 +24,7 @@ import (
 	// Register invoicing providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/fakturownia"
 
+	"github.com/openoms-org/openoms/apps/api-server/docs"
 	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
@@ -222,6 +223,12 @@ func main() {
 	// Sync job handler
 	syncJobHandler := handler.NewSyncJobHandler(syncJobRepo, pool)
 
+	// OpenAPI docs handler
+	docsHandler := handler.NewDocsHandler(docs.OpenAPISpec)
+
+	// Prometheus metrics collector
+	metricsCollector := middleware.NewMetricsCollector()
+
 	// Setup router
 	r := router.New(router.RouterDeps{
 		Pool:            pool,
@@ -253,6 +260,8 @@ func main() {
 		Warehouse:        warehouseHandler,
 		Customer:         customerHandler,
 		Print:            printHandler,
+		Docs:             docsHandler,
+		MetricsCollector: metricsCollector,
 	})
 
 	// Start background workers
