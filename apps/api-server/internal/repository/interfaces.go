@@ -143,6 +143,16 @@ type SupplierRepo interface {
 	UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastSyncAt time.Time, errorMessage *string) error
 }
 
+// InvoiceRepo defines the interface for invoice persistence operations.
+type InvoiceRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.InvoiceListFilter) ([]model.Invoice, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Invoice, error)
+	FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.Invoice, error)
+	Create(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error
+	Update(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}
+
 // SupplierProductRepo defines the interface for supplier product persistence operations.
 type SupplierProductRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.SupplierProductListFilter) ([]model.SupplierProduct, int, error)

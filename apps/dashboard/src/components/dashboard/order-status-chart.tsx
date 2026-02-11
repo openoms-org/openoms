@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import {
   BarChart,
   Bar,
@@ -20,6 +21,13 @@ interface OrderStatusChartProps {
 }
 
 export function OrderStatusChart({ data, isLoading }: OrderStatusChartProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const axisColor = isDark ? "#a1a1aa" : "#71717a";
+  const gridColor = isDark ? "#27272a" : "#e4e4e7";
+  const tooltipBg = isDark ? "#18181b" : "#ffffff";
+  const tooltipBorder = isDark ? "#27272a" : "#e4e4e7";
+
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
 
@@ -48,10 +56,17 @@ export function OrderStatusChart({ data, isLoading }: OrderStatusChartProps) {
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} tick={{ fill: axisColor }} />
+              <YAxis fontSize={12} tickLine={false} axisLine={false} tick={{ fill: axisColor }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: tooltipBg,
+                  borderColor: tooltipBorder,
+                  borderRadius: "0.5rem",
+                  color: isDark ? "#fafafa" : "#09090b",
+                }}
+              />
               <Bar
                 dataKey="count"
                 fill="#8b5cf6"

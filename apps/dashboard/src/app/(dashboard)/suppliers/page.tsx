@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/table";
 
 const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
-  active: { label: "Aktywny", color: "bg-green-100 text-green-800" },
-  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800" },
-  error: { label: "Bład", color: "bg-red-100 text-red-800" },
+  active: { label: "Aktywny", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  error: { label: "Bład", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export default function SuppliersPage() {

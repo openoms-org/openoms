@@ -1,5 +1,6 @@
 "use client";
 
+import { useTheme } from "next-themes";
 import {
   PieChart,
   Pie,
@@ -50,6 +51,12 @@ function renderCustomLabel(props: {
 }
 
 export function OrderSourceChart({ data, isLoading }: OrderSourceChartProps) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+  const tooltipBg = isDark ? "#18181b" : "#ffffff";
+  const tooltipBorder = isDark ? "#27272a" : "#e4e4e7";
+  const legendColor = isDark ? "#a1a1aa" : "#71717a";
+
   const chartData = data
     ? Object.entries(data)
         .filter(([, count]) => count > 0)
@@ -87,8 +94,15 @@ export function OrderSourceChart({ data, isLoading }: OrderSourceChartProps) {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
-              <Legend />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: tooltipBg,
+                  borderColor: tooltipBorder,
+                  borderRadius: "0.5rem",
+                  color: isDark ? "#fafafa" : "#09090b",
+                }}
+              />
+              <Legend formatter={(value) => <span style={{ color: legendColor }}>{value}</span>} />
             </PieChart>
           </ResponsiveContainer>
         )}

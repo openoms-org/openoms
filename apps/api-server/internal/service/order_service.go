@@ -30,6 +30,7 @@ type OrderService struct {
 	pool            *pgxpool.Pool
 	emailService    *EmailService
 	webhookDispatch *WebhookDispatchService
+	invoiceService  *InvoiceService
 }
 
 func NewOrderService(
@@ -48,6 +49,12 @@ func NewOrderService(
 		emailService:    emailService,
 		webhookDispatch: webhookDispatch,
 	}
+}
+
+// SetInvoiceService sets the invoice service for auto-invoicing on status change.
+// Called after both services are constructed to avoid circular dependency.
+func (s *OrderService) SetInvoiceService(invoiceSvc *InvoiceService) {
+	s.invoiceService = invoiceSvc
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
@@ -338,6 +345,9 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 	if err == nil && order != nil {
 		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
+		if s.invoiceService != nil {
+			go s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order)
+		}
 	}
 	return order, err
 }
