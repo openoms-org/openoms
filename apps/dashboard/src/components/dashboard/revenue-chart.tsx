@@ -71,7 +71,7 @@ export function RevenueChart({ data, currency = "PLN", isLoading }: RevenueChart
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value: number) => `${value} PLN`}
+                tickFormatter={(value: number) => `${value} ${currency}`}
               />
               <Tooltip content={<CustomTooltip currency={currency} />} />
               <Area

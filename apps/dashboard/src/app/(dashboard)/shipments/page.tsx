@@ -34,7 +34,7 @@ export default function ShipmentsPage() {
     setPagination((prev) => ({ ...prev, offset: 0 }));
   };
 
-  const { data, isLoading } = useShipments({
+  const { data, isLoading, isError, refetch } = useShipments({
     ...pagination,
     ...filters,
     sort_by: sortBy,
@@ -127,6 +127,22 @@ export default function ShipmentsPage() {
           setPagination((prev) => ({ ...prev, offset: 0 }));
         }}
       />
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       <DataTable
         columns={columns}

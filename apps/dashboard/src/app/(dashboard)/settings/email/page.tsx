@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +28,7 @@ const NOTIFICATION_STATUSES = [
   { value: "shipped", label: "Wysyłka zamówienia" },
   { value: "delivered", label: "Dostarczenie zamówienia" },
   { value: "cancelled", label: "Anulowanie zamówienia" },
-  { value: "refunded", label: "Zwrot srodkow" },
+  { value: "refunded", label: "Zwrot środków" },
 ];
 
 const DEFAULT_SETTINGS: EmailSettings = {
@@ -40,6 +43,8 @@ const DEFAULT_SETTINGS: EmailSettings = {
 };
 
 export default function EmailSettingsPage() {
+  const router = useRouter();
+  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: settings, isLoading } = useEmailSettings();
   const updateSettings = useUpdateEmailSettings();
   const sendTest = useSendTestEmail();
@@ -48,8 +53,18 @@ export default function EmailSettingsPage() {
   const [testEmail, setTestEmail] = useState("");
 
   useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.replace("/");
+    }
+  }, [authLoading, isAdmin, router]);
+
+  useEffect(() => {
     if (settings) setForm(settings);
   }, [settings]);
+
+  if (authLoading || !isAdmin) {
+    return <LoadingSkeleton />;
+  }
 
   const handleSave = async () => {
     try {
@@ -57,7 +72,7 @@ export default function EmailSettingsPage() {
       toast.success("Ustawienia zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawien";
+        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
       toast.error(message);
     }
   };
@@ -65,7 +80,7 @@ export default function EmailSettingsPage() {
   const handleTestEmail = async () => {
     try {
       await sendTest.mutateAsync(testEmail);
-      toast.success("Testowy email wyslany");
+      toast.success("Testowy email wysłany");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Nie udało się wysłać testowego emaila";
@@ -154,7 +169,7 @@ export default function EmailSettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Haslo</Label>
+              <Label>Hasło</Label>
               <Input
                 type="password"
                 value={form.smtp_pass}
@@ -195,7 +210,7 @@ export default function EmailSettingsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Wybierz przy jakich zmianach statusu wysylac email do klienta
+            Wybierz przy jakich zmianach statusu wysyłać email do klienta
           </p>
           <div className="space-y-3">
             {NOTIFICATION_STATUSES.map(({ value, label }) => (

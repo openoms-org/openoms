@@ -111,6 +111,7 @@ type StatsRepo interface {
 	GetTotalRevenue(ctx context.Context, tx pgx.Tx) (float64, error)
 	GetDailyRevenue(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyRevenue, error)
 	GetRecentOrders(ctx context.Context, tx pgx.Tx, limit int) ([]model.OrderSummary, error)
+	GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) (string, error)
 }
 
 // ProductListingRepo defines the interface for product listing persistence operations.

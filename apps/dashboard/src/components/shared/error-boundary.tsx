@@ -31,15 +31,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center gap-4 py-20">
-          <h2 className="text-xl font-semibold">Cos poszlo nie tak</h2>
+          <h2 className="text-xl font-semibold">Coś poszło nie tak</h2>
           <p className="text-muted-foreground text-sm">
-            Wystapil nieoczekiwany blad. Sprobuj odswiezyc strone.
+            Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.
           </p>
           <Button
             variant="outline"
             onClick={() => this.setState({ hasError: false })}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       );

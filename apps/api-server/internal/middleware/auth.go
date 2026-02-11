@@ -43,6 +43,12 @@ func JWTAuth(validator TokenValidator) func(http.Handler) http.Handler {
 				return
 			}
 
+			// Reject non-access tokens (e.g. refresh tokens)
+			if claims.Type != "" && claims.Type != "access" {
+				writeAuthError(w, "invalid or expired token")
+				return
+			}
+
 			// Parse user ID from JWT subject
 			userID, err := uuid.Parse(claims.Subject)
 			if err != nil {

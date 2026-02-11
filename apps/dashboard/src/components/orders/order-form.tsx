@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -249,6 +250,17 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
   };
 
   const handleFormSubmit = (data: OrderFormValues) => {
+    // Validate required custom fields
+    for (const field of customFields) {
+      if (field.required) {
+        const value = customValues[field.key];
+        if (value === undefined || value === null || value === "" || value === false) {
+          toast.error(`Pole "${field.label}" jest wymagane`);
+          return;
+        }
+      }
+    }
+
     const metadata: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(customValues)) {
       if (value !== "" && value !== undefined && value !== null) {

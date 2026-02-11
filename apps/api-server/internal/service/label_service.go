@@ -61,7 +61,7 @@ func NewLabelService(
 
 func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.GenerateLabelRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	// First transaction: load all required data from the database

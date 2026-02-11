@@ -155,7 +155,7 @@ func (h *ShipmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "shipment deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *ShipmentHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) {

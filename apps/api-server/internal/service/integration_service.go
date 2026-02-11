@@ -76,7 +76,7 @@ func (s *IntegrationService) Get(ctx context.Context, tenantID, integrationID uu
 
 func (s *IntegrationService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateIntegrationRequest, actorID uuid.UUID, ip string) (*model.Integration, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	encrypted, err := crypto.Encrypt(req.Credentials, s.encryptionKey)
@@ -124,7 +124,7 @@ func (s *IntegrationService) Create(ctx context.Context, tenantID uuid.UUID, req
 
 func (s *IntegrationService) Update(ctx context.Context, tenantID, integrationID uuid.UUID, req model.UpdateIntegrationRequest, actorID uuid.UUID, ip string) (*model.Integration, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var encryptedCreds *string

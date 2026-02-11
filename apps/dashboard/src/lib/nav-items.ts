@@ -25,14 +25,14 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/orders", label: "Zamowienia", icon: ShoppingCart },
+  { href: "/orders", label: "Zamówienia", icon: ShoppingCart },
   { href: "/shipments", label: "Przesyłki", icon: Truck },
   { href: "/returns", label: "Zwroty", icon: RotateCcw },
   { href: "/products", label: "Produkty", icon: Package },
   { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true },
   { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true },
   { href: "/audit", label: "Dziennik", icon: ScrollText, adminOnly: true },
-  { href: "/settings/users", label: "Uzytkownicy", icon: Users, adminOnly: true },
+  { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true },
   { href: "/settings/email", label: "Powiadomienia", icon: Mail, adminOnly: true },
   { href: "/settings/order-statuses", label: "Statusy", icon: ListChecks, adminOnly: true },

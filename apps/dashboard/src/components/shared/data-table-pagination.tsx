@@ -34,7 +34,7 @@ export function DataTablePagination({
       <div className="text-muted-foreground text-sm">
         {total > 0
           ? `Wyniki ${rangeStart}-${rangeEnd} z ${total}`
-          : "Brak wynikow"}
+          : "Brak wyników"}
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export function DataTablePagination({
             onClick={() => onPageChange(offset + limit)}
             disabled={offset + limit >= total}
           >
-            Nastepna
+            Następna
           </Button>
         </div>
       </div>

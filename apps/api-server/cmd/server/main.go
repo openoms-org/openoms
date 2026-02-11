@@ -98,8 +98,6 @@ func main() {
 	returnRepo := repository.NewReturnRepository()
 	supplierRepo := repository.NewSupplierRepository()
 	supplierProductRepo := repository.NewSupplierProductRepository()
-	_ = repository.NewProductListingRepository()
-	_ = repository.NewSyncJobRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)

@@ -35,5 +35,29 @@ func (s *PasswordService) ValidateStrength(password string) error {
 	if len(password) < 8 {
 		return errors.New("password must be at least 8 characters")
 	}
+	if len(password) > 72 {
+		return errors.New("password must not exceed 72 characters (bcrypt limit)")
+	}
+
+	hasLetter := false
+	hasDigit := false
+	for _, ch := range password {
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') {
+			hasLetter = true
+		}
+		if ch >= '0' && ch <= '9' {
+			hasDigit = true
+		}
+		if hasLetter && hasDigit {
+			break
+		}
+	}
+	if !hasLetter {
+		return errors.New("password must contain at least one letter")
+	}
+	if !hasDigit {
+		return errors.New("password must contain at least one digit")
+	}
+
 	return nil
 }

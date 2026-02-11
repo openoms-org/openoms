@@ -6,9 +6,10 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
 import { OrderSourceChart } from "@/components/dashboard/order-source-chart";
 import { RecentOrdersTable } from "@/components/dashboard/recent-orders-table";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
-  const { data: stats, isLoading } = useDashboardStats();
+  const { data: stats, isLoading, isError, refetch } = useDashboardStats();
 
   return (
     <div className="space-y-6">
@@ -16,6 +17,22 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold">Panel główny</h1>
         <p className="text-muted-foreground mt-1">Przegląd zamówień w systemie</p>
       </div>
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       <StatCards orderCounts={stats?.order_counts} isLoading={isLoading} />
 

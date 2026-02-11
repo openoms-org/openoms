@@ -30,6 +30,7 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 			TenantID:         tenantID,
 			Email:            "test@example.com",
 			Role:             "admin",
+			Type:             "access",
 		},
 	}
 

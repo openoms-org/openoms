@@ -25,7 +25,7 @@ export default function ReturnsPage() {
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading } = useReturns({
+  const { data, isLoading, isError, refetch } = useReturns({
     status: statusFilter || undefined,
     limit,
     offset,
@@ -38,7 +38,7 @@ export default function ReturnsPage() {
       cell: (row) => <StatusBadge status={row.status} statusMap={RETURN_STATUSES} />,
     },
     {
-      header: "Zamowienie",
+      header: "Zamówienie",
       accessorKey: "order_id",
       cell: (row) => (
         <Link
@@ -107,7 +107,7 @@ export default function ReturnsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie</SelectItem>
-              <SelectItem value="requested">Zgloszone</SelectItem>
+              <SelectItem value="requested">Zgłoszone</SelectItem>
               <SelectItem value="approved">Zatwierdzone</SelectItem>
               <SelectItem value="received">Odebrane</SelectItem>
               <SelectItem value="refunded">Zwrócone</SelectItem>
@@ -117,6 +117,22 @@ export default function ReturnsPage() {
           </Select>
         </div>
       </div>
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-md border">
         <DataTable<Return>

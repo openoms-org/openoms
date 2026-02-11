@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TagInput } from "@/components/shared/tag-input";
-import type { Product } from "@/types/api";
+import type { Product, CreateProductRequest, UpdateProductRequest } from "@/types/api";
 import { uploadFile } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useProductCategories } from "@/hooks/use-product-categories";
@@ -53,7 +53,7 @@ type ProductFormValues = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
   product?: Product;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateProductRequest) => void;
   isLoading?: boolean;
 }
 
@@ -337,13 +337,13 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label>Dodatkowe zdjecia</Label>
+        <Label>Dodatkowe zdjęcia</Label>
         <div className="space-y-2">
           {imageList.map((img, index) => (
             <div key={index} className="flex items-start gap-2">
               <div className="flex-1 space-y-1">
                 <Input
-                  placeholder="URL zdjecia"
+                  placeholder="URL zdjęcia"
                   value={img.url}
                   onChange={(e) => updateImage(index, "url", e.target.value)}
                 />
@@ -378,7 +378,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
           {imageList.length < 16 && (
             <Button type="button" variant="outline" size="sm" onClick={addImage}>
               <Plus className="h-4 w-4" />
-              Dodaj zdjecie
+              Dodaj zdjęcie
             </Button>
           )}
           <Button
@@ -389,7 +389,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             onClick={() => galleryFileRef.current?.click()}
           >
             {uploadingIdx !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Wgraj zdjecie
+            Wgraj zdjęcie
           </Button>
           <input
             ref={galleryFileRef}

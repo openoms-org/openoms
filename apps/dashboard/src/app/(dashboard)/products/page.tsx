@@ -17,15 +17,10 @@ import {
 import { useProducts } from "@/hooks/use-products";
 import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 import type { Product } from "@/types/api";
 
 const DEFAULT_LIMIT = 20;
-
-const SOURCE_LABELS: Record<string, string> = {
-  manual: "Ręczne",
-  allegro: "Allegro",
-  woocommerce: "WooCommerce",
-};
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
@@ -47,7 +42,7 @@ export default function ProductsPage() {
 
   const { data: categoriesConfig } = useProductCategories();
 
-  const { data, isLoading } = useProducts({
+  const { data, isLoading, isError, refetch } = useProducts({
     ...pagination,
     name: search || undefined,
     tag: tagFilter || undefined,
@@ -127,7 +122,7 @@ export default function ProductsPage() {
       accessorKey: "source" as const,
       cell: (product: Product) => (
         <span className="text-sm">
-          {SOURCE_LABELS[product.source] ?? product.source}
+          {ORDER_SOURCE_LABELS[product.source] ?? product.source}
         </span>
       ),
     },
@@ -236,6 +231,22 @@ export default function ProductsPage() {
           </SelectContent>
         </Select>
       </div>
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       <DataTable
         columns={columns}

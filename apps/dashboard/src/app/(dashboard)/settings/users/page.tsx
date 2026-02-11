@@ -38,7 +38,7 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data, isLoading } = useUsers();
+  const { data, isLoading, isError, refetch } = useUsers();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser(editUser?.id || "");
   const deleteUser = useDeleteUser();
@@ -107,7 +107,7 @@ export default function UsersPage() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Uzytkownicy</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Użytkownicy</h1>
           <p className="text-muted-foreground">
             Zarządzaj użytkownikami w organizacji
           </p>
@@ -115,10 +115,26 @@ export default function UsersPage() {
         <Button onClick={() => setCreateOpen(true)}>Nowy użytkownik</Button>
       </div>
 
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4 mb-6">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
+
       {users.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="Brak użytkownikow"
+          title="Brak użytkowników"
           description="Dodaj pierwszego użytkownika do organizacji."
         />
       ) : (

@@ -7,6 +7,7 @@ import { useAuditLog } from "@/hooks/use-audit";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -57,7 +58,7 @@ export default function AuditPage() {
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading } = useAuditLog({
+  const { data, isLoading, isError, refetch } = useAuditLog({
     limit,
     offset,
     entity_type: entityType || undefined,
@@ -165,6 +166,22 @@ export default function AuditPage() {
           className="max-w-xs"
         />
       </div>
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-md border">
         <DataTable<AuditLogEntry>

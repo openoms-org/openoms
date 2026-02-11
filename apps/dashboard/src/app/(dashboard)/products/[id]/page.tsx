@@ -30,12 +30,8 @@ import {
 } from "@/hooks/use-products";
 import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
-
-const SOURCE_LABELS: Record<string, string> = {
-  manual: "Ręczne",
-  allegro: "Allegro",
-  woocommerce: "WooCommerce",
-};
+import { ORDER_SOURCE_LABELS } from "@/lib/constants";
+import type { CreateProductRequest } from "@/types/api";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -48,7 +44,7 @@ export default function ProductDetailPage() {
   const updateProduct = useUpdateProduct(params.id);
   const deleteProduct = useDeleteProduct();
 
-  const handleUpdate = (data: any) => {
+  const handleUpdate = (data: CreateProductRequest) => {
     updateProduct.mutate(
       {
         name: data.name || undefined,
@@ -242,7 +238,7 @@ export default function ProductDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Źródło</p>
                 <p className="text-sm">
-                  {SOURCE_LABELS[product.source] ?? product.source}
+                  {ORDER_SOURCE_LABELS[product.source] ?? product.source}
                 </p>
               </div>
               {product.category && (() => {

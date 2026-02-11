@@ -52,11 +52,11 @@ func NewAuthService(
 // Register creates a new tenant and owner user, returns tokens.
 func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, ipAddress string) (*model.TokenResponse, string, error) {
 	if err := req.Validate(); err != nil {
-		return nil, "", fmt.Errorf("validation: %w", err)
+		return nil, "", NewValidationError(err)
 	}
 
 	if err := s.passwordSvc.ValidateStrength(req.Password); err != nil {
-		return nil, "", fmt.Errorf("validation: %w", err)
+		return nil, "", NewValidationError(err)
 	}
 
 	exists, err := s.tenantRepo.SlugExists(ctx, req.TenantSlug)
@@ -144,7 +144,7 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 // Login authenticates a user and returns tokens.
 func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddress string) (*model.TokenResponse, string, error) {
 	if err := req.Validate(); err != nil {
-		return nil, "", fmt.Errorf("validation: %w", err)
+		return nil, "", NewValidationError(err)
 	}
 
 	// Find tenant by slug (SECURITY DEFINER, bypasses RLS)
@@ -211,6 +211,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 	claims, err := s.tokenService.ValidateToken(refreshToken)
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid refresh token: %w", err)
+	}
+
+	if claims.Type != "refresh" {
+		return nil, "", fmt.Errorf("invalid refresh token: token is not a refresh token")
 	}
 
 	userID, err := uuid.Parse(claims.Subject)

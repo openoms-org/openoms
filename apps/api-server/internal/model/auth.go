@@ -15,6 +15,7 @@ type AuthClaims struct {
 	TenantID uuid.UUID `json:"tid"`
 	Email    string    `json:"email"`
 	Role     string    `json:"role"`
+	Type     string    `json:"type,omitempty"`
 }
 
 // LoginRequest is the body of POST /v1/auth/login.

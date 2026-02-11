@@ -83,7 +83,7 @@ func (s *ReturnService) Get(ctx context.Context, tenantID, returnID uuid.UUID) (
 
 func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateReturnRequest, actorID uuid.UUID, ip string) (*model.Return, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	items := req.Items
@@ -108,7 +108,7 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 			return err
 		}
 		if order == nil {
-			return fmt.Errorf("validation: %w", errors.New("order not found"))
+			return NewValidationError(errors.New("order not found"))
 		}
 
 		if err := s.returnRepo.Create(ctx, tx, ret); err != nil {
@@ -133,7 +133,7 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 
 func (s *ReturnService) Update(ctx context.Context, tenantID, returnID uuid.UUID, req model.UpdateReturnRequest, actorID uuid.UUID, ip string) (*model.Return, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var ret *model.Return
@@ -172,7 +172,7 @@ func (s *ReturnService) Update(ctx context.Context, tenantID, returnID uuid.UUID
 
 func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID uuid.UUID, req model.ReturnStatusRequest, actorID uuid.UUID, ip string) (*model.Return, error) {
 	if req.Status == "" {
-		return nil, fmt.Errorf("validation: %w", errors.New("status is required"))
+		return nil, NewValidationError(errors.New("status is required"))
 	}
 
 	var ret *model.Return

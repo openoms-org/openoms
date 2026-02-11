@@ -66,9 +66,9 @@ export function PaczkomatSearch({ value, onValueChange }: PaczkomatSearchProps) 
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : debouncedQuery.length < 2 ? (
-              <CommandEmpty>Wpisz min. 2 znaki, aby wyszukac</CommandEmpty>
+              <CommandEmpty>Wpisz min. 2 znaki, aby wyszukać</CommandEmpty>
             ) : points.length === 0 ? (
-              <CommandEmpty>Nie znaleziono paczkomatow</CommandEmpty>
+              <CommandEmpty>Nie znaleziono paczkomatów</CommandEmpty>
             ) : (
               <CommandGroup>
                 {points.map((point: InPostPoint) => (

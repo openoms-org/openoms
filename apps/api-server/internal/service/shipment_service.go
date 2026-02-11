@@ -85,7 +85,7 @@ func (s *ShipmentService) Get(ctx context.Context, tenantID, shipmentID uuid.UUI
 
 func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateShipmentRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	carrierData := req.CarrierData
@@ -136,7 +136,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 
 func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.UpdateShipmentRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var shipment *model.Shipment
@@ -205,7 +205,7 @@ func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, acto
 
 func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.ShipmentStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	if err := req.Validate(); err != nil {
-		return nil, fmt.Errorf("validation: %w", err)
+		return nil, NewValidationError(err)
 	}
 
 	var shipment *model.Shipment

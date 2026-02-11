@@ -31,7 +31,7 @@ const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
 export default function SuppliersPage() {
   const router = useRouter();
   const { isAdmin, isLoading: authLoading } = useAuth();
-  const { data, isLoading } = useSuppliers();
+  const { data, isLoading, isError, refetch } = useSuppliers();
   const deleteSupplier = useDeleteSupplier();
   const syncSupplier = useSyncSupplier();
 
@@ -85,6 +85,22 @@ export default function SuppliersPage() {
         description="Zarządzaj dostawcami i synchronizacją feedów produktowych"
         action={{ label: "Nowy dostawca", href: "/suppliers/new" }}
       />
+
+      {isError && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => refetch()}
+          >
+            Spróbuj ponownie
+          </Button>
+        </div>
+      )}
 
       {suppliers.length === 0 ? (
         <EmptyState

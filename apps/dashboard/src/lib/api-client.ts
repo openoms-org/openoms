@@ -95,8 +95,12 @@ export async function apiClient<T>(
 
 export async function uploadFile(file: File): Promise<{ url: string }> {
   const token = useAuthStore.getState().token;
-  const formData = new FormData();
-  formData.append("file", file);
+
+  function buildFormData(): FormData {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fd;
+  }
 
   const headers: Record<string, string> = {};
   if (token) {
@@ -106,7 +110,7 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
   let res = await fetch(`${API_URL}/v1/uploads`, {
     method: "POST",
     headers,
-    body: formData,
+    body: buildFormData(),
     credentials: "include",
   });
 
@@ -118,7 +122,7 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
       res = await fetch(`${API_URL}/v1/uploads`, {
         method: "POST",
         headers,
-        body: formData,
+        body: buildFormData(),
         credentials: "include",
       });
     }

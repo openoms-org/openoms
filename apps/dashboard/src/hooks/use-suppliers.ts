@@ -12,8 +12,8 @@ import type {
 
 export function useSuppliers(params: SupplierListParams = {}) {
   const query = new URLSearchParams();
-  if (params.limit) query.set("limit", String(params.limit));
-  if (params.offset) query.set("offset", String(params.offset));
+  if (params.limit != null) query.set("limit", String(params.limit));
+  if (params.offset != null) query.set("offset", String(params.offset));
   if (params.status) query.set("status", params.status);
   if (params.sort_by) query.set("sort_by", params.sort_by);
   if (params.sort_order) query.set("sort_order", params.sort_order);
@@ -93,8 +93,8 @@ export function useSupplierProducts(
   params: SupplierProductListParams = {}
 ) {
   const query = new URLSearchParams();
-  if (params.limit) query.set("limit", String(params.limit));
-  if (params.offset) query.set("offset", String(params.offset));
+  if (params.limit != null) query.set("limit", String(params.limit));
+  if (params.offset != null) query.set("offset", String(params.offset));
   if (params.ean) query.set("ean", params.ean);
   if (params.linked !== undefined) query.set("linked", String(params.linked));
 

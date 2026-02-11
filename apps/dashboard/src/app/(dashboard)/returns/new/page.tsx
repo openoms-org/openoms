@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,6 +26,8 @@ type ReturnFormValues = z.infer<typeof returnSchema>;
 
 export default function NewReturnPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultOrderId = searchParams.get("order_id") ?? "";
   const createReturn = useCreateReturn();
 
   const {
@@ -37,7 +39,7 @@ export default function NewReturnPage() {
   } = useForm<ReturnFormValues>({
     resolver: zodResolver(returnSchema),
     defaultValues: {
-      order_id: "",
+      order_id: defaultOrderId,
       reason: "",
       refund_amount: 0,
       notes: "",
