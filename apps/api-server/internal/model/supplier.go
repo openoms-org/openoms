@@ -62,6 +62,9 @@ func (r *CreateSupplierRequest) Validate() error {
 	default:
 		return errors.New("feed_format must be one of: iof, csv, custom")
 	}
+	if err := validateMaxLength("name", r.Name, 500); err != nil {
+		return err
+	}
 	return nil
 }
 

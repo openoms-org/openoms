@@ -40,7 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const credentialsSchema = z.object({
   credentials: z
     .string()
-    .min(1, "Dane uwierzytelniajace sa wymagane")
+    .min(1, "Dane uwierzytelniające są wymagane")
     .refine(
       (val) => {
         try {
@@ -50,7 +50,7 @@ const credentialsSchema = z.object({
           return false;
         }
       },
-      { message: "Nieprawidlowy format JSON" }
+      { message: "Nieprawidłowy format JSON" }
     ),
 });
 
@@ -130,7 +130,7 @@ export default function IntegrationDetailPage() {
       { credentials: JSON.parse(data.credentials) },
       {
         onSuccess: () => {
-          toast.success("Dane uwierzytelniajace zostały zaktualizowane");
+          toast.success("Dane uwierzytelniające zostały zaktualizowane");
         },
         onError: (error) => {
           toast.error(
@@ -146,7 +146,7 @@ export default function IntegrationDetailPage() {
   const handleDelete = () => {
     deleteIntegration.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Integracja zostala usunieta");
+        toast.success("Integracja została usunięta");
         router.push("/integrations");
       },
       onError: (error) => {
@@ -184,7 +184,7 @@ export default function IntegrationDetailPage() {
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
           >
-            Usun
+            Usuń
           </Button>
         </div>
       </div>
@@ -220,7 +220,7 @@ export default function IntegrationDetailPage() {
               )}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Dane uwierzytelniajace
+                  Dane uwierzytelniające
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.has_credentials ? "Skonfigurowane" : "Brak"}
@@ -295,7 +295,7 @@ export default function IntegrationDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Zmien status</CardTitle>
+              <CardTitle>Zmień status</CardTitle>
             </CardHeader>
             <CardContent>
               <Select
@@ -316,7 +316,7 @@ export default function IntegrationDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Aktualizuj dane uwierzytelniajace</CardTitle>
+              <CardTitle>Aktualizuj dane uwierzytelniające</CardTitle>
             </CardHeader>
             <CardContent>
               <form
@@ -325,7 +325,7 @@ export default function IntegrationDetailPage() {
               >
                 <div className="space-y-2">
                   <Label htmlFor="credentials">
-                    Nowe dane uwierzytelniajace (JSON)
+                    Nowe dane uwierzytelniające (JSON)
                   </Label>
                   <Textarea
                     id="credentials"

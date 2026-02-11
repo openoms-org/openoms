@@ -28,6 +28,9 @@ func TestNewClientDefaults(t *testing.T) {
 	if c.Labels == nil {
 		t.Fatal("Labels service not initialized")
 	}
+	if c.Tracking == nil {
+		t.Fatal("Tracking service not initialized")
+	}
 }
 
 func TestWithSandbox(t *testing.T) {

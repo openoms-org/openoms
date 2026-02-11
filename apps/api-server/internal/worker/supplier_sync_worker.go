@@ -74,13 +74,15 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 
 			// Record error on supplier
 			errMsg := err.Error()
-			_ = database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
+			if dbErr := database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
 				_, err := tx.Exec(ctx,
 					`UPDATE suppliers SET error_message = $1, updated_at = NOW() WHERE id = $2`,
 					errMsg, supplierID,
 				)
 				return err
-			})
+			}); dbErr != nil {
+				w.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+			}
 			continue
 		}
 		synced++

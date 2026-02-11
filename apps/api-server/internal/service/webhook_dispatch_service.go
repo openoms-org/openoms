@@ -91,15 +91,38 @@ func (s *WebhookDispatchService) Dispatch(ctx context.Context, tenantID uuid.UUI
 		if !matchesEvent(ep.Events, eventType) {
 			continue
 		}
-		s.sendWebhook(ctx, tenantID, ep, eventType, payloadJSON)
+		s.sendWebhookWithRetry(ctx, tenantID, ep, eventType, payloadJSON)
 	}
 }
 
-func (s *WebhookDispatchService) sendWebhook(ctx context.Context, tenantID uuid.UUID, ep model.WebhookEndpoint, eventType string, payload []byte) {
+func (s *WebhookDispatchService) sendWebhookWithRetry(ctx context.Context, tenantID uuid.UUID, ep model.WebhookEndpoint, eventType string, payload []byte) {
+	maxRetries := 3
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := time.Duration(1<<(2*uint(attempt-1))) * time.Second // 1s, 4s, 16s
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(backoff):
+			}
+		}
+		success := s.trySendWebhook(ctx, tenantID, ep, eventType, payload, attempt == maxRetries)
+		if success {
+			return
+		}
+	}
+}
+
+// trySendWebhook attempts a single webhook delivery. It logs the delivery only
+// on success or when isFinalAttempt is true. Returns true if successful.
+func (s *WebhookDispatchService) trySendWebhook(ctx context.Context, tenantID uuid.UUID, ep model.WebhookEndpoint, eventType string, payload []byte, isFinalAttempt bool) bool {
 	// SSRF protection: reject private/internal URLs
 	if isPrivateURL(ep.URL) {
 		slog.Warn("webhook: skipping dispatch to private/internal URL", "url", ep.URL, "tenant_id", tenantID)
-		return
+		if isFinalAttempt {
+			s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "failed", nil, "private/internal URL rejected")
+		}
+		return false
 	}
 
 	// Compute HMAC-SHA256 signature
@@ -110,8 +133,10 @@ func (s *WebhookDispatchService) sendWebhook(ctx context.Context, tenantID uuid.
 	// Send HTTP POST
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ep.URL, strings.NewReader(string(payload)))
 	if err != nil {
-		s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "failed", nil, err.Error())
-		return
+		if isFinalAttempt {
+			s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "failed", nil, err.Error())
+		}
+		return false
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Webhook-Signature", signature)
@@ -119,18 +144,24 @@ func (s *WebhookDispatchService) sendWebhook(ctx context.Context, tenantID uuid.
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "failed", nil, err.Error())
-		return
+		if isFinalAttempt {
+			s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "failed", nil, err.Error())
+		}
+		return false
 	}
 	defer resp.Body.Close()
 	io.ReadAll(resp.Body) // drain body
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "success", &resp.StatusCode, "")
-	} else {
+		return true
+	}
+
+	if isFinalAttempt {
 		errMsg := fmt.Sprintf("HTTP %d", resp.StatusCode)
 		s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "failed", &resp.StatusCode, errMsg)
 	}
+	return false
 }
 
 func (s *WebhookDispatchService) logDelivery(ctx context.Context, tenantID uuid.UUID, url, eventType string, payload []byte, status string, responseCode *int, errMsg string) {

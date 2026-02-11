@@ -19,6 +19,7 @@ type RouterDeps struct {
 	Pool            *pgxpool.Pool
 	Config          *config.Config
 	TokenSvc        *service.TokenService
+	TokenBlacklist  *middleware.TokenBlacklist
 	Auth            *handler.AuthHandler
 	User            *handler.UserHandler
 	Order           *handler.OrderHandler
@@ -76,7 +77,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {
-		r.Use(middleware.JWTAuth(deps.TokenSvc))
+		r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
 
 		// Upload endpoint — has its own body size limit, no global MaxBodySize
 		r.Post("/uploads", deps.Upload.Upload)

@@ -6,18 +6,26 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
-	isDev       bool
+	authService    *service.AuthService
+	isDev          bool
+	tokenBlacklist *middleware.TokenBlacklist
 }
 
-func NewAuthHandler(authService *service.AuthService, isDev bool) *AuthHandler {
-	return &AuthHandler{authService: authService, isDev: isDev}
+func NewAuthHandler(authService *service.AuthService, isDev bool, blacklist ...*middleware.TokenBlacklist) *AuthHandler {
+	h := &AuthHandler{authService: authService, isDev: isDev}
+	if len(blacklist) > 0 {
+		h.tokenBlacklist = blacklist[0]
+	}
+	return h
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +99,18 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	// Revoke the access token if a blacklist is configured
+	if h.tokenBlacklist != nil {
+		if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenStr != "" {
+				tokenHash := middleware.HashToken(tokenStr)
+				// Blacklist the token for 1 hour (access token TTL)
+				h.tokenBlacklist.Revoke(tokenHash, time.Now().Add(1*time.Hour))
+			}
+		}
+	}
+
 	h.clearRefreshCookie(w)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"time"
 
 	inpostsdk "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 
@@ -132,8 +133,22 @@ func (p *InPostProvider) GetLabel(ctx context.Context, externalID string, format
 }
 
 func (p *InPostProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
-	// TODO: InPost SDK does not have a tracking endpoint yet.
-	return nil, nil
+	resp, err := p.client.Tracking.Get(ctx, trackingNumber)
+	if err != nil {
+		return nil, fmt.Errorf("inpost get tracking: %w", err)
+	}
+
+	events := make([]integration.TrackingEvent, 0, len(resp.TrackingDetails))
+	for _, td := range resp.TrackingDetails {
+		ts, _ := time.Parse(time.RFC3339, td.Datetime)
+		events = append(events, integration.TrackingEvent{
+			Status:    td.Status,
+			Location:  td.Agency,
+			Timestamp: ts,
+			Details:   td.OriginStatus,
+		})
+	}
+	return events, nil
 }
 
 func (p *InPostProvider) CancelShipment(ctx context.Context, externalID string) error {

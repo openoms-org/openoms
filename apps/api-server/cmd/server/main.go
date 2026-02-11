@@ -21,6 +21,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -116,8 +117,11 @@ func main() {
 	statsService := service.NewStatsService(statsRepo, pool)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
+	// Initialize token blacklist for server-side token revocation
+	tokenBlacklist := middleware.NewTokenBlacklist()
+
 	// Initialize handlers
-	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment())
+	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment(), tokenBlacklist)
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
@@ -149,6 +153,7 @@ func main() {
 		Pool:            pool,
 		Config:          cfg,
 		TokenSvc:        tokenSvc,
+		TokenBlacklist:  tokenBlacklist,
 		Auth:            authHandler,
 		User:            userHandler,
 		Order:           orderHandler,

@@ -131,7 +131,7 @@ export default function ProductDetailPage() {
             onClick={() => setIsEditing(!isEditing)}
           >
             <Pencil className="h-4 w-4" />
-            {isEditing ? "Anuluj edycje" : "Edytuj"}
+            {isEditing ? "Anuluj edycję" : "Edytuj"}
           </Button>
           <Button
             variant="destructive"
@@ -139,7 +139,7 @@ export default function ProductDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Usun
+            Usuń
           </Button>
         </div>
       </div>
@@ -161,7 +161,7 @@ export default function ProductDetailPage() {
         <>
         <Card>
           <CardHeader>
-            <CardTitle>Zdjecia</CardTitle>
+            <CardTitle>Zdjęcia</CardTitle>
           </CardHeader>
           <CardContent>
             {product.image_url ? (
@@ -260,7 +260,7 @@ export default function ProductDetailPage() {
               })()}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Identyfikator zewnetrzny
+                  Identyfikator zewnętrzny
                 </p>
                 <p className="font-mono text-sm">
                   {product.external_id || "-"}

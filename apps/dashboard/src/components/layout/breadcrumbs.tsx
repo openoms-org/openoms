@@ -32,9 +32,17 @@ export function Breadcrumbs() {
 
   if (segments.length === 0) return null;
 
+  const formatSegment = (segment: string): string => {
+    // If it looks like a UUID, show "Szczegóły" instead
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(segment)) {
+      return "Szczegóły";
+    }
+    return segmentLabels[segment] || segment;
+  };
+
   const crumbs = segments.map((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
-    const label = segmentLabels[segment] || segment;
+    const label = formatSegment(segment);
     const isLast = index === segments.length - 1;
 
     return { href, label, isLast };

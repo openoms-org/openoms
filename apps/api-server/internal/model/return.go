@@ -39,6 +39,12 @@ func (r CreateReturnRequest) Validate() error {
 	if r.RefundAmount < 0 {
 		return errors.New("refund_amount must be non-negative")
 	}
+	if err := validateMaxLength("reason", r.Reason, 2000); err != nil {
+		return err
+	}
+	if err := validateMaxLengthPtr("notes", r.Notes, 5000); err != nil {
+		return err
+	}
 	return nil
 }
 

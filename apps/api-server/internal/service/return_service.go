@@ -86,6 +86,13 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 		return nil, NewValidationError(err)
 	}
 
+	// Sanitize user-facing text fields to prevent stored XSS
+	req.Reason = model.StripHTMLTags(req.Reason)
+	if req.Notes != nil {
+		sanitized := model.StripHTMLTags(*req.Notes)
+		req.Notes = &sanitized
+	}
+
 	items := req.Items
 	if items == nil {
 		items = json.RawMessage("[]")

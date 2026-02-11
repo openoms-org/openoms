@@ -70,6 +70,11 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		return nil, NewValidationError(err)
 	}
 
+	// Sanitize user-facing text fields to prevent stored XSS
+	req.Name = model.StripHTMLTags(req.Name)
+	req.DescriptionShort = model.StripHTMLTags(req.DescriptionShort)
+	req.DescriptionLong = model.StripHTMLTags(req.DescriptionLong)
+
 	metadata := req.Metadata
 	if metadata == nil {
 		metadata = []byte("{}")
