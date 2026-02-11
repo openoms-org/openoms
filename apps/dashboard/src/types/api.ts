@@ -432,6 +432,26 @@ export interface OrderSummary {
   created_at: string;
 }
 
+// === Advanced Reports ===
+export interface TopProduct {
+  name: string;
+  sku?: string;
+  total_quantity: number;
+  total_revenue: number;
+}
+
+export interface SourceRevenue {
+  source: string;
+  revenue: number;
+  count: number;
+}
+
+export interface DailyOrderTrend {
+  date: string;
+  count: number;
+  avg_value: number;
+}
+
 // === Audit Log ===
 export interface AuditLogEntry {
   id: number;
@@ -592,6 +612,12 @@ export interface SyncJob {
   error_message?: string;
   metadata: Record<string, unknown>;
   created_at: string;
+}
+
+export interface SyncJobListParams extends PaginationParams {
+  integration_id?: string;
+  job_type?: string;
+  status?: string;
 }
 
 // === Suppliers ===

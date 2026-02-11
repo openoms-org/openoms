@@ -127,3 +127,96 @@ func (r *StatsRepository) GetRecentOrders(ctx context.Context, tx pgx.Tx, limit 
 	}
 	return result, rows.Err()
 }
+
+func (r *StatsRepository) GetTopProducts(ctx context.Context, tx pgx.Tx, limit int) ([]model.TopProduct, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT name, SUM(quantity) as total_quantity, SUM(price * quantity) as total_revenue
+		 FROM orders, jsonb_to_recordset(orders.items) AS items(name text, quantity int, price numeric)
+		 GROUP BY name
+		 ORDER BY total_revenue DESC
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("top products: %w", err)
+	}
+	defer rows.Close()
+
+	result := []model.TopProduct{}
+	for rows.Next() {
+		var tp model.TopProduct
+		if err := rows.Scan(&tp.Name, &tp.TotalQuantity, &tp.TotalRevenue); err != nil {
+			return nil, fmt.Errorf("scan top products: %w", err)
+		}
+		result = append(result, tp)
+	}
+	return result, rows.Err()
+}
+
+func (r *StatsRepository) GetRevenueBySource(ctx context.Context, tx pgx.Tx, days int) ([]model.SourceRevenue, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT source, SUM(total_amount) as revenue, COUNT(*) as count
+		 FROM orders
+		 WHERE created_at >= NOW() - INTERVAL '1 day' * $1
+		 GROUP BY source
+		 ORDER BY revenue DESC`, days)
+	if err != nil {
+		return nil, fmt.Errorf("revenue by source: %w", err)
+	}
+	defer rows.Close()
+
+	result := []model.SourceRevenue{}
+	for rows.Next() {
+		var sr model.SourceRevenue
+		if err := rows.Scan(&sr.Source, &sr.Revenue, &sr.Count); err != nil {
+			return nil, fmt.Errorf("scan revenue by source: %w", err)
+		}
+		result = append(result, sr)
+	}
+	return result, rows.Err()
+}
+
+func (r *StatsRepository) GetOrderTrends(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyOrderTrend, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT DATE(created_at) as date, COUNT(*) as count, AVG(total_amount) as avg_value
+		 FROM orders
+		 WHERE created_at >= NOW() - INTERVAL '1 day' * $1
+		 GROUP BY DATE(created_at)
+		 ORDER BY date ASC`, days)
+	if err != nil {
+		return nil, fmt.Errorf("order trends: %w", err)
+	}
+	defer rows.Close()
+
+	result := []model.DailyOrderTrend{}
+	for rows.Next() {
+		var dt model.DailyOrderTrend
+		var date time.Time
+		if err := rows.Scan(&date, &dt.Count, &dt.AvgValue); err != nil {
+			return nil, fmt.Errorf("scan order trends: %w", err)
+		}
+		dt.Date = date.Format("2006-01-02")
+		result = append(result, dt)
+	}
+	return result, rows.Err()
+}
+
+func (r *StatsRepository) GetPaymentMethodStats(ctx context.Context, tx pgx.Tx) (map[string]int, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT COALESCE(payment_method, 'unknown'), COUNT(*)
+		 FROM orders
+		 GROUP BY payment_method`)
+	if err != nil {
+		return nil, fmt.Errorf("payment method stats: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]int)
+	for rows.Next() {
+		var method string
+		var count int
+		if err := rows.Scan(&method, &count); err != nil {
+			return nil, fmt.Errorf("scan payment method stats: %w", err)
+		}
+		result[method] = count
+	}
+	return result, rows.Err()
+}

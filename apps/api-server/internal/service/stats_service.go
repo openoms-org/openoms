@@ -96,3 +96,79 @@ func (s *StatsService) GetDashboardStats(ctx context.Context, tenantID uuid.UUID
 	}
 	return &stats, nil
 }
+
+func (s *StatsService) GetTopProducts(ctx context.Context, tenantID uuid.UUID, limit int) ([]model.TopProduct, error) {
+	var result []model.TopProduct
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		products, err := s.statsRepo.GetTopProducts(ctx, tx, limit)
+		if err != nil {
+			return err
+		}
+		result = products
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = []model.TopProduct{}
+	}
+	return result, nil
+}
+
+func (s *StatsService) GetRevenueBySource(ctx context.Context, tenantID uuid.UUID, days int) ([]model.SourceRevenue, error) {
+	var result []model.SourceRevenue
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		revenue, err := s.statsRepo.GetRevenueBySource(ctx, tx, days)
+		if err != nil {
+			return err
+		}
+		result = revenue
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = []model.SourceRevenue{}
+	}
+	return result, nil
+}
+
+func (s *StatsService) GetOrderTrends(ctx context.Context, tenantID uuid.UUID, days int) ([]model.DailyOrderTrend, error) {
+	var result []model.DailyOrderTrend
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		trends, err := s.statsRepo.GetOrderTrends(ctx, tx, days)
+		if err != nil {
+			return err
+		}
+		result = trends
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = []model.DailyOrderTrend{}
+	}
+	return result, nil
+}
+
+func (s *StatsService) GetPaymentMethodStats(ctx context.Context, tenantID uuid.UUID) (map[string]int, error) {
+	var result map[string]int
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		stats, err := s.statsRepo.GetPaymentMethodStats(ctx, tx)
+		if err != nil {
+			return err
+		}
+		result = stats
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		result = make(map[string]int)
+	}
+	return result, nil
+}

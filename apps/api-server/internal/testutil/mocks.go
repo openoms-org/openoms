@@ -364,6 +364,26 @@ func (m *MockStatsRepo) GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) (s
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockStatsRepo) GetTopProducts(ctx context.Context, tx pgx.Tx, limit int) ([]model.TopProduct, error) {
+	args := m.Called(ctx, tx, limit)
+	return args.Get(0).([]model.TopProduct), args.Error(1)
+}
+
+func (m *MockStatsRepo) GetRevenueBySource(ctx context.Context, tx pgx.Tx, days int) ([]model.SourceRevenue, error) {
+	args := m.Called(ctx, tx, days)
+	return args.Get(0).([]model.SourceRevenue), args.Error(1)
+}
+
+func (m *MockStatsRepo) GetOrderTrends(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyOrderTrend, error) {
+	args := m.Called(ctx, tx, days)
+	return args.Get(0).([]model.DailyOrderTrend), args.Error(1)
+}
+
+func (m *MockStatsRepo) GetPaymentMethodStats(ctx context.Context, tx pgx.Tx) (map[string]int, error) {
+	args := m.Called(ctx, tx)
+	return args.Get(0).(map[string]int), args.Error(1)
+}
+
 // --- MockSyncJobRepo ---
 
 type MockSyncJobRepo struct{ mock.Mock }
@@ -387,6 +407,11 @@ func (m *MockSyncJobRepo) GetByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) 
 func (m *MockSyncJobRepo) ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID, limit int) ([]*model.SyncJob, error) {
 	args := m.Called(ctx, tx, integrationID, limit)
 	return args.Get(0).([]*model.SyncJob), args.Error(1)
+}
+
+func (m *MockSyncJobRepo) List(ctx context.Context, tx pgx.Tx, filter model.SyncJobListFilter) ([]*model.SyncJob, int, error) {
+	args := m.Called(ctx, tx, filter)
+	return args.Get(0).([]*model.SyncJob), args.Int(1), args.Error(2)
 }
 
 // --- MockSupplierRepo ---

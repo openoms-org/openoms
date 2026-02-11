@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -236,6 +236,20 @@ export default function ShipmentDetailPage() {
                   <p className="text-sm">-</p>
                 )}
               </div>
+              {shipment.provider === "inpost" &&
+                typeof shipment.carrier_data?.target_point === "string" && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Paczkomat docelowy
+                    </p>
+                    <div className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2.5 py-1 mt-1">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-sm font-medium">
+                        {shipment.carrier_data.target_point}
+                      </span>
+                    </div>
+                  </div>
+                )}
               <div>
                 <p className="text-sm text-muted-foreground">Data utworzenia</p>
                 <p className="text-sm">{formatDate(shipment.created_at)}</p>
