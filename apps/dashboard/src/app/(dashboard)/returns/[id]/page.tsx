@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { ExternalLink, Copy, Check } from "lucide-react";
 import {
   useReturn,
   useUpdateReturn,
@@ -55,6 +56,7 @@ export default function ReturnDetailPage() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [tokenCopied, setTokenCopied] = useState(false);
 
   const { data: returnData, isLoading } = useReturn(params.id);
   const updateReturn = useUpdateReturn(params.id);
@@ -270,6 +272,72 @@ export default function ReturnDetailPage() {
                     <div>
                       <p className="text-sm text-muted-foreground">Notatki</p>
                       <p className="mt-1 text-sm">{returnData.notes}</p>
+                    </div>
+                  </>
+                )}
+
+                {returnData.customer_email && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email klienta (z formularza)</p>
+                      <p className="mt-1 text-sm">{returnData.customer_email}</p>
+                    </div>
+                  </>
+                )}
+
+                {returnData.customer_notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Uwagi klienta</p>
+                      <p className="mt-1 text-sm">{returnData.customer_notes}</p>
+                    </div>
+                  </>
+                )}
+
+                {returnData.return_token && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Link do śledzenia (dla klienta)</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded bg-muted px-2 py-1 text-xs font-mono break-all">
+                          {typeof window !== "undefined"
+                            ? `${window.location.origin}/return-request/${returnData.return_token}`
+                            : `/return-request/${returnData.return_token}`}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const url = `${window.location.origin}/return-request/${returnData.return_token}`;
+                            navigator.clipboard.writeText(url).then(() => {
+                              setTokenCopied(true);
+                              setTimeout(() => setTokenCopied(false), 2000);
+                            });
+                          }}
+                        >
+                          {tokenCopied ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                        >
+                          <a
+                            href={`/return-request/${returnData.return_token}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      </div>
                     </div>
                   </>
                 )}

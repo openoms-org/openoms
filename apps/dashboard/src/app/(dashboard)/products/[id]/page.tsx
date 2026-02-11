@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Layers, Package, PackageOpen, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Layers, Package, PackageOpen, Pencil, Plus, Trash2, X, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,7 +50,16 @@ import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { getErrorMessage } from "@/lib/api-client";
-import type { CreateProductRequest } from "@/types/api";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  useSuggestCategories,
+  useGenerateDescription,
+} from "@/hooks/use-ai";
+import type { CreateProductRequest, AISuggestion } from "@/types/api";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -59,6 +68,12 @@ export default function ProductDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const [showAddComponentDialog, setShowAddComponentDialog] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion | null>(null);
+  const [showDescriptionDialog, setShowDescriptionDialog] = useState(false);
+  const [aiDescription, setAiDescription] = useState("");
+
+  const suggestCategories = useSuggestCategories();
+  const generateDescription = useGenerateDescription();
 
   const { data: product, isLoading } = useProduct(params.id);
   const { data: categoriesConfig } = useProductCategories();
@@ -151,6 +166,112 @@ export default function ProductDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* AI button group */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!aiSuggestions) {
+                    suggestCategories.mutate(params.id, {
+                      onSuccess: (data) => setAiSuggestions(data),
+                      onError: (error) => toast.error(getErrorMessage(error)),
+                    });
+                  }
+                }}
+              >
+                {suggestCategories.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Sugeruj kategorie
+              </Button>
+            </PopoverTrigger>
+            {aiSuggestions && (
+              <PopoverContent className="w-80">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Sugerowane kategorie</p>
+                  <div className="flex flex-wrap gap-1">
+                    {aiSuggestions.categories.map((cat) => (
+                      <button
+                        key={cat}
+                        className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 cursor-pointer"
+                        onClick={() => {
+                          updateProduct.mutate(
+                            { category: cat },
+                            {
+                              onSuccess: () => {
+                                toast.success(`Kategoria "${cat}" zastosowana`);
+                                setAiSuggestions(null);
+                              },
+                              onError: (error) => toast.error(getErrorMessage(error)),
+                            }
+                          );
+                        }}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  {aiSuggestions.tags.length > 0 && (
+                    <>
+                      <p className="text-sm font-medium">Sugerowane tagi</p>
+                      <div className="flex flex-wrap gap-1">
+                        {aiSuggestions.tags.map((tag) => (
+                          <button
+                            key={tag}
+                            className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium hover:bg-muted/80 cursor-pointer"
+                            onClick={() => {
+                              const currentTags = product?.tags || [];
+                              if (!currentTags.includes(tag)) {
+                                updateProduct.mutate(
+                                  { tags: [...currentTags, tag] },
+                                  {
+                                    onSuccess: () => toast.success(`Tag "${tag}" dodany`),
+                                    onError: (error) => toast.error(getErrorMessage(error)),
+                                  }
+                                );
+                              }
+                            }}
+                          >
+                            + {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Kliknij aby zastosowac sugestie
+                  </p>
+                </div>
+              </PopoverContent>
+            )}
+          </Popover>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              generateDescription.mutate(params.id, {
+                onSuccess: (data) => {
+                  setAiDescription(data.description || "");
+                  setShowDescriptionDialog(true);
+                },
+                onError: (error) => toast.error(getErrorMessage(error)),
+              });
+            }}
+            disabled={generateDescription.isPending}
+          >
+            {generateDescription.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Generuj opis
+          </Button>
+
           <Button variant="outline" size="sm" asChild>
             <Link href={`/products/${params.id}/variants`}>
               <Layers className="h-4 w-4" />
@@ -163,7 +284,7 @@ export default function ProductDetailPage() {
             onClick={() => setIsEditing(!isEditing)}
           >
             <Pencil className="h-4 w-4" />
-            {isEditing ? "Anuluj edycję" : "Edytuj"}
+            {isEditing ? "Anuluj edycje" : "Edytuj"}
           </Button>
           <Button
             variant="destructive"
@@ -171,7 +292,7 @@ export default function ProductDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Usuń
+            Usun
           </Button>
         </div>
       </div>
@@ -480,10 +601,43 @@ export default function ProductDetailPage() {
         </>
       )}
 
+      {/* AI Generated Description Dialog */}
+      <Dialog open={showDescriptionDialog} onOpenChange={setShowDescriptionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Wygenerowany opis AI</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm whitespace-pre-wrap">{aiDescription}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDescriptionDialog(false)}>
+              Anuluj
+            </Button>
+            <Button
+              onClick={() => {
+                updateProduct.mutate(
+                  { description_long: aiDescription },
+                  {
+                    onSuccess: () => {
+                      toast.success("Opis produktu zaktualizowany");
+                      setShowDescriptionDialog(false);
+                    },
+                    onError: (error) => toast.error(getErrorMessage(error)),
+                  }
+                );
+              }}
+            >
+              Zastosuj opis
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuń produkt"
+        title="Usun produkt"
         description={`Czy na pewno chcesz usunąć produkt "${product.name}"? Ta operacja jest nieodwracalna.`}
         confirmLabel="Usuń"
         variant="destructive"

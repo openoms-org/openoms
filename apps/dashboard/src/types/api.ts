@@ -29,6 +29,7 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   name?: string;
   role?: "owner" | "admin" | "member";
+  role_id?: string;
 }
 
 // === Core Models ===
@@ -38,6 +39,7 @@ export interface User {
   email: string;
   name: string;
   role: "owner" | "admin" | "member";
+  role_id?: string;
   last_login_at?: string;
   created_at: string;
   updated_at: string;
@@ -322,6 +324,9 @@ export interface Return {
   items: ReturnItem[];
   refund_amount: number;
   notes?: string;
+  return_token?: string;
+  customer_email?: string;
+  customer_notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1175,4 +1180,248 @@ export interface CreatePriceListItemRequest {
 
 export interface PriceListListParams extends PaginationParams {
   active?: boolean;
+}
+
+// === Warehouse Documents (PZ/WZ/MM) ===
+export interface WarehouseDocument {
+  id: string;
+  tenant_id: string;
+  document_number: string;
+  document_type: "PZ" | "WZ" | "MM";
+  status: "draft" | "confirmed" | "cancelled";
+  warehouse_id: string;
+  target_warehouse_id?: string;
+  supplier_id?: string;
+  order_id?: string;
+  notes?: string;
+  confirmed_at?: string;
+  confirmed_by?: string;
+  created_by?: string;
+  items?: WarehouseDocItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WarehouseDocItem {
+  id: string;
+  tenant_id: string;
+  document_id: string;
+  product_id: string;
+  variant_id?: string;
+  quantity: number;
+  unit_price?: number;
+  notes?: string;
+  created_at: string;
+}
+
+export interface CreateWarehouseDocumentRequest {
+  document_type: "PZ" | "WZ" | "MM";
+  warehouse_id: string;
+  target_warehouse_id?: string;
+  supplier_id?: string;
+  order_id?: string;
+  notes?: string;
+  items: CreateWarehouseDocItemRequest[];
+}
+
+export interface CreateWarehouseDocItemRequest {
+  product_id: string;
+  variant_id?: string;
+  quantity: number;
+  unit_price?: number;
+  notes?: string;
+}
+
+export interface UpdateWarehouseDocumentRequest {
+  notes?: string;
+}
+
+export interface WarehouseDocumentListParams extends PaginationParams {
+  document_type?: string;
+  status?: string;
+  warehouse_id?: string;
+}
+
+// === Exchange Rates (Multi-Currency) ===
+export interface ExchangeRate {
+  id: string;
+  tenant_id: string;
+  base_currency: string;
+  target_currency: string;
+  rate: number;
+  source: string;
+  fetched_at: string;
+  created_at: string;
+}
+
+export interface CreateExchangeRateRequest {
+  base_currency: string;
+  target_currency: string;
+  rate: number;
+  source?: string;
+}
+
+export interface UpdateExchangeRateRequest {
+  rate?: number;
+  source?: string;
+}
+
+export interface ConvertAmountRequest {
+  amount: number;
+  from: string;
+  to: string;
+}
+
+export interface ConvertAmountResponse {
+  original_amount: number;
+  converted_amount: number;
+  from: string;
+  to: string;
+  rate: number;
+}
+
+export interface ExchangeRateListParams extends PaginationParams {
+  base_currency?: string;
+  target_currency?: string;
+}
+
+export interface FetchNBPResponse {
+  fetched: number;
+  source: string;
+}
+
+// === Public Return Self-Service ===
+export interface PublicReturnRequest {
+  order_id: string;
+  email: string;
+  items?: ReturnItem[];
+  reason: string;
+  notes?: string;
+}
+
+export interface PublicReturnResponse {
+  id: string;
+  status: string;
+  return_token: string;
+  created_at: string;
+}
+
+export interface PublicReturnStatus {
+  id: string;
+  status: string;
+  reason: string;
+  items: ReturnItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+// === Roles (RBAC) ===
+export interface Role {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  is_system: boolean;
+  permissions: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateRoleRequest {
+  name: string;
+  description?: string;
+  permissions: string[];
+}
+
+export interface UpdateRoleRequest {
+  name?: string;
+  description?: string;
+  permissions?: string[];
+}
+
+export interface RoleListParams extends PaginationParams {}
+
+export interface PermissionGroup {
+  group: string;
+  permissions: string[];
+}
+
+// === AI Auto-Categorization (Phase 33) ===
+export interface AISuggestion {
+  product_id: string;
+  categories: string[];
+  tags: string[];
+  description?: string;
+}
+
+export interface AIBulkCategorizeResult {
+  product_id: string;
+  categories: string[];
+  tags: string[];
+  error?: string;
+}
+
+export interface AIBulkCategorizeResponse {
+  results: AIBulkCategorizeResult[];
+}
+
+// === Marketing / Mailchimp (Phase 34) ===
+export interface MailchimpSettings {
+  api_key: string;
+  list_id: string;
+  enabled: boolean;
+}
+
+export interface MarketingSyncResponse {
+  synced: number;
+  failed: number;
+}
+
+export interface MarketingStatusResponse {
+  enabled: boolean;
+  configured: boolean;
+}
+
+export interface CreateCampaignRequest {
+  name: string;
+  subject: string;
+  content: string;
+}
+
+export interface CreateCampaignResponse {
+  campaign_id: string;
+}
+
+// === Helpdesk / Freshdesk (Phase 34) ===
+export interface FreshdeskSettings {
+  domain: string;
+  api_key: string;
+  enabled: boolean;
+}
+
+export interface FreshdeskTicket {
+  id: number;
+  subject: string;
+  description?: string;
+  status: number;
+  priority: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTicketRequest {
+  subject: string;
+  description: string;
+  email: string;
+}
+
+export interface TicketListResponse {
+  tickets: FreshdeskTicket[];
+}
+
+// === WebSocket Events ===
+export interface WSEvent {
+  type: string;
+  tenant_id: string;
+  payload?: Record<string, unknown>;
 }

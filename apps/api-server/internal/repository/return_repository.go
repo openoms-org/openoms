@@ -47,6 +47,7 @@ func (r *ReturnRepository) List(ctx context.Context, tx pgx.Tx, filter model.Ret
 
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
+		        return_token, customer_email, customer_notes,
 		        created_at, updated_at
 		 FROM returns %s
 		 %s
@@ -67,6 +68,7 @@ func (r *ReturnRepository) List(ctx context.Context, tx pgx.Tx, filter model.Ret
 		if err := rows.Scan(
 			&ret.ID, &ret.TenantID, &ret.OrderID, &ret.Status, &ret.Reason,
 			&ret.Items, &ret.RefundAmount, &ret.Notes,
+			&ret.ReturnToken, &ret.CustomerEmail, &ret.CustomerNotes,
 			&ret.CreatedAt, &ret.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan return: %w", err)
@@ -80,11 +82,13 @@ func (r *ReturnRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	var ret model.Return
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
+		        return_token, customer_email, customer_notes,
 		        created_at, updated_at
 		 FROM returns WHERE id = $1`, id,
 	).Scan(
 		&ret.ID, &ret.TenantID, &ret.OrderID, &ret.Status, &ret.Reason,
 		&ret.Items, &ret.RefundAmount, &ret.Notes,
+		&ret.ReturnToken, &ret.CustomerEmail, &ret.CustomerNotes,
 		&ret.CreatedAt, &ret.UpdatedAt,
 	)
 	if err != nil {
@@ -96,14 +100,38 @@ func (r *ReturnRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return &ret, nil
 }
 
+func (r *ReturnRepository) FindByToken(ctx context.Context, tx pgx.Tx, token string) (*model.Return, error) {
+	var ret model.Return
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
+		        return_token, customer_email, customer_notes,
+		        created_at, updated_at
+		 FROM returns WHERE return_token = $1`, token,
+	).Scan(
+		&ret.ID, &ret.TenantID, &ret.OrderID, &ret.Status, &ret.Reason,
+		&ret.Items, &ret.RefundAmount, &ret.Notes,
+		&ret.ReturnToken, &ret.CustomerEmail, &ret.CustomerNotes,
+		&ret.CreatedAt, &ret.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find return by token: %w", err)
+	}
+	return &ret, nil
+}
+
 func (r *ReturnRepository) Create(ctx context.Context, tx pgx.Tx, ret *model.Return) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO returns (
-			id, tenant_id, order_id, status, reason, items, refund_amount, notes
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			id, tenant_id, order_id, status, reason, items, refund_amount, notes,
+			return_token, customer_email, customer_notes
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING created_at, updated_at`,
 		ret.ID, ret.TenantID, ret.OrderID, ret.Status, ret.Reason,
 		ret.Items, ret.RefundAmount, ret.Notes,
+		ret.ReturnToken, ret.CustomerEmail, ret.CustomerNotes,
 	).Scan(&ret.CreatedAt, &ret.UpdatedAt)
 }
 

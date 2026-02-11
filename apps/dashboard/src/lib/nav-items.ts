@@ -26,6 +26,11 @@ import {
   Printer,
   ScanBarcode,
   BadgePercent,
+  ClipboardList,
+  Coins,
+  Shield,
+  Send,
+  Headphones,
 } from "lucide-react";
 
 export interface NavItem {
@@ -50,12 +55,16 @@ export const navItems: NavItem[] = [
   { href: "/settings/warehouses", label: "Magazyny", icon: Warehouse, adminOnly: true, group: "Katalog" },
   { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
   { href: "/settings/price-lists", label: "Cenniki", icon: BadgePercent, adminOnly: true, group: "Katalog" },
+  { href: "/settings/warehouse-documents", label: "Dokumenty mag.", icon: ClipboardList, adminOnly: true, group: "Katalog" },
   { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true, group: "Połączenia" },
   { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true, group: "Połączenia" },
   { href: "/settings/webhooks", label: "Webhooki", icon: Webhook, adminOnly: true, group: "Połączenia" },
   { href: "/settings/sync-jobs", label: "Synchronizacja", icon: RefreshCw, adminOnly: true, group: "Połączenia" },
+  { href: "/settings/marketing", label: "Marketing", icon: Send, adminOnly: true, group: "Połączenia" },
+  { href: "/settings/helpdesk", label: "Helpdesk", icon: Headphones, adminOnly: true, group: "Połączenia" },
   { href: "/audit", label: "Dziennik", icon: ScrollText, adminOnly: true, group: "Administracja" },
   { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Administracja" },
+  { href: "/settings/roles", label: "Role", icon: Shield, adminOnly: true, group: "Administracja" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Administracja" },
   { href: "/settings/email", label: "Powiadomienia", icon: Mail, adminOnly: true, group: "Administracja" },
   { href: "/settings/sms", label: "SMS", icon: MessageSquare, adminOnly: true, group: "Administracja" },
@@ -63,5 +72,6 @@ export const navItems: NavItem[] = [
   { href: "/settings/custom-fields", label: "Pola", icon: TextCursorInput, adminOnly: true, group: "Administracja" },
   { href: "/settings/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Administracja" },
   { href: "/settings/automation", label: "Automatyzacja", icon: Zap, adminOnly: true, group: "Administracja" },
+  { href: "/settings/currencies", label: "Waluty", icon: Coins, adminOnly: true, group: "Administracja" },
   { href: "/settings/print-templates", label: "Szablony", icon: Printer, adminOnly: true, group: "Administracja" },
 ];

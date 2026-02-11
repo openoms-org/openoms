@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check } from "lucide-react";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus } from "@/hooks/use-orders";
 import { useShipments } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
 import { useOrderGroups, useSplitOrder } from "@/hooks/use-order-groups";
+import { useOrderTickets, useCreateOrderTicket } from "@/hooks/use-helpdesk";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,8 @@ export default function OrderDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSplitDialog, setShowSplitDialog] = useState(false);
+  const [showCreateTicketDialog, setShowCreateTicketDialog] = useState(false);
+  const [returnLinkCopied, setReturnLinkCopied] = useState(false);
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
@@ -66,6 +69,8 @@ export default function OrderDetailPage() {
   const { data: returnsData } = useReturns({ order_id: params.id });
   const { data: orderGroups } = useOrderGroups(params.id);
   const splitOrder = useSplitOrder(params.id);
+  const { data: ticketsData } = useOrderTickets(params.id);
+  const createTicket = useCreateOrderTicket(params.id);
 
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
@@ -178,6 +183,24 @@ export default function OrderDetailPage() {
               <RotateCcw className="mr-2 h-4 w-4" />
               Zgłoś zwrot
             </Link>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const returnUrl = `${window.location.origin}/return-request?order_id=${params.id}`;
+              navigator.clipboard.writeText(returnUrl).then(() => {
+                setReturnLinkCopied(true);
+                toast.success("Link do formularza zwrotu skopiowany do schowka");
+                setTimeout(() => setReturnLinkCopied(false), 2000);
+              });
+            }}
+          >
+            {returnLinkCopied ? (
+              <Check className="mr-2 h-4 w-4" />
+            ) : (
+              <ExternalLink className="mr-2 h-4 w-4" />
+            )}
+            Link do zwrotu
           </Button>
           {order && order.status !== "merged" && order.status !== "split" && order.items && order.items.length >= 2 && (
             <Button variant="outline" onClick={() => setShowSplitDialog(true)}>
@@ -453,6 +476,60 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Helpdesk Tickets */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Headphones className="h-4 w-4" />
+                  Zgloszenia
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreateTicketDialog(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                  Utworz zgloszenie
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {ticketsData?.tickets && ticketsData.tickets.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Temat</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Utworzono</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ticketsData.tickets.map((ticket) => (
+                      <TableRow key={ticket.id}>
+                        <TableCell className="font-mono text-sm">#{ticket.id}</TableCell>
+                        <TableCell className="font-medium">{ticket.subject}</TableCell>
+                        <TableCell>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                            {ticket.status === 2 ? "Otwarty" : ticket.status === 3 ? "Oczekujacy" : ticket.status === 4 ? "Rozwiazany" : ticket.status === 5 ? "Zamkniety" : `Status ${ticket.status}`}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(ticket.created_at)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Brak zgloszen dla tego zamowienia.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Merge/Split History */}
           {(order.merged_into || order.split_from || (orderGroups && orderGroups.length > 0)) && (
             <Card>
@@ -588,7 +665,98 @@ export default function OrderDetailPage() {
           isLoading={splitOrder.isPending}
         />
       )}
+
+      {/* Create Ticket Dialog */}
+      <CreateTicketDialog
+        open={showCreateTicketDialog}
+        onOpenChange={setShowCreateTicketDialog}
+        customerEmail={order?.customer_email || ""}
+        onSubmit={async (data) => {
+          try {
+            await createTicket.mutateAsync(data);
+            toast.success("Zgloszenie utworzone");
+            setShowCreateTicketDialog(false);
+          } catch (error) {
+            toast.error(getErrorMessage(error));
+          }
+        }}
+        isLoading={createTicket.isPending}
+      />
     </div>
+  );
+}
+
+function CreateTicketDialog({
+  open,
+  onOpenChange,
+  customerEmail,
+  onSubmit,
+  isLoading,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  customerEmail: string;
+  onSubmit: (data: { subject: string; description: string; email: string }) => void;
+  isLoading: boolean;
+}) {
+  const [subject, setSubject] = useState("");
+  const [description, setDescription] = useState("");
+  const [email, setEmail] = useState(customerEmail);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Utworz zgloszenie</DialogTitle>
+          <DialogDescription>
+            Utworz zgloszenie w systemie Freshdesk dla tego zamowienia.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Email klienta</Label>
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="klient@example.com"
+              type="email"
+            />
+          </div>
+          <div>
+            <Label>Temat</Label>
+            <Input
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder="Temat zgloszenia..."
+            />
+          </div>
+          <div>
+            <Label>Opis</Label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Opis problemu..."
+              rows={4}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Anuluj
+          </Button>
+          <Button
+            onClick={() => onSubmit({ subject, description, email })}
+            disabled={!subject || !description || !email || isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : null}
+            Utworz zgloszenie
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

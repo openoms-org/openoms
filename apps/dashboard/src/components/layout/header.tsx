@@ -5,6 +5,7 @@ import { UserMenu } from "./user-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { MobileNav } from "./mobile-nav";
 import { Separator } from "@/components/ui/separator";
+import { ConnectionStatus } from "./connection-status";
 
 export function Header() {
   return (
@@ -15,6 +16,7 @@ export function Header() {
         <Breadcrumbs />
       </div>
       <div className="flex items-center gap-2">
+        <ConnectionStatus />
         <ThemeToggle />
         <UserMenu />
       </div>

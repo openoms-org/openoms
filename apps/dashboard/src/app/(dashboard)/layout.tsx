@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useServiceWorker } from "@/hooks/use-service-worker";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -20,6 +21,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useKeyboardShortcuts({
     onToggleCommandPalette: handleToggleCommandPalette,
   });
+
+  useServiceWorker();
 
   if (isLoading) {
     return (
