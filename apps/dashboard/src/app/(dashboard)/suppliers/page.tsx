@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
+import { SUPPLIER_STATUSES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -22,12 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
-  active: { label: "Aktywny", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  error: { label: "Błąd", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-};
 
 export default function SuppliersPage() {
   const router = useRouter();

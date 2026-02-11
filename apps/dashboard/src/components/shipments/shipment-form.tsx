@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
-import { PaczkomatMap } from "@/components/shared/paczkomat-map";
+import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
 import type { Shipment } from "@/types/api";
 
 const shipmentSchema = z.object({
@@ -129,9 +129,10 @@ export function ShipmentForm({
               <span className="font-medium text-sm">{targetPoint}</span>
             </div>
           )}
-          <PaczkomatMap
-            onSelect={handlePointSelect}
-            selectedPoint={targetPoint}
+          <PaczkomatSelector
+            mode="dialog"
+            onPointSelect={handlePointSelect}
+            value={targetPoint}
           />
         </div>
       )}

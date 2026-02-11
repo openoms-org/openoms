@@ -68,6 +68,12 @@ export const RETURN_TRANSITIONS: Record<string, string[]> = {
   cancelled: [],
 };
 
+export const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
+  active: { label: "Aktywny", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  error: { label: "Błąd", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+};
+
 export const INTEGRATION_STATUSES: Record<string, { label: string; color: string }> = {
   active: { label: "Aktywna", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
   inactive: { label: "Nieaktywna", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },

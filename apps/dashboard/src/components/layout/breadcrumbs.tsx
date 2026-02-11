@@ -34,6 +34,7 @@ const segmentLabels: Record<string, string> = {
   marketing: "Marketing",
   helpdesk: "Helpdesk",
   sms: "SMS",
+  notifications: "Powiadomienia",
   currencies: "Waluty",
   "print-templates": "Szablony wydruków",
   categories: "Kategorie",
