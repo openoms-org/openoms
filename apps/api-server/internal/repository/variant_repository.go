@@ -103,6 +103,60 @@ func (r *VariantRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return &v, nil
 }
 
+func (r *VariantRepository) FindBySKU(ctx context.Context, tx pgx.Tx, sku string) ([]model.ProductVariant, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, product_id, sku, ean, name, attributes, price_override, stock_quantity,
+		        weight, image_url, position, active, created_at, updated_at
+		 FROM product_variants WHERE sku = $1`, sku,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find variants by sku: %w", err)
+	}
+	defer rows.Close()
+
+	var variants []model.ProductVariant
+	for rows.Next() {
+		var v model.ProductVariant
+		if err := rows.Scan(
+			&v.ID, &v.TenantID, &v.ProductID, &v.SKU, &v.EAN, &v.Name,
+			&v.Attributes, &v.PriceOverride, &v.StockQuantity,
+			&v.Weight, &v.ImageURL, &v.Position, &v.Active,
+			&v.CreatedAt, &v.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan variant by sku: %w", err)
+		}
+		variants = append(variants, v)
+	}
+	return variants, rows.Err()
+}
+
+func (r *VariantRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string) ([]model.ProductVariant, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, product_id, sku, ean, name, attributes, price_override, stock_quantity,
+		        weight, image_url, position, active, created_at, updated_at
+		 FROM product_variants WHERE ean = $1`, ean,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find variants by ean: %w", err)
+	}
+	defer rows.Close()
+
+	var variants []model.ProductVariant
+	for rows.Next() {
+		var v model.ProductVariant
+		if err := rows.Scan(
+			&v.ID, &v.TenantID, &v.ProductID, &v.SKU, &v.EAN, &v.Name,
+			&v.Attributes, &v.PriceOverride, &v.StockQuantity,
+			&v.Weight, &v.ImageURL, &v.Position, &v.Active,
+			&v.CreatedAt, &v.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan variant by ean: %w", err)
+		}
+		variants = append(variants, v)
+	}
+	return variants, rows.Err()
+}
+
 func (r *VariantRepository) Create(ctx context.Context, tx pgx.Tx, variant *model.ProductVariant) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO product_variants (id, tenant_id, product_id, sku, ean, name, attributes, price_override, stock_quantity, weight, image_url, position, active)

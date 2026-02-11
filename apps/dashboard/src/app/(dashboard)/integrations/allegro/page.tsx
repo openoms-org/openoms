@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, RefreshCw, Unplug } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useIntegrations, useUpdateIntegration } from "@/hooks/use-integrations";
 import { AllegroConnect } from "@/components/integrations/allegro-connect";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -24,24 +23,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Integration } from "@/types/api";
 
 export default function AllegroIntegrationPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: integrations, isLoading, refetch } = useIntegrations();
 
   const allegro = useMemo(
     () => integrations?.find((i) => i.provider === "allegro") ?? null,
     [integrations]
   );
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   if (isLoading) {
     return (
@@ -53,6 +40,7 @@ export default function AllegroIntegrationPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
@@ -74,6 +62,7 @@ export default function AllegroIntegrationPage() {
         <NotConnectedState onConnected={refetch} />
       )}
     </div>
+    </AdminGuard>
   );
 }
 

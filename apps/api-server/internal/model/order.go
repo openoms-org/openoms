@@ -36,6 +36,8 @@ type Order struct {
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
 	PaidAt          *time.Time       `json:"paid_at,omitempty"`
 	CustomerID      *uuid.UUID       `json:"customer_id,omitempty"`
+	MergedInto      *uuid.UUID       `json:"merged_into,omitempty"`
+	SplitFrom       *uuid.UUID       `json:"split_from,omitempty"`
 	CreatedAt       time.Time        `json:"created_at"`
 	UpdatedAt       time.Time        `json:"updated_at"`
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { EditableCell, type EditableColumnConfig } from "@/components/shared/editable-cell";
+
+export type { EditableColumnConfig } from "@/components/shared/editable-cell";
 
 export interface ColumnDef<T> {
   header: string;
@@ -33,6 +36,7 @@ interface DataTableProps<T> {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (column: string) => void;
+  editableColumns?: EditableColumnConfig<T>[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,11 +63,21 @@ export function DataTable<T>({
   sortBy,
   sortOrder,
   onSort,
+  editableColumns,
 }: DataTableProps<T>) {
   const getRowId = useCallback(
     (row: T) => (rowId ? rowId(row) : (row as Record<string, unknown>).id as string),
     [rowId]
   );
+
+  const editableMap = useMemo(() => {
+    if (!editableColumns) return null;
+    const map = new Map<string, EditableColumnConfig<T>>();
+    for (const ec of editableColumns) {
+      map.set(ec.accessorKey, ec);
+    }
+    return map;
+  }, [editableColumns]);
 
   const allRowIds = data.map((row) => getRowId(row));
   const allSelected = allRowIds.length > 0 && allRowIds.every((id) => selectedIds?.has(id));
@@ -212,13 +226,33 @@ export function DataTable<T>({
                   />
                 </TableCell>
               )}
-              {columns.map((column) => (
-                <TableCell key={String(column.accessorKey)}>
-                  {column.cell
-                    ? column.cell(row)
-                    : String(getNestedValue(row, String(column.accessorKey)) ?? "")}
-                </TableCell>
-              ))}
+              {columns.map((column) => {
+                const key = String(column.accessorKey);
+                const editConfig = editableMap?.get(key);
+                const rawValue = getNestedValue(row, key);
+                const displayContent = column.cell
+                  ? column.cell(row)
+                  : String(rawValue ?? "");
+
+                if (editConfig) {
+                  return (
+                    <TableCell key={key}>
+                      <EditableCell<T>
+                        row={row}
+                        value={rawValue}
+                        config={editConfig}
+                        displayContent={displayContent}
+                      />
+                    </TableCell>
+                  );
+                }
+
+                return (
+                  <TableCell key={key}>
+                    {displayContent}
+                  </TableCell>
+                );
+              })}
             </TableRow>
           );
         })}

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,20 +50,12 @@ const DEFAULT_SETTINGS: SMSSettings = {
 };
 
 export default function SMSSettingsPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: settings, isLoading } = useSMSSettings();
   const updateSettings = useUpdateSMSSettings();
   const sendTest = useSendTestSMS();
 
   const [form, setForm] = useState<SMSSettings>(DEFAULT_SETTINGS);
   const [testPhone, setTestPhone] = useState("");
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
 
   useEffect(() => {
     if (settings) {
@@ -75,10 +65,6 @@ export default function SMSSettingsPage() {
       });
     }
   }, [settings]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleSave = async () => {
     try {
@@ -115,6 +101,7 @@ export default function SMSSettingsPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Powiadomienia SMS</h1>
@@ -308,5 +295,6 @@ export default function SMSSettingsPage() {
         </Button>
       </div>
     </div>
+    </AdminGuard>
   );
 }

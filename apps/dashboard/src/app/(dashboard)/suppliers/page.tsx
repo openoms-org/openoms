@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Factory, Trash2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useSuppliers, useDeleteSupplier, useSyncSupplier } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -31,22 +31,11 @@ const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
 
 export default function SuppliersPage() {
   const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data, isLoading, isError, refetch } = useSuppliers();
   const deleteSupplier = useDeleteSupplier();
   const syncSupplier = useSyncSupplier();
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -80,7 +69,7 @@ export default function SuppliersPage() {
   };
 
   return (
-    <>
+    <AdminGuard>
       <PageHeader
         title="Dostawcy"
         description="Zarządzaj dostawcami i synchronizacją feedów produktowych"
@@ -185,6 +174,6 @@ export default function SuppliersPage() {
         onConfirm={handleDelete}
         isLoading={deleteSupplier.isPending}
       />
-    </>
+    </AdminGuard>
   );
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, ImageIcon, Layers, Package, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Layers, Package, PackageOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +15,31 @@ import {
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  useBundleComponents,
+  useBundleStock,
+  useAddBundleComponent,
+  useRemoveBundleComponent,
+} from "@/hooks/use-bundles";
+import { useProducts } from "@/hooks/use-products";
 import { ProductForm } from "@/components/products/product-form";
 import {
   useProduct,
@@ -33,10 +58,17 @@ export default function ProductDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  const [showAddComponentDialog, setShowAddComponentDialog] = useState(false);
+
   const { data: product, isLoading } = useProduct(params.id);
   const { data: categoriesConfig } = useProductCategories();
   const updateProduct = useUpdateProduct(params.id);
   const deleteProduct = useDeleteProduct();
+
+  const { data: bundleComponents } = useBundleComponents(params.id);
+  const { data: bundleStockData } = useBundleStock(params.id);
+  const addComponent = useAddBundleComponent(params.id);
+  const removeComponent = useRemoveBundleComponent(params.id);
 
   const handleUpdate = (data: CreateProductRequest) => {
     updateProduct.mutate(
@@ -341,6 +373,110 @@ export default function ProductDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Bundle Toggle & Components */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <PackageOpen className="h-4 w-4" />
+                Zestaw produktów
+              </span>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="is-bundle-toggle" className="text-sm font-normal text-muted-foreground">
+                  Zestaw
+                </Label>
+                <Switch
+                  id="is-bundle-toggle"
+                  checked={product.is_bundle}
+                  onCheckedChange={(checked) => {
+                    updateProduct.mutate(
+                      { is_bundle: checked },
+                      {
+                        onSuccess: () => {
+                          toast.success(checked ? "Produkt oznaczony jako zestaw" : "Produkt nie jest już zestawem");
+                        },
+                        onError: (error) => {
+                          toast.error(getErrorMessage(error));
+                        },
+                      }
+                    );
+                  }}
+                />
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {product.is_bundle ? (
+              <div className="space-y-4">
+                {bundleStockData && (
+                  <div className="rounded-md bg-muted/50 p-3">
+                    <p className="text-sm text-muted-foreground">Stan zestawu (kalkulowany)</p>
+                    <p className={`text-lg font-bold ${bundleStockData.stock === 0 ? "text-destructive" : ""}`}>
+                      {bundleStockData.stock}
+                    </p>
+                  </div>
+                )}
+                {bundleComponents && bundleComponents.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Komponent</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-right">Ilość</TableHead>
+                        <TableHead className="text-right">Stan</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bundleComponents.map((comp) => (
+                        <TableRow key={comp.id}>
+                          <TableCell className="font-medium">{comp.component_name}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {comp.component_sku || "-"}
+                          </TableCell>
+                          <TableCell className="text-right">{comp.quantity}</TableCell>
+                          <TableCell className="text-right">{comp.component_stock}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                removeComponent.mutate(comp.id, {
+                                  onSuccess: () => toast.success("Komponent usunięty z zestawu"),
+                                  onError: (error) => toast.error(getErrorMessage(error)),
+                                });
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Brak komponentów w zestawie.
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddComponentDialog(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Dodaj komponent
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Włącz przełącznik &quot;Zestaw&quot; aby zarządzać komponentami zestawu.
+              </p>
+            )}
+          </CardContent>
+        </Card>
         </>
       )}
 
@@ -354,6 +490,107 @@ export default function ProductDetailPage() {
         onConfirm={handleDelete}
         isLoading={deleteProduct.isPending}
       />
+
+      <AddBundleComponentDialog
+        open={showAddComponentDialog}
+        onOpenChange={setShowAddComponentDialog}
+        bundleProductId={params.id}
+        onAdd={(componentId, quantity) => {
+          addComponent.mutate(
+            { component_product_id: componentId, quantity, position: 0 },
+            {
+              onSuccess: () => {
+                toast.success("Komponent dodany do zestawu");
+                setShowAddComponentDialog(false);
+              },
+              onError: (error) => {
+                toast.error(getErrorMessage(error));
+              },
+            }
+          );
+        }}
+        isLoading={addComponent.isPending}
+      />
     </div>
+  );
+}
+
+function AddBundleComponentDialog({
+  open,
+  onOpenChange,
+  bundleProductId,
+  onAdd,
+  isLoading,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  bundleProductId: string;
+  onAdd: (componentId: string, quantity: number) => void;
+  isLoading: boolean;
+}) {
+  const [search, setSearch] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [quantity, setQuantity] = useState(1);
+
+  const { data: productsData } = useProducts({ name: search || undefined, limit: 20 });
+  const products = (productsData?.items || []).filter((p) => p.id !== bundleProductId);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dodaj komponent do zestawu</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Szukaj produktu</Label>
+            <Input
+              placeholder="Wpisz nazwę produktu..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {products.length > 0 && (
+            <div className="max-h-48 overflow-y-auto rounded-md border">
+              {products.map((p) => (
+                <div
+                  key={p.id}
+                  className={`cursor-pointer px-3 py-2 text-sm hover:bg-muted ${selectedProductId === p.id ? "bg-primary/10 font-medium" : ""}`}
+                  onClick={() => setSelectedProductId(p.id)}
+                >
+                  <span>{p.name}</span>
+                  {p.sku && (
+                    <span className="ml-2 text-xs text-muted-foreground">({p.sku})</span>
+                  )}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    Stan: {p.stock_quantity}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div>
+            <Label>Ilość w zestawie</Label>
+            <Input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Anuluj
+          </Button>
+          <Button
+            onClick={() => onAdd(selectedProductId, quantity)}
+            disabled={!selectedProductId || isLoading}
+          >
+            {isLoading ? "Dodawanie..." : "Dodaj komponent"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

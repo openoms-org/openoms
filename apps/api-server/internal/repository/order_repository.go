@@ -24,7 +24,7 @@ const orderSelectColumns = `id, tenant_id, external_id, source, integration_id, 
 		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at,
 		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at`
+		        payment_status, payment_method, paid_at, customer_id, merged_into, split_from, created_at, updated_at`
 
 // scanOrder scans a row into a model.Order using the orderSelectColumns column order.
 func scanOrder(row pgx.Row) (model.Order, error) {
@@ -36,7 +36,7 @@ func scanOrder(row pgx.Row) (model.Order, error) {
 		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
 		&o.DeliveryMethod, &o.PickupPointID,
-		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
+		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.MergedInto, &o.SplitFrom, &o.CreatedAt, &o.UpdatedAt,
 	)
 	return o, err
 }

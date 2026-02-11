@@ -4,10 +4,21 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw, Printer, FileText } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch } from "lucide-react";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus } from "@/hooks/use-orders";
 import { useShipments } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
+import { useOrderGroups, useSplitOrder } from "@/hooks/use-order-groups";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { OrderForm } from "@/components/orders/order-form";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
@@ -40,6 +51,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSplitDialog, setShowSplitDialog] = useState(false);
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
@@ -52,6 +64,8 @@ export default function OrderDetailPage() {
 
   const { data: shipmentsData } = useShipments({ order_id: params.id });
   const { data: returnsData } = useReturns({ order_id: params.id });
+  const { data: orderGroups } = useOrderGroups(params.id);
+  const splitOrder = useSplitOrder(params.id);
 
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
@@ -165,6 +179,12 @@ export default function OrderDetailPage() {
               Zgłoś zwrot
             </Link>
           </Button>
+          {order && order.status !== "merged" && order.status !== "split" && order.items && order.items.length >= 2 && (
+            <Button variant="outline" onClick={() => setShowSplitDialog(true)}>
+              <Scissors className="mr-2 h-4 w-4" />
+              Podziel zamówienie
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setIsEditing(true)}>
             Edytuj
           </Button>
@@ -432,6 +452,72 @@ export default function OrderDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Merge/Split History */}
+          {(order.merged_into || order.split_from || (orderGroups && orderGroups.length > 0)) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  Historia scalania/podziału
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {order.merged_into && (
+                  <div className="rounded-md border bg-muted/50 p-3">
+                    <p className="text-sm">
+                      To zamówienie zostało scalone do:{" "}
+                      <Link href={`/orders/${order.merged_into}`} className="font-medium text-primary hover:underline">
+                        {shortId(order.merged_into)}
+                      </Link>
+                    </p>
+                  </div>
+                )}
+                {order.split_from && (
+                  <div className="rounded-md border bg-muted/50 p-3">
+                    <p className="text-sm">
+                      To zamówienie powstało z podziału:{" "}
+                      <Link href={`/orders/${order.split_from}`} className="font-medium text-primary hover:underline">
+                        {shortId(order.split_from)}
+                      </Link>
+                    </p>
+                  </div>
+                )}
+                {orderGroups && orderGroups.map((group) => (
+                  <div key={group.id} className="rounded-md border p-3 text-sm space-y-1">
+                    <p className="font-medium">
+                      {group.group_type === "merged" ? "Scalenie" : "Podział"} - {formatDate(group.created_at)}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {group.group_type === "merged" ? "Zamówienia źródłowe" : "Zamówienie źródłowe"}:{" "}
+                      {group.source_order_ids.map((id, i) => (
+                        <span key={id}>
+                          {i > 0 && ", "}
+                          <Link href={`/orders/${id}`} className="text-primary hover:underline">
+                            {shortId(id)}
+                          </Link>
+                        </span>
+                      ))}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {group.group_type === "merged" ? "Zamówienie docelowe" : "Zamówienia docelowe"}:{" "}
+                      {group.target_order_ids.map((id, i) => (
+                        <span key={id}>
+                          {i > 0 && ", "}
+                          <Link href={`/orders/${id}`} className="text-primary hover:underline">
+                            {shortId(id)}
+                          </Link>
+                        </span>
+                      ))}
+                    </p>
+                    {group.notes && (
+                      <p className="text-muted-foreground">Notatka: {group.notes}</p>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -483,6 +569,126 @@ export default function OrderDetailPage() {
         onConfirm={handleDelete}
         isLoading={deleteOrder.isPending}
       />
+
+      {/* Split Order Dialog */}
+      {order && order.items && (
+        <SplitOrderDialog
+          open={showSplitDialog}
+          onOpenChange={setShowSplitDialog}
+          order={order}
+          onSplit={async (splits) => {
+            try {
+              await splitOrder.mutateAsync({ splits });
+              toast.success("Zamówienie zostało podzielone");
+              setShowSplitDialog(false);
+            } catch (error) {
+              toast.error(getErrorMessage(error));
+            }
+          }}
+          isLoading={splitOrder.isPending}
+        />
+      )}
     </div>
+  );
+}
+
+function SplitOrderDialog({
+  open,
+  onOpenChange,
+  order,
+  onSplit,
+  isLoading,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  order: { items?: { name: string; sku?: string; quantity: number; price: number }[]; currency: string };
+  onSplit: (splits: { items: { name: string; sku?: string; quantity: number; price: number }[] }[]) => void;
+  isLoading: boolean;
+}) {
+  const items = order.items || [];
+  const [allocation, setAllocation] = useState<number[]>(() => items.map(() => 1));
+
+  const handleAllocChange = (index: number, split: number) => {
+    setAllocation((prev) => {
+      const next = [...prev];
+      next[index] = split;
+      return next;
+    });
+  };
+
+  const handleSubmit = () => {
+    const split1Items = items.filter((_, i) => allocation[i] === 1);
+    const split2Items = items.filter((_, i) => allocation[i] === 2);
+
+    if (split1Items.length === 0 || split2Items.length === 0) {
+      return;
+    }
+
+    onSplit([{ items: split1Items }, { items: split2Items }]);
+  };
+
+  const split1Items = items.filter((_, i) => allocation[i] === 1);
+  const split2Items = items.filter((_, i) => allocation[i] === 2);
+  const split1Total = split1Items.reduce((s, item) => s + item.price * item.quantity, 0);
+  const split2Total = split2Items.reduce((s, item) => s + item.price * item.quantity, 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Podziel zamówienie</DialogTitle>
+          <DialogDescription>
+            Przydziel pozycje do dwóch nowych zamówień. Każda pozycja trafi
+            do zamówienia 1 lub 2.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center justify-between gap-4 rounded-md border p-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium">{item.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {item.quantity} x {formatCurrency(item.price, order.currency)}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Zamówienie:</Label>
+                <select
+                  className="rounded border px-2 py-1 text-sm"
+                  value={allocation[i]}
+                  onChange={(e) => handleAllocChange(i, Number(e.target.value))}
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-4 rounded-md bg-muted/50 p-3 text-sm">
+          <div>
+            <p className="font-medium">Zamówienie 1</p>
+            <p className="text-muted-foreground">{split1Items.length} pozycji</p>
+            <p className="font-medium">{formatCurrency(split1Total, order.currency)}</p>
+          </div>
+          <div>
+            <p className="font-medium">Zamówienie 2</p>
+            <p className="text-muted-foreground">{split2Items.length} pozycji</p>
+            <p className="font-medium">{formatCurrency(split2Total, order.currency)}</p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Anuluj
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading || split1Items.length === 0 || split2Items.length === 0}
+          >
+            {isLoading ? "Dzielenie..." : "Podziel zamówienie"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

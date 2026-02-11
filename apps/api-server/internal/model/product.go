@@ -31,6 +31,7 @@ type Product struct {
 	ImageURL         *string         `json:"image_url,omitempty"`
 	Images        json.RawMessage `json:"images"`
 	HasVariants   bool            `json:"has_variants"`
+	IsBundle      bool            `json:"is_bundle"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 }
@@ -114,6 +115,7 @@ type UpdateProductRequest struct {
 	Category         *string          `json:"category,omitempty"`
 	ImageURL         *string          `json:"image_url,omitempty"`
 	Images        *json.RawMessage `json:"images,omitempty"`
+	IsBundle      *bool            `json:"is_bundle,omitempty"`
 }
 
 func (r *UpdateProductRequest) Validate() error {
@@ -121,7 +123,7 @@ func (r *UpdateProductRequest) Validate() error {
 		r.EAN == nil && r.Price == nil && r.StockQuantity == nil && r.Metadata == nil &&
 		r.Tags == nil && r.DescriptionShort == nil && r.DescriptionLong == nil &&
 		r.Weight == nil && r.Width == nil && r.Height == nil && r.Depth == nil &&
-		r.Category == nil && r.ImageURL == nil && r.Images == nil {
+		r.Category == nil && r.ImageURL == nil && r.Images == nil && r.IsBundle == nil {
 		return errors.New("at least one field must be provided")
 	}
 	if r.Source != nil {

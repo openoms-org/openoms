@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCreateSupplier } from "@/hooks/use-suppliers";
 import { getErrorMessage } from "@/lib/api-client";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +38,6 @@ type SupplierForm = z.infer<typeof supplierSchema>;
 
 export default function NewSupplierPage() {
   const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const createSupplier = useCreateSupplier();
 
   const {
@@ -52,16 +49,6 @@ export default function NewSupplierPage() {
     resolver: zodResolver(supplierSchema),
     defaultValues: { feed_format: "iof" },
   });
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const onSubmit = (data: SupplierForm) => {
     createSupplier.mutate(data, {
@@ -76,6 +63,7 @@ export default function NewSupplierPage() {
   };
 
   return (
+    <AdminGuard>
     <div className="max-w-2xl">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.push("/suppliers")}>
@@ -136,5 +124,6 @@ export default function NewSupplierPage() {
         </CardContent>
       </Card>
     </div>
+    </AdminGuard>
   );
 }

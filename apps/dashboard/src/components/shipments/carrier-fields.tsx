@@ -13,10 +13,23 @@ import {
 import { InPostGeowidget } from "@/components/shipments/inpost-geowidget";
 import { PaczkomatSearch } from "@/components/shipments/paczkomat-search";
 
+export interface CarrierFieldValues {
+  service_type?: string;
+  target_point?: string;
+  parcel_size?: string;
+  weight_kg?: number;
+  width_cm?: number;
+  height_cm?: number;
+  depth_cm?: number;
+  cod_amount?: number;
+  insured_value?: number;
+  [key: string]: unknown;
+}
+
 interface CarrierFieldsProps {
   provider: string;
-  values: Record<string, any>;
-  onChange: (field: string, value: any) => void;
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
 }
 
 export function CarrierFields({ provider, values, onChange }: CarrierFieldsProps) {
@@ -32,17 +45,82 @@ export function CarrierFields({ provider, values, onChange }: CarrierFieldsProps
   }
 }
 
+function ParcelDimensionFields({
+  values,
+  onChange,
+}: {
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Waga (kg)</Label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="np. 1.5"
+          value={values.weight_kg ?? ""}
+          onChange={(e) =>
+            onChange("weight_kg", e.target.value ? parseFloat(e.target.value) : undefined)
+          }
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Szerokość (cm)</Label>
+        <Input
+          type="number"
+          step="1"
+          min="0"
+          placeholder="np. 30"
+          value={values.width_cm ?? ""}
+          onChange={(e) =>
+            onChange("width_cm", e.target.value ? parseFloat(e.target.value) : undefined)
+          }
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Wysokość (cm)</Label>
+        <Input
+          type="number"
+          step="1"
+          min="0"
+          placeholder="np. 20"
+          value={values.height_cm ?? ""}
+          onChange={(e) =>
+            onChange("height_cm", e.target.value ? parseFloat(e.target.value) : undefined)
+          }
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Głębokość (cm)</Label>
+        <Input
+          type="number"
+          step="1"
+          min="0"
+          placeholder="np. 15"
+          value={values.depth_cm ?? ""}
+          onChange={(e) =>
+            onChange("depth_cm", e.target.value ? parseFloat(e.target.value) : undefined)
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
 function InPostFields({
   values,
   onChange,
 }: {
-  values: Record<string, any>;
-  onChange: (field: string, value: any) => void;
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
 }) {
   const serviceType = values.service_type ?? "inpost_locker_standard";
   const isLocker = serviceType === "inpost_locker_standard";
   const hasGeowidgetToken = !!process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN;
-  const targetPoint = values.target_point ?? "";
+  const targetPoint = (values.target_point as string) ?? "";
 
   return (
     <>
@@ -104,7 +182,7 @@ function InPostFields({
       <div className="space-y-2">
         <Label>Rozmiar paczki</Label>
         <Select
-          value={values.parcel_size ?? "small"}
+          value={(values.parcel_size as string) ?? "small"}
           onValueChange={(v) => onChange("parcel_size", v)}
         >
           <SelectTrigger className="w-full">
@@ -125,15 +203,15 @@ function DHLFields({
   values,
   onChange,
 }: {
-  values: Record<string, any>;
-  onChange: (field: string, value: any) => void;
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
 }) {
   return (
     <>
       <div className="space-y-2">
         <Label>Typ usługi</Label>
         <Select
-          value={values.service_type ?? "dhl_parcel"}
+          value={(values.service_type as string) ?? "dhl_parcel"}
           onValueChange={(v) => onChange("service_type", v)}
         >
           <SelectTrigger className="w-full">
@@ -146,60 +224,7 @@ function DHLFields({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Waga (kg)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="np. 1.5"
-            value={values.weight_kg ?? ""}
-            onChange={(e) =>
-              onChange("weight_kg", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Szerokość (cm)</Label>
-          <Input
-            type="number"
-            step="1"
-            min="0"
-            placeholder="np. 30"
-            value={values.width_cm ?? ""}
-            onChange={(e) =>
-              onChange("width_cm", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Wysokość (cm)</Label>
-          <Input
-            type="number"
-            step="1"
-            min="0"
-            placeholder="np. 20"
-            value={values.height_cm ?? ""}
-            onChange={(e) =>
-              onChange("height_cm", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Głębokość (cm)</Label>
-          <Input
-            type="number"
-            step="1"
-            min="0"
-            placeholder="np. 15"
-            value={values.depth_cm ?? ""}
-            onChange={(e) =>
-              onChange("depth_cm", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-      </div>
+      <ParcelDimensionFields values={values} onChange={onChange} />
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -237,15 +262,15 @@ function DPDFields({
   values,
   onChange,
 }: {
-  values: Record<string, any>;
-  onChange: (field: string, value: any) => void;
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
 }) {
   return (
     <>
       <div className="space-y-2">
         <Label>Typ usługi</Label>
         <Select
-          value={values.service_type ?? "dpd_classic"}
+          value={(values.service_type as string) ?? "dpd_classic"}
           onValueChange={(v) => onChange("service_type", v)}
         >
           <SelectTrigger className="w-full">
@@ -258,60 +283,7 @@ function DPDFields({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Waga (kg)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="np. 1.5"
-            value={values.weight_kg ?? ""}
-            onChange={(e) =>
-              onChange("weight_kg", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Szerokość (cm)</Label>
-          <Input
-            type="number"
-            step="1"
-            min="0"
-            placeholder="np. 30"
-            value={values.width_cm ?? ""}
-            onChange={(e) =>
-              onChange("width_cm", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Wysokość (cm)</Label>
-          <Input
-            type="number"
-            step="1"
-            min="0"
-            placeholder="np. 20"
-            value={values.height_cm ?? ""}
-            onChange={(e) =>
-              onChange("height_cm", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Głębokość (cm)</Label>
-          <Input
-            type="number"
-            step="1"
-            min="0"
-            placeholder="np. 15"
-            value={values.depth_cm ?? ""}
-            onChange={(e) =>
-              onChange("depth_cm", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-      </div>
+      <ParcelDimensionFields values={values} onChange={onChange} />
     </>
   );
 }

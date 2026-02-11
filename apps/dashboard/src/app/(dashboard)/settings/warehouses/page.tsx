@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Warehouse, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useWarehouses, useDeleteWarehouse, useCreateWarehouse } from "@/hooks/use-warehouses";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -36,7 +36,6 @@ import {
 
 export default function WarehousesPage() {
   const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data, isLoading, isError, refetch } = useWarehouses();
   const deleteWarehouse = useDeleteWarehouse();
   const createWarehouse = useCreateWarehouse();
@@ -45,16 +44,6 @@ export default function WarehousesPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCode, setNewCode] = useState("");
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -94,7 +83,7 @@ export default function WarehousesPage() {
   };
 
   return (
-    <>
+    <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Magazyny</h1>
@@ -256,6 +245,6 @@ export default function WarehousesPage() {
         onConfirm={handleDelete}
         isLoading={deleteWarehouse.isPending}
       />
-    </>
+    </AdminGuard>
   );
 }

@@ -80,7 +80,13 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 				}
 
 				if err := provider.UpdateStock(ctx, externalID, stockQty); err != nil {
-					w.logger.Error("stock sync: update stock failed", "external_id", externalID, "error", err)
+					w.logger.Error("stock sync: update stock failed",
+						"operation", "listing.stock_update",
+						"tenant_id", ti.TenantID,
+						"entity_id", listingID,
+						"external_id", externalID,
+						"error", err,
+					)
 					// Update listing sync status to error
 					_, _ = tx.Exec(ctx,
 						`UPDATE product_listings SET sync_status = 'error', updated_at = NOW() WHERE id = $1`,
@@ -93,6 +99,13 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 				_, _ = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'synced', last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 					listingID,
+				)
+				w.logger.Info("worker: stock synced",
+					"operation", "listing.stock_update",
+					"tenant_id", ti.TenantID,
+					"entity_id", listingID,
+					"external_id", externalID,
+					"stock_quantity", stockQty,
 				)
 				totalSynced++
 			}

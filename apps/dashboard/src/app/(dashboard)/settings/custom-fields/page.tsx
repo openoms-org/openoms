@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useUpdateCustomFields } from "@/hooks/use-settings";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -30,28 +29,16 @@ const TYPE_OPTIONS: { value: CustomFieldDef["type"]; label: string }[] = [
 ];
 
 export default function CustomFieldsPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: config, isLoading } = useCustomFields();
   const updateCustomFields = useUpdateCustomFields();
 
   const [fields, setFields] = useState<CustomFieldDef[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
     if (config) {
       setFields([...config.fields]);
     }
   }, [config]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleAddField = () => {
     const newPosition = fields.length + 1;
@@ -114,6 +101,7 @@ export default function CustomFieldsPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Pola dodatkowe</h1>
@@ -234,5 +222,6 @@ export default function CustomFieldsPage() {
         </Button>
       </div>
     </div>
+    </AdminGuard>
   );
 }

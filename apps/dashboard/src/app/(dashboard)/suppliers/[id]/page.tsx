@@ -3,14 +3,16 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, Link2 } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { RefreshCw, ArrowLeft, Link2, Search } from "lucide-react";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useSupplier,
   useUpdateSupplier,
   useSyncSupplier,
   useSupplierProducts,
+  useLinkSupplierProduct,
 } from "@/hooks/use-suppliers";
+import { useProducts } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { getErrorMessage } from "@/lib/api-client";
@@ -40,6 +42,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
 const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
@@ -52,23 +60,20 @@ export default function SupplierDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: supplier, isLoading } = useSupplier(id);
   const updateSupplier = useUpdateSupplier(id);
   const syncSupplier = useSyncSupplier();
   const { data: productsData } = useSupplierProducts(id);
+  const linkProduct = useLinkSupplierProduct(id);
 
   const [name, setName] = useState("");
+  const [linkingProductId, setLinkingProductId] = useState<string | null>(null);
+  const [productSearch, setProductSearch] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [code, setCode] = useState("");
   const [feedUrl, setFeedUrl] = useState("");
   const [feedFormat, setFeedFormat] = useState("iof");
   const [status, setStatus] = useState("active");
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
 
   useEffect(() => {
     if (supplier) {
@@ -80,7 +85,7 @@ export default function SupplierDetailPage() {
     }
   }, [supplier]);
 
-  if (authLoading || !isAdmin || isLoading) {
+  if (isLoading) {
     return <LoadingSkeleton />;
   }
 
@@ -107,9 +112,31 @@ export default function SupplierDetailPage() {
     });
   };
 
+  const { data: localProducts } = useProducts({
+    name: productSearch || undefined,
+    limit: 20,
+  });
+
+  const handleLink = () => {
+    if (!linkingProductId || !selectedProductId) return;
+    linkProduct.mutate(
+      { supplierProductId: linkingProductId, productId: selectedProductId },
+      {
+        onSuccess: () => {
+          toast.success("Produkt powiazany");
+          setLinkingProductId(null);
+          setSelectedProductId("");
+          setProductSearch("");
+        },
+        onError: (error) => toast.error(getErrorMessage(error)),
+      }
+    );
+  };
+
   const products = productsData?.items ?? [];
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.push("/suppliers")}>
@@ -252,7 +279,18 @@ export default function SupplierDetailPage() {
                           Powiązany
                         </Badge>
                       ) : (
-                        <span className="text-muted-foreground text-sm">Brak</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setLinkingProductId(sp.id);
+                            setSelectedProductId("");
+                            setProductSearch("");
+                          }}
+                        >
+                          <Link2 className="h-3 w-3 mr-1" />
+                          Powiaz
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
@@ -262,6 +300,82 @@ export default function SupplierDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!linkingProductId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setLinkingProductId(null);
+            setSelectedProductId("");
+            setProductSearch("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Powiaz z produktem OMS</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Szukaj produktu</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder="Wpisz nazwe produktu..."
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <div className="max-h-64 overflow-auto border rounded-md">
+              {localProducts?.items && localProducts.items.length > 0 ? (
+                localProducts.items.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => setSelectedProductId(product.id)}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 flex items-center justify-between ${
+                      selectedProductId === product.id
+                        ? "bg-primary/10 border-l-2 border-primary"
+                        : ""
+                    }`}
+                  >
+                    <div>
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        SKU: {product.sku || "---"}
+                      </div>
+                    </div>
+                    {selectedProductId === product.id && (
+                      <Badge variant="default" className="ml-2">Wybrany</Badge>
+                    )}
+                  </button>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {productSearch ? "Brak wynikow" : "Wpisz nazwe, aby wyszukac"}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setLinkingProductId(null)}
+              >
+                Anuluj
+              </Button>
+              <Button
+                onClick={handleLink}
+                disabled={!selectedProductId || linkProduct.isPending}
+              >
+                {linkProduct.isPending ? "Laczenie..." : "Powiaz"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+    </AdminGuard>
   );
 }

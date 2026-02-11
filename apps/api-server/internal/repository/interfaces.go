@@ -84,6 +84,8 @@ type ShipmentRepo interface {
 type ProductRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.ProductListFilter) ([]model.Product, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Product, error)
+	FindBySKU(ctx context.Context, tx pgx.Tx, sku string) (*model.Product, error)
+	FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.Product, error)
 	Create(ctx context.Context, tx pgx.Tx, product *model.Product) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateProductRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
@@ -221,8 +223,23 @@ type CustomerRepo interface {
 type VariantRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.VariantListFilter) ([]model.ProductVariant, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ProductVariant, error)
+	FindBySKU(ctx context.Context, tx pgx.Tx, sku string) ([]model.ProductVariant, error)
+	FindByEAN(ctx context.Context, tx pgx.Tx, ean string) ([]model.ProductVariant, error)
 	Create(ctx context.Context, tx pgx.Tx, variant *model.ProductVariant) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateVariantRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	CountByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (int, error)
+}
+
+// PriceListRepo defines the interface for price list persistence operations.
+type PriceListRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.PriceListListFilter) ([]model.PriceList, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PriceList, error)
+	Create(ctx context.Context, tx pgx.Tx, pl *model.PriceList) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdatePriceListRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	ListItems(ctx context.Context, tx pgx.Tx, priceListID uuid.UUID, limit, offset int) ([]model.PriceListItem, int, error)
+	CreateItem(ctx context.Context, tx pgx.Tx, item *model.PriceListItem) error
+	DeleteItem(ctx context.Context, tx pgx.Tx, itemID uuid.UUID) error
+	FindItemsByProduct(ctx context.Context, tx pgx.Tx, priceListID, productID uuid.UUID, variantID *uuid.UUID, quantity int) ([]model.PriceListItem, error)
 }

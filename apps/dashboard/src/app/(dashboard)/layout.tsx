@@ -1,13 +1,25 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useAuthStore } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
+import { CommandPalette } from "@/components/shared/command-palette";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  const handleToggleCommandPalette = useCallback(() => {
+    setCommandPaletteOpen((prev) => !prev);
+  }, []);
+
+  useKeyboardShortcuts({
+    onToggleCommandPalette: handleToggleCommandPalette,
+  });
 
   if (isLoading) {
     return (
@@ -26,6 +38,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+      />
     </div>
   );
 }

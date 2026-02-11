@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Users, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/use-users";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -32,9 +31,6 @@ import {
 import type { User, CreateUserRequest, UpdateUserRequest } from "@/types/api";
 
 export default function UsersPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
-
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -43,16 +39,6 @@ export default function UsersPage() {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser(editUser?.id || "");
   const deleteUser = useDeleteUser();
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -103,7 +89,7 @@ export default function UsersPage() {
   };
 
   return (
-    <>
+    <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Użytkownicy</h1>
@@ -239,6 +225,6 @@ export default function UsersPage() {
         onConfirm={handleDelete}
         isLoading={deleteUser.isPending}
       />
-    </>
+    </AdminGuard>
   );
 }

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useOrderStatuses, COLOR_PRESETS } from "@/hooks/use-order-statuses";
 import { useUpdateOrderStatuses } from "@/hooks/use-settings";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -26,8 +25,6 @@ const COLOR_OPTIONS = Object.entries(COLOR_PRESETS).map(([key, classes]) => ({
 }));
 
 export default function OrderStatusesPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: config, isLoading } = useOrderStatuses();
   const updateStatuses = useUpdateOrderStatuses();
 
@@ -35,21 +32,11 @@ export default function OrderStatusesPage() {
   const [transitions, setTransitions] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
     if (config) {
       setStatuses([...config.statuses]);
       setTransitions({ ...config.transitions });
     }
   }, [config]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleAddStatus = () => {
     const newPosition = statuses.length + 1;
@@ -121,6 +108,7 @@ export default function OrderStatusesPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Statusy zamówień</h1>
@@ -225,5 +213,6 @@ export default function OrderStatusesPage() {
         </Button>
       </div>
     </div>
+    </AdminGuard>
   );
 }

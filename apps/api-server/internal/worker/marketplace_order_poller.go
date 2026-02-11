@@ -111,7 +111,19 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 
 				order := p.buildOrder(mo, ti, req)
 
-				return p.orderRepo.Create(ctx, tx, &order)
+				if err := p.orderRepo.Create(ctx, tx, &order); err != nil {
+					return err
+				}
+
+				p.logger.Info("worker: order created",
+					"operation", "order.create",
+					"tenant_id", ti.TenantID,
+					"entity_id", order.ID,
+					"external_id", mo.ExternalID,
+					"provider", p.providerName,
+					"integration_id", ti.IntegrationID,
+				)
+				return nil
 			}); err != nil {
 				p.logger.Error("failed to create order", "integration_id", ti.IntegrationID, "external_id", mo.ExternalID, "error", err)
 				continue
@@ -125,7 +137,19 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 				"UPDATE integrations SET sync_cursor = $1, last_sync_at = NOW() WHERE id = $2",
 				newCursor, ti.IntegrationID,
 			); err != nil {
-				p.logger.Error("failed to update sync cursor", "integration_id", ti.IntegrationID, "error", err)
+				p.logger.Error("failed to update sync cursor",
+					"operation", "integration.update_cursor",
+					"tenant_id", ti.TenantID,
+					"entity_id", ti.IntegrationID,
+					"error", err,
+				)
+			} else {
+				p.logger.Info("worker: sync cursor updated",
+					"operation", "integration.update_cursor",
+					"tenant_id", ti.TenantID,
+					"entity_id", ti.IntegrationID,
+					"new_cursor", newCursor,
+				)
 			}
 		}
 	}

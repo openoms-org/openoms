@@ -18,14 +18,14 @@ func NewCustomerRepository() *CustomerRepository {
 
 var customerColumns = `id, tenant_id, email, phone, name, company_name, nip,
 	default_shipping_address, default_billing_address, tags, notes,
-	total_orders, total_spent, created_at, updated_at`
+	total_orders, total_spent, price_list_id, created_at, updated_at`
 
 func scanCustomer(row interface{ Scan(dest ...any) error }) (*model.Customer, error) {
 	var c model.Customer
 	err := row.Scan(
 		&c.ID, &c.TenantID, &c.Email, &c.Phone, &c.Name, &c.CompanyName, &c.NIP,
 		&c.DefaultShippingAddress, &c.DefaultBillingAddress, &c.Tags, &c.Notes,
-		&c.TotalOrders, &c.TotalSpent, &c.CreatedAt, &c.UpdatedAt,
+		&c.TotalOrders, &c.TotalSpent, &c.PriceListID, &c.CreatedAt, &c.UpdatedAt,
 	)
 	return &c, err
 }
@@ -183,6 +183,11 @@ func (r *CustomerRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	if req.Notes != nil {
 		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
 		args = append(args, *req.Notes)
+		argIdx++
+	}
+	if req.PriceListID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("price_list_id = $%d", argIdx))
+		args = append(args, *req.PriceListID)
 		argIdx++
 	}
 

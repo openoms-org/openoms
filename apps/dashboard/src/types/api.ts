@@ -116,6 +116,8 @@ export interface Order {
   payment_method?: string;
   paid_at?: string;
   customer_id?: string;
+  merged_into?: string;
+  split_from?: string;
   created_at: string;
   updated_at: string;
 }
@@ -255,6 +257,7 @@ export interface Product {
   image_url?: string;
   images: ProductImage[];
   has_variants: boolean;
+  is_bundle: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -299,6 +302,7 @@ export interface UpdateProductRequest {
   depth?: number;
   image_url?: string;
   images?: ProductImage[];
+  is_bundle?: boolean;
 }
 
 export interface ProductListParams extends PaginationParams {
@@ -986,6 +990,7 @@ export interface Customer {
   notes?: string;
   total_orders: number;
   total_spent: number;
+  price_list_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1012,6 +1017,7 @@ export interface UpdateCustomerRequest {
   default_billing_address?: Record<string, unknown>;
   tags?: string[];
   notes?: string;
+  price_list_id?: string;
 }
 
 export interface CustomerListParams extends PaginationParams {
@@ -1024,4 +1030,149 @@ export interface PrintTemplatesConfig {
   packing_slip_html: string;
   order_summary_html: string;
   return_slip_html: string;
+}
+
+// === Order Groups (Merge/Split) ===
+export interface OrderGroup {
+  id: string;
+  tenant_id: string;
+  group_type: "merged" | "split";
+  source_order_ids: string[];
+  target_order_ids: string[];
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface MergeOrdersRequest {
+  order_ids: string[];
+  notes?: string;
+}
+
+export interface SplitSpec {
+  items: OrderItem[];
+  customer_name?: string;
+  shipping_address?: Address;
+}
+
+export interface SplitOrderRequest {
+  splits: SplitSpec[];
+  notes?: string;
+}
+
+// === Product Bundles ===
+export interface BundleComponent {
+  id: string;
+  tenant_id: string;
+  bundle_product_id: string;
+  component_product_id: string;
+  component_variant_id?: string;
+  quantity: number;
+  position: number;
+  component_name?: string;
+  component_sku?: string;
+  component_stock: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateBundleComponentRequest {
+  component_product_id: string;
+  component_variant_id?: string;
+  quantity: number;
+  position?: number;
+}
+
+export interface UpdateBundleComponentRequest {
+  quantity?: number;
+  position?: number;
+}
+
+export interface BundleStockResponse {
+  stock: number;
+}
+
+// === Barcode / Packing Station ===
+export interface BarcodeLookupResponse {
+  product?: Product;
+  variants?: ProductVariant[];
+}
+
+export interface ScannedItem {
+  sku: string;
+  quantity: number;
+}
+
+export interface PackOrderRequest {
+  scanned_items: ScannedItem[];
+}
+
+export interface PackOrderResponse {
+  order_id: string;
+  packed_at: string;
+  packed_by: string;
+  status: string;
+}
+
+// === Price Lists (B2B) ===
+export interface PriceList {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  currency: string;
+  is_default: boolean;
+  discount_type: "percentage" | "fixed" | "override";
+  active: boolean;
+  valid_from?: string;
+  valid_to?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PriceListItem {
+  id: string;
+  tenant_id: string;
+  price_list_id: string;
+  product_id: string;
+  variant_id?: string;
+  price?: number;
+  discount?: number;
+  min_quantity: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePriceListRequest {
+  name: string;
+  description?: string;
+  currency?: string;
+  is_default?: boolean;
+  discount_type?: "percentage" | "fixed" | "override";
+  active?: boolean;
+  valid_from?: string;
+  valid_to?: string;
+}
+
+export interface UpdatePriceListRequest {
+  name?: string;
+  description?: string;
+  currency?: string;
+  is_default?: boolean;
+  discount_type?: "percentage" | "fixed" | "override";
+  active?: boolean;
+  valid_from?: string;
+  valid_to?: string;
+}
+
+export interface CreatePriceListItemRequest {
+  product_id: string;
+  variant_id?: string;
+  price?: number;
+  discount?: number;
+  min_quantity?: number;
+}
+
+export interface PriceListListParams extends PaginationParams {
+  active?: boolean;
 }

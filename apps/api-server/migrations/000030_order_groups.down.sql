@@ -1,0 +1,3 @@
+ALTER TABLE orders DROP COLUMN IF EXISTS split_from;
+ALTER TABLE orders DROP COLUMN IF EXISTS merged_into;
+DROP TABLE IF EXISTS order_groups;

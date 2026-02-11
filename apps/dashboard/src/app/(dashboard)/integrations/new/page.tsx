@@ -1,31 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCreateIntegration } from "@/hooks/use-integrations";
 import { getErrorMessage } from "@/lib/api-client";
 import { PageHeader } from "@/components/shared/page-header";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { IntegrationForm } from "@/components/integrations/integration-form";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CreateIntegrationRequest } from "@/types/api";
 
 export default function NewIntegrationPage() {
   const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const createIntegration = useCreateIntegration();
-
-  useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.push("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleSubmit = (data: CreateIntegrationRequest) => {
     createIntegration.mutate(data, {
@@ -40,7 +27,7 @@ export default function NewIntegrationPage() {
   };
 
   return (
-    <>
+    <AdminGuard>
       <PageHeader
         title="Nowa integracja"
         description="Dodaj nowe połączenie z zewnętrznym serwisem"
@@ -53,6 +40,6 @@ export default function NewIntegrationPage() {
           />
         </CardContent>
       </Card>
-    </>
+    </AdminGuard>
   );
 }

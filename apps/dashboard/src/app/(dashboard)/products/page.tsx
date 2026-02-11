@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Package, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DataTable } from "@/components/shared/data-table";
+import { DataTable, type EditableColumnConfig } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
@@ -19,11 +19,14 @@ import { useProducts } from "@/hooks/use-products";
 import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_SOURCE_LABELS } from "@/lib/constants";
+import { apiClient } from "@/lib/api-client";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Product } from "@/types/api";
 
 const DEFAULT_LIMIT = 20;
 
 export default function ProductsPage() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -51,6 +54,34 @@ export default function ProductsPage() {
     sort_by: sortBy,
     sort_order: sortOrder,
   });
+
+  const editableColumns = useMemo<EditableColumnConfig<Product>[]>(
+    () => [
+      {
+        accessorKey: "price",
+        type: "number",
+        onSave: async (row, value) => {
+          await apiClient<Product>(`/v1/products/${row.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ price: Number(value) }),
+          });
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+        },
+      },
+      {
+        accessorKey: "stock_quantity",
+        type: "number",
+        onSave: async (row, value) => {
+          await apiClient<Product>(`/v1/products/${row.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ stock_quantity: Number(value) }),
+          });
+          queryClient.invalidateQueries({ queryKey: ["products"] });
+        },
+      },
+    ],
+    [queryClient]
+  );
 
   const columns = [
     {
@@ -264,6 +295,7 @@ export default function ProductsPage() {
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSort={handleSort}
+        editableColumns={editableColumns}
       />
 
       {data && (

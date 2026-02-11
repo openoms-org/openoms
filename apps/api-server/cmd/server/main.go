@@ -119,6 +119,8 @@ func main() {
 	webhookDeliveryRepo := repository.NewWebhookDeliveryRepository()
 	statsRepo := repository.NewStatsRepository()
 
+	orderGroupRepo := repository.NewOrderGroupRepository()
+	bundleRepo := repository.NewBundleRepository()
 	returnRepo := repository.NewReturnRepository()
 	invoiceRepo := repository.NewInvoiceRepository()
 	supplierRepo := repository.NewSupplierRepository()
@@ -128,6 +130,7 @@ func main() {
 	warehouseRepo := repository.NewWarehouseRepository()
 	warehouseStockRepo := repository.NewWarehouseStockRepository()
 	customerRepo := repository.NewCustomerRepository()
+	priceListRepo := repository.NewPriceListRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -152,7 +155,11 @@ func main() {
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
 	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, pool)
+	orderGroupService := service.NewOrderGroupService(orderGroupRepo, orderRepo, auditRepo, pool)
+	bundleService := service.NewBundleService(bundleRepo, productRepo, auditRepo, pool)
 	customerService := service.NewCustomerService(customerRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	barcodeService := service.NewBarcodeService(productRepo, variantRepo, orderRepo, auditRepo, pool)
+	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -217,6 +224,18 @@ func main() {
 	// Customer handler
 	customerHandler := handler.NewCustomerHandler(customerService)
 
+	// Order group handler
+	orderGroupHandler := handler.NewOrderGroupHandler(orderGroupService)
+
+	// Bundle handler
+	bundleHandler := handler.NewBundleHandler(bundleService)
+
+	// Barcode handler
+	barcodeHandler := handler.NewBarcodeHandler(barcodeService)
+
+	// Price list handler
+	priceListHandler := handler.NewPriceListHandler(priceListService)
+
 	// Print handler
 	printHandler := handler.NewPrintHandler(tenantRepo, orderRepo, returnRepo, pool)
 
@@ -262,6 +281,10 @@ func main() {
 		Print:            printHandler,
 		Docs:             docsHandler,
 		MetricsCollector: metricsCollector,
+		OrderGroup:       orderGroupHandler,
+		Bundle:           bundleHandler,
+		Barcode:          barcodeHandler,
+		PriceList:        priceListHandler,
 	})
 
 	// Start background workers

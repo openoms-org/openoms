@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
+import { AdminGuard } from "@/components/shared/admin-guard";
 import { useProductCategories, useUpdateProductCategories } from "@/hooks/use-product-categories";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
@@ -13,28 +12,16 @@ import { Trash2, Plus } from "lucide-react";
 import type { CategoryDef } from "@/types/api";
 
 export default function ProductCategoriesPage() {
-  const router = useRouter();
-  const { isAdmin, isLoading: authLoading } = useAuth();
   const { data: config, isLoading } = useProductCategories();
   const updateCategories = useUpdateProductCategories();
 
   const [categories, setCategories] = useState<CategoryDef[]>([]);
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
-      router.replace("/");
-    }
-  }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
     if (config) {
       setCategories([...config.categories]);
     }
   }, [config]);
-
-  if (authLoading || !isAdmin) {
-    return <LoadingSkeleton />;
-  }
 
   const handleAddCategory = () => {
     const newPosition = categories.length + 1;
@@ -82,6 +69,7 @@ export default function ProductCategoriesPage() {
   }
 
   return (
+    <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Kategorie produktów</h1>
@@ -145,5 +133,6 @@ export default function ProductCategoriesPage() {
         </Button>
       </div>
     </div>
+    </AdminGuard>
   );
 }
