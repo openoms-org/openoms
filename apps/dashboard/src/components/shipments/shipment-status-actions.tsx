@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { StatusTransitionDialog } from "@/components/shared/status-transition-dialog";
 import { SHIPMENT_TRANSITIONS, SHIPMENT_STATUSES } from "@/lib/constants";
 
 interface ShipmentStatusActionsProps {
@@ -73,40 +66,25 @@ export function ShipmentStatusActions({
         })}
       </div>
 
-      <Dialog
+      <StatusTransitionDialog
         open={!!confirmStatus}
         onOpenChange={(open) => !open && setConfirmStatus(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Potwierdzenie zmiany statusu</DialogTitle>
-            <DialogDescription>
-              Czy na pewno chcesz zmienić status przesyłki na{" "}
-              <strong>
-                {confirmStatus
-                  ? SHIPMENT_STATUSES[confirmStatus]?.label ?? confirmStatus
-                  : ""}
-              </strong>
-              ? Ta operacja może być nieodwracalna.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmStatus(null)}
-            >
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirm}
-              disabled={isLoading}
-            >
-              Potwierdź
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Potwierdzenie zmiany statusu"
+        description={
+          <>
+            Czy na pewno chcesz zmienić status przesyłki na{" "}
+            <strong>
+              {confirmStatus
+                ? SHIPMENT_STATUSES[confirmStatus]?.label ?? confirmStatus
+                : ""}
+            </strong>
+            ? Ta operacja może być nieodwracalna.
+          </>
+        }
+        isDestructive
+        isPending={isLoading}
+        onConfirm={handleConfirm}
+      />
     </>
   );
 }

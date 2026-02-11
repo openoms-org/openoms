@@ -34,10 +34,6 @@ func (s *ReturnService) SetAutomationService(automationSvc *AutomationService) {
 	s.automationService = automationSvc
 }
 
-func (s *ReturnService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
-	FireAutomationEvent(s.automationService, tenantID, "return", eventType, entityID, data)
-}
-
 func NewReturnService(
 	returnRepo repository.ReturnRepo,
 	orderRepo repository.OrderRepo,
@@ -145,7 +141,7 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.created", ret)
-	s.fireAutomationEvent(tenantID, "return.created", ret.ID, map[string]any{
+	FireAutomationEvent(s.automationService, tenantID, "return", "return.created", ret.ID, map[string]any{
 		"status": ret.Status, "reason": ret.Reason, "order_id": ret.OrderID.String(),
 		"refund_amount": ret.RefundAmount,
 	})
@@ -246,7 +242,7 @@ func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID
 	})
 	if err == nil && ret != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.status_changed", map[string]any{"return_id": returnID.String(), "from": oldStatus, "to": req.Status})
-		s.fireAutomationEvent(tenantID, "return.status_changed", ret.ID, map[string]any{
+		FireAutomationEvent(s.automationService, tenantID, "return", "return.status_changed", ret.ID, map[string]any{
 			"status": ret.Status, "old_status": oldStatus, "new_status": req.Status,
 			"order_id": ret.OrderID.String(), "refund_amount": ret.RefundAmount,
 		})

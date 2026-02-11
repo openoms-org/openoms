@@ -11,15 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { StatusTransitionDialog } from "@/components/shared/status-transition-dialog";
 import { ORDER_TRANSITIONS, ORDER_STATUSES } from "@/lib/constants";
+import { isDestructiveOrderStatus } from "@/lib/order-utils";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import type { Order } from "@/types/api";
 
@@ -27,8 +21,6 @@ interface BulkActionsProps {
   selectedOrders: Order[];
   onClearSelection: () => void;
 }
-
-const DESTRUCTIVE_STATUSES = ["cancelled", "refunded"];
 
 function pluralOrders(count: number): string {
   if (count === 1) return "zamówienie";
@@ -48,14 +40,12 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
   const orderTransitions = statusConfig?.transitions ?? ORDER_TRANSITIONS;
 
-  // Compute common valid transitions across all selected orders
   const commonTransitions = selectedOrders.reduce<string[]>((acc, order, index) => {
     const transitions = orderTransitions[order.status] || [];
     if (index === 0) return [...transitions];
     return acc.filter((t) => transitions.includes(t));
   }, []);
 
-  // All other statuses for force mode (excluding statuses that are already in common transitions)
   const selectedStatuses = new Set(selectedOrders.map((o) => o.status));
   const forceTransitions = Object.keys(orderStatuses).filter(
     (s) => !commonTransitions.includes(s) && !selectedStatuses.has(s)
@@ -65,7 +55,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
 
   const handleAction = () => {
     if (!targetStatus) return;
-    if (isForce || DESTRUCTIVE_STATUSES.includes(targetStatus)) {
+    if (isForce || isDestructiveOrderStatus(targetStatus)) {
       setShowConfirmDialog(true);
       return;
     }
@@ -152,32 +142,20 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
         </Button>
       </div>
 
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isForce ? "Wymuszona zmiana statusu" : "Potwierdzenie"}
-            </DialogTitle>
-            <DialogDescription>
-              {isForce
-                ? `Ta zmiana jest niezgodna z normalnym flow. Czy na pewno chcesz wymusić zmianę statusu ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
-                : `Czy na pewno chcesz zmienić status ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={executeBulkTransition}
-              disabled={bulkTransition.isPending}
-            >
-              {bulkTransition.isPending ? "Zmieniam..." : "Potwierdź"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StatusTransitionDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title={isForce ? "Wymuszona zmiana statusu" : "Potwierdzenie"}
+        description={
+          isForce
+            ? `Ta zmiana jest niezgodna z normalnym flow. Czy na pewno chcesz wymusić zmianę statusu ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
+            : `Czy na pewno chcesz zmienić status ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
+        }
+        isDestructive
+        isPending={bulkTransition.isPending}
+        onConfirm={executeBulkTransition}
+        confirmLabel={bulkTransition.isPending ? "Zmieniam..." : "Potwierdź"}
+      />
     </>
   );
 }

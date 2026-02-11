@@ -3,15 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { StatusTransitionDialog } from "@/components/shared/status-transition-dialog";
 import { ORDER_STATUSES, ORDER_TRANSITIONS } from "@/lib/constants";
+import { isDestructiveOrderStatus } from "@/lib/order-utils";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 
 interface OrderStatusActionsProps {
@@ -20,10 +14,8 @@ interface OrderStatusActionsProps {
   isLoading?: boolean;
 }
 
-const DESTRUCTIVE_STATUSES = ["cancelled", "refunded"];
-
 function getButtonVariant(status: string): "default" | "destructive" | "outline" {
-  if (DESTRUCTIVE_STATUSES.includes(status)) return "destructive";
+  if (isDestructiveOrderStatus(status)) return "destructive";
   if (["delivered", "completed", "confirmed"].includes(status)) return "default";
   return "outline";
 }
@@ -44,14 +36,13 @@ export function OrderStatusActions({
 
   const normalTransitions = orderTransitions[currentStatus] || [];
 
-  // All other statuses (excluding current and normal transitions) for force mode
   const allStatuses = Object.keys(orderStatuses);
   const forceTransitions = allStatuses.filter(
     (s) => s !== currentStatus && !normalTransitions.includes(s)
   );
 
   const handleClick = (newStatus: string, force: boolean) => {
-    if (force || DESTRUCTIVE_STATUSES.includes(newStatus)) {
+    if (force || isDestructiveOrderStatus(newStatus)) {
       setConfirmDialog({ status: newStatus, force });
     } else {
       onTransition(newStatus, false);
@@ -116,34 +107,24 @@ export function OrderStatusActions({
         </>
       )}
 
-      <Dialog open={!!confirmDialog} onOpenChange={() => setConfirmDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {confirmDialog?.force
-                ? "Wymuszona zmiana statusu"
-                : "Potwierdzenie zmiany statusu"}
-            </DialogTitle>
-            <DialogDescription>
-              {confirmDialog?.force
-                ? `Ta zmiana jest niezgodna z normalnym flow zamówienia. Czy na pewno chcesz wymusić zmianę statusu na "${confirmLabel}"?`
-                : `Czy na pewno chcesz zmienić status zamówienia na "${confirmLabel}"? Ta operacja może być nieodwracalna.`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialog(null)}>
-              Anuluj
-            </Button>
-            <Button
-              variant={confirmDialog?.force ? "destructive" : "default"}
-              onClick={handleConfirm}
-              disabled={isLoading}
-            >
-              {confirmDialog?.force ? "Wymuś zmianę" : "Potwierdź"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <StatusTransitionDialog
+        open={!!confirmDialog}
+        onOpenChange={() => setConfirmDialog(null)}
+        title={
+          confirmDialog?.force
+            ? "Wymuszona zmiana statusu"
+            : "Potwierdzenie zmiany statusu"
+        }
+        description={
+          confirmDialog?.force
+            ? `Ta zmiana jest niezgodna z normalnym flow zamówienia. Czy na pewno chcesz wymusić zmianę statusu na "${confirmLabel}"?`
+            : `Czy na pewno chcesz zmienić status zamówienia na "${confirmLabel}"? Ta operacja może być nieodwracalna.`
+        }
+        isDestructive={confirmDialog?.force ?? false}
+        isPending={isLoading}
+        onConfirm={handleConfirm}
+        confirmLabel={confirmDialog?.force ? "Wymuś zmianę" : "Potwierdź"}
+      />
     </>
   );
 }

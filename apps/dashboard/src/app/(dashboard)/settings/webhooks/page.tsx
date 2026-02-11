@@ -115,6 +115,9 @@ export default function WebhooksPage() {
           <p className="text-muted-foreground mt-1">
             Konfiguracja endpointów do powiadamiania zewnętrznych systemów
           </p>
+          <p className="text-sm text-muted-foreground">
+            Webhooki wysyłają powiadomienia HTTP POST do zewnętrznych systemów gdy wystąpi zdarzenie w OpenOMS.
+          </p>
         </div>
         <Link href="/settings/webhooks/deliveries">
           <Button variant="outline" size="sm">

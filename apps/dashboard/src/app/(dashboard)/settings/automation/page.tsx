@@ -71,6 +71,9 @@ export default function AutomationRulesPage() {
           <p className="text-muted-foreground mt-1">
             Reguły automatycznego przetwarzania zdarzeń
           </p>
+          <p className="text-sm text-muted-foreground">
+            Reguły automatyzacji wykonują wewnętrzne akcje (zmiana statusu, wysyłka powiadomień) gdy spełnione są warunki.
+          </p>
         </div>
         <Button onClick={() => router.push("/settings/automation/new")}>
           <Plus className="h-4 w-4" />

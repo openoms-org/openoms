@@ -30,10 +30,6 @@ func (s *ProductService) SetAutomationService(automationSvc *AutomationService) 
 	s.automationService = automationSvc
 }
 
-func (s *ProductService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
-	FireAutomationEvent(s.automationService, tenantID, "product", eventType, entityID, data)
-}
-
 func NewProductService(
 	productRepo repository.ProductRepo,
 	auditRepo repository.AuditRepo,
@@ -144,7 +140,7 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.created", product)
-	s.fireAutomationEvent(tenantID, "product.created", product.ID, map[string]any{
+	FireAutomationEvent(s.automationService, tenantID, "product", "product.created", product.ID, map[string]any{
 		"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 		"source": product.Source,
 	})
@@ -208,7 +204,7 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 	}
 	if product != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.updated", product)
-		s.fireAutomationEvent(tenantID, "product.updated", product.ID, map[string]any{
+		FireAutomationEvent(s.automationService, tenantID, "product", "product.updated", product.ID, map[string]any{
 			"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 			"source": product.Source,
 		})

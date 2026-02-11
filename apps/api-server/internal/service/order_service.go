@@ -70,10 +70,6 @@ func (s *OrderService) SetSMSService(smsSvc *SMSService) {
 	s.smsService = smsSvc
 }
 
-func (s *OrderService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
-	FireAutomationEvent(s.automationService, tenantID, "order", eventType, entityID, data)
-}
-
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
 	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
@@ -219,7 +215,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order)
-	s.fireAutomationEvent(tenantID, "order.created", order.ID, map[string]any{
+	FireAutomationEvent(s.automationService, tenantID, "order", "order.created", order.ID, map[string]any{
 		"status": order.Status, "source": order.Source,
 		"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
 		"currency": order.Currency, "payment_status": order.PaymentStatus,
@@ -262,7 +258,7 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 	})
 	if err == nil && order != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order)
-		s.fireAutomationEvent(tenantID, "order.updated", order.ID, map[string]any{
+		FireAutomationEvent(s.automationService, tenantID, "order", "order.updated", order.ID, map[string]any{
 			"status": order.Status, "source": order.Source,
 			"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
 			"currency": order.Currency, "payment_status": order.PaymentStatus,
@@ -378,7 +374,7 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		if s.smsService != nil {
 			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, oldStatus, req.Status)
 		}
-		s.fireAutomationEvent(tenantID, "order.status_changed", order.ID, map[string]any{
+		FireAutomationEvent(s.automationService, tenantID, "order", "order.status_changed", order.ID, map[string]any{
 			"status": order.Status, "old_status": oldStatus, "new_status": req.Status,
 			"source": order.Source, "customer_name": order.CustomerName,
 			"total_amount": order.TotalAmount, "currency": order.Currency,

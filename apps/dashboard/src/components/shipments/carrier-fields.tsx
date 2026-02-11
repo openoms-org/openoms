@@ -10,8 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InPostGeowidget } from "@/components/shipments/inpost-geowidget";
-import { PaczkomatSearch } from "@/components/shipments/paczkomat-search";
+import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
 
 export interface CarrierFieldValues {
   service_type?: string;
@@ -165,14 +164,16 @@ function InPostFields({
                   <span className="font-medium text-sm">{targetPoint}</span>
                 </div>
               )}
-              <InPostGeowidget
+              <PaczkomatSelector
+                mode="inline"
                 onPointSelect={(name) => onChange("target_point", name)}
               />
             </>
           ) : (
-            <PaczkomatSearch
+            <PaczkomatSelector
+              mode="search"
               value={targetPoint}
-              onValueChange={(v) => onChange("target_point", v)}
+              onPointSelect={(v) => onChange("target_point", v)}
             />
           )}
         </div>

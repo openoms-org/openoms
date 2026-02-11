@@ -42,10 +42,6 @@ func (s *ShipmentService) SetAutomationService(automationSvc *AutomationService)
 	s.automationService = automationSvc
 }
 
-func (s *ShipmentService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
-	FireAutomationEvent(s.automationService, tenantID, "shipment", eventType, entityID, data)
-}
-
 func NewShipmentService(
 	shipmentRepo repository.ShipmentRepo,
 	orderRepo repository.OrderRepo,
@@ -148,7 +144,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.created", shipment)
-	s.fireAutomationEvent(tenantID, "shipment.created", shipment.ID, map[string]any{
+	FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.created", shipment.ID, map[string]any{
 		"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
 	})
 	return shipment, nil
@@ -295,7 +291,7 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		if s.smsService != nil {
 			go s.smsService.SendShipmentStatusSMS(context.Background(), tenantID, shipment, "")
 		}
-		s.fireAutomationEvent(tenantID, "shipment.status_changed", shipment.ID, map[string]any{
+		FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.status_changed", shipment.ID, map[string]any{
 			"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
 		})
 	}

@@ -2,9 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -144,16 +142,3 @@ func (h *AuthHandler) clearRefreshCookie(w http.ResponseWriter) {
 	})
 }
 
-func isValidationError(err error) bool {
-	var ve *service.ValidationError
-	return errors.As(err, &ve)
-}
-
-// clientIP extracts the IP address from r.RemoteAddr, stripping the port.
-func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
-}
