@@ -44,9 +44,9 @@ func (r *UserRepository) FindForAuth(ctx context.Context, email string, tenantID
 func (r *UserRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.User, error) {
 	var u model.User
 	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, email, name, role, last_login_at, created_at, updated_at
+		`SELECT id, tenant_id, email, name, role, role_id, last_login_at, created_at, updated_at
 		 FROM users WHERE id = $1`, id,
-	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt)
+	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.RoleID, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -59,7 +59,7 @@ func (r *UserRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) 
 // List returns all users for the current tenant.
 func (r *UserRepository) List(ctx context.Context, tx pgx.Tx) ([]model.User, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, tenant_id, email, name, role, last_login_at, created_at, updated_at
+		`SELECT id, tenant_id, email, name, role, role_id, last_login_at, created_at, updated_at
 		 FROM users ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
@@ -69,7 +69,7 @@ func (r *UserRepository) List(ctx context.Context, tx pgx.Tx) ([]model.User, err
 	var users []model.User
 	for rows.Next() {
 		var u model.User
-		if err := rows.Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.RoleID, &u.LastLoginAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		users = append(users, u)
@@ -104,6 +104,18 @@ func (r *UserRepository) UpdateName(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	ct, err := tx.Exec(ctx, "UPDATE users SET name = $1 WHERE id = $2", name, id)
 	if err != nil {
 		return fmt.Errorf("update user name: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// UpdateRoleID updates a user's RBAC role_id.
+func (r *UserRepository) UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UUID, roleID *uuid.UUID) error {
+	ct, err := tx.Exec(ctx, "UPDATE users SET role_id = $1 WHERE id = $2", roleID, id)
+	if err != nil {
+		return fmt.Errorf("update user role_id: %w", err)
 	}
 	if ct.RowsAffected() == 0 {
 		return fmt.Errorf("user not found")

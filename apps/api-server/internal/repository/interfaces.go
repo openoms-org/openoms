@@ -46,6 +46,7 @@ type UserRepo interface {
 	List(ctx context.Context, tx pgx.Tx) ([]model.User, error)
 	Create(ctx context.Context, tx pgx.Tx, user *model.User, passwordHash string) error
 	UpdateRole(ctx context.Context, tx pgx.Tx, id uuid.UUID, role string) error
+	UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UUID, roleID *uuid.UUID) error
 	UpdateName(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string) error
 	UpdateLastLogin(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
@@ -105,9 +106,21 @@ type IntegrationRepo interface {
 type ReturnRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.ReturnListFilter) ([]model.Return, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Return, error)
+	FindByToken(ctx context.Context, tx pgx.Tx, token string) (*model.Return, error)
 	Create(ctx context.Context, tx pgx.Tx, ret *model.Return) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateReturnRequest) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}
+
+// ExchangeRateRepo defines the interface for exchange rate persistence operations.
+type ExchangeRateRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.ExchangeRateListFilter) ([]model.ExchangeRate, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ExchangeRate, error)
+	GetRate(ctx context.Context, tx pgx.Tx, baseCurrency, targetCurrency string) (*model.ExchangeRate, error)
+	Create(ctx context.Context, tx pgx.Tx, rate *model.ExchangeRate) error
+	Upsert(ctx context.Context, tx pgx.Tx, rate *model.ExchangeRate) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateExchangeRateRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 
@@ -229,6 +242,34 @@ type VariantRepo interface {
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateVariantRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	CountByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (int, error)
+}
+
+// WarehouseDocumentRepo defines the interface for warehouse document persistence operations.
+type WarehouseDocumentRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.WarehouseDocumentListFilter) ([]model.WarehouseDocument, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.WarehouseDocument, error)
+	Create(ctx context.Context, tx pgx.Tx, doc *model.WarehouseDocument) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateWarehouseDocumentRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	Confirm(ctx context.Context, tx pgx.Tx, id uuid.UUID, confirmedBy uuid.UUID) error
+	Cancel(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	NextDocumentNumber(ctx context.Context, tx pgx.Tx, docType string, year int) (int, error)
+}
+
+// WarehouseDocItemRepo defines the interface for warehouse document item persistence operations.
+type WarehouseDocItemRepo interface {
+	ListByDocumentID(ctx context.Context, tx pgx.Tx, documentID uuid.UUID) ([]model.WarehouseDocItem, error)
+	Create(ctx context.Context, tx pgx.Tx, item *model.WarehouseDocItem) error
+}
+
+// RoleRepo defines the interface for role persistence operations.
+type RoleRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.RoleListFilter) ([]model.Role, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Role, error)
+	FindByName(ctx context.Context, tx pgx.Tx, name string) (*model.Role, error)
+	Create(ctx context.Context, tx pgx.Tx, role *model.Role) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRoleRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 
 // PriceListRepo defines the interface for price list persistence operations.

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth";
 
 // Mock next/navigation which is used by the sidebar
@@ -28,6 +29,18 @@ vi.mock("next-themes", () => ({
 // Import the layout after setting up mocks
 import DashboardLayout from "@/app/(dashboard)/layout";
 
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+
 beforeEach(() => {
   useAuthStore.getState().clearAuth();
 });
@@ -39,7 +52,8 @@ describe("DashboardLayout", () => {
     render(
       <DashboardLayout>
         <div>Child content</div>
-      </DashboardLayout>
+      </DashboardLayout>,
+      { wrapper: Wrapper },
     );
 
     // When loading, child content should not be visible
@@ -52,7 +66,8 @@ describe("DashboardLayout", () => {
     render(
       <DashboardLayout>
         <div>Dashboard Content</div>
-      </DashboardLayout>
+      </DashboardLayout>,
+      { wrapper: Wrapper },
     );
 
     expect(screen.getByText("Dashboard Content")).toBeInTheDocument();
@@ -64,7 +79,8 @@ describe("DashboardLayout", () => {
     render(
       <DashboardLayout>
         <div>Content</div>
-      </DashboardLayout>
+      </DashboardLayout>,
+      { wrapper: Wrapper },
     );
 
     expect(screen.getByText("OpenOMS")).toBeInTheDocument();
@@ -76,7 +92,8 @@ describe("DashboardLayout", () => {
     const { container } = render(
       <DashboardLayout>
         <div>Main area test</div>
-      </DashboardLayout>
+      </DashboardLayout>,
+      { wrapper: Wrapper },
     );
 
     const main = container.querySelector("main");

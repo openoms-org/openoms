@@ -15,6 +15,7 @@ type AuthClaims struct {
 	TenantID uuid.UUID `json:"tid"`
 	Email    string    `json:"email"`
 	Role     string    `json:"role"`
+	RoleID   uuid.UUID `json:"role_id,omitempty"`
 	Type     string    `json:"type,omitempty"`
 }
 
@@ -99,13 +100,14 @@ func (r *CreateUserRequest) Validate() error {
 
 // UpdateUserRequest is the body of PATCH /v1/users/{id}.
 type UpdateUserRequest struct {
-	Name *string `json:"name,omitempty"`
-	Role *string `json:"role,omitempty"`
+	Name   *string    `json:"name,omitempty"`
+	Role   *string    `json:"role,omitempty"`
+	RoleID *uuid.UUID `json:"role_id,omitempty"`
 }
 
 func (r *UpdateUserRequest) Validate() error {
-	if r.Name == nil && r.Role == nil {
-		return errors.New("at least one field (name or role) must be provided")
+	if r.Name == nil && r.Role == nil && r.RoleID == nil {
+		return errors.New("at least one field (name, role, or role_id) must be provided")
 	}
 	if r.Role != nil {
 		switch *r.Role {

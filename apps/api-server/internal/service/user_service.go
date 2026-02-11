@@ -154,6 +154,13 @@ func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID
 			}
 			user.Role = *req.Role
 		}
+		if req.RoleID != nil {
+			changes["role_id"] = *req.RoleID
+			if err := s.userRepo.UpdateRoleID(ctx, tx, userID, req.RoleID); err != nil {
+				return err
+			}
+			user.RoleID = req.RoleID
+		}
 
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,

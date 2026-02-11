@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Package, Plus, Search } from "lucide-react";
+import { Package, Plus, Search, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useBulkCategorize } from "@/hooks/use-ai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type EditableColumnConfig } from "@/components/shared/data-table";
@@ -33,6 +35,8 @@ export default function ProductsPage() {
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const bulkCategorize = useBulkCategorize();
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -211,12 +215,40 @@ export default function ProductsPage() {
             Zarządzaj katalogiem produktów
           </p>
         </div>
-        <Button asChild>
-          <Link href="/products/new">
-            <Plus className="h-4 w-4" />
-            Nowy produkt
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedProducts.size > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                bulkCategorize.mutate(Array.from(selectedProducts), {
+                  onSuccess: (data) => {
+                    const succeeded = data.results.filter((r) => !r.error).length;
+                    const failed = data.results.filter((r) => r.error).length;
+                    toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} bledow`);
+                    setSelectedProducts(new Set());
+                  },
+                  onError: (error) => {
+                    toast.error(error instanceof Error ? error.message : "Blad auto-kategoryzacji");
+                  },
+                });
+              }}
+              disabled={bulkCategorize.isPending}
+            >
+              {bulkCategorize.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Auto-kategoryzacja ({selectedProducts.size})
+            </Button>
+          )}
+          <Button asChild>
+            <Link href="/products/new">
+              <Plus className="h-4 w-4" />
+              Nowy produkt
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -296,6 +328,9 @@ export default function ProductsPage() {
         sortOrder={sortOrder}
         onSort={handleSort}
         editableColumns={editableColumns}
+        selectable
+        selectedIds={selectedProducts}
+        onSelectionChange={setSelectedProducts}
       />
 
       {data && (

@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
+
 	// Register marketplace providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/amazon"
@@ -35,6 +37,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 	"github.com/openoms-org/openoms/apps/api-server/internal/worker"
+	"github.com/openoms-org/openoms/apps/api-server/internal/ws"
 	inpost "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
 
@@ -131,9 +134,14 @@ func main() {
 	warehouseStockRepo := repository.NewWarehouseStockRepository()
 	customerRepo := repository.NewCustomerRepository()
 	priceListRepo := repository.NewPriceListRepository()
+	warehouseDocRepo := repository.NewWarehouseDocumentRepository()
+	warehouseDocItemRepo := repository.NewWarehouseDocItemRepository()
+	exchangeRateRepo := repository.NewExchangeRateRepository()
+	roleRepo := repository.NewRoleRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
+	roleService := service.NewRoleService(roleRepo, auditRepo, pool)
 	emailService := service.NewEmailService(tenantRepo, pool)
 	smsService := service.NewSMSService(tenantRepo, pool)
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
@@ -160,6 +168,8 @@ func main() {
 	customerService := service.NewCustomerService(customerRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	barcodeService := service.NewBarcodeService(productRepo, variantRepo, orderRepo, auditRepo, pool)
 	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
+	warehouseDocService := service.NewWarehouseDocumentService(warehouseDocRepo, warehouseDocItemRepo, warehouseStockRepo, auditRepo, pool)
+	exchangeRateService := service.NewExchangeRateService(exchangeRateRepo, auditRepo, pool)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -236,6 +246,43 @@ func main() {
 	// Price list handler
 	priceListHandler := handler.NewPriceListHandler(priceListService)
 
+	// Warehouse document handler
+	warehouseDocHandler := handler.NewWarehouseDocumentHandler(warehouseDocService)
+
+	// WebSocket hub and handler
+	wsHub := ws.NewHub()
+	go wsHub.Run()
+	wsHandler := handler.NewWSHandler(wsHub, tokenSvc)
+
+	// Wire hub into webhook dispatch service for real-time events
+	webhookDispatchService.SetWSBroadcast(func(tenantID uuid.UUID, eventType string, payload any) {
+		wsHub.BroadcastToTenant(tenantID, ws.Event{Type: eventType, Payload: payload})
+	})
+
+	// AI service & handler (Phase 33)
+	aiService := service.NewAIService(cfg.OpenAIAPIKey, cfg.OpenAIModel, productRepo, tenantRepo, pool)
+	aiHandler := handler.NewAIHandler(aiService)
+	if cfg.OpenAIAPIKey != "" {
+		slog.Info("AI auto-categorization enabled", "model", cfg.OpenAIModel)
+	}
+
+	// Mailchimp marketing service & handler (Phase 34)
+	mailchimpService := service.NewMailchimpService(tenantRepo, customerRepo, pool, slog.Default())
+	marketingHandler := handler.NewMarketingHandler(mailchimpService)
+
+	// Freshdesk helpdesk service & handler (Phase 34)
+	freshdeskService := service.NewFreshdeskService(tenantRepo, orderRepo, pool, slog.Default())
+	helpdeskHandler := handler.NewHelpdeskHandler(freshdeskService)
+
+	// Public return handler (Phase 29)
+	publicReturnHandler := handler.NewPublicReturnHandler(pool, returnRepo, orderRepo)
+
+	// Exchange rate handler (Phase 30)
+	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService)
+
+	// Role handler (Phase 31 — RBAC)
+	roleHandler := handler.NewRoleHandler(roleService)
+
 	// Print handler
 	printHandler := handler.NewPrintHandler(tenantRepo, orderRepo, returnRepo, pool)
 
@@ -284,7 +331,16 @@ func main() {
 		OrderGroup:       orderGroupHandler,
 		Bundle:           bundleHandler,
 		Barcode:          barcodeHandler,
-		PriceList:        priceListHandler,
+		PriceList:          priceListHandler,
+		WarehouseDocument:  warehouseDocHandler,
+		WS:                 wsHandler,
+		AI:                 aiHandler,
+		Marketing:          marketingHandler,
+		Helpdesk:           helpdeskHandler,
+		PublicReturn:       publicReturnHandler,
+		ExchangeRate:       exchangeRateHandler,
+		Role:               roleHandler,
+		RoleService:        roleService,
 	})
 
 	// Start background workers
@@ -296,6 +352,7 @@ func main() {
 	workerMgr.Register(worker.NewAmazonOrderPoller(pool, encryptionKey, orderRepo, slog.Default()))
 	workerMgr.Register(worker.NewWooCommerceOrderPoller(pool, encryptionKey, orderRepo, slog.Default()))
 	workerMgr.Register(worker.NewSupplierSyncWorker(pool, supplierService, slog.Default()))
+	workerMgr.Register(worker.NewExchangeRateWorker(pool, exchangeRateService, slog.Default()))
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

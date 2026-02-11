@@ -24,11 +24,14 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+type wsBroadcastFunc func(tenantID uuid.UUID, eventType string, payload any)
+
 type WebhookDispatchService struct {
 	tenantRepo   repository.TenantRepo
 	deliveryRepo repository.WebhookDeliveryRepo
 	pool         *pgxpool.Pool
 	httpClient   *http.Client
+	wsBroadcast  wsBroadcastFunc
 }
 
 // noPrivateDialer returns a DialContext function that refuses to connect to private IP addresses.
@@ -76,8 +79,18 @@ func NewWebhookDispatchService(
 	}
 }
 
+// SetWSBroadcast sets the function used to broadcast events via WebSocket.
+func (s *WebhookDispatchService) SetWSBroadcast(fn func(tenantID uuid.UUID, eventType string, payload any)) {
+	s.wsBroadcast = fn
+}
+
 // Dispatch sends webhook to all matching endpoints. Called as goroutine.
 func (s *WebhookDispatchService) Dispatch(ctx context.Context, tenantID uuid.UUID, eventType string, payload any) {
+	// Also broadcast to WebSocket clients
+	if s.wsBroadcast != nil {
+		s.wsBroadcast(tenantID, eventType, payload)
+	}
+
 	// 1. Load tenant settings
 	var settingsRaw json.RawMessage
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

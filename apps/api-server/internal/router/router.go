@@ -50,7 +50,16 @@ type RouterDeps struct {
 	OrderGroup       *handler.OrderGroupHandler
 	Bundle           *handler.BundleHandler
 	Barcode          *handler.BarcodeHandler
-	PriceList        *handler.PriceListHandler
+	PriceList          *handler.PriceListHandler
+	WarehouseDocument  *handler.WarehouseDocumentHandler
+	WS                 *handler.WSHandler
+	AI                 *handler.AIHandler
+	Marketing          *handler.MarketingHandler
+	Helpdesk           *handler.HelpdeskHandler
+	PublicReturn       *handler.PublicReturnHandler
+	ExchangeRate       *handler.ExchangeRateHandler
+	Role               *handler.RoleHandler
+	RoleService        *service.RoleService
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -102,6 +111,18 @@ func New(deps RouterDeps) *chi.Mux {
 
 	// Public webhook routes — no JWT, signature-verified
 	r.Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
+
+	// Public return self-service routes — no JWT, rate-limited
+	r.Route("/v1/public/returns", func(r chi.Router) {
+		r.Use(middleware.RateLimit(30, 1*time.Minute))
+		r.Use(middleware.MaxBodySize(1 << 20))
+		r.Post("/", deps.PublicReturn.CreatePublicReturn)
+		r.Get("/{token}", deps.PublicReturn.GetByToken)
+		r.Get("/{token}/status", deps.PublicReturn.GetStatusByToken)
+	})
+
+	// WebSocket endpoint — auth via query param, must be before JWT middleware
+	r.Get("/v1/ws", deps.WS.ServeWS)
 
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {
@@ -189,6 +210,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/packing-slip", deps.Print.GetPackingSlip)
 				r.Get("/{id}/print", deps.Print.GetOrderSummary)
 				r.Post("/{id}/pack", deps.Barcode.PackOrder)
+				r.Get("/{id}/tickets", deps.Helpdesk.ListOrderTickets)
+				r.Post("/{id}/tickets", deps.Helpdesk.CreateOrderTicket)
 			})
 
 			// Invoices — any authenticated user
@@ -344,6 +367,59 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/items", deps.PriceList.ListItems)
 				r.Post("/{id}/items", deps.PriceList.CreateItem)
 				r.Delete("/{id}/items/{itemId}", deps.PriceList.DeleteItem)
+			})
+
+			// Warehouse documents — admin only
+			r.Route("/warehouse-documents", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.WarehouseDocument.List)
+				r.Post("/", deps.WarehouseDocument.Create)
+				r.Get("/{id}", deps.WarehouseDocument.Get)
+				r.Patch("/{id}", deps.WarehouseDocument.Update)
+				r.Delete("/{id}", deps.WarehouseDocument.Delete)
+				r.Post("/{id}/confirm", deps.WarehouseDocument.Confirm)
+				r.Post("/{id}/cancel", deps.WarehouseDocument.Cancel)
+			})
+
+			// AI auto-categorization — any authenticated user
+			r.Route("/ai", func(r chi.Router) {
+				r.Post("/categorize", deps.AI.Categorize)
+				r.Post("/describe", deps.AI.Describe)
+				r.Post("/bulk-categorize", deps.AI.BulkCategorize)
+			})
+
+			// Marketing (Mailchimp) — admin only
+			r.Route("/marketing", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Post("/sync", deps.Marketing.Sync)
+				r.Get("/status", deps.Marketing.Status)
+				r.Post("/campaigns", deps.Marketing.CreateCampaign)
+			})
+
+			// Helpdesk (Freshdesk) — any authenticated user
+			r.Get("/helpdesk/tickets", deps.Helpdesk.ListAllTickets)
+
+			// Exchange rates — admin only
+			r.Route("/exchange-rates", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.ExchangeRate.List)
+				r.Post("/", deps.ExchangeRate.Create)
+				r.Post("/fetch", deps.ExchangeRate.FetchNBP)
+				r.Post("/convert", deps.ExchangeRate.Convert)
+				r.Get("/{id}", deps.ExchangeRate.Get)
+				r.Patch("/{id}", deps.ExchangeRate.Update)
+				r.Delete("/{id}", deps.ExchangeRate.Delete)
+			})
+
+			// Roles (RBAC) — admin only
+			r.Route("/roles", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.Role.List)
+				r.Get("/permissions", deps.Role.ListPermissions)
+				r.Post("/", deps.Role.Create)
+				r.Get("/{id}", deps.Role.Get)
+				r.Patch("/{id}", deps.Role.Update)
+				r.Delete("/{id}", deps.Role.Delete)
 			})
 
 			// InPost points search (proxy)
