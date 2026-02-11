@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -110,6 +111,11 @@ func (s *OrderGroupService) MergeOrders(ctx context.Context, tenantID, userID uu
 		}
 		if req.Notes != nil {
 			newOrder.Notes = req.Notes
+		}
+		newOrder.Metadata = json.RawMessage(`{}`)
+		if newOrder.OrderedAt == nil {
+			now := time.Now()
+			newOrder.OrderedAt = &now
 		}
 
 		if err := s.orderRepo.Create(ctx, tx, newOrder); err != nil {
@@ -222,6 +228,11 @@ func (s *OrderGroupService) SplitOrder(ctx context.Context, tenantID, userID uui
 			}
 			if req.Notes != nil {
 				newOrder.Notes = req.Notes
+			}
+			newOrder.Metadata = json.RawMessage(`{}`)
+			if newOrder.OrderedAt == nil {
+				now := time.Now()
+				newOrder.OrderedAt = &now
 			}
 
 			if err := s.orderRepo.Create(ctx, tx, newOrder); err != nil {

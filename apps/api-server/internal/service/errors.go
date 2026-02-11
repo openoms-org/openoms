@@ -34,3 +34,15 @@ func isDuplicateKeyError(err error) bool {
 	}
 	return false
 }
+
+// IsForeignKeyError checks for PostgreSQL foreign key constraint violation (code 23503).
+func IsForeignKeyError(err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == "23503"
+	}
+	return false
+}
+
+// ErrFreshdeskNotConfigured is returned when Freshdesk is not enabled or configured for the tenant.
+var ErrFreshdeskNotConfigured = errors.New("freshdesk is not configured")

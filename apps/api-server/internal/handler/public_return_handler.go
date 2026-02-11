@@ -117,37 +117,24 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// First, find the order WITHOUT RLS to get the tenant_id.
+	// Look up the order's tenant_id using a SECURITY DEFINER function
+	// that bypasses RLS (avoids chicken-and-egg problem).
 	var tenantID uuid.UUID
-
-	err = h.queryWithoutRLS(r.Context(), func(tx pgx.Tx) error {
-		var oID uuid.UUID
-		var customerEmail *string
-		err := tx.QueryRow(r.Context(),
-			`SELECT id, tenant_id, customer_email FROM orders WHERE id = $1`,
-			orderID,
-		).Scan(&oID, &tenantID, &customerEmail)
-		if err == pgx.ErrNoRows {
-			return fmt.Errorf("order not found")
-		}
-		if err != nil {
-			return fmt.Errorf("query order: %w", err)
-		}
-		if customerEmail == nil || strings.ToLower(*customerEmail) != req.Email {
-			return fmt.Errorf("email does not match order")
-		}
-		return nil
-	})
+	var customerEmail *string
+	err = h.pool.QueryRow(r.Context(),
+		`SELECT tenant_id, customer_email FROM find_order_tenant_id($1)`,
+		orderID,
+	).Scan(&tenantID, &customerEmail)
+	if err == pgx.ErrNoRows {
+		writeError(w, http.StatusNotFound, "order not found")
+		return
+	}
 	if err != nil {
-		if err.Error() == "order not found" {
-			writeError(w, http.StatusNotFound, "order not found")
-			return
-		}
-		if err.Error() == "email does not match order" {
-			writeError(w, http.StatusForbidden, "email does not match order")
-			return
-		}
 		writeError(w, http.StatusInternalServerError, "failed to validate order")
+		return
+	}
+	if customerEmail == nil || strings.ToLower(*customerEmail) != req.Email {
+		writeError(w, http.StatusForbidden, "email does not match order")
 		return
 	}
 
@@ -200,20 +187,6 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 	})
 }
 
-// queryWithoutRLS runs a function in a transaction without setting the tenant context (bypasses RLS).
-func (h *PublicReturnHandler) queryWithoutRLS(ctx context.Context, fn func(tx pgx.Tx) error) error {
-	tx, err := h.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-
-	if err := fn(tx); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
-}
-
 // withTenant runs a function in a transaction with RLS set to the given tenant.
 func (h *PublicReturnHandler) withTenant(ctx context.Context, tenantID uuid.UUID, fn func(tx pgx.Tx) error) error {
 	tx, err := h.pool.Begin(ctx)
@@ -235,30 +208,26 @@ func (h *PublicReturnHandler) withTenant(ctx context.Context, tenantID uuid.UUID
 	return tx.Commit(ctx)
 }
 
-// findReturnByToken finds a return by token, bypassing RLS (since the token is globally unique).
+// findReturnByToken finds a return by token using a SECURITY DEFINER function
+// that bypasses RLS (since the token is globally unique and this is a public endpoint).
 func (h *PublicReturnHandler) findReturnByToken(ctx context.Context, token string) (*model.Return, error) {
-	var ret *model.Return
-	err := h.queryWithoutRLS(ctx, func(tx pgx.Tx) error {
-		var r model.Return
-		err := tx.QueryRow(ctx,
-			`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
-			        return_token, customer_email, customer_notes,
-			        created_at, updated_at
-			 FROM returns WHERE return_token = $1`, token,
-		).Scan(
-			&r.ID, &r.TenantID, &r.OrderID, &r.Status, &r.Reason,
-			&r.Items, &r.RefundAmount, &r.Notes,
-			&r.ReturnToken, &r.CustomerEmail, &r.CustomerNotes,
-			&r.CreatedAt, &r.UpdatedAt,
-		)
-		if err == pgx.ErrNoRows {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		ret = &r
-		return nil
-	})
-	return ret, err
+	var r model.Return
+	err := h.pool.QueryRow(ctx,
+		`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
+		        return_token, customer_email, customer_notes,
+		        created_at, updated_at
+		 FROM find_return_by_token($1)`, token,
+	).Scan(
+		&r.ID, &r.TenantID, &r.OrderID, &r.Status, &r.Reason,
+		&r.Items, &r.RefundAmount, &r.Notes,
+		&r.ReturnToken, &r.CustomerEmail, &r.CustomerNotes,
+		&r.CreatedAt, &r.UpdatedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }

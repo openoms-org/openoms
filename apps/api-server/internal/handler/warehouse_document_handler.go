@@ -88,6 +88,8 @@ func (h *WarehouseDocumentHandler) Create(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
+		} else if service.IsForeignKeyError(err) {
+			writeError(w, http.StatusBadRequest, "referenced product, variant, or warehouse does not exist")
 		} else {
 			writeError(w, http.StatusInternalServerError, "failed to create warehouse document")
 		}
@@ -176,6 +178,8 @@ func (h *WarehouseDocumentHandler) Confirm(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusNotFound, "warehouse document not found")
 		case errors.Is(err, service.ErrDocumentNotDraft):
 			writeError(w, http.StatusConflict, "document is not in draft status")
+		case service.IsForeignKeyError(err):
+			writeError(w, http.StatusBadRequest, "referenced product, variant, or warehouse does not exist")
 		default:
 			writeError(w, http.StatusInternalServerError, "failed to confirm warehouse document")
 		}

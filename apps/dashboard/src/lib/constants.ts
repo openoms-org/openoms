@@ -143,6 +143,7 @@ export const INVOICE_STATUS_MAP: Record<string, { label: string; color: string }
 };
 
 export const INVOICE_TYPE_LABELS: Record<string, string> = {
+  standard: "Standardowa",
   vat: "Faktura VAT",
   proforma: "Proforma",
   correction: "Korekta",

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useAllTickets } from "@/hooks/use-helpdesk";
+import { useCompanySettings } from "@/hooks/use-settings";
 import {
   Table,
   TableBody,
@@ -49,6 +50,7 @@ const FRESHDESK_PRIORITY_LABELS: Record<number, string> = {
 
 export default function HelpdeskSettingsPage() {
   const { data: ticketsData, isLoading: ticketsLoading } = useAllTickets();
+  const { data: companySettings } = useCompanySettings();
 
   const [form, setForm] = useState<FreshdeskSettings>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
@@ -56,10 +58,13 @@ export default function HelpdeskSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save freshdesk settings under the tenant settings freshdesk key
+      // Save freshdesk settings under the tenant settings freshdesk key,
+      // spreading existing company settings to avoid overwriting other fields.
+      const current = companySettings || {};
       await apiClient("/v1/settings/company", {
         method: "PUT",
         body: JSON.stringify({
+          ...current,
           freshdesk: form,
         }),
       });

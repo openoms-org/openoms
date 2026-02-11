@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -30,6 +31,12 @@ func (h *HelpdeskHandler) ListOrderTickets(w http.ResponseWriter, r *http.Reques
 
 	tickets, err := h.freshdeskService.GetTickets(r.Context(), tenantID, orderID)
 	if err != nil {
+		if errors.Is(err, service.ErrFreshdeskNotConfigured) {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"tickets": []service.FreshdeskTicket{},
+			})
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -69,6 +76,10 @@ func (h *HelpdeskHandler) CreateOrderTicket(w http.ResponseWriter, r *http.Reque
 
 	ticket, err := h.freshdeskService.CreateTicket(r.Context(), tenantID, orderID, req.Subject, req.Description, req.Email)
 	if err != nil {
+		if errors.Is(err, service.ErrFreshdeskNotConfigured) {
+			writeError(w, http.StatusBadRequest, "freshdesk is not configured")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -82,6 +93,12 @@ func (h *HelpdeskHandler) ListAllTickets(w http.ResponseWriter, r *http.Request)
 
 	tickets, err := h.freshdeskService.ListAllTickets(r.Context(), tenantID)
 	if err != nil {
+		if errors.Is(err, service.ErrFreshdeskNotConfigured) {
+			writeJSON(w, http.StatusOK, map[string]interface{}{
+				"tickets": []service.FreshdeskTicket{},
+			})
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
