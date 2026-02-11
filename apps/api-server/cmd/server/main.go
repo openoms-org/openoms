@@ -121,6 +121,9 @@ func main() {
 	supplierProductRepo := repository.NewSupplierProductRepository()
 	variantRepo := repository.NewVariantRepository()
 	syncJobRepo := repository.NewSyncJobRepository()
+	warehouseRepo := repository.NewWarehouseRepository()
+	warehouseStockRepo := repository.NewWarehouseStockRepository()
+	customerRepo := repository.NewCustomerRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -144,6 +147,8 @@ func main() {
 	shipmentService.SetSMSService(smsService)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
+	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, pool)
+	customerService := service.NewCustomerService(customerRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -202,6 +207,12 @@ func main() {
 	// Variant handler
 	variantHandler := handler.NewVariantHandler(variantService)
 
+	// Warehouse handler
+	warehouseHandler := handler.NewWarehouseHandler(warehouseService)
+
+	// Customer handler
+	customerHandler := handler.NewCustomerHandler(customerService)
+
 	// Sync job handler
 	syncJobHandler := handler.NewSyncJobHandler(syncJobRepo, pool)
 
@@ -233,6 +244,8 @@ func main() {
 		Import:           importHandler,
 		Variant:          variantHandler,
 		SyncJob:          syncJobHandler,
+		Warehouse:        warehouseHandler,
+		Customer:         customerHandler,
 	})
 
 	// Start background workers

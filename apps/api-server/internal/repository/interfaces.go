@@ -188,6 +188,35 @@ type SupplierProductRepo interface {
 	LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error
 }
 
+// WarehouseRepo defines the interface for warehouse persistence operations.
+type WarehouseRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.WarehouseListFilter) ([]model.Warehouse, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Warehouse, error)
+	Create(ctx context.Context, tx pgx.Tx, warehouse *model.Warehouse) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateWarehouseRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}
+
+// WarehouseStockRepo defines the interface for warehouse stock persistence operations.
+type WarehouseStockRepo interface {
+	ListByWarehouse(ctx context.Context, tx pgx.Tx, warehouseID uuid.UUID, filter model.WarehouseStockListFilter) ([]model.WarehouseStock, int, error)
+	ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]model.WarehouseStock, error)
+	Upsert(ctx context.Context, tx pgx.Tx, stock *model.WarehouseStock) error
+	AdjustQuantity(ctx context.Context, tx pgx.Tx, warehouseID, productID uuid.UUID, variantID *uuid.UUID, delta int) error
+}
+
+// CustomerRepo defines the interface for customer persistence operations.
+type CustomerRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.CustomerListFilter) ([]model.Customer, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Customer, error)
+	FindByEmail(ctx context.Context, tx pgx.Tx, email string) (*model.Customer, error)
+	Create(ctx context.Context, tx pgx.Tx, customer *model.Customer) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateCustomerRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	IncrementOrderStats(ctx context.Context, tx pgx.Tx, id uuid.UUID, amount float64) error
+	ListOrdersByCustomerID(ctx context.Context, tx pgx.Tx, customerID uuid.UUID, filter model.OrderListFilter) ([]model.Order, int, error)
+}
+
 // VariantRepo defines the interface for product variant persistence operations.
 type VariantRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.VariantListFilter) ([]model.ProductVariant, int, error)
