@@ -97,10 +97,16 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 
 		// Save default order status config so new tenant has working transitions
 		defaultCfg := model.DefaultOrderStatusConfig()
-		cfgJSON, _ := json.Marshal(defaultCfg)
-		initialSettings, _ := json.Marshal(map[string]json.RawMessage{
+		cfgJSON, err := json.Marshal(defaultCfg)
+		if err != nil {
+			return fmt.Errorf("marshal default order status config: %w", err)
+		}
+		initialSettings, err := json.Marshal(map[string]json.RawMessage{
 			"order_statuses": cfgJSON,
 		})
+		if err != nil {
+			return fmt.Errorf("marshal initial settings: %w", err)
+		}
 		if err := s.tenantRepo.UpdateSettings(ctx, tx, tenantID, initialSettings); err != nil {
 			return fmt.Errorf("set default settings: %w", err)
 		}

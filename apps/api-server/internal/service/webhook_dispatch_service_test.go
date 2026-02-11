@@ -3,6 +3,7 @@ package service
 import (
 	"testing"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +47,7 @@ func TestIsPrivateURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := isPrivateURL(tt.url)
+			result := netutil.IsPrivateURL(tt.url)
 			assert.Equal(t, tt.want, result)
 		})
 	}

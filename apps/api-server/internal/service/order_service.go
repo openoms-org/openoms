@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -72,15 +71,7 @@ func (s *OrderService) SetSMSService(smsSvc *SMSService) {
 }
 
 func (s *OrderService) fireAutomationEvent(tenantID uuid.UUID, eventType string, entityID uuid.UUID, data map[string]any) {
-	if s.automationService != nil {
-		s.automationService.ProcessEvent(context.Background(), automation.Event{
-			Type:       eventType,
-			TenantID:   tenantID,
-			EntityType: "order",
-			EntityID:   entityID,
-			Data:       data,
-		})
-	}
+	FireAutomationEvent(s.automationService, tenantID, "order", eventType, entityID, data)
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {

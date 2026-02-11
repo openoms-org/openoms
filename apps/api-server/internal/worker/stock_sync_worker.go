@@ -37,7 +37,7 @@ func (w *StockSyncWorker) Interval() time.Duration {
 
 func (w *StockSyncWorker) Run(ctx context.Context) error {
 	// Get all active marketplace integrations (all providers)
-	tis, err := ListActiveIntegrations(ctx, w.pool, "allegro")
+	tis, err := ListAllActiveMarketplaceIntegrations(ctx, w.pool)
 	if err != nil {
 		return err
 	}

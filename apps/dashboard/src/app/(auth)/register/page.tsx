@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +43,7 @@ export default function RegisterPage() {
     try {
       await registerUser(data);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Błąd rejestracji");
+      toast.error(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

@@ -19,6 +19,7 @@ type Shipment struct {
 	Status         string          `json:"status"`
 	LabelURL       *string         `json:"label_url,omitempty"`
 	CarrierData    json.RawMessage `json:"carrier_data,omitempty"`
+	WarehouseID    *uuid.UUID      `json:"warehouse_id,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
@@ -30,6 +31,7 @@ type CreateShipmentRequest struct {
 	TrackingNumber *string         `json:"tracking_number,omitempty"`
 	LabelURL       *string         `json:"label_url,omitempty"`
 	CarrierData    json.RawMessage `json:"carrier_data,omitempty"`
+	WarehouseID    *uuid.UUID      `json:"warehouse_id,omitempty"`
 }
 
 func (r *CreateShipmentRequest) Validate() error {

@@ -25,13 +25,13 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
-import type { CreateOrderRequest } from "@/types/api";
+import type { CreateOrderRequest, UpdateOrderRequest } from "@/types/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -55,7 +55,7 @@ export default function OrderDetailPage() {
 
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
-      await updateOrder.mutateAsync(data);
+      await updateOrder.mutateAsync(data as unknown as UpdateOrderRequest);
       toast.success("Zamówienie zostało zaktualizowane");
       setIsEditing(false);
     } catch (error) {

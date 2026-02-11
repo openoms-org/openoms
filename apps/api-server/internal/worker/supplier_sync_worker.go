@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
-	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -93,30 +92,3 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 	return nil
 }
 
-// ListActiveSuppliers queries all active suppliers across tenants for the worker.
-// This bypasses RLS.
-func ListActiveSuppliers(ctx context.Context, pool *pgxpool.Pool) ([]model.Supplier, error) {
-	rows, err := pool.Query(ctx,
-		`SELECT id, tenant_id, name, code, feed_url, feed_format, status, settings,
-		        last_sync_at, error_message, created_at, updated_at
-		 FROM suppliers WHERE status = 'active' AND feed_url IS NOT NULL AND feed_url != ''`,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var suppliers []model.Supplier
-	for rows.Next() {
-		var s model.Supplier
-		if err := rows.Scan(
-			&s.ID, &s.TenantID, &s.Name, &s.Code, &s.FeedURL, &s.FeedFormat,
-			&s.Status, &s.Settings, &s.LastSyncAt, &s.ErrorMessage,
-			&s.CreatedAt, &s.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		suppliers = append(suppliers, s)
-	}
-	return suppliers, rows.Err()
-}

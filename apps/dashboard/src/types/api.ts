@@ -48,6 +48,7 @@ export interface Tenant {
   name: string;
   slug: string;
   plan: string;
+  settings?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -75,6 +76,19 @@ export interface OrderItem {
   price: number;
 }
 
+export interface ReturnItem {
+  name: string;
+  quantity: number;
+}
+
+export interface Address {
+  name?: string;
+  street?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+}
+
 export interface Order {
   id: string;
   tenant_id: string;
@@ -85,8 +99,8 @@ export interface Order {
   customer_name: string;
   customer_email?: string;
   customer_phone?: string;
-  shipping_address?: Record<string, unknown>;
-  billing_address?: Record<string, unknown>;
+  shipping_address?: Address;
+  billing_address?: Address;
   items?: OrderItem[];
   total_amount: number;
   currency: string;
@@ -113,14 +127,16 @@ export interface CreateOrderRequest {
   customer_name: string;
   customer_email?: string;
   customer_phone?: string;
-  shipping_address?: Record<string, unknown>;
-  billing_address?: Record<string, unknown>;
-  items?: Record<string, unknown>;
+  shipping_address?: Address;
+  billing_address?: Address;
+  items?: OrderItem[];
   total_amount: number;
   currency?: string;
   notes?: string;
   metadata?: Record<string, unknown>;
   tags?: string[];
+  delivery_method?: string;
+  pickup_point_id?: string;
   ordered_at?: string;
   payment_status?: string;
   payment_method?: string;
@@ -131,14 +147,19 @@ export interface UpdateOrderRequest {
   customer_name?: string;
   customer_email?: string;
   customer_phone?: string;
-  shipping_address?: Record<string, unknown>;
-  billing_address?: Record<string, unknown>;
-  items?: Record<string, unknown>;
+  shipping_address?: Address;
+  billing_address?: Address;
+  items?: OrderItem[];
   total_amount?: number;
   currency?: string;
   notes?: string;
   metadata?: Record<string, unknown>;
   tags?: string[];
+  delivery_method?: string;
+  pickup_point_id?: string;
+  payment_status?: string;
+  payment_method?: string;
+  paid_at?: string;
 }
 
 export interface StatusTransitionRequest {
@@ -165,6 +186,7 @@ export interface Shipment {
   status: string;
   label_url?: string;
   carrier_data?: Record<string, unknown>;
+  warehouse_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -176,6 +198,7 @@ export interface CreateShipmentRequest {
   tracking_number?: string;
   label_url?: string;
   carrier_data?: Record<string, unknown>;
+  warehouse_id?: string;
 }
 
 export interface UpdateShipmentRequest {
@@ -231,6 +254,7 @@ export interface Product {
   depth?: number;
   image_url?: string;
   images: ProductImage[];
+  has_variants: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -291,7 +315,7 @@ export interface Return {
   order_id: string;
   status: string;
   reason: string;
-  items: Record<string, unknown>[];
+  items: ReturnItem[];
   refund_amount: number;
   notes?: string;
   created_at: string;
@@ -301,13 +325,14 @@ export interface Return {
 export interface CreateReturnRequest {
   order_id: string;
   reason: string;
-  items?: Record<string, unknown>[];
+  items?: ReturnItem[];
   refund_amount: number;
   notes?: string;
 }
 
 export interface UpdateReturnRequest {
   reason?: string;
+  items?: ReturnItem[];
   refund_amount?: number;
   notes?: string;
 }
@@ -339,6 +364,7 @@ export interface Integration {
 
 export interface CreateIntegrationRequest {
   provider: string;
+  label?: string;
   credentials: Record<string, unknown>;
   settings?: Record<string, unknown>;
 }
@@ -350,17 +376,6 @@ export interface UpdateIntegrationRequest {
   settings?: Record<string, unknown>;
   sync_cursor?: string;
   error_message?: string;
-}
-
-// === Webhooks ===
-export interface WebhookEvent {
-  id: string;
-  tenant_id: string;
-  provider: string;
-  event_type: string;
-  payload: Record<string, unknown>;
-  status: string;
-  created_at: string;
 }
 
 // === Outgoing Webhooks ===
@@ -669,6 +684,7 @@ export interface UpdateSupplierRequest {
   feed_format?: string;
   status?: string;
   settings?: Record<string, unknown>;
+  error_message?: string;
 }
 
 export interface SupplierListParams extends PaginationParams {
@@ -704,9 +720,9 @@ export interface Invoice {
 
 export interface CreateInvoiceRequest {
   order_id: string;
-  provider?: string;
+  provider: string;
   invoice_type?: string;
-  customer_name?: string;
+  customer_name: string;
   customer_email?: string;
   nip?: string;
   payment_method?: string;
@@ -735,10 +751,6 @@ export interface SMSSettings {
   from: string;
   notify_on: string[];
   templates: Record<string, string>;
-}
-
-export interface SendTestSMSRequest {
-  phone: string;
 }
 
 // === Automation Rules ===

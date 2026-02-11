@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useCreateReturn } from "@/hooks/use-returns";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,9 +128,7 @@ export default function NewReturnPage() {
       toast.success("Zwrot został utworzony");
       router.push(`/returns/${result.id}`);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Błąd podczas tworzenia zwrotu"
-      );
+      toast.error(getErrorMessage(error));
     }
   };
 

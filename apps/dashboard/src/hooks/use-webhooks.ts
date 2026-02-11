@@ -31,8 +31,8 @@ export function useWebhookDeliveries(params: WebhookDeliveryParams) {
     queryKey: ["webhook-deliveries", params],
     queryFn: () => {
       const query = new URLSearchParams();
-      if (params.limit) query.set("limit", params.limit.toString());
-      if (params.offset) query.set("offset", params.offset.toString());
+      if (params.limit != null) query.set("limit", params.limit.toString());
+      if (params.offset != null) query.set("offset", params.offset.toString());
       if (params.event_type) query.set("event_type", params.event_type);
       if (params.status) query.set("status", params.status);
       return apiClient<ListResponse<WebhookDelivery>>(`/v1/webhook-deliveries?${query.toString()}`);

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -364,7 +365,7 @@ func TestSettingsHandler_IsPrivateWebhookURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.url, func(t *testing.T) {
-			assert.Equal(t, tt.want, isPrivateWebhookURL(tt.url))
+			assert.Equal(t, tt.want, netutil.IsPrivateURL(tt.url))
 		})
 	}
 }

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
+import { formatDateTime } from "@/lib/utils";
 import { useWebhookDeliveries } from "@/hooks/use-webhooks";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -84,8 +83,7 @@ export default function WebhookDeliveriesPage() {
     {
       header: "Czas",
       accessorKey: "created_at",
-      cell: (row) =>
-        format(new Date(row.created_at), "dd.MM.yyyy HH:mm:ss", { locale: pl }),
+      cell: (row) => formatDateTime(row.created_at),
     },
     {
       header: "URL",

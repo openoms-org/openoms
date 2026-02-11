@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { getErrorMessage } from "@/lib/api-client";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ export default function CustomersPage() {
         setDeleteId(null);
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Blad usuwania klienta");
+        toast.error(getErrorMessage(error));
       },
     });
   };

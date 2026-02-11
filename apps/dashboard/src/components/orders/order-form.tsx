@@ -22,7 +22,7 @@ import { useCustomFields } from "@/hooks/use-custom-fields";
 import { TagInput } from "@/components/shared/tag-input";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
-import type { Order, CreateOrderRequest, CustomFieldDef } from "@/types/api";
+import type { Order, CreateOrderRequest, CustomFieldDef, Address } from "@/types/api";
 
 interface OrderItemRow {
   name: string;
@@ -66,7 +66,7 @@ interface OrderFormProps {
   onCancel?: () => void;
 }
 
-function parseAddress(addr: Record<string, unknown> | undefined): AddressFields {
+function parseAddress(addr: Address | undefined): AddressFields {
   if (!addr) return { ...emptyAddress };
   return {
     name: (addr.name as string) || "",
@@ -286,9 +286,9 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       notes: data.notes || undefined,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
       tags: tags.length > 0 ? tags : undefined,
-      items: items.length > 0 ? (items as unknown as Record<string, unknown>) : undefined,
-      shipping_address: hasShipping ? (shippingAddress as unknown as Record<string, unknown>) : undefined,
-      billing_address: hasBilling ? (billingAddress as unknown as Record<string, unknown>) : undefined,
+      items: items.length > 0 ? items : undefined,
+      shipping_address: hasShipping ? shippingAddress : undefined,
+      billing_address: hasBilling ? billingAddress : undefined,
       payment_status: paymentStatus || undefined,
       payment_method: paymentMethod || undefined,
     });

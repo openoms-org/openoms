@@ -122,6 +122,50 @@ export async function apiClient<T>(
   return res.json();
 }
 
+export async function apiFetch(
+  path: string,
+  init?: RequestInit
+): Promise<Response> {
+  const token = useAuthStore.getState().token;
+
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers,
+    credentials: "include",
+  });
+
+  // Auto-refresh on 401
+  if (res.status === 401 && token) {
+    const newToken = await getValidToken();
+    if (newToken) {
+      headers["Authorization"] = `Bearer ${newToken}`;
+      res = await fetch(`${API_URL}${path}`, {
+        ...init,
+        headers,
+        credentials: "include",
+      });
+      if (res.status === 401) {
+        useAuthStore.getState().clearAuth();
+      }
+    }
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new ApiClientError(res.status, body.error);
+  }
+
+  return res;
+}
+
 export async function uploadFile(file: File): Promise<{ url: string }> {
   const token = useAuthStore.getState().token;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,26 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { MapPin } from "lucide-react";
+
+/**
+ * Shared helper to load InPost Geowidget script and CSS exactly once.
+ * Used by both PaczkomatMap (dialog) and InPostGeowidget (inline).
+ */
+export function loadInPostGeowidgetScript() {
+  const existing = document.getElementById("inpost-geowidget-script");
+  if (existing) return;
+
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "https://geowidget.inpost.pl/inpost-geowidget.css";
+  document.head.appendChild(link);
+
+  const script = document.createElement("script");
+  script.id = "inpost-geowidget-script";
+  script.src = "https://geowidget.inpost.pl/inpost-geowidget.js";
+  script.defer = true;
+  document.head.appendChild(script);
+}
 
 interface PaczkomatMapProps {
   onSelect: (pointName: string) => void;
@@ -22,26 +42,10 @@ export function PaczkomatMap({ onSelect, selectedPoint }: PaczkomatMapProps) {
   const callbackRef = useRef(onSelect);
   callbackRef.current = onSelect;
 
-  const loadScript = useCallback(() => {
-    const existing = document.getElementById("inpost-geowidget-script");
-    if (existing) return;
-
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "https://geowidget.inpost.pl/inpost-geowidget.css";
-    document.head.appendChild(link);
-
-    const script = document.createElement("script");
-    script.id = "inpost-geowidget-script";
-    script.src = "https://geowidget.inpost.pl/inpost-geowidget.js";
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
-
   useEffect(() => {
     if (!open) return;
 
-    loadScript();
+    loadInPostGeowidgetScript();
 
     // Global callback for the geowidget onpoint attribute
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,7 +78,7 @@ export function PaczkomatMap({ onSelect, selectedPoint }: PaczkomatMapProps) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).onInpostPointSelected;
     };
-  }, [open, loadScript]);
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

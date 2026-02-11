@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
-	"net/url"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,6 +13,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
@@ -53,8 +52,9 @@ func (h *SettingsHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, ten
 		return nil
 	}
 
-	// Ignore unmarshal errors — return zero value of dest
-	json.Unmarshal(raw, dest)
+	if err := json.Unmarshal(raw, dest); err != nil {
+		slog.Warn("failed to unmarshal settings section", "key", key, "error", err)
+	}
 	return nil
 }
 
@@ -484,7 +484,7 @@ func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request)
 		}
 
 		// SSRF protection: reject private/internal webhook URLs
-		if isPrivateWebhookURL(ep.URL) {
+		if netutil.IsPrivateURL(ep.URL) {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("endpoint URL %q resolves to a private/internal address", ep.URL))
 			return
 		}
@@ -707,54 +707,4 @@ func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Test SMS sent successfully"})
 }
 
-// isPrivateWebhookURL checks whether a URL resolves to a private/internal IP address.
-func isPrivateWebhookURL(urlStr string) bool {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return true
-	}
 
-	hostname := u.Hostname()
-	if hostname == "" {
-		return true
-	}
-
-	ips, err := net.LookupHost(hostname)
-	if err != nil {
-		return true
-	}
-
-	privateRanges := []string{
-		"10.0.0.0/8",
-		"172.16.0.0/12",
-		"192.168.0.0/16",
-		"127.0.0.0/8",
-		"169.254.0.0/16",
-		"::1/128",
-		"fc00::/7",
-		"fe80::/10",
-	}
-
-	var cidrs []*net.IPNet
-	for _, cidr := range privateRanges {
-		_, ipNet, err := net.ParseCIDR(cidr)
-		if err != nil {
-			continue
-		}
-		cidrs = append(cidrs, ipNet)
-	}
-
-	for _, ipStr := range ips {
-		ip := net.ParseIP(ipStr)
-		if ip == nil {
-			continue
-		}
-		for _, cidr := range cidrs {
-			if cidr.Contains(ip) {
-				return true
-			}
-		}
-	}
-
-	return false
-}
