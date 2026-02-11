@@ -1,0 +1,173 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Factory, Trash2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { useSuppliers, useDeleteSupplier, useSyncSupplier } from "@/hooks/use-suppliers";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { formatDate } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
+  active: { label: "Aktywny", color: "bg-green-100 text-green-800" },
+  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800" },
+  error: { label: "Bład", color: "bg-red-100 text-red-800" },
+};
+
+export default function SuppliersPage() {
+  const router = useRouter();
+  const { isAdmin, isLoading: authLoading } = useAuth();
+  const { data, isLoading } = useSuppliers();
+  const deleteSupplier = useDeleteSupplier();
+  const syncSupplier = useSyncSupplier();
+
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !isAdmin) {
+      router.push("/");
+    }
+  }, [authLoading, isAdmin, router]);
+
+  if (authLoading || !isAdmin) {
+    return <LoadingSkeleton />;
+  }
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  const suppliers = data?.items ?? [];
+
+  const handleDelete = () => {
+    if (!deleteId) return;
+    deleteSupplier.mutate(deleteId, {
+      onSuccess: () => {
+        toast.success("Dostawca został usunięty");
+        setDeleteId(null);
+      },
+      onError: (error) => {
+        toast.error(error instanceof Error ? error.message : "Bład usuwania dostawcy");
+      },
+    });
+  };
+
+  const handleSync = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    syncSupplier.mutate(id, {
+      onSuccess: () => {
+        toast.success("Synchronizacja zakończona");
+      },
+      onError: (error) => {
+        toast.error(error instanceof Error ? error.message : "Bład synchronizacji");
+      },
+    });
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Dostawcy"
+        description="Zarządzaj dostawcami i synchronizacją feedów produktowych"
+        action={{ label: "Nowy dostawca", href: "/suppliers/new" }}
+      />
+
+      {suppliers.length === 0 ? (
+        <EmptyState
+          icon={Factory}
+          title="Brak dostawców"
+          description="Dodaj pierwszego dostawcę, aby importować produkty z feedów IOF."
+          action={{ label: "Nowy dostawca", href: "/suppliers/new" }}
+        />
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nazwa</TableHead>
+                <TableHead>Kod</TableHead>
+                <TableHead>Format</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Ostatnia synchronizacja</TableHead>
+                <TableHead>Utworzono</TableHead>
+                <TableHead className="w-[100px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {suppliers.map((supplier) => (
+                <TableRow
+                  key={supplier.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/suppliers/${supplier.id}`)}
+                >
+                  <TableCell className="font-medium">{supplier.name}</TableCell>
+                  <TableCell>{supplier.code || "---"}</TableCell>
+                  <TableCell className="uppercase">{supplier.feed_format}</TableCell>
+                  <TableCell>
+                    <StatusBadge
+                      status={supplier.status}
+                      statusMap={SUPPLIER_STATUSES}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {supplier.last_sync_at
+                      ? formatDate(supplier.last_sync_at)
+                      : "---"}
+                  </TableCell>
+                  <TableCell>{formatDate(supplier.created_at)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={(e) => handleSync(supplier.id, e)}
+                        disabled={syncSupplier.isPending}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteId(supplier.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Usuń dostawcę"
+        description="Czy na pewno chcesz usunąć tego dostawcę? Produkty dostawcy również zostaną usunięte."
+        confirmLabel="Usuń"
+        variant="destructive"
+        onConfirm={handleDelete}
+        isLoading={deleteSupplier.isPending}
+      />
+    </>
+  );
+}

@@ -27,7 +27,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		argIdx++
 	}
 	if filter.SKU != nil {
-		conditions = append(conditions, fmt.Sprintf("sku = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("sku ILIKE '%%' || $%d || '%%'", argIdx))
 		args = append(args, *filter.SKU)
 		argIdx++
 	}

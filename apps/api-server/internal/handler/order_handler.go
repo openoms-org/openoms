@@ -304,9 +304,9 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	defer writer.Flush()
 
 	header := []string{
-		"ID", "Klient", "Email", "Telefon", "Zrodlo", "Status",
-		"Status platnosci", "Metoda platnosci", "Kwota", "Waluta",
-		"Data zamowienia", "Data oplacenia", "Tagi",
+		"ID", "Klient", "Email", "Telefon", "Źródło", "Status",
+		"Status płatności", "Metoda płatności", "Kwota", "Waluta",
+		"Data zamówienia", "Data opłacenia", "Tagi",
 	}
 	for _, f := range cfConfig.Fields {
 		header = append(header, f.Label)

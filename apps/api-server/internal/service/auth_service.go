@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -93,6 +94,17 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 		if err := s.tenantRepo.Create(ctx, tx, tenant); err != nil {
 			return fmt.Errorf("create tenant: %w", err)
 		}
+
+		// Save default order status config so new tenant has working transitions
+		defaultCfg := model.DefaultOrderStatusConfig()
+		cfgJSON, _ := json.Marshal(defaultCfg)
+		initialSettings, _ := json.Marshal(map[string]json.RawMessage{
+			"order_statuses": cfgJSON,
+		})
+		if err := s.tenantRepo.UpdateSettings(ctx, tx, tenantID, initialSettings); err != nil {
+			return fmt.Errorf("set default settings: %w", err)
+		}
+
 		if err := s.userRepo.Create(ctx, tx, user, hash); err != nil {
 			return fmt.Errorf("create user: %w", err)
 		}

@@ -13,6 +13,7 @@ import {
   FolderTree,
   ScrollText,
   Webhook,
+  Factory,
 } from "lucide-react";
 
 export interface NavItem {
@@ -29,6 +30,7 @@ export const navItems: NavItem[] = [
   { href: "/returns", label: "Zwroty", icon: RotateCcw },
   { href: "/products", label: "Produkty", icon: Package },
   { href: "/integrations", label: "Integracje", icon: Plug, adminOnly: true },
+  { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true },
   { href: "/audit", label: "Dziennik", icon: ScrollText, adminOnly: true },
   { href: "/settings/users", label: "Uzytkownicy", icon: Users, adminOnly: true },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true },

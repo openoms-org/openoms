@@ -21,6 +21,8 @@ const segmentLabels: Record<string, string> = {
   webhooks: "Webhooki",
   allegro: "Allegro",
   listings: "Oferty marketplace",
+  suppliers: "Dostawcy",
+  deliveries: "Dostarczenia",
   new: "Nowe",
 };
 
