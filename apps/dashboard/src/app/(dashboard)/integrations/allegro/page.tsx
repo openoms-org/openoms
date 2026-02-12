@@ -14,6 +14,9 @@ import {
   Eye,
   EyeOff,
   Trash2,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -23,6 +26,7 @@ import {
   useUpdateIntegration,
   useDeleteIntegration,
 } from "@/hooks/use-integrations";
+import { MarketplaceShipmentSettings } from "@/components/integrations/marketplace-shipment-settings";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -39,14 +43,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import type { Integration } from "@/types/api";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+function getRedirectURI() {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/integrations/allegro`;
+  }
+  return `${API_URL.replace(/:\d+$/, ":3000")}/integrations/allegro`;
+}
 
 export default function AllegroIntegrationPage() {
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
   const state = searchParams.get("state");
 
-  // Handle OAuth callback (runs in popup after Allegro redirect)
   if (code && state) {
     return <OAuthCallback code={code} state={state} />;
   }
@@ -165,12 +178,51 @@ function AllegroMainPage() {
   );
 }
 
+function CopyableField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 rounded bg-muted px-3 py-2 text-sm font-mono break-all">
+          {value}
+        </code>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleCopy}
+          className="shrink-0"
+        >
+          {copied ? (
+            <Check className="h-4 w-4 text-green-600" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function SetupState({ onCreated }: { onCreated: () => void }) {
   const createIntegration = useCreateIntegration();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [sandbox, setSandbox] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+
+  const redirectURI = getRedirectURI();
+  const devPortalURL = sandbox
+    ? "https://apps.developer.allegro.pl.allegrosandbox.pl/"
+    : "https://apps.developer.allegro.pl/";
 
   const handleSave = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -181,7 +233,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
     createIntegration.mutate(
       {
         provider: "allegro",
-        label: "Allegro",
+        label: sandbox ? "Allegro (Sandbox)" : "Allegro",
         credentials: {
           client_id: clientId.trim(),
           client_secret: clientSecret.trim(),
@@ -190,7 +242,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       },
       {
         onSuccess: () => {
-          toast.success("Dane Allegro zapisane. Możesz teraz połączyć konto.");
+          toast.success(
+            "Dane Allegro zapisane. Kliknij 'Połącz z Allegro' aby autoryzować."
+          );
           onCreated();
         },
         onError: (error) => {
@@ -205,87 +259,136 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Konfiguracja Allegro</CardTitle>
-        <CardDescription>
-          Wprowadź dane aplikacji z{" "}
-          <a
-            href="https://apps.developer.allegro.pl/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            Allegro Developer Center
-          </a>
-          . Po zapisaniu będziesz mógł połączyć konto OAuth.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="client-id">Client ID</Label>
-          <Input
-            id="client-id"
-            placeholder="Wklej Client ID aplikacji Allegro"
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="client-secret">Client Secret</Label>
-          <div className="relative">
-            <Input
-              id="client-secret"
-              type={showSecret ? "text" : "password"}
-              placeholder="Wklej Client Secret aplikacji Allegro"
-              value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
-              className="pr-10"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-0 top-0 h-full px-3"
-              onClick={() => setShowSecret(!showSecret)}
-            >
-              {showSecret ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </Button>
+    <div className="space-y-6">
+      {/* Step 1: Prerequisites */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Krok 1: Zarejestruj aplikację w Allegro</CardTitle>
+          <CardDescription>
+            Przed połączeniem musisz utworzyć aplikację w panelu deweloperskim
+            Allegro.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="setup-sandbox"
+                checked={sandbox}
+                onCheckedChange={setSandbox}
+              />
+              <Label htmlFor="setup-sandbox" className="cursor-pointer">
+                Tryb sandbox (testowy)
+              </Label>
+            </div>
+            {sandbox && (
+              <p className="text-xs text-muted-foreground">
+                Sandbox wymaga osobnego konta na allegro.pl.allegrosandbox.pl
+              </p>
+            )}
           </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Switch
-            id="sandbox"
-            checked={sandbox}
-            onCheckedChange={setSandbox}
-          />
-          <Label htmlFor="sandbox" className="cursor-pointer">
-            Tryb sandbox (testowy)
-          </Label>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Włącz sandbox, aby testować integrację bez wpływu na produkcyjne konto
-          Allegro.
-        </p>
 
-        <Button
-          onClick={handleSave}
-          disabled={
-            createIntegration.isPending || !clientId.trim() || !clientSecret.trim()
-          }
-        >
-          {createIntegration.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          <Save className="mr-2 h-4 w-4" />
-          Zapisz i kontynuuj
-        </Button>
-      </CardContent>
-    </Card>
+          <Separator />
+
+          <ol className="list-decimal list-inside space-y-2 text-sm">
+            <li>
+              Przejdź do{" "}
+              <a
+                href={devPortalURL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary underline"
+              >
+                {sandbox
+                  ? "Allegro Sandbox Developer Center"
+                  : "Allegro Developer Center"}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </li>
+            <li>Kliknij &quot;Zarejestruj aplikację&quot;</li>
+            <li>
+              W polu <strong>Redirect URI</strong> wklej poniższy adres:
+            </li>
+          </ol>
+
+          <CopyableField label="Redirect URI (do wklejenia w Allegro)" value={redirectURI} />
+
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
+            <p className="text-xs text-amber-800 dark:text-amber-200">
+              Redirect URI musi być <strong>dokładnie taki sam</strong> jak
+              powyżej. Różnica w nawet jednym znaku (np. trailing slash)
+              spowoduje błąd autoryzacji.
+            </p>
+          </div>
+
+          <ol className="list-decimal list-inside space-y-2 text-sm" start={4}>
+            <li>Po rejestracji skopiuj Client ID i Client Secret</li>
+          </ol>
+        </CardContent>
+      </Card>
+
+      {/* Step 2: Enter credentials */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Krok 2: Wprowadź dane aplikacji</CardTitle>
+          <CardDescription>
+            Wklej Client ID i Client Secret z panelu deweloperskiego Allegro.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="client-id">Client ID</Label>
+            <Input
+              id="client-id"
+              placeholder="Wklej Client ID aplikacji Allegro"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="client-secret">Client Secret</Label>
+            <div className="relative">
+              <Input
+                id="client-secret"
+                type={showSecret ? "text" : "password"}
+                placeholder="Wklej Client Secret aplikacji Allegro"
+                value={clientSecret}
+                onChange={(e) => setClientSecret(e.target.value)}
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowSecret(!showSecret)}
+              >
+                {showSecret ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleSave}
+            disabled={
+              createIntegration.isPending ||
+              !clientId.trim() ||
+              !clientSecret.trim()
+            }
+          >
+            {createIntegration.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            <Save className="mr-2 h-4 w-4" />
+            Zapisz i przejdź do autoryzacji
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -320,7 +423,11 @@ function ConnectedState({
   };
 
   const handleDelete = () => {
-    if (!confirm("Czy na pewno chcesz usunąć integrację Allegro? Ta operacja jest nieodwracalna.")) {
+    if (
+      !confirm(
+        "Czy na pewno chcesz usunąć integrację Allegro? Ta operacja jest nieodwracalna."
+      )
+    ) {
       return;
     }
     deleteIntegration.mutate(integration.id, {
@@ -338,9 +445,9 @@ function ConnectedState({
     });
   };
 
-  const handleReauthorize = useCallback(() => {
+  const handleAuthorize = useCallback(() => {
     setIsReauthorizing(true);
-    const doReauth = async () => {
+    const doAuth = async () => {
       try {
         const { auth_url } = await apiClient<{ auth_url: string }>(
           "/v1/integrations/allegro/auth-url"
@@ -372,139 +479,208 @@ function ConnectedState({
         setIsReauthorizing(false);
       }
     };
-    doReauth();
+    doAuth();
   }, [onRefetch]);
 
+  const needsOAuth = integration.status !== "active";
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Status połączenia</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <div className="mt-1">
-                <StatusBadge
-                  status={integration.status}
-                  statusMap={INTEGRATION_STATUSES}
-                />
-              </div>
+    <div className="space-y-6">
+      {/* OAuth prompt if not yet authorized */}
+      {needsOAuth && (
+        <Card className="border-amber-200 dark:border-amber-800">
+          <CardHeader>
+            <CardTitle>Autoryzacja OAuth</CardTitle>
+            <CardDescription>
+              Dane aplikacji zostały zapisane. Kliknij poniżej, aby autoryzować
+              dostęp do konta Allegro. Otworzy się okno popup z logowaniem
+              Allegro.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <CopyableField
+                label="Redirect URI (musi być zarejestrowany w Allegro)"
+                value={getRedirectURI()}
+              />
+              <Button
+                onClick={handleAuthorize}
+                disabled={isReauthorizing}
+                className="w-full"
+              >
+                {isReauthorizing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                )}
+                Połącz z Allegro
+              </Button>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Dane uwierzytelniające
-              </p>
-              <p className="mt-1 font-medium">
-                {integration.has_credentials ? "Skonfigurowane" : "Brak"}
-              </p>
-            </div>
-            {integration.label && (
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Status card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Status połączenia</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Etykieta</p>
-                <p className="mt-1 font-medium">{integration.label}</p>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className="mt-1">
+                  <StatusBadge
+                    status={integration.status}
+                    statusMap={INTEGRATION_STATUSES}
+                  />
+                </div>
               </div>
-            )}
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Ostatnia synchronizacja
-              </p>
-              <p className="mt-1 font-medium">
-                {integration.last_sync_at
-                  ? formatDate(integration.last_sync_at)
-                  : "---"}
-              </p>
-            </div>
-            {integration.sync_cursor && (
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Kursor synchronizacji
+                  Dane uwierzytelniające
                 </p>
-                <p className="mt-1 font-mono text-xs truncate">
-                  {integration.sync_cursor}
+                <p className="mt-1 font-medium">
+                  {integration.has_credentials ? "Skonfigurowane" : "Brak"}
+                </p>
+              </div>
+              {integration.label && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Etykieta</p>
+                  <p className="mt-1 font-medium">{integration.label}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Ostatnia synchronizacja
+                </p>
+                <p className="mt-1 font-medium">
+                  {integration.last_sync_at
+                    ? formatDate(integration.last_sync_at)
+                    : "---"}
+                </p>
+              </div>
+              {integration.sync_cursor && (
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Kursor synchronizacji
+                  </p>
+                  <p className="mt-1 font-mono text-xs truncate">
+                    {integration.sync_cursor}
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">ID integracji</p>
+                <p className="mt-1 font-mono text-xs">{integration.id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Data utworzenia</p>
+                <p className="mt-1 font-medium">
+                  {formatDate(integration.created_at)}
+                </p>
+              </div>
+            </div>
+
+            {integration.status === "error" && integration.error_message && (
+              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
+                <p className="text-sm font-medium text-destructive">
+                  Błąd integracji
+                </p>
+                <p className="mt-1 text-sm text-destructive/80">
+                  {integration.error_message}
                 </p>
               </div>
             )}
-            <div>
-              <p className="text-sm text-muted-foreground">ID integracji</p>
-              <p className="mt-1 font-mono text-xs">{integration.id}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Data utworzenia</p>
-              <p className="mt-1 font-medium">
-                {formatDate(integration.created_at)}
-              </p>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {integration.status === "error" && integration.error_message && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-              <p className="text-sm font-medium text-destructive">
-                Błąd integracji
-              </p>
-              <p className="mt-1 text-sm text-destructive/80">
-                {integration.error_message}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Akcje</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={handleReauthorize}
-            disabled={isReauthorizing}
-          >
-            {isReauthorizing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
+        {/* Actions card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Akcje</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {integration.status === "active" && (
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={handleAuthorize}
+                disabled={isReauthorizing}
+              >
+                {isReauthorizing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                Odśwież token
+              </Button>
             )}
-            {integration.status === "active"
-              ? "Odśwież token"
-              : "Połącz z Allegro"}
-          </Button>
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={handleDisconnect}
-            disabled={
-              updateIntegration.isPending || integration.status === "inactive"
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={handleDisconnect}
+              disabled={
+                updateIntegration.isPending ||
+                integration.status === "inactive"
+              }
+            >
+              {updateIntegration.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Unplug className="mr-2 h-4 w-4" />
+              )}
+              Dezaktywuj
+            </Button>
+            <Button
+              className="w-full"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteIntegration.isPending}
+            >
+              {deleteIntegration.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Usuń integrację
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Credentials update card */}
+        <CredentialsCard
+          integrationId={integration.id}
+          onUpdated={onRefetch}
+        />
+      </div>
+
+      {/* Marketplace shipment settings */}
+      <MarketplaceShipmentSettings
+        provider="allegro"
+        settings={
+          (integration.settings ?? {}) as Record<string, unknown>
+        }
+        onSave={(newSettings) => {
+          updateIntegration.mutate(
+            { settings: newSettings },
+            {
+              onSuccess: () => {
+                toast.success("Ustawienia przesyłek zostały zapisane");
+                onRefetch();
+              },
+              onError: (error) => {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Błąd podczas zapisywania ustawień przesyłek"
+                );
+              },
             }
-          >
-            {updateIntegration.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Unplug className="mr-2 h-4 w-4" />
-            )}
-            Dezaktywuj
-          </Button>
-          <Button
-            className="w-full"
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleteIntegration.isPending}
-          >
-            {deleteIntegration.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            Usuń integrację
-          </Button>
-        </CardContent>
-      </Card>
-
-      <CredentialsCard
-        integrationId={integration.id}
-        onUpdated={onRefetch}
+          );
+        }}
+        isLoading={updateIntegration.isPending}
       />
     </div>
   );

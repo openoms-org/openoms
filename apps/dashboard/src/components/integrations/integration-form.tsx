@@ -25,6 +25,7 @@ import {
   PROVIDER_CATEGORIES,
   PROVIDER_CREDENTIAL_FIELDS,
   PROVIDER_SETTINGS_FIELDS,
+  PROVIDERS_WITH_DEDICATED_PAGES,
 } from "@/lib/constants";
 import type { CredentialField } from "@/lib/constants";
 
@@ -194,7 +195,15 @@ export function IntegrationForm({
   const regularFields = fields.filter((f) => f.type !== "checkbox" && f.type !== "select");
   const selectFields = fields.filter((f) => f.type === "select");
   const checkboxFields = fields.filter((f) => f.type === "checkbox");
-  const categoryEntries = Object.entries(PROVIDER_CATEGORIES);
+  const categoryEntries = Object.entries(PROVIDER_CATEGORIES).map(([key, cat]) => [
+    key,
+    {
+      ...cat,
+      providers: isEditMode
+        ? cat.providers
+        : cat.providers.filter((p) => !(p in PROVIDERS_WITH_DEDICATED_PAGES)),
+    },
+  ] as [string, { label: string; providers: string[] }]).filter(([, cat]) => cat.providers.length > 0);
 
   const renderField = (field: CredentialField) => {
     if (field.type === "checkbox") {
