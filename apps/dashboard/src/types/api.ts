@@ -256,6 +256,13 @@ export interface ShipmentListParams extends PaginationParams {
   order_id?: string;
 }
 
+export interface TrackingEvent {
+  status: string;
+  location?: string;
+  timestamp: string;
+  details?: string;
+}
+
 export interface GenerateLabelRequest {
   service_type: string;
   parcel_size?: string;

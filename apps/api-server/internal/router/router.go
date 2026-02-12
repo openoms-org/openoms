@@ -264,6 +264,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}", deps.Shipment.Delete)
 				r.Post("/{id}/status", deps.Shipment.TransitionStatus)
 				r.Post("/{id}/label", deps.Shipment.GenerateLabel)
+				r.Get("/{id}/tracking", deps.Shipment.GetTracking)
 			})
 
 			// Returns — any authenticated user

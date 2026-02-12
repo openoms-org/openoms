@@ -9,6 +9,7 @@ import type {
   StatusTransitionRequest,
   GenerateLabelRequest,
   BatchLabelsRequest,
+  TrackingEvent,
 } from "@/types/api";
 
 export function useShipments(params: ShipmentListParams = {}) {
@@ -108,6 +109,16 @@ export function useGenerateLabel(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipments"] });
     },
+  });
+}
+
+export function useShipmentTracking(id: string, enabled = true) {
+  return useQuery({
+    queryKey: ["shipments", id, "tracking"],
+    queryFn: () =>
+      apiClient<TrackingEvent[]>(`/v1/shipments/${id}/tracking`),
+    enabled: !!id && enabled,
+    refetchInterval: 60_000,
   });
 }
 

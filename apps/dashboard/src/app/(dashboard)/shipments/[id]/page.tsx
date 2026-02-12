@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag, MapPin } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag, MapPin, Route } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,11 +26,13 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ShipmentForm } from "@/components/shipments/shipment-form";
 import { ShipmentStatusActions } from "@/components/shipments/shipment-status-actions";
 import { GenerateLabelDialog } from "@/components/shipments/generate-label-dialog";
+import { TrackingTimeline } from "@/components/shipments/tracking-timeline";
 import {
   useShipment,
   useUpdateShipment,
   useDeleteShipment,
   useTransitionShipmentStatus,
+  useShipmentTracking,
 } from "@/hooks/use-shipments";
 import { useOrder } from "@/hooks/use-orders";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
@@ -48,6 +50,8 @@ export default function ShipmentDetailPage() {
   const updateShipment = useUpdateShipment(params.id);
   const deleteShipment = useDeleteShipment();
   const transitionStatus = useTransitionShipmentStatus(params.id);
+  const hasTracking = !!shipment?.tracking_number;
+  const { data: trackingEvents, isLoading: trackingLoading } = useShipmentTracking(params.id, hasTracking);
 
   const handleUpdate = (data: { tracking_number?: string; label_url?: string }) => {
     updateShipment.mutate(
@@ -279,6 +283,36 @@ export default function ShipmentDetailPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Tracking timeline — shows when shipment has a tracking number */}
+      {hasTracking && !isEditing && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Route className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Śledzenie przesyłki</CardTitle>
+              </div>
+              {shipment.tracking_number && (
+                <span className="text-xs font-mono text-muted-foreground">
+                  {shipment.tracking_number}
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {trackingLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-8 w-1/2" />
+              </div>
+            ) : (
+              <TrackingTimeline events={trackingEvents ?? []} />
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
