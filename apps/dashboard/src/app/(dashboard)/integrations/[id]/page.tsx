@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
@@ -37,6 +37,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const DEDICATED_PAGES: Record<string, string> = {
+  allegro: "/integrations/allegro",
+  amazon: "/integrations/amazon",
+};
+
 export default function IntegrationDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -45,6 +50,12 @@ export default function IntegrationDetailPage() {
   const deleteIntegration = useDeleteIntegration();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Redirect to dedicated page for providers that have one
+  if (integration && DEDICATED_PAGES[integration.provider]) {
+    router.replace(DEDICATED_PAGES[integration.provider]);
+    return null;
+  }
 
   if (isLoading) {
     return (
@@ -242,16 +253,6 @@ export default function IntegrationDetailPage() {
               </div>
             )}
 
-            {integration.provider === "allegro" && (
-              <div className="pt-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/integrations/allegro">
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Zarządzaj połączeniem Allegro
-                  </Link>
-                </Button>
-              </div>
-            )}
           </CardContent>
         </Card>
 

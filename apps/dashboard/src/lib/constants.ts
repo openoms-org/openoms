@@ -277,6 +277,12 @@ export const PROVIDER_CATEGORIES: Record<string, { label: string; providers: str
   invoicing: { label: "Fakturowanie", providers: ["fakturownia"] },
 };
 
+/** Providers with dedicated setup pages — excluded from the generic "New Integration" form */
+export const PROVIDERS_WITH_DEDICATED_PAGES: Record<string, string> = {
+  allegro: "/integrations/allegro",
+  amazon: "/integrations/amazon",
+};
+
 export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   allegro: [
     { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z apps.developer.allegro.pl", helpText: "Znajdziesz w panelu deweloperskim Allegro: apps.developer.allegro.pl", type: "text", required: true },

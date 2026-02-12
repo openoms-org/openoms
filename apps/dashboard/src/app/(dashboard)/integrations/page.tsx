@@ -94,11 +94,18 @@ export default function IntegrationsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {integrations.map((integration) => (
+              {integrations.map((integration) => {
+                // Providers with dedicated pages get routed there
+                const dedicatedPages: Record<string, string> = {
+                  allegro: "/integrations/allegro",
+                  amazon: "/integrations/amazon",
+                };
+                const href = dedicatedPages[integration.provider] ?? `/integrations/${integration.id}`;
+                return (
                 <TableRow
                   key={integration.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => router.push(`/integrations/${integration.id}`)}
+                  onClick={() => router.push(href)}
                 >
                   <TableCell className="font-medium">
                     {integration.provider.charAt(0).toUpperCase() +
@@ -141,7 +148,8 @@ export default function IntegrationsPage() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </div>
