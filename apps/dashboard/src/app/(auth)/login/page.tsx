@@ -17,7 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 const loginSchema = z.object({
   tenant_slug: z.string().min(1, "Slug organizacji jest wymagany"),
   email: z.string().email("Nieprawidlowy adres email"),
-  password: z.string().min(1, "Haslo jest wymagane"),
+  password: z.string().min(1, "Hasło jest wymagane"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -152,7 +152,7 @@ export default function LoginPage() {
       <Card className="w-full">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Logowanie</CardTitle>
-          <CardDescription>Zaloguj sie do panelu OpenOMS</CardDescription>
+          <CardDescription>Zaloguj się do panelu OpenOMS</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
@@ -180,7 +180,7 @@ export default function LoginPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Haslo</Label>
+              <Label htmlFor="password">Hasło</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -193,7 +193,7 @@ export default function LoginPage() {
                   className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowPassword((prev) => !prev)}
                   tabIndex={-1}
-                  aria-label={showPassword ? "Ukryj haslo" : "Pokaz haslo"}
+                  aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -209,12 +209,12 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Logowanie..." : "Zaloguj sie"}
+              {isSubmitting ? "Logowanie..." : "Zaloguj się"}
             </Button>
             <p className="text-sm text-muted-foreground">
               Nie masz konta?{" "}
               <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-                Zarejestruj sie
+                Zarejestruj się
               </Link>
             </p>
           </CardFooter>

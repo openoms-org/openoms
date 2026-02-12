@@ -69,6 +69,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
+				slog.Error("login failed", "error", err)
 				writeError(w, http.StatusInternalServerError, "login failed")
 			}
 		}

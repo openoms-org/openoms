@@ -30,28 +30,15 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) FindForAuth(ctx context.Context, email string, tenantID uuid.UUID) (*UserWithPassword, error) {
 	var u UserWithPassword
 	err := r.pool.QueryRow(ctx,
-		"SELECT id, tenant_id, email, name, password_hash, role, role_id, created_at, updated_at FROM find_user_for_auth($1, $2)",
+		"SELECT id, tenant_id, email, name, password_hash, role, role_id, created_at, updated_at, totp_secret, totp_enabled FROM find_user_for_auth($1, $2)",
 		email, tenantID,
-	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.PasswordHash, &u.Role, &u.RoleID, &u.CreatedAt, &u.UpdatedAt)
+	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.PasswordHash, &u.Role, &u.RoleID, &u.CreatedAt, &u.UpdatedAt, &u.TOTPSecret, &u.TOTPEnabled)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("find user for auth: %w", err)
 	}
-
-	// Fetch TOTP fields separately (not in SECURITY DEFINER function)
-	var totpSecret *string
-	var totpEnabled bool
-	err = r.pool.QueryRow(ctx,
-		"SELECT totp_secret, totp_enabled FROM users WHERE id = $1 AND tenant_id = $2",
-		u.ID, tenantID,
-	).Scan(&totpSecret, &totpEnabled)
-	if err != nil && err != pgx.ErrNoRows {
-		return nil, fmt.Errorf("fetch totp fields: %w", err)
-	}
-	u.TOTPSecret = totpSecret
-	u.TOTPEnabled = totpEnabled
 
 	return &u, nil
 }

@@ -82,7 +82,7 @@ func TestAuthService_Register_ValidationError_WeakPassword(t *testing.T) {
 func TestAuthService_Login_ValidationError_MissingEmail(t *testing.T) {
 	svc := NewAuthService(nil, nil, nil, nil, nil, nil)
 
-	_, _, err := svc.Login(context.Background(), model.LoginRequest{
+	_, err := svc.Login(context.Background(), model.LoginRequest{
 		TenantSlug: "test",
 		Password:   "password",
 	}, "127.0.0.1")
@@ -95,7 +95,7 @@ func TestAuthService_Login_ValidationError_MissingEmail(t *testing.T) {
 func TestAuthService_Login_ValidationError_MissingPassword(t *testing.T) {
 	svc := NewAuthService(nil, nil, nil, nil, nil, nil)
 
-	_, _, err := svc.Login(context.Background(), model.LoginRequest{
+	_, err := svc.Login(context.Background(), model.LoginRequest{
 		TenantSlug: "test",
 		Email:      "user@example.com",
 	}, "127.0.0.1")
@@ -108,7 +108,7 @@ func TestAuthService_Login_ValidationError_MissingPassword(t *testing.T) {
 func TestAuthService_Login_ValidationError_MissingTenantSlug(t *testing.T) {
 	svc := NewAuthService(nil, nil, nil, nil, nil, nil)
 
-	_, _, err := svc.Login(context.Background(), model.LoginRequest{
+	_, err := svc.Login(context.Background(), model.LoginRequest{
 		Email:    "user@example.com",
 		Password: "password",
 	}, "127.0.0.1")

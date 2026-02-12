@@ -181,6 +181,12 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Quick JSON validity check before starting a transaction
+	if !json.Valid(rawBody) {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
 	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		// Load existing company settings first so that fields not present in the
 		// request body are preserved (merge instead of overwrite).
