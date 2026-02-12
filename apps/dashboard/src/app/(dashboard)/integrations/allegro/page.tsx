@@ -445,16 +445,29 @@ function ConnectedState({
     });
   };
 
+  const [debugInfo, setDebugInfo] = useState<{
+    auth_url: string;
+    redirect_uri: string;
+  } | null>(null);
+
   const handleAuthorize = useCallback(() => {
     setIsReauthorizing(true);
+    setDebugInfo(null);
     const doAuth = async () => {
       try {
-        const { auth_url } = await apiClient<{ auth_url: string }>(
-          "/v1/integrations/allegro/auth-url"
-        );
+        const resp = await apiClient<{
+          auth_url: string;
+          state: string;
+          redirect_uri: string;
+        }>("/v1/integrations/allegro/auth-url");
+
+        setDebugInfo({
+          auth_url: resp.auth_url,
+          redirect_uri: resp.redirect_uri,
+        });
 
         const popup = window.open(
-          auth_url,
+          resp.auth_url,
           "allegro-oauth",
           "width=600,height=700,scrollbars=yes"
         );
@@ -515,6 +528,53 @@ function ConnectedState({
                 )}
                 Połącz z Allegro
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Debug info - shows after auth attempt */}
+      {debugInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Diagnostyka OAuth</CardTitle>
+            <CardDescription>
+              Jeśli Allegro pokazuje błąd, sprawdź czy poniższe dane zgadzają
+              się z konfiguracją aplikacji w Developer Center.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <CopyableField
+              label="Redirect URI wysłany do Allegro"
+              value={debugInfo.redirect_uri}
+            />
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Auth URL (otwierany w popup)
+              </Label>
+              <code className="block rounded bg-muted px-3 py-2 text-xs font-mono break-all max-h-24 overflow-auto">
+                {debugInfo.auth_url}
+              </code>
+            </div>
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
+              <p className="text-xs text-amber-800 dark:text-amber-200">
+                <strong>Częste przyczyny błędu:</strong>
+              </p>
+              <ul className="mt-1 list-disc list-inside text-xs text-amber-800 dark:text-amber-200 space-y-1">
+                <li>
+                  Client ID z <strong>produkcji</strong> użyty w trybie{" "}
+                  <strong>sandbox</strong> (lub odwrotnie) — konto i
+                  aplikacja muszą być z tego samego środowiska
+                </li>
+                <li>
+                  Redirect URI niezarejestrowany w aplikacji Allegro — musi być{" "}
+                  <strong>identyczny</strong> (bez trailing slash)
+                </li>
+                <li>
+                  Aplikacja nie ma włączonego &quot;Browser access&quot; w
+                  ustawieniach
+                </li>
+              </ul>
             </div>
           </CardContent>
         </Card>

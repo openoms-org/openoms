@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -101,9 +102,17 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 
 	authURL := client.AuthorizationURL(state)
 
+	slog.Info("allegro OAuth: generated auth URL",
+		"auth_url", authURL,
+		"redirect_uri", h.redirectURI(),
+		"sandbox", creds.Sandbox,
+		"client_id_prefix", creds.ClientID[:min(8, len(creds.ClientID))]+"...",
+	)
+
 	writeJSON(w, http.StatusOK, map[string]string{
-		"auth_url": authURL,
-		"state":    state,
+		"auth_url":     authURL,
+		"state":        state,
+		"redirect_uri": h.redirectURI(),
 	})
 }
 
