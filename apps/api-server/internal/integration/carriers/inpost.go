@@ -108,6 +108,51 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 		return nil, fmt.Errorf("inpost: create shipment: %w", err)
 	}
 
+	// InPost generates offers asynchronously. Poll until offers are available, then buy.
+	shipmentID := shipment.ID
+	var offerID int64
+	for attempt := 0; attempt < 10; attempt++ {
+		if len(shipment.Offers) > 0 {
+			offerID = shipment.Offers[0].ID
+			break
+		}
+		// If status is already "confirmed", no need to buy
+		if shipment.Status == "confirmed" {
+			break
+		}
+		time.Sleep(time.Duration(500+attempt*500) * time.Millisecond)
+		polled, err := p.client.Shipments.Get(ctx, shipmentID)
+		if err != nil {
+			p.logger.Warn("inpost: poll shipment failed", "id", shipmentID, "error", err)
+			break
+		}
+		shipment = polled
+	}
+
+	// Check for payment failures in transactions
+	for _, tx := range shipment.Transactions {
+		if tx.Status == "failure" {
+			return nil, fmt.Errorf("inpost: opłacenie przesyłki nie powiodło się — sprawdź rozliczenia konta InPost (ID przesyłki InPost: %d)", shipmentID)
+		}
+	}
+
+	if shipment.Status != "confirmed" && offerID > 0 {
+		bought, err := p.client.Shipments.Buy(ctx, shipmentID, offerID)
+		if err != nil {
+			p.logger.Warn("inpost: buy failed", "id", shipmentID, "offer_id", offerID, "error", err)
+		} else {
+			shipment = bought
+			// Check transactions again after buy
+			for _, tx := range shipment.Transactions {
+				if tx.Status == "failure" {
+					return nil, fmt.Errorf("inpost: opłacenie przesyłki nie powiodło się — sprawdź rozliczenia konta InPost (ID przesyłki InPost: %d)", shipmentID)
+				}
+			}
+		}
+	} else if shipment.Status != "confirmed" && offerID == 0 {
+		p.logger.Warn("inpost: no offers available after polling", "id", shipmentID, "status", shipment.Status)
+	}
+
 	return &integration.CarrierShipmentResponse{
 		ExternalID:     strconv.FormatInt(shipment.ID, 10),
 		TrackingNumber: shipment.TrackingNumber,

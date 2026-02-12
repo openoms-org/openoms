@@ -232,7 +232,9 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 				slog.Error("label generation failed", "error", err)
 				// Extract carrier API error details for better user feedback
 				errMsg := err.Error()
-				if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Token is missing or invalid") {
+				if strings.Contains(errMsg, "opłacenie przesyłki") || strings.Contains(errMsg, "debt_collection") {
+					writeError(w, http.StatusBadGateway, errMsg)
+				} else if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Token is missing or invalid") {
 					writeError(w, http.StatusBadGateway, "Błąd autoryzacji kuriera — sprawdź dane logowania w ustawieniach integracji")
 				} else if strings.Contains(errMsg, "api error 4") {
 					// 4xx from carrier — pass through the carrier message

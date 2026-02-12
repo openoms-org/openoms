@@ -14,16 +14,30 @@ var (
 
 // APIError represents an error response from the InPost API.
 type APIError struct {
-	StatusCode int               `json:"-"`
-	Message    string            `json:"message"`
-	Details    map[string]string `json:"details"`
+	StatusCode int                    `json:"-"`
+	Message    string                 `json:"message"`
+	Details    map[string]interface{} `json:"details"`
+	Keys       map[string]string     `json:"keys"`
 }
 
 func (e *APIError) Error() string {
+	msg := fmt.Sprintf("inpost: api error %d", e.StatusCode)
 	if e.Message != "" {
-		return fmt.Sprintf("inpost: api error %d: %s", e.StatusCode, e.Message)
+		msg = fmt.Sprintf("inpost: api error %d: %s", e.StatusCode, e.Message)
 	}
-	return fmt.Sprintf("inpost: api error %d", e.StatusCode)
+	if len(e.Details) > 0 {
+		msg += " ["
+		first := true
+		for k, v := range e.Details {
+			if !first {
+				msg += ", "
+			}
+			msg += fmt.Sprintf("%s: %v", k, v)
+			first = false
+		}
+		msg += "]"
+	}
+	return msg
 }
 
 func (e *APIError) Unwrap() error {

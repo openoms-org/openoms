@@ -60,10 +60,6 @@ func NewLabelService(
 }
 
 func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.GenerateLabelRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
-	if err := req.Validate(); err != nil {
-		return nil, NewValidationError(err)
-	}
-
 	// First transaction: load all required data from the database
 	var shipment *model.Shipment
 	var order *model.Order
@@ -85,6 +81,33 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 			return ErrShipmentNotCreated
 		}
 
+		// Merge carrier_data from shipment into request (fill missing fields)
+		if len(shipment.CarrierData) > 0 {
+			var cd map[string]interface{}
+			if err := json.Unmarshal(shipment.CarrierData, &cd); err == nil {
+				if req.TargetPoint == "" {
+					if tp, ok := cd["target_point"].(string); ok && tp != "" {
+						req.TargetPoint = tp
+					}
+				}
+				if req.ServiceType == "" {
+					if st, ok := cd["service_type"].(string); ok && st != "" {
+						req.ServiceType = st
+					}
+				}
+				if req.ParcelSize == "" {
+					if ps, ok := cd["parcel_size"].(string); ok && ps != "" {
+						req.ParcelSize = ps
+					}
+				}
+			}
+		}
+
+		// Validate after merging carrier_data
+		if err := req.Validate(); err != nil {
+			return NewValidationError(err)
+		}
+
 		// Load linked order
 		order, err = s.orderRepo.FindByID(ctx, tx, shipment.OrderID)
 		if err != nil {
@@ -99,6 +122,10 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		hasEmail := order.CustomerEmail != nil && *order.CustomerEmail != ""
 		if !hasPhone && !hasEmail {
 			return ErrNoCustomerContact
+		}
+		// InPost requires phone number specifically
+		if shipment.Provider == "inpost" && !hasPhone {
+			return NewValidationError(fmt.Errorf("InPost wymaga numeru telefonu odbiorcy — uzupełnij telefon w zamówieniu"))
 		}
 
 		// Find active integration for this carrier
