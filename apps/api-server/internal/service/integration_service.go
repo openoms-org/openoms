@@ -74,6 +74,33 @@ func (s *IntegrationService) Get(ctx context.Context, tenantID, integrationID uu
 	return result, err
 }
 
+// GetDecryptedCredentialsByProvider returns decrypted credentials JSON for a given provider.
+func (s *IntegrationService) GetDecryptedCredentialsByProvider(ctx context.Context, tenantID uuid.UUID, provider string) ([]byte, *model.Integration, error) {
+	var credJSON []byte
+	var result *model.Integration
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		wc, err := s.integrationRepo.FindByProvider(ctx, tx, provider)
+		if err != nil {
+			return err
+		}
+		if wc == nil {
+			return ErrIntegrationNotFound
+		}
+		if wc.EncryptedCredentials == "" {
+			return errors.New("integration has no credentials")
+		}
+		decrypted, err := crypto.Decrypt(wc.EncryptedCredentials, s.encryptionKey)
+		if err != nil {
+			return fmt.Errorf("decrypt credentials: %w", err)
+		}
+		credJSON = decrypted
+		wc.HasCredentials = true
+		result = &wc.Integration
+		return nil
+	})
+	return credJSON, result, err
+}
+
 func (s *IntegrationService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateIntegrationRequest, actorID uuid.UUID, ip string) (*model.Integration, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)

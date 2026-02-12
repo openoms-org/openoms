@@ -18,11 +18,7 @@ type Config struct {
 	JWTSecret     string `env:"JWT_SECRET,required"`
 	EncryptionKey string `env:"ENCRYPTION_KEY,required"`
 
-	AllegroClientID      string `env:"ALLEGRO_CLIENT_ID"`
-	AllegroClientSecret  string `env:"ALLEGRO_CLIENT_SECRET"`
-	AllegroRedirectURI   string `env:"ALLEGRO_REDIRECT_URI"`
 	AllegroWebhookSecret string `env:"ALLEGRO_WEBHOOK_SECRET"`
-	AllegroSandbox       bool   `env:"ALLEGRO_SANDBOX" envDefault:"false"`
 
 	InPostAPIToken      string `env:"INPOST_API_TOKEN"`
 	InPostOrgID         string `env:"INPOST_ORGANIZATION_ID"`
