@@ -75,16 +75,27 @@ func (r *ShipmentStatusTransitionRequest) Validate() error {
 }
 
 type GenerateLabelRequest struct {
-	ServiceType  string  `json:"service_type"`
-	ParcelSize   string  `json:"parcel_size,omitempty"`
-	TargetPoint  string  `json:"target_point,omitempty"`
-	LabelFormat  string  `json:"label_format"`
-	WeightKg     float64 `json:"weight_kg,omitempty"`
-	WidthCm      float64 `json:"width_cm,omitempty"`
-	HeightCm     float64 `json:"height_cm,omitempty"`
-	DepthCm      float64 `json:"depth_cm,omitempty"`
-	CODAmount    float64 `json:"cod_amount,omitempty"`
-	InsuredValue float64 `json:"insured_value,omitempty"`
+	ServiceType   string  `json:"service_type"`
+	ParcelSize    string  `json:"parcel_size,omitempty"`
+	TargetPoint   string  `json:"target_point,omitempty"`
+	SendingMethod string  `json:"sending_method,omitempty"`
+	LabelFormat   string  `json:"label_format"`
+	WeightKg      float64 `json:"weight_kg,omitempty"`
+	WidthCm       float64 `json:"width_cm,omitempty"`
+	HeightCm      float64 `json:"height_cm,omitempty"`
+	DepthCm       float64 `json:"depth_cm,omitempty"`
+	CODAmount     float64 `json:"cod_amount,omitempty"`
+	InsuredValue  float64 `json:"insured_value,omitempty"`
+}
+
+// validSendingMethods defines the allowed sending method values.
+var validSendingMethods = map[string]bool{
+	"parcel_locker":  true,
+	"dispatch_order": true,
+	"pop":            true,
+	"any_point":      true,
+	"pok":            true,
+	"branch":         true,
 }
 
 func (r *GenerateLabelRequest) Validate() error {
@@ -94,6 +105,10 @@ func (r *GenerateLabelRequest) Validate() error {
 
 	if r.ServiceType == "inpost_locker_standard" && strings.TrimSpace(r.TargetPoint) == "" {
 		return errors.New("target_point is required for inpost_locker_standard service")
+	}
+
+	if r.SendingMethod != "" && !validSendingMethods[r.SendingMethod] {
+		return errors.New("sending_method must be one of: parcel_locker, dispatch_order, pop, any_point, pok, branch")
 	}
 
 	if r.LabelFormat == "" {
@@ -114,6 +129,25 @@ type ShipmentListFilter struct {
 	Provider *string
 	OrderID  *uuid.UUID
 	PaginationParams
+}
+
+// CreateDispatchOrderRequest is the payload for creating a dispatch order (courier pickup).
+type CreateDispatchOrderRequest struct {
+	ShipmentIDs []uuid.UUID `json:"shipment_ids"`
+	Street      string      `json:"street,omitempty"`
+	BuildingNo  string      `json:"building_number,omitempty"`
+	City        string      `json:"city,omitempty"`
+	PostCode    string      `json:"post_code,omitempty"`
+	Name        string      `json:"name,omitempty"`
+	Phone       string      `json:"phone,omitempty"`
+	Email       string      `json:"email,omitempty"`
+	Comment     string      `json:"comment,omitempty"`
+}
+
+// DispatchOrderResponse is the response returned after creating a dispatch order.
+type DispatchOrderResponse struct {
+	ID     int64  `json:"id"`
+	Status string `json:"status"`
 }
 
 // BatchLabelsRequest is the payload for batch label download.

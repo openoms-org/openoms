@@ -266,8 +266,9 @@ export interface CredentialField {
   label: string;
   placeholder: string;
   helpText?: string;
-  type: "text" | "password" | "url" | "checkbox";
+  type: "text" | "password" | "url" | "checkbox" | "select";
   required: boolean;
+  options?: { value: string; label: string }[];
 }
 
 export const PROVIDER_CATEGORIES: Record<string, { label: string; providers: string[] }> = {
@@ -327,6 +328,14 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
     { key: "organization_id", label: "ID organizacji", placeholder: "Twój numer organizacji InPost", type: "text", required: true },
     { key: "geowidget_token", label: "Token GeoWidget (mapa)", placeholder: "Twój token GeoWidget InPost", helpText: "Token do wyświetlania mapy paczkomatów. Wygeneruj na manager.paczkomaty.pl > API > GeoWidget. WAŻNE: token jest przypisany do domeny — dla dev wpisz 'localhost', dla produkcji domenę sklepu.", type: "text", required: false },
     { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "default_sending_method", label: "Domyślna metoda nadania", placeholder: "", helpText: "Metoda nadania używana domyślnie przy generowaniu etykiety InPost", type: "select", required: false, options: [
+      { value: "dispatch_order", label: "Kurier odbierze (zlecenie odbioru)" },
+      { value: "parcel_locker", label: "Nadam w paczkomacie" },
+      { value: "pop", label: "Nadam w PaczkoPunkcie (POP)" },
+      { value: "any_point", label: "Dowolny punkt (paczkomat/POP)" },
+      { value: "pok", label: "Punkt Obsługi Klienta (POK)" },
+      { value: "branch", label: "Oddział InPost" },
+    ]},
   ],
   dhl: [
     { key: "username", label: "Nazwa użytkownika", placeholder: "Login do DHL WebAPI", type: "text", required: true },
@@ -372,5 +381,5 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
 };
 
 export const PROVIDER_SETTINGS_FIELDS: Record<string, string[]> = {
-  inpost: ["geowidget_token"],
+  inpost: ["geowidget_token", "default_sending_method"],
 };

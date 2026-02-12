@@ -274,6 +274,42 @@ func (h *ShipmentHandler) GetTracking(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, events)
 }
 
+// CreateDispatchOrder creates a dispatch order (courier pickup) for given shipments.
+func (h *ShipmentHandler) CreateDispatchOrder(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var req model.CreateDispatchOrderRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if len(req.ShipmentIDs) == 0 {
+		writeError(w, http.StatusBadRequest, "shipment_ids is required")
+		return
+	}
+
+	resp, err := h.labelService.CreateDispatchOrder(r.Context(), tenantID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShipmentNotFound):
+			writeError(w, http.StatusNotFound, "shipment not found")
+		case errors.Is(err, service.ErrNoCarrierIntegration):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				slog.Error("dispatch order creation failed", "error", err)
+				writeError(w, http.StatusInternalServerError, "Nie udało się utworzyć zlecenia odbioru")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, resp)
+}
+
 // BatchLabels collects label files for multiple shipments and returns them as a ZIP archive.
 func (h *ShipmentHandler) BatchLabels(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())

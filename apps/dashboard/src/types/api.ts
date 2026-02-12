@@ -180,6 +180,8 @@ export interface CreateOrderRequest {
   ordered_at?: string;
   payment_status?: string;
   payment_method?: string;
+  shipment_provider?: string;
+  auto_create_shipment?: boolean;
 }
 
 export interface UpdateOrderRequest {
@@ -267,6 +269,7 @@ export interface GenerateLabelRequest {
   service_type: string;
   parcel_size?: string;
   target_point?: string;
+  sending_method?: string;
   label_format: string;
   weight_kg?: number;
   width_cm?: number;
@@ -870,6 +873,23 @@ export interface DelayedAction {
 
 export interface BatchLabelsRequest {
   shipment_ids: string[];
+}
+
+export interface CreateDispatchOrderRequest {
+  shipment_ids: string[];
+  street?: string;
+  building_number?: string;
+  city?: string;
+  post_code?: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  comment?: string;
+}
+
+export interface DispatchOrderResponse {
+  id: number;
+  status: string;
 }
 
 export interface AutomationRule {

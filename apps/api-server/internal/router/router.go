@@ -259,6 +259,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/", deps.Shipment.List)
 				r.Post("/", deps.Shipment.Create)
 				r.Post("/batch-labels", deps.Shipment.BatchLabels)
+				r.Post("/dispatch-order", deps.Shipment.CreateDispatchOrder)
 				r.Get("/{id}", deps.Shipment.Get)
 				r.Patch("/{id}", deps.Shipment.Update)
 				r.Delete("/{id}", deps.Shipment.Delete)

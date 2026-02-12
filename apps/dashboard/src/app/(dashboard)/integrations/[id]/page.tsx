@@ -17,7 +17,9 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   INTEGRATION_STATUSES,
   INTEGRATION_PROVIDER_LABELS,
+  PROVIDER_CATEGORIES,
 } from "@/lib/constants";
+import { MarketplaceShipmentSettings } from "@/components/integrations/marketplace-shipment-settings";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,6 +69,8 @@ export default function IntegrationDetailPage() {
   const providerLabel =
     INTEGRATION_PROVIDER_LABELS[integration.provider] ??
     integration.provider.charAt(0).toUpperCase() + integration.provider.slice(1);
+
+  const isMarketplace = PROVIDER_CATEGORIES.marketplace.providers.includes(integration.provider);
 
   const handleStatusChange = (newStatus: string) => {
     updateIntegration.mutate(
@@ -288,6 +292,31 @@ export default function IntegrationDetailPage() {
           </Card>
         </div>
       </div>
+
+      {isMarketplace && (
+        <MarketplaceShipmentSettings
+          provider={integration.provider}
+          settings={(integration.settings ?? {}) as Record<string, unknown>}
+          onSave={(newSettings) => {
+            updateIntegration.mutate(
+              { settings: newSettings },
+              {
+                onSuccess: () => {
+                  toast.success("Ustawienia przesyłek zostały zapisane");
+                },
+                onError: (error) => {
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Błąd podczas zapisywania ustawień przesyłek"
+                  );
+                },
+              }
+            );
+          }}
+          isLoading={updateIntegration.isPending}
+        />
+      )}
 
       <ConfirmDialog
         open={showDeleteDialog}

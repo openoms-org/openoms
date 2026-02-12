@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag, MapPin, Route } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag, MapPin, Route, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,6 +26,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ShipmentForm } from "@/components/shipments/shipment-form";
 import { ShipmentStatusActions } from "@/components/shipments/shipment-status-actions";
 import { GenerateLabelDialog } from "@/components/shipments/generate-label-dialog";
+import { DispatchOrderDialog } from "@/components/shipments/dispatch-order-dialog";
 import { TrackingTimeline } from "@/components/shipments/tracking-timeline";
 import {
   useShipment,
@@ -38,12 +39,22 @@ import { useOrder } from "@/hooks/use-orders";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { formatDate, shortId } from "@/lib/utils";
 
+const SENDING_METHOD_LABELS: Record<string, string> = {
+  dispatch_order: "Kurier odbierze",
+  parcel_locker: "Nadanie w paczkomacie",
+  pop: "PaczkoPunkt (POP)",
+  any_point: "Dowolny punkt",
+  pok: "Punkt Obslugi Klienta",
+  branch: "Oddzial InPost",
+};
+
 export default function ShipmentDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showLabelDialog, setShowLabelDialog] = useState(false);
+  const [showDispatchDialog, setShowDispatchDialog] = useState(false);
 
   const { data: shipment, isLoading } = useShipment(params.id);
   const { data: order } = useOrder(shipment?.order_id ?? "");
@@ -154,6 +165,18 @@ export default function ShipmentDetailPage() {
               </a>
             </Button>
           )}
+          {shipment.provider === "inpost" &&
+           shipment.status === "label_ready" &&
+           !shipment.carrier_data?.dispatch_order_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDispatchDialog(true)}
+            >
+              <Truck className="h-4 w-4" />
+              Zamow kuriera
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -254,6 +277,18 @@ export default function ShipmentDetailPage() {
                     </div>
                   </div>
                 )}
+              {typeof shipment.carrier_data?.sending_method === "string" && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Metoda nadania</p>
+                  <p className="text-sm">{SENDING_METHOD_LABELS[shipment.carrier_data.sending_method] ?? shipment.carrier_data.sending_method}</p>
+                </div>
+              )}
+              {shipment.carrier_data?.dispatch_order_id != null && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Zlecenie odbioru</p>
+                  <p className="font-mono text-sm">#{String(shipment.carrier_data.dispatch_order_id)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Data utworzenia</p>
                 <p className="text-sm">{formatDate(shipment.created_at)}</p>
@@ -349,6 +384,12 @@ export default function ShipmentDetailPage() {
         shipment={shipment}
         open={showLabelDialog}
         onOpenChange={setShowLabelDialog}
+      />
+
+      <DispatchOrderDialog
+        shipmentIds={[params.id]}
+        open={showDispatchDialog}
+        onOpenChange={setShowDispatchDialog}
       />
     </div>
   );

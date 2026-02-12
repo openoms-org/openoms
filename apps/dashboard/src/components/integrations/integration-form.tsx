@@ -191,7 +191,8 @@ export function IntegrationForm({
     });
   };
 
-  const regularFields = fields.filter((f) => f.type !== "checkbox");
+  const regularFields = fields.filter((f) => f.type !== "checkbox" && f.type !== "select");
+  const selectFields = fields.filter((f) => f.type === "select");
   const checkboxFields = fields.filter((f) => f.type === "checkbox");
   const categoryEntries = Object.entries(PROVIDER_CATEGORIES);
 
@@ -209,6 +210,32 @@ export function IntegrationForm({
           <Label htmlFor={`cred-${field.key}`} className="font-normal cursor-pointer">
             {field.label}
           </Label>
+        </div>
+      );
+    }
+
+    if (field.type === "select" && field.options) {
+      return (
+        <div key={field.key} className="space-y-2">
+          <Label htmlFor={`cred-${field.key}`}>{field.label}</Label>
+          <Select
+            value={(credentialValues[field.key] as string) ?? ""}
+            onValueChange={(v) => handleCredentialChange(field.key, v)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Nie ustawiono" />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {field.helpText && (
+            <p className="text-sm text-muted-foreground">{field.helpText}</p>
+          )}
         </div>
       );
     }
@@ -312,6 +339,9 @@ export function IntegrationForm({
 
           {/* Regular (text/password/url) fields */}
           {regularFields.map(renderField)}
+
+          {/* Select fields */}
+          {selectFields.map(renderField)}
 
           {/* Checkbox fields separated visually */}
           {checkboxFields.length > 0 && (

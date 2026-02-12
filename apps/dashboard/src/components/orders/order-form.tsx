@@ -18,9 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { TagInput } from "@/components/shared/tag-input";
-import { PAYMENT_METHODS, ORDER_PRIORITIES } from "@/lib/constants";
+import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
+import { PAYMENT_METHODS, ORDER_PRIORITIES, SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import type { Order, CreateOrderRequest, CustomFieldDef, Address } from "@/types/api";
 
@@ -110,6 +112,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
   const [paymentMethod, setPaymentMethod] = useState(order?.payment_method || "");
   const [priority, setPriority] = useState<string>(order?.priority || "normal");
   const [internalNotes, setInternalNotes] = useState(order?.internal_notes || "");
+
+  const [shipmentProvider, setShipmentProvider] = useState<string>(order?.delivery_method ? "" : "");
+  const [autoCreateShipment, setAutoCreateShipment] = useState(false);
+  const [pickupPointId, setPickupPointId] = useState(order?.pickup_point_id || "");
 
   useEffect(() => {
     if (order?.metadata && typeof order.metadata === "object") {
@@ -295,6 +301,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       payment_method: paymentMethod || undefined,
       priority: priority as "urgent" | "high" | "normal" | "low",
       internal_notes: internalNotes || undefined,
+      delivery_method: shipmentProvider ? (SHIPMENT_PROVIDER_LABELS[shipmentProvider] ?? shipmentProvider) : undefined,
+      pickup_point_id: pickupPointId || undefined,
+      shipment_provider: autoCreateShipment && shipmentProvider ? shipmentProvider : undefined,
+      auto_create_shipment: autoCreateShipment && !!shipmentProvider,
     });
   };
 
@@ -579,6 +589,65 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
               onChange={(e) => updateShipping("country", e.target.value)}
             />
           </div>
+        </div>
+      </div>
+
+      {/* Delivery method / Carrier selection */}
+      <Separator />
+      <div>
+        <h3 className="text-sm font-medium mb-4">Metoda dostawy</h3>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Dostawca przesyłki</Label>
+            <Select
+              value={shipmentProvider || "__none__"}
+              onValueChange={(v) => {
+                setShipmentProvider(v === "__none__" ? "" : v);
+                if (v === "__none__") setAutoCreateShipment(false);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Wybierz dostawcę" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Brak (bez przesyłki)</SelectItem>
+                {SHIPMENT_PROVIDERS.filter(p => p !== "manual").map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {SHIPMENT_PROVIDER_LABELS[p] ?? p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {shipmentProvider === "inpost" && (
+            <div className="space-y-2">
+              <Label>Paczkomat docelowy</Label>
+              {pickupPointId && (
+                <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 mb-2">
+                  <span className="font-medium text-sm">{pickupPointId}</span>
+                </div>
+              )}
+              <PaczkomatSelector
+                mode="inline"
+                value={pickupPointId}
+                onPointSelect={(name) => setPickupPointId(name)}
+              />
+            </div>
+          )}
+
+          {shipmentProvider && (
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="auto_create_shipment"
+                checked={autoCreateShipment}
+                onCheckedChange={(checked) => setAutoCreateShipment(checked === true)}
+              />
+              <Label htmlFor="auto_create_shipment" className="font-normal cursor-pointer">
+                Utwórz przesyłkę automatycznie
+              </Label>
+            </div>
+          )}
         </div>
       </div>
 

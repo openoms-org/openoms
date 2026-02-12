@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -26,6 +27,8 @@ type MarketplaceOrderPoller struct {
 	pool          *pgxpool.Pool
 	encryptionKey []byte
 	orderRepo     repository.OrderRepo
+	shipmentRepo  repository.ShipmentRepo
+	auditRepo     repository.AuditRepo
 	logger        *slog.Logger
 	providerName  string
 	interval      time.Duration
@@ -39,6 +42,8 @@ type MarketplaceOrderPollerConfig struct {
 	Pool          *pgxpool.Pool
 	EncryptionKey []byte
 	OrderRepo     repository.OrderRepo
+	ShipmentRepo  repository.ShipmentRepo
+	AuditRepo     repository.AuditRepo
 	Logger        *slog.Logger
 	ProviderName  string
 	Interval      time.Duration
@@ -50,6 +55,8 @@ func NewMarketplaceOrderPoller(cfg MarketplaceOrderPollerConfig) *MarketplaceOrd
 		pool:          cfg.Pool,
 		encryptionKey: cfg.EncryptionKey,
 		orderRepo:     cfg.OrderRepo,
+		shipmentRepo:  cfg.ShipmentRepo,
+		auditRepo:     cfg.AuditRepo,
 		logger:        cfg.Logger,
 		providerName:  cfg.ProviderName,
 		interval:      cfg.Interval,
@@ -98,6 +105,9 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 		}
 
 		for _, mo := range orders {
+			req := integration.MarketplaceOrderToCreateRequest(mo, p.providerName, ti.IntegrationID)
+			order := p.buildOrder(mo, ti, req)
+
 			if err := database.WithTenant(ctx, p.pool, ti.TenantID, func(tx pgx.Tx) error {
 				existing, err := p.orderRepo.FindByExternalID(ctx, tx, p.providerName, mo.ExternalID)
 				if err != nil {
@@ -106,10 +116,6 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 				if existing != nil {
 					return nil // duplicate, skip
 				}
-
-				req := integration.MarketplaceOrderToCreateRequest(mo, p.providerName, ti.IntegrationID)
-
-				order := p.buildOrder(mo, ti, req)
 
 				if err := p.orderRepo.Create(ctx, tx, &order); err != nil {
 					return err
@@ -129,6 +135,29 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 				continue
 			}
 			totalOrders++
+
+			// Auto-create shipment based on integration carrier mapping (best effort)
+			if p.shipmentRepo != nil {
+				dm := ""
+				if order.DeliveryMethod != nil {
+					dm = *order.DeliveryMethod
+				}
+				carrier := resolveCarrier(ti.Settings, dm)
+				if carrier != "" {
+					if err := p.autoCreateShipment(ctx, ti, order, carrier); err != nil {
+						p.logger.Error("auto-create shipment failed (non-fatal)",
+							"order_id", order.ID,
+							"carrier", carrier,
+							"error", err,
+						)
+					} else {
+						p.logger.Info("auto-created shipment for marketplace order",
+							"order_id", order.ID,
+							"carrier", carrier,
+						)
+					}
+				}
+			}
 		}
 
 		// Update sync cursor (bypasses RLS)
@@ -215,4 +244,67 @@ func (p *MarketplaceOrderPoller) buildOrder(mo integration.MarketplaceOrder, ti 
 	}
 
 	return order
+}
+
+// resolveCarrier looks up the delivery method in carrier_mapping, falling back to default_carrier.
+func resolveCarrier(settings json.RawMessage, deliveryMethod string) string {
+	if len(settings) == 0 {
+		return ""
+	}
+	var s struct {
+		AutoCreateShipment bool              `json:"auto_create_shipment"`
+		DefaultCarrier     string            `json:"default_carrier"`
+		CarrierMapping     map[string]string `json:"carrier_mapping"`
+	}
+	if err := json.Unmarshal(settings, &s); err != nil || !s.AutoCreateShipment {
+		return ""
+	}
+	// Substring matching in carrier_mapping
+	if deliveryMethod != "" && len(s.CarrierMapping) > 0 {
+		deliveryLower := strings.ToLower(deliveryMethod)
+		for key, provider := range s.CarrierMapping {
+			if strings.Contains(deliveryLower, strings.ToLower(key)) {
+				return provider
+			}
+		}
+	}
+	return s.DefaultCarrier
+}
+
+func (p *MarketplaceOrderPoller) autoCreateShipment(ctx context.Context, ti TenantIntegration, order model.Order, carrier string) error {
+	shipment := &model.Shipment{
+		ID:       uuid.New(),
+		TenantID: ti.TenantID,
+		OrderID:  order.ID,
+		Provider: carrier,
+		Status:   "created",
+	}
+	carrierData := map[string]any{}
+	if order.PickupPointID != nil && *order.PickupPointID != "" {
+		carrierData["target_point"] = *order.PickupPointID
+	}
+	if len(carrierData) > 0 {
+		cd, _ := json.Marshal(carrierData)
+		shipment.CarrierData = cd
+	} else {
+		shipment.CarrierData = json.RawMessage("{}")
+	}
+
+	return database.WithTenant(ctx, p.pool, ti.TenantID, func(tx pgx.Tx) error {
+		if err := p.shipmentRepo.Create(ctx, tx, shipment); err != nil {
+			return err
+		}
+		if p.auditRepo != nil {
+			return p.auditRepo.Log(ctx, tx, model.AuditEntry{
+				TenantID:   ti.TenantID,
+				UserID:     uuid.Nil,
+				Action:     "shipment.created",
+				EntityType: "shipment",
+				EntityID:   shipment.ID,
+				Changes:    map[string]string{"order_id": order.ID.String(), "provider": carrier, "auto": "true"},
+				IPAddress:  "worker",
+			})
+		}
+		return nil
+	})
 }
