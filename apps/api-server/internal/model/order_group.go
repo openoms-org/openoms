@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,7 +55,7 @@ func (r *SplitOrderRequest) Validate() error {
 	}
 	for i, split := range r.Splits {
 		if len(split.Items) == 0 || string(split.Items) == "null" {
-			return errors.New("split " + string(rune('1'+i)) + " must have items")
+			return errors.New("split " + fmt.Sprintf("%d", i+1) + " must have items")
 		}
 	}
 	return nil

@@ -98,7 +98,7 @@ export default function WarehouseDetailPage() {
   if (!warehouse) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Magazyn nie znaleziony
+        Nie znaleziono magazynu
       </div>
     );
   }

@@ -260,7 +260,7 @@ export default function ProductDetailPage() {
                     </>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Kliknij aby zastosowac sugestie
+                    Kliknij aby zastosować sugestię
                   </p>
                 </div>
               </PopoverContent>
@@ -288,7 +288,7 @@ export default function ProductDetailPage() {
             onClick={() => setIsEditing(!isEditing)}
           >
             <Pencil className="h-4 w-4" />
-            {isEditing ? "Anuluj edycje" : "Edytuj"}
+            {isEditing ? "Anuluj edycję" : "Edytuj"}
           </Button>
           <Button
             variant="destructive"
@@ -296,7 +296,7 @@ export default function ProductDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Usun
+            Usuń
           </Button>
         </div>
       </div>
@@ -627,7 +627,7 @@ export default function ProductDetailPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Jezyk</Label>
+              <Label>Język</Label>
               <Select value={aiLanguage} onValueChange={setAiLanguage}>
                 <SelectTrigger>
                   <SelectValue />
@@ -640,15 +640,15 @@ export default function ProductDetailPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Dlugosc</Label>
+              <Label>Długość</Label>
               <Select value={aiLength} onValueChange={setAiLength}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="short">Krotki</SelectItem>
-                  <SelectItem value="medium">Sredni</SelectItem>
-                  <SelectItem value="long">Dlugi</SelectItem>
+                  <SelectItem value="short">Krótki</SelectItem>
+                  <SelectItem value="medium">Średni</SelectItem>
+                  <SelectItem value="long">Długi</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -712,12 +712,12 @@ export default function ProductDetailPage() {
           <div className="space-y-4">
             {aiShortDescription && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Krotki opis</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Krótki opis</p>
                 <p className="text-sm whitespace-pre-wrap rounded-md border p-3">{aiShortDescription}</p>
               </div>
             )}
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Pelny opis</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Pełny opis</p>
               <p className="text-sm whitespace-pre-wrap rounded-md border p-3">{aiLongDescription}</p>
             </div>
           </div>
@@ -732,13 +732,13 @@ export default function ProductDetailPage() {
                   updateProduct.mutate(
                     { description_short: aiShortDescription },
                     {
-                      onSuccess: () => toast.success("Krotki opis zaktualizowany"),
+                      onSuccess: () => toast.success("Krótki opis zaktualizowany"),
                       onError: (error) => toast.error(getErrorMessage(error)),
                     }
                   );
                 }}
               >
-                Zastosuj krotki opis
+                Zastosuj krótki opis
               </Button>
             )}
             <Button
@@ -765,7 +765,7 @@ export default function ProductDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usun produkt"
+        title="Usuń produkt"
         description={`Czy na pewno chcesz usunąć produkt "${product.name}"? Ta operacja jest nieodwracalna.`}
         confirmLabel="Usuń"
         variant="destructive"

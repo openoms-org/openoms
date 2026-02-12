@@ -49,7 +49,7 @@ export default function InventorySettingsPage() {
         { strict_mode: false },
         {
           onSuccess: () => {
-            toast.success("Tryb scislej kontroli magazynowej wylaczony");
+            toast.success("Tryb ścisłej kontroli magazynowej wyłączony");
           },
           onError: (error) => {
             toast.error(getErrorMessage(error));
@@ -64,7 +64,7 @@ export default function InventorySettingsPage() {
       { strict_mode: true },
       {
         onSuccess: () => {
-          toast.success("Tryb scislej kontroli magazynowej wlaczony");
+          toast.success("Tryb ścisłej kontroli magazynowej włączony");
           setShowWarning(false);
         },
         onError: (error) => {
@@ -91,17 +91,17 @@ export default function InventorySettingsPage() {
           <CardHeader>
             <CardTitle>Kontrola magazynowa</CardTitle>
             <CardDescription>
-              Ustawienia dotyczace sposobu zarzadzania stanami magazynowymi
+              Ustawienia dotyczące sposobu zarządzania stanami magazynowymi
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="strict-mode" className="text-base font-medium">
-                  Tryb scislej kontroli magazynowej
+                  Tryb ścisłej kontroli magazynowej
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Gdy wlaczony, zmiany stanow magazynowych mozliwe tylko przez dokumenty PZ/WZ/MM
+                  Gdy włączony, zmiany stanów magazynowych możliwe tylko przez dokumenty PZ/WZ/MM
                 </p>
               </div>
               <Switch
@@ -117,11 +117,11 @@ export default function InventorySettingsPage() {
                 <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                    Tryb scislej kontroli jest aktywny
+                    Tryb ścisłej kontroli jest aktywny
                   </p>
                   <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    Reczna zmiana stanow magazynowych (PUT /warehouses/&#123;id&#125;/stock) jest zablokowana.
-                    Wszystkie zmiany musza przechodzic przez dokumenty magazynowe (PZ, WZ, MM) lub inwentaryzacje.
+                    Ręczna zmiana stanów magazynowych (PUT /warehouses/&#123;id&#125;/stock) jest zablokowana.
+                    Wszystkie zmiany muszą przechodzić przez dokumenty magazynowe (PZ, WZ, MM) lub inwentaryzacje.
                   </p>
                 </div>
               </div>
@@ -134,18 +134,18 @@ export default function InventorySettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Wlaczenie scislej kontroli magazynowej
+              Włączenie ścisłej kontroli magazynowej
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Uwaga: po wlaczeniu nie bedzie mozliwa reczna zmiana stanow magazynowych.
-              Wszystkie zmiany beda musialy przechodzic przez dokumenty magazynowe (PZ/WZ/MM).
-              Czy na pewno chcesz wlaczyc ten tryb?
+              Uwaga: po włączeniu nie będzie możliwa ręczna zmiana stanów magazynowych.
+              Wszystkie zmiany będą musiały przechodzić przez dokumenty magazynowe (PZ/WZ/MM).
+              Czy na pewno chcesz włączyć ten tryb?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Anuluj</AlertDialogCancel>
             <AlertDialogAction onClick={confirmEnable}>
-              {updateSettings.isPending ? "Wlaczanie..." : "Wlacz"}
+              {updateSettings.isPending ? "Włączanie..." : "Włącz"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

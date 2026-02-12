@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -160,11 +160,15 @@ export default function OrderDetailPage() {
           <Button
             variant="outline"
             onClick={async () => {
-              const res = await apiFetch(`/v1/orders/${params.id}/print`);
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
-              window.open(url, "_blank");
-              setTimeout(() => URL.revokeObjectURL(url), 60000);
+              try {
+                const res = await apiFetch(`/v1/orders/${params.id}/print`);
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                window.open(url, "_blank");
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+              } catch {
+                toast.error("Nie udało się pobrać wydruku");
+              }
             }}
           >
             <Printer className="mr-2 h-4 w-4" />
@@ -173,11 +177,15 @@ export default function OrderDetailPage() {
           <Button
             variant="outline"
             onClick={async () => {
-              const res = await apiFetch(`/v1/orders/${params.id}/packing-slip`);
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
-              window.open(url, "_blank");
-              setTimeout(() => URL.revokeObjectURL(url), 60000);
+              try {
+                const res = await apiFetch(`/v1/orders/${params.id}/packing-slip`);
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                window.open(url, "_blank");
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+              } catch {
+                toast.error("Nie udało się pobrać listu przewozowego");
+              }
             }}
           >
             <FileText className="mr-2 h-4 w-4" />
@@ -722,6 +730,14 @@ function CreateTicketDialog({
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [email, setEmail] = useState(customerEmail);
+
+  useEffect(() => {
+    if (!open) {
+      setSubject("");
+      setDescription("");
+      setEmail(customerEmail);
+    }
+  }, [open, customerEmail]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

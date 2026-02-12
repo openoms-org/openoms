@@ -177,20 +177,15 @@ func (r *StocktakeItemRepository) CreateBulk(ctx context.Context, tx pgx.Tx, ite
 		return nil
 	}
 
-	// Use COPY protocol for efficiency
-	columns := []string{"id", "tenant_id", "stocktake_id", "product_id", "expected_quantity"}
-	rows := make([][]any, len(items))
-	for i, item := range items {
-		rows[i] = []any{item.ID, item.TenantID, item.StocktakeID, item.ProductID, item.ExpectedQuantity}
-	}
-
-	_, err := tx.CopyFrom(ctx,
-		pgx.Identifier{"stocktake_items"},
-		columns,
-		pgx.CopyFromRows(rows),
-	)
-	if err != nil {
-		return fmt.Errorf("bulk insert stocktake_items: %w", err)
+	for _, item := range items {
+		_, err := tx.Exec(ctx,
+			`INSERT INTO stocktake_items (id, tenant_id, stocktake_id, product_id, expected_quantity)
+			 VALUES ($1, $2, $3, $4, $5)`,
+			item.ID, item.TenantID, item.StocktakeID, item.ProductID, item.ExpectedQuantity,
+		)
+		if err != nil {
+			return fmt.Errorf("insert stocktake_item: %w", err)
+		}
 	}
 	return nil
 }

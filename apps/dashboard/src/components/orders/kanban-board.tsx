@@ -374,7 +374,9 @@ export function KanbanBoard({ filters }: KanbanBoardProps) {
           }
         );
 
-        toast.error(getErrorMessage(error));
+        const statusLabel =
+          statusEntries.find((s) => s.key === targetStatus)?.label || targetStatus;
+        toast.error(`Nie udało się zmienić statusu na "${statusLabel}": ${getErrorMessage(error)}`);
       }
     },
     [filters, queryClient, statusEntries]

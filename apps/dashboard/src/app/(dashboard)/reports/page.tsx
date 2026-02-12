@@ -357,7 +357,7 @@ function PaymentMethodChart() {
     ? Object.entries(data)
         .filter(([, count]) => count > 0)
         .map(([method, count]) => ({
-          name: method || "Nieznana",
+          name: (method === "unknown" || !method) ? "Nieznana" : method,
           value: count,
         }))
         .sort((a, b) => b.value - a.value)

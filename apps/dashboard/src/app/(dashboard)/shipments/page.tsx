@@ -126,7 +126,7 @@ export default function ShipmentsPage() {
                   await batchLabels.mutateAsync({
                     shipment_ids: Array.from(selectedIds),
                   });
-                  toast.success("Etykiety zostaly pobrane");
+                  toast.success("Etykiety zostały pobrane");
                 } catch (error) {
                   toast.error(getErrorMessage(error));
                 }

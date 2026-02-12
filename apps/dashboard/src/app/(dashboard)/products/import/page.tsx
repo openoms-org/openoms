@@ -71,7 +71,7 @@ export default function ProductImportPage() {
       onSuccess: (data) => {
         setResult(data);
         toast.success(
-          `Import zakonczony: ${data.created} utworzonych, ${data.updated} zaktualizowanych`
+          `Import zakończony: ${data.created} utworzonych, ${data.updated} zaktualizowanych`
         );
       },
       onError: (error) => {
@@ -96,10 +96,10 @@ export default function ProductImportPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Import produktow CSV
+            Import produktów CSV
           </h1>
           <p className="text-muted-foreground">
-            Importuj produkty z pliku CSV. Istniejace produkty (dopasowane po SKU) zostana zaktualizowane.
+            Importuj produkty z pliku CSV. Istniejące produkty (dopasowane po SKU) zostaną zaktualizowane.
           </p>
         </div>
       </div>
@@ -110,7 +110,7 @@ export default function ProductImportPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Import zakonczony
+              Import zakończony
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -136,14 +136,14 @@ export default function ProductImportPage() {
                   {result.errors.length}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Bledy
+                  Błędy
                 </p>
               </div>
             </div>
 
             {result.errors.length > 0 && (
               <div className="space-y-2">
-                <h3 className="font-medium text-destructive">Bledy importu:</h3>
+                <h3 className="font-medium text-destructive">Błędy importu:</h3>
                 <div className="max-h-60 overflow-y-auto rounded-md border">
                   <Table>
                     <TableHeader>
@@ -172,7 +172,7 @@ export default function ProductImportPage() {
                 Importuj kolejny plik
               </Button>
               <Button asChild>
-                <Link href="/products">Wroc do produktow</Link>
+                <Link href="/products">Wróć do produktów</Link>
               </Button>
             </div>
           </CardContent>
@@ -186,7 +186,7 @@ export default function ProductImportPage() {
             <CardHeader>
               <CardTitle>Plik CSV</CardTitle>
               <CardDescription>
-                Przeciagnij plik CSV lub kliknij, aby wybrac. Wymagane kolumny: name. Opcjonalne: sku, ean, price, stock_quantity, category, tags, weight, width, height, length, short_description.
+                Przeciągnij plik CSV lub kliknij, aby wybrać. Wymagane kolumny: name. Opcjonalne: sku, ean, price, stock_quantity, category, tags, weight, width, height, length, short_description.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -229,17 +229,17 @@ export default function ProductImportPage() {
                         resetState();
                       }}
                     >
-                      Zmien
+                      Zmień
                     </Button>
                   </div>
                 ) : (
                   <>
                     <Upload className="mb-4 h-10 w-10 text-muted-foreground" />
                     <p className="text-sm font-medium">
-                      Przeciagnij plik CSV tutaj
+                      Przeciągnij plik CSV tutaj
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      lub kliknij, aby wybrac plik
+                      lub kliknij, aby wybrać plik
                     </p>
                   </>
                 )}
@@ -256,7 +256,7 @@ export default function ProductImportPage() {
           {preview && (
             <Card>
               <CardHeader>
-                <CardTitle>Podglad importu</CardTitle>
+                <CardTitle>Podgląd importu</CardTitle>
                 <CardDescription>
                   Pierwsze 10 wierszy z pliku CSV
                 </CardDescription>
@@ -264,7 +264,7 @@ export default function ProductImportPage() {
               <CardContent className="space-y-4">
                 <div className="flex gap-4">
                   <Badge variant="outline" className="text-sm px-3 py-1">
-                    Lacznie: {preview.total_rows}
+                    Łącznie: {preview.total_rows}
                   </Badge>
                   <Badge
                     variant="outline"
@@ -317,7 +317,7 @@ export default function ProductImportPage() {
                   >
                     {importMutation.isPending
                       ? "Importowanie..."
-                      : `Importuj ${preview.total_rows} produktow`}
+                      : `Importuj ${preview.total_rows} produktów`}
                   </Button>
                 </div>
               </CardContent>

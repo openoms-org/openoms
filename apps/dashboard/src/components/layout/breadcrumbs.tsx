@@ -49,6 +49,8 @@ const segmentLabels: Record<string, string> = {
   roles: "Role",
   warehouses: "Magazyny",
   stocktakes: "Inwentaryzacja",
+  security: "Bezpieczeństwo",
+  inventory: "Kontrola magazynowa",
 };
 
 export function Breadcrumbs() {

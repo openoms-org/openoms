@@ -103,6 +103,7 @@ func (r *InvoiceRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 		&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
 		&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
 		&inv.Metadata, &inv.ErrorMessage,
+		&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
 		&inv.CreatedAt, &inv.UpdatedAt,
 	)
 	if err != nil {

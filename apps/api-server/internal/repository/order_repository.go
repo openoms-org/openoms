@@ -80,6 +80,7 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 
 	allowedSortColumns := map[string]string{
 		"created_at":     "created_at",
+		"ordered_at":     "ordered_at",
 		"customer_name":  "customer_name",
 		"total_amount":   "total_amount",
 		"status":         "status",

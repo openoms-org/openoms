@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 const loginSchema = z.object({
   tenant_slug: z.string().min(1, "Slug organizacji jest wymagany"),
-  email: z.string().email("Nieprawidlowy adres email"),
+  email: z.string().email("Nieprawidłowy adres email"),
   password: z.string().min(1, "Hasło jest wymagane"),
 });
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-2xl">Weryfikacja 2FA</CardTitle>
             <CardDescription>
-              Kod z aplikacji uwierzytelniajcej
+              Kod z aplikacji uwierzytelniającej
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -114,7 +114,7 @@ export default function LoginPage() {
                 disabled={isVerifying2FA}
               />
               <p className="text-xs text-muted-foreground text-center">
-                Wpisz 6-cyfrowy kod z aplikacji uwierzytelniajcej
+                Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej
               </p>
             </div>
           </CardContent>
@@ -135,7 +135,7 @@ export default function LoginPage() {
                 setTotpCode("");
               }}
             >
-              Wroc do logowania
+              Wróć do logowania
             </button>
           </CardFooter>
         </Card>

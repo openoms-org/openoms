@@ -243,27 +243,28 @@ func (r *WarehouseStockRepository) Upsert(ctx context.Context, tx pgx.Tx, stock 
 }
 
 func (r *WarehouseStockRepository) AdjustQuantity(ctx context.Context, tx pgx.Tx, warehouseID, productID uuid.UUID, variantID *uuid.UUID, delta int) error {
-	var ct interface{ RowsAffected() int64 }
-	var err error
-
 	if variantID != nil {
-		ct, err = tx.Exec(ctx,
-			`UPDATE warehouse_stock SET quantity = quantity + $1, updated_at = NOW()
-			 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id = $4`,
-			delta, warehouseID, productID, *variantID,
+		_, err := tx.Exec(ctx,
+			`INSERT INTO warehouse_stock (id, tenant_id, warehouse_id, product_id, variant_id, quantity)
+			 VALUES (uuid_generate_v4(), current_setting('app.current_tenant_id')::uuid, $1, $2, $3, $4)
+			 ON CONFLICT (warehouse_id, product_id, variant_id)
+			 DO UPDATE SET quantity = warehouse_stock.quantity + EXCLUDED.quantity, updated_at = NOW()`,
+			warehouseID, productID, *variantID, delta,
 		)
+		if err != nil {
+			return fmt.Errorf("adjust stock quantity: %w", err)
+		}
 	} else {
-		ct, err = tx.Exec(ctx,
-			`UPDATE warehouse_stock SET quantity = quantity + $1, updated_at = NOW()
-			 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-			delta, warehouseID, productID,
+		_, err := tx.Exec(ctx,
+			`INSERT INTO warehouse_stock (id, tenant_id, warehouse_id, product_id, variant_id, quantity)
+			 VALUES (uuid_generate_v4(), current_setting('app.current_tenant_id')::uuid, $1, $2, NULL, $3)
+			 ON CONFLICT (warehouse_id, product_id, variant_id)
+			 DO UPDATE SET quantity = warehouse_stock.quantity + EXCLUDED.quantity, updated_at = NOW()`,
+			warehouseID, productID, delta,
 		)
-	}
-	if err != nil {
-		return fmt.Errorf("adjust stock quantity: %w", err)
-	}
-	if ct.RowsAffected() == 0 {
-		return fmt.Errorf("stock entry not found")
+		if err != nil {
+			return fmt.Errorf("adjust stock quantity: %w", err)
+		}
 	}
 	return nil
 }

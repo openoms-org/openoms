@@ -74,7 +74,7 @@ export default function PrintTemplatesPage() {
       toast.success("Szablony wydruku zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac szablonow";
+        err instanceof Error ? err.message : "Nie udało się zapisać szablonów";
       toast.error(message);
     }
   };
