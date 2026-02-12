@@ -111,6 +111,15 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Post("/refresh", deps.Auth.Refresh)
 		r.Post("/logout", deps.Auth.Logout)
 		r.Post("/2fa/login", deps.Auth.TwoFALogin)
+
+		// 2FA management — JWT required (inside /v1/auth to avoid chi prefix conflict)
+		r.Route("/2fa", func(r chi.Router) {
+			r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+			r.Post("/setup", deps.Auth.TwoFASetup)
+			r.Post("/verify", deps.Auth.TwoFAVerify)
+			r.Post("/disable", deps.Auth.TwoFADisable)
+			r.Get("/status", deps.Auth.TwoFAStatus)
+		})
 	})
 
 	// Public webhook routes — no JWT, signature-verified
@@ -189,14 +198,6 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Use(middleware.RequireRole("admin"))
 				r.Get("/", deps.SyncJob.List)
 				r.Get("/{id}", deps.SyncJob.Get)
-			})
-
-			// 2FA management — any authenticated user
-			r.Route("/auth/2fa", func(r chi.Router) {
-				r.Post("/setup", deps.Auth.TwoFASetup)
-				r.Post("/verify", deps.Auth.TwoFAVerify)
-				r.Post("/disable", deps.Auth.TwoFADisable)
-				r.Get("/status", deps.Auth.TwoFAStatus)
 			})
 
 			// Any authenticated user

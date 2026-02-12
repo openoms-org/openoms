@@ -61,6 +61,7 @@ export function RateShopping({
   const [hasSearched, setHasSearched] = useState(false);
   const [useCod, setUseCod] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
   const getRates = useShippingRates();
 
   const {
@@ -87,6 +88,7 @@ export function RateShopping({
     if (!useCod) {
       data.cod = 0;
     }
+    setError(null);
     getRates.mutate(
       {
         from_postal_code: data.from_postal_code,
@@ -102,6 +104,10 @@ export function RateShopping({
       {
         onSuccess: (response) => {
           setRates(response.rates);
+          setHasSearched(true);
+        },
+        onError: (err) => {
+          setError(err instanceof Error ? err.message : "Nie udalo sie pobrac stawek");
           setHasSearched(true);
         },
       }
@@ -264,7 +270,13 @@ export function RateShopping({
             </Button>
           </form>
 
-          {hasSearched && rates.length === 0 && (
+          {error && (
+            <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          {hasSearched && !error && rates.length === 0 && (
             <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
               Brak dostepnych stawek dla podanych parametrow. Upewnij sie, ze masz aktywne integracje z kurierami.
             </div>

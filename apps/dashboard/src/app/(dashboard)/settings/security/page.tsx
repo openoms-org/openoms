@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { ShieldCheck, ShieldOff, Loader2, Copy, CheckCircle2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +25,24 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import QRCode from "qrcode";
 import type { TwoFASetupResponse, TwoFAStatusResponse } from "@/types/api";
+
+function QRCodeCanvas({ data, size }: { data: string; size: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (canvasRef.current && data) {
+      QRCode.toCanvas(canvasRef.current, data, {
+        width: size,
+        margin: 1,
+        color: { dark: "#000000", light: "#ffffff" },
+      });
+    }
+  }, [data, size]);
+
+  return <canvas ref={canvasRef} />;
+}
 
 export default function SecuritySettingsPage() {
   const queryClient = useQueryClient();
@@ -206,15 +223,10 @@ export default function SecuritySettingsPage() {
 
           {setupData && (
             <div className="space-y-4">
-              {/* QR Code rendered as otpauth URL image */}
+              {/* QR Code rendered client-side (no external service) */}
               <div className="flex justify-center">
                 <div className="rounded-lg border bg-white p-4">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupData.qr_url)}`}
-                    alt="Kod QR do aplikacji uwierzytelniajcej"
-                    width={200}
-                    height={200}
-                  />
+                  <QRCodeCanvas data={setupData.qr_url} size={200} />
                 </div>
               </div>
 
@@ -296,7 +308,7 @@ export default function SecuritySettingsPage() {
           <DialogHeader>
             <DialogTitle>Wylacz uwierzytelnianie dwuskladnikowe</DialogTitle>
             <DialogDescription>
-              Podaj haslo i aktualny kod 2FA, aby wylaczycuwierzytelnianie
+              Podaj haslo i aktualny kod 2FA, aby wylaczyc uwierzytelnianie
               dwuskladnikowe. Twoje konto bedzie mniej bezpieczne.
             </DialogDescription>
           </DialogHeader>
