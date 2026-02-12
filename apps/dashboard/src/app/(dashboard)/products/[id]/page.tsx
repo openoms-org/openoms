@@ -56,10 +56,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   useSuggestCategories,
   useGenerateDescription,
+  useImproveDescription,
+  useTranslateDescription,
 } from "@/hooks/use-ai";
-import type { CreateProductRequest, AISuggestion } from "@/types/api";
+import type { CreateProductRequest, AISuggestion, AIDescribeRequest } from "@/types/api";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -70,10 +79,18 @@ export default function ProductDetailPage() {
   const [showAddComponentDialog, setShowAddComponentDialog] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion | null>(null);
   const [showDescriptionDialog, setShowDescriptionDialog] = useState(false);
-  const [aiDescription, setAiDescription] = useState("");
+  const [aiShortDescription, setAiShortDescription] = useState("");
+  const [aiLongDescription, setAiLongDescription] = useState("");
+  const [showAIOptionsDialog, setShowAIOptionsDialog] = useState(false);
+  const [aiStyle, setAiStyle] = useState<string>("professional");
+  const [aiLanguage, setAiLanguage] = useState<string>("pl");
+  const [aiLength, setAiLength] = useState<string>("medium");
+  const [aiMarketplace, setAiMarketplace] = useState<string>("");
 
   const suggestCategories = useSuggestCategories();
   const generateDescription = useGenerateDescription();
+  const improveDescription = useImproveDescription();
+  const translateDescription = useTranslateDescription();
 
   const { data: product, isLoading } = useProduct(params.id);
   const { data: categoriesConfig } = useProductCategories();
@@ -253,23 +270,10 @@ export default function ProductDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              generateDescription.mutate(params.id, {
-                onSuccess: (data) => {
-                  setAiDescription(data.description || "");
-                  setShowDescriptionDialog(true);
-                },
-                onError: (error) => toast.error(getErrorMessage(error)),
-              });
-            }}
-            disabled={generateDescription.isPending}
+            onClick={() => setShowAIOptionsDialog(true)}
           >
-            {generateDescription.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            Generuj opis
+            <Sparkles className="h-4 w-4" />
+            Generuj opis AI
           </Button>
 
           <Button variant="outline" size="sm" asChild>
@@ -601,34 +605,158 @@ export default function ProductDetailPage() {
         </>
       )}
 
-      {/* AI Generated Description Dialog */}
-      <Dialog open={showDescriptionDialog} onOpenChange={setShowDescriptionDialog}>
+      {/* AI Options Dialog */}
+      <Dialog open={showAIOptionsDialog} onOpenChange={setShowAIOptionsDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Wygenerowany opis AI</DialogTitle>
+            <DialogTitle>Generuj opis AI</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm whitespace-pre-wrap">{aiDescription}</p>
+            <div className="space-y-2">
+              <Label>Styl</Label>
+              <Select value={aiStyle} onValueChange={setAiStyle}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="professional">Profesjonalny</SelectItem>
+                  <SelectItem value="promotional">Promocyjny</SelectItem>
+                  <SelectItem value="casual">Swobodny</SelectItem>
+                  <SelectItem value="seo">SEO</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Jezyk</Label>
+              <Select value={aiLanguage} onValueChange={setAiLanguage}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pl">Polski</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Dlugosc</Label>
+              <Select value={aiLength} onValueChange={setAiLength}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="short">Krotki</SelectItem>
+                  <SelectItem value="medium">Sredni</SelectItem>
+                  <SelectItem value="long">Dlugi</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Marketplace</Label>
+              <Select value={aiMarketplace || "__none__"} onValueChange={(v) => setAiMarketplace(v === "__none__" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Brak</SelectItem>
+                  <SelectItem value="allegro">Allegro</SelectItem>
+                  <SelectItem value="amazon">Amazon</SelectItem>
+                  <SelectItem value="ebay">eBay</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDescriptionDialog(false)}>
+            <Button variant="outline" onClick={() => setShowAIOptionsDialog(false)}>
               Anuluj
             </Button>
             <Button
               onClick={() => {
-                updateProduct.mutate(
-                  { description_long: aiDescription },
-                  {
-                    onSuccess: () => {
-                      toast.success("Opis produktu zaktualizowany");
-                      setShowDescriptionDialog(false);
-                    },
-                    onError: (error) => toast.error(getErrorMessage(error)),
-                  }
-                );
+                const req: AIDescribeRequest = {
+                  product_id: params.id,
+                  style: aiStyle as AIDescribeRequest["style"],
+                  language: aiLanguage as AIDescribeRequest["language"],
+                  length: aiLength as AIDescribeRequest["length"],
+                  marketplace: aiMarketplace as AIDescribeRequest["marketplace"] || undefined,
+                };
+                generateDescription.mutate(req, {
+                  onSuccess: (data) => {
+                    setAiShortDescription(data.short_description || "");
+                    setAiLongDescription(data.long_description || data.description || "");
+                    setShowAIOptionsDialog(false);
+                    setShowDescriptionDialog(true);
+                  },
+                  onError: (error) => toast.error(getErrorMessage(error)),
+                });
+              }}
+              disabled={generateDescription.isPending}
+            >
+              {generateDescription.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Generuj
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Generated Description Dialog */}
+      <Dialog open={showDescriptionDialog} onOpenChange={setShowDescriptionDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Wygenerowany opis AI</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {aiShortDescription && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Krotki opis</p>
+                <p className="text-sm whitespace-pre-wrap rounded-md border p-3">{aiShortDescription}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Pelny opis</p>
+              <p className="text-sm whitespace-pre-wrap rounded-md border p-3">{aiLongDescription}</p>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowDescriptionDialog(false)}>
+              Anuluj
+            </Button>
+            {aiShortDescription && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  updateProduct.mutate(
+                    { description_short: aiShortDescription },
+                    {
+                      onSuccess: () => toast.success("Krotki opis zaktualizowany"),
+                      onError: (error) => toast.error(getErrorMessage(error)),
+                    }
+                  );
+                }}
+              >
+                Zastosuj krotki opis
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                const update: Record<string, string> = { description_long: aiLongDescription };
+                if (aiShortDescription) {
+                  update.description_short = aiShortDescription;
+                }
+                updateProduct.mutate(update, {
+                  onSuccess: () => {
+                    toast.success("Opis produktu zaktualizowany");
+                    setShowDescriptionDialog(false);
+                  },
+                  onError: (error) => toast.error(getErrorMessage(error)),
+                });
               }}
             >
-              Zastosuj opis
+              Zastosuj wszystko
             </Button>
           </DialogFooter>
         </DialogContent>

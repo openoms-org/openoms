@@ -17,7 +17,7 @@ import (
 )
 
 func TestProductHandler_Create_InvalidJSON(t *testing.T) {
-	h := NewProductHandler(nil)
+	h := NewProductHandler(nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/products", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -32,7 +32,7 @@ func TestProductHandler_Create_InvalidJSON(t *testing.T) {
 }
 
 func TestProductHandler_Get_InvalidID(t *testing.T) {
-	h := NewProductHandler(nil)
+	h := NewProductHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -51,7 +51,7 @@ func TestProductHandler_Get_InvalidID(t *testing.T) {
 }
 
 func TestProductHandler_Update_InvalidID(t *testing.T) {
-	h := NewProductHandler(nil)
+	h := NewProductHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -66,7 +66,7 @@ func TestProductHandler_Update_InvalidID(t *testing.T) {
 }
 
 func TestProductHandler_Update_InvalidJSON(t *testing.T) {
-	h := NewProductHandler(nil)
+	h := NewProductHandler(nil, nil)
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -82,7 +82,7 @@ func TestProductHandler_Update_InvalidJSON(t *testing.T) {
 }
 
 func TestProductHandler_Delete_InvalidID(t *testing.T) {
-	h := NewProductHandler(nil)
+	h := NewProductHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -98,7 +98,7 @@ func TestProductHandler_Delete_InvalidID(t *testing.T) {
 
 func TestProductHandler_Create_ValidationError(t *testing.T) {
 	svc := service.NewProductService(nil, nil, nil, nil)
-	h := NewProductHandler(svc)
+	h := NewProductHandler(svc, nil)
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -120,7 +120,7 @@ func TestProductHandler_Create_ValidationError(t *testing.T) {
 
 func TestProductHandler_Update_ValidationError(t *testing.T) {
 	svc := service.NewProductService(nil, nil, nil, nil)
-	h := NewProductHandler(svc)
+	h := NewProductHandler(svc, nil)
 
 	tenantID := uuid.New()
 	userID := uuid.New()

@@ -3,6 +3,8 @@ import { apiClient } from "@/lib/api-client";
 import type {
   AISuggestion,
   AIBulkCategorizeResponse,
+  AIDescribeRequest,
+  AITextResult,
 } from "@/types/api";
 
 export function useSuggestCategories() {
@@ -17,10 +19,10 @@ export function useSuggestCategories() {
 
 export function useGenerateDescription() {
   return useMutation({
-    mutationFn: (productId: string) =>
+    mutationFn: (req: AIDescribeRequest) =>
       apiClient<AISuggestion>("/v1/ai/describe", {
         method: "POST",
-        body: JSON.stringify({ product_id: productId }),
+        body: JSON.stringify(req),
       }),
   });
 }
@@ -36,5 +38,25 @@ export function useBulkCategorize() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
+  });
+}
+
+export function useImproveDescription() {
+  return useMutation({
+    mutationFn: (data: { description: string; style?: string; language?: string }) =>
+      apiClient<AITextResult>("/v1/ai/improve", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  });
+}
+
+export function useTranslateDescription() {
+  return useMutation({
+    mutationFn: (data: { description: string; target_language: string }) =>
+      apiClient<AITextResult>("/v1/ai/translate", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   });
 }

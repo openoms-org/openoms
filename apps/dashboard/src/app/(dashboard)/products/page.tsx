@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Package, Plus, Search, Sparkles, Loader2 } from "lucide-react";
+import { Package, Plus, Search, Sparkles, Loader2, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useBulkCategorize } from "@/hooks/use-ai";
+import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type EditableColumnConfig } from "@/components/shared/data-table";
@@ -242,6 +243,35 @@ export default function ProductsPage() {
               Auto-kategoryzacja ({selectedProducts.size})
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const res = await apiFetch("/v1/products/export");
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                toast.success("Eksport CSV rozpoczety");
+              } catch {
+                toast.error("Blad eksportu CSV");
+              }
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Eksportuj CSV
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/products/import">
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Link>
+          </Button>
           <Button asChild>
             <Link href="/products/new">
               <Plus className="h-4 w-4" />

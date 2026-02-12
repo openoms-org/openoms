@@ -150,6 +150,42 @@ func (p *UPSProvider) MapStatus(carrierStatus string) (string, bool) {
 	return upssdk.MapStatus(carrierStatus)
 }
 
+func (p *UPSProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
+	// TODO: Implement real UPS Rating API integration.
+	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
+		(req.ToCountry == "" || req.ToCountry == "PL")
+	if !domestic {
+		return nil, nil
+	}
+
+	w := req.Weight
+	var rates []integration.Rate
+
+	if w <= 30 {
+		price := 22.00
+		if w > 10 {
+			price = 28.00
+		}
+		if w > 20 {
+			price = 35.00
+		}
+		if req.COD > 0 {
+			price += 6.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "UPS",
+			CarrierCode:   "ups",
+			ServiceName:   "UPS Standard",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 3,
+			PickupPoint:   false,
+		})
+	}
+
+	return rates, nil
+}
+
 func (p *UPSProvider) SupportsPickupPoints() bool { return false }
 
 func (p *UPSProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {

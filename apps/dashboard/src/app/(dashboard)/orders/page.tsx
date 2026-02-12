@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOrders, exportOrdersCSV } from "@/hooks/use-orders";
@@ -9,11 +9,12 @@ import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { OrderFilters } from "@/components/orders/order-filters";
 import { BulkActions } from "@/components/orders/bulk-actions";
+import { KanbanBoard } from "@/components/orders/kanban-board";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
-import { formatDate, formatCurrency, shortId } from "@/lib/utils";
-import { Download, ShoppingCart, Merge, Printer } from "lucide-react";
+import { formatDate, formatCurrency, shortId, cn } from "@/lib/utils";
+import { Download, ShoppingCart, Merge, Printer, LayoutGrid, Columns3 } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { apiClient } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/api-client";
@@ -21,6 +22,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMergeOrders } from "@/hooks/use-order-groups";
 import { useBatchLabels } from "@/hooks/use-shipments";
 import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +37,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Order } from "@/types/api";
+
+type ViewMode = "table" | "kanban";
+
+function useViewMode(): [ViewMode, (mode: ViewMode) => void] {
+  const [view, setViewState] = useState<ViewMode>("table");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("orders-view-mode");
+    if (saved === "kanban" || saved === "table") {
+      setViewState(saved);
+    }
+  }, []);
+
+  const setView = (mode: ViewMode) => {
+    setViewState(mode);
+    localStorage.setItem("orders-view-mode", mode);
+  };
+
+  return [view, setView];
+}
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -43,6 +70,7 @@ export default function OrdersPage() {
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [viewMode, setViewMode] = useViewMode();
   const mergeOrders = useMergeOrders();
   const batchLabels = useBatchLabels();
 
@@ -144,7 +172,7 @@ export default function OrdersPage() {
       accessorKey: "notes",
       cell: (row) => (
         <span className="text-sm text-muted-foreground truncate max-w-[200px] inline-block">
-          {row.notes || "—"}
+          {row.notes || "\u2014"}
         </span>
       ),
     },
@@ -196,6 +224,44 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* View mode switcher */}
+          <TooltipProvider>
+            <div className="flex items-center rounded-md border bg-muted p-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setViewMode("table")}
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
+                      viewMode === "table"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Widok tabeli</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setViewMode("kanban")}
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-sm px-2.5 py-1.5 text-sm font-medium transition-colors",
+                      viewMode === "kanban"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Columns3 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Widok Kanban</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+
           <Button variant="outline" onClick={() => exportOrdersCSV({ ...filters, limit: 10000, offset: 0 })}>
             <Download className="mr-2 h-4 w-4" />
             Eksportuj CSV
@@ -208,7 +274,7 @@ export default function OrdersPage() {
 
       <OrderFilters filters={filters} onFilterChange={handleFilterChange} />
 
-      {isError && (
+      {isError && viewMode === "table" && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
             Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
@@ -224,7 +290,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {selectedIds.size > 0 && (
+      {viewMode === "table" && selectedIds.size > 0 && (
         <div className="space-y-3">
           <BulkActions
             selectedOrders={selectedOrders}
@@ -280,39 +346,49 @@ export default function OrdersPage() {
         </div>
       )}
 
-      <div className="rounded-md border">
-        <DataTable<Order>
-          columns={columns}
-          data={data?.items || []}
-          isLoading={isLoading}
-          emptyState={
-            <EmptyState
-              icon={ShoppingCart}
-              title="Brak zamówień"
-              description="Nie znaleziono zamówień do wyświetlenia."
-              action={{ label: "Nowe zamówienie", href: "/orders/new" }}
-            />
-          }
-          onRowClick={(row) => router.push(`/orders/${row.id}`)}
-          selectable
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          rowId={(row) => row.id}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-          editableColumns={editableColumns}
-        />
-      </div>
+      {/* Kanban view */}
+      {viewMode === "kanban" && (
+        <KanbanBoard filters={filters} />
+      )}
 
-      {data && (
-        <DataTablePagination
-          total={data.total}
-          limit={limit}
-          offset={offset}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+      {/* Table view */}
+      {viewMode === "table" && (
+        <>
+          <div className="rounded-md border">
+            <DataTable<Order>
+              columns={columns}
+              data={data?.items || []}
+              isLoading={isLoading}
+              emptyState={
+                <EmptyState
+                  icon={ShoppingCart}
+                  title="Brak zamówień"
+                  description="Nie znaleziono zamówień do wyświetlenia."
+                  action={{ label: "Nowe zamówienie", href: "/orders/new" }}
+                />
+              }
+              onRowClick={(row) => router.push(`/orders/${row.id}`)}
+              selectable
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              rowId={(row) => row.id}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              editableColumns={editableColumns}
+            />
+          </div>
+
+          {data && (
+            <DataTablePagination
+              total={data.total}
+              limit={limit}
+              offset={offset}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          )}
+        </>
       )}
 
       <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>

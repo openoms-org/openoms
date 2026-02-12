@@ -196,6 +196,8 @@ func (h *WarehouseHandler) UpsertStock(w http.ResponseWriter, r *http.Request) {
 	stock, err := h.warehouseService.UpsertStock(r.Context(), tenantID, warehouseID, req, actorID, clientIP(r))
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrStrictInventoryControl):
+			writeError(w, http.StatusForbidden, err.Error())
 		case errors.Is(err, service.ErrWarehouseNotFound):
 			writeError(w, http.StatusNotFound, "warehouse not found")
 		case service.IsForeignKeyError(err):

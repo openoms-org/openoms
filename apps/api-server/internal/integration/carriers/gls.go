@@ -132,6 +132,42 @@ func (p *GLSProvider) MapStatus(carrierStatus string) (string, bool) {
 	return glssdk.MapStatus(carrierStatus)
 }
 
+func (p *GLSProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
+	// TODO: Implement real GLS rate API integration.
+	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
+		(req.ToCountry == "" || req.ToCountry == "PL")
+	if !domestic {
+		return nil, nil
+	}
+
+	w := req.Weight
+	var rates []integration.Rate
+
+	if w <= 31.5 {
+		price := 13.99
+		if w > 10 {
+			price = 16.99
+		}
+		if w > 20 {
+			price = 19.99
+		}
+		if req.COD > 0 {
+			price += 4.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "GLS",
+			CarrierCode:   "gls",
+			ServiceName:   "GLS Business Parcel",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 2,
+			PickupPoint:   false,
+		})
+	}
+
+	return rates, nil
+}
+
 func (p *GLSProvider) SupportsPickupPoints() bool { return true }
 
 func (p *GLSProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {

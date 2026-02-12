@@ -60,6 +60,11 @@ type UserRepo interface {
 	UpdateLastLogout(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	CountByRole(ctx context.Context, tx pgx.Tx, role string) (int, error)
+	SetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.UUID, encryptedSecret string) error
+	EnableTOTP(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	DisableTOTP(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	GetTOTPStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID) (bool, *string, error)
+	GetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*string, error)
 }
 
 // TenantRepo defines the interface for tenant persistence operations.

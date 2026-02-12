@@ -698,6 +698,52 @@ func (h *SettingsHandler) UpdateSMSSettings(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, smsCfg)
 }
 
+func (h *SettingsHandler) GetInventorySettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	inventoryCfg := model.InventorySettings{}
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		return h.getSettingsSection(r.Context(), tx, tenantID, "inventory", &inventoryCfg)
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load inventory settings")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, inventoryCfg)
+}
+
+func (h *SettingsHandler) UpdateInventorySettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var inventoryCfg model.InventorySettings
+	if err := json.NewDecoder(r.Body).Decode(&inventoryCfg); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "inventory", inventoryCfg); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.inventory_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save inventory settings")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, inventoryCfg)
+}
+
 func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

@@ -20,6 +20,37 @@ export interface TokenResponse {
   tenant: Tenant;
 }
 
+export interface LoginResponse {
+  access_token?: string;
+  expires_in?: number;
+  user?: User;
+  tenant?: Tenant;
+  requires_2fa?: boolean;
+  temp_token?: string;
+}
+
+export interface TwoFASetupResponse {
+  secret: string;
+  qr_url: string;
+}
+
+export interface TwoFAStatusResponse {
+  enabled: boolean;
+  verified_at?: string;
+}
+
+export interface AITextResult {
+  description: string;
+}
+
+export interface AIDescribeRequest {
+  product_id: string;
+  style?: "professional" | "promotional" | "casual" | "seo";
+  language?: "pl" | "en" | "de";
+  length?: "short" | "medium" | "long";
+  marketplace?: "allegro" | "amazon" | "ebay";
+}
+
 export interface CreateUserRequest {
   email: string;
   name: string;
@@ -1032,6 +1063,26 @@ export interface WarehouseListParams extends PaginationParams {
 
 export interface WarehouseStockListParams extends PaginationParams {}
 
+// === Inventory Settings ===
+export interface InventorySettings {
+  strict_mode: boolean;
+}
+
+// === Product Import ===
+export interface ProductImportPreview {
+  headers: string[];
+  total_rows: number;
+  sample_rows: ImportPreviewRow[];
+  new_count: number;
+  update_count: number;
+}
+
+export interface ProductImportResult {
+  created: number;
+  updated: number;
+  errors: ImportError[];
+}
+
 // === Customers ===
 export interface Customer {
   id: string;
@@ -1404,6 +1455,8 @@ export interface AISuggestion {
   categories: string[];
   tags: string[];
   description?: string;
+  short_description?: string;
+  long_description?: string;
 }
 
 export interface AIBulkCategorizeResult {
@@ -1531,6 +1584,33 @@ export interface StocktakeListParams extends PaginationParams {
 
 export interface StocktakeItemListParams extends PaginationParams {
   filter?: "all" | "uncounted" | "discrepancies";
+}
+
+// === Shipping Rate Shopping ===
+export interface ShippingRate {
+  carrier_name: string;
+  carrier_code: string;
+  service_name: string;
+  price: number;
+  currency: string;
+  estimated_days: number;
+  pickup_point: boolean;
+}
+
+export interface GetRatesRequest {
+  from_postal_code: string;
+  from_country: string;
+  to_postal_code: string;
+  to_country: string;
+  weight: number;
+  width: number;
+  height: number;
+  length: number;
+  cod: number;
+}
+
+export interface GetRatesResponse {
+  rates: ShippingRate[];
 }
 
 // === WebSocket Events ===

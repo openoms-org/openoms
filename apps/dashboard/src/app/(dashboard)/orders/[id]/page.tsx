@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check } from "lucide-react";
+import { RateShopping } from "@/components/shipping/rate-shopping";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus } from "@/hooks/use-orders";
 import { useShipments } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
@@ -447,6 +448,15 @@ export default function OrderDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          <RateShopping
+            defaultToPostalCode={order.shipping_address?.postal_code}
+            onSelectRate={(rate) => {
+              router.push(
+                `/shipments/new?order_id=${params.id}&carrier=${rate.carrier_code}`
+              );
+            }}
+          />
 
           <Card>
             <CardHeader>

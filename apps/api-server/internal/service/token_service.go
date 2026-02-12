@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	accessTokenDuration  = 1 * time.Hour
-	refreshTokenDuration = 30 * 24 * time.Hour
+	accessTokenDuration      = 1 * time.Hour
+	refreshTokenDuration     = 30 * 24 * time.Hour
+	twofaPendingTokenDuration = 5 * time.Minute
 )
 
 // TokenService handles Ed25519 JWT token generation and validation.
@@ -65,6 +66,25 @@ func (s *TokenService) GenerateRefreshToken(user model.User) (string, error) {
 		},
 		TenantID: user.TenantID,
 		Type:     "refresh",
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+	return token.SignedString(s.privateKey)
+}
+
+// Generate2FAPendingToken creates a short-lived (5 min) JWT for 2FA pending state.
+func (s *TokenService) Generate2FAPendingToken(user model.User) (string, error) {
+	now := time.Now()
+	claims := model.AuthClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   user.ID.String(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(twofaPendingTokenDuration)),
+			Issuer:    "openoms",
+		},
+		TenantID: user.TenantID,
+		Email:    user.Email,
+		Role:     user.Role,
+		Type:     "2fa_pending",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 	return token.SignedString(s.privateKey)

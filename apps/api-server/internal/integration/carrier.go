@@ -66,6 +66,31 @@ type CarrierShipmentResponse struct {
 	LabelURL       string `json:"label_url,omitempty"`
 }
 
+// RateRequest contains all data needed to request shipping rates from a carrier.
+type RateRequest struct {
+	FromPostalCode string  `json:"from_postal_code"`
+	FromCountry    string  `json:"from_country"`
+	ToPostalCode   string  `json:"to_postal_code"`
+	ToCountry      string  `json:"to_country"`
+	Weight         float64 `json:"weight"`          // kg
+	Width          float64 `json:"width"`           // cm
+	Height         float64 `json:"height"`          // cm
+	Length         float64 `json:"length"`          // cm
+	COD            float64 `json:"cod"`             // cash on delivery amount, 0 if none
+	IsPickupPoint  bool    `json:"is_pickup_point"`
+}
+
+// Rate represents a single shipping rate option from a carrier.
+type Rate struct {
+	CarrierName   string  `json:"carrier_name"`
+	CarrierCode   string  `json:"carrier_code"`
+	ServiceName   string  `json:"service_name"`
+	Price         float64 `json:"price"`
+	Currency      string  `json:"currency"`
+	EstimatedDays int     `json:"estimated_days"`
+	PickupPoint   bool    `json:"pickup_point"`
+}
+
 // CarrierProvider defines the interface for carrier/shipping integrations
 // (e.g. InPost, DHL, DPD).
 type CarrierProvider interface {
@@ -77,4 +102,5 @@ type CarrierProvider interface {
 	MapStatus(carrierStatus string) (omsStatus string, ok bool)
 	SupportsPickupPoints() bool
 	SearchPickupPoints(ctx context.Context, query string) ([]PickupPoint, error)
+	GetRates(ctx context.Context, req RateRequest) ([]Rate, error)
 }
