@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronsUpDown, MapPin, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, MapPin, Loader2, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Popover,
@@ -57,27 +56,80 @@ export function PaczkomatSelector({
   const { data: tokenData } = useGeowidgetToken();
   const token = tokenData?.geowidget_token || process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN || "";
 
+  // Search mode — always works, no token needed
   if (mode === "search") {
     return <SearchMode value={value ?? ""} onPointSelect={onPointSelect} />;
   }
 
-  if (mode === "inline") {
-    return <InlineMode token={token} onPointSelect={onPointSelect} />;
-  }
-
-  return <DialogMode token={token} value={value} onPointSelect={onPointSelect} />;
+  // Inline/dialog — show search as primary, map as optional button
+  return (
+    <SearchWithMapFallback
+      token={token}
+      value={value ?? ""}
+      onPointSelect={onPointSelect}
+      layout={mode === "inline" ? "stacked" : "row"}
+    />
+  );
 }
 
-function DialogMode({
+/** Primary: text search combobox + optional "Show map" button */
+function SearchWithMapFallback({
   token,
   value,
   onPointSelect,
+  layout,
 }: {
   token: string;
-  value?: string;
+  value: string;
+  onPointSelect: (pointName: string) => void;
+  layout: "row" | "stacked";
+}) {
+  const [mapOpen, setMapOpen] = useState(false);
+
+  return (
+    <div className={layout === "stacked" ? "space-y-3" : "flex gap-2 items-start"}>
+      <div className={layout === "stacked" ? "" : "flex-1"}>
+        <SearchMode value={value} onPointSelect={onPointSelect} />
+      </div>
+      {token && (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size={layout === "stacked" ? "default" : "icon"}
+            onClick={() => setMapOpen(true)}
+            title="Pokaż mapę paczkomatów"
+          >
+            <Map className="h-4 w-4" />
+            {layout === "stacked" && <span className="ml-2">Pokaż na mapie</span>}
+          </Button>
+          <MapDialog
+            token={token}
+            open={mapOpen}
+            onOpenChange={setMapOpen}
+            onPointSelect={(name) => {
+              onPointSelect(name);
+              setMapOpen(false);
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Map dialog — only rendered when token is available */
+function MapDialog({
+  token,
+  open,
+  onOpenChange,
+  onPointSelect,
+}: {
+  token: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onPointSelect: (pointName: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [widgetError, setWidgetError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onPointSelect);
@@ -92,7 +144,6 @@ function DialogMode({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).onInpostPointSelected = (point: { name: string }) => {
       callbackRef.current(point.name);
-      setOpen(false);
     };
 
     const timer = setTimeout(() => {
@@ -102,9 +153,7 @@ function DialogMode({
         widget.setAttribute("onpoint", "onInpostPointSelected");
         widget.setAttribute("language", "pl");
         widget.setAttribute("config", "parcelcollect");
-        if (token) {
-          widget.setAttribute("token", token);
-        }
+        widget.setAttribute("token", token);
         widget.style.display = "block";
         widget.style.width = "100%";
         widget.style.height = "100%";
@@ -114,8 +163,8 @@ function DialogMode({
         const errorCheck = setTimeout(() => {
           const shadow = widget.shadowRoot;
           if (shadow) {
-            const errorEl = shadow.querySelector(".error, [class*=error]");
-            if (errorEl?.textContent?.includes("Brak dostępu")) {
+            const text = shadow.textContent || "";
+            if (text.includes("Brak dostępu") || text.includes("nieprawidłow")) {
               setWidgetError(true);
             }
           }
@@ -133,21 +182,13 @@ function DialogMode({
   }, [open, token]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" type="button" className="w-full justify-start">
-          <MapPin className="h-4 w-4 mr-2" />
-          {value
-            ? `Paczkomat: ${value}`
-            : "Wybierz paczkomat na mapie"}
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh]">
         <DialogHeader>
           <DialogTitle>Wybierz paczkomat InPost</DialogTitle>
         </DialogHeader>
         {widgetError ? (
-          <div className="flex-1 min-h-[60vh] flex flex-col items-center justify-center gap-4">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-center max-w-md">
               <p className="font-medium text-destructive">Błąd tokenu GeoWidget</p>
               <p className="text-sm text-muted-foreground mt-2">
@@ -159,83 +200,13 @@ function DialogMode({
                 <code className="bg-muted px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.hostname : "localhost"}</code>
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">Możesz wybrać paczkomat wyszukiwarką:</p>
-            <div className="w-full max-w-sm">
-              <SearchMode
-                value=""
-                onPointSelect={(name) => {
-                  onPointSelect(name);
-                  setOpen(false);
-                }}
-              />
-            </div>
+            <p className="text-sm text-muted-foreground">Zamknij dialog i użyj wyszukiwarki tekstowej.</p>
           </div>
         ) : (
           <div ref={containerRef} className="flex-1 min-h-[60vh]" />
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-function InlineMode({
-  token,
-  onPointSelect,
-}: {
-  token: string;
-  onPointSelect: (pointName: string) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const callbackRef = useRef(onPointSelect);
-  callbackRef.current = onPointSelect;
-
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__inpostGeowidgetCallback = (point: { name: string }) => {
-      callbackRef.current(point.name);
-    };
-    return () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (window as any).__inpostGeowidgetCallback;
-    };
-  }, []);
-
-  useEffect(() => {
-    loadGeowidgetScript();
-
-    if (!containerRef.current || !token) return;
-
-    const el = document.createElement("inpost-geowidget");
-    el.setAttribute("token", token);
-    el.setAttribute("language", "pl");
-    el.setAttribute("config", "parcelCollect");
-    el.setAttribute("onpoint", "__inpostGeowidgetCallback");
-    el.style.display = "block";
-    el.style.width = "100%";
-    el.style.height = "100%";
-
-    containerRef.current.appendChild(el);
-
-    return () => {
-      if (containerRef.current?.contains(el)) {
-        containerRef.current.removeChild(el);
-      }
-    };
-  }, [token]);
-
-  if (!token) {
-    return (
-      <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-        <p>Brak tokenu GeoWidget InPost.</p>
-        <p className="text-xs mt-1">
-          Skonfiguruj token GeoWidget w ustawieniach integracji InPost.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={containerRef} className="h-[400px] w-full rounded-md overflow-hidden border" />
   );
 }
 
@@ -268,8 +239,12 @@ function SearchMode({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between font-normal"
+          type="button"
         >
-          {value ? value : "Wybierz paczkomat..."}
+          <span className="flex items-center gap-2 truncate">
+            <MapPin className="h-4 w-4 shrink-0" />
+            {value ? `Paczkomat: ${value}` : "Wybierz paczkomat..."}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
