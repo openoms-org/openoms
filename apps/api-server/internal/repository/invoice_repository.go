@@ -54,6 +54,7 @@ func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.In
 		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
 		        status, invoice_type, total_net, total_gross, currency,
 		        issue_date, due_date, pdf_url, metadata, error_message,
+		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
 		        created_at, updated_at
 		 FROM invoices %s
 		 %s
@@ -77,6 +78,7 @@ func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.In
 			&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
 			&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
 			&inv.Metadata, &inv.ErrorMessage,
+			&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
 			&inv.CreatedAt, &inv.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan invoice: %w", err)
@@ -92,6 +94,7 @@ func (r *InvoiceRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
 		        status, invoice_type, total_net, total_gross, currency,
 		        issue_date, due_date, pdf_url, metadata, error_message,
+		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
 		        created_at, updated_at
 		 FROM invoices WHERE id = $1`, id,
 	).Scan(
@@ -116,6 +119,7 @@ func (r *InvoiceRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderI
 		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
 		        status, invoice_type, total_net, total_gross, currency,
 		        issue_date, due_date, pdf_url, metadata, error_message,
+		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
 		        created_at, updated_at
 		 FROM invoices WHERE order_id = $1 ORDER BY created_at DESC`, orderID,
 	)
@@ -133,6 +137,7 @@ func (r *InvoiceRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderI
 			&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
 			&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
 			&inv.Metadata, &inv.ErrorMessage,
+			&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
 			&inv.CreatedAt, &inv.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan invoice: %w", err)
@@ -147,14 +152,16 @@ func (r *InvoiceRepository) Create(ctx context.Context, tx pgx.Tx, inv *model.In
 		`INSERT INTO invoices (
 			id, tenant_id, order_id, provider, external_id, external_number,
 			status, invoice_type, total_net, total_gross, currency,
-			issue_date, due_date, pdf_url, metadata, error_message
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+			issue_date, due_date, pdf_url, metadata, error_message,
+			ksef_number, ksef_status, ksef_sent_at, ksef_response
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		RETURNING created_at, updated_at`,
 		inv.ID, inv.TenantID, inv.OrderID, inv.Provider,
 		inv.ExternalID, inv.ExternalNumber,
 		inv.Status, inv.InvoiceType, inv.TotalNet, inv.TotalGross,
 		inv.Currency, inv.IssueDate, inv.DueDate, inv.PDFURL,
 		inv.Metadata, inv.ErrorMessage,
+		inv.KSeFNumber, inv.KSeFStatus, inv.KSeFSentAt, inv.KSeFResponse,
 	).Scan(&inv.CreatedAt, &inv.UpdatedAt)
 }
 
@@ -163,11 +170,14 @@ func (r *InvoiceRepository) Update(ctx context.Context, tx pgx.Tx, inv *model.In
 		`UPDATE invoices SET
 			external_id = $2, external_number = $3, status = $4,
 			total_net = $5, total_gross = $6, pdf_url = $7,
-			error_message = $8, metadata = $9, updated_at = NOW()
+			error_message = $8, metadata = $9,
+			ksef_number = $10, ksef_status = $11, ksef_sent_at = $12, ksef_response = $13,
+			updated_at = NOW()
 		WHERE id = $1`,
 		inv.ID, inv.ExternalID, inv.ExternalNumber, inv.Status,
 		inv.TotalNet, inv.TotalGross, inv.PDFURL,
 		inv.ErrorMessage, inv.Metadata,
+		inv.KSeFNumber, inv.KSeFStatus, inv.KSeFSentAt, inv.KSeFResponse,
 	)
 	if err != nil {
 		return fmt.Errorf("update invoice: %w", err)
@@ -182,6 +192,57 @@ func (r *InvoiceRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 	ct, err := tx.Exec(ctx, "DELETE FROM invoices WHERE id = $1", id)
 	if err != nil {
 		return fmt.Errorf("delete invoice: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("invoice not found")
+	}
+	return nil
+}
+
+// FindPendingKSeF returns all invoices with ksef_status = 'pending'.
+func (r *InvoiceRepository) FindPendingKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
+		        status, invoice_type, total_net, total_gross, currency,
+		        issue_date, due_date, pdf_url, metadata, error_message,
+		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
+		        created_at, updated_at
+		 FROM invoices WHERE ksef_status = 'pending' ORDER BY ksef_sent_at ASC LIMIT 100`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find pending ksef invoices: %w", err)
+	}
+	defer rows.Close()
+
+	var invoices []model.Invoice
+	for rows.Next() {
+		var inv model.Invoice
+		if err := rows.Scan(
+			&inv.ID, &inv.TenantID, &inv.OrderID, &inv.Provider,
+			&inv.ExternalID, &inv.ExternalNumber,
+			&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
+			&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
+			&inv.Metadata, &inv.ErrorMessage,
+			&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
+			&inv.CreatedAt, &inv.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan invoice: %w", err)
+		}
+		invoices = append(invoices, inv)
+	}
+	return invoices, rows.Err()
+}
+
+// UpdateKSeFStatus updates only the KSeF-related fields of an invoice.
+func (r *InvoiceRepository) UpdateKSeFStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, ksefNumber *string, ksefStatus string, ksefResponse []byte) error {
+	ct, err := tx.Exec(ctx,
+		`UPDATE invoices SET
+			ksef_number = $2, ksef_status = $3, ksef_response = $4, updated_at = NOW()
+		WHERE id = $1`,
+		id, ksefNumber, ksefStatus, ksefResponse,
+	)
+	if err != nil {
+		return fmt.Errorf("update ksef status: %w", err)
 	}
 	if ct.RowsAffected() == 0 {
 		return fmt.Errorf("invoice not found")

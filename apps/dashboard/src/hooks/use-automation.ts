@@ -3,6 +3,7 @@ import { apiClient } from "@/lib/api-client";
 import type {
   AutomationRule,
   AutomationRuleLog,
+  DelayedAction,
   ListResponse,
   AutomationRuleListParams,
   CreateAutomationRuleRequest,
@@ -104,5 +105,12 @@ export function useTestAutomationRule(id: string) {
           body: JSON.stringify(data),
         }
       ),
+  });
+}
+
+export function useDelayedActions() {
+  return useQuery({
+    queryKey: ["automation-delayed"],
+    queryFn: () => apiClient<DelayedAction[]>("/v1/automation/delayed"),
   });
 }

@@ -71,7 +71,7 @@ export default function NewAutomationRulePage() {
   };
 
   const addAction = () => {
-    setActions([...actions, { type: "set_status", config: {} }]);
+    setActions([...actions, { type: "set_status", config: {}, delay_seconds: 0 }]);
   };
 
   const updateAction = (index: number, updates: Partial<AutomationAction>) => {
@@ -279,7 +279,7 @@ export default function NewAutomationRulePage() {
           ) : (
             actions.map((action, index) => (
               <div key={index} className="flex items-start gap-3 rounded-md border p-3">
-                <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Typ akcji</Label>
                     <Select
@@ -351,6 +351,22 @@ export default function NewAutomationRulePage() {
                           : ""
                       }
                     />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Opoznienie (minuty)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={Math.round((action.delay_seconds ?? 0) / 60)}
+                      onChange={(e) => {
+                        const minutes = parseInt(e.target.value) || 0;
+                        updateAction(index, { delay_seconds: minutes * 60 });
+                      }}
+                      placeholder="0 = natychmiast"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      0 = natychmiast
+                    </p>
                   </div>
                 </div>
                 <Button

@@ -13,12 +13,13 @@ import { Button } from "@/components/ui/button";
 import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
-import { Download, ShoppingCart, Merge } from "lucide-react";
+import { Download, ShoppingCart, Merge, Printer } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { apiClient } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMergeOrders } from "@/hooks/use-order-groups";
+import { useBatchLabels } from "@/hooks/use-shipments";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -43,6 +44,7 @@ export default function OrdersPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   const mergeOrders = useMergeOrders();
+  const batchLabels = useBatchLabels();
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -228,16 +230,53 @@ export default function OrdersPage() {
             selectedOrders={selectedOrders}
             onClearSelection={() => setSelectedIds(new Set())}
           />
-          {selectedIds.size >= 2 && (
+          <div className="flex gap-2">
+            {selectedIds.size >= 2 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMergeDialog(true)}
+              >
+                <Merge className="mr-2 h-4 w-4" />
+                Scal zamówienia ({selectedIds.size})
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowMergeDialog(true)}
+              onClick={async () => {
+                try {
+                  // Fetch shipments for selected orders and batch download labels
+                  const orderIds = Array.from(selectedIds);
+                  const responses = await Promise.all(
+                    orderIds.map((orderId) =>
+                      apiClient<{ items: { id: string; label_url?: string }[] }>(
+                        `/v1/shipments?order_id=${orderId}&limit=100`
+                      ).catch(() => ({ items: [] }))
+                    )
+                  );
+                  const shipmentIds = responses
+                    .flatMap((r) => r.items)
+                    .filter((s) => s.label_url)
+                    .map((s) => s.id);
+
+                  if (shipmentIds.length === 0) {
+                    toast.error("Brak przesylek z etykietami dla wybranych zamowien");
+                    return;
+                  }
+
+                  await batchLabels.mutateAsync({ shipment_ids: shipmentIds });
+                  toast.success(`Pobrano etykiety (${shipmentIds.length})`);
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                }
+              }}
+              disabled={batchLabels.isPending}
             >
-              <Merge className="mr-2 h-4 w-4" />
-              Scal zamówienia ({selectedIds.size})
+              <Printer className="mr-2 h-4 w-4" />
+              Generuj etykiety ({selectedIds.size})
             </Button>
-          )}
+          </div>
         </div>
       )}
 

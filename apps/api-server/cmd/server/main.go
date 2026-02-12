@@ -138,6 +138,8 @@ func main() {
 	warehouseDocItemRepo := repository.NewWarehouseDocItemRepository()
 	exchangeRateRepo := repository.NewExchangeRateRepository()
 	roleRepo := repository.NewRoleRepository()
+	stocktakeRepo := repository.NewStocktakeRepository()
+	stocktakeItemRepo := repository.NewStocktakeItemRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -170,13 +172,18 @@ func main() {
 	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
 	warehouseDocService := service.NewWarehouseDocumentService(warehouseDocRepo, warehouseDocItemRepo, warehouseStockRepo, auditRepo, pool)
 	exchangeRateService := service.NewExchangeRateService(exchangeRateRepo, auditRepo, pool)
+	ksefService := service.NewKSeFService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool)
+	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
 	automationRuleLogRepo := repository.NewAutomationRuleLogRepository()
+	delayedActionRepo := repository.NewDelayedActionRepository()
 	automationExecutor := automation.NewDefaultActionExecutor(slog.Default())
 	automationEngine := automation.NewEngine(automationRuleRepo, automationRuleLogRepo, pool, automationExecutor, slog.Default())
+	automationEngine.SetDelayedActionRepo(delayedActionRepo)
 	automationService := service.NewAutomationService(automationRuleRepo, automationRuleLogRepo, pool, automationEngine, slog.Default())
+	automationService.SetDelayedActionRepo(delayedActionRepo)
 
 	// Wire automation service into entity services (setter pattern to avoid circular dependency)
 	orderService.SetAutomationService(automationService)
@@ -214,6 +221,9 @@ func main() {
 
 	// Invoice handler
 	invoiceHandler := handler.NewInvoiceHandler(invoiceService)
+
+	// KSeF handler
+	ksefHandler := handler.NewKSeFHandler(ksefService)
 
 	// Supplier handler
 	supplierHandler := handler.NewSupplierHandler(supplierService)
@@ -283,6 +293,9 @@ func main() {
 	// Role handler (Phase 31 — RBAC)
 	roleHandler := handler.NewRoleHandler(roleService)
 
+	// Stocktake handler (inventory counting)
+	stocktakeHandler := handler.NewStocktakeHandler(stocktakeService)
+
 	// Print handler
 	printHandler := handler.NewPrintHandler(tenantRepo, orderRepo, returnRepo, pool)
 
@@ -341,6 +354,8 @@ func main() {
 		ExchangeRate:       exchangeRateHandler,
 		Role:               roleHandler,
 		RoleService:        roleService,
+		Stocktake:          stocktakeHandler,
+		KSeF:               ksefHandler,
 	})
 
 	// Start background workers
@@ -353,6 +368,8 @@ func main() {
 	workerMgr.Register(worker.NewWooCommerceOrderPoller(pool, encryptionKey, orderRepo, slog.Default()))
 	workerMgr.Register(worker.NewSupplierSyncWorker(pool, supplierService, slog.Default()))
 	workerMgr.Register(worker.NewExchangeRateWorker(pool, exchangeRateService, slog.Default()))
+	workerMgr.Register(worker.NewKSeFStatusWorker(pool, ksefService, slog.Default()))
+	workerMgr.Register(worker.NewDelayedActionWorker(pool, delayedActionRepo, automationExecutor, slog.Default()))
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

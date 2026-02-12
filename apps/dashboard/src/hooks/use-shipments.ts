@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, apiFetch } from "@/lib/api-client";
 import type {
   Shipment,
   ListResponse,
@@ -8,6 +8,7 @@ import type {
   UpdateShipmentRequest,
   StatusTransitionRequest,
   GenerateLabelRequest,
+  BatchLabelsRequest,
 } from "@/types/api";
 
 export function useShipments(params: ShipmentListParams = {}) {
@@ -106,6 +107,27 @@ export function useGenerateLabel(id: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipments"] });
+    },
+  });
+}
+
+export function useBatchLabels() {
+  return useMutation({
+    mutationFn: async (data: BatchLabelsRequest) => {
+      const res = await apiFetch("/v1/shipments/batch-labels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "labels.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     },
   });
 }

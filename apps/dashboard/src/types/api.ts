@@ -725,6 +725,10 @@ export interface Invoice {
   pdf_url?: string;
   metadata: Record<string, unknown>;
   error_message?: string;
+  ksef_number?: string;
+  ksef_status: string;
+  ksef_sent_at?: string;
+  ksef_response?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -755,6 +759,32 @@ export interface InvoicingSettings {
   credentials: Record<string, string>;
 }
 
+// === KSeF Settings ===
+export interface KSeFSettings {
+  enabled: boolean;
+  environment: string;
+  nip: string;
+  token: string;
+  company_name: string;
+  company_street: string;
+  company_city: string;
+  company_postal: string;
+  company_country: string;
+}
+
+export interface KSeFTestResult {
+  success: boolean;
+  message: string;
+  timestamp?: string;
+  challenge?: string;
+}
+
+export interface KSeFBulkSendResult {
+  sent: number;
+  errors: string[];
+  total: number;
+}
+
 // === SMS Settings ===
 export interface SMSSettings {
   enabled: boolean;
@@ -774,6 +804,26 @@ export interface AutomationCondition {
 export interface AutomationAction {
   type: string;
   config: Record<string, unknown>;
+  delay_seconds?: number;
+}
+
+export interface DelayedAction {
+  id: string;
+  tenant_id: string;
+  rule_id: string;
+  action_index: number;
+  order_id?: string;
+  execute_at: string;
+  executed: boolean;
+  executed_at?: string;
+  error?: string;
+  created_at: string;
+  action_data: Record<string, unknown>;
+  event_data: Record<string, unknown>;
+}
+
+export interface BatchLabelsRequest {
+  shipment_ids: string[];
 }
 
 export interface AutomationRule {
@@ -1419,6 +1469,68 @@ export interface CreateTicketRequest {
 
 export interface TicketListResponse {
   tickets: FreshdeskTicket[];
+}
+
+// === Stocktakes (Inventory Counting) ===
+export interface Stocktake {
+  id: string;
+  tenant_id: string;
+  warehouse_id: string;
+  name: string;
+  status: "draft" | "in_progress" | "completed" | "cancelled";
+  started_at?: string;
+  completed_at?: string;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  stats?: StocktakeStats;
+  items?: StocktakeItem[];
+}
+
+export interface StocktakeItem {
+  id: string;
+  tenant_id: string;
+  stocktake_id: string;
+  product_id: string;
+  expected_quantity: number;
+  counted_quantity: number | null;
+  difference: number;
+  notes?: string;
+  counted_at?: string;
+  counted_by?: string;
+  created_at: string;
+  product_name?: string;
+  product_sku?: string;
+}
+
+export interface StocktakeStats {
+  total_items: number;
+  counted_items: number;
+  discrepancies: number;
+  surplus_count: number;
+  shortage_count: number;
+}
+
+export interface CreateStocktakeRequest {
+  warehouse_id: string;
+  name: string;
+  notes?: string;
+  product_ids?: string[];
+}
+
+export interface UpdateStocktakeItemRequest {
+  counted_quantity: number;
+  notes?: string;
+}
+
+export interface StocktakeListParams extends PaginationParams {
+  warehouse_id?: string;
+  status?: string;
+}
+
+export interface StocktakeItemListParams extends PaginationParams {
+  filter?: "all" | "uncounted" | "discrepancies";
 }
 
 // === WebSocket Events ===

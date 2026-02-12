@@ -162,6 +162,19 @@ export const INVOICING_PROVIDER_LABELS: Record<string, string> = {
   fakturownia: "Fakturownia",
 };
 
+// === KSeF ===
+export const KSEF_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  not_sent: { label: "Nie wysłano", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  accepted: { label: "Zaakceptowana", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  rejected: { label: "Odrzucona", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+};
+
+export const KSEF_ENVIRONMENTS = [
+  { value: "test", label: "Testowe (ksef-test.mf.gov.pl)" },
+  { value: "production", label: "Produkcyjne (ksef.mf.gov.pl)" },
+] as const;
+
 // === Automation ===
 export const AUTOMATION_TRIGGER_EVENTS = [
   "order.created",

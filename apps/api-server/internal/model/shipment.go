@@ -115,3 +115,15 @@ type ShipmentListFilter struct {
 	OrderID  *uuid.UUID
 	PaginationParams
 }
+
+// BatchLabelsRequest is the payload for batch label download.
+type BatchLabelsRequest struct {
+	ShipmentIDs []uuid.UUID `json:"shipment_ids"`
+}
+
+// BatchLabelResult holds the label data for a single shipment.
+type BatchLabelResult struct {
+	ShipmentID string `json:"shipment_id"`
+	Data       []byte `json:"-"`
+	Error      string `json:"error,omitempty"`
+}

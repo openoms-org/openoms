@@ -28,6 +28,14 @@ type AutomationRuleLogRepo interface {
 	ListByRuleID(ctx context.Context, tx pgx.Tx, ruleID uuid.UUID, limit, offset int) ([]model.AutomationRuleLog, int, error)
 }
 
+// DelayedActionRepo defines the interface for delayed automation action persistence.
+type DelayedActionRepo interface {
+	Create(ctx context.Context, tx pgx.Tx, da *model.DelayedAction) error
+	ListPending(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
+	MarkExecuted(ctx context.Context, tx pgx.Tx, id uuid.UUID, errMsg *string) error
+	ListPendingByTenant(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
+}
+
 // OrderRepo defines the interface for order persistence operations.
 type OrderRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.OrderListFilter) ([]model.Order, int, error)
@@ -189,6 +197,8 @@ type InvoiceRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error
 	Update(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	FindPendingKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error)
+	UpdateKSeFStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, ksefNumber *string, ksefStatus string, ksefResponse []byte) error
 }
 
 // SupplierProductRepo defines the interface for supplier product persistence operations.
@@ -271,6 +281,27 @@ type RoleRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, role *model.Role) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRoleRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}
+
+// StocktakeRepo defines the interface for stocktake persistence operations.
+type StocktakeRepo interface {
+	Create(ctx context.Context, tx pgx.Tx, stocktake *model.Stocktake) error
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Stocktake, error)
+	List(ctx context.Context, tx pgx.Tx, filter model.StocktakeListFilter) ([]model.Stocktake, int, error)
+	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
+	SetStartedAt(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	SetCompletedAt(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}
+
+// StocktakeItemRepo defines the interface for stocktake item persistence operations.
+type StocktakeItemRepo interface {
+	CreateBulk(ctx context.Context, tx pgx.Tx, items []model.StocktakeItem) error
+	List(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID, filter model.StocktakeItemListFilter) ([]model.StocktakeItem, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.StocktakeItem, error)
+	UpdateCount(ctx context.Context, tx pgx.Tx, itemID uuid.UUID, countedQty int, notes *string, countedBy uuid.UUID) error
+	GetStats(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID) (*model.StocktakeStats, error)
+	ListDiscrepancies(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID) ([]model.StocktakeItem, error)
 }
 
 // PriceListRepo defines the interface for price list persistence operations.

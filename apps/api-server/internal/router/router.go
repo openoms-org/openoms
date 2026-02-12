@@ -60,6 +60,8 @@ type RouterDeps struct {
 	ExchangeRate       *handler.ExchangeRateHandler
 	Role               *handler.RoleHandler
 	RoleService        *service.RoleService
+	Stocktake          *handler.StocktakeHandler
+	KSeF               *handler.KSeFHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -162,6 +164,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/sms/test", deps.Settings.SendTestSMS)
 				r.Get("/print-templates", deps.Print.GetPrintTemplates)
 				r.Put("/print-templates", deps.Print.UpdatePrintTemplates)
+				r.Get("/ksef", deps.KSeF.GetSettings)
+				r.Put("/ksef", deps.KSeF.UpdateSettings)
+				r.Post("/ksef/test", deps.KSeF.TestConnection)
 			})
 
 			// Admin-only audit log and webhook deliveries
@@ -222,10 +227,14 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Route("/invoices", func(r chi.Router) {
 				r.Get("/", deps.Invoice.List)
 				r.Post("/", deps.Invoice.Create)
+				r.Post("/ksef/bulk-send", deps.KSeF.BulkSendToKSeF)
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", deps.Invoice.Get)
 					r.Get("/pdf", deps.Invoice.GetPDF)
 					r.Delete("/", deps.Invoice.Cancel)
+					r.Post("/ksef/send", deps.KSeF.SendToKSeF)
+					r.Get("/ksef/status", deps.KSeF.CheckKSeFStatus)
+					r.Get("/ksef/upo", deps.KSeF.GetUPO)
 				})
 			})
 
@@ -233,6 +242,7 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Route("/shipments", func(r chi.Router) {
 				r.Get("/", deps.Shipment.List)
 				r.Post("/", deps.Shipment.Create)
+				r.Post("/batch-labels", deps.Shipment.BatchLabels)
 				r.Get("/{id}", deps.Shipment.Get)
 				r.Patch("/{id}", deps.Shipment.Update)
 				r.Delete("/{id}", deps.Shipment.Delete)
@@ -337,15 +347,18 @@ func New(deps RouterDeps) *chi.Mux {
 			})
 
 			// Automation rules — admin only
-			r.Route("/automation/rules", func(r chi.Router) {
+			r.Route("/automation", func(r chi.Router) {
 				r.Use(middleware.RequireRole("admin"))
-				r.Get("/", deps.Automation.List)
-				r.Post("/", deps.Automation.Create)
-				r.Get("/{id}", deps.Automation.Get)
-				r.Patch("/{id}", deps.Automation.Update)
-				r.Delete("/{id}", deps.Automation.Delete)
-				r.Get("/{id}/logs", deps.Automation.GetLogs)
-				r.Post("/{id}/test", deps.Automation.TestRule)
+				r.Get("/delayed", deps.Automation.ListDelayed)
+				r.Route("/rules", func(r chi.Router) {
+					r.Get("/", deps.Automation.List)
+					r.Post("/", deps.Automation.Create)
+					r.Get("/{id}", deps.Automation.Get)
+					r.Patch("/{id}", deps.Automation.Update)
+					r.Delete("/{id}", deps.Automation.Delete)
+					r.Get("/{id}/logs", deps.Automation.GetLogs)
+					r.Post("/{id}/test", deps.Automation.TestRule)
+				})
 			})
 
 			// Stats — any authenticated user
@@ -383,6 +396,20 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}", deps.WarehouseDocument.Delete)
 				r.Post("/{id}/confirm", deps.WarehouseDocument.Confirm)
 				r.Post("/{id}/cancel", deps.WarehouseDocument.Cancel)
+			})
+
+			// Stocktakes (inventory counting) — admin only
+			r.Route("/stocktakes", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/", deps.Stocktake.List)
+				r.Post("/", deps.Stocktake.Create)
+				r.Get("/{id}", deps.Stocktake.Get)
+				r.Delete("/{id}", deps.Stocktake.Delete)
+				r.Post("/{id}/start", deps.Stocktake.Start)
+				r.Post("/{id}/items/{itemId}/count", deps.Stocktake.RecordCount)
+				r.Post("/{id}/complete", deps.Stocktake.Complete)
+				r.Post("/{id}/cancel", deps.Stocktake.Cancel)
+				r.Get("/{id}/items", deps.Stocktake.ListItems)
 			})
 
 			// AI auto-categorization — any authenticated user

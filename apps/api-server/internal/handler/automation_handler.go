@@ -164,6 +164,17 @@ func (h *AutomationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *AutomationHandler) ListDelayed(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	actions, err := h.automationService.ListDelayed(r.Context(), tenantID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list delayed actions")
+		return
+	}
+	writeJSON(w, http.StatusOK, actions)
+}
+
 func (h *AutomationHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

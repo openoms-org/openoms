@@ -2,7 +2,7 @@
 .git
 .gitignore
 
-# Dependencies
+# Dependencies (reinstalled in Docker)
 **/node_modules
 
 # Build artifacts
@@ -10,16 +10,17 @@
 **/dist
 **/tmp
 
-# Development files
-**/__pycache__
-**/.DS_Store
-**/*.test.go
+# Test files
+**/*_test.go
 **/*.test.ts
 **/*.test.tsx
 **/*.spec.ts
 **/*.spec.tsx
+**/test-results
+**/__pycache__
+**/.DS_Store
 
-# Environment & secrets
+# Environment and secrets
 .env
 .env.*
 !.env.example
@@ -38,12 +39,16 @@ mvp/
 weekend-challenge/
 deploy/
 scripts/
-prompts-obrazy.md
+github/
 
 # Images for landing page (not needed in builds)
 *.webp
 *.png
 openoms-landing-page.html
 
-# Taskfile (dev-only)
+# Development tools
 Taskfile.yml
+DEPLOY-INSTRUKCJA.md
+
+# Uploads (bind-mounted, not baked into image)
+uploads/

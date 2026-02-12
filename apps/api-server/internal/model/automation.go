@@ -72,8 +72,25 @@ type AutomationCondition struct {
 
 // AutomationAction represents a single action in an automation rule.
 type AutomationAction struct {
-	Type   string         `json:"type"`
-	Config map[string]any `json:"config"`
+	Type         string         `json:"type"`
+	Config       map[string]any `json:"config"`
+	DelaySeconds int            `json:"delay_seconds,omitempty"`
+}
+
+// DelayedAction represents a pending delayed automation action.
+type DelayedAction struct {
+	ID          uuid.UUID       `json:"id"`
+	TenantID    uuid.UUID       `json:"tenant_id"`
+	RuleID      uuid.UUID       `json:"rule_id"`
+	ActionIndex int             `json:"action_index"`
+	OrderID     *uuid.UUID      `json:"order_id,omitempty"`
+	ExecuteAt   time.Time       `json:"execute_at"`
+	Executed    bool            `json:"executed"`
+	ExecutedAt  *time.Time      `json:"executed_at,omitempty"`
+	Error       *string         `json:"error,omitempty"`
+	CreatedAt   time.Time       `json:"created_at"`
+	ActionData  json.RawMessage `json:"action_data"`
+	EventData   json.RawMessage `json:"event_data"`
 }
 
 // CreateAutomationRuleRequest is the payload for creating an automation rule.

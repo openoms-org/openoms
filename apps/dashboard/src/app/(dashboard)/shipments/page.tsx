@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Truck } from "lucide-react";
+import { Plus, Truck, Printer } from "lucide-react";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ShipmentFilters } from "@/components/shipments/shipment-filters";
-import { useShipments } from "@/hooks/use-shipments";
+import { useShipments, useBatchLabels } from "@/hooks/use-shipments";
 import { SHIPMENT_STATUSES } from "@/lib/constants";
 import { formatDate, shortId } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/api-client";
 import type { Shipment } from "@/types/api";
 
 const DEFAULT_LIMIT = 20;
@@ -24,6 +26,8 @@ export default function ShipmentsPage() {
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const batchLabels = useBatchLabels();
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -113,12 +117,33 @@ export default function ShipmentsPage() {
             Zarządzaj przesyłkami zamówień
           </p>
         </div>
-        <Button asChild>
-          <Link href="/shipments/new">
-            <Plus className="h-4 w-4" />
-            Nowa przesyłka
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await batchLabels.mutateAsync({
+                    shipment_ids: Array.from(selectedIds),
+                  });
+                  toast.success("Etykiety zostaly pobrane");
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                }
+              }}
+              disabled={batchLabels.isPending}
+            >
+              <Printer className="h-4 w-4" />
+              Drukuj etykiety ({selectedIds.size})
+            </Button>
+          )}
+          <Button asChild>
+            <Link href="/shipments/new">
+              <Plus className="h-4 w-4" />
+              Nowa przesyłka
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <ShipmentFilters
@@ -160,6 +185,10 @@ export default function ShipmentsPage() {
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSort={handleSort}
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        rowId={(row) => row.id}
       />
 
       {data && (
