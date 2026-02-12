@@ -107,7 +107,7 @@ export const PAYMENT_STATUSES: Record<string, { label: string; color: string }> 
 
 export const PAYMENT_METHODS = ["przelew", "pobranie", "karta", "PayU", "Przelewy24", "BLIK"] as const;
 export const SHIPMENT_PROVIDERS = ["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"] as const;
-export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "empik", "erli", "ebay", "kaufland", "olx", "inpost", "dhl", "dpd", "woocommerce"] as const;
+export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik", "inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka", "fakturownia"] as const;
 
 export const ORDER_SOURCE_LABELS: Record<string, string> = {
   manual: "Ręczne",
@@ -145,6 +145,12 @@ export const INTEGRATION_PROVIDER_LABELS: Record<string, string> = {
   dhl: "DHL",
   dpd: "DPD",
   woocommerce: "WooCommerce",
+  gls: "GLS",
+  ups: "UPS",
+  fedex: "FedEx",
+  poczta_polska: "Poczta Polska",
+  orlen_paczka: "Orlen Paczka",
+  fakturownia: "Fakturownia",
 };
 
 export const INVOICE_STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -251,4 +257,115 @@ export const AUTOMATION_ACTION_LABELS: Record<string, string> = {
   send_email: "Wyślij e-mail",
   create_invoice: "Utwórz fakturę",
   webhook: "Wywołaj webhook",
+};
+
+// === Integration Provider Credential Fields ===
+
+export interface CredentialField {
+  key: string;
+  label: string;
+  placeholder: string;
+  helpText?: string;
+  type: "text" | "password" | "url" | "checkbox";
+  required: boolean;
+}
+
+export const PROVIDER_CATEGORIES: Record<string, { label: string; providers: string[] }> = {
+  marketplace: { label: "Marketplace", providers: ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik"] },
+  carrier: { label: "Kurierzy", providers: ["inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka"] },
+  invoicing: { label: "Fakturowanie", providers: ["fakturownia"] },
+};
+
+export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
+  allegro: [
+    { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z apps.developer.allegro.pl", helpText: "Znajdziesz w panelu deweloperskim Allegro: apps.developer.allegro.pl", type: "text", required: true },
+    { key: "client_secret", label: "Client Secret", placeholder: "Twój Client Secret", type: "password", required: true },
+    { key: "access_token", label: "Access Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
+    { key: "refresh_token", label: "Refresh Token", placeholder: "", type: "password", required: false },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  amazon: [
+    { key: "client_id", label: "Client ID (LWA)", placeholder: "amzn1.application-oa2-client.xxx", helpText: "Login with Amazon (LWA) credentials z Seller Central > Develop Apps", type: "text", required: true },
+    { key: "client_secret", label: "Client Secret (LWA)", placeholder: "", type: "password", required: true },
+    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Wygeneruj w Seller Central > Develop Apps > Authorize", type: "password", required: true },
+    { key: "marketplace_id", label: "Marketplace ID", placeholder: "A1C3SOZRARQ6R3", helpText: "Amazon.pl: A1C3SOZRARQ6R3, Amazon.de: A1PA6795UKMFR9", type: "text", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  woocommerce: [
+    { key: "store_url", label: "Adres sklepu", placeholder: "https://twoj-sklep.pl", helpText: "Pełny adres URL Twojego sklepu WooCommerce", type: "url", required: true },
+    { key: "consumer_key", label: "Consumer Key", placeholder: "ck_...", helpText: "WooCommerce > Ustawienia > Zaawansowane > REST API > Dodaj klucz", type: "password", required: true },
+    { key: "consumer_secret", label: "Consumer Secret", placeholder: "cs_...", type: "password", required: true },
+  ],
+  ebay: [
+    { key: "app_id", label: "App ID (Client ID)", placeholder: "Twój App ID z developer.ebay.com", helpText: "Znajdziesz w eBay Developer Program: developer.ebay.com", type: "text", required: true },
+    { key: "cert_id", label: "Cert ID (Client Secret)", placeholder: "", type: "password", required: true },
+    { key: "dev_id", label: "Dev ID", placeholder: "", type: "text", required: true },
+    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Wygeneruj przez eBay OAuth flow", type: "password", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  kaufland: [
+    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API Kaufland", helpText: "Seller Portal Kaufland > Ustawienia > API", type: "password", required: true },
+    { key: "secret_key", label: "Klucz Secret", placeholder: "", type: "password", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  olx: [
+    { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z OLX API", helpText: "Zarejestruj aplikację na developer.olx.pl", type: "text", required: true },
+    { key: "client_secret", label: "Client Secret", placeholder: "", type: "password", required: true },
+    { key: "access_token", label: "Access Token", placeholder: "", helpText: "Wygenerowany po autoryzacji OAuth2", type: "password", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  erli: [
+    { key: "api_token", label: "Token API", placeholder: "Twój token API Erli", helpText: "Panel sprzedawcy Erli > Ustawienia > API", type: "password", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  empik: [
+    { key: "base_url", label: "Adres API Mirakl", placeholder: "https://empikplace-prod.mirakl.net", helpText: "URL platformy Mirakl dla Empik Marketplace", type: "url", required: true },
+    { key: "api_key", label: "Klucz API", placeholder: "", helpText: "Mój Profil > Klucze API w panelu Mirakl", type: "password", required: true },
+  ],
+  inpost: [
+    { key: "api_token", label: "Token API", placeholder: "Twój token API InPost", helpText: "Manager Paczek InPost > Ustawienia > API", type: "password", required: true },
+    { key: "organization_id", label: "ID organizacji", placeholder: "Twój numer organizacji InPost", type: "text", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  dhl: [
+    { key: "username", label: "Nazwa użytkownika", placeholder: "Login do DHL WebAPI", type: "text", required: true },
+    { key: "password", label: "Hasło", placeholder: "", type: "password", required: true },
+    { key: "account_number", label: "Numer konta DHL", placeholder: "Twój numer konta nadawczego", helpText: "Numer konta nadawczego DHL (SAP)", type: "text", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  dpd: [
+    { key: "login", label: "Login", placeholder: "Login do DPD WebAPI", type: "text", required: true },
+    { key: "password", label: "Hasło", placeholder: "", type: "password", required: true },
+    { key: "master_fid", label: "Master FID", placeholder: "Numer Master FID", helpText: "Numer identyfikacyjny nadawcy DPD", type: "text", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  gls: [
+    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API GLS", helpText: "GLS Poland > Konto firmowe > API", type: "password", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  ups: [
+    { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z developer.ups.com", helpText: "UPS Developer Kit: developer.ups.com", type: "text", required: true },
+    { key: "client_secret", label: "Client Secret", placeholder: "", type: "password", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  fedex: [
+    { key: "client_id", label: "Client ID (API Key)", placeholder: "Twój Client ID z developer.fedex.com", helpText: "FedEx Developer Portal: developer.fedex.com", type: "text", required: true },
+    { key: "client_secret", label: "Client Secret (Secret Key)", placeholder: "", type: "password", required: true },
+    { key: "account_number", label: "Numer konta FedEx", placeholder: "Twój 9-cyfrowy numer konta", type: "text", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  poczta_polska: [
+    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API Poczta Polska", helpText: "Elektroniczny Nadawca > Ustawienia > API", type: "password", required: true },
+    { key: "partner_id", label: "ID Partnera", placeholder: "Twój identyfikator partnera", type: "text", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  orlen_paczka: [
+    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API Orlen Paczka", helpText: "Panel Orlen Paczka > Ustawienia > Dostęp API", type: "password", required: true },
+    { key: "partner_id", label: "ID Partnera", placeholder: "Twój identyfikator partnera", type: "text", required: true },
+    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+  ],
+  fakturownia: [
+    { key: "api_token", label: "Token API", placeholder: "Twój token API Fakturownia", helpText: "Ustawienia > Ustawienia konta > Integracja > Kod autoryzacyjny API", type: "password", required: true },
+    { key: "subdomain", label: "Subdomena", placeholder: "twoja-firma", helpText: "Nazwa Twojego konta, np. 'twoja-firma' z twoja-firma.fakturownia.pl", type: "text", required: true },
+  ],
 };
