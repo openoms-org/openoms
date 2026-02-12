@@ -89,12 +89,19 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 		Reference: req.Reference,
 	}
 
-	// Set target point for locker or address for courier
-	if req.TargetPoint != "" {
-		inpostReq.CustomAttributes = &inpostsdk.CustomAttributes{
-			TargetPoint: req.TargetPoint,
+	// Set custom attributes (target point and/or sending method)
+	if req.TargetPoint != "" || req.SendingMethod != "" {
+		inpostReq.CustomAttributes = &inpostsdk.CustomAttributes{}
+		if req.TargetPoint != "" {
+			inpostReq.CustomAttributes.TargetPoint = req.TargetPoint
 		}
-	} else {
+		if req.SendingMethod != "" {
+			inpostReq.CustomAttributes.SendingMethod = req.SendingMethod
+		}
+	}
+
+	// Set receiver address for courier services
+	if req.TargetPoint == "" {
 		inpostReq.Receiver.Address = &inpostsdk.Address{
 			Street:      req.Receiver.Street,
 			City:        req.Receiver.City,
@@ -198,6 +205,28 @@ func (p *InPostProvider) GetTracking(ctx context.Context, trackingNumber string)
 
 func (p *InPostProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return fmt.Errorf("inpost: cancel shipment not implemented")
+}
+
+func (p *InPostProvider) CreateDispatchOrder(ctx context.Context, shipmentExternalIDs []int64, address integration.DispatchOrderAddress, contact integration.DispatchOrderContact) (int64, error) {
+	req := &inpostsdk.CreateDispatchOrderRequest{
+		Shipments: shipmentExternalIDs,
+		Address: &inpostsdk.DispatchOrderAddress{
+			Street:         address.Street,
+			BuildingNumber: address.BuildingNumber,
+			City:           address.City,
+			PostCode:       address.PostCode,
+			CountryCode:    address.CountryCode,
+		},
+		Name:    contact.Name,
+		Phone:   contact.Phone,
+		Email:   contact.Email,
+		Comment: contact.Comment,
+	}
+	order, err := p.client.DispatchOrders.Create(ctx, req)
+	if err != nil {
+		return 0, fmt.Errorf("inpost: create dispatch order: %w", err)
+	}
+	return order.ID, nil
 }
 
 func (p *InPostProvider) MapStatus(carrierStatus string) (string, bool) {

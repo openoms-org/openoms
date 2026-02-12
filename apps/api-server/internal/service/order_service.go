@@ -33,6 +33,7 @@ type OrderService struct {
 	invoiceService    *InvoiceService
 	smsService        *SMSService
 	automationService *AutomationService
+	shipmentService   *ShipmentService
 }
 
 func NewOrderService(
@@ -78,6 +79,11 @@ func (s *OrderService) SetAutomationService(automationSvc *AutomationService) {
 // SetSMSService sets the SMS service for sending SMS notifications on status change.
 func (s *OrderService) SetSMSService(smsSvc *SMSService) {
 	s.smsService = smsSvc
+}
+
+// SetShipmentService sets the shipment service for auto-creating shipments with orders.
+func (s *OrderService) SetShipmentService(shipmentSvc *ShipmentService) {
+	s.shipmentService = shipmentSvc
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
@@ -232,6 +238,25 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
 		"currency": order.Currency, "payment_status": order.PaymentStatus,
 	})
+
+	// Auto-create shipment if requested (best effort — never fails order creation)
+	if req.AutoCreateShipment && req.ShipmentProvider != nil && *req.ShipmentProvider != "" && s.shipmentService != nil {
+		go func() {
+			shipReq := model.CreateShipmentRequest{
+				OrderID:  order.ID,
+				Provider: *req.ShipmentProvider,
+			}
+			// Include pickup_point_id as carrier_data.target_point if present
+			if req.PickupPointID != nil && *req.PickupPointID != "" {
+				cd, _ := json.Marshal(map[string]string{"target_point": *req.PickupPointID})
+				shipReq.CarrierData = cd
+			}
+			if _, err := s.shipmentService.Create(context.Background(), tenantID, shipReq, actorID, ip); err != nil {
+				slog.Error("auto-create shipment failed", "order_id", order.ID, "provider", *req.ShipmentProvider, "error", err)
+			}
+		}()
+	}
+
 	return order, nil
 }
 

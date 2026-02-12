@@ -16,6 +16,7 @@ export interface CarrierFieldValues {
   service_type?: string;
   target_point?: string;
   parcel_size?: string;
+  sending_method?: string;
   weight_kg?: number;
   width_cm?: number;
   height_cm?: number;
@@ -168,6 +169,31 @@ function InPostFields({
           />
         </div>
       )}
+
+      {/* Sending method */}
+      <div className="space-y-2">
+        <Label>Metoda nadania</Label>
+        <Select
+          value={(values.sending_method as string) ?? "__default__"}
+          onValueChange={(v) => onChange("sending_method", v === "__default__" ? undefined : v)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Domyślna (z ustawień integracji)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__default__">Domyślna (z ustawień integracji)</SelectItem>
+            <SelectItem value="dispatch_order">Kurier odbierze (zlecenie odbioru)</SelectItem>
+            <SelectItem value="parcel_locker">Nadam w paczkomacie</SelectItem>
+            <SelectItem value="pop">Nadam w PaczkoPunkcie (POP)</SelectItem>
+            <SelectItem value="any_point">Dowolny punkt (paczkomat/POP)</SelectItem>
+            <SelectItem value="pok">Punkt Obsługi Klienta (POK)</SelectItem>
+            <SelectItem value="branch">Oddział InPost</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Jak paczka trafi do sieci InPost. Pozostaw puste, aby użyć domyślnej metody z ustawień integracji.
+        </p>
+      </div>
 
       {/* Parcel size */}
       <div className="space-y-2">

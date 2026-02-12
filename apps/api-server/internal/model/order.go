@@ -66,6 +66,10 @@ type CreateOrderRequest struct {
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
 	InternalNotes   string           `json:"internal_notes,omitempty"`
 	Priority        string           `json:"priority,omitempty"`
+
+	// Transient: trigger shipment auto-creation (not persisted on order)
+	ShipmentProvider   *string `json:"shipment_provider,omitempty"`
+	AutoCreateShipment bool    `json:"auto_create_shipment,omitempty"`
 }
 
 var validPriorities = map[string]bool{
@@ -124,6 +128,9 @@ func (r *CreateOrderRequest) Validate() error {
 	}
 	if !IsValidPriority(r.Priority) {
 		return errors.New("priority must be one of: low, normal, high, urgent")
+	}
+	if r.AutoCreateShipment && (r.ShipmentProvider == nil || *r.ShipmentProvider == "") {
+		return errors.New("shipment_provider is required when auto_create_shipment is true")
 	}
 	return nil
 }

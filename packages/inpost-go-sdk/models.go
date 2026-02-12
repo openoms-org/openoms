@@ -63,10 +63,55 @@ type Weight struct {
 	Unit   string  `json:"unit"`
 }
 
+// SendingMethod identifies how the sender hands over parcels to InPost.
+type SendingMethod string
+
+const (
+	SendingMethodParcelLocker  SendingMethod = "parcel_locker"
+	SendingMethodDispatchOrder SendingMethod = "dispatch_order"
+	SendingMethodPOP           SendingMethod = "pop"
+	SendingMethodAnyPoint      SendingMethod = "any_point"
+	SendingMethodPOK           SendingMethod = "pok"
+	SendingMethodBranch        SendingMethod = "branch"
+)
+
 // CustomAttributes holds service-specific attributes.
 type CustomAttributes struct {
 	TargetPoint   string `json:"target_point,omitempty"`
 	SendingMethod string `json:"sending_method,omitempty"`
+}
+
+// DispatchOrderAddress is the pickup address for a dispatch order.
+type DispatchOrderAddress struct {
+	Street         string `json:"street"`
+	BuildingNumber string `json:"building_number"`
+	City           string `json:"city"`
+	PostCode       string `json:"post_code"`
+	CountryCode    string `json:"country_code"`
+}
+
+// CreateDispatchOrderRequest is the payload sent to create a new dispatch order.
+type CreateDispatchOrderRequest struct {
+	Shipments []int64               `json:"shipments"`
+	Address   *DispatchOrderAddress `json:"address"`
+	Name      string                `json:"name"`
+	Phone     string                `json:"phone"`
+	Email     string                `json:"email"`
+	Comment   string                `json:"comment,omitempty"`
+}
+
+// DispatchOrder is the API response for a dispatch order resource.
+type DispatchOrder struct {
+	ID        int64                 `json:"id"`
+	Status    string                `json:"status"`
+	Shipments []int64               `json:"shipments"`
+	Address   *DispatchOrderAddress `json:"address"`
+	Name      string                `json:"name"`
+	Phone     string                `json:"phone"`
+	Email     string                `json:"email"`
+	Comment   string                `json:"comment"`
+	CreatedAt string                `json:"created_at"`
+	UpdatedAt string                `json:"updated_at"`
 }
 
 // OfferService identifies the service of an offer.

@@ -13,11 +13,13 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
-func NewAmazonOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repository.OrderRepo, logger *slog.Logger) *MarketplaceOrderPoller {
+func NewAmazonOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repository.OrderRepo, shipmentRepo repository.ShipmentRepo, auditRepo repository.AuditRepo, logger *slog.Logger) *MarketplaceOrderPoller {
 	return NewMarketplaceOrderPoller(MarketplaceOrderPollerConfig{
 		Pool:          pool,
 		EncryptionKey: encryptionKey,
 		OrderRepo:     orderRepo,
+		ShipmentRepo:  shipmentRepo,
+		AuditRepo:     auditRepo,
 		Logger:        logger,
 		ProviderName:  "amazon",
 		Interval:      2 * time.Minute,

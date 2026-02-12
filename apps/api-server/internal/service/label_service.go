@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -100,6 +101,11 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 						req.ParcelSize = ps
 					}
 				}
+				if req.SendingMethod == "" {
+					if sm, ok := cd["sending_method"].(string); ok && sm != "" {
+						req.SendingMethod = sm
+					}
+				}
 			}
 		}
 
@@ -138,6 +144,16 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		}
 
 		integrationSettings = integrationData.Settings
+
+		// Fall back to integration-level default sending method
+		if req.SendingMethod == "" && len(integrationSettings) > 0 {
+			var settingsMap map[string]interface{}
+			if err := json.Unmarshal(integrationSettings, &settingsMap); err == nil {
+				if sm, ok := settingsMap["default_sending_method"].(string); ok && sm != "" {
+					req.SendingMethod = sm
+				}
+			}
+		}
 
 		// Decrypt credentials
 		credJSON, err = crypto.Decrypt(integrationData.EncryptedCredentials, s.encryptionKey)
@@ -193,10 +209,11 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 			HeightCm: req.HeightCm,
 			DepthCm:  req.DepthCm,
 		},
-		TargetPoint:  req.TargetPoint,
-		CODAmount:    req.CODAmount,
-		InsuredValue: req.InsuredValue,
-		Reference:    shipment.OrderID.String(),
+		TargetPoint:   req.TargetPoint,
+		SendingMethod: req.SendingMethod,
+		CODAmount:     req.CODAmount,
+		InsuredValue:  req.InsuredValue,
+		Reference:     shipment.OrderID.String(),
 	}
 
 	resp, err := carrier.CreateShipment(ctx, carrierReq)
@@ -244,6 +261,9 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		}
 		if req.ParcelSize != "" {
 			carrierData["parcel_size"] = req.ParcelSize
+		}
+		if req.SendingMethod != "" {
+			carrierData["sending_method"] = req.SendingMethod
 		}
 		carrierDataJSON, err := json.Marshal(carrierData)
 		if err != nil {
@@ -341,4 +361,153 @@ func (s *LabelService) GetTracking(ctx context.Context, tenantID, shipmentID uui
 		events = []integration.TrackingEvent{}
 	}
 	return events, nil
+}
+
+// CreateDispatchOrder creates a dispatch order (courier pickup) for the given shipments.
+func (s *LabelService) CreateDispatchOrder(ctx context.Context, tenantID uuid.UUID, req model.CreateDispatchOrderRequest, actorID uuid.UUID, ip string) (*model.DispatchOrderResponse, error) {
+	var shipments []*model.Shipment
+	var credJSON []byte
+	var integrationSettings json.RawMessage
+	var provider string
+
+	// First transaction: load and validate all shipments, load integration
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		for _, sid := range req.ShipmentIDs {
+			shipment, err := s.shipmentRepo.FindByID(ctx, tx, sid)
+			if err != nil {
+				return err
+			}
+			if shipment == nil {
+				return ErrShipmentNotFound
+			}
+			if shipment.Status != "label_ready" && shipment.Status != "confirmed" {
+				return NewValidationError(fmt.Errorf("shipment %s must be in 'label_ready' or 'confirmed' status (current: %s)", sid, shipment.Status))
+			}
+			if provider == "" {
+				provider = shipment.Provider
+			} else if shipment.Provider != provider {
+				return NewValidationError(fmt.Errorf("all shipments must use the same carrier provider"))
+			}
+			shipments = append(shipments, shipment)
+		}
+
+		integrationData, err := s.integrationRepo.FindByProvider(ctx, tx, provider)
+		if err != nil {
+			return err
+		}
+		if integrationData == nil {
+			return ErrNoCarrierIntegration
+		}
+		integrationSettings = integrationData.Settings
+
+		credJSON, err = crypto.Decrypt(integrationData.EncryptedCredentials, s.encryptionKey)
+		if err != nil {
+			return fmt.Errorf("decrypting integration credentials: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Create carrier provider and assert DispatchOrderCreator capability
+	carrier, err := integration.NewCarrierProvider(provider, credJSON, integrationSettings)
+	if err != nil {
+		return nil, fmt.Errorf("creating carrier provider: %w", err)
+	}
+
+	dispatchCreator, ok := carrier.(integration.DispatchOrderCreator)
+	if !ok {
+		return nil, NewValidationError(fmt.Errorf("carrier %q does not support dispatch orders", provider))
+	}
+
+	// Extract external IDs from carrier_data
+	var externalIDs []int64
+	for _, shipment := range shipments {
+		var cd map[string]interface{}
+		if err := json.Unmarshal(shipment.CarrierData, &cd); err != nil {
+			return nil, fmt.Errorf("parsing carrier_data for shipment %s: %w", shipment.ID, err)
+		}
+		extIDStr, ok := cd["external_id"].(string)
+		if !ok || extIDStr == "" {
+			return nil, NewValidationError(fmt.Errorf("shipment %s has no external_id in carrier_data", shipment.ID))
+		}
+		extID, err := strconv.ParseInt(extIDStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("parsing external_id for shipment %s: %w", shipment.ID, err)
+		}
+		externalIDs = append(externalIDs, extID)
+	}
+
+	// Build address and contact
+	address := integration.DispatchOrderAddress{
+		Street:         req.Street,
+		BuildingNumber: req.BuildingNo,
+		City:           req.City,
+		PostCode:       req.PostCode,
+		CountryCode:    "PL",
+	}
+	contact := integration.DispatchOrderContact{
+		Name:    req.Name,
+		Phone:   req.Phone,
+		Email:   req.Email,
+		Comment: req.Comment,
+	}
+
+	// Call carrier API
+	orderID, err := dispatchCreator.CreateDispatchOrder(ctx, externalIDs, address, contact)
+	if err != nil {
+		return nil, fmt.Errorf("carrier create dispatch order: %w", err)
+	}
+
+	slog.Info("dispatch order created",
+		"dispatch_order_id", orderID,
+		"provider", provider,
+		"shipment_count", len(shipments),
+	)
+
+	// Second transaction: save dispatch_order_id in each shipment's carrier_data and audit log
+	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		for _, shipment := range shipments {
+			var cd map[string]interface{}
+			if err := json.Unmarshal(shipment.CarrierData, &cd); err != nil {
+				cd = map[string]interface{}{}
+			}
+			cd["dispatch_order_id"] = orderID
+
+			updatedCD, err := json.Marshal(cd)
+			if err != nil {
+				return fmt.Errorf("marshaling updated carrier_data: %w", err)
+			}
+
+			updateReq := model.UpdateShipmentRequest{
+				CarrierData: updatedCD,
+			}
+			if err := s.shipmentRepo.Update(ctx, tx, shipment.ID, updateReq); err != nil {
+				return fmt.Errorf("updating shipment %s carrier_data: %w", shipment.ID, err)
+			}
+		}
+
+		if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "shipment.dispatch_order_created",
+			EntityType: "shipment",
+			EntityID:   shipments[0].ID,
+			Changes:    map[string]string{"dispatch_order_id": strconv.FormatInt(orderID, 10), "shipment_count": strconv.Itoa(len(shipments))},
+			IPAddress:  ip,
+		}); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.DispatchOrderResponse{
+		ID:     orderID,
+		Status: "created",
+	}, nil
 }

@@ -47,15 +47,16 @@ type PickupPoint struct {
 
 // CarrierShipmentRequest contains all data needed to create a shipment with a carrier.
 type CarrierShipmentRequest struct {
-	OrderID      string          `json:"order_id"`
-	ServiceType  string          `json:"service_type"`
-	Receiver     CarrierReceiver `json:"receiver"`
-	Parcel       CarrierParcel   `json:"parcel"`
-	TargetPoint  string          `json:"target_point,omitempty"` // locker ID for InPost
-	CODAmount    float64         `json:"cod_amount,omitempty"`
-	CODCurrency  string          `json:"cod_currency,omitempty"`
-	InsuredValue float64         `json:"insured_value,omitempty"`
-	Reference    string          `json:"reference,omitempty"`
+	OrderID       string          `json:"order_id"`
+	ServiceType   string          `json:"service_type"`
+	Receiver      CarrierReceiver `json:"receiver"`
+	Parcel        CarrierParcel   `json:"parcel"`
+	TargetPoint   string          `json:"target_point,omitempty"`   // locker ID for InPost
+	SendingMethod string          `json:"sending_method,omitempty"` // e.g. parcel_locker, dispatch_order
+	CODAmount     float64         `json:"cod_amount,omitempty"`
+	CODCurrency   string          `json:"cod_currency,omitempty"`
+	InsuredValue  float64         `json:"insured_value,omitempty"`
+	Reference     string          `json:"reference,omitempty"`
 }
 
 // CarrierShipmentResponse is returned after a shipment is created with a carrier.
@@ -103,4 +104,27 @@ type CarrierProvider interface {
 	SupportsPickupPoints() bool
 	SearchPickupPoints(ctx context.Context, query string) ([]PickupPoint, error)
 	GetRates(ctx context.Context, req RateRequest) ([]Rate, error)
+}
+
+// DispatchOrderAddress is the pickup address for a dispatch order.
+type DispatchOrderAddress struct {
+	Street         string `json:"street"`
+	BuildingNumber string `json:"building_number"`
+	City           string `json:"city"`
+	PostCode       string `json:"post_code"`
+	CountryCode    string `json:"country_code"`
+}
+
+// DispatchOrderContact is the contact info for a dispatch order.
+type DispatchOrderContact struct {
+	Name    string `json:"name"`
+	Phone   string `json:"phone"`
+	Email   string `json:"email"`
+	Comment string `json:"comment,omitempty"`
+}
+
+// DispatchOrderCreator is an optional interface that carrier providers can implement
+// to support creating dispatch orders (courier pickup requests).
+type DispatchOrderCreator interface {
+	CreateDispatchOrder(ctx context.Context, shipmentExternalIDs []int64, address DispatchOrderAddress, contact DispatchOrderContact) (int64, error)
 }

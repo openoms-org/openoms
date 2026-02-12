@@ -10,6 +10,8 @@ import type {
   GenerateLabelRequest,
   BatchLabelsRequest,
   TrackingEvent,
+  CreateDispatchOrderRequest,
+  DispatchOrderResponse,
 } from "@/types/api";
 
 export function useShipments(params: ShipmentListParams = {}) {
@@ -139,6 +141,20 @@ export function useBatchLabels() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+    },
+  });
+}
+
+export function useCreateDispatchOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateDispatchOrderRequest) =>
+      apiClient<DispatchOrderResponse>("/v1/shipments/dispatch-order", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
     },
   });
 }

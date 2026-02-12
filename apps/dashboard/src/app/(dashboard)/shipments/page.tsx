@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Truck, Printer } from "lucide-react";
+import { Plus, Truck, Printer, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { DataTable } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ShipmentFilters } from "@/components/shipments/shipment-filters";
+import { DispatchOrderDialog } from "@/components/shipments/dispatch-order-dialog";
 import { useShipments, useBatchLabels } from "@/hooks/use-shipments";
 import { SHIPMENT_STATUSES } from "@/lib/constants";
 import { formatDate, shortId } from "@/lib/utils";
@@ -27,6 +28,7 @@ export default function ShipmentsPage() {
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDispatchDialog, setShowDispatchDialog] = useState(false);
   const batchLabels = useBatchLabels();
 
   const handleSort = (column: string) => {
@@ -118,25 +120,45 @@ export default function ShipmentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  await batchLabels.mutateAsync({
-                    shipment_ids: Array.from(selectedIds),
-                  });
-                  toast.success("Etykiety zostały pobrane");
-                } catch (error) {
-                  toast.error(getErrorMessage(error));
-                }
-              }}
-              disabled={batchLabels.isPending}
-            >
-              <Printer className="h-4 w-4" />
-              Drukuj etykiety ({selectedIds.size})
-            </Button>
-          )}
+          {selectedIds.size > 0 && (() => {
+            const dispatchEligible = (data?.items ?? []).filter(
+              (s) =>
+                selectedIds.has(s.id) &&
+                s.provider === "inpost" &&
+                s.status === "label_ready" &&
+                !s.carrier_data?.dispatch_order_id
+            );
+            return (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await batchLabels.mutateAsync({
+                        shipment_ids: Array.from(selectedIds),
+                      });
+                      toast.success("Etykiety zostaly pobrane");
+                    } catch (error) {
+                      toast.error(getErrorMessage(error));
+                    }
+                  }}
+                  disabled={batchLabels.isPending}
+                >
+                  <Printer className="h-4 w-4" />
+                  Drukuj etykiety ({selectedIds.size})
+                </Button>
+                {dispatchEligible.length > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDispatchDialog(true)}
+                  >
+                    <PackageCheck className="h-4 w-4" />
+                    Zamow kuriera ({dispatchEligible.length})
+                  </Button>
+                )}
+              </>
+            );
+          })()}
           <Button asChild>
             <Link href="/shipments/new">
               <Plus className="h-4 w-4" />
@@ -204,6 +226,20 @@ export default function ShipmentsPage() {
           }
         />
       )}
+
+      <DispatchOrderDialog
+        shipmentIds={(data?.items ?? [])
+          .filter(
+            (s) =>
+              selectedIds.has(s.id) &&
+              s.provider === "inpost" &&
+              s.status === "label_ready" &&
+              !s.carrier_data?.dispatch_order_id
+          )
+          .map((s) => s.id)}
+        open={showDispatchDialog}
+        onOpenChange={setShowDispatchDialog}
+      />
     </div>
   );
 }

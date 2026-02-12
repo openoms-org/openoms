@@ -94,6 +94,7 @@ export function GenerateLabelDialog({
     if (carrierValues.depth_cm != null) data.depth_cm = carrierValues.depth_cm;
     if (carrierValues.cod_amount != null) data.cod_amount = carrierValues.cod_amount;
     if (carrierValues.insured_value != null) data.insured_value = carrierValues.insured_value;
+    if (carrierValues.sending_method) data.sending_method = carrierValues.sending_method as string;
 
     generateLabel.mutate(data, {
       onSuccess: () => {
