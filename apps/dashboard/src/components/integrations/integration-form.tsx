@@ -53,9 +53,20 @@ interface IntegrationFormProps {
     settings?: Record<string, unknown>;
   }) => void;
   isLoading?: boolean;
+  /** Edit mode: provider is fixed and fields pre-filled from existing settings */
+  editProvider?: string;
+  /** Existing settings to pre-fill settings fields (e.g. geowidget_token) */
+  existingSettings?: Record<string, unknown>;
 }
 
-export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationFormProps) {
+export function IntegrationForm({
+  onSubmit,
+  isLoading = false,
+  editProvider,
+  existingSettings,
+}: IntegrationFormProps) {
+  const isEditMode = !!editProvider;
+
   const {
     register,
     handleSubmit,
@@ -65,15 +76,28 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
   } = useForm<IntegrationFormValues>({
     resolver: zodResolver(integrationSchema),
     defaultValues: {
-      provider: "",
+      provider: editProvider ?? "",
       settings: "",
     },
   });
 
-  const selectedProvider = watch("provider");
+  const selectedProvider = editProvider ?? watch("provider");
   const fields = selectedProvider ? (PROVIDER_CREDENTIAL_FIELDS[selectedProvider] ?? []) : [];
 
-  const [credentialValues, setCredentialValues] = useState<Record<string, string | boolean>>({});
+  // In edit mode, pre-fill settings-mapped fields from existingSettings
+  const buildInitialValues = (): Record<string, string | boolean> => {
+    if (!isEditMode || !existingSettings) return {};
+    const settingsFields = PROVIDER_SETTINGS_FIELDS[selectedProvider] ?? [];
+    const initial: Record<string, string | boolean> = {};
+    for (const key of settingsFields) {
+      const val = existingSettings[key];
+      if (typeof val === "string") initial[key] = val;
+      if (typeof val === "boolean") initial[key] = val;
+    }
+    return initial;
+  };
+
+  const [credentialValues, setCredentialValues] = useState<Record<string, string | boolean>>(buildInitialValues);
   const [credentialErrors, setCredentialErrors] = useState<Record<string, string>>({});
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -101,7 +125,8 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
   const validateCredentials = (): boolean => {
     const newErrors: Record<string, string> = {};
     for (const field of fields) {
-      if (field.required && field.type !== "checkbox") {
+      // In edit mode, required fields are optional (user may only update some)
+      if (!isEditMode && field.required && field.type !== "checkbox") {
         const val = credentialValues[field.key];
         if (!val || (typeof val === "string" && val.trim() === "")) {
           newErrors[field.key] = `Pole "${field.label}" jest wymagane`;
@@ -125,6 +150,7 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
   const handleFormSubmit = (data: IntegrationFormValues) => {
     if (!validateCredentials()) return;
 
+    const provider = editProvider ?? data.provider;
     const credentials: Record<string, unknown> = {};
     for (const field of fields) {
       const val = credentialValues[field.key];
@@ -136,7 +162,7 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
     }
 
     // Extract fields that should go to settings instead of credentials
-    const settingsFields = PROVIDER_SETTINGS_FIELDS[data.provider] ?? [];
+    const settingsFields = PROVIDER_SETTINGS_FIELDS[provider] ?? [];
     const autoSettings: Record<string, unknown> = {};
     for (const key of settingsFields) {
       if (credentials[key] !== undefined) {
@@ -153,18 +179,16 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
       finalSettings = autoSettings;
     }
 
-    const result: {
-      provider: string;
-      credentials: Record<string, unknown>;
-      settings?: Record<string, unknown>;
-    } = {
-      provider: data.provider,
+    // In edit mode, merge with existing settings to preserve unmodified keys
+    if (isEditMode && existingSettings) {
+      finalSettings = { ...existingSettings, ...(finalSettings ?? {}) };
+    }
+
+    onSubmit({
+      provider,
       credentials,
-    };
-
-    result.settings = finalSettings;
-
-    onSubmit(result);
+      settings: finalSettings,
+    });
   };
 
   const regularFields = fields.filter((f) => f.type !== "checkbox");
@@ -197,13 +221,13 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
       <div key={field.key} className="space-y-2">
         <Label htmlFor={`cred-${field.key}`}>
           {field.label}
-          {field.required && <span className="text-destructive ml-1">*</span>}
+          {!isEditMode && field.required && <span className="text-destructive ml-1">*</span>}
         </Label>
         <div className="relative">
           <Input
             id={`cred-${field.key}`}
             type={inputType}
-            placeholder={field.placeholder}
+            placeholder={isEditMode ? "Pozostaw puste, aby nie zmieniać" : field.placeholder}
             value={(credentialValues[field.key] as string) ?? ""}
             onChange={(e) => handleCredentialChange(field.key, e.target.value)}
             className={isPassword ? "pr-10" : ""}
@@ -241,43 +265,50 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Provider selection grouped by category */}
-      <div className="space-y-2">
-        <Label htmlFor="provider">Dostawca</Label>
-        <Select
-          value={selectedProvider}
-          onValueChange={handleProviderChange}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz dostawcę" />
-          </SelectTrigger>
-          <SelectContent>
-            {categoryEntries.map(([catKey, category], catIndex) => (
-              <SelectGroup key={catKey}>
-                {catIndex > 0 && <SelectSeparator />}
-                <SelectLabel>{category.label}</SelectLabel>
-                {category.providers.map((provider) => (
-                  <SelectItem key={provider} value={provider}>
-                    {INTEGRATION_PROVIDER_LABELS[provider] ??
-                      provider.charAt(0).toUpperCase() + provider.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.provider && (
-          <p className="text-sm text-destructive">{errors.provider.message}</p>
-        )}
-      </div>
+      {/* Provider selection — only shown in create mode */}
+      {!isEditMode && (
+        <div className="space-y-2">
+          <Label htmlFor="provider">Dostawca</Label>
+          <Select
+            value={selectedProvider}
+            onValueChange={handleProviderChange}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Wybierz dostawcę" />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryEntries.map(([catKey, category], catIndex) => (
+                <SelectGroup key={catKey}>
+                  {catIndex > 0 && <SelectSeparator />}
+                  <SelectLabel>{category.label}</SelectLabel>
+                  {category.providers.map((provider) => (
+                    <SelectItem key={provider} value={provider}>
+                      {INTEGRATION_PROVIDER_LABELS[provider] ??
+                        provider.charAt(0).toUpperCase() + provider.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.provider && (
+            <p className="text-sm text-destructive">{errors.provider.message}</p>
+          )}
+        </div>
+      )}
 
       {/* Dynamic credential fields */}
       {selectedProvider && fields.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-foreground">
-            Dane uwierzytelniające &mdash;{" "}
+            {isEditMode ? "Aktualizuj dane" : "Dane uwierzytelniające"} &mdash;{" "}
             {INTEGRATION_PROVIDER_LABELS[selectedProvider] ?? selectedProvider}
           </h3>
+          {isEditMode && (
+            <p className="text-sm text-muted-foreground">
+              Wypełnij tylko pola, które chcesz zmienić. Puste pola nie zostaną nadpisane.
+            </p>
+          )}
 
           {/* Regular (text/password/url) fields */}
           {regularFields.map(renderField)}
@@ -325,7 +356,10 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
 
       <div className="flex justify-end gap-3">
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Tworzenie..." : "Utwórz integrację"}
+          {isLoading
+            ? isEditMode ? "Aktualizowanie..." : "Tworzenie..."
+            : isEditMode ? "Zapisz zmiany" : "Utwórz integrację"
+          }
         </Button>
       </div>
     </form>
