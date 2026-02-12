@@ -16,10 +16,11 @@ const (
 
 // Client is an InPost ShipX API client.
 type Client struct {
-	httpClient *http.Client
-	baseURL    string
-	token      string
-	orgID      string
+	httpClient    *http.Client
+	baseURL       string
+	pointsBaseURL string
+	token         string
+	orgID         string
 
 	Shipments *ShipmentService
 	Labels    *LabelService
@@ -51,6 +52,13 @@ func WithBaseURL(url string) Option {
 	}
 }
 
+// WithPointsBaseURL sets a custom base URL for the Points API (useful for testing).
+func WithPointsBaseURL(url string) Option {
+	return func(cl *Client) {
+		cl.pointsBaseURL = url
+	}
+}
+
 // NewClient creates a new InPost API client.
 func NewClient(token, organizationID string, opts ...Option) *Client {
 	c := &Client{
@@ -66,7 +74,7 @@ func NewClient(token, organizationID string, opts ...Option) *Client {
 
 	c.Shipments = &ShipmentService{client: c}
 	c.Labels = &LabelService{client: c}
-	c.Points = &PointService{client: c}
+	c.Points = &PointService{client: c, baseURL: c.pointsBaseURL}
 	c.Tracking = &TrackingService{client: c}
 
 	return c
