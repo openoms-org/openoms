@@ -24,7 +24,8 @@ const orderSelectColumns = `id, tenant_id, external_id, source, integration_id, 
 		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at,
 		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, customer_id, merged_into, split_from, created_at, updated_at`
+		        payment_status, payment_method, paid_at, customer_id, merged_into, split_from,
+		        internal_notes, priority, created_at, updated_at`
 
 // scanOrder scans a row into a model.Order using the orderSelectColumns column order.
 func scanOrder(row pgx.Row) (model.Order, error) {
@@ -36,7 +37,8 @@ func scanOrder(row pgx.Row) (model.Order, error) {
 		&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 		&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
 		&o.DeliveryMethod, &o.PickupPointID,
-		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.MergedInto, &o.SplitFrom, &o.CreatedAt, &o.UpdatedAt,
+		&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.MergedInto, &o.SplitFrom,
+		&o.InternalNotes, &o.Priority, &o.CreatedAt, &o.UpdatedAt,
 	)
 	return o, err
 }
@@ -69,6 +71,11 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 	if filter.Tag != nil {
 		where += fmt.Sprintf(" AND tags @> ARRAY[$%d]::text[]", argIdx)
 		args = append(args, *filter.Tag)
+		argIdx++
+	}
+	if filter.Priority != nil {
+		where += fmt.Sprintf(" AND priority = $%d", argIdx)
+		args = append(args, *filter.Priority)
 		argIdx++
 	}
 
@@ -140,8 +147,9 @@ func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Or
 			shipping_address, billing_address, items,
 			total_amount, currency, notes, metadata, tags, ordered_at,
 			delivery_method, pickup_point_id,
-			payment_status, payment_method
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+			payment_status, payment_method,
+			internal_notes, priority
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 		RETURNING created_at, updated_at`,
 		order.ID, order.TenantID, order.ExternalID, order.Source, order.IntegrationID, order.Status,
 		order.CustomerName, order.CustomerEmail, order.CustomerPhone,
@@ -149,6 +157,7 @@ func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Or
 		order.TotalAmount, order.Currency, order.Notes, order.Metadata, tags, order.OrderedAt,
 		order.DeliveryMethod, order.PickupPointID,
 		order.PaymentStatus, order.PaymentMethod,
+		order.InternalNotes, order.Priority,
 	).Scan(&order.CreatedAt, &order.UpdatedAt)
 }
 
@@ -240,6 +249,16 @@ func (r *OrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, r
 	if req.PaidAt != nil {
 		setClauses = append(setClauses, fmt.Sprintf("paid_at = $%d", argIdx))
 		args = append(args, *req.PaidAt)
+		argIdx++
+	}
+	if req.InternalNotes != nil {
+		setClauses = append(setClauses, fmt.Sprintf("internal_notes = $%d", argIdx))
+		args = append(args, *req.InternalNotes)
+		argIdx++
+	}
+	if req.Priority != nil {
+		setClauses = append(setClauses, fmt.Sprintf("priority = $%d", argIdx))
+		args = append(args, *req.Priority)
 		argIdx++
 	}
 

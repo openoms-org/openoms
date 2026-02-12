@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Package, Plus, Search, Sparkles, Loader2, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -31,7 +31,9 @@ const DEFAULT_LIMIT = 20;
 export default function ProductsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [localTagFilter, setLocalTagFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const tagDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
   const [sortBy, setSortBy] = useState<string>("created_at");
@@ -49,10 +51,31 @@ export default function ProductsPage() {
     setPagination((prev) => ({ ...prev, offset: 0 }));
   };
 
+  const handleTagFilterChange = (value: string) => {
+    setLocalTagFilter(value);
+    if (tagDebounceRef.current) {
+      clearTimeout(tagDebounceRef.current);
+    }
+    tagDebounceRef.current = setTimeout(() => {
+      setTagFilter(value);
+      setPagination((prev) => ({ ...prev, offset: 0 }));
+    }, 300);
+  };
+
+  // Cleanup tag debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (tagDebounceRef.current) {
+        clearTimeout(tagDebounceRef.current);
+      }
+    };
+  }, []);
+
   const { data: categoriesConfig } = useProductCategories();
 
   const { data, isLoading, isError, refetch } = useProducts({
     ...pagination,
+    search: search || undefined,
     name: search || undefined,
     tag: tagFilter || undefined,
     category: categoryFilter || undefined,
@@ -285,7 +308,7 @@ export default function ProductsPage() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Szukaj po nazwie..."
+            placeholder="Szukaj po nazwie, SKU lub EAN..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -296,11 +319,8 @@ export default function ProductsPage() {
         </div>
         <Input
           placeholder="Filtruj po tagu..."
-          value={tagFilter}
-          onChange={(e) => {
-            setTagFilter(e.target.value);
-            setPagination((prev) => ({ ...prev, offset: 0 }));
-          }}
+          value={localTagFilter}
+          onChange={(e) => handleTagFilterChange(e.target.value)}
           className="w-[180px]"
         />
         <Select

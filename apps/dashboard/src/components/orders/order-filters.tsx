@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ORDER_STATUSES, ORDER_SOURCES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
+import { ORDER_STATUSES, ORDER_SOURCES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS, ORDER_PRIORITIES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 
 interface OrderFilters {
@@ -18,6 +18,7 @@ interface OrderFilters {
   search?: string;
   payment_status?: string;
   tag?: string;
+  priority?: string;
 }
 
 interface OrderFiltersProps {
@@ -30,12 +31,19 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
 
   const [localSearch, setLocalSearch] = useState(filters.search || "");
+  const [localTag, setLocalTag] = useState(filters.tag || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const tagDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Sync local search when filters.search changes externally (e.g. reset)
   useEffect(() => {
     setLocalSearch(filters.search || "");
   }, [filters.search]);
+
+  // Sync local tag when filters.tag changes externally (e.g. reset)
+  useEffect(() => {
+    setLocalTag(filters.tag || "");
+  }, [filters.tag]);
 
   const handleSearchChange = (value: string) => {
     setLocalSearch(value);
@@ -47,11 +55,24 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
     }, 300);
   };
 
-  // Cleanup timeout on unmount
+  const handleTagChange = (value: string) => {
+    setLocalTag(value);
+    if (tagDebounceRef.current) {
+      clearTimeout(tagDebounceRef.current);
+    }
+    tagDebounceRef.current = setTimeout(() => {
+      onFilterChange({ ...filters, tag: value || undefined });
+    }, 300);
+  };
+
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
+      }
+      if (tagDebounceRef.current) {
+        clearTimeout(tagDebounceRef.current);
       }
     };
   }, []);
@@ -127,12 +148,31 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           </SelectContent>
         </Select>
       </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Priorytet:</span>
+        <Select
+          value={filters.priority || "all"}
+          onValueChange={(v) =>
+            onFilterChange({ ...filters, priority: v === "all" ? undefined : v })
+          }
+        >
+          <SelectTrigger className="w-[160px]" size="sm">
+            <SelectValue placeholder="Wszystkie" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Wszystkie</SelectItem>
+            {Object.entries(ORDER_PRIORITIES).map(([key, { label }]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <Input
         placeholder="Filtruj po tagu..."
-        value={filters.tag || ""}
-        onChange={(e) =>
-          onFilterChange({ ...filters, tag: e.target.value || undefined })
-        }
+        value={localTag}
+        onChange={(e) => handleTagChange(e.target.value)}
         className="w-[180px]"
       />
     </div>

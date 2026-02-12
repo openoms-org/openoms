@@ -155,6 +155,8 @@ func New(deps RouterDeps) *chi.Mux {
 			// Settings — admin only
 			r.Route("/settings", func(r chi.Router) {
 				r.Use(middleware.RequireRole("admin"))
+				r.Get("/export", deps.Settings.ExportSettings)
+				r.Post("/import", deps.Settings.ImportSettings)
 				r.Get("/email", deps.Settings.GetEmailSettings)
 				r.Put("/email", deps.Settings.UpdateEmailSettings)
 				r.Post("/email/test", deps.Settings.SendTestEmail)
@@ -225,6 +227,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Patch("/{id}", deps.Order.Update)
 				r.Delete("/{id}", deps.Order.Delete)
 				r.Post("/{id}/status", deps.Order.TransitionStatus)
+				r.Post("/{id}/duplicate", deps.Order.DuplicateOrder)
 				r.Post("/{id}/split", deps.OrderGroup.SplitOrder)
 				r.Get("/{id}/groups", deps.OrderGroup.ListByOrder)
 				r.Get("/{id}/audit", deps.Order.GetAudit)

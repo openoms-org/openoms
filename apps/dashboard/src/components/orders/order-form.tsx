@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { TagInput } from "@/components/shared/tag-input";
-import { PAYMENT_METHODS } from "@/lib/constants";
+import { PAYMENT_METHODS, ORDER_PRIORITIES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import type { Order, CreateOrderRequest, CustomFieldDef, Address } from "@/types/api";
 
@@ -108,6 +108,8 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
 
   const [paymentStatus, setPaymentStatus] = useState(order?.payment_status || "pending");
   const [paymentMethod, setPaymentMethod] = useState(order?.payment_method || "");
+  const [priority, setPriority] = useState<string>(order?.priority || "normal");
+  const [internalNotes, setInternalNotes] = useState(order?.internal_notes || "");
 
   useEffect(() => {
     if (order?.metadata && typeof order.metadata === "object") {
@@ -291,6 +293,8 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       billing_address: hasBilling ? billingAddress : undefined,
       payment_status: paymentStatus || undefined,
       payment_method: paymentMethod || undefined,
+      priority: priority as "urgent" | "high" | "normal" | "low",
+      internal_notes: internalNotes || undefined,
     });
   };
 
@@ -651,6 +655,36 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         {errors.notes && (
           <p className="text-sm text-destructive">{errors.notes.message}</p>
         )}
+      </div>
+
+      {/* Priority */}
+      <div className="space-y-2">
+        <Label>Priorytet</Label>
+        <Select value={priority} onValueChange={setPriority}>
+          <SelectTrigger>
+            <SelectValue placeholder="Wybierz priorytet" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(ORDER_PRIORITIES).map(([key, { label }]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Internal notes */}
+      <div className="space-y-2">
+        <Label htmlFor="internal_notes">Notatki wewnętrzne</Label>
+        <Textarea
+          id="internal_notes"
+          placeholder="Notatki widoczne tylko dla zespołu..."
+          rows={3}
+          value={internalNotes}
+          onChange={(e) => setInternalNotes(e.target.value)}
+          className="border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
+        />
       </div>
 
       {/* Custom fields */}

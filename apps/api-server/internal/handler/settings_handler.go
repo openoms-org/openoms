@@ -785,4 +785,99 @@ func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Test SMS sent successfully"})
 }
 
+func (h *SettingsHandler) ExportSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
 
+	var settings json.RawMessage
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		settings, err = h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
+		return err
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load settings")
+		return
+	}
+
+	if settings == nil {
+		settings = json.RawMessage("{}")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", `attachment; filename="settings-export.json"`)
+	w.WriteHeader(http.StatusOK)
+	w.Write(settings)
+}
+
+func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "failed to read request body")
+		return
+	}
+
+	if !json.Valid(rawBody) {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	// Parse incoming sections
+	var incoming map[string]json.RawMessage
+	if err := json.Unmarshal(rawBody, &incoming); err != nil {
+		writeError(w, http.StatusBadRequest, "request body must be a JSON object")
+		return
+	}
+
+	var updatedSettings json.RawMessage
+	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		existing, err := h.tenantRepo.GetSettings(r.Context(), tx, tenantID)
+		if err != nil {
+			return err
+		}
+
+		var allSettings map[string]json.RawMessage
+		if existing != nil {
+			if err := json.Unmarshal(existing, &allSettings); err != nil {
+				allSettings = make(map[string]json.RawMessage)
+			}
+		} else {
+			allSettings = make(map[string]json.RawMessage)
+		}
+
+		// Merge: overwrite provided sections, keep others
+		for k, v := range incoming {
+			allSettings[k] = v
+		}
+
+		newSettings, err := json.Marshal(allSettings)
+		if err != nil {
+			return err
+		}
+
+		if err := h.tenantRepo.UpdateSettings(r.Context(), tx, tenantID, newSettings); err != nil {
+			return err
+		}
+
+		updatedSettings = newSettings
+
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.imported",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to import settings")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(updatedSettings)
+}

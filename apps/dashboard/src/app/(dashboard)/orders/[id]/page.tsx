@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save } from "lucide-react";
 import { RateShopping } from "@/components/shipping/rate-shopping";
-import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus } from "@/hooks/use-orders";
+import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus, useDuplicateOrder } from "@/hooks/use-orders";
 import { useShipments } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
 import { useOrderGroups, useSplitOrder } from "@/hooks/use-order-groups";
@@ -39,7 +39,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES } from "@/lib/constants";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, ORDER_PRIORITIES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
@@ -54,6 +62,8 @@ export default function OrderDetailPage() {
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [showCreateTicketDialog, setShowCreateTicketDialog] = useState(false);
   const [returnLinkCopied, setReturnLinkCopied] = useState(false);
+  const [internalNotes, setInternalNotes] = useState("");
+  const [internalNotesDirty, setInternalNotesDirty] = useState(false);
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
@@ -70,6 +80,13 @@ export default function OrderDetailPage() {
   const splitOrder = useSplitOrder(params.id);
   const { data: ticketsData } = useOrderTickets(params.id);
   const createTicket = useCreateOrderTicket(params.id);
+  const duplicateOrder = useDuplicateOrder();
+
+  useEffect(() => {
+    if (order && !internalNotesDirty) {
+      setInternalNotes(order.internal_notes || "");
+    }
+  }, [order, internalNotesDirty]);
 
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
@@ -227,6 +244,26 @@ export default function OrderDetailPage() {
               Podziel zamówienie
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const newOrder = await duplicateOrder.mutateAsync(params.id);
+                toast.success("Zamówienie zostało zduplikowane");
+                router.push(`/orders/${newOrder.id}`);
+              } catch (error) {
+                toast.error(getErrorMessage(error));
+              }
+            }}
+            disabled={duplicateOrder.isPending}
+          >
+            {duplicateOrder.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Copy className="mr-2 h-4 w-4" />
+            )}
+            Duplikuj zamówienie
+          </Button>
           <Button variant="outline" onClick={() => setIsEditing(true)}>
             Edytuj
           </Button>
@@ -248,6 +285,39 @@ export default function OrderDetailPage() {
                   <p className="text-sm text-muted-foreground">Status</p>
                   <div className="mt-1">
                     <StatusBadge status={order.status} statusMap={orderStatuses} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Priorytet</p>
+                  <div className="mt-1">
+                    <Select
+                      value={order.priority || "normal"}
+                      onValueChange={async (value) => {
+                        try {
+                          await updateOrder.mutateAsync({ priority: value as "urgent" | "high" | "normal" | "low" });
+                          toast.success("Priorytet zamówienia został zmieniony");
+                        } catch (error) {
+                          toast.error(getErrorMessage(error));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]" size="sm">
+                        <SelectValue>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ORDER_PRIORITIES[order.priority || "normal"]?.color || ""}`}>
+                            {ORDER_PRIORITIES[order.priority || "normal"]?.label || "Normalny"}
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ORDER_PRIORITIES).map(([key, { label, color }]) => (
+                          <SelectItem key={key} value={key}>
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
+                              {label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>
@@ -656,6 +726,51 @@ export default function OrderDetailPage() {
                     Zobacz profil klienta
                   </Link>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Notatki wewnętrzne */}
+          <Card className="border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                <StickyNote className="h-4 w-4" />
+                Notatki wewnętrzne
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={internalNotes}
+                onChange={(e) => {
+                  setInternalNotes(e.target.value);
+                  setInternalNotesDirty(true);
+                }}
+                placeholder="Notatki widoczne tylko dla zespołu..."
+                rows={4}
+                className="border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-950/30"
+              />
+              {internalNotesDirty && (
+                <Button
+                  size="sm"
+                  className="mt-2"
+                  onClick={async () => {
+                    try {
+                      await updateOrder.mutateAsync({ internal_notes: internalNotes });
+                      toast.success("Notatki wewnętrzne zapisane");
+                      setInternalNotesDirty(false);
+                    } catch (error) {
+                      toast.error(getErrorMessage(error));
+                    }
+                  }}
+                  disabled={updateOrder.isPending}
+                >
+                  {updateOrder.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Zapisz notatki
+                </Button>
               )}
             </CardContent>
           </Card>

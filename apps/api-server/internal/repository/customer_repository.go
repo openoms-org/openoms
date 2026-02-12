@@ -263,7 +263,8 @@ func (r *CustomerRepository) ListOrdersByCustomerID(ctx context.Context, tx pgx.
 		        total_amount, currency, notes, metadata, tags,
 		        ordered_at, shipped_at, delivered_at,
 		        delivery_method, pickup_point_id,
-		        payment_status, payment_method, paid_at, customer_id, created_at, updated_at
+		        payment_status, payment_method, paid_at, customer_id, merged_into, split_from,
+		        internal_notes, priority, created_at, updated_at
 		 FROM orders %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
@@ -285,7 +286,8 @@ func (r *CustomerRepository) ListOrdersByCustomerID(ctx context.Context, tx pgx.
 			&o.TotalAmount, &o.Currency, &o.Notes, &o.Metadata, &o.Tags,
 			&o.OrderedAt, &o.ShippedAt, &o.DeliveredAt,
 			&o.DeliveryMethod, &o.PickupPointID,
-			&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.CreatedAt, &o.UpdatedAt,
+			&o.PaymentStatus, &o.PaymentMethod, &o.PaidAt, &o.CustomerID, &o.MergedInto, &o.SplitFrom,
+			&o.InternalNotes, &o.Priority, &o.CreatedAt, &o.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan customer order: %w", err)
 		}

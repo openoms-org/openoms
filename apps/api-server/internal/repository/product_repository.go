@@ -41,6 +41,11 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		args = append(args, *filter.Category)
 		argIdx++
 	}
+	if filter.Search != nil {
+		conditions = append(conditions, fmt.Sprintf("(name ILIKE '%%' || $%d || '%%' OR sku ILIKE '%%' || $%d || '%%' OR ean ILIKE '%%' || $%d || '%%')", argIdx, argIdx, argIdx))
+		args = append(args, *filter.Search)
+		argIdx++
+	}
 
 	where := ""
 	if len(conditions) > 0 {

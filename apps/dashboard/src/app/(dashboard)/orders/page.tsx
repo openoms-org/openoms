@@ -11,7 +11,7 @@ import { OrderFilters } from "@/components/orders/order-filters";
 import { BulkActions } from "@/components/orders/bulk-actions";
 import { KanbanBoard } from "@/components/orders/kanban-board";
 import { Button } from "@/components/ui/button";
-import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS } from "@/lib/constants";
+import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS, ORDER_PRIORITIES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { formatDate, formatCurrency, shortId, cn } from "@/lib/utils";
 import { Download, ShoppingCart, Merge, Printer, LayoutGrid, Columns3 } from "lucide-react";
@@ -63,7 +63,7 @@ export default function OrdersPage() {
   const queryClient = useQueryClient();
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
-  const [filters, setFilters] = useState<{ status?: string; source?: string; search?: string; payment_status?: string; tag?: string }>({});
+  const [filters, setFilters] = useState<{ status?: string; source?: string; search?: string; payment_status?: string; tag?: string; priority?: string }>({});
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -156,6 +156,21 @@ export default function OrdersPage() {
       sortable: true,
     },
     {
+      header: "Priorytet",
+      accessorKey: "priority",
+      cell: (row) => {
+        const priority = row.priority || "normal";
+        const config = ORDER_PRIORITIES[priority];
+        if (!config || priority === "normal") return null;
+        return (
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${config.color}`}>
+            {config.label}
+          </span>
+        );
+      },
+      sortable: true,
+    },
+    {
       header: "Kwota",
       accessorKey: "total_amount",
       cell: (row) => formatCurrency(row.total_amount, row.currency),
@@ -197,7 +212,7 @@ export default function OrdersPage() {
     },
   ];
 
-  const handleFilterChange = (newFilters: { status?: string; source?: string; search?: string; payment_status?: string; tag?: string }) => {
+  const handleFilterChange = (newFilters: { status?: string; source?: string; search?: string; payment_status?: string; tag?: string; priority?: string }) => {
     setFilters(newFilters);
     setOffset(0);
     setSelectedIds(new Set());
