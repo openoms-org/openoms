@@ -3,7 +3,6 @@
 import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useGeowidgetToken } from "@/hooks/use-inpost-points";
 import {
   Select,
   SelectContent,
@@ -119,8 +118,6 @@ function InPostFields({
 }) {
   const serviceType = values.service_type ?? "inpost_locker_standard";
   const isLocker = serviceType === "inpost_locker_standard";
-  const { data: tokenData } = useGeowidgetToken();
-  const hasGeowidgetToken = !!(tokenData?.geowidget_token || process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN);
   const targetPoint = (values.target_point as string) ?? "";
 
   return (
@@ -158,26 +155,17 @@ function InPostFields({
       {isLocker && (
         <div className="space-y-2">
           <Label>Paczkomat docelowy</Label>
-          {hasGeowidgetToken ? (
-            <>
-              {targetPoint && (
-                <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-sm">{targetPoint}</span>
-                </div>
-              )}
-              <PaczkomatSelector
-                mode="inline"
-                onPointSelect={(name) => onChange("target_point", name)}
-              />
-            </>
-          ) : (
-            <PaczkomatSelector
-              mode="search"
-              value={targetPoint}
-              onPointSelect={(v) => onChange("target_point", v)}
-            />
+          {targetPoint && (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">{targetPoint}</span>
+            </div>
           )}
+          <PaczkomatSelector
+            mode="inline"
+            value={targetPoint}
+            onPointSelect={(name) => onChange("target_point", name)}
+          />
         </div>
       )}
 
