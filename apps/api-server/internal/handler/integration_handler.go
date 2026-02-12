@@ -7,17 +7,27 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 type IntegrationHandler struct {
 	integrationService *service.IntegrationService
+	integrationRepo    repository.IntegrationRepo
+	pool               *pgxpool.Pool
 }
 
-func NewIntegrationHandler(integrationService *service.IntegrationService) *IntegrationHandler {
-	return &IntegrationHandler{integrationService: integrationService}
+func NewIntegrationHandler(integrationService *service.IntegrationService, integrationRepo repository.IntegrationRepo, pool *pgxpool.Pool) *IntegrationHandler {
+	return &IntegrationHandler{
+		integrationService: integrationService,
+		integrationRepo:    integrationRepo,
+		pool:               pool,
+	}
 }
 
 func (h *IntegrationHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -138,4 +148,36 @@ func (h *IntegrationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *IntegrationHandler) GetGeowidgetToken(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	var token string
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		integration, err := h.integrationRepo.FindByProvider(r.Context(), tx, "inpost")
+		if err != nil {
+			return err
+		}
+		if integration == nil {
+			return nil
+		}
+		if len(integration.Settings) == 0 {
+			return nil
+		}
+		var settings map[string]interface{}
+		if err := json.Unmarshal(integration.Settings, &settings); err != nil {
+			return nil
+		}
+		if v, ok := settings["geowidget_token"].(string); ok {
+			token = v
+		}
+		return nil
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get geowidget token")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"geowidget_token": token})
 }

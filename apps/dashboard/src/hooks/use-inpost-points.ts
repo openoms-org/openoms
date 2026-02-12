@@ -18,3 +18,12 @@ export function useInPostPointSearch(query: string) {
       previousData,
   });
 }
+
+export function useGeowidgetToken() {
+  return useQuery({
+    queryKey: ["inpost", "geowidget-token"],
+    queryFn: () =>
+      apiClient<{ geowidget_token: string }>("/v1/inpost/geowidget-token"),
+    staleTime: 5 * 60 * 1000,
+  });
+}

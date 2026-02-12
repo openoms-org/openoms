@@ -17,7 +17,7 @@ import (
 )
 
 func TestIntegrationHandler_Create_InvalidJSON(t *testing.T) {
-	h := NewIntegrationHandler(nil)
+	h := NewIntegrationHandler(nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -32,7 +32,7 @@ func TestIntegrationHandler_Create_InvalidJSON(t *testing.T) {
 }
 
 func TestIntegrationHandler_Get_InvalidID(t *testing.T) {
-	h := NewIntegrationHandler(nil)
+	h := NewIntegrationHandler(nil, nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "not-a-uuid")
@@ -51,7 +51,7 @@ func TestIntegrationHandler_Get_InvalidID(t *testing.T) {
 }
 
 func TestIntegrationHandler_Update_InvalidID(t *testing.T) {
-	h := NewIntegrationHandler(nil)
+	h := NewIntegrationHandler(nil, nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -66,7 +66,7 @@ func TestIntegrationHandler_Update_InvalidID(t *testing.T) {
 }
 
 func TestIntegrationHandler_Update_InvalidJSON(t *testing.T) {
-	h := NewIntegrationHandler(nil)
+	h := NewIntegrationHandler(nil, nil, nil)
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -82,7 +82,7 @@ func TestIntegrationHandler_Update_InvalidJSON(t *testing.T) {
 }
 
 func TestIntegrationHandler_Delete_InvalidID(t *testing.T) {
-	h := NewIntegrationHandler(nil)
+	h := NewIntegrationHandler(nil, nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -99,7 +99,7 @@ func TestIntegrationHandler_Delete_InvalidID(t *testing.T) {
 func TestIntegrationHandler_Create_ValidationError(t *testing.T) {
 	key := make([]byte, 32)
 	svc := service.NewIntegrationService(nil, nil, nil, key)
-	h := NewIntegrationHandler(svc)
+	h := NewIntegrationHandler(svc, nil, nil)
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -122,7 +122,7 @@ func TestIntegrationHandler_Create_ValidationError(t *testing.T) {
 func TestIntegrationHandler_Update_ValidationError(t *testing.T) {
 	key := make([]byte, 32)
 	svc := service.NewIntegrationService(nil, nil, nil, key)
-	h := NewIntegrationHandler(svc)
+	h := NewIntegrationHandler(svc, nil, nil)
 
 	tenantID := uuid.New()
 	userID := uuid.New()

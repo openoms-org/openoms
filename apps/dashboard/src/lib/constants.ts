@@ -325,6 +325,7 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   inpost: [
     { key: "api_token", label: "Token API", placeholder: "Twój token API InPost", helpText: "Manager Paczek InPost > Ustawienia > API", type: "password", required: true },
     { key: "organization_id", label: "ID organizacji", placeholder: "Twój numer organizacji InPost", type: "text", required: true },
+    { key: "geowidget_token", label: "Token GeoWidget (mapa)", placeholder: "Twój token GeoWidget InPost", helpText: "Token do wyświetlania mapy paczkomatów. Wygeneruj na https://manager.paczkomaty.pl w zakładce API > GeoWidget.", type: "text", required: false },
     { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
   ],
   dhl: [
@@ -368,4 +369,8 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
     { key: "api_token", label: "Token API", placeholder: "Twój token API Fakturownia", helpText: "Ustawienia > Ustawienia konta > Integracja > Kod autoryzacyjny API", type: "password", required: true },
     { key: "subdomain", label: "Subdomena", placeholder: "twoja-firma", helpText: "Nazwa Twojego konta, np. 'twoja-firma' z twoja-firma.fakturownia.pl", type: "text", required: true },
   ],
+};
+
+export const PROVIDER_SETTINGS_FIELDS: Record<string, string[]> = {
+  inpost: ["geowidget_token"],
 };

@@ -23,6 +23,7 @@ import {
 import { useGenerateLabel } from "@/hooks/use-shipments";
 import { CarrierFields } from "@/components/shipments/carrier-fields";
 import { SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
+import { useGeowidgetToken } from "@/hooks/use-inpost-points";
 import type { Order, GenerateLabelRequest } from "@/types/api";
 
 interface GenerateLabelDialogProps {
@@ -66,7 +67,8 @@ export function GenerateLabelDialog({
   const isLocker =
     provider === "inpost" &&
     carrierValues.service_type === "inpost_locker_standard";
-  const hasGeowidgetToken = !!process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN;
+  const { data: tokenData } = useGeowidgetToken();
+  const hasGeowidgetToken = !!(tokenData?.geowidget_token || process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN);
   const isSubmitDisabled =
     generateLabel.isPending ||
     (isLocker && !(carrierValues.target_point ?? "").trim());
