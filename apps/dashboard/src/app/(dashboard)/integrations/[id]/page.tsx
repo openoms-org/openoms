@@ -5,23 +5,21 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useIntegration,
   useUpdateIntegration,
   useDeleteIntegration,
 } from "@/hooks/use-integrations";
+import { IntegrationForm } from "@/components/integrations/integration-form";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { INTEGRATION_STATUSES } from "@/lib/constants";
+import {
+  INTEGRATION_STATUSES,
+  INTEGRATION_PROVIDER_LABELS,
+} from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -37,25 +35,6 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const credentialsSchema = z.object({
-  credentials: z
-    .string()
-    .min(1, "Dane uwierzytelniające są wymagane")
-    .refine(
-      (val) => {
-        try {
-          JSON.parse(val);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      { message: "Nieprawidłowy format JSON" }
-    ),
-});
-
-type CredentialsFormValues = z.infer<typeof credentialsSchema>;
-
 export default function IntegrationDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -64,17 +43,6 @@ export default function IntegrationDetailPage() {
   const deleteIntegration = useDeleteIntegration();
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CredentialsFormValues>({
-    resolver: zodResolver(credentialsSchema),
-    defaultValues: {
-      credentials: "",
-    },
-  });
 
   if (isLoading) {
     return (
@@ -96,6 +64,10 @@ export default function IntegrationDetailPage() {
     );
   }
 
+  const providerLabel =
+    INTEGRATION_PROVIDER_LABELS[integration.provider] ??
+    integration.provider.charAt(0).toUpperCase() + integration.provider.slice(1);
+
   const handleStatusChange = (newStatus: string) => {
     updateIntegration.mutate(
       { status: newStatus as "active" | "inactive" | "error" },
@@ -114,22 +86,37 @@ export default function IntegrationDetailPage() {
     );
   };
 
-  const handleCredentialsUpdate = (data: CredentialsFormValues) => {
-    updateIntegration.mutate(
-      { credentials: JSON.parse(data.credentials) },
-      {
-        onSuccess: () => {
-          toast.success("Dane uwierzytelniające zostały zaktualizowane");
-        },
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Błąd podczas aktualizacji danych"
-          );
-        },
-      }
-    );
+  const handleCredentialsUpdate = (data: {
+    credentials: Record<string, unknown>;
+    settings?: Record<string, unknown>;
+  }) => {
+    const payload: Record<string, unknown> = {};
+
+    // Only send credentials if user actually filled in any field
+    if (Object.keys(data.credentials).length > 0) {
+      payload.credentials = data.credentials;
+    }
+    if (data.settings) {
+      payload.settings = data.settings;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      toast.info("Nie wprowadzono żadnych zmian");
+      return;
+    }
+
+    updateIntegration.mutate(payload, {
+      onSuccess: () => {
+        toast.success("Dane integracji zostały zaktualizowane");
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Błąd podczas aktualizacji danych"
+        );
+      },
+    });
   };
 
   const handleDelete = () => {
@@ -159,10 +146,7 @@ export default function IntegrationDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
-              {integration.provider.charAt(0).toUpperCase() +
-                integration.provider.slice(1)}
-            </h1>
+            <h1 className="text-2xl font-bold">{providerLabel}</h1>
             <p className="text-muted-foreground">
               Utworzona {formatDate(integration.created_at)}
             </p>
@@ -188,10 +172,7 @@ export default function IntegrationDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Dostawca</p>
-                <p className="mt-1 font-medium">
-                  {integration.provider.charAt(0).toUpperCase() +
-                    integration.provider.slice(1)}
-                </p>
+                <p className="mt-1 font-medium">{providerLabel}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
@@ -267,18 +248,6 @@ export default function IntegrationDetailPage() {
                 </Button>
               </div>
             )}
-
-            {integration.settings &&
-              Object.keys(integration.settings).length > 0 && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Ustawienia
-                  </p>
-                  <pre className="rounded-md bg-muted p-3 text-xs font-mono overflow-auto max-h-40">
-                    {JSON.stringify(integration.settings, null, 2)}
-                  </pre>
-                </div>
-              )}
           </CardContent>
         </Card>
 
@@ -306,38 +275,15 @@ export default function IntegrationDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Aktualizuj dane uwierzytelniające</CardTitle>
+              <CardTitle>Aktualizuj dane integracji</CardTitle>
             </CardHeader>
             <CardContent>
-              <form
-                onSubmit={handleSubmit(handleCredentialsUpdate)}
-                className="space-y-4"
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="credentials">
-                    Nowe dane uwierzytelniające (JSON)
-                  </Label>
-                  <Textarea
-                    id="credentials"
-                    placeholder='{"api_key": "...", "secret": "..."}'
-                    className="min-h-32 font-mono text-sm"
-                    {...register("credentials")}
-                  />
-                  {errors.credentials && (
-                    <p className="text-sm text-destructive">
-                      {errors.credentials.message}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  type="submit"
-                  disabled={updateIntegration.isPending}
-                >
-                  {updateIntegration.isPending
-                    ? "Aktualizowanie..."
-                    : "Zaktualizuj dane"}
-                </Button>
-              </form>
+              <IntegrationForm
+                editProvider={integration.provider}
+                existingSettings={integration.settings as Record<string, unknown> | undefined}
+                isLoading={updateIntegration.isPending}
+                onSubmit={handleCredentialsUpdate}
+              />
             </CardContent>
           </Card>
         </div>
