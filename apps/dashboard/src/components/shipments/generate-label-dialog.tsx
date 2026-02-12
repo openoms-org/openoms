@@ -23,12 +23,13 @@ import {
 import { useGenerateLabel } from "@/hooks/use-shipments";
 import { CarrierFields } from "@/components/shipments/carrier-fields";
 import { SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
-import type { Order, GenerateLabelRequest } from "@/types/api";
+import type { Order, Shipment, GenerateLabelRequest } from "@/types/api";
 
 interface GenerateLabelDialogProps {
   shipmentId: string;
   provider: string;
   order: Order | undefined;
+  shipment?: Shipment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -38,6 +39,14 @@ const DEFAULT_VALUES: Record<string, Record<string, any>> = {
   dhl: { service_type: "dhl_parcel" },
   dpd: { service_type: "dpd_classic" },
 };
+
+function buildInitialValues(provider: string, shipment?: Shipment): Record<string, any> {
+  const defaults = DEFAULT_VALUES[provider] ?? {};
+  const carrierData = shipment?.carrier_data as Record<string, any> | undefined;
+  if (!carrierData) return { ...defaults };
+  // Merge: shipment carrier_data overrides defaults
+  return { ...defaults, ...carrierData };
+}
 
 function getDialogTitle(provider: string): string {
   const label = SHIPMENT_PROVIDER_LABELS[provider];
@@ -49,13 +58,14 @@ export function GenerateLabelDialog({
   shipmentId,
   provider,
   order,
+  shipment,
   open,
   onOpenChange,
 }: GenerateLabelDialogProps) {
   const generateLabel = useGenerateLabel(shipmentId);
 
   const [carrierValues, setCarrierValues] = useState<Record<string, any>>(
-    () => DEFAULT_VALUES[provider] ?? {}
+    () => buildInitialValues(provider, shipment)
   );
   const [labelFormat, setLabelFormat] = useState<string>("pdf");
 

@@ -312,6 +312,7 @@ export default function ShipmentDetailPage() {
         shipmentId={params.id}
         provider={shipment.provider}
         order={order}
+        shipment={shipment}
         open={showLabelDialog}
         onOpenChange={setShowLabelDialog}
       />
