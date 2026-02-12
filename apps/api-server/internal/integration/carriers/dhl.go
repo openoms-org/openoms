@@ -142,6 +142,99 @@ func (p *DHLProvider) MapStatus(carrierStatus string) (string, bool) {
 	return dhlsdk.MapStatus(carrierStatus)
 }
 
+func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
+	// DHL Poland domestic rate estimation based on weight tiers.
+	// Real integration would use the DHL Rating API.
+	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
+		(req.ToCountry == "" || req.ToCountry == "PL")
+
+	if !domestic {
+		// International rates are not hardcoded — return empty for now.
+		return nil, nil
+	}
+
+	w := req.Weight
+	var rates []integration.Rate
+
+	if w <= 1 {
+		price := 12.50
+		if req.COD > 0 {
+			price += 5.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "DHL",
+			CarrierCode:   "dhl",
+			ServiceName:   "DHL Parcel do 1 kg",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 2,
+			PickupPoint:   false,
+		})
+	}
+	if w <= 5 {
+		price := 14.50
+		if req.COD > 0 {
+			price += 5.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "DHL",
+			CarrierCode:   "dhl",
+			ServiceName:   "DHL Parcel do 5 kg",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 2,
+			PickupPoint:   false,
+		})
+	}
+	if w <= 10 {
+		price := 16.50
+		if req.COD > 0 {
+			price += 5.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "DHL",
+			CarrierCode:   "dhl",
+			ServiceName:   "DHL Parcel do 10 kg",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 2,
+			PickupPoint:   false,
+		})
+	}
+	if w <= 20 {
+		price := 18.50
+		if req.COD > 0 {
+			price += 5.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "DHL",
+			CarrierCode:   "dhl",
+			ServiceName:   "DHL Parcel do 20 kg",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 2,
+			PickupPoint:   false,
+		})
+	}
+	if w <= 31.5 {
+		price := 21.00
+		if req.COD > 0 {
+			price += 5.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "DHL",
+			CarrierCode:   "dhl",
+			ServiceName:   "DHL Parcel do 31.5 kg",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 2,
+			PickupPoint:   false,
+		})
+	}
+
+	return rates, nil
+}
+
 func (p *DHLProvider) SupportsPickupPoints() bool { return false }
 
 func (p *DHLProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {

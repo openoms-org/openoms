@@ -209,6 +209,42 @@ func (p *FedExProvider) MapStatus(carrierStatus string) (string, bool) {
 	return fedexsdk.MapStatus(carrierStatus)
 }
 
+func (p *FedExProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
+	// TODO: Implement real FedEx Rate API integration.
+	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
+		(req.ToCountry == "" || req.ToCountry == "PL")
+	if !domestic {
+		return nil, nil
+	}
+
+	w := req.Weight
+	var rates []integration.Rate
+
+	if w <= 30 {
+		price := 25.00
+		if w > 10 {
+			price = 32.00
+		}
+		if w > 20 {
+			price = 40.00
+		}
+		if req.COD > 0 {
+			price += 7.00
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "FedEx",
+			CarrierCode:   "fedex",
+			ServiceName:   "FedEx Economy",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 3,
+			PickupPoint:   false,
+		})
+	}
+
+	return rates, nil
+}
+
 func (p *FedExProvider) SupportsPickupPoints() bool { return false }
 
 func (p *FedExProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {

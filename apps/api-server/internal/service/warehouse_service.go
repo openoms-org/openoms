@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	ErrWarehouseNotFound = errors.New("warehouse not found")
-	ErrStockEntryNotFound = errors.New("stock entry not found")
+	ErrWarehouseNotFound        = errors.New("warehouse not found")
+	ErrStockEntryNotFound       = errors.New("stock entry not found")
+	ErrStrictInventoryControl   = errors.New("Tryb ścisłej kontroli magazynowej jest włączony. Zmiany stanów możliwe tylko przez dokumenty magazynowe.")
 )
 
 // WarehouseService provides business logic for warehouses and warehouse stock.
@@ -24,6 +25,7 @@ type WarehouseService struct {
 	warehouseRepo      repository.WarehouseRepo
 	warehouseStockRepo repository.WarehouseStockRepo
 	auditRepo          repository.AuditRepo
+	tenantRepo         repository.TenantRepo
 	pool               *pgxpool.Pool
 }
 
@@ -32,14 +34,44 @@ func NewWarehouseService(
 	warehouseRepo repository.WarehouseRepo,
 	warehouseStockRepo repository.WarehouseStockRepo,
 	auditRepo repository.AuditRepo,
+	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
 ) *WarehouseService {
 	return &WarehouseService{
 		warehouseRepo:      warehouseRepo,
 		warehouseStockRepo: warehouseStockRepo,
 		auditRepo:          auditRepo,
+		tenantRepo:         tenantRepo,
 		pool:               pool,
 	}
+}
+
+// isStrictInventoryMode checks if strict inventory control is enabled for the tenant.
+func (s *WarehouseService) isStrictInventoryMode(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (bool, error) {
+	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
+	if err != nil {
+		return false, err
+	}
+	if settings == nil {
+		return false, nil
+	}
+
+	var allSettings map[string]json.RawMessage
+	if err := json.Unmarshal(settings, &allSettings); err != nil {
+		return false, nil
+	}
+
+	raw, ok := allSettings["inventory"]
+	if !ok {
+		return false, nil
+	}
+
+	var inventoryCfg model.InventorySettings
+	if err := json.Unmarshal(raw, &inventoryCfg); err != nil {
+		return false, nil
+	}
+
+	return inventoryCfg.StrictMode, nil
 }
 
 // List lists all warehouses for a tenant.
@@ -251,6 +283,15 @@ func (s *WarehouseService) UpsertStock(ctx context.Context, tenantID, warehouseI
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		// Check strict inventory control mode
+		strict, err := s.isStrictInventoryMode(ctx, tx, tenantID)
+		if err != nil {
+			return err
+		}
+		if strict {
+			return ErrStrictInventoryControl
+		}
+
 		// Verify warehouse exists
 		wh, err := s.warehouseRepo.FindByID(ctx, tx, warehouseID)
 		if err != nil {

@@ -141,7 +141,7 @@ func main() {
 	stocktakeRepo := repository.NewStocktakeRepository()
 	stocktakeItemRepo := repository.NewStocktakeItemRepository()
 
-	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool)
+	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	roleService := service.NewRoleService(roleRepo, auditRepo, pool)
 	emailService := service.NewEmailService(tenantRepo, pool)
@@ -164,7 +164,7 @@ func main() {
 	shipmentService.SetSMSService(smsService)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
-	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, pool)
+	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, tenantRepo, pool)
 	orderGroupService := service.NewOrderGroupService(orderGroupRepo, orderRepo, auditRepo, pool)
 	bundleService := service.NewBundleService(bundleRepo, productRepo, auditRepo, pool)
 	customerService := service.NewCustomerService(customerRepo, auditRepo, pool, webhookDispatchService, slog.Default())
@@ -199,7 +199,8 @@ func main() {
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
-	productHandler := handler.NewProductHandler(productService)
+	productImportService := service.NewProductImportService(productRepo, auditRepo, pool)
+	productHandler := handler.NewProductHandler(productService, productImportService)
 	integrationHandler := handler.NewIntegrationHandler(integrationService)
 	returnHandler := handler.NewReturnHandler(returnService)
 	webhookHandler := handler.NewWebhookHandler(webhookService)
@@ -305,6 +306,10 @@ func main() {
 	// OpenAPI docs handler
 	docsHandler := handler.NewDocsHandler(docs.OpenAPISpec)
 
+	// Rate shopping service & handler
+	rateService := service.NewRateService(integrationRepo, pool, encryptionKey)
+	rateHandler := handler.NewRateHandler(rateService)
+
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
 
@@ -356,6 +361,7 @@ func main() {
 		RoleService:        roleService,
 		Stocktake:          stocktakeHandler,
 		KSeF:               ksefHandler,
+		Rate:               rateHandler,
 	})
 
 	// Start background workers

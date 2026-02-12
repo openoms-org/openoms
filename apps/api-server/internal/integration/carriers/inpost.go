@@ -161,6 +161,99 @@ func (p *InPostProvider) MapStatus(carrierStatus string) (string, bool) {
 
 func (p *InPostProvider) SupportsPickupPoints() bool { return true }
 
+func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
+	// InPost does not expose a real-time rate API.
+	// Use hardcoded Polish domestic pricing tiers (net prices approximation).
+	var rates []integration.Rate
+
+	w := req.Weight
+	width := req.Width
+	height := req.Height
+	length := req.Length
+
+	// Paczkomat sizing:
+	//   A: max 8 kg, fits in 38x64x8 cm
+	//   B: max 25 kg, fits in 38x64x19 cm
+	//   C: max 25 kg, fits in 41x38x64 cm (largest)
+	fitsA := w <= 8 && width <= 38 && height <= 8 && length <= 64
+	fitsB := w <= 25 && width <= 38 && height <= 19 && length <= 64
+	fitsC := w <= 25 && width <= 41 && height <= 38 && length <= 64
+
+	// Only return paczkomat rates for domestic PL shipments
+	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
+		(req.ToCountry == "" || req.ToCountry == "PL")
+
+	if domestic {
+		if fitsA {
+			price := 12.99
+			if req.COD > 0 {
+				price += 3.50
+			}
+			rates = append(rates, integration.Rate{
+				CarrierName:   "InPost",
+				CarrierCode:   "inpost",
+				ServiceName:   "Paczkomat A (mała)",
+				Price:         price,
+				Currency:      "PLN",
+				EstimatedDays: 2,
+				PickupPoint:   true,
+			})
+		}
+		if fitsB {
+			price := 13.99
+			if req.COD > 0 {
+				price += 3.50
+			}
+			rates = append(rates, integration.Rate{
+				CarrierName:   "InPost",
+				CarrierCode:   "inpost",
+				ServiceName:   "Paczkomat B (średnia)",
+				Price:         price,
+				Currency:      "PLN",
+				EstimatedDays: 2,
+				PickupPoint:   true,
+			})
+		}
+		if fitsC {
+			price := 15.49
+			if req.COD > 0 {
+				price += 3.50
+			}
+			rates = append(rates, integration.Rate{
+				CarrierName:   "InPost",
+				CarrierCode:   "inpost",
+				ServiceName:   "Paczkomat C (duża)",
+				Price:         price,
+				Currency:      "PLN",
+				EstimatedDays: 2,
+				PickupPoint:   true,
+			})
+		}
+
+		// Courier rate (up to 25 kg for standard)
+		if w <= 25 {
+			price := 16.99
+			if w > 10 {
+				price = 19.99
+			}
+			if req.COD > 0 {
+				price += 4.00
+			}
+			rates = append(rates, integration.Rate{
+				CarrierName:   "InPost",
+				CarrierCode:   "inpost",
+				ServiceName:   "Kurier Standard",
+				Price:         price,
+				Currency:      "PLN",
+				EstimatedDays: 1,
+				PickupPoint:   false,
+			})
+		}
+	}
+
+	return rates, nil
+}
+
 func (p *InPostProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
 	resp, err := p.client.Points.Search(ctx, query, inpostsdk.PointTypeParcelLocker, 10)
 	if err != nil {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
@@ -7,25 +8,54 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShipmentForm } from "@/components/shipments/shipment-form";
+import { RateShopping } from "@/components/shipping/rate-shopping";
 import { useCreateShipment } from "@/hooks/use-shipments";
+import type { ShippingRate } from "@/types/api";
+
+type ProviderValue = "inpost" | "dhl" | "dpd" | "gls" | "ups" | "poczta_polska" | "orlen_paczka" | "fedex" | "manual";
+
+const VALID_PROVIDERS: ProviderValue[] = [
+  "inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual",
+];
 
 export default function NewShipmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultOrderId = searchParams.get("order_id") ?? undefined;
+  const carrierParam = searchParams.get("carrier") ?? undefined;
   const createShipment = useCreateShipment();
+
+  const initialCarrier =
+    carrierParam && VALID_PROVIDERS.includes(carrierParam as ProviderValue)
+      ? (carrierParam as ProviderValue)
+      : undefined;
+
+  const [selectedCarrier, setSelectedCarrier] = useState<ProviderValue | undefined>(initialCarrier);
+
+  const handleRateSelect = useCallback((rate: ShippingRate) => {
+    if (VALID_PROVIDERS.includes(rate.carrier_code as ProviderValue)) {
+      setSelectedCarrier(rate.carrier_code as ProviderValue);
+    }
+    toast.success(
+      `Wybrano: ${rate.carrier_name} - ${rate.service_name} (${rate.price.toFixed(2)} ${rate.currency})`
+    );
+  }, []);
 
   const handleSubmit = (data: Parameters<typeof createShipment.mutate>[0]) => {
     createShipment.mutate(data, {
       onSuccess: (shipment) => {
-        toast.success("Przesyłka została utworzona");
+        toast.success("Przesylka zostala utworzona");
         router.push(`/shipments/${shipment.id}`);
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się utworzyć przesyłki");
+        toast.error(error.message || "Nie udalo sie utworzyc przesylki");
       },
     });
   };
+
+  const formDefaults: Record<string, unknown> = {};
+  if (defaultOrderId) formDefaults.order_id = defaultOrderId;
+  if (selectedCarrier) formDefaults.provider = selectedCarrier;
 
   return (
     <div className="space-y-6">
@@ -36,20 +66,27 @@ export default function NewShipmentPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Nowa przesyłka</h1>
+          <h1 className="text-2xl font-bold">Nowa przesylka</h1>
           <p className="text-muted-foreground">
-            Utwórz nową przesyłkę dla zamówienia
+            Utworz nowa przesylke dla zamowienia
           </p>
         </div>
       </div>
 
+      <RateShopping onSelectRate={handleRateSelect} />
+
       <Card>
         <CardHeader>
-          <CardTitle>Dane przesyłki</CardTitle>
+          <CardTitle>Dane przesylki</CardTitle>
         </CardHeader>
         <CardContent>
           <ShipmentForm
-            defaultValues={defaultOrderId ? { order_id: defaultOrderId } : undefined}
+            defaultValues={
+              Object.keys(formDefaults).length > 0
+                ? (formDefaults as Parameters<typeof ShipmentForm>[0]["defaultValues"])
+                : undefined
+            }
+            key={selectedCarrier ?? "default"}
             onSubmit={handleSubmit}
             isLoading={createShipment.isPending}
           />

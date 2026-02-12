@@ -62,7 +62,11 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
 	var req struct {
-		ProductID uuid.UUID `json:"product_id"`
+		ProductID   uuid.UUID `json:"product_id"`
+		Style       string    `json:"style"`
+		Language    string    `json:"language"`
+		Length      string    `json:"length"`
+		Marketplace string    `json:"marketplace"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -73,7 +77,14 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.aiService.Describe(r.Context(), tenantID, req.ProductID)
+	opts := &service.DescribeOptions{
+		Style:       req.Style,
+		Language:    req.Language,
+		Length:      req.Length,
+		Marketplace: req.Marketplace,
+	}
+
+	result, err := h.aiService.Describe(r.Context(), tenantID, req.ProductID, opts)
 	if err != nil {
 		if errors.Is(err, service.ErrProductNotFound) {
 			writeError(w, http.StatusNotFound, "product not found")
@@ -84,6 +95,69 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, result)
+}
+
+// Improve handles POST /v1/ai/improve
+func (h *AIHandler) Improve(w http.ResponseWriter, r *http.Request) {
+	if !h.aiService.IsConfigured() {
+		writeError(w, http.StatusServiceUnavailable, "AI nie jest skonfigurowane")
+		return
+	}
+
+	var req struct {
+		Description string `json:"description"`
+		Style       string `json:"style"`
+		Language    string `json:"language"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Description == "" {
+		writeError(w, http.StatusBadRequest, "description is required")
+		return
+	}
+
+	result, err := h.aiService.ImproveDescription(r.Context(), req.Description, req.Style, req.Language)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "AI description improvement failed")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, service.AITextResult{Description: result})
+}
+
+// Translate handles POST /v1/ai/translate
+func (h *AIHandler) Translate(w http.ResponseWriter, r *http.Request) {
+	if !h.aiService.IsConfigured() {
+		writeError(w, http.StatusServiceUnavailable, "AI nie jest skonfigurowane")
+		return
+	}
+
+	var req struct {
+		Description    string `json:"description"`
+		TargetLanguage string `json:"target_language"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Description == "" {
+		writeError(w, http.StatusBadRequest, "description is required")
+		return
+	}
+	if req.TargetLanguage == "" {
+		writeError(w, http.StatusBadRequest, "target_language is required")
+		return
+	}
+
+	result, err := h.aiService.TranslateDescription(r.Context(), req.Description, req.TargetLanguage)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "AI translation failed")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, service.AITextResult{Description: result})
 }
 
 // BulkCategorize handles POST /v1/ai/bulk-categorize

@@ -140,6 +140,42 @@ func (p *PocztaPolskaProvider) MapStatus(carrierStatus string) (string, bool) {
 	return pocztasdk.MapStatus(carrierStatus)
 }
 
+func (p *PocztaPolskaProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
+	// TODO: Implement real Poczta Polska eNadawca rate API integration.
+	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
+		(req.ToCountry == "" || req.ToCountry == "PL")
+	if !domestic {
+		return nil, nil
+	}
+
+	w := req.Weight
+	var rates []integration.Rate
+
+	if w <= 20 {
+		price := 14.00
+		if w > 5 {
+			price = 16.50
+		}
+		if w > 10 {
+			price = 19.00
+		}
+		if req.COD > 0 {
+			price += 5.50
+		}
+		rates = append(rates, integration.Rate{
+			CarrierName:   "Poczta Polska",
+			CarrierCode:   "poczta_polska",
+			ServiceName:   "Pocztex Kurier 48",
+			Price:         price,
+			Currency:      "PLN",
+			EstimatedDays: 2,
+			PickupPoint:   false,
+		})
+	}
+
+	return rates, nil
+}
+
 func (p *PocztaPolskaProvider) SupportsPickupPoints() bool { return false }
 
 func (p *PocztaPolskaProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {

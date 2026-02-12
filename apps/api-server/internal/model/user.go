@@ -63,6 +63,11 @@ type SMSSettings struct {
 	Templates map[string]string `json:"templates"`
 }
 
+// InventorySettings controls warehouse inventory behaviour for a tenant.
+type InventorySettings struct {
+	StrictMode bool `json:"strict_mode"`
+}
+
 // AuditEntry represents an audit log record.
 type AuditEntry struct {
 	TenantID   uuid.UUID `json:"tenant_id"`

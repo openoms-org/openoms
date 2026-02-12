@@ -14,6 +14,8 @@ import (
 type UserWithPassword struct {
 	model.User
 	PasswordHash string
+	TOTPSecret   *string
+	TOTPEnabled  bool
 }
 
 type UserRepository struct {
@@ -37,6 +39,20 @@ func (r *UserRepository) FindForAuth(ctx context.Context, email string, tenantID
 		}
 		return nil, fmt.Errorf("find user for auth: %w", err)
 	}
+
+	// Fetch TOTP fields separately (not in SECURITY DEFINER function)
+	var totpSecret *string
+	var totpEnabled bool
+	err = r.pool.QueryRow(ctx,
+		"SELECT totp_secret, totp_enabled FROM users WHERE id = $1 AND tenant_id = $2",
+		u.ID, tenantID,
+	).Scan(&totpSecret, &totpEnabled)
+	if err != nil && err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("fetch totp fields: %w", err)
+	}
+	u.TOTPSecret = totpSecret
+	u.TOTPEnabled = totpEnabled
+
 	return &u, nil
 }
 
@@ -152,4 +168,45 @@ func (r *UserRepository) CountByRole(ctx context.Context, tx pgx.Tx, role string
 	var count int
 	err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE role = $1", role).Scan(&count)
 	return count, err
+}
+
+// SetTOTPSecret sets the encrypted TOTP secret for a user.
+func (r *UserRepository) SetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.UUID, encryptedSecret string) error {
+	_, err := tx.Exec(ctx, "UPDATE users SET totp_secret = $1 WHERE id = $2", encryptedSecret, id)
+	return err
+}
+
+// EnableTOTP enables TOTP for a user and sets the verified_at timestamp.
+func (r *UserRepository) EnableTOTP(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	_, err := tx.Exec(ctx, "UPDATE users SET totp_enabled = TRUE, totp_verified_at = NOW() WHERE id = $1", id)
+	return err
+}
+
+// DisableTOTP disables TOTP for a user and clears the secret.
+func (r *UserRepository) DisableTOTP(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	_, err := tx.Exec(ctx, "UPDATE users SET totp_enabled = FALSE, totp_secret = NULL, totp_verified_at = NULL WHERE id = $1", id)
+	return err
+}
+
+// GetTOTPStatus returns the TOTP enabled state and verified_at timestamp.
+func (r *UserRepository) GetTOTPStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID) (bool, *string, error) {
+	var enabled bool
+	var verifiedAt *string
+	err := tx.QueryRow(ctx,
+		"SELECT totp_enabled, totp_verified_at::text FROM users WHERE id = $1", id,
+	).Scan(&enabled, &verifiedAt)
+	if err != nil {
+		return false, nil, fmt.Errorf("get totp status: %w", err)
+	}
+	return enabled, verifiedAt, nil
+}
+
+// GetTOTPSecret returns the encrypted TOTP secret for a user.
+func (r *UserRepository) GetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*string, error) {
+	var secret *string
+	err := tx.QueryRow(ctx, "SELECT totp_secret FROM users WHERE id = $1", id).Scan(&secret)
+	if err != nil {
+		return nil, fmt.Errorf("get totp secret: %w", err)
+	}
+	return secret, nil
 }

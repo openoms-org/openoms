@@ -239,12 +239,27 @@ Zwroc JSON: {"description": "tresc opisu"}`,
 	return parsed.Description, nil
 }
 
+// DescribeOptions holds optional parameters for enhanced description generation.
+type DescribeOptions struct {
+	Style       string `json:"style"`       // "professional" | "promotional" | "casual" | "seo"
+	Language    string `json:"language"`     // "pl" | "en" | "de"
+	Length      string `json:"length"`       // "short" | "medium" | "long"
+	Marketplace string `json:"marketplace"` // "" | "allegro" | "amazon" | "ebay"
+}
+
 // AISuggestion holds all AI-generated suggestions for a product.
 type AISuggestion struct {
-	ProductID   uuid.UUID `json:"product_id"`
-	Categories  []string  `json:"categories"`
-	Tags        []string  `json:"tags"`
-	Description string    `json:"description,omitempty"`
+	ProductID        uuid.UUID `json:"product_id"`
+	Categories       []string  `json:"categories"`
+	Tags             []string  `json:"tags"`
+	Description      string    `json:"description,omitempty"`
+	ShortDescription string    `json:"short_description,omitempty"`
+	LongDescription  string    `json:"long_description,omitempty"`
+}
+
+// AITextResult holds a single text result from AI operations.
+type AITextResult struct {
+	Description string `json:"description"`
 }
 
 // Categorize fetches a product and returns AI suggestions without modifying the product.
@@ -288,7 +303,7 @@ func (s *AIService) Categorize(ctx context.Context, tenantID, productID uuid.UUI
 }
 
 // Describe fetches a product and returns an AI-generated description.
-func (s *AIService) Describe(ctx context.Context, tenantID, productID uuid.UUID) (*AISuggestion, error) {
+func (s *AIService) Describe(ctx context.Context, tenantID, productID uuid.UUID, opts *DescribeOptions) (*AISuggestion, error) {
 	var name, shortDesc string
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -307,13 +322,208 @@ func (s *AIService) Describe(ctx context.Context, tenantID, productID uuid.UUID)
 		return nil, err
 	}
 
-	desc, err := s.GenerateDescription(ctx, name, shortDesc)
+	if opts == nil {
+		opts = &DescribeOptions{}
+	}
+	if opts.Style == "" {
+		opts.Style = "professional"
+	}
+	if opts.Language == "" {
+		opts.Language = "pl"
+	}
+	if opts.Length == "" {
+		opts.Length = "medium"
+	}
+
+	shortDescResult, longDescResult, err := s.GenerateEnhancedDescription(ctx, name, shortDesc, *opts)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AISuggestion{
-		ProductID:   productID,
-		Description: desc,
+		ProductID:        productID,
+		ShortDescription: shortDescResult,
+		LongDescription:  longDescResult,
+		Description:      longDescResult, // backward compatibility
 	}, nil
+}
+
+// GenerateEnhancedDescription generates both short and long product descriptions with options.
+func (s *AIService) GenerateEnhancedDescription(ctx context.Context, productName, shortDescription string, opts DescribeOptions) (string, string, error) {
+	langMap := map[string]string{
+		"pl": "po polsku",
+		"en": "in English",
+		"de": "auf Deutsch",
+	}
+	lang := langMap[opts.Language]
+	if lang == "" {
+		lang = "po polsku"
+	}
+
+	styleMap := map[string]string{
+		"professional": "profesjonalny, rzeczowy ton",
+		"promotional":  "promocyjny, zachecajacy do zakupu ton",
+		"casual":       "swobodny, przyjazny ton",
+		"seo":          "zoptymalizowany pod SEO, z uzyciem slow kluczowych",
+	}
+	style := styleMap[opts.Style]
+	if style == "" {
+		style = styleMap["professional"]
+	}
+
+	lengthMap := map[string]string{
+		"short":  "krotki (1-2 zdania)",
+		"medium": "sredni (3-5 zdan)",
+		"long":   "dlugi (6-10 zdan, szczegolowy)",
+	}
+	length := lengthMap[opts.Length]
+	if length == "" {
+		length = lengthMap["medium"]
+	}
+
+	marketplaceHint := ""
+	if opts.Marketplace != "" {
+		marketplaceMap := map[string]string{
+			"allegro": "Sformatuj opis pod Allegro - uzyj punktow, podkresl najwazniejsze cechy, dodaj sekcje 'Specyfikacja' i 'W zestawie'.",
+			"amazon":  "Sformatuj opis pod Amazon - uzyj bullet pointow (max 5), zachowaj zwiezlosc, podkresl USP produktu.",
+			"ebay":    "Sformatuj opis pod eBay - uzyj czytelnego formatowania HTML, dodaj sekcje opisowa i specyfikacje.",
+		}
+		marketplaceHint = marketplaceMap[opts.Marketplace]
+		if marketplaceHint == "" {
+			marketplaceHint = ""
+		}
+	}
+
+	systemPrompt := fmt.Sprintf("Jestes copywriterem e-commerce. Piszesz opisy produktow %s. Styl: %s. Zwracasz TYLKO surowy JSON, bez markdown.", lang, style)
+
+	marketplaceInstruction := ""
+	if marketplaceHint != "" {
+		marketplaceInstruction = fmt.Sprintf("\n%s", marketplaceHint)
+	}
+
+	userPrompt := fmt.Sprintf(
+		`Produkt: "%s"
+Krotki opis: "%s"
+
+Napisz:
+1. Krotki opis produktu (1-2 zdania, do 200 znakow)
+2. Dlugi opis produktu (%s)
+
+Jezyk: %s
+%s
+Zwroc JSON: {"short_description": "...", "long_description": "..."}`,
+		productName, shortDescription, length, lang, marketplaceInstruction,
+	)
+
+	result, err := s.callOpenAI(ctx, systemPrompt, userPrompt)
+	if err != nil {
+		return "", "", err
+	}
+
+	var parsed struct {
+		ShortDescription string `json:"short_description"`
+		LongDescription  string `json:"long_description"`
+	}
+	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+		// Fallback: try old format
+		var oldParsed struct {
+			Description string `json:"description"`
+		}
+		if err2 := json.Unmarshal([]byte(result), &oldParsed); err2 == nil {
+			return "", oldParsed.Description, nil
+		}
+		return "", result, nil
+	}
+	return parsed.ShortDescription, parsed.LongDescription, nil
+}
+
+// ImproveDescription takes an existing description and improves it.
+func (s *AIService) ImproveDescription(ctx context.Context, description, style, language string) (string, error) {
+	if style == "" {
+		style = "professional"
+	}
+	if language == "" {
+		language = "pl"
+	}
+
+	langMap := map[string]string{
+		"pl": "po polsku",
+		"en": "in English",
+		"de": "auf Deutsch",
+	}
+	lang := langMap[language]
+	if lang == "" {
+		lang = "po polsku"
+	}
+
+	styleMap := map[string]string{
+		"professional": "profesjonalny, rzeczowy",
+		"promotional":  "promocyjny, zachecajacy",
+		"casual":       "swobodny, przyjazny",
+		"seo":          "zoptymalizowany pod SEO",
+	}
+	styleTxt := styleMap[style]
+	if styleTxt == "" {
+		styleTxt = styleMap["professional"]
+	}
+
+	systemPrompt := fmt.Sprintf("Jestes copywriterem e-commerce. Poprawiasz opisy produktow. Jezyk: %s. Styl: %s. Zwracasz TYLKO surowy JSON, bez markdown.", lang, styleTxt)
+	userPrompt := fmt.Sprintf(
+		`Obecny opis produktu:
+"%s"
+
+Popraw ten opis - ulepsz styl, popraw bledy, uczyni go bardziej atrakcyjnym dla klientow. Zachowaj kluczowe informacje.
+Zwroc JSON: {"description": "poprawiony opis"}`,
+		description,
+	)
+
+	result, err := s.callOpenAI(ctx, systemPrompt, userPrompt)
+	if err != nil {
+		return "", err
+	}
+
+	var parsed struct {
+		Description string `json:"description"`
+	}
+	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+		return result, nil
+	}
+	return parsed.Description, nil
+}
+
+// TranslateDescription translates a product description to the target language.
+func (s *AIService) TranslateDescription(ctx context.Context, description, targetLanguage string) (string, error) {
+	langMap := map[string]string{
+		"pl": "polski",
+		"en": "angielski",
+		"de": "niemiecki",
+	}
+	lang := langMap[targetLanguage]
+	if lang == "" {
+		lang = targetLanguage
+	}
+
+	systemPrompt := "Jestes profesjonalnym tlumaczem opisow produktow e-commerce. Zwracasz TYLKO surowy JSON, bez markdown."
+	userPrompt := fmt.Sprintf(
+		`Przetlumacz ponizszy opis produktu na jezyk %s. Zachowaj formatowanie i styl.
+
+Opis do przetlumaczenia:
+"%s"
+
+Zwroc JSON: {"description": "przetlumaczony opis"}`,
+		lang, description,
+	)
+
+	result, err := s.callOpenAI(ctx, systemPrompt, userPrompt)
+	if err != nil {
+		return "", err
+	}
+
+	var parsed struct {
+		Description string `json:"description"`
+	}
+	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
+		return result, nil
+	}
+	return parsed.Description, nil
 }

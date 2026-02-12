@@ -62,6 +62,7 @@ type RouterDeps struct {
 	RoleService        *service.RoleService
 	Stocktake          *handler.StocktakeHandler
 	KSeF               *handler.KSeFHandler
+	Rate               *handler.RateHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -109,6 +110,7 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Post("/login", deps.Auth.Login)
 		r.Post("/refresh", deps.Auth.Refresh)
 		r.Post("/logout", deps.Auth.Logout)
+		r.Post("/2fa/login", deps.Auth.TwoFALogin)
 	})
 
 	// Public webhook routes — no JWT, signature-verified
@@ -162,6 +164,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/sms", deps.Settings.GetSMSSettings)
 				r.Put("/sms", deps.Settings.UpdateSMSSettings)
 				r.Post("/sms/test", deps.Settings.SendTestSMS)
+				r.Get("/inventory", deps.Settings.GetInventorySettings)
+				r.Put("/inventory", deps.Settings.UpdateInventorySettings)
 				r.Get("/print-templates", deps.Print.GetPrintTemplates)
 				r.Put("/print-templates", deps.Print.UpdatePrintTemplates)
 				r.Get("/ksef", deps.KSeF.GetSettings)
@@ -185,6 +189,14 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Use(middleware.RequireRole("admin"))
 				r.Get("/", deps.SyncJob.List)
 				r.Get("/{id}", deps.SyncJob.Get)
+			})
+
+			// 2FA management — any authenticated user
+			r.Route("/auth/2fa", func(r chi.Router) {
+				r.Post("/setup", deps.Auth.TwoFASetup)
+				r.Post("/verify", deps.Auth.TwoFAVerify)
+				r.Post("/disable", deps.Auth.TwoFADisable)
+				r.Get("/status", deps.Auth.TwoFAStatus)
 			})
 
 			// Any authenticated user
@@ -267,6 +279,9 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Route("/products", func(r chi.Router) {
 				r.Get("/", deps.Product.List)
 				r.Post("/", deps.Product.Create)
+				r.Get("/export", deps.Product.ExportCSV)
+				r.Post("/import/preview", deps.Product.ImportPreview)
+				r.Post("/import", deps.Product.ImportCSV)
 				r.Get("/{id}", deps.Product.Get)
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)
@@ -417,6 +432,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/categorize", deps.AI.Categorize)
 				r.Post("/describe", deps.AI.Describe)
 				r.Post("/bulk-categorize", deps.AI.BulkCategorize)
+				r.Post("/improve", deps.AI.Improve)
+				r.Post("/translate", deps.AI.Translate)
 			})
 
 			// Marketing (Mailchimp) — admin only
@@ -455,6 +472,9 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// InPost points search (proxy)
 			r.Get("/inpost/points", deps.InPostPoint.Search)
+
+			// Shipping rate comparison — any authenticated user
+			r.Post("/shipping/rates", deps.Rate.GetRates)
 		})
 	})
 

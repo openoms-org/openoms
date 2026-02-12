@@ -105,6 +105,42 @@ func (m *MockUserRepo) CountByRole(ctx context.Context, tx pgx.Tx, role string) 
 	return args.Int(0), args.Error(1)
 }
 
+func (m *MockUserRepo) UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UUID, roleID *uuid.UUID) error {
+	return m.Called(ctx, tx, id, roleID).Error(0)
+}
+
+func (m *MockUserRepo) UpdateLastLogout(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	return m.Called(ctx, tx, id).Error(0)
+}
+
+func (m *MockUserRepo) SetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.UUID, encryptedSecret string) error {
+	return m.Called(ctx, tx, id, encryptedSecret).Error(0)
+}
+
+func (m *MockUserRepo) EnableTOTP(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	return m.Called(ctx, tx, id).Error(0)
+}
+
+func (m *MockUserRepo) DisableTOTP(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	return m.Called(ctx, tx, id).Error(0)
+}
+
+func (m *MockUserRepo) GetTOTPStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID) (bool, *string, error) {
+	args := m.Called(ctx, tx, id)
+	if args.Get(1) == nil {
+		return args.Bool(0), nil, args.Error(2)
+	}
+	return args.Bool(0), args.Get(1).(*string), args.Error(2)
+}
+
+func (m *MockUserRepo) GetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*string, error) {
+	args := m.Called(ctx, tx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*string), args.Error(1)
+}
+
 // --- MockTenantRepo ---
 
 type MockTenantRepo struct{ mock.Mock }

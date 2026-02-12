@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, ImageIcon, Upload, Loader2 } from "lucide-react";
+import { Plus, Trash2, ImageIcon, Upload, Loader2, Sparkles, Languages, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,11 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TagInput } from "@/components/shared/tag-input";
 import type { Product, CreateProductRequest, UpdateProductRequest } from "@/types/api";
-import { uploadFile } from "@/lib/api-client";
+import { uploadFile, getErrorMessage } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useProductCategories } from "@/hooks/use-product-categories";
+import { useImproveDescription, useTranslateDescription } from "@/hooks/use-ai";
 
 const PRODUCT_SOURCES = ["manual", "allegro", "woocommerce"] as const;
 
@@ -68,6 +75,8 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   const mainFileRef = useRef<HTMLInputElement>(null);
   const galleryFileRef = useRef<HTMLInputElement>(null);
   const { data: categoriesConfig } = useProductCategories();
+  const improveDescription = useImproveDescription();
+  const translateDescription = useTranslateDescription();
 
   const {
     register,
@@ -96,6 +105,44 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
 
   const sourceValue = watch("source");
   const imageUrlValue = watch("image_url");
+  const descShortValue = watch("description_short");
+  const descLongValue = watch("description_long");
+
+  const handleImprove = (field: "description_short" | "description_long") => {
+    const text = field === "description_short" ? descShortValue : descLongValue;
+    if (!text?.trim()) {
+      toast.error("Pole opisu jest puste");
+      return;
+    }
+    improveDescription.mutate(
+      { description: text },
+      {
+        onSuccess: (data) => {
+          setValue(field, data.description, { shouldDirty: true });
+          toast.success("Opis poprawiony przez AI");
+        },
+        onError: (error) => toast.error(getErrorMessage(error)),
+      }
+    );
+  };
+
+  const handleTranslate = (field: "description_short" | "description_long", targetLanguage: string) => {
+    const text = field === "description_short" ? descShortValue : descLongValue;
+    if (!text?.trim()) {
+      toast.error("Pole opisu jest puste");
+      return;
+    }
+    translateDescription.mutate(
+      { description: text, target_language: targetLanguage },
+      {
+        onSuccess: (data) => {
+          setValue(field, data.description, { shouldDirty: true });
+          toast.success("Opis przetlumaczony przez AI");
+        },
+        onError: (error) => toast.error(getErrorMessage(error)),
+      }
+    );
+  };
 
   const handleFormSubmit = (data: ProductFormValues) => {
     onSubmit({
@@ -244,7 +291,56 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description_short">Krótki opis</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description_short">Krótki opis</Label>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={!descShortValue?.trim() || improveDescription.isPending}
+              onClick={() => handleImprove("description_short")}
+            >
+              {improveDescription.isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Sparkles className="mr-1 h-3 w-3" />
+              )}
+              Popraw
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  disabled={!descShortValue?.trim() || translateDescription.isPending}
+                >
+                  {translateDescription.isPending ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Languages className="mr-1 h-3 w-3" />
+                  )}
+                  Przetlumacz
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleTranslate("description_short", "pl")}>
+                  Polski
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate("description_short", "en")}>
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate("description_short", "de")}>
+                  Deutsch
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
         <Input
           id="description_short"
           placeholder="Krótki opis produktu..."
@@ -253,7 +349,56 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description_long">Opis</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description_long">Opis</Label>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={!descLongValue?.trim() || improveDescription.isPending}
+              onClick={() => handleImprove("description_long")}
+            >
+              {improveDescription.isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Sparkles className="mr-1 h-3 w-3" />
+              )}
+              Popraw
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  disabled={!descLongValue?.trim() || translateDescription.isPending}
+                >
+                  {translateDescription.isPending ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Languages className="mr-1 h-3 w-3" />
+                  )}
+                  Przetlumacz
+                  <ChevronDown className="ml-1 h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleTranslate("description_long", "pl")}>
+                  Polski
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate("description_long", "en")}>
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate("description_long", "de")}>
+                  Deutsch
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
         <Textarea
           id="description_long"
           placeholder="Pełny opis produktu..."

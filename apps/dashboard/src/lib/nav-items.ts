@@ -18,6 +18,7 @@ import {
   Factory,
   Zap,
   Upload,
+  Download,
   BarChart3,
   RefreshCw,
   Warehouse,
@@ -31,6 +32,7 @@ import {
   Shield,
   Send,
   Headphones,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface NavItem {
@@ -52,8 +54,10 @@ export const navItems: NavItem[] = [
   { href: "/packing", label: "Pakowanie", icon: ScanBarcode, group: "Sprzedaż" },
   { href: "/reports", label: "Raporty", icon: BarChart3, group: "Sprzedaż" },
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
+  { href: "/products/import", label: "Import produktow", icon: Upload, group: "Katalog" },
   { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
   { href: "/settings/print-templates", label: "Szablony druku", icon: Printer, group: "Katalog" },
+  { href: "/settings/security", label: "Bezpieczenstwo", icon: ShieldCheck, group: "Ogólne" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Ogólne" },
   { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Ogólne" },
   { href: "/settings/roles", label: "Role", icon: Shield, adminOnly: true, group: "Ogólne" },
@@ -64,6 +68,7 @@ export const navItems: NavItem[] = [
   { href: "/settings/ksef", label: "KSeF", icon: FileText, adminOnly: true, group: "Sprzedaż - ustawienia" },
   { href: "/settings/notifications", label: "Powiadomienia", icon: Bell, adminOnly: true, group: "Powiadomienia" },
   { href: "/settings/webhooks", label: "Webhooki", icon: Webhook, adminOnly: true, group: "Powiadomienia" },
+  { href: "/settings/inventory", label: "Kontrola magazynowa", icon: ShieldCheck, adminOnly: true, group: "Magazyn" },
   { href: "/settings/warehouses", label: "Magazyny", icon: Warehouse, adminOnly: true, group: "Magazyn" },
   { href: "/settings/warehouse-documents", label: "Dokumenty magazynowe", icon: ClipboardList, adminOnly: true, group: "Magazyn" },
   { href: "/stocktakes", label: "Inwentaryzacja", icon: ClipboardCheck, adminOnly: true, group: "Magazyn" },

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { EmailSettings, CompanySettings, OrderStatusConfig, CustomFieldsConfig } from "@/types/api";
+import type { EmailSettings, CompanySettings, OrderStatusConfig, CustomFieldsConfig, InventorySettings } from "@/types/api";
 
 export function useEmailSettings() {
   return useQuery({
@@ -80,6 +80,27 @@ export function useUpdateCustomFields() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["custom-fields"] });
+    },
+  });
+}
+
+export function useInventorySettings() {
+  return useQuery({
+    queryKey: ["settings", "inventory"],
+    queryFn: () => apiClient<InventorySettings>("/v1/settings/inventory"),
+  });
+}
+
+export function useUpdateInventorySettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: InventorySettings) =>
+      apiClient<InventorySettings>("/v1/settings/inventory", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "inventory"] });
     },
   });
 }
