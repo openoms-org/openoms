@@ -27,6 +27,10 @@ type Invoice struct {
 	PDFURL         *string         `json:"pdf_url,omitempty"`
 	Metadata       json.RawMessage `json:"metadata"`
 	ErrorMessage   *string         `json:"error_message,omitempty"`
+	KSeFNumber     *string         `json:"ksef_number,omitempty"`
+	KSeFStatus     string          `json:"ksef_status"`
+	KSeFSentAt     *time.Time      `json:"ksef_sent_at,omitempty"`
+	KSeFResponse   json.RawMessage `json:"ksef_response,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 }

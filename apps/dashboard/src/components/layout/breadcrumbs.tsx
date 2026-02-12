@@ -45,8 +45,10 @@ const segmentLabels: Record<string, string> = {
   customers: "Klienci",
   invoices: "Faktury",
   invoicing: "Fakturowanie",
+  ksef: "KSeF",
   roles: "Role",
   warehouses: "Magazyny",
+  stocktakes: "Inwentaryzacja",
 };
 
 export function Breadcrumbs() {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -296,4 +297,96 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		})
 	}
 	return shipment, err
+}
+
+// GetBatchLabelURLs loads label data for multiple shipments.
+// It reads label files from disk based on the label_url stored in each shipment.
+func (s *ShipmentService) GetBatchLabelURLs(ctx context.Context, tenantID uuid.UUID, shipmentIDs []uuid.UUID) ([]model.BatchLabelResult, error) {
+	var results []model.BatchLabelResult
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		for _, sid := range shipmentIDs {
+			shipment, err := s.shipmentRepo.FindByID(ctx, tx, sid)
+			if err != nil {
+				results = append(results, model.BatchLabelResult{
+					ShipmentID: sid.String(),
+					Error:      "failed to load shipment",
+				})
+				continue
+			}
+			if shipment == nil {
+				results = append(results, model.BatchLabelResult{
+					ShipmentID: sid.String(),
+					Error:      "shipment not found",
+				})
+				continue
+			}
+			if shipment.LabelURL == nil || *shipment.LabelURL == "" {
+				results = append(results, model.BatchLabelResult{
+					ShipmentID: sid.String(),
+					Error:      "no label available",
+				})
+				continue
+			}
+
+			labelData, err := readLabelFile(*shipment.LabelURL)
+			if err != nil {
+				results = append(results, model.BatchLabelResult{
+					ShipmentID: sid.String(),
+					Error:      "label file not found",
+				})
+				continue
+			}
+			results = append(results, model.BatchLabelResult{
+				ShipmentID: sid.String(),
+				Data:       labelData,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter to only results with data
+	var validResults []model.BatchLabelResult
+	for _, r := range results {
+		if r.Data != nil {
+			validResults = append(validResults, r)
+		}
+	}
+
+	return validResults, nil
+}
+
+// readLabelFile reads a label file from disk. The URL is in the form:
+// {baseURL}/uploads/{tenantID}/{filename}
+// We extract the path from the URL and read the file.
+func readLabelFile(labelURL string) ([]byte, error) {
+	// The label URL looks like: http://localhost:8080/uploads/tenant-uuid/filename.pdf
+	// We need to extract the path after /uploads/ and resolve it to disk.
+	// Since we don't have the upload dir here, we try to find "uploads/" in the URL
+	// and read from the filesystem relative to the working directory.
+	idx := 0
+	const marker = "/uploads/"
+	for i := range labelURL {
+		if i+len(marker) <= len(labelURL) && labelURL[i:i+len(marker)] == marker {
+			idx = i + len(marker)
+			break
+		}
+	}
+	if idx == 0 {
+		return nil, fmt.Errorf("invalid label URL format: %s", labelURL)
+	}
+
+	path := labelURL[idx:]
+	// Try common upload directories
+	for _, base := range []string{"uploads", "./uploads", "/tmp/uploads"} {
+		data, err := os.ReadFile(base + "/" + path)
+		if err == nil {
+			return data, nil
+		}
+	}
+
+	return nil, fmt.Errorf("label file not found for URL: %s", labelURL)
 }

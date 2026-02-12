@@ -25,13 +25,22 @@ type AutomationRuleLogRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, log *model.AutomationRuleLog) error
 }
 
+// DelayedActionRepo is the interface needed by the engine for delayed action persistence.
+type DelayedActionRepo interface {
+	Create(ctx context.Context, tx pgx.Tx, da *model.DelayedAction) error
+	ListPending(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
+	MarkExecuted(ctx context.Context, tx pgx.Tx, id uuid.UUID, errMsg *string) error
+	ListPendingByTenant(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
+}
+
 // Engine is the automation rules engine that processes events.
 type Engine struct {
-	ruleRepo AutomationRuleRepo
-	logRepo  AutomationRuleLogRepo
-	pool     *pgxpool.Pool
-	executor ActionExecutor
-	logger   *slog.Logger
+	ruleRepo       AutomationRuleRepo
+	logRepo        AutomationRuleLogRepo
+	delayedRepo    DelayedActionRepo
+	pool           *pgxpool.Pool
+	executor       ActionExecutor
+	logger         *slog.Logger
 }
 
 // NewEngine creates a new automation engine.
@@ -49,6 +58,12 @@ func NewEngine(
 		executor: executor,
 		logger:   logger,
 	}
+}
+
+// SetDelayedActionRepo sets the delayed action repository.
+// This uses a setter to avoid changing the constructor signature.
+func (e *Engine) SetDelayedActionRepo(repo DelayedActionRepo) {
+	e.delayedRepo = repo
 }
 
 // ProcessEvent processes an automation event by loading matching rules,
@@ -144,23 +159,60 @@ func (e *Engine) processRule(ctx context.Context, tx pgx.Tx, rule model.Automati
 	var errorMessage *string
 
 	if conditionsMet {
-		for _, action := range actions {
+		for i, action := range actions {
 			actionResult := map[string]any{
 				"type":   action.Type,
 				"params": action.Params,
 			}
 
-			if err := e.executor.ExecuteAction(ctx, event.TenantID, action, event); err != nil {
-				e.logger.Error("automation engine: action failed",
-					"rule_id", rule.ID,
-					"action_type", action.Type,
-					"error", err,
-				)
-				actionResult["error"] = err.Error()
-				errMsg := err.Error()
-				errorMessage = &errMsg
+			// If the action has a delay, schedule it instead of executing immediately
+			if action.DelaySeconds > 0 && e.delayedRepo != nil {
+				actionJSON, _ := json.Marshal(action)
+				eventJSON, _ := json.Marshal(event)
+
+				var orderID *uuid.UUID
+				if event.EntityType == "order" {
+					oid := event.EntityID
+					orderID = &oid
+				}
+
+				da := &model.DelayedAction{
+					ID:          uuid.New(),
+					TenantID:    event.TenantID,
+					RuleID:      rule.ID,
+					ActionIndex: i,
+					OrderID:     orderID,
+					ExecuteAt:   time.Now().Add(time.Duration(action.DelaySeconds) * time.Second),
+					ActionData:  actionJSON,
+					EventData:   eventJSON,
+				}
+
+				if err := e.delayedRepo.Create(ctx, tx, da); err != nil {
+					e.logger.Error("automation engine: failed to schedule delayed action",
+						"rule_id", rule.ID,
+						"action_type", action.Type,
+						"error", err,
+					)
+					actionResult["error"] = err.Error()
+					errMsg := err.Error()
+					errorMessage = &errMsg
+				} else {
+					actionResult["delayed"] = true
+					actionResult["execute_at"] = da.ExecuteAt.Format(time.RFC3339)
+				}
 			} else {
-				actionResult["success"] = true
+				if err := e.executor.ExecuteAction(ctx, event.TenantID, action, event); err != nil {
+					e.logger.Error("automation engine: action failed",
+						"rule_id", rule.ID,
+						"action_type", action.Type,
+						"error", err,
+					)
+					actionResult["error"] = err.Error()
+					errMsg := err.Error()
+					errorMessage = &errMsg
+				} else {
+					actionResult["success"] = true
+				}
 			}
 
 			actionsExecuted = append(actionsExecuted, actionResult)

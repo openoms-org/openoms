@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { INVOICE_STATUS_MAP, INVOICE_TYPE_LABELS, INVOICING_PROVIDER_LABELS } from "@/lib/constants";
+import { INVOICE_STATUS_MAP, INVOICE_TYPE_LABELS, INVOICING_PROVIDER_LABELS, KSEF_STATUS_MAP } from "@/lib/constants";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import type { Invoice } from "@/types/api";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -61,6 +61,20 @@ export const invoiceColumns: ColumnDef<Invoice>[] = [
     header: "Data wystawienia",
     accessorKey: "issue_date",
     cell: (row) => (row.issue_date ? formatDate(row.issue_date) : "-"),
+  },
+  {
+    header: "KSeF",
+    accessorKey: "ksef_status",
+    cell: (row) => (
+      <div className="flex flex-col gap-1">
+        <StatusBadge status={row.ksef_status} statusMap={KSEF_STATUS_MAP} />
+        {row.ksef_number && (
+          <span className="font-mono text-xs text-muted-foreground">
+            {row.ksef_number}
+          </span>
+        )}
+      </div>
+    ),
   },
   {
     header: "Dostawca",

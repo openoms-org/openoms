@@ -1,6 +1,36 @@
+# Dependencies (reinstalled in Docker)
 node_modules
+
+# Build output
 .next
+out
+dist
+
+# Environment and secrets
 .env
 .env.*
 !.env.example
+
+# Documentation
 *.md
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+test-results
+playwright-report
+coverage
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+playwright.config.ts
+e2e/

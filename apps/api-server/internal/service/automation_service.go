@@ -21,11 +21,12 @@ var (
 )
 
 type AutomationService struct {
-	ruleRepo repository.AutomationRuleRepo
-	logRepo  repository.AutomationRuleLogRepo
-	pool     *pgxpool.Pool
-	engine   *automation.Engine
-	logger   *slog.Logger
+	ruleRepo    repository.AutomationRuleRepo
+	logRepo     repository.AutomationRuleLogRepo
+	delayedRepo repository.DelayedActionRepo
+	pool        *pgxpool.Pool
+	engine      *automation.Engine
+	logger      *slog.Logger
 }
 
 func NewAutomationService(
@@ -42,6 +43,11 @@ func NewAutomationService(
 		engine:   engine,
 		logger:   logger,
 	}
+}
+
+// SetDelayedActionRepo sets the delayed action repository.
+func (s *AutomationService) SetDelayedActionRepo(repo repository.DelayedActionRepo) {
+	s.delayedRepo = repo
 }
 
 func (s *AutomationService) List(ctx context.Context, tenantID uuid.UUID, filter model.AutomationRuleListFilter) (model.ListResponse[model.AutomationRule], error) {
@@ -245,6 +251,27 @@ func (s *AutomationService) TestRule(ctx context.Context, tenantID, ruleID uuid.
 // ProcessEvent delegates to the automation engine.
 func (s *AutomationService) ProcessEvent(ctx context.Context, event automation.Event) {
 	s.engine.ProcessEvent(ctx, event)
+}
+
+// ListDelayed returns pending delayed actions for admin visibility.
+func (s *AutomationService) ListDelayed(ctx context.Context, tenantID uuid.UUID) ([]model.DelayedAction, error) {
+	if s.delayedRepo == nil {
+		return []model.DelayedAction{}, nil
+	}
+
+	var actions []model.DelayedAction
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		actions, err = s.delayedRepo.ListPendingByTenant(ctx, tx)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	if actions == nil {
+		actions = []model.DelayedAction{}
+	}
+	return actions, nil
 }
 
 // Ensure unused import is suppressed

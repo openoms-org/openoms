@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -233,4 +235,59 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, shipment)
+}
+
+// BatchLabels collects label files for multiple shipments and returns them as a ZIP archive.
+func (h *ShipmentHandler) BatchLabels(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	var req model.BatchLabelsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if len(req.ShipmentIDs) == 0 {
+		writeError(w, http.StatusBadRequest, "shipment_ids is required")
+		return
+	}
+	if len(req.ShipmentIDs) > 100 {
+		writeError(w, http.StatusBadRequest, "maximum 100 shipments per batch")
+		return
+	}
+
+	labels, err := h.shipmentService.GetBatchLabelURLs(r.Context(), tenantID, req.ShipmentIDs)
+	if err != nil {
+		slog.Error("batch labels: failed to get label URLs", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to get label URLs")
+		return
+	}
+
+	if len(labels) == 0 {
+		writeError(w, http.StatusUnprocessableEntity, "no shipments with labels found")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=labels.zip")
+
+	zipWriter := zip.NewWriter(w)
+	defer zipWriter.Close()
+
+	for i, label := range labels {
+		filename := fmt.Sprintf("label_%s.pdf", label.ShipmentID[:8])
+		if label.Data == nil {
+			continue
+		}
+
+		f, err := zipWriter.Create(filename)
+		if err != nil {
+			slog.Error("batch labels: zip create entry", "index", i, "error", err)
+			continue
+		}
+		if _, err := f.Write(label.Data); err != nil {
+			slog.Error("batch labels: zip write entry", "index", i, "error", err)
+			continue
+		}
+	}
 }

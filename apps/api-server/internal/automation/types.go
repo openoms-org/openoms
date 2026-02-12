@@ -24,8 +24,9 @@ type Condition struct {
 
 // Action defines an action to execute when conditions are met.
 type Action struct {
-	Type   string         `json:"type"`
-	Params map[string]any `json:"params"`
+	Type         string         `json:"type"`
+	Params       map[string]any `json:"params"`
+	DelaySeconds int            `json:"delay_seconds,omitempty"`
 }
 
 // EventProcessor is the interface that services use to fire automation events.
