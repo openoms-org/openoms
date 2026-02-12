@@ -69,6 +69,27 @@ type CustomAttributes struct {
 	SendingMethod string `json:"sending_method,omitempty"`
 }
 
+// OfferService identifies the service of an offer.
+type OfferService struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// Offer represents a shipping offer returned during shipment creation.
+type Offer struct {
+	ID      int64        `json:"id"`
+	Service OfferService `json:"service"`
+	Status  string       `json:"status"`
+	Rate    *float64     `json:"rate"` // nullable
+}
+
+// Transaction represents a payment transaction for a shipment.
+type Transaction struct {
+	ID      int64  `json:"id"`
+	Status  string `json:"status"` // "success", "failure"
+	OfferID int64  `json:"offer_id"`
+}
+
 // Shipment is the API response for a shipment resource.
 type Shipment struct {
 	ID               int64             `json:"id"`
@@ -78,6 +99,8 @@ type Shipment struct {
 	Receiver         Receiver          `json:"receiver"`
 	Parcels          []ParcelResponse  `json:"parcels"`
 	CustomAttributes *CustomAttributes `json:"custom_attributes"`
+	Offers           []Offer           `json:"offers,omitempty"`
+	Transactions     []Transaction     `json:"transactions,omitempty"`
 	CreatedAt        string            `json:"created_at"`
 	UpdatedAt        string            `json:"updated_at"`
 }
