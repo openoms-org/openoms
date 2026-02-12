@@ -87,10 +87,10 @@ export default function InvoicesPage() {
         eligibleForKSeF.map((inv) => inv.id)
       );
       toast.success(
-        `Wyslano ${result.sent} z ${result.total} faktur do KSeF`
+        `Wysłano ${result.sent} z ${result.total} faktur do KSeF`
       );
       if (result.errors && result.errors.length > 0) {
-        toast.error(`Bledy: ${result.errors.join(", ")}`);
+        toast.error(`Błędy: ${result.errors.join(", ")}`);
       }
       refetch();
     } catch (error) {
@@ -118,7 +118,7 @@ export default function InvoicesPage() {
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Wyslij do KSeF ({eligibleForKSeF.length})
+            Wyślij do KSeF ({eligibleForKSeF.length})
           </Button>
         )}
       </div>
@@ -183,7 +183,7 @@ export default function InvoicesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
           </p>
           <Button
             variant="outline"
@@ -191,7 +191,7 @@ export default function InvoicesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       )}

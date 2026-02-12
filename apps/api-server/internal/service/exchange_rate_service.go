@@ -254,6 +254,7 @@ func (s *ExchangeRateService) FetchNBPRates(ctx context.Context, tenantID uuid.U
 		return 0, fmt.Errorf("create NBP request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "OpenOMS/1.0")
 
 	resp, err := client.Do(req)
 	if err != nil {

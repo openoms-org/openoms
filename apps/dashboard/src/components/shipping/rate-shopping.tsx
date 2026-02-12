@@ -107,7 +107,7 @@ export function RateShopping({
           setHasSearched(true);
         },
         onError: (err) => {
-          setError(err instanceof Error ? err.message : "Nie udalo sie pobrac stawek");
+          setError(err instanceof Error ? err.message : "Nie udało się pobrać stawek");
           setHasSearched(true);
         },
       }

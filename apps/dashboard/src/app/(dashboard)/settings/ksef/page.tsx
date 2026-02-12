@@ -68,7 +68,7 @@ export default function KSeFSettingsPage() {
       toast.success("Ustawienia KSeF zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac ustawien";
+        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
       toast.error(message);
     }
   };
@@ -85,7 +85,7 @@ export default function KSeFSettingsPage() {
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie przetestowac polaczenia";
+        err instanceof Error ? err.message : "Nie udało się przetestować połączenia";
       toast.error(message);
       setTestResult({ success: false, message });
     }
@@ -114,7 +114,7 @@ export default function KSeFSettingsPage() {
           <CardHeader>
             <CardTitle>Status integracji</CardTitle>
             <CardDescription>
-              Wlacz lub wylacz wysylanie faktur do KSeF
+              Włącz lub wyłącz wysyłanie faktur do KSeF
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -126,7 +126,7 @@ export default function KSeFSettingsPage() {
                 }
               />
               <span className="text-sm">
-                {form.enabled ? "KSeF wlaczony" : "KSeF wylaczony"}
+                {form.enabled ? "KSeF włączony" : "KSeF wyłączony"}
               </span>
             </div>
           </CardContent>
@@ -135,14 +135,14 @@ export default function KSeFSettingsPage() {
         {/* Environment */}
         <Card>
           <CardHeader>
-            <CardTitle>Srodowisko</CardTitle>
+            <CardTitle>Środowisko</CardTitle>
             <CardDescription>
-              Wybierz srodowisko KSeF (testowe do testow, produkcyjne do wysylki prawdziwych faktur)
+              Wybierz środowisko KSeF (testowe do testów, produkcyjne do wysyłki prawdziwych faktur)
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-w-sm">
-              <Label>Srodowisko</Label>
+              <Label>Środowisko</Label>
               <Select
                 value={form.environment || "test"}
                 onValueChange={(value) =>
@@ -150,7 +150,7 @@ export default function KSeFSettingsPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz srodowisko" />
+                  <SelectValue placeholder="Wybierz środowisko" />
                 </SelectTrigger>
                 <SelectContent>
                   {KSEF_ENVIRONMENTS.map((env) => (
@@ -210,7 +210,7 @@ export default function KSeFSettingsPage() {
           <CardHeader>
             <CardTitle>Dane firmy (sprzedawca)</CardTitle>
             <CardDescription>
-              Dane firmy uzywane w fakturach strukturalnych KSeF
+              Dane firmy używane w fakturach strukturalnych KSeF
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -232,7 +232,7 @@ export default function KSeFSettingsPage() {
                   onChange={(e) =>
                     setForm({ ...form, company_street: e.target.value })
                   }
-                  placeholder="ul. Przykladowa 1"
+                  placeholder="ul. Przykładowa 1"
                 />
               </div>
               <div className="space-y-2">
@@ -273,9 +273,9 @@ export default function KSeFSettingsPage() {
         {/* Test connection */}
         <Card>
           <CardHeader>
-            <CardTitle>Test polaczenia</CardTitle>
+            <CardTitle>Test połączenia</CardTitle>
             <CardDescription>
-              Sprawdz czy polaczenie z KSeF dziala poprawnie
+              Sprawdź czy połączenie z KSeF działa poprawnie
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -289,7 +289,7 @@ export default function KSeFSettingsPage() {
               ) : (
                 <TestTube className="mr-2 h-4 w-4" />
               )}
-              Testuj polaczenie
+              Testuj połączenie
             </Button>
 
             {testResult && (

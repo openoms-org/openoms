@@ -11,6 +11,8 @@ export const ORDER_STATUSES: Record<string, { label: string; color: string }> = 
   on_hold: { label: "Wstrzymane", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
   cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
   refunded: { label: "Zwrócone", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
+  merged: { label: "Scalone", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  split: { label: "Rozdzielone", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
 };
 
 export const ORDER_TRANSITIONS: Record<string, string[]> = {

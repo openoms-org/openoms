@@ -28,8 +28,8 @@ export function ConnectionStatus() {
         <TooltipContent>
           <p>
             {isConnected
-              ? "Polaczenie aktywne"
-              : "Brak polaczenia z serwerem"}
+              ? "Połączenie aktywne"
+              : "Brak połączenia z serwerem"}
           </p>
         </TooltipContent>
       </Tooltip>

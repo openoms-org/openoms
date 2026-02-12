@@ -29,7 +29,7 @@ const MARKETPLACES = [
   { id: "A1PA6795UKMFR9", label: "amazon.de (Niemcy)" },
   { id: "A1F83G8C2ARO7P", label: "amazon.co.uk (Wielka Brytania)" },
   { id: "A13V1IB3VIYZZH", label: "amazon.fr (Francja)" },
-  { id: "APJ6JRA9NG5V4", label: "amazon.it (Wlochy)" },
+  { id: "APJ6JRA9NG5V4", label: "amazon.it (Włochy)" },
   { id: "A1RKKUPIHCS9HS", label: "amazon.es (Hiszpania)" },
   { id: "A21TJRUUN4KGV", label: "amazon.in (Indie)" },
   { id: "ATVPDKIKX0DER", label: "amazon.com (USA)" },
@@ -47,7 +47,7 @@ export default function AmazonSetupPage() {
     e.preventDefault();
 
     if (!clientId || !clientSecret || !refreshToken || !marketplaceId) {
-      toast.error("Wszystkie pola sa wymagane");
+      toast.error("Wszystkie pola są wymagane");
       return;
     }
 
@@ -63,10 +63,10 @@ export default function AmazonSetupPage() {
           sandbox,
         }),
       });
-      toast.success("Integracja Amazon zostala skonfigurowana");
+      toast.success("Integracja Amazon została skonfigurowana");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie skonfigurowac integracji";
+        err instanceof Error ? err.message : "Nie udało się skonfigurować integracji";
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -85,14 +85,14 @@ export default function AmazonSetupPage() {
           <div>
             <h1 className="text-2xl font-bold">Integracja Amazon</h1>
             <p className="text-muted-foreground">
-              Polacz swoje konto Amazon Seller, aby synchronizowac zamowienia
+              Połącz swoje konto Amazon Seller, aby synchronizować zamówienia
             </p>
           </div>
         </div>
 
         <Card className="max-w-2xl">
           <CardHeader>
-            <CardTitle>Dane uwierzytelniajace Amazon SP-API</CardTitle>
+            <CardTitle>Dane uwierzytelniające Amazon SP-API</CardTitle>
             <CardDescription>
               Podaj dane z aplikacji Amazon Seller Partner API. Dane znajdziesz
               w panelu Amazon Seller Central w sekcji Developer.

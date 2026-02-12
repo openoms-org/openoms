@@ -65,7 +65,7 @@ export function EditableCell<T>({
       setIsEditing(false);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac zmian";
+        err instanceof Error ? err.message : "Nie udało się zapisać zmian";
       toast.error(message);
     } finally {
       setIsSaving(false);
@@ -126,7 +126,7 @@ export function EditableCell<T>({
               const message =
                 err instanceof Error
                   ? err.message
-                  : "Nie udalo sie zapisac zmian";
+                  : "Nie udało się zapisać zmian";
               toast.error(message);
             })
             .finally(() => {

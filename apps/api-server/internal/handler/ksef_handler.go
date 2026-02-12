@@ -122,11 +122,11 @@ func (h *KSeFHandler) SendToKSeF(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, service.ErrKSeFNotConfigured) {
-			writeError(w, http.StatusBadRequest, "KSeF nie jest skonfigurowany")
+			writeError(w, http.StatusBadRequest, "KSeF is not configured")
 			return
 		}
 		if errors.Is(err, service.ErrKSeFAlreadySent) {
-			writeError(w, http.StatusConflict, "Faktura została już wysłana do KSeF")
+			writeError(w, http.StatusConflict, "invoice has already been sent to KSeF")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, "failed to send invoice to KSeF")

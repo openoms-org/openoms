@@ -78,7 +78,7 @@ export default function SecuritySettingsPage() {
         body: JSON.stringify({ code }),
       }),
     onSuccess: () => {
-      toast.success("Uwierzytelnianie dwuskladnikowe zostalo wlaczone");
+      toast.success("Uwierzytelnianie dwuskładnikowe zostało włączone");
       setShowSetupDialog(false);
       setSetupData(null);
       setVerifyCode("");
@@ -97,7 +97,7 @@ export default function SecuritySettingsPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      toast.success("Uwierzytelnianie dwuskladnikowe zostalo wylaczone");
+      toast.success("Uwierzytelnianie dwuskładnikowe zostało wyłączone");
       setShowDisableDialog(false);
       setDisablePassword("");
       setDisableCode("");
@@ -119,7 +119,7 @@ export default function SecuritySettingsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Bezpieczenstwo</h1>
+        <h1 className="text-2xl font-bold">Bezpieczeństwo</h1>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -130,9 +130,9 @@ export default function SecuritySettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Bezpieczenstwo</h1>
+        <h1 className="text-2xl font-bold">Bezpieczeństwo</h1>
         <p className="text-muted-foreground">
-          Zarzadzaj ustawieniami bezpieczenstwa konta
+          Zarządzaj ustawieniami bezpieczeństwa konta
         </p>
       </div>
 
@@ -140,12 +140,12 @@ export default function SecuritySettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" />
-            Uwierzytelnianie dwuskladnikowe (2FA)
+            Uwierzytelnianie dwuskładnikowe (2FA)
           </CardTitle>
           <CardDescription>
-            Dodatkowa warstwa zabezpieczen dla Twojego konta. Wymaga kodu z
-            aplikacji uwierzytelniajcej (np. Google Authenticator, Authy) przy
-            kazdym logowaniu.
+            Dodatkowa warstwa zabezpieczeń dla Twojego konta. Wymaga kodu z
+            aplikacji uwierzytelniającej (np. Google Authenticator, Authy) przy
+            każdym logowaniu.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -165,7 +165,7 @@ export default function SecuritySettingsPage() {
                   )}
                 </div>
               ) : (
-                <Badge variant="secondary">Wylaczone</Badge>
+                <Badge variant="secondary">Wyłączone</Badge>
               )}
             </div>
             <div>
@@ -176,7 +176,7 @@ export default function SecuritySettingsPage() {
                   onClick={() => setShowDisableDialog(true)}
                 >
                   <ShieldOff className="mr-2 h-4 w-4" />
-                  Wylacz 2FA
+                  Wyłącz 2FA
                 </Button>
               ) : (
                 <Button
@@ -189,7 +189,7 @@ export default function SecuritySettingsPage() {
                   ) : (
                     <ShieldCheck className="mr-2 h-4 w-4" />
                   )}
-                  Wlacz 2FA
+                  Włącz 2FA
                 </Button>
               )}
             </div>
@@ -199,13 +199,13 @@ export default function SecuritySettingsPage() {
 
           <div className="rounded-lg bg-muted/50 p-4">
             <h4 className="text-sm font-medium mb-2">
-              Jak dziala uwierzytelnianie dwuskladnikowe?
+              Jak działa uwierzytelnianie dwuskładnikowe?
             </h4>
             <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>Zainstaluj aplikacje uwierzytelniajca (Google Authenticator, Authy, itp.)</li>
-              <li>Kliknij &quot;Wlacz 2FA&quot; i zeskanuj kod QR w aplikacji</li>
-              <li>Wpisz 6-cyfrowy kod z aplikacji, aby potwierdzic</li>
-              <li>Przy kazdym logowaniu bedziesz proszony o kod z aplikacji</li>
+              <li>Zainstaluj aplikację uwierzytelniającą (Google Authenticator, Authy, itp.)</li>
+              <li>Kliknij &quot;Włącz 2FA&quot; i zeskanuj kod QR w aplikacji</li>
+              <li>Wpisz 6-cyfrowy kod z aplikacji, aby potwierdzić</li>
+              <li>Przy każdym logowaniu będziesz proszony o kod z aplikacji</li>
             </ol>
           </div>
         </CardContent>
@@ -217,7 +217,7 @@ export default function SecuritySettingsPage() {
           <DialogHeader>
             <DialogTitle>Konfiguracja 2FA</DialogTitle>
             <DialogDescription>
-              Zeskanuj kod QR w aplikacji uwierzytelniajcej lub wpisz klucz recznie
+              Zeskanuj kod QR w aplikacji uwierzytelniającej lub wpisz klucz ręcznie
             </DialogDescription>
           </DialogHeader>
 
@@ -232,7 +232,7 @@ export default function SecuritySettingsPage() {
 
               {/* Manual secret */}
               <div className="space-y-2">
-                <Label>Klucz reczny</Label>
+                <Label>Klucz ręczny</Label>
                 <div className="flex gap-2">
                   <Input
                     readOnly
@@ -271,8 +271,8 @@ export default function SecuritySettingsPage() {
                   className="text-center text-lg tracking-widest font-mono"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Wpisz 6-cyfrowy kod z aplikacji uwierzytelniajcej aby
-                  potwierdzic konfiguracje
+                  Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej aby
+                  potwierdzić konfigurację
                 </p>
               </div>
             </div>
@@ -296,7 +296,7 @@ export default function SecuritySettingsPage() {
               {verifyMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Potwierdz i wlacz
+              Potwierdź i włącz
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -306,16 +306,16 @@ export default function SecuritySettingsPage() {
       <Dialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Wylacz uwierzytelnianie dwuskladnikowe</DialogTitle>
+            <DialogTitle>Wyłącz uwierzytelnianie dwuskładnikowe</DialogTitle>
             <DialogDescription>
-              Podaj haslo i aktualny kod 2FA, aby wylaczyc uwierzytelnianie
-              dwuskladnikowe. Twoje konto bedzie mniej bezpieczne.
+              Podaj hasło i aktualny kod 2FA, aby wyłączyć uwierzytelnianie
+              dwuskładnikowe. Twoje konto będzie mniej bezpieczne.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="disable-password">Haslo</Label>
+              <Label htmlFor="disable-password">Hasło</Label>
               <Input
                 id="disable-password"
                 type="password"
@@ -369,7 +369,7 @@ export default function SecuritySettingsPage() {
               {disableMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Wylacz 2FA
+              Wyłącz 2FA
             </Button>
           </DialogFooter>
         </DialogContent>

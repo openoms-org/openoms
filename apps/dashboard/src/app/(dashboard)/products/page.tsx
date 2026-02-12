@@ -225,11 +225,11 @@ export default function ProductsPage() {
                   onSuccess: (data) => {
                     const succeeded = data.results.filter((r) => !r.error).length;
                     const failed = data.results.filter((r) => r.error).length;
-                    toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} bledow`);
+                    toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} błędów`);
                     setSelectedProducts(new Set());
                   },
                   onError: (error) => {
-                    toast.error(error instanceof Error ? error.message : "Blad auto-kategoryzacji");
+                    toast.error(error instanceof Error ? error.message : "Błąd auto-kategoryzacji");
                   },
                 });
               }}
@@ -257,9 +257,9 @@ export default function ProductsPage() {
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                toast.success("Eksport CSV rozpoczety");
+                toast.success("Eksport CSV rozpoczęty");
               } catch {
-                toast.error("Blad eksportu CSV");
+                toast.error("Błąd eksportu CSV");
               }
             }}
           >

@@ -282,7 +282,7 @@ func formatAddress(raw json.RawMessage) string {
 		return ""
 	}
 	parts := []string{}
-	for _, key := range []string{"street", "line1", "line2", "city", "post_code", "postal_code", "country"} {
+	for _, key := range []string{"name", "street", "line1", "line2", "city", "post_code", "postal_code", "country"} {
 		if v, ok := addr[key]; ok && v != nil {
 			s := fmt.Sprintf("%v", v)
 			if s != "" {

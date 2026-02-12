@@ -28,7 +28,7 @@ interface CommandPaletteProps {
 const quickActions = [
   { label: "Nowe zamówienie", href: "/orders/new", icon: ShoppingCart },
   { label: "Nowy produkt", href: "/products/new", icon: Package },
-  { label: "Nowa przesylka", href: "/shipments/new", icon: Truck },
+  { label: "Nowa przesyłka", href: "/shipments/new", icon: Truck },
   { label: "Nowy klient", href: "/customers/new", icon: Contact },
 ];
 
@@ -53,8 +53,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Paleta polecen"
-      description="Wyszukaj strone lub akcje..."
+      title="Paleta poleceń"
+      description="Wyszukaj stronę lub akcję..."
     >
       <CommandInput placeholder="Szukaj..." />
       <CommandList>

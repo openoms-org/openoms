@@ -137,7 +137,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       {
         onSuccess: (data) => {
           setValue(field, data.description, { shouldDirty: true });
-          toast.success("Opis przetlumaczony przez AI");
+          toast.success("Opis przetłumaczony przez AI");
         },
         onError: (error) => toast.error(getErrorMessage(error)),
       }
@@ -323,7 +323,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                   ) : (
                     <Languages className="mr-1 h-3 w-3" />
                   )}
-                  Przetlumacz
+                  Przetłumacz
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
@@ -381,7 +381,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                   ) : (
                     <Languages className="mr-1 h-3 w-3" />
                   )}
-                  Przetlumacz
+                  Przetłumacz
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>

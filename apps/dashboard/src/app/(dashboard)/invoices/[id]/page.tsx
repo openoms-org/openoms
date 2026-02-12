@@ -42,7 +42,7 @@ export default function InvoiceDetailPage() {
   const handleCancel = async () => {
     try {
       await cancelInvoice.mutateAsync(params.id);
-      toast.success("Faktura zostala anulowana");
+      toast.success("Faktura została anulowana");
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -59,7 +59,7 @@ export default function InvoiceDetailPage() {
   const handleSendToKSeF = async () => {
     try {
       await sendToKSeF.mutateAsync(params.id);
-      toast.success("Faktura wyslana do KSeF");
+      toast.success("Faktura wysłana do KSeF");
       refetch();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -113,7 +113,7 @@ export default function InvoiceDetailPage() {
           className="mt-4"
           onClick={() => router.push("/invoices")}
         >
-          Wroc do listy
+          Wróć do listy
         </Button>
       </div>
     );
@@ -162,7 +162,7 @@ export default function InvoiceDetailPage() {
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Wyslij do KSeF
+              Wyślij do KSeF
             </Button>
           )}
           {hasPDF && (
@@ -205,7 +205,7 @@ export default function InvoiceDetailPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Zamowienie</p>
+                  <p className="text-sm text-muted-foreground">Zamówienie</p>
                   <Link
                     href={`/orders/${invoice.order_id}`}
                     className="mt-1 font-mono text-sm text-primary hover:underline"
@@ -247,7 +247,7 @@ export default function InvoiceDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Termin platnosci
+                    Termin płatności
                   </p>
                   <p className="mt-1 text-sm">
                     {invoice.due_date ? formatDate(invoice.due_date) : "-"}
@@ -259,7 +259,7 @@ export default function InvoiceDetailPage() {
                 <>
                   <Separator />
                   <div>
-                    <p className="text-sm text-muted-foreground">Blad</p>
+                    <p className="text-sm text-muted-foreground">Błąd</p>
                     <p className="mt-1 text-sm text-destructive">
                       {invoice.error_message}
                     </p>
@@ -296,7 +296,7 @@ export default function InvoiceDetailPage() {
                 {invoice.ksef_sent_at && (
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Data wyslania
+                      Data wysłania
                     </p>
                     <p className="mt-1 text-sm">
                       {formatDate(invoice.ksef_sent_at)}
@@ -317,7 +317,7 @@ export default function InvoiceDetailPage() {
                     ) : (
                       <Send className="mr-2 h-4 w-4" />
                     )}
-                    Wyslij do KSeF
+                    Wyślij do KSeF
                   </Button>
                 )}
                 {canCheckKSeFStatus && (
@@ -332,7 +332,7 @@ export default function InvoiceDetailPage() {
                     ) : (
                       <RefreshCw className="mr-2 h-4 w-4" />
                     )}
-                    Sprawdz status
+                    Sprawdź status
                   </Button>
                 )}
                 {canDownloadUPO && (
@@ -362,7 +362,7 @@ export default function InvoiceDetailPage() {
               </div>
               {invoice.external_id && (
                 <div>
-                  <p className="text-sm text-muted-foreground">ID zewnetrzne</p>
+                  <p className="text-sm text-muted-foreground">ID zewnętrzne</p>
                   <p className="mt-1 font-mono text-xs">
                     {invoice.external_id}
                   </p>
@@ -389,8 +389,8 @@ export default function InvoiceDetailPage() {
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
         title="Anulowanie faktury"
-        description="Czy na pewno chcesz anulowac te fakture? Ta operacja jest nieodwracalna."
-        confirmLabel="Anuluj fakture"
+        description="Czy na pewno chcesz anulować tę fakturę? Ta operacja jest nieodwracalna."
+        confirmLabel="Anuluj fakturę"
         variant="destructive"
         onConfirm={handleCancel}
         isLoading={cancelInvoice.isPending}
