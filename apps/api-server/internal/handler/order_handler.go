@@ -51,6 +51,9 @@ func parseOrderFilter(r *http.Request) model.OrderListFilter {
 	if t := r.URL.Query().Get("tag"); t != "" {
 		filter.Tag = &t
 	}
+	if p := r.URL.Query().Get("priority"); p != "" {
+		filter.Priority = &p
+	}
 	return filter
 }
 
@@ -241,6 +244,81 @@ func (h *OrderHandler) GetAudit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, entries)
+}
+
+func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	orderID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid order ID")
+		return
+	}
+
+	var newOrder *model.Order
+	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		existing, err := h.orderService.OrderRepo().FindByID(r.Context(), tx, orderID)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			return errors.New("order not found")
+		}
+
+		newOrder = &model.Order{
+			ID:              uuid.New(),
+			TenantID:        existing.TenantID,
+			ExternalID:      existing.ExternalID,
+			Source:          existing.Source,
+			IntegrationID:   existing.IntegrationID,
+			Status:          "new",
+			CustomerName:    existing.CustomerName,
+			CustomerEmail:   existing.CustomerEmail,
+			CustomerPhone:   existing.CustomerPhone,
+			ShippingAddress: existing.ShippingAddress,
+			BillingAddress:  existing.BillingAddress,
+			Items:           existing.Items,
+			TotalAmount:     existing.TotalAmount,
+			Currency:        existing.Currency,
+			Notes:           existing.Notes,
+			Metadata:        existing.Metadata,
+			Tags:            existing.Tags,
+			OrderedAt:       existing.OrderedAt,
+			DeliveryMethod:  existing.DeliveryMethod,
+			PickupPointID:   existing.PickupPointID,
+			PaymentStatus:   existing.PaymentStatus,
+			PaymentMethod:   existing.PaymentMethod,
+			CustomerID:      existing.CustomerID,
+			InternalNotes:   existing.InternalNotes,
+			Priority:        existing.Priority,
+		}
+
+		if err := h.orderService.OrderRepo().Create(r.Context(), tx, newOrder); err != nil {
+			return fmt.Errorf("create duplicated order: %w", err)
+		}
+
+		return h.orderService.AuditRepo().Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "order.duplicated",
+			EntityType: "order",
+			EntityID:   newOrder.ID,
+			Changes:    map[string]string{"source_order_id": orderID.String()},
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		if err.Error() == "order not found" {
+			writeError(w, http.StatusNotFound, "order not found")
+			return
+		}
+		slog.Error("failed to duplicate order", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to duplicate order")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, newOrder)
 }
 
 func (h *OrderHandler) loadCustomFieldsConfig(ctx context.Context, tenantID uuid.UUID) model.CustomFieldsConfig {

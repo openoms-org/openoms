@@ -139,6 +139,8 @@ export interface Order {
   total_amount: number;
   currency: string;
   notes?: string;
+  internal_notes?: string;
+  priority?: "urgent" | "high" | "normal" | "low";
   metadata?: Record<string, unknown>;
   tags: string[];
   ordered_at?: string;
@@ -169,6 +171,8 @@ export interface CreateOrderRequest {
   total_amount: number;
   currency?: string;
   notes?: string;
+  internal_notes?: string;
+  priority?: "urgent" | "high" | "normal" | "low";
   metadata?: Record<string, unknown>;
   tags?: string[];
   delivery_method?: string;
@@ -189,6 +193,8 @@ export interface UpdateOrderRequest {
   total_amount?: number;
   currency?: string;
   notes?: string;
+  internal_notes?: string;
+  priority?: "urgent" | "high" | "normal" | "low";
   metadata?: Record<string, unknown>;
   tags?: string[];
   delivery_method?: string;
@@ -209,6 +215,7 @@ export interface OrderListParams extends PaginationParams {
   search?: string;
   payment_status?: string;
   tag?: string;
+  priority?: string;
 }
 
 // === Shipments ===
@@ -344,6 +351,7 @@ export interface ProductListParams extends PaginationParams {
   sku?: string;
   tag?: string;
   category?: string;
+  search?: string;
 }
 
 // === Returns/RMA ===

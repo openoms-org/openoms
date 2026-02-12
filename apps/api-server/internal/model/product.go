@@ -166,5 +166,6 @@ type ProductListFilter struct {
 	SKU      *string
 	Tag      *string
 	Category *string
+	Search   *string
 	PaginationParams
 }

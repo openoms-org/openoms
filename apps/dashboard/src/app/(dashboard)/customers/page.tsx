@@ -8,6 +8,7 @@ import { useCustomers, useDeleteCustomer } from "@/hooks/use-customers";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate, formatCurrency } from "@/lib/utils";
@@ -22,11 +23,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const DEFAULT_LIMIT = 20;
+
 export default function CustomersPage() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const { data, isLoading, isError, refetch } = useCustomers({ search: searchQuery, limit: 50 });
+  const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
+  const { data, isLoading, isError, refetch } = useCustomers({ search: searchQuery, ...pagination });
   const deleteCustomer = useDeleteCustomer();
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -53,6 +57,7 @@ export default function CustomersPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchQuery(search);
+    setPagination((prev) => ({ ...prev, offset: 0 }));
   };
 
   return (
@@ -102,73 +107,89 @@ export default function CustomersPage() {
           action={{ label: "Nowy klient", href: "/customers/new" }}
         />
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Imię i nazwisko</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Telefon</TableHead>
-                <TableHead>Firma</TableHead>
-                <TableHead className="text-right">Zamówień</TableHead>
-                <TableHead className="text-right">Wydano łącznie</TableHead>
-                <TableHead>Tagi</TableHead>
-                <TableHead className="w-[60px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers.map((customer) => (
-                <TableRow
-                  key={customer.id}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => router.push(`/customers/${customer.id}`)}
-                >
-                  <TableCell className="font-medium">{customer.name}</TableCell>
-                  <TableCell>{customer.email || "---"}</TableCell>
-                  <TableCell>{customer.phone || "---"}</TableCell>
-                  <TableCell>{customer.company_name || "---"}</TableCell>
-                  <TableCell className="text-right">{customer.total_orders}</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(customer.total_spent)}
-                  </TableCell>
-                  <TableCell>
-                    {customer.tags && customer.tags.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {customer.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {customer.tags.length > 3 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{customer.tags.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      "---"
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteId(customer.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+        <>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Imię i nazwisko</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Firma</TableHead>
+                  <TableHead className="text-right">Zamówień</TableHead>
+                  <TableHead className="text-right">Wydano łącznie</TableHead>
+                  <TableHead>Tagi</TableHead>
+                  <TableHead className="w-[60px]" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {customers.map((customer) => (
+                  <TableRow
+                    key={customer.id}
+                    className="cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => router.push(`/customers/${customer.id}`)}
+                  >
+                    <TableCell className="font-medium">{customer.name}</TableCell>
+                    <TableCell>{customer.email || "---"}</TableCell>
+                    <TableCell>{customer.phone || "---"}</TableCell>
+                    <TableCell>{customer.company_name || "---"}</TableCell>
+                    <TableCell className="text-right">{customer.total_orders}</TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(customer.total_spent)}
+                    </TableCell>
+                    <TableCell>
+                      {customer.tags && customer.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {customer.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {customer.tags.length > 3 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{customer.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        "---"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteId(customer.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {data && (
+            <DataTablePagination
+              total={data.total}
+              limit={data.limit}
+              offset={data.offset}
+              onPageChange={(offset) =>
+                setPagination((prev) => ({ ...prev, offset }))
+              }
+              onPageSizeChange={(limit) =>
+                setPagination({ limit, offset: 0 })
+              }
+            />
+          )}
+        </>
       )}
 
       <ConfirmDialog

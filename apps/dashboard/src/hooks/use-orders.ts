@@ -22,6 +22,7 @@ export function useOrders(params: OrderListParams = {}) {
   if (params.search) searchParams.set("search", params.search);
   if (params.payment_status) searchParams.set("payment_status", params.payment_status);
   if (params.tag) searchParams.set("tag", params.tag);
+  if (params.priority) searchParams.set("priority", params.priority);
   if (params.sort_by) searchParams.set("sort_by", params.sort_by);
   if (params.sort_order) searchParams.set("sort_order", params.sort_order);
 
@@ -107,6 +108,17 @@ export function useOrderAudit(id: string) {
     queryKey: ["orders", id, "audit"],
     queryFn: () => apiClient<AuditLogEntry[]>(`/v1/orders/${id}/audit`),
     enabled: !!id,
+  });
+}
+
+export function useDuplicateOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiClient<Order>(`/v1/orders/${id}/duplicate`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
   });
 }
 

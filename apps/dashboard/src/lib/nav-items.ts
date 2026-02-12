@@ -52,7 +52,7 @@ export const navItems: NavItem[] = [
   { href: "/orders/import", label: "Import", icon: Upload, group: "Sprzedaż" },
   { href: "/customers", label: "Klienci", icon: Contact, group: "Sprzedaż" },
   { href: "/packing", label: "Pakowanie", icon: ScanBarcode, group: "Sprzedaż" },
-  { href: "/reports", label: "Raporty", icon: BarChart3, group: "Sprzedaż" },
+  { href: "/reports", label: "Raporty", icon: BarChart3, adminOnly: true, group: "Sprzedaż" },
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
   { href: "/products/import", label: "Import produktów", icon: Upload, group: "Katalog" },
   { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },

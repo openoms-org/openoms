@@ -53,6 +53,16 @@ func NewOrderService(
 	}
 }
 
+// OrderRepo returns the underlying order repository for direct access.
+func (s *OrderService) OrderRepo() repository.OrderRepo {
+	return s.orderRepo
+}
+
+// AuditRepo returns the underlying audit repository for direct access.
+func (s *OrderService) AuditRepo() repository.AuditRepo {
+	return s.auditRepo
+}
+
 // SetInvoiceService sets the invoice service for auto-invoicing on status change.
 // Called after both services are constructed to avoid circular dependency.
 func (s *OrderService) SetInvoiceService(invoiceSvc *InvoiceService) {
@@ -186,6 +196,8 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		DeliveryMethod:  req.DeliveryMethod,
 		PickupPointID:   req.PickupPointID,
 		OrderedAt:       orderedAt,
+		InternalNotes:   req.InternalNotes,
+		Priority:        req.Priority,
 	}
 
 	if req.PaymentStatus != nil {

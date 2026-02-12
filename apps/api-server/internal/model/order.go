@@ -38,6 +38,8 @@ type Order struct {
 	CustomerID      *uuid.UUID       `json:"customer_id,omitempty"`
 	MergedInto      *uuid.UUID       `json:"merged_into,omitempty"`
 	SplitFrom       *uuid.UUID       `json:"split_from,omitempty"`
+	InternalNotes   string           `json:"internal_notes"`
+	Priority        string           `json:"priority"`
 	CreatedAt       time.Time        `json:"created_at"`
 	UpdatedAt       time.Time        `json:"updated_at"`
 }
@@ -62,6 +64,16 @@ type CreateOrderRequest struct {
 	OrderedAt       *time.Time       `json:"ordered_at,omitempty"`
 	PaymentStatus   *string          `json:"payment_status,omitempty"`
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
+	InternalNotes   string           `json:"internal_notes,omitempty"`
+	Priority        string           `json:"priority,omitempty"`
+}
+
+var validPriorities = map[string]bool{
+	"low": true, "normal": true, "high": true, "urgent": true,
+}
+
+func IsValidPriority(p string) bool {
+	return validPriorities[p]
 }
 
 func (r *CreateOrderRequest) Validate() error {
@@ -107,6 +119,12 @@ func (r *CreateOrderRequest) Validate() error {
 	if err := validateMaxLengthPtr("pickup_point_id", r.PickupPointID, 100); err != nil {
 		return err
 	}
+	if r.Priority == "" {
+		r.Priority = "normal"
+	}
+	if !IsValidPriority(r.Priority) {
+		return errors.New("priority must be one of: low, normal, high, urgent")
+	}
 	return nil
 }
 
@@ -128,6 +146,8 @@ type UpdateOrderRequest struct {
 	PaymentStatus   *string          `json:"payment_status,omitempty"`
 	PaymentMethod   *string          `json:"payment_method,omitempty"`
 	PaidAt          *time.Time       `json:"paid_at,omitempty"`
+	InternalNotes   *string          `json:"internal_notes,omitempty"`
+	Priority        *string          `json:"priority,omitempty"`
 }
 
 func (r *UpdateOrderRequest) Validate() error {
@@ -136,7 +156,8 @@ func (r *UpdateOrderRequest) Validate() error {
 		r.Items == nil && r.TotalAmount == nil && r.Currency == nil &&
 		r.Notes == nil && r.Metadata == nil && r.Tags == nil &&
 		r.DeliveryMethod == nil && r.PickupPointID == nil &&
-		r.PaymentStatus == nil && r.PaymentMethod == nil && r.PaidAt == nil {
+		r.PaymentStatus == nil && r.PaymentMethod == nil && r.PaidAt == nil &&
+		r.InternalNotes == nil && r.Priority == nil {
 		return errors.New("at least one field must be provided")
 	}
 	if r.TotalAmount != nil && *r.TotalAmount < 0 {
@@ -169,6 +190,9 @@ func (r *UpdateOrderRequest) Validate() error {
 	if err := validateMaxLengthPtr("pickup_point_id", r.PickupPointID, 100); err != nil {
 		return err
 	}
+	if r.Priority != nil && !IsValidPriority(*r.Priority) {
+		return errors.New("priority must be one of: low, normal, high, urgent")
+	}
 	return nil
 }
 
@@ -190,6 +214,7 @@ type OrderListFilter struct {
 	Search        *string
 	PaymentStatus *string
 	Tag           *string
+	Priority      *string
 	PaginationParams
 }
 

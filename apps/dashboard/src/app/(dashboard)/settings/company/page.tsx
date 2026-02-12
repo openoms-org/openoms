@@ -16,8 +16,10 @@ import {
   useCompanySettings,
   useUpdateCompanySettings,
 } from "@/hooks/use-settings";
-import { uploadFile } from "@/lib/api-client";
-import { Loader2, Save, Upload, Building2 } from "lucide-react";
+import { uploadFile, apiFetch, apiClient } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/api-client";
+import { Loader2, Save, Upload, Download, Building2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import type { CompanySettings } from "@/types/api";
 
 const DEFAULT_SETTINGS: CompanySettings = {
@@ -38,7 +40,10 @@ export default function CompanySettingsPage() {
 
   const [form, setForm] = useState<CompanySettings>(DEFAULT_SETTINGS);
   const [uploading, setUploading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings) setForm(settings);
@@ -237,6 +242,92 @@ export default function CompanySettingsPage() {
           Zapisz dane firmy
         </Button>
       </div>
+
+      <Separator />
+
+      {/* Export / Import settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Eksport / Import ustawień</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Eksportuj wszystkie ustawienia systemu do pliku JSON lub zaimportuj wcześniej wyeksportowane ustawienia.
+          </p>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  const res = await apiFetch("/v1/settings/export");
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `ustawienia-${new Date().toISOString().slice(0, 10)}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  toast.success("Ustawienia wyeksportowane");
+                } catch (err) {
+                  toast.error(getErrorMessage(err));
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Eksportuj ustawienia
+            </Button>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImporting(true);
+                try {
+                  const text = await file.text();
+                  const data = JSON.parse(text);
+                  await apiClient("/v1/settings/import", {
+                    method: "POST",
+                    body: JSON.stringify(data),
+                  });
+                  toast.success("Ustawienia zaimportowane pomyślnie");
+                } catch (err) {
+                  toast.error(getErrorMessage(err));
+                } finally {
+                  setImporting(false);
+                  if (importFileInputRef.current) {
+                    importFileInputRef.current.value = "";
+                  }
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              onClick={() => importFileInputRef.current?.click()}
+              disabled={importing}
+            >
+              {importing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              Importuj ustawienia
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
     </AdminGuard>
   );

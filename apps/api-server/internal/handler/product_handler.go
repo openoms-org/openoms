@@ -47,6 +47,9 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	if c := r.URL.Query().Get("category"); c != "" {
 		filter.Category = &c
 	}
+	if s := r.URL.Query().Get("search"); s != "" {
+		filter.Search = &s
+	}
 
 	products, total, err := h.productService.List(r.Context(), tenantID, filter)
 	if err != nil {
