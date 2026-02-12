@@ -78,12 +78,14 @@ function DialogMode({
   onPointSelect: (pointName: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [widgetError, setWidgetError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onPointSelect);
   callbackRef.current = onPointSelect;
 
   useEffect(() => {
     if (!open) return;
+    setWidgetError(false);
 
     loadGeowidgetScript();
 
@@ -107,6 +109,19 @@ function DialogMode({
         widget.style.width = "100%";
         widget.style.height = "100%";
         containerRef.current.appendChild(widget);
+
+        // Detect widget auth errors after it loads
+        const errorCheck = setTimeout(() => {
+          const shadow = widget.shadowRoot;
+          if (shadow) {
+            const errorEl = shadow.querySelector(".error, [class*=error]");
+            if (errorEl?.textContent?.includes("Brak dostępu")) {
+              setWidgetError(true);
+            }
+          }
+        }, 3000);
+
+        return () => clearTimeout(errorCheck);
       }
     }, 500);
 
@@ -131,7 +146,33 @@ function DialogMode({
         <DialogHeader>
           <DialogTitle>Wybierz paczkomat InPost</DialogTitle>
         </DialogHeader>
-        <div ref={containerRef} className="flex-1 min-h-[60vh]" />
+        {widgetError ? (
+          <div className="flex-1 min-h-[60vh] flex flex-col items-center justify-center gap-4">
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-center max-w-md">
+              <p className="font-medium text-destructive">Błąd tokenu GeoWidget</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Token GeoWidget jest przypisany do konkretnej domeny. Sprawdź w{" "}
+                <a href="https://manager.paczkomaty.pl" target="_blank" rel="noopener noreferrer" className="underline">
+                  panelu InPost
+                </a>{" "}
+                czy token jest wygenerowany dla domeny:{" "}
+                <code className="bg-muted px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.hostname : "localhost"}</code>
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">Możesz wybrać paczkomat wyszukiwarką:</p>
+            <div className="w-full max-w-sm">
+              <SearchMode
+                value=""
+                onPointSelect={(name) => {
+                  onPointSelect(name);
+                  setOpen(false);
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div ref={containerRef} className="flex-1 min-h-[60vh]" />
+        )}
       </DialogContent>
     </Dialog>
   );
