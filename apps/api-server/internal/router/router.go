@@ -476,6 +476,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// InPost points search (proxy)
 			r.Get("/inpost/points", deps.InPostPoint.Search)
+			r.Get("/inpost/geowidget-token", deps.Integration.GetGeowidgetToken)
 
 			// Shipping rate comparison — any authenticated user
 			r.Post("/shipping/rates", deps.Rate.GetRates)

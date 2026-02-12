@@ -201,7 +201,7 @@ func main() {
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
 	productImportService := service.NewProductImportService(productRepo, auditRepo, pool)
 	productHandler := handler.NewProductHandler(productService, productImportService)
-	integrationHandler := handler.NewIntegrationHandler(integrationService)
+	integrationHandler := handler.NewIntegrationHandler(integrationService, integrationRepo, pool)
 	returnHandler := handler.NewReturnHandler(returnService)
 	webhookHandler := handler.NewWebhookHandler(webhookService)
 	statsHandler := handler.NewStatsHandler(statsService)

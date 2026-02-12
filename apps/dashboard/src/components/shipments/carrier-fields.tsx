@@ -3,6 +3,7 @@
 import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useGeowidgetToken } from "@/hooks/use-inpost-points";
 import {
   Select,
   SelectContent,
@@ -118,7 +119,8 @@ function InPostFields({
 }) {
   const serviceType = values.service_type ?? "inpost_locker_standard";
   const isLocker = serviceType === "inpost_locker_standard";
-  const hasGeowidgetToken = !!process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN;
+  const { data: tokenData } = useGeowidgetToken();
+  const hasGeowidgetToken = !!(tokenData?.geowidget_token || process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN);
   const targetPoint = (values.target_point as string) ?? "";
 
   return (

@@ -24,7 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useInPostPointSearch } from "@/hooks/use-inpost-points";
+import { useInPostPointSearch, useGeowidgetToken } from "@/hooks/use-inpost-points";
 import type { InPostPoint } from "@/types/api";
 
 function loadGeowidgetScript() {
@@ -54,21 +54,26 @@ export function PaczkomatSelector({
   value,
   onPointSelect,
 }: PaczkomatSelectorProps) {
+  const { data: tokenData } = useGeowidgetToken();
+  const token = tokenData?.geowidget_token || process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN || "";
+
   if (mode === "search") {
     return <SearchMode value={value ?? ""} onPointSelect={onPointSelect} />;
   }
 
   if (mode === "inline") {
-    return <InlineMode onPointSelect={onPointSelect} />;
+    return <InlineMode token={token} onPointSelect={onPointSelect} />;
   }
 
-  return <DialogMode value={value} onPointSelect={onPointSelect} />;
+  return <DialogMode token={token} value={value} onPointSelect={onPointSelect} />;
 }
 
 function DialogMode({
+  token,
   value,
   onPointSelect,
 }: {
+  token: string;
   value?: string;
   onPointSelect: (pointName: string) => void;
 }) {
@@ -95,7 +100,6 @@ function DialogMode({
         widget.setAttribute("onpoint", "onInpostPointSelected");
         widget.setAttribute("language", "pl");
         widget.setAttribute("config", "parcelcollect");
-        const token = process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN;
         if (token) {
           widget.setAttribute("token", token);
         }
@@ -111,7 +115,7 @@ function DialogMode({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).onInpostPointSelected;
     };
-  }, [open]);
+  }, [open, token]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -134,15 +138,15 @@ function DialogMode({
 }
 
 function InlineMode({
+  token,
   onPointSelect,
 }: {
+  token: string;
   onPointSelect: (pointName: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onPointSelect);
   callbackRef.current = onPointSelect;
-
-  const token = process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN || "";
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -183,7 +187,7 @@ function InlineMode({
       <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
         <p>Brak tokenu GeoWidget InPost.</p>
         <p className="text-xs mt-1">
-          Ustaw NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN w pliku .env
+          Skonfiguruj token GeoWidget w ustawieniach integracji InPost.
         </p>
       </div>
     );

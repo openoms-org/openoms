@@ -24,6 +24,7 @@ import {
   INTEGRATION_PROVIDER_LABELS,
   PROVIDER_CATEGORIES,
   PROVIDER_CREDENTIAL_FIELDS,
+  PROVIDER_SETTINGS_FIELDS,
 } from "@/lib/constants";
 import type { CredentialField } from "@/lib/constants";
 
@@ -134,6 +135,24 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
       }
     }
 
+    // Extract fields that should go to settings instead of credentials
+    const settingsFields = PROVIDER_SETTINGS_FIELDS[data.provider] ?? [];
+    const autoSettings: Record<string, unknown> = {};
+    for (const key of settingsFields) {
+      if (credentials[key] !== undefined) {
+        autoSettings[key] = credentials[key];
+        delete credentials[key];
+      }
+    }
+
+    // Merge with manual JSON settings if provided
+    let finalSettings: Record<string, unknown> | undefined;
+    if (data.settings && data.settings.trim() !== "") {
+      finalSettings = { ...JSON.parse(data.settings), ...autoSettings };
+    } else if (Object.keys(autoSettings).length > 0) {
+      finalSettings = autoSettings;
+    }
+
     const result: {
       provider: string;
       credentials: Record<string, unknown>;
@@ -143,9 +162,7 @@ export function IntegrationForm({ onSubmit, isLoading = false }: IntegrationForm
       credentials,
     };
 
-    if (data.settings && data.settings.trim() !== "") {
-      result.settings = JSON.parse(data.settings);
-    }
+    result.settings = finalSettings;
 
     onSubmit(result);
   };
