@@ -249,6 +249,31 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, shipment)
 }
 
+func (h *ShipmentHandler) GetTracking(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	shipmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid shipment ID")
+		return
+	}
+
+	events, err := h.labelService.GetTracking(r.Context(), tenantID, shipmentID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShipmentNotFound):
+			writeError(w, http.StatusNotFound, "shipment not found")
+		case errors.Is(err, service.ErrNoCarrierIntegration):
+			writeError(w, http.StatusUnprocessableEntity, err.Error())
+		default:
+			slog.Error("get tracking failed", "error", err)
+			writeError(w, http.StatusInternalServerError, "failed to get tracking info")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, events)
+}
+
 // BatchLabels collects label files for multiple shipments and returns them as a ZIP archive.
 func (h *ShipmentHandler) BatchLabels(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())

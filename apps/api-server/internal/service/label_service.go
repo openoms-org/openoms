@@ -284,3 +284,61 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 
 	return updatedShipment, nil
 }
+
+// GetTracking fetches real-time tracking events from the carrier API.
+func (s *LabelService) GetTracking(ctx context.Context, tenantID, shipmentID uuid.UUID) ([]integration.TrackingEvent, error) {
+	var shipment *model.Shipment
+	var credJSON []byte
+	var integrationSettings json.RawMessage
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		shipment, err = s.shipmentRepo.FindByID(ctx, tx, shipmentID)
+		if err != nil {
+			return err
+		}
+		if shipment == nil {
+			return ErrShipmentNotFound
+		}
+		if shipment.TrackingNumber == nil || *shipment.TrackingNumber == "" {
+			return nil // no tracking number yet
+		}
+
+		integrationData, err := s.integrationRepo.FindByProvider(ctx, tx, shipment.Provider)
+		if err != nil {
+			return err
+		}
+		if integrationData == nil {
+			return ErrNoCarrierIntegration
+		}
+		integrationSettings = integrationData.Settings
+
+		credJSON, err = crypto.Decrypt(integrationData.EncryptedCredentials, s.encryptionKey)
+		if err != nil {
+			return fmt.Errorf("decrypting integration credentials: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if shipment.TrackingNumber == nil || *shipment.TrackingNumber == "" {
+		return []integration.TrackingEvent{}, nil
+	}
+
+	carrier, err := integration.NewCarrierProvider(shipment.Provider, credJSON, integrationSettings)
+	if err != nil {
+		return nil, fmt.Errorf("creating carrier provider: %w", err)
+	}
+
+	events, err := carrier.GetTracking(ctx, *shipment.TrackingNumber)
+	if err != nil {
+		return nil, fmt.Errorf("carrier get tracking: %w", err)
+	}
+
+	if events == nil {
+		events = []integration.TrackingEvent{}
+	}
+	return events, nil
+}
