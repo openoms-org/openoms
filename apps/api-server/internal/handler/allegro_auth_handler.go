@@ -55,11 +55,11 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	h.stateStore[state] = now.Add(10 * time.Minute)
 	h.stateMu.Unlock()
 
-	client := allegrosdk.NewClient(
-		h.cfg.AllegroClientID,
-		h.cfg.AllegroClientSecret,
-		allegrosdk.WithRedirectURI(h.cfg.AllegroRedirectURI),
-	)
+	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.cfg.AllegroRedirectURI)}
+	if h.cfg.AllegroSandbox {
+		opts = append(opts, allegrosdk.WithSandbox())
+	}
+	client := allegrosdk.NewClient(h.cfg.AllegroClientID, h.cfg.AllegroClientSecret, opts...)
 	defer client.Close()
 
 	authURL := client.AuthorizationURL(state)
@@ -102,11 +102,11 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	client := allegrosdk.NewClient(
-		h.cfg.AllegroClientID,
-		h.cfg.AllegroClientSecret,
-		allegrosdk.WithRedirectURI(h.cfg.AllegroRedirectURI),
-	)
+	cbOpts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.cfg.AllegroRedirectURI)}
+	if h.cfg.AllegroSandbox {
+		cbOpts = append(cbOpts, allegrosdk.WithSandbox())
+	}
+	client := allegrosdk.NewClient(h.cfg.AllegroClientID, h.cfg.AllegroClientSecret, cbOpts...)
 	defer client.Close()
 
 	tok, err := client.ExchangeCode(r.Context(), body.Code)
@@ -123,6 +123,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		"access_token":  tok.AccessToken,
 		"refresh_token": tok.RefreshToken,
 		"token_expiry":  tokenExpiry.Format(time.RFC3339),
+		"sandbox":       h.cfg.AllegroSandbox,
 	}
 	credJSON, err := json.Marshal(credentials)
 	if err != nil {

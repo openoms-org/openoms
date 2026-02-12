@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, RefreshCw, Unplug } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Loader2, RefreshCw, Unplug, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useIntegrations, useUpdateIntegration } from "@/hooks/use-integrations";
@@ -11,6 +12,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
+import { apiClient } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,6 +25,74 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Integration } from "@/types/api";
 
 export default function AllegroIntegrationPage() {
+  const searchParams = useSearchParams();
+  const code = searchParams.get("code");
+  const state = searchParams.get("state");
+
+  // Handle OAuth callback (runs in popup after Allegro redirect)
+  if (code && state) {
+    return <OAuthCallback code={code} state={state} />;
+  }
+
+  return <AllegroMainPage />;
+}
+
+function OAuthCallback({ code, state }: { code: string; state: string }) {
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [errorMsg, setErrorMsg] = useState("");
+  const didRun = useRef(false);
+
+  useEffect(() => {
+    if (didRun.current) return;
+    didRun.current = true;
+
+    apiClient("/v1/integrations/allegro/callback", {
+      method: "POST",
+      body: JSON.stringify({ code, state }),
+    })
+      .then(() => {
+        setStatus("success");
+        // Auto-close popup after brief success message
+        setTimeout(() => window.close(), 1500);
+      })
+      .catch((err) => {
+        setStatus("error");
+        setErrorMsg(err instanceof Error ? err.message : "Autoryzacja nie powiodła się");
+      });
+  }, [code, state]);
+
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardContent className="flex flex-col items-center gap-4 pt-6">
+          {status === "loading" && (
+            <>
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Łączenie z Allegro...</p>
+            </>
+          )}
+          {status === "success" && (
+            <>
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+              <p className="text-sm font-medium">Połączono z Allegro! Okno zamknie się automatycznie.</p>
+            </>
+          )}
+          {status === "error" && (
+            <>
+              <XCircle className="h-8 w-8 text-destructive" />
+              <p className="text-sm text-destructive">{errorMsg}</p>
+              <Button variant="outline" size="sm" onClick={() => window.close()}>
+                Zamknij okno
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AllegroMainPage() {
   const { data: integrations, isLoading, refetch } = useIntegrations();
 
   const allegro = useMemo(
