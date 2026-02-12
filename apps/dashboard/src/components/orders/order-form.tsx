@@ -114,6 +114,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
   const [internalNotes, setInternalNotes] = useState(order?.internal_notes || "");
 
   const [shipmentProvider, setShipmentProvider] = useState<string>(order?.delivery_method ? "" : "");
+  const [inpostServiceType, setInpostServiceType] = useState<string>("locker");
   const [autoCreateShipment, setAutoCreateShipment] = useState(false);
   const [pickupPointId, setPickupPointId] = useState(order?.pickup_point_id || "");
 
@@ -301,7 +302,11 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       payment_method: paymentMethod || undefined,
       priority: priority as "urgent" | "high" | "normal" | "low",
       internal_notes: internalNotes || undefined,
-      delivery_method: shipmentProvider ? (SHIPMENT_PROVIDER_LABELS[shipmentProvider] ?? shipmentProvider) : undefined,
+      delivery_method: shipmentProvider
+        ? shipmentProvider === "inpost"
+          ? inpostServiceType === "locker" ? "Paczkomat InPost" : "Kurier InPost"
+          : (SHIPMENT_PROVIDER_LABELS[shipmentProvider] ?? shipmentProvider)
+        : undefined,
       pickup_point_id: pickupPointId || undefined,
       shipment_provider: autoCreateShipment && shipmentProvider ? shipmentProvider : undefined,
       auto_create_shipment: autoCreateShipment && !!shipmentProvider,
@@ -621,19 +626,42 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
           </div>
 
           {shipmentProvider === "inpost" && (
-            <div className="space-y-2">
-              <Label>Paczkomat docelowy</Label>
-              {pickupPointId && (
-                <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 mb-2">
-                  <span className="font-medium text-sm">{pickupPointId}</span>
+            <>
+              <div className="space-y-2">
+                <Label>Typ usługi InPost</Label>
+                <Select
+                  value={inpostServiceType}
+                  onValueChange={(v) => {
+                    setInpostServiceType(v);
+                    if (v !== "locker") setPickupPointId("");
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="locker">Paczkomat</SelectItem>
+                    <SelectItem value="courier">Kurier InPost</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {inpostServiceType === "locker" && (
+                <div className="space-y-2">
+                  <Label>Paczkomat docelowy</Label>
+                  {pickupPointId && (
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 mb-2">
+                      <span className="font-medium text-sm">{pickupPointId}</span>
+                    </div>
+                  )}
+                  <PaczkomatSelector
+                    mode="inline"
+                    value={pickupPointId}
+                    onPointSelect={(name) => setPickupPointId(name)}
+                  />
                 </div>
               )}
-              <PaczkomatSelector
-                mode="inline"
-                value={pickupPointId}
-                onPointSelect={(name) => setPickupPointId(name)}
-              />
-            </div>
+            </>
           )}
 
           {shipmentProvider && (
