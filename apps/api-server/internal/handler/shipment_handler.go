@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -229,7 +230,16 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
 				slog.Error("label generation failed", "error", err)
-				writeError(w, http.StatusInternalServerError, "failed to generate label")
+				// Extract carrier API error details for better user feedback
+				errMsg := err.Error()
+				if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Token is missing or invalid") {
+					writeError(w, http.StatusBadGateway, "Błąd autoryzacji kuriera — sprawdź dane logowania w ustawieniach integracji")
+				} else if strings.Contains(errMsg, "api error 4") {
+					// 4xx from carrier — pass through the carrier message
+					writeError(w, http.StatusBadGateway, "Błąd API kuriera: "+errMsg)
+				} else {
+					writeError(w, http.StatusInternalServerError, "Nie udało się wygenerować etykiety — spróbuj ponownie lub sprawdź ustawienia integracji")
+				}
 			}
 		}
 		return
