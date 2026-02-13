@@ -51,6 +51,8 @@ apiServer:
     runAsUser: 65534
     readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
+    capabilities:
+      drop: ['ALL']
     seccompProfile:
       type: RuntimeDefault
   strategy:
@@ -107,6 +109,8 @@ dashboard:
     runAsGroup: 1001
     readOnlyRootFilesystem: false
     allowPrivilegeEscalation: false
+    capabilities:
+      drop: ['ALL']
     seccompProfile:
       type: RuntimeDefault
   strategy:
