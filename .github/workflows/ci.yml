@@ -10,6 +10,49 @@ env:
   GO_VERSION: "1.24"
 
 jobs:
+  auto-format:
+    name: Auto-format
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.9.0
+
+      - name: Auto-fix Go code
+        run: |
+          for dir in apps/api-server packages/allegro-go-sdk packages/inpost-go-sdk packages/order-engine; do
+            echo "Fixing $dir..."
+            golangci-lint run --fix --timeout=5m "./$dir/..." || true
+          done
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Auto-fix frontend code
+        working-directory: apps/dashboard
+        run: |
+          npm ci
+          npx eslint --fix src/ || true
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: auto-format code"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -20,33 +63,72 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install golangci-lint
+      - name: Lint api-server
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2
+          version: v2.9.0
           working-directory: apps/api-server
           args: --timeout=5m
 
       - name: Lint allegro-go-sdk
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2
+          version: v2.9.0
           working-directory: packages/allegro-go-sdk
           args: --timeout=5m
 
       - name: Lint inpost-go-sdk
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2
+          version: v2.9.0
           working-directory: packages/inpost-go-sdk
           args: --timeout=5m
 
       - name: Lint order-engine
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2
+          version: v2.9.0
           working-directory: packages/order-engine
           args: --timeout=5m
+
+  security:
+    name: Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Scan api-server
+        working-directory: apps/api-server
+        run: govulncheck ./...
+
+      - name: Scan allegro-go-sdk
+        working-directory: packages/allegro-go-sdk
+        run: govulncheck ./...
+
+      - name: Scan inpost-go-sdk
+        working-directory: packages/inpost-go-sdk
+        run: govulncheck ./...
+
+      - name: Scan order-engine
+        working-directory: packages/order-engine
+        run: govulncheck ./...
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Audit frontend dependencies
+        working-directory: apps/dashboard
+        run: npm ci && npm audit --audit-level=high
 
   test:
     name: Test
@@ -151,6 +233,14 @@ jobs:
       - name: Install dependencies
         working-directory: apps/dashboard
         run: npm ci
+
+      - name: Lint
+        working-directory: apps/dashboard
+        run: npx eslint src/
+
+      - name: Unit tests
+        working-directory: apps/dashboard
+        run: npx vitest run
 
       - name: Build
         working-directory: apps/dashboard
