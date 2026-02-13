@@ -152,10 +152,15 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Set up kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          printf '%s' "$KUBECONFIG_B64" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+
+      - name: Verify cluster access
+        run: kubectl cluster-info
 
       - name: Deploy with Helm
         run: |
