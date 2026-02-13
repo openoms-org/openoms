@@ -27,6 +27,7 @@ import {
   useTestKSeFConnection,
 } from "@/hooks/use-ksef";
 import { Loader2, Save, TestTube, CheckCircle, XCircle } from "lucide-react";
+import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { KSEF_ENVIRONMENTS } from "@/lib/constants";
 import type { KSeFSettings } from "@/types/api";
 
@@ -108,6 +109,8 @@ export default function KSeFSettingsPage() {
             Konfiguracja integracji z Krajowym Systemem e-Faktur
           </p>
         </div>
+
+        <DevelopmentBanner />
 
         {/* Enable/disable */}
         <Card>

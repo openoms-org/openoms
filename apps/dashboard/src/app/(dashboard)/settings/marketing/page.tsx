@@ -21,6 +21,7 @@ import {
 } from "@/hooks/use-marketing";
 import { useCompanySettings, useUpdateCompanySettings } from "@/hooks/use-settings";
 import { Loader2, Save, RefreshCw, Send } from "lucide-react";
+import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { apiClient } from "@/lib/api-client";
 import type { MailchimpSettings } from "@/types/api";
 
@@ -119,6 +120,8 @@ export default function MarketingSettingsPage() {
             Synchronizuj klientów z Mailchimp i tworzenie kampanii email
           </p>
         </div>
+
+        <DevelopmentBanner />
 
         {/* Status card */}
         <Card>

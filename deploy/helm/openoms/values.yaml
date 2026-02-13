@@ -8,8 +8,8 @@ apiServer:
     pullPolicy: IfNotPresent
   port: 8080
   env: production
-  baseUrl: https://openoms-api.loghawk.xyz
-  frontendUrl: https://openoms-app.loghawk.xyz
+  baseUrl: https://api.openoms.example.com
+  frontendUrl: https://app.openoms.example.com
   uploadDir: /tmp/uploads
   maxUploadSize: "10485760"
   features:
@@ -19,7 +19,7 @@ apiServer:
     enabled: true
     bucket: openoms-uploads
     region: eu-central-1
-    endpoint: "http://minio.apps-core.svc.cluster.local:9000"
+    endpoint: ""
     publicUrl: ""
   openai:
     model: gpt-4o-mini
@@ -131,10 +131,10 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   api:
-    host: openoms-api.loghawk.xyz
+    host: api.openoms.example.com
     tlsSecret: openoms-api-tls
   dashboard:
-    host: openoms-app.loghawk.xyz
+    host: app.openoms.example.com
     tlsSecret: openoms-dashboard-tls
 
 secrets:
@@ -143,3 +143,6 @@ secrets:
 
 imagePullSecrets:
   - name: ghcr-pull-secret
+
+database:
+  host: postgres

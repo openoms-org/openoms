@@ -14,6 +14,8 @@ import {
   INTEGRATION_PROVIDER_LABELS,
 } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { DevelopmentBadge } from "@/components/shared/development-banner";
+import { isInDevelopment } from "@/lib/integration-status";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { CreateIntegrationRequest } from "@/types/api";
 
@@ -56,6 +58,7 @@ export default function NewIntegrationPage() {
                 <Link href={href}>
                   <ExternalLink className="mr-2 h-4 w-4" />
                   {INTEGRATION_PROVIDER_LABELS[provider] ?? provider}
+                  {isInDevelopment(provider) && <DevelopmentBadge />}
                 </Link>
               </Button>
             ))}
