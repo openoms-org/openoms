@@ -58,6 +58,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
@@ -69,6 +71,7 @@ jobs:
           version: v2.9.0
           working-directory: apps/api-server
           args: --timeout=5m
+          only-new-issues: true
 
       - name: Lint allegro-go-sdk
         uses: golangci/golangci-lint-action@v7
@@ -76,6 +79,7 @@ jobs:
           version: v2.9.0
           working-directory: packages/allegro-go-sdk
           args: --timeout=5m
+          only-new-issues: true
 
       - name: Lint inpost-go-sdk
         uses: golangci/golangci-lint-action@v7
@@ -83,6 +87,7 @@ jobs:
           version: v2.9.0
           working-directory: packages/inpost-go-sdk
           args: --timeout=5m
+          only-new-issues: true
 
       - name: Lint order-engine
         uses: golangci/golangci-lint-action@v7
@@ -90,6 +95,7 @@ jobs:
           version: v2.9.0
           working-directory: packages/order-engine
           args: --timeout=5m
+          only-new-issues: true
 
   security:
     name: Security
