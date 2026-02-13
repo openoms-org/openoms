@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "openoms.fullname" . }}-test-connection
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-api
+      image: busybox:1.36
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "Testing API server health endpoint..."
+          wget -qO- --timeout=10 http://{{ include "openoms.fullname" . }}-api/health && echo " OK" || exit 1
+          echo "Testing dashboard endpoint..."
+          wget -qO- --timeout=10 http://{{ include "openoms.fullname" . }}-dashboard/ > /dev/null && echo " OK" || exit 1
+          echo "All tests passed."

@@ -132,7 +132,7 @@ export default function SupplierDetailPage() {
 
   return (
     <AdminGuard>
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.push("/suppliers")}>
           <ArrowLeft className="h-4 w-4" />
@@ -330,7 +330,7 @@ export default function SupplierDetailPage() {
                     key={product.id}
                     type="button"
                     onClick={() => setSelectedProductId(product.id)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 flex items-center justify-between ${
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between ${
                       selectedProductId === product.id
                         ? "bg-primary/10 border-l-2 border-primary"
                         : ""

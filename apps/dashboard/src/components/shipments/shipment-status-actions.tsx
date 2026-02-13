@@ -24,7 +24,7 @@ export function ShipmentStatusActions({
 
   if (availableTransitions.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground py-4 text-center">
         Brak dostępnych zmian statusu.
       </p>
     );

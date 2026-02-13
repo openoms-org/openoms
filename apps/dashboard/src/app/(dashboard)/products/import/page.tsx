@@ -268,13 +268,13 @@ export default function ProductImportPage() {
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="text-sm px-3 py-1 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
+                    className="text-sm px-3 py-1 bg-success/15 text-success"
                   >
                     Nowe produkty: {preview.new_count}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="text-sm px-3 py-1 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                    className="text-sm px-3 py-1 bg-info/15 text-info"
                   >
                     Aktualizacje: {preview.update_count}
                   </Badge>

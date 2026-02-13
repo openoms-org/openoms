@@ -166,7 +166,7 @@ func (p *Provider) mapEbayOrder(o *ebaysdk.Order) integration.MarketplaceOrder {
 	// Shipping address from fulfillment instructions
 	if len(o.FulfillmentSOs) > 0 {
 		shipTo := o.FulfillmentSOs[0].ShippingStep.ShipTo
-		mo.ShippingAddress = integration.ShippingAddress{
+		mo.ShippingAddress = model.ShippingAddress{
 			Name: shipTo.FullName,
 		}
 		if shipTo.ContactAddress != nil {

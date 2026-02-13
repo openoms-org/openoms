@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   INVOICE_STATUS_MAP,
   INVOICE_TYPE_LABELS,

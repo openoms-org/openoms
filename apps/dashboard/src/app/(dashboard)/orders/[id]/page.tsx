@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown } from "lucide-react";
 import { RateShopping } from "@/components/shipping/rate-shopping";
+import { AllegroShipmentDialog } from "@/components/integrations/allegro-shipment-dialog";
+import { useAllegroCarriers, useAllegroFulfillment, useAllegroTracking } from "@/hooks/use-allegro";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus, useDuplicateOrder } from "@/hooks/use-orders";
 import { useShipments } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
@@ -38,7 +40,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -50,9 +52,55 @@ import {
 import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, ORDER_PRIORITIES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
-import { formatDate, formatCurrency, shortId } from "@/lib/utils";
+import { formatDate, formatCurrency, shortId, cn } from "@/lib/utils";
 import { getErrorMessage, apiFetch } from "@/lib/api-client";
 import type { CreateOrderRequest, UpdateOrderRequest } from "@/types/api";
+
+function CollapsibleSection({
+  title,
+  icon: Icon,
+  defaultOpen = true,
+  children,
+  badge,
+  headerAction,
+}: {
+  title: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  badge?: React.ReactNode;
+  headerAction?: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Card>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between px-6 py-4 text-left"
+      >
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+          <h3 className="font-semibold">{title}</h3>
+          {badge}
+        </div>
+        <div className="flex items-center gap-2">
+          {headerAction && (
+            <span onClick={(e) => e.stopPropagation()}>
+              {headerAction}
+            </span>
+          )}
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              open && "rotate-180"
+            )}
+          />
+        </div>
+      </button>
+      {open && <CardContent>{children}</CardContent>}
+    </Card>
+  );
+}
 
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -64,6 +112,8 @@ export default function OrderDetailPage() {
   const [returnLinkCopied, setReturnLinkCopied] = useState(false);
   const [internalNotes, setInternalNotes] = useState("");
   const [internalNotesDirty, setInternalNotesDirty] = useState(false);
+  const [showAllegroShipmentDialog, setShowAllegroShipmentDialog] = useState(false);
+  const [showAllegroFulfillmentDialog, setShowAllegroFulfillmentDialog] = useState(false);
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
@@ -74,11 +124,11 @@ export default function OrderDetailPage() {
   const deleteOrder = useDeleteOrder();
   const transitionStatus = useTransitionOrderStatus(params.id);
 
-  const { data: shipmentsData } = useShipments({ order_id: params.id });
-  const { data: returnsData } = useReturns({ order_id: params.id });
+  const { data: shipmentsData, isLoading: isLoadingShipments } = useShipments({ order_id: params.id });
+  const { data: returnsData, isLoading: isLoadingReturns } = useReturns({ order_id: params.id });
   const { data: orderGroups } = useOrderGroups(params.id);
   const splitOrder = useSplitOrder(params.id);
-  const { data: ticketsData } = useOrderTickets(params.id);
+  const { data: ticketsData, isLoading: isLoadingTickets } = useOrderTickets(params.id);
   const createTicket = useCreateOrderTicket(params.id);
   const duplicateOrder = useDuplicateOrder();
 
@@ -163,7 +213,7 @@ export default function OrderDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">
@@ -214,6 +264,18 @@ export default function OrderDetailPage() {
               Utwórz przesyłkę
             </Link>
           </Button>
+          {order.source === "allegro" && order.external_id && (
+            <>
+              <Button variant="outline" onClick={() => setShowAllegroFulfillmentDialog(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                Wyslij do Allegro
+              </Button>
+              <Button variant="outline" onClick={() => setShowAllegroShipmentDialog(true)}>
+                <Tag className="mr-2 h-4 w-4" />
+                Etykieta Allegro
+              </Button>
+            </>
+          )}
           <Button variant="outline" asChild>
             <Link href={`/returns/new?order_id=${params.id}`}>
               <RotateCcw className="mr-2 h-4 w-4" />
@@ -429,51 +491,55 @@ export default function OrderDetailPage() {
           </Card>
 
           {order.items && order.items.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Pozycje zamówienia</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produkt</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Ilość</TableHead>
-                      <TableHead className="text-right">Cena</TableHead>
-                      <TableHead className="text-right">Wartość</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {order.items.map((item, i) => (
-                      <TableRow key={i}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
-                          {item.sku || "—"}
-                        </TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(item.price, order.currency)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.price * item.quantity, order.currency)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow>
-                      <TableCell colSpan={4} className="font-medium">
-                        Razem
+            <CollapsibleSection
+              title="Pozycje zamówienia"
+              icon={Package}
+              defaultOpen={true}
+              badge={
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {order.items.length}
+                </span>
+              }
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produkt</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead className="text-right">Ilość</TableHead>
+                    <TableHead className="text-right">Cena</TableHead>
+                    <TableHead className="text-right">Wartość</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {order.items.map((item, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {item.sku || "—"}
                       </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {formatCurrency(order.total_amount, order.currency)}
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(item.price, order.currency)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(item.price * item.quantity, order.currency)}
                       </TableCell>
                     </TableRow>
-                  </TableFooter>
-                </Table>
-              </CardContent>
-            </Card>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={4} className="font-medium">
+                      Razem
+                    </TableCell>
+                    <TableCell className="text-right font-bold">
+                      {formatCurrency(order.total_amount, order.currency)}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </CollapsibleSection>
           )}
 
           <Card>
@@ -489,43 +555,57 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Przesyłki</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {shipmentsData?.items && shipmentsData.items.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Numer śledzenia</TableHead>
-                      <TableHead>Dostawca</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Utworzono</TableHead>
+          <CollapsibleSection
+            title="Przesyłki"
+            icon={Package}
+            defaultOpen={!!(shipmentsData?.items && shipmentsData.items.length > 0)}
+            badge={
+              shipmentsData?.items && shipmentsData.items.length > 0 ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {shipmentsData.items.length}
+                </span>
+              ) : undefined
+            }
+          >
+            {isLoadingShipments ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ) : shipmentsData?.items && shipmentsData.items.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Numer śledzenia</TableHead>
+                    <TableHead>Dostawca</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Utworzono</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shipmentsData.items.map((shipment) => (
+                    <TableRow key={shipment.id}>
+                      <TableCell>
+                        <Link href={`/shipments/${shipment.id}`} className="font-medium text-primary hover:underline">
+                          {shipment.tracking_number || shortId(shipment.id)}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{shipment.provider}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
+                      </TableCell>
+                      <TableCell>{formatDate(shipment.created_at)}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shipmentsData.items.map((shipment) => (
-                      <TableRow key={shipment.id}>
-                        <TableCell>
-                          <Link href={`/shipments/${shipment.id}`} className="font-medium text-primary hover:underline">
-                            {shipment.tracking_number || shortId(shipment.id)}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{shipment.provider}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
-                        </TableCell>
-                        <TableCell>{formatDate(shipment.created_at)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">Brak przesyłek dla tego zamówienia.</p>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </CollapsibleSection>
 
           <RateShopping
             defaultToPostalCode={order.shipping_address?.postal_code}
@@ -536,108 +616,136 @@ export default function OrderDetailPage() {
             }}
           />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Zwroty</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {returnsData?.items && returnsData.items.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Powód</TableHead>
-                      <TableHead>Kwota zwrotu</TableHead>
+          <CollapsibleSection
+            title="Zwroty"
+            icon={RotateCcw}
+            defaultOpen={!!(returnsData?.items && returnsData.items.length > 0)}
+            badge={
+              returnsData?.items && returnsData.items.length > 0 ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {returnsData.items.length}
+                </span>
+              ) : undefined
+            }
+          >
+            {isLoadingReturns ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ) : returnsData?.items && returnsData.items.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Powód</TableHead>
+                    <TableHead>Kwota zwrotu</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {returnsData.items.map((ret) => (
+                    <TableRow key={ret.id}>
+                      <TableCell>
+                        <Link href={`/returns/${ret.id}`} className="font-medium text-primary hover:underline">
+                          {shortId(ret.id)}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={ret.status} statusMap={RETURN_STATUSES} />
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">{ret.reason}</TableCell>
+                      <TableCell>{formatCurrency(ret.refund_amount)}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {returnsData.items.map((ret) => (
-                      <TableRow key={ret.id}>
-                        <TableCell>
-                          <Link href={`/returns/${ret.id}`} className="font-medium text-primary hover:underline">
-                            {shortId(ret.id)}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={ret.status} statusMap={RETURN_STATUSES} />
-                        </TableCell>
-                        <TableCell className="max-w-[200px] truncate">{ret.reason}</TableCell>
-                        <TableCell>{formatCurrency(ret.refund_amount)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <RotateCcw className="h-8 w-8 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">Brak zwrotów dla tego zamówienia.</p>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </CollapsibleSection>
 
           {/* Helpdesk Tickets */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Headphones className="h-4 w-4" />
-                  Zgłoszenia
+          <CollapsibleSection
+            title="Zgłoszenia"
+            icon={Headphones}
+            defaultOpen={!!(ticketsData?.tickets && ticketsData.tickets.length > 0)}
+            badge={
+              ticketsData?.tickets && ticketsData.tickets.length > 0 ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {ticketsData.tickets.length}
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCreateTicketDialog(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Utwórz zgłoszenie
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {ticketsData?.tickets && ticketsData.tickets.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Temat</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Utworzono</TableHead>
+              ) : undefined
+            }
+            headerAction={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCreateTicketDialog(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Utwórz zgłoszenie
+              </Button>
+            }
+          >
+            {isLoadingTickets ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ) : ticketsData?.tickets && ticketsData.tickets.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Temat</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Utworzono</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ticketsData.tickets.map((ticket) => (
+                    <TableRow key={ticket.id}>
+                      <TableCell className="font-mono text-sm">#{ticket.id}</TableCell>
+                      <TableCell className="font-medium">{ticket.subject}</TableCell>
+                      <TableCell>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                          {ticket.status === 2 ? "Otwarty" : ticket.status === 3 ? "Oczekujący" : ticket.status === 4 ? "Rozwiązany" : ticket.status === 5 ? "Zamknięty" : `Status ${ticket.status}`}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(ticket.created_at)}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ticketsData.tickets.map((ticket) => (
-                      <TableRow key={ticket.id}>
-                        <TableCell className="font-mono text-sm">#{ticket.id}</TableCell>
-                        <TableCell className="font-medium">{ticket.subject}</TableCell>
-                        <TableCell>
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                            {ticket.status === 2 ? "Otwarty" : ticket.status === 3 ? "Oczekujący" : ticket.status === 4 ? "Rozwiązany" : ticket.status === 5 ? "Zamknięty" : `Status ${ticket.status}`}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(ticket.created_at)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Brak zgłoszeń dla tego zamówienia.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Headphones className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">Brak zgłoszeń dla tego zamówienia.</p>
+              </div>
+            )}
+          </CollapsibleSection>
 
           {/* Merge/Split History */}
           {(order.merged_into || order.split_from || (orderGroups && orderGroups.length > 0)) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4" />
-                  Historia scalania/podziału
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <CollapsibleSection
+              title="Historia scalania/podziału"
+              icon={GitBranch}
+              defaultOpen={true}
+              badge={
+                orderGroups && orderGroups.length > 0 ? (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    {orderGroups.length}
+                  </span>
+                ) : undefined
+              }
+            >
+              <div className="space-y-3">
                 {order.merged_into && (
                   <div className="rounded-md border bg-muted/50 p-3">
                     <p className="text-sm">
@@ -690,8 +798,8 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </CollapsibleSection>
           )}
         </div>
 
@@ -806,6 +914,24 @@ export default function OrderDetailPage() {
             }
           }}
           isLoading={splitOrder.isPending}
+        />
+      )}
+
+      {/* Allegro Shipment Dialog */}
+      {order && order.source === "allegro" && order.external_id && (
+        <AllegroShipmentDialog
+          open={showAllegroShipmentDialog}
+          onOpenChange={setShowAllegroShipmentDialog}
+          order={order}
+        />
+      )}
+
+      {/* Allegro Fulfillment Dialog */}
+      {order && order.source === "allegro" && order.external_id && (
+        <AllegroFulfillmentDialog
+          open={showAllegroFulfillmentDialog}
+          onOpenChange={setShowAllegroFulfillmentDialog}
+          orderId={params.id}
         />
       )}
 
@@ -1005,6 +1131,117 @@ function SplitOrderDialog({
             disabled={isLoading || split1Items.length === 0 || split2Items.length === 0}
           >
             {isLoading ? "Dzielenie..." : "Podziel zamówienie"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AllegroFulfillmentDialog({
+  open,
+  onOpenChange,
+  orderId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  orderId: string;
+}) {
+  const [fulfillmentStatus, setFulfillmentStatus] = useState("SENT");
+  const [carrierId, setCarrierId] = useState("");
+  const [waybill, setWaybill] = useState("");
+
+  const { data: carriersData } = useAllegroCarriers();
+  const fulfillmentMutation = useAllegroFulfillment(orderId);
+  const trackingMutation = useAllegroTracking(orderId);
+
+  useEffect(() => {
+    if (!open) {
+      setFulfillmentStatus("SENT");
+      setCarrierId("");
+      setWaybill("");
+    }
+  }, [open]);
+
+  const handleSubmit = async () => {
+    try {
+      // Update fulfillment status
+      await fulfillmentMutation.mutateAsync({ status: fulfillmentStatus });
+
+      // Add tracking if carrier and waybill provided
+      if (carrierId && waybill) {
+        await trackingMutation.mutateAsync({ carrier_id: carrierId, waybill });
+      }
+
+      toast.success("Status realizacji Allegro zaktualizowany");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
+  const isSubmitting = fulfillmentMutation.isPending || trackingMutation.isPending;
+  const carriers = carriersData?.carriers || [];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Wyslij do Allegro</DialogTitle>
+          <DialogDescription>
+            Zaktualizuj status realizacji zamowienia na Allegro i dodaj numer przesylki.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Status realizacji</Label>
+            <Select value={fulfillmentStatus} onValueChange={setFulfillmentStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SENT">Wyslane (SENT)</SelectItem>
+                <SelectItem value="PICKED_UP">Odebrane (PICKED_UP)</SelectItem>
+                <SelectItem value="READY_FOR_SHIPMENT">Gotowe do wysylki</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator />
+          <div>
+            <Label>Dostawca (opcjonalnie)</Label>
+            <Select value={carrierId} onValueChange={setCarrierId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wybierz dostawce..." />
+              </SelectTrigger>
+              <SelectContent>
+                {carriers.map((carrier) => (
+                  <SelectItem key={carrier.id} value={carrier.id}>
+                    {carrier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Numer przesylki (opcjonalnie)</Label>
+            <Input
+              value={waybill}
+              onChange={(e) => setWaybill(e.target.value)}
+              placeholder="np. 6280012345678"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Anuluj
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            Wyslij
           </Button>
         </DialogFooter>
       </DialogContent>

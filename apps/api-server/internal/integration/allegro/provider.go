@@ -132,6 +132,112 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, pric
 	return p.client.Offers.UpdatePrice(ctx, externalOfferID, price, "PLN")
 }
 
+// UpdateFulfillment updates the fulfillment status of an Allegro order.
+func (p *Provider) UpdateFulfillment(ctx context.Context, externalOrderID, status string) error {
+	if err := p.client.Fulfillment.UpdateStatus(ctx, externalOrderID, status); err != nil {
+		return fmt.Errorf("allegro: update fulfillment %s: %w", externalOrderID, err)
+	}
+	p.logger.Info("fulfillment updated", "order_id", externalOrderID, "status", status)
+	return nil
+}
+
+// AddTracking adds a shipment with tracking information to an Allegro order.
+func (p *Provider) AddTracking(ctx context.Context, externalOrderID, carrierID, waybill string) error {
+	shipment := allegrosdk.ShipmentInput{
+		CarrierID: carrierID,
+		Waybill:   waybill,
+	}
+	if err := p.client.Fulfillment.AddShipment(ctx, externalOrderID, shipment); err != nil {
+		return fmt.Errorf("allegro: add tracking %s: %w", externalOrderID, err)
+	}
+	p.logger.Info("tracking added", "order_id", externalOrderID, "carrier", carrierID, "waybill", waybill)
+	return nil
+}
+
+// ListCarriers returns the list of available Allegro shipping carriers.
+func (p *Provider) ListCarriers(ctx context.Context) ([]allegrosdk.Carrier, error) {
+	carriers, err := p.client.Fulfillment.ListCarriers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: list carriers: %w", err)
+	}
+	return carriers, nil
+}
+
+// --- Shipment Management ("Wysyłam z Allegro") ---
+
+// ListDeliveryServices returns available delivery services for Allegro shipment management.
+func (p *Provider) ListDeliveryServices(ctx context.Context) ([]allegrosdk.DeliveryService, error) {
+	services, err := p.client.ShipmentManagement.ListDeliveryServices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: list delivery services: %w", err)
+	}
+	return services, nil
+}
+
+// CreateShipment creates a managed shipment via Allegro shipment management.
+func (p *Provider) CreateShipment(ctx context.Context, cmd allegrosdk.CreateShipmentCommand) (*allegrosdk.CreateShipmentResponse, error) {
+	resp, err := p.client.ShipmentManagement.CreateShipment(ctx, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: create shipment: %w", err)
+	}
+	p.logger.Info("managed shipment created", "command_id", cmd.CommandID, "shipment_id", resp.ShipmentID)
+	return resp, nil
+}
+
+// GetShipment retrieves a managed shipment by ID.
+func (p *Provider) GetShipment(ctx context.Context, shipmentID string) (*allegrosdk.ManagedShipment, error) {
+	shipment, err := p.client.ShipmentManagement.GetShipment(ctx, shipmentID)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: get shipment %s: %w", shipmentID, err)
+	}
+	return shipment, nil
+}
+
+// GetLabel generates a shipping label PDF for the given shipment IDs.
+func (p *Provider) GetLabel(ctx context.Context, shipmentIDs []string) ([]byte, error) {
+	data, err := p.client.ShipmentManagement.GetLabel(ctx, shipmentIDs)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: get label: %w", err)
+	}
+	return data, nil
+}
+
+// CancelShipment cancels managed shipments by their IDs.
+func (p *Provider) CancelShipment(ctx context.Context, shipmentIDs []string) error {
+	if err := p.client.ShipmentManagement.CancelShipment(ctx, shipmentIDs); err != nil {
+		return fmt.Errorf("allegro: cancel shipment: %w", err)
+	}
+	p.logger.Info("managed shipments cancelled", "shipment_ids", shipmentIDs)
+	return nil
+}
+
+// GetPickupProposals retrieves pickup proposals for managed shipments.
+func (p *Provider) GetPickupProposals(ctx context.Context, req allegrosdk.PickupProposalRequest) ([]allegrosdk.PickupProposal, error) {
+	proposals, err := p.client.ShipmentManagement.GetPickupProposals(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: get pickup proposals: %w", err)
+	}
+	return proposals, nil
+}
+
+// SchedulePickup schedules a courier pickup for managed shipments.
+func (p *Provider) SchedulePickup(ctx context.Context, cmd allegrosdk.SchedulePickupCommand) error {
+	if err := p.client.ShipmentManagement.SchedulePickup(ctx, cmd); err != nil {
+		return fmt.Errorf("allegro: schedule pickup: %w", err)
+	}
+	p.logger.Info("pickup scheduled", "command_id", cmd.CommandID, "date", cmd.PickupDate)
+	return nil
+}
+
+// GenerateProtocol generates a dispatch protocol PDF for the given shipment IDs.
+func (p *Provider) GenerateProtocol(ctx context.Context, shipmentIDs []string) ([]byte, error) {
+	data, err := p.client.ShipmentManagement.GenerateProtocol(ctx, shipmentIDs)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: generate protocol: %w", err)
+	}
+	return data, nil
+}
+
 // mapAllegroOrder converts an Allegro SDK Order to the normalized MarketplaceOrder.
 func (p *Provider) mapAllegroOrder(o *allegrosdk.Order) integration.MarketplaceOrder {
 	mo := integration.MarketplaceOrder{
@@ -139,7 +245,7 @@ func (p *Provider) mapAllegroOrder(o *allegrosdk.Order) integration.MarketplaceO
 		ExternalStatus: o.Status,
 		CustomerName:   fmt.Sprintf("%s %s", o.Delivery.Address.FirstName, o.Delivery.Address.LastName),
 		CustomerEmail:  o.Buyer.Email,
-		ShippingAddress: integration.ShippingAddress{
+		ShippingAddress: model.ShippingAddress{
 			Name:       fmt.Sprintf("%s %s", o.Delivery.Address.FirstName, o.Delivery.Address.LastName),
 			Street:     o.Delivery.Address.Street,
 			City:       o.Delivery.Address.City,

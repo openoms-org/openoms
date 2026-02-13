@@ -44,7 +44,7 @@ export function CarrierMappingEditor({ value, onChange }: CarrierMappingEditorPr
   return (
     <div className="space-y-2">
       {entries.length === 0 && (
-        <p className="text-sm text-muted-foreground py-2">
+        <p className="text-sm text-muted-foreground py-4 text-center">
           Brak mapowań. Dodaj mapowanie, aby automatycznie przypisywać kuriera do zamówień.
         </p>
       )}

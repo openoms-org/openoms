@@ -55,9 +55,10 @@ interface TrackingTimelineProps {
 export function TrackingTimeline({ events }: TrackingTimelineProps) {
   if (events.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-4">
-        Brak danych śledzenia. Informacje pojawią się po nadaniu przesyłki.
-      </p>
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
+        <p className="text-sm text-muted-foreground">Brak danych śledzenia. Informacje pojawią się po nadaniu przesyłki.</p>
+      </div>
     );
   }
 

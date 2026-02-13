@@ -7,6 +7,8 @@ import { Header } from "@/components/layout/header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
 import { CommandPalette } from "@/components/shared/command-palette";
+import { SidebarProvider } from "@/components/layout/sidebar-context";
+import { TableDensityProvider } from "@/lib/table-density";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 
@@ -33,18 +35,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6">
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
-      </div>
-      <CommandPalette
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-      />
-    </div>
+    <TableDensityProvider>
+      <SidebarProvider>
+        <div className="dashboard-base flex h-screen overflow-hidden">
+          <Sidebar />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto p-6">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
+          </div>
+          <CommandPalette
+            open={commandPaletteOpen}
+            onOpenChange={setCommandPaletteOpen}
+          />
+        </div>
+      </SidebarProvider>
+    </TableDensityProvider>
   );
 }

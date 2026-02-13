@@ -35,6 +35,8 @@ type RouterDeps struct {
 	Return          *handler.ReturnHandler
 	InPostPoint     *handler.InPostPointHandler
 	AllegroAuth     *handler.AllegroAuthHandler
+	Allegro         *handler.AllegroHandler
+	AllegroShipment *handler.AllegroShipmentHandler
 	AmazonAuth      *handler.AmazonAuthHandler
 	Supplier        *handler.SupplierHandler
 	Invoice         *handler.InvoiceHandler
@@ -63,6 +65,16 @@ type RouterDeps struct {
 	Stocktake          *handler.StocktakeHandler
 	KSeF               *handler.KSeFHandler
 	Rate               *handler.RateHandler
+	AllegroComms       *handler.AllegroCommsHandler
+	AllegroWebhook     *handler.AllegroWebhookHandler
+	AllegroAccount     *handler.AllegroAccountHandler
+	AllegroCatalog     *handler.AllegroCatalogHandler
+	AllegroDisputes    *handler.AllegroDisputesHandler
+	AllegroRatings     *handler.AllegroRatingsHandler
+	AllegroPromotions  *handler.AllegroPromotionsHandler
+	AllegroDelivery    *handler.AllegroDeliveryHandler
+	AllegroPolicies    *handler.AllegroPoliciesHandler
+	AllegroListings    *handler.AllegroListingsHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -124,6 +136,11 @@ func New(deps RouterDeps) *chi.Mux {
 
 	// Public webhook routes — no JWT, signature-verified
 	r.Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
+
+	// Public Allegro webhook endpoint — no JWT, HMAC-verified
+	if deps.AllegroWebhook != nil {
+		r.Post("/v1/webhooks/allegro", deps.AllegroWebhook.HandleWebhook)
+	}
 
 	// Public return self-service routes — no JWT, rate-limited
 	r.Route("/v1/public/returns", func(r chi.Router) {
@@ -310,16 +327,142 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Patch("/{id}", deps.Variant.Update)
 					r.Delete("/{id}", deps.Variant.Delete)
 				})
+
+				// Marketplace listings
+				if deps.AllegroListings != nil {
+					r.Route("/{productId}/listings", func(r chi.Router) {
+						r.Use(middleware.RequireRole("admin"))
+						r.Get("/", deps.AllegroListings.ListByProduct)
+						r.Post("/allegro", deps.AllegroListings.CreateListing)
+						r.Get("/{listingId}", deps.AllegroListings.GetListing)
+						r.Patch("/{listingId}", deps.AllegroListings.UpdateListing)
+						r.Delete("/{listingId}", deps.AllegroListings.DeleteListing)
+						r.Post("/{listingId}/sync", deps.AllegroListings.SyncListing)
+					})
+				}
 			})
 
 			// Integrations — admin only
 			r.Route("/integrations", func(r chi.Router) {
 				r.Use(middleware.RequireRole("admin"))
 
-				// Allegro OAuth2 (must be before /{id} to avoid chi treating "allegro" as an ID)
+				// Allegro OAuth2 + fulfillment + shipment management + comms
 				r.Route("/allegro", func(r chi.Router) {
 					r.Get("/auth-url", deps.AllegroAuth.GetAuthURL)
 					r.Post("/callback", deps.AllegroAuth.HandleCallback)
+
+					// Fulfillment + tracking (Batch 1)
+					r.Get("/carriers", deps.Allegro.ListCarriers)
+					r.Post("/sync", deps.Allegro.SyncOrders)
+					r.Post("/orders/{orderId}/fulfillment", deps.Allegro.UpdateFulfillment)
+					r.Post("/orders/{orderId}/tracking", deps.Allegro.AddTracking)
+
+					// Shipment management ("Wysyłam z Allegro")
+					r.Get("/delivery-services", deps.AllegroShipment.ListDeliveryServices)
+					r.Post("/shipments", deps.AllegroShipment.CreateShipment)
+					r.Get("/shipments/{shipmentId}/label", deps.AllegroShipment.GetLabel)
+					r.Delete("/shipments/{shipmentId}", deps.AllegroShipment.CancelShipment)
+					r.Post("/pickup-proposals", deps.AllegroShipment.GetPickupProposals)
+					r.Post("/pickups", deps.AllegroShipment.SchedulePickup)
+					r.Post("/protocol", deps.AllegroShipment.GenerateProtocol)
+
+					// Messaging
+					r.Get("/messages", deps.AllegroComms.ListThreads)
+					r.Get("/messages/{threadId}", deps.AllegroComms.GetMessages)
+					r.Post("/messages/{threadId}", deps.AllegroComms.SendMessage)
+
+					// Returns
+					r.Get("/returns", deps.AllegroComms.ListAllegroReturns)
+					r.Get("/returns/{returnId}", deps.AllegroComms.GetAllegroReturn)
+					r.Post("/returns/{returnId}/reject", deps.AllegroComms.RejectAllegroReturn)
+
+					// Refunds
+					r.Post("/refunds", deps.AllegroComms.CreateRefund)
+					r.Get("/refunds", deps.AllegroComms.ListRefunds)
+
+					// Account & billing (Batch 4)
+					if deps.AllegroAccount != nil {
+						r.Get("/account", deps.AllegroAccount.GetAccount)
+						r.Get("/billing", deps.AllegroAccount.GetBilling)
+
+						// Offer management
+						r.Get("/offers", deps.AllegroAccount.ListOffers)
+						r.Post("/offers/{offerId}/deactivate", deps.AllegroAccount.DeactivateOffer)
+						r.Post("/offers/{offerId}/activate", deps.AllegroAccount.ActivateOffer)
+						r.Patch("/offers/{offerId}/stock", deps.AllegroAccount.UpdateOfferStock)
+						r.Patch("/offers/{offerId}/price", deps.AllegroAccount.UpdateOfferPrice)
+					}
+
+					// Catalog + Finance (Batch 5)
+					if deps.AllegroCatalog != nil {
+						r.Get("/categories", deps.AllegroCatalog.ListCategories)
+						r.Get("/categories/search", deps.AllegroCatalog.SearchCategories)
+						r.Get("/categories/{categoryId}", deps.AllegroCatalog.GetCategory)
+						r.Get("/categories/{categoryId}/parameters", deps.AllegroCatalog.GetCategoryParameters)
+						r.Get("/products/catalog", deps.AllegroCatalog.SearchProducts)
+						r.Get("/products/catalog/{productId}", deps.AllegroCatalog.GetProduct)
+						r.Get("/pricing/fees", deps.AllegroCatalog.GetFeePreview)
+						r.Get("/pricing/commissions", deps.AllegroCatalog.GetCommissions)
+					}
+
+					// After-sales policies (return policies, warranties, size tables)
+					if deps.AllegroPolicies != nil {
+						r.Get("/return-policies", deps.AllegroPolicies.ListReturnPolicies)
+						r.Post("/return-policies", deps.AllegroPolicies.CreateReturnPolicy)
+						r.Get("/return-policies/{policyId}", deps.AllegroPolicies.GetReturnPolicy)
+						r.Put("/return-policies/{policyId}", deps.AllegroPolicies.UpdateReturnPolicy)
+
+						r.Get("/warranties", deps.AllegroPolicies.ListWarranties)
+						r.Post("/warranties", deps.AllegroPolicies.CreateWarranty)
+						r.Get("/warranties/{warrantyId}", deps.AllegroPolicies.GetWarranty)
+						r.Put("/warranties/{warrantyId}", deps.AllegroPolicies.UpdateWarranty)
+
+						r.Get("/size-tables", deps.AllegroPolicies.ListSizeTables)
+						r.Post("/size-tables", deps.AllegroPolicies.CreateSizeTable)
+						r.Get("/size-tables/{tableId}", deps.AllegroPolicies.GetSizeTable)
+						r.Put("/size-tables/{tableId}", deps.AllegroPolicies.UpdateSizeTable)
+						r.Delete("/size-tables/{tableId}", deps.AllegroPolicies.DeleteSizeTable)
+					}
+
+					// Promotions
+					if deps.AllegroPromotions != nil {
+						r.Get("/promotions", deps.AllegroPromotions.ListPromotions)
+						r.Post("/promotions", deps.AllegroPromotions.CreatePromotion)
+						r.Get("/promotions/{promotionId}", deps.AllegroPromotions.GetPromotion)
+						r.Put("/promotions/{promotionId}", deps.AllegroPromotions.UpdatePromotion)
+						r.Delete("/promotions/{promotionId}", deps.AllegroPromotions.DeletePromotion)
+						r.Get("/promotion-badges", deps.AllegroPromotions.ListBadges)
+					}
+
+					// Delivery settings
+					if deps.AllegroDelivery != nil {
+						r.Get("/delivery-settings", deps.AllegroDelivery.GetDeliverySettings)
+						r.Put("/delivery-settings", deps.AllegroDelivery.UpdateDeliverySettings)
+						r.Get("/shipping-rates", deps.AllegroDelivery.ListShippingRates)
+						r.Post("/shipping-rates", deps.AllegroDelivery.CreateShippingRate)
+						r.Post("/shipping-rates/auto-generate", deps.AllegroDelivery.AutoGenerateShippingRate)
+						r.Get("/shipping-rates/{rateId}", deps.AllegroDelivery.GetShippingRate)
+						r.Put("/shipping-rates/{rateId}", deps.AllegroDelivery.UpdateShippingRate)
+						r.Get("/delivery-methods", deps.AllegroDelivery.ListDeliveryMethods)
+					}
+
+					// Disputes
+					if deps.AllegroDisputes != nil {
+						r.Get("/disputes", deps.AllegroDisputes.ListDisputes)
+						r.Get("/disputes/{disputeId}", deps.AllegroDisputes.GetDispute)
+						r.Get("/disputes/{disputeId}/messages", deps.AllegroDisputes.ListDisputeMessages)
+						r.Post("/disputes/{disputeId}/messages", deps.AllegroDisputes.SendDisputeMessage)
+					}
+
+					// Ratings
+					if deps.AllegroRatings != nil {
+						r.Get("/ratings", deps.AllegroRatings.ListRatings)
+						r.Get("/ratings/{ratingId}/answer", deps.AllegroRatings.GetAnswer)
+						r.Put("/ratings/{ratingId}/answer", deps.AllegroRatings.CreateAnswer)
+						r.Delete("/ratings/{ratingId}/answer", deps.AllegroRatings.DeleteAnswer)
+						r.Post("/ratings/{ratingId}/removal", deps.AllegroRatings.RequestRemoval)
+					}
+
 				})
 
 				// Amazon SP-API setup

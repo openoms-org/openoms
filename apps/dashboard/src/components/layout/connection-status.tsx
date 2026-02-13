@@ -19,8 +19,8 @@ export function ConnectionStatus() {
             <span
               className={`inline-block h-2.5 w-2.5 rounded-full ${
                 isConnected
-                  ? "bg-green-500"
-                  : "bg-red-500"
+                  ? "bg-success"
+                  : "bg-destructive"
               }`}
             />
           </div>

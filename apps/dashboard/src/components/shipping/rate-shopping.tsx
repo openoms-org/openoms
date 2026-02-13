@@ -307,7 +307,7 @@ export function RateShopping({
                         key={`${rate.carrier_code}-${rate.service_name}-${index}`}
                         className={
                           isCheapest
-                            ? "bg-green-50 dark:bg-green-950/20"
+                            ? "bg-success/15"
                             : undefined
                         }
                       >
@@ -316,7 +316,7 @@ export function RateShopping({
                             {SHIPMENT_PROVIDER_LABELS[rate.carrier_code] ??
                               rate.carrier_name}
                             {isCheapest && (
-                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              <Badge variant="success">
                                 <Tag className="mr-1 h-3 w-3" />
                                 Najtansza
                               </Badge>

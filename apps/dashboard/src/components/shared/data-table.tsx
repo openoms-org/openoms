@@ -12,6 +12,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { EditableCell, type EditableColumnConfig } from "@/components/shared/editable-cell";
+import { useTableDensity, densityConfig } from "@/lib/table-density";
+import { cn } from "@/lib/utils";
 
 export type { EditableColumnConfig } from "@/components/shared/editable-cell";
 
@@ -20,6 +22,7 @@ export interface ColumnDef<T> {
   accessorKey: keyof T | string;
   cell?: (row: T) => React.ReactNode;
   sortable?: boolean;
+  className?: string;
 }
 
 interface DataTableProps<T> {
@@ -65,6 +68,9 @@ export function DataTable<T>({
   onSort,
   editableColumns,
 }: DataTableProps<T>) {
+  const { density } = useTableDensity();
+  const cellPx = densityConfig[density].cellPadding;
+
   const getRowId = useCallback(
     (row: T) => (rowId ? rowId(row) : (row as Record<string, unknown>).id as string),
     [rowId]
@@ -106,10 +112,10 @@ export function DataTable<T>({
         <TableHeader>
           <TableRow>
             {selectable && (
-              <TableHead className="w-10" />
+              <TableHead className={cn("w-10", cellPx)} />
             )}
             {columns.map((column) => (
-              <TableHead key={String(column.accessorKey)}>
+              <TableHead key={String(column.accessorKey)} className={cn(cellPx, column.className)}>
                 {column.sortable && onSort ? (
                   <button
                     className="flex items-center gap-1 hover:text-foreground"
@@ -137,12 +143,12 @@ export function DataTable<T>({
           {Array.from({ length: 5 }).map((_, rowIndex) => (
             <TableRow key={rowIndex}>
               {selectable && (
-                <TableCell className="w-10">
+                <TableCell className={cn("w-10", cellPx)}>
                   <Skeleton className="h-4 w-4" />
                 </TableCell>
               )}
               {columns.map((column) => (
-                <TableCell key={String(column.accessorKey)}>
+                <TableCell key={String(column.accessorKey)} className={cn(cellPx, column.className)}>
                   <Skeleton className="h-4 w-full" />
                 </TableCell>
               ))}
@@ -169,7 +175,7 @@ export function DataTable<T>({
       <TableHeader>
         <TableRow>
           {selectable && (
-            <TableHead className="w-10">
+            <TableHead className={cn("w-10", cellPx)}>
               <input
                 type="checkbox"
                 className="cursor-pointer"
@@ -182,7 +188,7 @@ export function DataTable<T>({
             </TableHead>
           )}
           {columns.map((column) => (
-            <TableHead key={String(column.accessorKey)}>
+            <TableHead key={String(column.accessorKey)} className={cn(cellPx, column.className)}>
               {column.sortable && onSort ? (
                 <button
                   className="flex items-center gap-1 hover:text-foreground"
@@ -216,7 +222,7 @@ export function DataTable<T>({
               onClick={() => onRowClick?.(row)}
             >
               {selectable && (
-                <TableCell className="w-10">
+                <TableCell className={cn("w-10", cellPx)}>
                   <input
                     type="checkbox"
                     className="cursor-pointer"
@@ -236,7 +242,7 @@ export function DataTable<T>({
 
                 if (editConfig) {
                   return (
-                    <TableCell key={key}>
+                    <TableCell key={key} className={cn(cellPx, column.className)}>
                       <EditableCell<T>
                         row={row}
                         value={rawValue}
@@ -248,7 +254,7 @@ export function DataTable<T>({
                 }
 
                 return (
-                  <TableCell key={key}>
+                  <TableCell key={key} className={cn(cellPx, column.className)}>
                     {displayContent}
                   </TableCell>
                 );

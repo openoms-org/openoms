@@ -33,3 +33,12 @@ func (s *EventService) Poll(ctx context.Context, fromEventID string, eventTypes 
 	}
 	return &result, nil
 }
+
+// EventStats retrieves statistics about order events, including the latest event.
+func (s *EventService) EventStats(ctx context.Context) (*EventStatsResponse, error) {
+	var result EventStatsResponse
+	if err := s.client.do(ctx, "GET", "/order/event-stats", nil, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}

@@ -77,7 +77,7 @@ export default function InventorySettingsPage() {
 
   return (
     <AdminGuard>
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             Ustawienia magazynowe
@@ -113,13 +113,13 @@ export default function InventorySettingsPage() {
             </div>
 
             {strictMode && (
-              <div className="flex items-start gap-3 rounded-lg border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-700 dark:bg-yellow-950">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/15 p-4">
+                <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  <p className="text-sm font-medium text-warning">
                     Tryb ścisłej kontroli jest aktywny
                   </p>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  <p className="text-sm text-warning">
                     Ręczna zmiana stanów magazynowych (PUT /warehouses/&#123;id&#125;/stock) jest zablokowana.
                     Wszystkie zmiany muszą przechodzić przez dokumenty magazynowe (PZ, WZ, MM) lub inwentaryzacje.
                   </p>

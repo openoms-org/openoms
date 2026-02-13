@@ -11,6 +11,7 @@ import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ShipmentFilters } from "@/components/shipments/shipment-filters";
 import { DispatchOrderDialog } from "@/components/shipments/dispatch-order-dialog";
+import { DensityToggle } from "@/components/shared/density-toggle";
 import { useShipments, useBatchLabels } from "@/hooks/use-shipments";
 import { SHIPMENT_STATUSES } from "@/lib/constants";
 import { formatDate, shortId } from "@/lib/utils";
@@ -120,6 +121,7 @@ export default function ShipmentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <DensityToggle />
           {selectedIds.size > 0 && (() => {
             const dispatchEligible = (data?.items ?? []).filter(
               (s) =>

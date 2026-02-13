@@ -158,8 +158,8 @@ function PublicReturnForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4">
-              <p className="text-sm text-green-800 dark:text-green-200">
+            <div className="rounded-md bg-success/15 border border-success/30 p-4">
+              <p className="text-sm text-success">
                 Twoje zgłoszenie zostało zarejestrowane. Otrzymasz informacje o zmianach statusu.
               </p>
             </div>

@@ -67,6 +67,7 @@ export default function NewStocktakePage() {
 
   return (
     <AdminGuard>
+      <div className="mx-auto max-w-4xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">
           Nowa inwentaryzacja
@@ -150,6 +151,7 @@ export default function NewStocktakePage() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </AdminGuard>
   );
 }

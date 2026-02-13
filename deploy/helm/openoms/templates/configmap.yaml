@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openoms.fullname" . }}-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.apiServer.port | quote }}
+  ENV: {{ .Values.apiServer.env | quote }}
+  BASE_URL: {{ .Values.apiServer.baseUrl | quote }}
+  FRONTEND_URL: {{ .Values.apiServer.frontendUrl | quote }}
+  UPLOAD_DIR: {{ .Values.apiServer.uploadDir | quote }}
+  MAX_UPLOAD_SIZE: {{ .Values.apiServer.maxUploadSize | quote }}
+  S3_ENABLED: {{ .Values.apiServer.s3.enabled | quote }}
+  S3_BUCKET: {{ .Values.apiServer.s3.bucket | quote }}
+  S3_REGION: {{ .Values.apiServer.s3.region | quote }}
+  S3_ENDPOINT: {{ .Values.apiServer.s3.endpoint | quote }}
+  S3_PUBLIC_URL: {{ .Values.apiServer.s3.publicUrl | quote }}
+  FEATURE_ALLEGRO: {{ .Values.apiServer.features.allegro | quote }}
+  FEATURE_INPOST: {{ .Values.apiServer.features.inpost | quote }}
+  OPENAI_MODEL: {{ .Values.apiServer.openai.model | quote }}
+  REDIS_URL: "redis://localhost:6379"

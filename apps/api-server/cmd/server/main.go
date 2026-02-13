@@ -218,6 +218,43 @@ func main() {
 	// Allegro OAuth handler
 	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey)
 
+	// Allegro fulfillment + tracking handler (Batch 1)
+	allegroHandler := handler.NewAllegroHandler(integrationService, orderService, encryptionKey)
+
+	// Allegro shipment management handler ("Wysyłam z Allegro")
+	allegroShipmentHandler := handler.NewAllegroShipmentHandler(integrationService, encryptionKey)
+
+	// Allegro communications handler (messaging, returns, refunds)
+	allegroCommsHandler := handler.NewAllegroCommsHandler(integrationService, encryptionKey)
+
+	// Allegro webhook handler (public endpoint, HMAC-verified)
+	allegroWebhookHandler := handler.NewAllegroWebhookHandler(cfg.AllegroWebhookSecret)
+
+	// Allegro account & offers handler
+	allegroAccountHandler := handler.NewAllegroAccountHandler(integrationService, encryptionKey)
+
+	// Allegro listings handler (publish products to Allegro)
+	productListingRepo := repository.NewProductListingRepository()
+	allegroListingsHandler := handler.NewAllegroListingsHandler(integrationService, productService, productListingRepo, encryptionKey, pool, cfg)
+
+	// Allegro catalog + finance handler
+	allegroCatalogHandler := handler.NewAllegroCatalogHandler(integrationService, encryptionKey)
+
+	// Allegro after-sales policies handler (return policies, warranties, size tables)
+	allegroPoliciesHandler := handler.NewAllegroPoliciesHandler(integrationService, encryptionKey)
+
+	// Allegro promotions handler
+	allegroPromotionsHandler := handler.NewAllegroPromotionsHandler(integrationService, encryptionKey)
+
+	// Allegro delivery settings handler
+	allegroDeliveryHandler := handler.NewAllegroDeliveryHandler(integrationService, encryptionKey)
+
+	// Allegro disputes handler
+	allegroDisputesHandler := handler.NewAllegroDisputesHandler(integrationService, encryptionKey)
+
+	// Allegro ratings handler
+	allegroRatingsHandler := handler.NewAllegroRatingsHandler(integrationService, encryptionKey)
+
 	// Amazon auth handler
 	amazonAuthHandler := handler.NewAmazonAuthHandler(integrationService, encryptionKey)
 
@@ -335,6 +372,8 @@ func main() {
 		Return:          returnHandler,
 		InPostPoint:     inpostPointHandler,
 		AllegroAuth:     allegroAuthHandler,
+		Allegro:         allegroHandler,
+		AllegroShipment: allegroShipmentHandler,
 		AmazonAuth:      amazonAuthHandler,
 		Supplier:         supplierHandler,
 		Invoice:          invoiceHandler,
@@ -363,6 +402,16 @@ func main() {
 		Stocktake:          stocktakeHandler,
 		KSeF:               ksefHandler,
 		Rate:               rateHandler,
+		AllegroComms:       allegroCommsHandler,
+		AllegroWebhook:     allegroWebhookHandler,
+		AllegroAccount:     allegroAccountHandler,
+		AllegroCatalog:     allegroCatalogHandler,
+		AllegroPolicies:    allegroPoliciesHandler,
+		AllegroPromotions:  allegroPromotionsHandler,
+		AllegroDelivery:    allegroDeliveryHandler,
+		AllegroDisputes:    allegroDisputesHandler,
+		AllegroRatings:     allegroRatingsHandler,
+		AllegroListings:    allegroListingsHandler,
 	})
 
 	// Start background workers

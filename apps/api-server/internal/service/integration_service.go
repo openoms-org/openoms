@@ -197,6 +197,26 @@ func (s *IntegrationService) Update(ctx context.Context, tenantID, integrationID
 	return result, err
 }
 
+// UpdateCredentialsByProvider encrypts and persists new credential JSON for a given provider.
+// Used by OAuth token refresh callbacks to persist refreshed tokens.
+func (s *IntegrationService) UpdateCredentialsByProvider(ctx context.Context, tenantID uuid.UUID, provider string, credentialsJSON []byte) error {
+	encrypted, err := crypto.Encrypt(credentialsJSON, s.encryptionKey)
+	if err != nil {
+		return fmt.Errorf("encrypt credentials: %w", err)
+	}
+
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		wc, err := s.integrationRepo.FindByProvider(ctx, tx, provider)
+		if err != nil {
+			return err
+		}
+		if wc == nil {
+			return ErrIntegrationNotFound
+		}
+		return s.integrationRepo.Update(ctx, tx, wc.ID, model.UpdateIntegrationRequest{}, &encrypted)
+	})
+}
+
 func (s *IntegrationService) Delete(ctx context.Context, tenantID, integrationID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		wc, err := s.integrationRepo.FindByID(ctx, tx, integrationID)

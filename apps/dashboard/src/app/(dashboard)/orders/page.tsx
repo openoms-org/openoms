@@ -28,6 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DensityToggle } from "@/components/shared/density-toggle";
 import {
   Dialog,
   DialogContent,
@@ -148,6 +149,7 @@ export default function OrdersPage() {
       accessorKey: "source",
       cell: (row) => ORDER_SOURCE_LABELS[row.source] || row.source,
       sortable: true,
+      className: "hidden lg:table-cell",
     },
     {
       header: "Status",
@@ -169,6 +171,7 @@ export default function OrdersPage() {
         );
       },
       sortable: true,
+      className: "hidden lg:table-cell",
     },
     {
       header: "Kwota",
@@ -181,6 +184,7 @@ export default function OrdersPage() {
       accessorKey: "payment_status",
       cell: (row) => <StatusBadge status={row.payment_status} statusMap={PAYMENT_STATUSES} />,
       sortable: true,
+      className: "hidden lg:table-cell",
     },
     {
       header: "Notatki",
@@ -190,6 +194,7 @@ export default function OrdersPage() {
           {row.notes || "\u2014"}
         </span>
       ),
+      className: "hidden md:table-cell",
     },
     {
       header: "Tagi",
@@ -203,12 +208,14 @@ export default function OrdersPage() {
           ))}
         </div>
       ),
+      className: "hidden lg:table-cell",
     },
     {
       header: "Data",
       accessorKey: "created_at",
       cell: (row) => formatDate(row.created_at),
       sortable: true,
+      className: "hidden md:table-cell",
     },
   ];
 
@@ -239,6 +246,7 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <DensityToggle />
           {/* View mode switcher */}
           <TooltipProvider>
             <div className="flex items-center rounded-md border bg-muted p-0.5">

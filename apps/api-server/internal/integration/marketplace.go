@@ -8,18 +8,6 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
-// ShippingAddress represents a structured shipping address.
-// TODO: Replace with model.ShippingAddress once it is available.
-type ShippingAddress struct {
-	Name       string `json:"name"`
-	Street     string `json:"street"`
-	City       string `json:"city"`
-	PostalCode string `json:"postal_code"`
-	Country    string `json:"country"`
-	Phone      string `json:"phone,omitempty"`
-	Email      string `json:"email,omitempty"`
-}
-
 // MarketplaceOrderItem represents a single item in a marketplace order.
 type MarketplaceOrderItem struct {
 	ExternalID string  `json:"external_id"`
@@ -39,8 +27,8 @@ type MarketplaceOrder struct {
 	CustomerName    string                 `json:"customer_name"`
 	CustomerEmail   string                 `json:"customer_email,omitempty"`
 	CustomerPhone   string                 `json:"customer_phone,omitempty"`
-	ShippingAddress ShippingAddress         `json:"shipping_address"`
-	BillingAddress  *ShippingAddress        `json:"billing_address,omitempty"`
+	ShippingAddress model.ShippingAddress    `json:"shipping_address"`
+	BillingAddress  *model.ShippingAddress   `json:"billing_address,omitempty"`
 	Items           []MarketplaceOrderItem  `json:"items"`
 	TotalAmount     float64                `json:"total_amount"`
 	Currency        string                 `json:"currency"`

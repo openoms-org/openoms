@@ -65,7 +65,7 @@ export default function NewCustomerPage() {
   };
 
   return (
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.push("/customers")}>
           <ArrowLeft className="h-4 w-4" />
@@ -81,10 +81,10 @@ export default function NewCustomerPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Imię i nazwisko *</Label>
-              <Input id="name" {...register("name")} placeholder="np. Jan Kowalski" />
+              <Label htmlFor="name">Imię i nazwisko <span className="text-destructive">*</span></Label>
+              <Input id="name" aria-invalid={!!errors.name} {...register("name")} placeholder="np. Jan Kowalski" />
               {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
+                <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -93,11 +93,12 @@ export default function NewCustomerPage() {
                 <Input
                   id="email"
                   type="email"
+                  aria-invalid={!!errors.email}
                   {...register("email")}
                   placeholder="jan@example.com"
                 />
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                  <p className="text-destructive text-xs mt-1">{errors.email.message}</p>
                 )}
               </div>
               <div className="space-y-2">

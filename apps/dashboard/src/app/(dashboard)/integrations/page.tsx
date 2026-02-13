@@ -9,7 +9,7 @@ import { useIntegrations, useDeleteIntegration } from "@/hooks/use-integrations"
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -52,7 +52,7 @@ export default function IntegrationsPage() {
   return (
     <AdminGuard>
       <PageHeader
-        title="Integracje"
+        title="Połączenia"
         description="Zarządzaj połączeniami z zewnętrznymi serwisami"
         action={{ label: "Nowa integracja", href: "/integrations/new" }}
       />
@@ -119,7 +119,7 @@ export default function IntegrationsPage() {
                   </TableCell>
                   <TableCell>
                     {integration.has_credentials ? (
-                      <Badge variant="outline" className="gap-1 border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-300">
+                      <Badge variant="success" className="gap-1">
                         <KeyRound className="h-3 w-3" />
                         Skonfigurowane
                       </Badge>
