@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/smtp"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -90,13 +91,7 @@ func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.U
 	}
 
 	// Check if this status is in the notify list
-	shouldNotify := false
-	for _, status := range emailCfg.NotifyOn {
-		if status == newStatus {
-			shouldNotify = true
-			break
-		}
-	}
+	shouldNotify := slices.Contains(emailCfg.NotifyOn, newStatus)
 	if !shouldNotify {
 		return
 	}

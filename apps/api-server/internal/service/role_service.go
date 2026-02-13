@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	ErrRoleNotFound     = errors.New("role not found")
-	ErrRoleIsSystem     = errors.New("system roles cannot be deleted")
+	ErrRoleNotFound      = errors.New("role not found")
+	ErrRoleIsSystem      = errors.New("system roles cannot be deleted")
 	ErrRoleDuplicateName = errors.New("role with this name already exists")
 )
 

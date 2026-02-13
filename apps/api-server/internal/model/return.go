@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -118,10 +119,5 @@ func IsValidReturnTransition(from, to string) bool {
 	if !ok {
 		return false
 	}
-	for _, s := range allowed {
-		if s == to {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowed, to)
 }

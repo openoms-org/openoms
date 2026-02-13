@@ -22,11 +22,11 @@ var (
 
 // WarehouseDocumentService provides business logic for warehouse documents.
 type WarehouseDocumentService struct {
-	docRepo      repository.WarehouseDocumentRepo
-	itemRepo     repository.WarehouseDocItemRepo
-	stockRepo    repository.WarehouseStockRepo
-	auditRepo    repository.AuditRepo
-	pool         *pgxpool.Pool
+	docRepo   repository.WarehouseDocumentRepo
+	itemRepo  repository.WarehouseDocItemRepo
+	stockRepo repository.WarehouseStockRepo
+	auditRepo repository.AuditRepo
+	pool      *pgxpool.Pool
 }
 
 // NewWarehouseDocumentService creates a new WarehouseDocumentService.

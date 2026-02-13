@@ -274,20 +274,20 @@ func (s *KSeFService) CheckKSeFStatus(ctx context.Context, tenantID, invoiceID u
 			inv.KSeFStatus = "accepted"
 			inv.KSeFNumber = &upo.ReferenceNumber
 			responseJSON, _ := json.Marshal(map[string]any{
-				"reference_number":      upo.ReferenceNumber,
-				"processing_code":       upo.ProcessingCode,
+				"reference_number":       upo.ReferenceNumber,
+				"processing_code":        upo.ProcessingCode,
 				"processing_description": upo.ProcessingDescription,
-				"timestamp":             upo.Timestamp,
+				"timestamp":              upo.Timestamp,
 			})
 			inv.KSeFResponse = responseJSON
 			return s.invoiceRepo.Update(ctx, tx, inv)
 		} else if upo.ProcessingCode >= 400 {
 			inv.KSeFStatus = "rejected"
 			responseJSON, _ := json.Marshal(map[string]any{
-				"reference_number":      upo.ReferenceNumber,
-				"processing_code":       upo.ProcessingCode,
+				"reference_number":       upo.ReferenceNumber,
+				"processing_code":        upo.ProcessingCode,
 				"processing_description": upo.ProcessingDescription,
-				"timestamp":             upo.Timestamp,
+				"timestamp":              upo.Timestamp,
 			})
 			inv.KSeFResponse = responseJSON
 			return s.invoiceRepo.Update(ctx, tx, inv)
@@ -389,8 +389,8 @@ func (s *KSeFService) SyncPendingStatuses(ctx context.Context, tenantID uuid.UUI
 
 			if upo.ProcessingCode == 200 {
 				responseJSON, _ := json.Marshal(map[string]any{
-					"reference_number":      upo.ReferenceNumber,
-					"processing_code":       upo.ProcessingCode,
+					"reference_number":       upo.ReferenceNumber,
+					"processing_code":        upo.ProcessingCode,
 					"processing_description": upo.ProcessingDescription,
 				})
 				if err := s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, &upo.ReferenceNumber, "accepted", responseJSON); err != nil {
@@ -400,8 +400,8 @@ func (s *KSeFService) SyncPendingStatuses(ctx context.Context, tenantID uuid.UUI
 				synced++
 			} else if upo.ProcessingCode >= 400 {
 				responseJSON, _ := json.Marshal(map[string]any{
-					"reference_number":      upo.ReferenceNumber,
-					"processing_code":       upo.ProcessingCode,
+					"reference_number":       upo.ReferenceNumber,
+					"processing_code":        upo.ProcessingCode,
 					"processing_description": upo.ProcessingDescription,
 				})
 				if err := s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, nil, "rejected", responseJSON); err != nil {
@@ -550,11 +550,11 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 	if order == nil || order.Items == nil || string(order.Items) == "[]" || string(order.Items) == "null" {
 		return []ksef.InvoiceLineItem{
 			{
-				LineNumber:  1,
-				Name:        "Zamówienie",
-				Quantity:    1,
-				Unit:        "szt.",
-				VATRate:     fmt.Sprintf("%d", taxRate),
+				LineNumber: 1,
+				Name:       "Zamówienie",
+				Quantity:   1,
+				Unit:       "szt.",
+				VATRate:    fmt.Sprintf("%d", taxRate),
 			},
 		}
 	}

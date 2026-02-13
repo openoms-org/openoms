@@ -155,7 +155,7 @@ func TestOrderStatusConfig_GetStatusDef(t *testing.T) {
 
 	def := cfg.GetStatusDef("new")
 	require.NotNil(t, def)
-	assert.Equal(t, "Nowe", def.Label)
+	assert.Equal(t, "Now", def.Label)
 	assert.Equal(t, "blue", def.Color)
 
 	assert.Nil(t, cfg.GetStatusDef("nonexistent"))

@@ -175,7 +175,7 @@ func (s *BarcodeService) PackOrder(ctx context.Context, tenantID, orderID, actor
 		}
 
 		// Update order metadata with packing info
-		metadata := make(map[string]interface{})
+		metadata := make(map[string]any)
 		if order.Metadata != nil {
 			_ = json.Unmarshal(order.Metadata, &metadata)
 		}

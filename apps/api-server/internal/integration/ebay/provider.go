@@ -202,10 +202,10 @@ func (p *Provider) mapEbayOrder(o *ebaysdk.Order) integration.MarketplaceOrder {
 
 	// RawData
 	mo.RawData = map[string]any{
-		"ebay_order_id":          o.OrderID,
-		"ebay_legacy_order_id":   o.LegacyOrderID,
+		"ebay_order_id":           o.OrderID,
+		"ebay_legacy_order_id":    o.LegacyOrderID,
 		"ebay_fulfillment_status": o.OrderFulfStatus,
-		"ebay_payment_status":    o.OrderPaymentStat,
+		"ebay_payment_status":     o.OrderPaymentStat,
 	}
 
 	return mo

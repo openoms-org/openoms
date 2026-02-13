@@ -132,7 +132,7 @@ func TestSupplierHandler_LinkProduct_InvalidID(t *testing.T) {
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("spid", "bad")
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/suppliers/products/bad/link", strings.NewReader(`{"product_id":"` + uuid.New().String() + `"}`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/suppliers/products/bad/link", strings.NewReader(`{"product_id":"`+uuid.New().String()+`"}`))
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	rr := httptest.NewRecorder()
 

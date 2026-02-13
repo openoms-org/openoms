@@ -27,8 +27,8 @@ func TestEncryptDecrypt_Roundtrip(t *testing.T) {
 
 func TestEncrypt_InvalidKeyLength(t *testing.T) {
 	tests := []struct {
-		name    string
-		keyLen  int
+		name   string
+		keyLen int
 	}{
 		{"too short", 16},
 		{"too long", 64},

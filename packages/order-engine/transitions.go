@@ -3,6 +3,7 @@ package engine
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -45,12 +46,7 @@ func CanTransitionOrder(from, to OrderStatus) bool {
 	if !ok {
 		return false
 	}
-	for _, t := range targets {
-		if t == to {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(targets, to)
 }
 
 // CanTransitionShipment reports whether a shipment can move from one status to another.
@@ -59,12 +55,7 @@ func CanTransitionShipment(from, to ShipmentStatus) bool {
 	if !ok {
 		return false
 	}
-	for _, t := range targets {
-		if t == to {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(targets, to)
 }
 
 // TransitionOrder validates and performs an order status transition.

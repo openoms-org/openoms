@@ -16,22 +16,22 @@ import (
 )
 
 var (
-	ErrStocktakeNotFound    = errors.New("stocktake not found")
-	ErrStocktakeNotDraft    = errors.New("stocktake is not in draft status")
-	ErrStocktakeNotActive   = errors.New("stocktake is not in progress")
+	ErrStocktakeNotFound     = errors.New("stocktake not found")
+	ErrStocktakeNotDraft     = errors.New("stocktake is not in draft status")
+	ErrStocktakeNotActive    = errors.New("stocktake is not in progress")
 	ErrStocktakeItemNotFound = errors.New("stocktake item not found")
-	ErrNotAllItemsCounted   = errors.New("not all items have been counted")
+	ErrNotAllItemsCounted    = errors.New("not all items have been counted")
 )
 
 // StocktakeService provides business logic for stocktaking.
 type StocktakeService struct {
-	stocktakeRepo  repository.StocktakeRepo
-	itemRepo       repository.StocktakeItemRepo
-	stockRepo      repository.WarehouseStockRepo
-	docRepo        repository.WarehouseDocumentRepo
-	docItemRepo    repository.WarehouseDocItemRepo
-	auditRepo      repository.AuditRepo
-	pool           *pgxpool.Pool
+	stocktakeRepo   repository.StocktakeRepo
+	itemRepo        repository.StocktakeItemRepo
+	stockRepo       repository.WarehouseStockRepo
+	docRepo         repository.WarehouseDocumentRepo
+	docItemRepo     repository.WarehouseDocItemRepo
+	auditRepo       repository.AuditRepo
+	pool            *pgxpool.Pool
 	webhookDispatch *WebhookDispatchService
 }
 

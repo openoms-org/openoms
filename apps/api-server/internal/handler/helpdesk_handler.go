@@ -32,7 +32,7 @@ func (h *HelpdeskHandler) ListOrderTickets(w http.ResponseWriter, r *http.Reques
 	tickets, err := h.freshdeskService.GetTickets(r.Context(), tenantID, orderID)
 	if err != nil {
 		if errors.Is(err, service.ErrFreshdeskNotConfigured) {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
 				"tickets": []service.FreshdeskTicket{},
 			})
 			return
@@ -45,7 +45,7 @@ func (h *HelpdeskHandler) ListOrderTickets(w http.ResponseWriter, r *http.Reques
 		tickets = []service.FreshdeskTicket{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"tickets": tickets,
 	})
 }
@@ -94,7 +94,7 @@ func (h *HelpdeskHandler) ListAllTickets(w http.ResponseWriter, r *http.Request)
 	tickets, err := h.freshdeskService.ListAllTickets(r.Context(), tenantID)
 	if err != nil {
 		if errors.Is(err, service.ErrFreshdeskNotConfigured) {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			writeJSON(w, http.StatusOK, map[string]any{
 				"tickets": []service.FreshdeskTicket{},
 			})
 			return
@@ -107,7 +107,7 @@ func (h *HelpdeskHandler) ListAllTickets(w http.ResponseWriter, r *http.Request)
 		tickets = []service.FreshdeskTicket{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"tickets": tickets,
 	})
 }

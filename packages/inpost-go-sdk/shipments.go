@@ -26,7 +26,7 @@ func (s *ShipmentService) Create(ctx context.Context, req *CreateShipmentRequest
 // In simplified mode (service specified), offerID can be 0 to auto-select.
 func (s *ShipmentService) Buy(ctx context.Context, id int64, offerID int64) (*Shipment, error) {
 	path := fmt.Sprintf("/v1/shipments/%d/buy", id)
-	var body interface{}
+	var body any
 	if offerID > 0 {
 		body = map[string]int64{"offer_id": offerID}
 	}

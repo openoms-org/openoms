@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -10,62 +11,62 @@ import (
 )
 
 type Order struct {
-	ID              uuid.UUID        `json:"id"`
-	TenantID        uuid.UUID        `json:"tenant_id"`
-	ExternalID      *string          `json:"external_id,omitempty"`
-	Source          string           `json:"source"`
-	IntegrationID   *uuid.UUID       `json:"integration_id,omitempty"`
-	Status          string           `json:"status"`
-	CustomerName    string           `json:"customer_name"`
-	CustomerEmail   *string          `json:"customer_email,omitempty"`
-	CustomerPhone   *string          `json:"customer_phone,omitempty"`
-	ShippingAddress json.RawMessage  `json:"shipping_address,omitempty"`
-	BillingAddress  json.RawMessage  `json:"billing_address,omitempty"`
-	Items           json.RawMessage  `json:"items,omitempty"`
-	TotalAmount     float64          `json:"total_amount"`
-	Currency        string           `json:"currency"`
-	Notes           *string          `json:"notes,omitempty"`
-	Metadata        json.RawMessage  `json:"metadata,omitempty"`
-	Tags            []string         `json:"tags"`
-	OrderedAt       *time.Time       `json:"ordered_at,omitempty"`
-	ShippedAt       *time.Time       `json:"shipped_at,omitempty"`
-	DeliveredAt     *time.Time       `json:"delivered_at,omitempty"`
-	DeliveryMethod  *string          `json:"delivery_method,omitempty"`
-	PickupPointID   *string          `json:"pickup_point_id,omitempty"`
-	PaymentStatus   string           `json:"payment_status"`
-	PaymentMethod   *string          `json:"payment_method,omitempty"`
-	PaidAt          *time.Time       `json:"paid_at,omitempty"`
-	CustomerID      *uuid.UUID       `json:"customer_id,omitempty"`
-	MergedInto      *uuid.UUID       `json:"merged_into,omitempty"`
-	SplitFrom       *uuid.UUID       `json:"split_from,omitempty"`
-	InternalNotes   string           `json:"internal_notes"`
-	Priority        string           `json:"priority"`
-	CreatedAt       time.Time        `json:"created_at"`
-	UpdatedAt       time.Time        `json:"updated_at"`
+	ID              uuid.UUID       `json:"id"`
+	TenantID        uuid.UUID       `json:"tenant_id"`
+	ExternalID      *string         `json:"external_id,omitempty"`
+	Source          string          `json:"source"`
+	IntegrationID   *uuid.UUID      `json:"integration_id,omitempty"`
+	Status          string          `json:"status"`
+	CustomerName    string          `json:"customer_name"`
+	CustomerEmail   *string         `json:"customer_email,omitempty"`
+	CustomerPhone   *string         `json:"customer_phone,omitempty"`
+	ShippingAddress json.RawMessage `json:"shipping_address,omitempty"`
+	BillingAddress  json.RawMessage `json:"billing_address,omitempty"`
+	Items           json.RawMessage `json:"items,omitempty"`
+	TotalAmount     float64         `json:"total_amount"`
+	Currency        string          `json:"currency"`
+	Notes           *string         `json:"notes,omitempty"`
+	Metadata        json.RawMessage `json:"metadata,omitempty"`
+	Tags            []string        `json:"tags"`
+	OrderedAt       *time.Time      `json:"ordered_at,omitempty"`
+	ShippedAt       *time.Time      `json:"shipped_at,omitempty"`
+	DeliveredAt     *time.Time      `json:"delivered_at,omitempty"`
+	DeliveryMethod  *string         `json:"delivery_method,omitempty"`
+	PickupPointID   *string         `json:"pickup_point_id,omitempty"`
+	PaymentStatus   string          `json:"payment_status"`
+	PaymentMethod   *string         `json:"payment_method,omitempty"`
+	PaidAt          *time.Time      `json:"paid_at,omitempty"`
+	CustomerID      *uuid.UUID      `json:"customer_id,omitempty"`
+	MergedInto      *uuid.UUID      `json:"merged_into,omitempty"`
+	SplitFrom       *uuid.UUID      `json:"split_from,omitempty"`
+	InternalNotes   string          `json:"internal_notes"`
+	Priority        string          `json:"priority"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 type CreateOrderRequest struct {
-	ExternalID      *string          `json:"external_id,omitempty"`
-	Source          string           `json:"source"`
-	IntegrationID   *uuid.UUID       `json:"integration_id,omitempty"`
-	CustomerName    string           `json:"customer_name"`
-	CustomerEmail   *string          `json:"customer_email,omitempty"`
-	CustomerPhone   *string          `json:"customer_phone,omitempty"`
-	ShippingAddress json.RawMessage  `json:"shipping_address,omitempty"`
-	BillingAddress  json.RawMessage  `json:"billing_address,omitempty"`
-	Items           json.RawMessage  `json:"items,omitempty"`
-	TotalAmount     float64          `json:"total_amount"`
-	Currency        string           `json:"currency"`
-	Notes           *string          `json:"notes,omitempty"`
-	Metadata        json.RawMessage  `json:"metadata,omitempty"`
-	Tags            []string         `json:"tags,omitempty"`
-	DeliveryMethod  *string          `json:"delivery_method,omitempty"`
-	PickupPointID   *string          `json:"pickup_point_id,omitempty"`
-	OrderedAt       *time.Time       `json:"ordered_at,omitempty"`
-	PaymentStatus   *string          `json:"payment_status,omitempty"`
-	PaymentMethod   *string          `json:"payment_method,omitempty"`
-	InternalNotes   string           `json:"internal_notes,omitempty"`
-	Priority        string           `json:"priority,omitempty"`
+	ExternalID      *string         `json:"external_id,omitempty"`
+	Source          string          `json:"source"`
+	IntegrationID   *uuid.UUID      `json:"integration_id,omitempty"`
+	CustomerName    string          `json:"customer_name"`
+	CustomerEmail   *string         `json:"customer_email,omitempty"`
+	CustomerPhone   *string         `json:"customer_phone,omitempty"`
+	ShippingAddress json.RawMessage `json:"shipping_address,omitempty"`
+	BillingAddress  json.RawMessage `json:"billing_address,omitempty"`
+	Items           json.RawMessage `json:"items,omitempty"`
+	TotalAmount     float64         `json:"total_amount"`
+	Currency        string          `json:"currency"`
+	Notes           *string         `json:"notes,omitempty"`
+	Metadata        json.RawMessage `json:"metadata,omitempty"`
+	Tags            []string        `json:"tags,omitempty"`
+	DeliveryMethod  *string         `json:"delivery_method,omitempty"`
+	PickupPointID   *string         `json:"pickup_point_id,omitempty"`
+	OrderedAt       *time.Time      `json:"ordered_at,omitempty"`
+	PaymentStatus   *string         `json:"payment_status,omitempty"`
+	PaymentMethod   *string         `json:"payment_method,omitempty"`
+	InternalNotes   string          `json:"internal_notes,omitempty"`
+	Priority        string          `json:"priority,omitempty"`
 
 	// Transient: trigger shipment auto-creation (not persisted on order)
 	ShipmentProvider   *string `json:"shipment_provider,omitempty"`
@@ -136,25 +137,25 @@ func (r *CreateOrderRequest) Validate() error {
 }
 
 type UpdateOrderRequest struct {
-	ExternalID      *string          `json:"external_id,omitempty"`
-	CustomerName    *string          `json:"customer_name,omitempty"`
-	CustomerEmail   *string          `json:"customer_email,omitempty"`
-	CustomerPhone   *string          `json:"customer_phone,omitempty"`
-	ShippingAddress json.RawMessage  `json:"shipping_address,omitempty"`
-	BillingAddress  json.RawMessage  `json:"billing_address,omitempty"`
-	Items           json.RawMessage  `json:"items,omitempty"`
-	TotalAmount     *float64         `json:"total_amount,omitempty"`
-	Currency        *string          `json:"currency,omitempty"`
-	Notes           *string          `json:"notes,omitempty"`
-	Metadata        json.RawMessage  `json:"metadata,omitempty"`
-	Tags            *[]string        `json:"tags,omitempty"`
-	DeliveryMethod  *string          `json:"delivery_method,omitempty"`
-	PickupPointID   *string          `json:"pickup_point_id,omitempty"`
-	PaymentStatus   *string          `json:"payment_status,omitempty"`
-	PaymentMethod   *string          `json:"payment_method,omitempty"`
-	PaidAt          *time.Time       `json:"paid_at,omitempty"`
-	InternalNotes   *string          `json:"internal_notes,omitempty"`
-	Priority        *string          `json:"priority,omitempty"`
+	ExternalID      *string         `json:"external_id,omitempty"`
+	CustomerName    *string         `json:"customer_name,omitempty"`
+	CustomerEmail   *string         `json:"customer_email,omitempty"`
+	CustomerPhone   *string         `json:"customer_phone,omitempty"`
+	ShippingAddress json.RawMessage `json:"shipping_address,omitempty"`
+	BillingAddress  json.RawMessage `json:"billing_address,omitempty"`
+	Items           json.RawMessage `json:"items,omitempty"`
+	TotalAmount     *float64        `json:"total_amount,omitempty"`
+	Currency        *string         `json:"currency,omitempty"`
+	Notes           *string         `json:"notes,omitempty"`
+	Metadata        json.RawMessage `json:"metadata,omitempty"`
+	Tags            *[]string       `json:"tags,omitempty"`
+	DeliveryMethod  *string         `json:"delivery_method,omitempty"`
+	PickupPointID   *string         `json:"pickup_point_id,omitempty"`
+	PaymentStatus   *string         `json:"payment_status,omitempty"`
+	PaymentMethod   *string         `json:"payment_method,omitempty"`
+	PaidAt          *time.Time      `json:"paid_at,omitempty"`
+	InternalNotes   *string         `json:"internal_notes,omitempty"`
+	Priority        *string         `json:"priority,omitempty"`
 }
 
 func (r *UpdateOrderRequest) Validate() error {
@@ -284,12 +285,7 @@ func (c *OrderStatusConfig) CanTransition(from, to string) bool {
 	if !ok {
 		return false
 	}
-	for _, t := range targets {
-		if t == to {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(targets, to)
 }
 
 func (c *OrderStatusConfig) GetStatusDef(key string) *StatusDef {
@@ -360,7 +356,7 @@ func DefaultProductCategoriesConfig() ProductCategoriesConfig {
 func DefaultOrderStatusConfig() OrderStatusConfig {
 	return OrderStatusConfig{
 		Statuses: []StatusDef{
-			{Key: "new", Label: "Nowe", Color: "blue", Position: 1},
+			{Key: "new", Label: "Now", Color: "blue", Position: 1},
 			{Key: "confirmed", Label: "Potwierdzone", Color: "indigo", Position: 2},
 			{Key: "processing", Label: "W realizacji", Color: "yellow", Position: 3},
 			{Key: "ready_to_ship", Label: "Gotowe do wysyłki", Color: "orange", Position: 4},

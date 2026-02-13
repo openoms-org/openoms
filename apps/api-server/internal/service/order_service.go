@@ -533,14 +533,12 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 
 	// Dispatch notifications outside the transaction
 	for _, n := range pendingEmails {
-		n := n
 		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
 		if s.smsService != nil {
 			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
 		}
 	}
 	for _, n := range pendingWebhooks {
-		n := n
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
 	}
 

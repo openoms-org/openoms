@@ -9,12 +9,12 @@ import (
 
 // User represents a user in the system (JSON-safe, no password_hash).
 type User struct {
-	ID          uuid.UUID  `json:"id"`
-	TenantID    uuid.UUID  `json:"tenant_id"`
-	Email       string     `json:"email"`
-	Name        string     `json:"name"`
-	Role        string     `json:"role"`
-	RoleID      *uuid.UUID `json:"role_id,omitempty"`
+	ID           uuid.UUID  `json:"id"`
+	TenantID     uuid.UUID  `json:"tenant_id"`
+	Email        string     `json:"email"`
+	Name         string     `json:"name"`
+	Role         string     `json:"role"`
+	RoleID       *uuid.UUID `json:"role_id,omitempty"`
 	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
 	LastLogoutAt *time.Time `json:"last_logout_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
@@ -23,9 +23,9 @@ type User struct {
 
 // Tenant represents a tenant organization.
 type Tenant struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Slug      string    `json:"slug"`
+	ID        uuid.UUID       `json:"id"`
+	Name      string          `json:"name"`
+	Slug      string          `json:"slug"`
 	Plan      string          `json:"plan"`
 	Settings  json.RawMessage `json:"settings"`
 	CreatedAt time.Time       `json:"created_at"`

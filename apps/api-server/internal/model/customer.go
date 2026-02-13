@@ -72,16 +72,16 @@ func (r *CreateCustomerRequest) Validate() error {
 }
 
 type UpdateCustomerRequest struct {
-	Email                  *string          `json:"email,omitempty"`
-	Phone                  *string          `json:"phone,omitempty"`
-	Name                   *string          `json:"name,omitempty"`
-	CompanyName            *string          `json:"company_name,omitempty"`
-	NIP                    *string          `json:"nip,omitempty"`
-	DefaultShippingAddress json.RawMessage  `json:"default_shipping_address,omitempty"`
-	DefaultBillingAddress  json.RawMessage  `json:"default_billing_address,omitempty"`
-	Tags                   *[]string        `json:"tags,omitempty"`
-	Notes                  *string          `json:"notes,omitempty"`
-	PriceListID            *uuid.UUID       `json:"price_list_id,omitempty"`
+	Email                  *string         `json:"email,omitempty"`
+	Phone                  *string         `json:"phone,omitempty"`
+	Name                   *string         `json:"name,omitempty"`
+	CompanyName            *string         `json:"company_name,omitempty"`
+	NIP                    *string         `json:"nip,omitempty"`
+	DefaultShippingAddress json.RawMessage `json:"default_shipping_address,omitempty"`
+	DefaultBillingAddress  json.RawMessage `json:"default_billing_address,omitempty"`
+	Tags                   *[]string       `json:"tags,omitempty"`
+	Notes                  *string         `json:"notes,omitempty"`
+	PriceListID            *uuid.UUID      `json:"price_list_id,omitempty"`
 }
 
 func (r *UpdateCustomerRequest) Validate() error {

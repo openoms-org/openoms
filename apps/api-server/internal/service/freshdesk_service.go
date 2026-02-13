@@ -80,7 +80,7 @@ func (s *FreshdeskService) GetSettings(ctx context.Context, tenantID uuid.UUID) 
 	return &settings, err
 }
 
-func (s *FreshdeskService) doRequest(ctx context.Context, method, url, apiKey string, body interface{}) ([]byte, int, error) {
+func (s *FreshdeskService) doRequest(ctx context.Context, method, url, apiKey string, body any) ([]byte, int, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -123,14 +123,14 @@ func (s *FreshdeskService) CreateTicket(ctx context.Context, tenantID uuid.UUID,
 
 	url := fmt.Sprintf("https://%s.freshdesk.com/api/v2/tickets", settings.Domain)
 
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"subject":     subject,
 		"description": description,
 		"email":       email,
 		"priority":    1,
 		"status":      2,
 		"tags":        []string{"openoms", "order-" + orderID.String()},
-		"custom_fields": map[string]interface{}{
+		"custom_fields": map[string]any{
 			"cf_order_id": orderID.String(),
 		},
 	}

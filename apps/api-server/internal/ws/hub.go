@@ -17,11 +17,11 @@ type Event struct {
 
 // Hub maintains the set of active clients grouped by tenant and broadcasts messages.
 type Hub struct {
-	mu          sync.RWMutex
-	tenants     map[uuid.UUID]map[*Client]struct{}
-	register    chan *Client
-	unregister  chan *Client
-	broadcast   chan tenantEvent
+	mu         sync.RWMutex
+	tenants    map[uuid.UUID]map[*Client]struct{}
+	register   chan *Client
+	unregister chan *Client
+	broadcast  chan tenantEvent
 }
 
 type tenantEvent struct {

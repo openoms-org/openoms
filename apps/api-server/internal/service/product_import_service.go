@@ -40,17 +40,17 @@ func NewProductImportService(
 
 // ProductImportPreview is the response for the import preview endpoint.
 type ProductImportPreview struct {
-	Headers    []string                    `json:"headers"`
-	TotalRows  int                         `json:"total_rows"`
-	SampleRows []model.ImportPreviewRow    `json:"sample_rows"`
-	NewCount   int                         `json:"new_count"`
-	UpdateCount int                        `json:"update_count"`
+	Headers     []string                 `json:"headers"`
+	TotalRows   int                      `json:"total_rows"`
+	SampleRows  []model.ImportPreviewRow `json:"sample_rows"`
+	NewCount    int                      `json:"new_count"`
+	UpdateCount int                      `json:"update_count"`
 }
 
 // ProductImportResult is the response for the import endpoint.
 type ProductImportResult struct {
-	Created int                `json:"created"`
-	Updated int                `json:"updated"`
+	Created int                 `json:"created"`
+	Updated int                 `json:"updated"`
 	Errors  []model.ImportError `json:"errors"`
 }
 
@@ -96,15 +96,12 @@ func (s *ProductImportService) PreviewCSV(ctx context.Context, tenantID uuid.UUI
 	}
 
 	// Build sample rows (up to 10)
-	sampleCount := totalRows
-	if sampleCount > 10 {
-		sampleCount = 10
-	}
+	sampleCount := min(totalRows, 10)
 
 	sampleRows := make([]model.ImportPreviewRow, 0, sampleCount)
 	for i := 1; i <= sampleCount; i++ {
 		row := records[i]
-		data := make(map[string]interface{})
+		data := make(map[string]any)
 		for j, h := range headers {
 			if j < len(row) {
 				data[h] = row[j]
@@ -297,7 +294,7 @@ func (s *ProductImportService) importProductRow(
 	// Parse tags (comma-separated)
 	var tags []string
 	if tagsStr != "" {
-		for _, t := range strings.Split(tagsStr, ",") {
+		for t := range strings.SplitSeq(tagsStr, ",") {
 			t = strings.TrimSpace(t)
 			if t != "" {
 				tags = append(tags, t)

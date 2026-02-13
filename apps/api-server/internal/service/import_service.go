@@ -69,15 +69,12 @@ func (s *ImportService) ParseCSV(file io.Reader) (*model.ImportPreviewResponse, 
 	totalRows := len(records) - 1 // exclude header row
 
 	// Build sample rows (up to 10)
-	sampleCount := totalRows
-	if sampleCount > 10 {
-		sampleCount = 10
-	}
+	sampleCount := min(totalRows, 10)
 
 	sampleRows := make([]model.ImportPreviewRow, 0, sampleCount)
 	for i := 1; i <= sampleCount; i++ {
 		row := records[i]
-		data := make(map[string]interface{})
+		data := make(map[string]any)
 		for j, h := range headers {
 			if j < len(row) {
 				data[h] = row[j]
@@ -397,7 +394,7 @@ func (s *ImportService) importRow(
 	// Parse tags (comma-separated)
 	var tags []string
 	if v := getVal("tags"); v != "" {
-		for _, t := range strings.Split(v, ",") {
+		for t := range strings.SplitSeq(v, ",") {
 			t = strings.TrimSpace(t)
 			if t != "" {
 				tags = append(tags, t)

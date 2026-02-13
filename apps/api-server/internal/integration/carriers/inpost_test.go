@@ -314,7 +314,7 @@ func TestInPostGetLabel_PDF(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInPostGetLabel_ZPL(t *testing.T) {
-	fakeZPL := []byte("^XA^FO50,50^ADN,36,20^FDInPost Label^FS^XZ")
+	fakeZPL := []byte("^XA^FO50,50^AND,36,20^FDInPost Label^FS^XZ")
 	var receivedPath string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

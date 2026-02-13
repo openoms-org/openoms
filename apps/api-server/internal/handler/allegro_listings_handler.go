@@ -223,13 +223,13 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 
 	// Build metadata to store with the listing
 	metadata, _ := json.Marshal(map[string]any{
-		"category_id":     req.CategoryID,
-		"parameters":      req.Parameters,
+		"category_id":      req.CategoryID,
+		"parameters":       req.Parameters,
 		"shipping_rate_id": req.ShippingRateID,
 		"return_policy_id": req.ReturnPolicyID,
-		"warranty_id":     req.WarrantyID,
-		"handling_time":   req.HandlingTime,
-		"location":        req.Location,
+		"warranty_id":      req.WarrantyID,
+		"handling_time":    req.HandlingTime,
+		"location":         req.Location,
 	})
 
 	now := time.Now()

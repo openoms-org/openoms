@@ -8,8 +8,8 @@ import (
 
 // BarcodeLookupResponse is the response for a barcode/SKU/EAN lookup.
 type BarcodeLookupResponse struct {
-	Product  *Product          `json:"product,omitempty"`
-	Variants []ProductVariant  `json:"variants,omitempty"`
+	Product  *Product         `json:"product,omitempty"`
+	Variants []ProductVariant `json:"variants,omitempty"`
 }
 
 // ScannedItem represents a single scanned item in the packing request.

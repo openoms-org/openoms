@@ -79,7 +79,7 @@ func (s *MailchimpService) getDataCenter(apiKey string) string {
 	return "us1"
 }
 
-func (s *MailchimpService) doRequest(ctx context.Context, method, url, apiKey string, body interface{}) ([]byte, int, error) {
+func (s *MailchimpService) doRequest(ctx context.Context, method, url, apiKey string, body any) ([]byte, int, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -137,7 +137,7 @@ func (s *MailchimpService) SyncCustomer(ctx context.Context, tenantID uuid.UUID,
 		lastName = names[1]
 	}
 
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"email_address": customerEmail,
 		"status_if_new": "subscribed",
 		"merge_fields": map[string]string{
@@ -221,12 +221,12 @@ func (s *MailchimpService) CreateCampaign(ctx context.Context, tenantID uuid.UUI
 	dc := s.getDataCenter(settings.APIKey)
 
 	// 1. Create campaign
-	campaignPayload := map[string]interface{}{
+	campaignPayload := map[string]any{
 		"type": "regular",
-		"recipients": map[string]interface{}{
+		"recipients": map[string]any{
 			"list_id": settings.ListID,
 		},
-		"settings": map[string]interface{}{
+		"settings": map[string]any{
 			"subject_line": subject,
 			"title":        name,
 			"from_name":    name,
@@ -252,7 +252,7 @@ func (s *MailchimpService) CreateCampaign(ctx context.Context, tenantID uuid.UUI
 	}
 
 	// 2. Set campaign content
-	contentPayload := map[string]interface{}{
+	contentPayload := map[string]any{
 		"html": content,
 	}
 	_, statusCode, err = s.doRequest(ctx, http.MethodPut,

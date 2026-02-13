@@ -96,7 +96,7 @@ func (c *Client) WritePump() {
 
 			// Flush any queued messages
 			n := len(c.send)
-			for i := 0; i < n; i++ {
+			for range n {
 				w.Write([]byte("\n"))
 				w.Write(<-c.send)
 			}

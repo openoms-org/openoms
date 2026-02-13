@@ -433,7 +433,7 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Parse order metadata and append custom field values
-			var metadata map[string]interface{}
+			var metadata map[string]any
 			if o.Metadata != nil {
 				if err := json.Unmarshal(o.Metadata, &metadata); err != nil {
 					slog.Warn("csv export: failed to unmarshal order metadata", "error", err, "order_id", o.ID)

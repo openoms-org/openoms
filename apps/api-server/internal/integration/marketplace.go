@@ -27,9 +27,9 @@ type MarketplaceOrder struct {
 	CustomerName    string                 `json:"customer_name"`
 	CustomerEmail   string                 `json:"customer_email,omitempty"`
 	CustomerPhone   string                 `json:"customer_phone,omitempty"`
-	ShippingAddress model.ShippingAddress    `json:"shipping_address"`
-	BillingAddress  *model.ShippingAddress   `json:"billing_address,omitempty"`
-	Items           []MarketplaceOrderItem  `json:"items"`
+	ShippingAddress model.ShippingAddress  `json:"shipping_address"`
+	BillingAddress  *model.ShippingAddress `json:"billing_address,omitempty"`
+	Items           []MarketplaceOrderItem `json:"items"`
 	TotalAmount     float64                `json:"total_amount"`
 	Currency        string                 `json:"currency"`
 	PaymentStatus   string                 `json:"payment_status,omitempty"`

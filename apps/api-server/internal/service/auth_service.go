@@ -10,11 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/pquerna/otp/totp"
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/pquerna/otp/totp"
 )
 
 var (
@@ -447,7 +447,6 @@ func (s *AuthService) Get2FAStatus(ctx context.Context, userID, tenantID uuid.UU
 	return resp, nil
 }
 
-
 type RefreshTokenInfo struct {
 	UserID   uuid.UUID
 	TenantID uuid.UUID
@@ -505,7 +504,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 		return nil, "", ErrUserNotFound
 	}
 
-	if user.LastLogoutAt != nil && claims.IssuedAt != nil && claims.IssuedAt.Time.Before(*user.LastLogoutAt) {
+	if user.LastLogoutAt != nil && claims.IssuedAt != nil && claims.IssuedAt.Before(*user.LastLogoutAt) {
 		return nil, "", fmt.Errorf("refresh token revoked by logout")
 	}
 

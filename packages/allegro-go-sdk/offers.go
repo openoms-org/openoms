@@ -182,9 +182,9 @@ type ResponsibleProducer struct {
 
 // ResponsibleProducerData contains the producer's contact details.
 type ResponsibleProducerData struct {
-	TradeName string                         `json:"tradeName"`
-	Address   ResponsibleProducerAddress     `json:"address"`
-	Contact   ResponsibleProducerContact     `json:"contact"`
+	TradeName string                     `json:"tradeName"`
+	Address   ResponsibleProducerAddress `json:"address"`
+	Contact   ResponsibleProducerContact `json:"contact"`
 }
 
 // ResponsibleProducerAddress is the address of the producer.

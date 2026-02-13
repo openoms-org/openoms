@@ -214,4 +214,3 @@ func (s *UserService) DeleteUser(ctx context.Context, tenantID, targetID, actorI
 		})
 	})
 }
-

@@ -100,4 +100,3 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 		"total", len(refs), "synced", synced)
 	return nil
 }
-

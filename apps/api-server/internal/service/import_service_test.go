@@ -86,7 +86,7 @@ func TestParseCSV_HeaderOnly(t *testing.T) {
 func TestParseCSV_SampleRowsLimitedTo10(t *testing.T) {
 	var sb strings.Builder
 	sb.WriteString("name\n")
-	for i := 0; i < 25; i++ {
+	for range 25 {
 		sb.WriteString("row\n")
 	}
 	svc := &ImportService{}

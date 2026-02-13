@@ -22,9 +22,9 @@ import (
 )
 
 var (
-	ErrShipmentNotCreated    = errors.New("shipment must be in 'created' status to generate label")
-	ErrNoCarrierIntegration  = errors.New("no active carrier integration found for provider")
-	ErrNoCustomerContact     = errors.New("order has no customer email or phone")
+	ErrShipmentNotCreated   = errors.New("shipment must be in 'created' status to generate label")
+	ErrNoCarrierIntegration = errors.New("no active carrier integration found for provider")
+	ErrNoCustomerContact    = errors.New("order has no customer email or phone")
 )
 
 type LabelService struct {
@@ -84,7 +84,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 
 		// Merge carrier_data from shipment into request (fill missing fields)
 		if len(shipment.CarrierData) > 0 {
-			var cd map[string]interface{}
+			var cd map[string]any
 			if err := json.Unmarshal(shipment.CarrierData, &cd); err == nil {
 				if req.TargetPoint == "" {
 					if tp, ok := cd["target_point"].(string); ok && tp != "" {
@@ -147,7 +147,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 
 		// Fall back to integration-level default sending method
 		if req.SendingMethod == "" && len(integrationSettings) > 0 {
-			var settingsMap map[string]interface{}
+			var settingsMap map[string]any
 			if err := json.Unmarshal(integrationSettings, &settingsMap); err == nil {
 				if sm, ok := settingsMap["default_sending_method"].(string); ok && sm != "" {
 					req.SendingMethod = sm
@@ -424,7 +424,7 @@ func (s *LabelService) CreateDispatchOrder(ctx context.Context, tenantID uuid.UU
 	// Extract external IDs from carrier_data
 	var externalIDs []int64
 	for _, shipment := range shipments {
-		var cd map[string]interface{}
+		var cd map[string]any
 		if err := json.Unmarshal(shipment.CarrierData, &cd); err != nil {
 			return nil, fmt.Errorf("parsing carrier_data for shipment %s: %w", shipment.ID, err)
 		}
@@ -469,9 +469,9 @@ func (s *LabelService) CreateDispatchOrder(ctx context.Context, tenantID uuid.UU
 	// Second transaction: save dispatch_order_id in each shipment's carrier_data and audit log
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for _, shipment := range shipments {
-			var cd map[string]interface{}
+			var cd map[string]any
 			if err := json.Unmarshal(shipment.CarrierData, &cd); err != nil {
-				cd = map[string]interface{}{}
+				cd = map[string]any{}
 			}
 			cd["dispatch_order_id"] = orderID
 

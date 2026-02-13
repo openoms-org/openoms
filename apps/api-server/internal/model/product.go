@@ -10,16 +10,16 @@ import (
 )
 
 type Product struct {
-	ID            uuid.UUID       `json:"id"`
-	TenantID      uuid.UUID       `json:"tenant_id"`
-	ExternalID    *string         `json:"external_id,omitempty"`
-	Source        string          `json:"source"`
-	Name          string          `json:"name"`
-	SKU           *string         `json:"sku,omitempty"`
-	EAN           *string         `json:"ean,omitempty"`
-	Price         float64         `json:"price"`
-	StockQuantity int             `json:"stock_quantity"`
-	Metadata      json.RawMessage `json:"metadata"`
+	ID               uuid.UUID       `json:"id"`
+	TenantID         uuid.UUID       `json:"tenant_id"`
+	ExternalID       *string         `json:"external_id,omitempty"`
+	Source           string          `json:"source"`
+	Name             string          `json:"name"`
+	SKU              *string         `json:"sku,omitempty"`
+	EAN              *string         `json:"ean,omitempty"`
+	Price            float64         `json:"price"`
+	StockQuantity    int             `json:"stock_quantity"`
+	Metadata         json.RawMessage `json:"metadata"`
 	Tags             []string        `json:"tags"`
 	DescriptionShort string          `json:"description_short"`
 	DescriptionLong  string          `json:"description_long"`
@@ -29,22 +29,22 @@ type Product struct {
 	Depth            *float64        `json:"depth,omitempty"`
 	Category         *string         `json:"category,omitempty"`
 	ImageURL         *string         `json:"image_url,omitempty"`
-	Images        json.RawMessage `json:"images"`
-	HasVariants   bool            `json:"has_variants"`
-	IsBundle      bool            `json:"is_bundle"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
+	Images           json.RawMessage `json:"images"`
+	HasVariants      bool            `json:"has_variants"`
+	IsBundle         bool            `json:"is_bundle"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 type CreateProductRequest struct {
-	ExternalID *string         `json:"external_id,omitempty"`
-	Source     string          `json:"source"`
-	Name       string          `json:"name"`
-	SKU        *string         `json:"sku,omitempty"`
-	EAN        *string         `json:"ean,omitempty"`
-	Price      float64         `json:"price"`
-	StockQty   int             `json:"stock_quantity"`
-	Metadata   json.RawMessage `json:"metadata,omitempty"`
+	ExternalID       *string         `json:"external_id,omitempty"`
+	Source           string          `json:"source"`
+	Name             string          `json:"name"`
+	SKU              *string         `json:"sku,omitempty"`
+	EAN              *string         `json:"ean,omitempty"`
+	Price            float64         `json:"price"`
+	StockQty         int             `json:"stock_quantity"`
+	Metadata         json.RawMessage `json:"metadata,omitempty"`
 	Tags             []string        `json:"tags,omitempty"`
 	DescriptionShort string          `json:"description_short,omitempty"`
 	DescriptionLong  string          `json:"description_long,omitempty"`
@@ -54,7 +54,7 @@ type CreateProductRequest struct {
 	Depth            *float64        `json:"depth,omitempty"`
 	Category         *string         `json:"category,omitempty"`
 	ImageURL         *string         `json:"image_url,omitempty"`
-	Images     json.RawMessage `json:"images,omitempty"`
+	Images           json.RawMessage `json:"images,omitempty"`
 }
 
 func (r *CreateProductRequest) Validate() error {
@@ -97,14 +97,14 @@ func (r *CreateProductRequest) Validate() error {
 }
 
 type UpdateProductRequest struct {
-	ExternalID    *string          `json:"external_id,omitempty"`
-	Source        *string          `json:"source,omitempty"`
-	Name          *string          `json:"name,omitempty"`
-	SKU           *string          `json:"sku,omitempty"`
-	EAN           *string          `json:"ean,omitempty"`
-	Price         *float64         `json:"price,omitempty"`
-	StockQuantity *int             `json:"stock_quantity,omitempty"`
-	Metadata      *json.RawMessage `json:"metadata,omitempty"`
+	ExternalID       *string          `json:"external_id,omitempty"`
+	Source           *string          `json:"source,omitempty"`
+	Name             *string          `json:"name,omitempty"`
+	SKU              *string          `json:"sku,omitempty"`
+	EAN              *string          `json:"ean,omitempty"`
+	Price            *float64         `json:"price,omitempty"`
+	StockQuantity    *int             `json:"stock_quantity,omitempty"`
+	Metadata         *json.RawMessage `json:"metadata,omitempty"`
 	Tags             *[]string        `json:"tags,omitempty"`
 	DescriptionShort *string          `json:"description_short,omitempty"`
 	DescriptionLong  *string          `json:"description_long,omitempty"`
@@ -114,8 +114,8 @@ type UpdateProductRequest struct {
 	Depth            *float64         `json:"depth,omitempty"`
 	Category         *string          `json:"category,omitempty"`
 	ImageURL         *string          `json:"image_url,omitempty"`
-	Images        *json.RawMessage `json:"images,omitempty"`
-	IsBundle      *bool            `json:"is_bundle,omitempty"`
+	Images           *json.RawMessage `json:"images,omitempty"`
+	IsBundle         *bool            `json:"is_bundle,omitempty"`
 }
 
 func (r *UpdateProductRequest) Validate() error {
