@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 export interface EditableColumnConfig<T> {
@@ -97,7 +97,7 @@ export function EditableCell<T>({
   if (!isEditing) {
     return (
       <div
-        className="group/editable-cell cursor-pointer rounded px-1 py-0.5 -mx-1 -my-0.5 hover:bg-muted/60 transition-colors"
+        className="group relative cursor-pointer rounded px-1 py-0.5 -mx-1 -my-0.5 hover:bg-muted/40 transition-colors"
         onDoubleClick={(e) => {
           e.stopPropagation();
           startEditing();
@@ -105,6 +105,7 @@ export function EditableCell<T>({
         title="Kliknij dwukrotnie, aby edytować"
       >
         {displayContent}
+        <Pencil className="absolute top-1 right-1 h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
     );
   }

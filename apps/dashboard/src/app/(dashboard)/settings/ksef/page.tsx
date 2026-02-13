@@ -101,7 +101,7 @@ export default function KSeFSettingsPage() {
 
   return (
     <AdminGuard>
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold">KSeF - Krajowy System e-Faktur</h1>
           <p className="text-muted-foreground">
@@ -296,14 +296,14 @@ export default function KSeFSettingsPage() {
               <div
                 className={`flex items-center gap-2 rounded-md border p-3 ${
                   testResult.success
-                    ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
-                    : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
+                    ? "border-success/30 bg-success/15"
+                    : "border-destructive/30 bg-destructive/15"
                 }`}
               >
                 {testResult.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-success" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  <XCircle className="h-5 w-5 text-destructive" />
                 )}
                 <span className="text-sm">{testResult.message}</span>
               </div>

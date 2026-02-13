@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -325,7 +325,7 @@ export default function ProductVariantsPage() {
                             variant.stock_quantity === 0
                               ? "text-destructive font-medium"
                               : variant.stock_quantity < 10
-                                ? "text-yellow-600 dark:text-yellow-400 font-medium"
+                                ? "text-warning font-medium"
                                 : ""
                           }
                         >

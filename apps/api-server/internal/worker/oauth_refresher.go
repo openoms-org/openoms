@@ -156,8 +156,9 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 		}
 
 		refreshed++
-		w.logger.Info("worker: token refreshed",
+		w.logger.Info("oauth: refreshed token",
 			"operation", "integration.oauth_refresh",
+			"provider", ir.provider,
 			"tenant_id", ir.tenantID,
 			"entity_id", ir.id,
 			"new_expiry", newExpiry.Format(time.RFC3339))

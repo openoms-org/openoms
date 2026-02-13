@@ -322,13 +322,13 @@ export default function PackingPage() {
                             key={`${item.sku}-${idx}`}
                             className={`flex items-center justify-between p-3 rounded-md border ${
                               isComplete
-                                ? "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950"
+                                ? "border-success/30 bg-success/15"
                                 : "border-border"
                             }`}
                           >
                             <div className="flex items-center gap-3">
                               {isComplete ? (
-                                <Check className="h-5 w-5 text-green-600" />
+                                <Check className="h-5 w-5 text-success" />
                               ) : (
                                 <Package className="h-5 w-5 text-muted-foreground" />
                               )}
@@ -345,7 +345,7 @@ export default function PackingPage() {
                               variant={isComplete ? "default" : "outline"}
                               className={
                                 isComplete
-                                  ? "bg-green-600"
+                                  ? "bg-success"
                                   : ""
                               }
                             >
@@ -405,8 +405,8 @@ export default function PackingPage() {
                 </div>
 
                 {allItemsScanned && (
-                  <div className="p-3 rounded-md bg-green-50 border border-green-200 dark:bg-green-950 dark:border-green-800">
-                    <p className="text-sm text-green-700 dark:text-green-300 font-medium flex items-center gap-2">
+                  <div className="p-3 rounded-md bg-success/15 border border-success/30">
+                    <p className="text-sm text-success font-medium flex items-center gap-2">
                       <Check className="h-4 w-4" />
                       Wszystkie pozycje zeskanowane
                     </p>

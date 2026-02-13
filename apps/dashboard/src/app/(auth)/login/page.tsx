@@ -157,35 +157,38 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="tenant_slug">Organizacja</Label>
+              <Label htmlFor="tenant_slug">Organizacja <span className="text-destructive">*</span></Label>
               <Input
                 id="tenant_slug"
                 placeholder="moja-firma"
+                aria-invalid={!!errors.tenant_slug}
                 {...register("tenant_slug")}
               />
               {errors.tenant_slug && (
-                <p className="text-sm text-destructive">{errors.tenant_slug.message}</p>
+                <p className="text-destructive text-xs mt-1">{errors.tenant_slug.message}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="jan@example.com"
+                aria-invalid={!!errors.email}
                 {...register("email")}
               />
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+                <p className="text-destructive text-xs mt-1">{errors.email.message}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Hasło</Label>
+              <Label htmlFor="password">Hasło <span className="text-destructive">*</span></Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className="pr-10"
+                  aria-invalid={!!errors.password}
                   {...register("password")}
                 />
                 <button
@@ -203,7 +206,7 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p className="text-destructive text-xs mt-1">{errors.password.message}</p>
               )}
             </div>
           </CardContent>

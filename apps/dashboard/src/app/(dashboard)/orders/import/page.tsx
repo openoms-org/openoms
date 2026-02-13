@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useImportPreview, useImportOrders } from "@/hooks/use-import";
+import { useImportPreview, useImportOrders } from "@/hooks/use-order-import";
 import { getErrorMessage } from "@/lib/api-client";
 import type { ImportColumnMapping, ImportPreviewResponse, ImportResult } from "@/types/api";
 
@@ -413,7 +413,7 @@ export default function ImportOrdersPage() {
                 </div>
               </div>
               <div className="rounded-lg border p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-600">
+                <div className="text-2xl font-bold text-warning">
                   {result.skipped}
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -421,7 +421,7 @@ export default function ImportOrdersPage() {
                 </div>
               </div>
               <div className="rounded-lg border p-4 text-center">
-                <div className="text-2xl font-bold text-red-600">
+                <div className="text-2xl font-bold text-destructive">
                   {result.errors.length}
                 </div>
                 <div className="text-sm text-muted-foreground">

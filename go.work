@@ -1,0 +1,26 @@
+go 1.24.3
+
+use (
+	./apps/api-server
+	./packages/allegro-go-sdk
+	./packages/amazon-sp-sdk
+	./packages/dhl-go-sdk
+	./packages/dpd-go-sdk
+	./packages/erli-go-sdk
+	./packages/fakturownia-go-sdk
+	./packages/gls-go-sdk
+	./packages/inpost-go-sdk
+	./packages/iof-parser
+	./packages/mirakl-go-sdk
+	./packages/order-engine
+	./packages/ups-go-sdk
+	./packages/poczta-polska-go-sdk
+	./packages/orlen-paczka-go-sdk
+	./packages/fedex-go-sdk
+	./packages/smsapi-go-sdk
+	./packages/woocommerce-go-sdk
+	./packages/ebay-go-sdk
+	./packages/kaufland-go-sdk
+	./packages/olx-go-sdk
+	./packages/ksef-go-sdk
+)

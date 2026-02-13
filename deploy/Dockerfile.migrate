@@ -1,0 +1,3 @@
+FROM migrate/migrate:v4.18.1
+COPY apps/api-server/migrations/ /migrations/
+ENTRYPOINT ["migrate"]

@@ -165,7 +165,7 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) integration.Marketpla
 		CustomerName:   customerName,
 		CustomerEmail:  o.Billing.Email,
 		CustomerPhone:  o.Billing.Phone,
-		ShippingAddress: integration.ShippingAddress{
+		ShippingAddress: model.ShippingAddress{
 			Name:       fmt.Sprintf("%s %s", o.Shipping.FirstName, o.Shipping.LastName),
 			Street:     o.Shipping.Address1,
 			City:       o.Shipping.City,
@@ -179,7 +179,7 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) integration.Marketpla
 	}
 
 	// Billing address
-	mo.BillingAddress = &integration.ShippingAddress{
+	mo.BillingAddress = &model.ShippingAddress{
 		Name:       fmt.Sprintf("%s %s", o.Billing.FirstName, o.Billing.LastName),
 		Street:     o.Billing.Address1,
 		City:       o.Billing.City,

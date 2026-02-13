@@ -7,7 +7,8 @@ WORKDIR /src
 
 # Copy workspace-level dependency files first (layer caching).
 # go.work tells Go this is a multi-module workspace.
-COPY go.work go.work.sum ./
+COPY go.work ./
+COPY go.work.su[m] ./
 
 # Copy go.mod (and go.sum where present) for every module in the workspace
 # so that `go mod download` can fetch all dependencies in a cached layer.
@@ -31,6 +32,7 @@ COPY packages/smsapi-go-sdk/go.mod        ./packages/smsapi-go-sdk/
 COPY packages/woocommerce-go-sdk/go.mod   ./packages/woocommerce-go-sdk/
 COPY packages/ebay-go-sdk/go.mod          ./packages/ebay-go-sdk/
 COPY packages/kaufland-go-sdk/go.mod      ./packages/kaufland-go-sdk/
+COPY packages/ksef-go-sdk/go.mod          ./packages/ksef-go-sdk/
 COPY packages/olx-go-sdk/go.mod           ./packages/olx-go-sdk/
 
 RUN cd apps/api-server && go mod download

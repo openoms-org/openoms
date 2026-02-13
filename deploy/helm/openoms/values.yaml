@@ -1,0 +1,141 @@
+namespace: openoms
+
+apiServer:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/ralllf/openoms-api
+    tag: ""  # defaults to Chart.appVersion
+    pullPolicy: IfNotPresent
+  port: 8080
+  env: production
+  baseUrl: https://api.openoms.loghawk.xyz
+  frontendUrl: https://app.openoms.loghawk.xyz
+  uploadDir: /tmp/uploads
+  maxUploadSize: "10485760"
+  features:
+    allegro: true
+    inpost: true
+  s3:
+    enabled: true
+    bucket: openoms-uploads
+    region: eu-central-1
+    endpoint: "http://minio.apps-core.svc.cluster.local:9000"
+    publicUrl: ""
+  openai:
+    model: gpt-4o-mini
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+workerStrategy: separate  # "separate" or "embedded"
+
+worker:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 384Mi
+
+dashboard:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/ralllf/openoms-dashboard
+    tag: ""
+    pullPolicy: IfNotPresent
+  port: 3000
+  resources:
+    requests:
+      cpu: 30m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 5
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+migration:
+  image:
+    repository: ghcr.io/ralllf/openoms-migrate
+    tag: ""
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  api:
+    host: api.openoms.loghawk.xyz
+    tlsSecret: openoms-api-tls
+  dashboard:
+    host: app.openoms.loghawk.xyz
+    tlsSecret: openoms-dashboard-tls
+
+secrets:
+  createPlainSecret: false
+  name: openoms-secrets
+
+imagePullSecrets:
+  - name: ghcr-pull-secret

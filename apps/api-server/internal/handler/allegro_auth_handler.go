@@ -56,6 +56,7 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	// Read credentials from existing integration
 	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
 	if err != nil {
+		slog.Error("allegro OAuth: failed to get credentials", "error", err)
 		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji Allegro (Client ID i Client Secret)")
 		return
 	}
@@ -66,6 +67,7 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 		Sandbox      bool   `json:"sandbox"`
 	}
 	if err := json.Unmarshal(credJSON, &creds); err != nil || creds.ClientID == "" || creds.ClientSecret == "" {
+		slog.Error("allegro OAuth: credential unmarshal failed", "error", err, "json_length", len(credJSON))
 		writeError(w, http.StatusBadRequest, "Integracja Allegro nie ma poprawnych danych Client ID / Client Secret")
 		return
 	}

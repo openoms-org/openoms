@@ -9,8 +9,7 @@
 *.prof
 /vendor/
 
-# Go workspace (local dev only — do NOT commit)
-go.work
+# Go workspace checksum (auto-generated, not needed in repo)
 go.work.sum
 
 # Node.js (web-dashboard)
@@ -38,6 +37,9 @@ redisdata/
 .DS_Store
 Thumbs.db
 
+# Test coverage
+coverage/
+
 # Logs
 *.log
 
@@ -46,20 +48,26 @@ uploads/
 
 # Binary output
 /bin/
-/tmp/
+tmp/
 apps/api-server/server
 
 # Legacy code (reference only, not part of new build)
 /mvp/
 /weekend-challenge/
-/deploy/
 /github/
+
+# Internal research & notes (not part of published docs)
+docs/api-research/
+docs/competitive-analysis.md
+docs/market-research-report.md
+docs/qa-seller-test-report.md
 
 # Old project files (pre-monorepo)
 openoms-*.docx
 openoms-*.md
 !README.md
 prompts-obrazy.md
+DEPLOY-INSTRUKCJA.md
 *.png
 *.webp
-!apps/web-dashboard/public/**
+!apps/dashboard/public/**

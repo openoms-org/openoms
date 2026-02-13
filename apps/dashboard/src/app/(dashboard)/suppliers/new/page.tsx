@@ -64,7 +64,7 @@ export default function NewSupplierPage() {
 
   return (
     <AdminGuard>
-    <div className="max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.push("/suppliers")}>
           <ArrowLeft className="h-4 w-4" />

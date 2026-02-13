@@ -8,7 +8,7 @@ import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from "@/hooks/u
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
 import { UserForm } from "@/components/users/user-form";
 import { formatDate } from "@/lib/utils";

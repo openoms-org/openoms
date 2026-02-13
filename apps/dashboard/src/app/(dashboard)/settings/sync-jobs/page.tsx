@@ -44,9 +44,9 @@ const JOB_TYPE_OPTIONS = [
 function statusBadge(status: string) {
   switch (status) {
     case "running":
-      return <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">W trakcie</Badge>;
+      return <Badge variant="info">W trakcie</Badge>;
     case "completed":
-      return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Zakończone</Badge>;
+      return <Badge variant="success">Zakończone</Badge>;
     case "failed":
       return <Badge variant="destructive">Nieudane</Badge>;
     default:

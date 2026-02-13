@@ -102,7 +102,7 @@ export default function CustomFieldsPage() {
 
   return (
     <AdminGuard>
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Pola dodatkowe</h1>
         <p className="text-muted-foreground mt-1">

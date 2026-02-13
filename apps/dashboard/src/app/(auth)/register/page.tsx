@@ -58,60 +58,65 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tenant_name">Nazwa organizacji</Label>
+            <Label htmlFor="tenant_name">Nazwa organizacji <span className="text-destructive">*</span></Label>
             <Input
               id="tenant_name"
               placeholder="Moja Firma Sp. z o.o."
+              aria-invalid={!!errors.tenant_name}
               {...register("tenant_name")}
             />
             {errors.tenant_name && (
-              <p className="text-sm text-destructive">{errors.tenant_name.message}</p>
+              <p className="text-destructive text-xs mt-1">{errors.tenant_name.message}</p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tenant_slug">Slug organizacji</Label>
+            <Label htmlFor="tenant_slug">Slug organizacji <span className="text-destructive">*</span></Label>
             <Input
               id="tenant_slug"
               placeholder="moja-firma"
+              aria-invalid={!!errors.tenant_slug}
               {...register("tenant_slug")}
             />
             {errors.tenant_slug && (
-              <p className="text-sm text-destructive">{errors.tenant_slug.message}</p>
+              <p className="text-destructive text-xs mt-1">{errors.tenant_slug.message}</p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="name">Imię i nazwisko</Label>
+            <Label htmlFor="name">Imię i nazwisko <span className="text-destructive">*</span></Label>
             <Input
               id="name"
               placeholder="Jan Kowalski"
+              aria-invalid={!!errors.name}
               {...register("name")}
             />
             {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
+              <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
             <Input
               id="email"
               type="email"
               placeholder="jan@example.com"
+              aria-invalid={!!errors.email}
               {...register("email")}
             />
             {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
+              <p className="text-destructive text-xs mt-1">{errors.email.message}</p>
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Hasło</Label>
+            <Label htmlFor="password">Hasło <span className="text-destructive">*</span></Label>
             <Input
               id="password"
               type="password"
               placeholder="Minimum 8 znaków"
+              aria-invalid={!!errors.password}
               {...register("password")}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p className="text-destructive text-xs mt-1">{errors.password.message}</p>
             )}
           </div>
         </CardContent>

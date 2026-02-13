@@ -47,7 +47,7 @@ export function TagInput({ tags, onChange, placeholder = "Dodaj tag..." }: TagIn
             <button
               type="button"
               onClick={() => removeTag(tag)}
-              className="rounded-full p-0.5 hover:bg-primary/20"
+              className="rounded-full p-0.5 hover:bg-primary/20 transition-colors"
             >
               <X className="h-3 w-3" />
             </button>

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: openoms
+description: OpenOMS - Open-source Order Management System
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - oms
+  - ecommerce
+  - order-management
+maintainers:
+  - name: ralllf

@@ -180,14 +180,15 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Nazwa produktu</Label>
+        <Label htmlFor="name">Nazwa produktu <span className="text-destructive">*</span></Label>
         <Input
           id="name"
           placeholder="Nazwa produktu"
+          aria-invalid={!!errors.name}
           {...register("name")}
         />
         {errors.name && (
-          <p className="text-sm text-destructive">{errors.name.message}</p>
+          <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
         )}
       </div>
 
@@ -213,32 +214,34 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="price">Cena</Label>
+          <Label htmlFor="price">Cena <span className="text-destructive">*</span></Label>
           <Input
             id="price"
             type="number"
             step="0.01"
             min="0"
             placeholder="0.00"
+            aria-invalid={!!errors.price}
             {...register("price", { valueAsNumber: true })}
           />
           {errors.price && (
-            <p className="text-sm text-destructive">{errors.price.message}</p>
+            <p className="text-destructive text-xs mt-1">{errors.price.message}</p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="stock_quantity">Stan magazynowy</Label>
+          <Label htmlFor="stock_quantity">Stan magazynowy <span className="text-destructive">*</span></Label>
           <Input
             id="stock_quantity"
             type="number"
             step="1"
             min="0"
             placeholder="0"
+            aria-invalid={!!errors.stock_quantity}
             {...register("stock_quantity", { valueAsNumber: true })}
           />
           {errors.stock_quantity && (
-            <p className="text-sm text-destructive">
+            <p className="text-destructive text-xs mt-1">
               {errors.stock_quantity.message}
             </p>
           )}
@@ -246,7 +249,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="source">Źródło</Label>
+        <Label htmlFor="source">Źródło <span className="text-destructive">*</span></Label>
         <Select
           value={sourceValue}
           onValueChange={(value) =>
@@ -255,7 +258,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             })
           }
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full" aria-invalid={!!errors.source}>
             <SelectValue placeholder="Wybierz źródło" />
           </SelectTrigger>
           <SelectContent>
@@ -267,7 +270,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
           </SelectContent>
         </Select>
         {errors.source && (
-          <p className="text-sm text-destructive">{errors.source.message}</p>
+          <p className="text-destructive text-xs mt-1">{errors.source.message}</p>
         )}
       </div>
 

@@ -318,7 +318,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       {/* Basic info */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="source">Źródło</Label>
+          <Label htmlFor="source">Źródło <span className="text-destructive">*</span></Label>
           <Select
             value={currentSource}
             onValueChange={(value) => setValue("source", value)}
@@ -339,12 +339,12 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             </SelectContent>
           </Select>
           {errors.source && (
-            <p className="text-sm text-destructive">{errors.source.message}</p>
+            <p className="text-destructive text-xs mt-1">{errors.source.message}</p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="customer_name">Nazwa klienta</Label>
+          <Label htmlFor="customer_name">Nazwa klienta <span className="text-destructive">*</span></Label>
           <Input
             id="customer_name"
             placeholder="Jan Kowalski"
@@ -352,7 +352,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             {...register("customer_name")}
           />
           {errors.customer_name && (
-            <p className="text-sm text-destructive">{errors.customer_name.message}</p>
+            <p className="text-destructive text-xs mt-1">{errors.customer_name.message}</p>
           )}
         </div>
 
@@ -366,7 +366,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             {...register("customer_email")}
           />
           {errors.customer_email && (
-            <p className="text-sm text-destructive">{errors.customer_email.message}</p>
+            <p className="text-destructive text-xs mt-1">{errors.customer_email.message}</p>
           )}
         </div>
 
@@ -378,12 +378,12 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             {...register("customer_phone")}
           />
           {errors.customer_phone && (
-            <p className="text-sm text-destructive">{errors.customer_phone.message}</p>
+            <p className="text-destructive text-xs mt-1">{errors.customer_phone.message}</p>
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="currency">Waluta</Label>
+          <Label htmlFor="currency">Waluta <span className="text-destructive">*</span></Label>
           <Input
             id="currency"
             value={currency}
@@ -477,7 +477,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       {/* Total amount */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="total_amount">Kwota całkowita</Label>
+          <Label htmlFor="total_amount">Kwota całkowita <span className="text-destructive">*</span></Label>
           {hasItems ? (
             <Input
               id="total_amount"
@@ -506,7 +506,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             </p>
           )}
           {errors.total_amount && (
-            <p className="text-sm text-destructive">{errors.total_amount.message}</p>
+            <p className="text-destructive text-xs mt-1">{errors.total_amount.message}</p>
           )}
         </div>
       </div>
@@ -750,7 +750,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
           {...register("notes")}
         />
         {errors.notes && (
-          <p className="text-sm text-destructive">{errors.notes.message}</p>
+          <p className="text-destructive text-xs mt-1">{errors.notes.message}</p>
         )}
       </div>
 

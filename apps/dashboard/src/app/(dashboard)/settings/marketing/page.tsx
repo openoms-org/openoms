@@ -112,7 +112,7 @@ export default function MarketingSettingsPage() {
 
   return (
     <AdminGuard>
-      <div className="space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Marketing (Mailchimp)</h1>
           <p className="text-muted-foreground">
@@ -130,7 +130,7 @@ export default function MarketingSettingsPage() {
               <div className="flex items-center gap-2">
                 <div
                   className={`h-3 w-3 rounded-full ${
-                    status?.configured ? "bg-green-500" : "bg-red-500"
+                    status?.configured ? "bg-success" : "bg-destructive"
                   }`}
                 />
                 <span className="text-sm">
@@ -140,7 +140,7 @@ export default function MarketingSettingsPage() {
               <div className="flex items-center gap-2">
                 <div
                   className={`h-3 w-3 rounded-full ${
-                    status?.enabled ? "bg-green-500" : "bg-gray-400"
+                    status?.enabled ? "bg-success" : "bg-muted-foreground"
                   }`}
                 />
                 <span className="text-sm">

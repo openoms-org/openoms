@@ -193,7 +193,7 @@ func (p *Provider) mapAmazonOrder(o *amazonsdk.Order, items []amazonsdk.OrderIte
 	// Shipping address
 	if o.ShippingAddress != nil {
 		mo.CustomerName = o.ShippingAddress.Name
-		mo.ShippingAddress = integration.ShippingAddress{
+		mo.ShippingAddress = model.ShippingAddress{
 			Name:       o.ShippingAddress.Name,
 			Street:     o.ShippingAddress.AddressLine1,
 			City:       o.ShippingAddress.City,

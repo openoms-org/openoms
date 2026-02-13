@@ -59,11 +59,5 @@ func NewCarrierProvider(provider string, credentials json.RawMessage, settings j
 		return factory(credentials, settings)
 	}
 
-	switch provider {
-	case "dpd":
-		// TODO: return dpd.NewProvider(credentials, settings)
-		return nil, fmt.Errorf("carrier provider %q: not implemented", provider)
-	default:
-		return nil, fmt.Errorf("unknown carrier provider: %q", provider)
-	}
+	return nil, fmt.Errorf("unknown carrier provider: %q", provider)
 }

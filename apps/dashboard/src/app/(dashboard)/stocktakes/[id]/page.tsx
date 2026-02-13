@@ -12,7 +12,7 @@ import {
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useStocktake,
   useStocktakeItems,

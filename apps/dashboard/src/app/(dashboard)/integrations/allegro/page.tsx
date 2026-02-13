@@ -17,6 +17,16 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Package,
+  MessageSquare,
+  RotateCcw,
+  User,
+  Star,
+  Folder,
+  CreditCard,
+  Shield,
+  Tag,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -27,6 +37,7 @@ import {
   useDeleteIntegration,
 } from "@/hooks/use-integrations";
 import { MarketplaceShipmentSettings } from "@/components/integrations/marketplace-shipment-settings";
+import { useAllegroAccount } from "@/hooks/use-allegro";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -580,6 +591,119 @@ function ConnectedState({
         </Card>
       )}
 
+      {/* Sub-page navigation */}
+      {integration.status === "active" && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Link href="/integrations/allegro/offers">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <Package className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Oferty</p>
+                  <p className="text-sm text-muted-foreground">
+                    Zarzadzaj ofertami na Allegro
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/integrations/allegro/messages">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <MessageSquare className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Wiadomosci</p>
+                  <p className="text-sm text-muted-foreground">
+                    Centrum wiadomosci Allegro
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/integrations/allegro/returns">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <RotateCcw className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Zwroty</p>
+                  <p className="text-sm text-muted-foreground">
+                    Zwroty i reklamacje Allegro
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/integrations/allegro/catalog">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <Folder className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Katalog</p>
+                  <p className="text-sm text-muted-foreground">
+                    Kategorie i produkty Allegro
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/integrations/allegro/finance">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <CreditCard className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Finanse</p>
+                  <p className="text-sm text-muted-foreground">
+                    Rozliczenia i kalkulator prowizji
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/integrations/allegro/policies">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <Shield className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Polityki sprzedazy</p>
+                  <p className="text-sm text-muted-foreground">
+                    Zwroty, rekojmia i tabele rozmiarow
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/integrations/allegro/promotions">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <Tag className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Promocje</p>
+                  <p className="text-sm text-muted-foreground">
+                    Kampanie promocyjne i pakiety
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/integrations/allegro/delivery">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <Truck className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Dostawa</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ustawienia dostawy i cenniki wysylki
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
+
+      {/* Account info */}
+      {integration.status === "active" && <AllegroAccountCard />}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Status card */}
         <Card>
@@ -743,6 +867,74 @@ function ConnectedState({
         isLoading={updateIntegration.isPending}
       />
     </div>
+  );
+}
+
+function AllegroAccountCard() {
+  const { data, isLoading, isError } = useAllegroAccount();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Konto sprzedawcy
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError || !data) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <User className="h-5 w-5" />
+          Konto sprzedawcy
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Login</p>
+            <p className="mt-1 font-medium">{data.user.login}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Email</p>
+            <p className="mt-1 font-medium">{data.user.email || "---"}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Polecenia</p>
+            <p className="mt-1 font-medium flex items-center gap-1">
+              <Star className="h-4 w-4 text-yellow-500" />
+              {data.quality.recommendPercentage
+                ? `${data.quality.recommendPercentage}%`
+                : "---"}
+              {data.quality.recommendCount > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  ({data.quality.recommendCount} opinii)
+                </span>
+              )}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">ID konta</p>
+            <p className="mt-1 font-mono text-xs">{data.user.id}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

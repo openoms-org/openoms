@@ -39,6 +39,7 @@ export default function CompanySettingsPage() {
   const updateSettings = useUpdateCompanySettings();
 
   const [form, setForm] = useState<CompanySettings>(DEFAULT_SETTINGS);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -49,7 +50,40 @@ export default function CompanySettingsPage() {
     if (settings) setForm(settings);
   }, [settings]);
 
+  const validateField = (field: string, value: string) => {
+    let error = "";
+    if (field === "company_name" && !value.trim()) {
+      error = "Nazwa firmy jest wymagana";
+    }
+    if (field === "email" && value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      error = "Nieprawidłowy adres email";
+    }
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (error) {
+        next[field] = error;
+      } else {
+        delete next[field];
+      }
+      return next;
+    });
+  };
+
   const handleSave = async () => {
+    // Validate required fields before saving
+    const errors: Record<string, string> = {};
+    if (!form.company_name.trim()) {
+      errors.company_name = "Nazwa firmy jest wymagana";
+    }
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = "Nieprawidłowy adres email";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      toast.error("Popraw błędy w formularzu");
+      return;
+    }
+    setFieldErrors({});
     try {
       await updateSettings.mutateAsync(form);
       toast.success("Dane firmy zapisane");
@@ -91,7 +125,7 @@ export default function CompanySettingsPage() {
 
   return (
     <AdminGuard>
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Dane firmy</h1>
         <p className="text-muted-foreground">
@@ -150,13 +184,18 @@ export default function CompanySettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Nazwa firmy</Label>
+              <Label>Nazwa firmy <span className="text-destructive">*</span></Label>
               <Input
                 value={form.company_name}
+                aria-invalid={!!fieldErrors.company_name}
                 onChange={(e) =>
                   setForm({ ...form, company_name: e.target.value })
                 }
+                onBlur={(e) => validateField("company_name", e.target.value)}
               />
+              {fieldErrors.company_name && (
+                <p className="text-destructive text-xs mt-1">{fieldErrors.company_name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>NIP</Label>
@@ -211,10 +250,15 @@ export default function CompanySettingsPage() {
               <Input
                 type="email"
                 value={form.email}
+                aria-invalid={!!fieldErrors.email}
                 onChange={(e) =>
                   setForm({ ...form, email: e.target.value })
                 }
+                onBlur={(e) => validateField("email", e.target.value)}
               />
+              {fieldErrors.email && (
+                <p className="text-destructive text-xs mt-1">{fieldErrors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Strona WWW</Label>

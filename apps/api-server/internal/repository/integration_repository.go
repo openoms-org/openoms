@@ -73,7 +73,7 @@ func (r *IntegrationRepository) FindByProvider(ctx context.Context, tx pgx.Tx, p
 	var credsJSON json.RawMessage
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, provider, label, status, credentials, settings, sync_cursor, error_message, last_sync_at, created_at, updated_at
-		 FROM integrations WHERE provider = $1 AND status = 'active' LIMIT 1`, provider,
+		 FROM integrations WHERE provider = $1 LIMIT 1`, provider,
 	).Scan(&i.ID, &i.TenantID, &i.Provider, &i.Label, &i.Status,
 		&credsJSON, &i.Settings, &i.SyncCursor, &i.ErrorMessage, &i.LastSyncAt, &i.CreatedAt, &i.UpdatedAt)
 	if err != nil {

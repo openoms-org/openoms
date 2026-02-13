@@ -119,7 +119,7 @@ func (p *Provider) mapErliOrder(o *erlisdk.Order) integration.MarketplaceOrder {
 		CustomerName:   o.BuyerName,
 		CustomerEmail:  o.BuyerEmail,
 		CustomerPhone:  o.BuyerPhone,
-		ShippingAddress: integration.ShippingAddress{
+		ShippingAddress: model.ShippingAddress{
 			Name:       o.Address.Name,
 			Street:     o.Address.Street,
 			City:       o.Address.City,

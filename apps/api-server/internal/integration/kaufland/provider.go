@@ -152,7 +152,7 @@ func (p *Provider) mapKauflandOrder(orderID int64, units []kauflandsdk.OrderUnit
 		ExternalStatus: first.Status,
 		CustomerName:   customerName,
 		CustomerEmail:  first.Buyer.Email,
-		ShippingAddress: integration.ShippingAddress{
+		ShippingAddress: model.ShippingAddress{
 			Name:       customerName,
 			Street:     street,
 			City:       first.ShippingAddr.City,
@@ -170,7 +170,7 @@ func (p *Provider) mapKauflandOrder(orderID int64, units []kauflandsdk.OrderUnit
 	if first.BillingAddr.HouseNumber != "" {
 		billingStreet += " " + first.BillingAddr.HouseNumber
 	}
-	mo.BillingAddress = &integration.ShippingAddress{
+	mo.BillingAddress = &model.ShippingAddress{
 		Name:       billingName,
 		Street:     billingStreet,
 		City:       first.BillingAddr.City,

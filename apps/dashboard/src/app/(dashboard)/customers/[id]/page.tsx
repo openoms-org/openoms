@@ -4,12 +4,12 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, ShoppingBag } from "lucide-react";
 import { useCustomer, useUpdateCustomer, useDeleteCustomer, useCustomerOrders } from "@/hooks/use-customers";
 import { usePriceLists } from "@/hooks/use-price-lists";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ORDER_STATUSES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +51,7 @@ export default function CustomerDetailPage() {
   const { data: customer, isLoading } = useCustomer(params.id);
   const updateCustomer = useUpdateCustomer(params.id);
   const deleteCustomer = useDeleteCustomer();
-  const { data: ordersData } = useCustomerOrders(params.id);
+  const { data: ordersData, isLoading: isLoadingOrders } = useCustomerOrders(params.id);
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
@@ -123,7 +123,7 @@ export default function CustomerDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.push("/customers")}>
           <ArrowLeft className="h-4 w-4" />
@@ -322,7 +322,12 @@ export default function CustomerDetailPage() {
               <CardTitle>Historia zamówień</CardTitle>
             </CardHeader>
             <CardContent>
-              {ordersData?.items && ordersData.items.length > 0 ? (
+              {isLoadingOrders ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              ) : ordersData?.items && ordersData.items.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -357,9 +362,10 @@ export default function CustomerDetailPage() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Brak zamówień dla tego klienta.
-                </p>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <ShoppingBag className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">Brak zamówień dla tego klienta.</p>
+                </div>
               )}
             </CardContent>
           </Card>

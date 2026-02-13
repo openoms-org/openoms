@@ -17,6 +17,7 @@ var (
 // APIError represents an error response from the Allegro API.
 type APIError struct {
 	StatusCode int           `json:"-"`
+	RawBody    string        `json:"-"`
 	Code       string        `json:"code"`
 	Message    string        `json:"message"`
 	Details    []ErrorDetail `json:"errors"`
@@ -24,9 +25,11 @@ type APIError struct {
 
 // ErrorDetail represents a single validation or field-level error.
 type ErrorDetail struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Path    string `json:"path"`
+	Code        string `json:"code"`
+	Message     string `json:"message"`
+	UserMessage string `json:"userMessage"`
+	Details     any    `json:"details"`
+	Path        string `json:"path"`
 }
 
 func (e *APIError) Error() string {
@@ -39,7 +42,14 @@ func (e *APIError) Error() string {
 		fmt.Fprintf(&b, ": %s", e.Message)
 	}
 	for _, d := range e.Details {
-		fmt.Fprintf(&b, "\n  - %s: %s (path: %s)", d.Code, d.Message, d.Path)
+		msg := d.Message
+		if d.UserMessage != "" && d.UserMessage != msg {
+			msg = d.UserMessage
+		}
+		if d.Details != nil {
+			msg += fmt.Sprintf(" | %v", d.Details)
+		}
+		fmt.Fprintf(&b, "\n  - %s: %s (path: %s)", d.Code, msg, d.Path)
 	}
 	return b.String()
 }

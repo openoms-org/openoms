@@ -29,7 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <QueryProvider>
             <AuthProvider>
               {children}
-              <Toaster richColors position="top-right" />
+              <Toaster
+                richColors
+                position="top-right"
+                duration={3000}
+              />
             </AuthProvider>
           </QueryProvider>
         </ThemeProvider>

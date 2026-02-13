@@ -122,7 +122,7 @@ func (p *Provider) mapMiraklOrder(o *miraklsdk.Order) integration.MarketplaceOrd
 		ExternalStatus: o.Status,
 		CustomerName:   customerName,
 		CustomerEmail:  o.Customer.Email,
-		ShippingAddress: integration.ShippingAddress{
+		ShippingAddress: model.ShippingAddress{
 			Name:       fmt.Sprintf("%s %s", o.ShippingAddress.FirstName, o.ShippingAddress.LastName),
 			Street:     o.ShippingAddress.Street1,
 			City:       o.ShippingAddress.City,

@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DensityToggle } from "@/components/shared/density-toggle";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,9 @@ export default function CustomersPage() {
         <Button type="submit" variant="outline" size="sm">
           Szukaj
         </Button>
+        <div className="ml-auto">
+          <DensityToggle />
+        </div>
       </form>
 
       {isError && (

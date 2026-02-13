@@ -17,7 +17,7 @@ import {
   Truck,
   Contact,
 } from "lucide-react";
-import { navItems } from "@/lib/nav-items";
+import { navItems, flattenNavItems } from "@/lib/nav-items";
 import { useAuthStore } from "@/lib/auth";
 
 interface CommandPaletteProps {
@@ -37,7 +37,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin" || user?.role === "owner";
 
-  const filteredNavItems = navItems.filter(
+  const allNavItems = flattenNavItems(navItems).filter(
     (item) => !item.adminOnly || isAdmin
   );
 
@@ -61,7 +61,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         <CommandEmpty>Nie znaleziono wyników.</CommandEmpty>
 
         <CommandGroup heading="Nawigacja">
-          {filteredNavItems.map((item) => (
+          {allNavItems.map((item) => (
             <CommandItem
               key={item.href}
               value={`${item.label} ${item.group || ""}`}

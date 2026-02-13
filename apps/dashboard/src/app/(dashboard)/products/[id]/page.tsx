@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Layers, Package, PackageOpen, Pencil, Plus, Trash2, X, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Layers, Package, PackageOpen, Pencil, Plus, Store, Trash2, X, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -97,7 +97,7 @@ export default function ProductDetailPage() {
   const updateProduct = useUpdateProduct(params.id);
   const deleteProduct = useDeleteProduct();
 
-  const { data: bundleComponents } = useBundleComponents(params.id);
+  const { data: bundleComponents, isLoading: isLoadingBundle } = useBundleComponents(params.id);
   const { data: bundleStockData } = useBundleStock(params.id);
   const addComponent = useAddBundleComponent(params.id);
   const removeComponent = useRemoveBundleComponent(params.id);
@@ -167,7 +167,7 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
@@ -214,7 +214,7 @@ export default function ProductDetailPage() {
                     {aiSuggestions.categories.map((cat) => (
                       <button
                         key={cat}
-                        className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 cursor-pointer"
+                        className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/20 cursor-pointer transition-colors"
                         onClick={() => {
                           updateProduct.mutate(
                             { category: cat },
@@ -239,7 +239,7 @@ export default function ProductDetailPage() {
                         {aiSuggestions.tags.map((tag) => (
                           <button
                             key={tag}
-                            className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium hover:bg-muted/80 cursor-pointer"
+                            className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium hover:bg-muted/80 cursor-pointer transition-colors"
                             onClick={() => {
                               const currentTags = product?.tags || [];
                               if (!currentTags.includes(tag)) {
@@ -276,6 +276,12 @@ export default function ProductDetailPage() {
             Generuj opis AI
           </Button>
 
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/products/${params.id}/listings`}>
+              <Store className="h-4 w-4" />
+              Oferty marketplace
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/products/${params.id}/variants`}>
               <Layers className="h-4 w-4" />
@@ -385,7 +391,7 @@ export default function ProductDetailPage() {
                     product.stock_quantity === 0
                       ? "text-destructive"
                       : product.stock_quantity < 10
-                        ? "text-yellow-600 dark:text-yellow-400"
+                        ? "text-warning"
                         : ""
                   }`}
                 >
@@ -542,7 +548,12 @@ export default function ProductDetailPage() {
                     </p>
                   </div>
                 )}
-                {bundleComponents && bundleComponents.length > 0 ? (
+                {isLoadingBundle ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                ) : bundleComponents && bundleComponents.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -582,9 +593,10 @@ export default function ProductDetailPage() {
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Brak komponentów w zestawie.
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <PackageOpen className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">Brak komponentów w zestawie.</p>
+                  </div>
                 )}
                 <Button
                   variant="outline"
@@ -837,7 +849,7 @@ function AddBundleComponentDialog({
               {products.map((p) => (
                 <div
                   key={p.id}
-                  className={`cursor-pointer px-3 py-2 text-sm hover:bg-muted ${selectedProductId === p.id ? "bg-primary/10 font-medium" : ""}`}
+                  className={`cursor-pointer px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedProductId === p.id ? "bg-primary/10 font-medium" : ""}`}
                   onClick={() => setSelectedProductId(p.id)}
                 >
                   <span>{p.name}</span>

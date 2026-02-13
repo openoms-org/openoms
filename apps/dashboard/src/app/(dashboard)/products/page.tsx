@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DensityToggle } from "@/components/shared/density-toggle";
 import { useProducts } from "@/hooks/use-products";
 import { useProductCategories } from "@/hooks/use-product-categories";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -120,11 +121,11 @@ export default function ProductsPage() {
           <img
             src={product.image_url}
             alt={product.name}
-            className="h-10 w-10 rounded object-cover"
+            className="h-10 w-10 sm:h-12 sm:w-12 rounded-md object-cover"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+          <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-md bg-muted">
             <Package className="h-5 w-5 text-muted-foreground" />
           </div>
         )
@@ -169,7 +170,7 @@ export default function ProductsPage() {
             product.stock_quantity === 0
               ? "text-destructive"
               : product.stock_quantity < 10
-                ? "text-yellow-600 dark:text-yellow-400"
+                ? "text-warning"
                 : ""
           }`}
         >
@@ -240,6 +241,7 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <DensityToggle />
           {selectedProducts.size > 0 && (
             <Button
               variant="outline"

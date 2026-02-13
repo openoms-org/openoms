@@ -13,7 +13,7 @@ import {
 } from "@/hooks/use-integrations";
 import { IntegrationForm } from "@/components/integrations/integration-form";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   INTEGRATION_STATUSES,
   INTEGRATION_PROVIDER_LABELS,

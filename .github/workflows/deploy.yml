@@ -1,0 +1,133 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/ralllf/openoms-api
+  DASHBOARD_IMAGE: ghcr.io/ralllf/openoms-dashboard
+  MIGRATE_IMAGE: ghcr.io/ralllf/openoms-migrate
+
+jobs:
+  build-api:
+    name: Build API Image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api-server/Dockerfile
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:${{ github.sha }}
+            ${{ env.API_IMAGE }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+  build-dashboard:
+    name: Build Dashboard Image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/dashboard
+          file: apps/dashboard/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}
+            ${{ env.DASHBOARD_IMAGE }}:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.openoms.loghawk.xyz
+          cache-from: type=gha,scope=dashboard
+          cache-to: type=gha,mode=max,scope=dashboard
+
+  build-migrate:
+    name: Build Migrate Image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Migrate image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.migrate
+          push: true
+          tags: |
+            ${{ env.MIGRATE_IMAGE }}:${{ github.sha }}
+            ${{ env.MIGRATE_IMAGE }}:latest
+          cache-from: type=gha,scope=migrate
+          cache-to: type=gha,mode=max,scope=migrate
+
+  deploy:
+    name: Deploy to k3s
+    runs-on: self-hosted
+    needs: [build-api, build-dashboard, build-migrate]
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install openoms deploy/helm/openoms \
+            -n openoms \
+            --set apiServer.image.tag=${{ github.sha }} \
+            --set dashboard.image.tag=${{ github.sha }} \
+            --set migration.image.tag=${{ github.sha }} \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment health
+        run: |
+          echo "Checking deployment rollout status..."
+          kubectl rollout status deployment/openoms-api -n openoms --timeout=120s
+          kubectl rollout status deployment/openoms-dashboard -n openoms --timeout=120s
+          kubectl rollout status deployment/openoms-worker -n openoms --timeout=120s
+          echo "All deployments are healthy."

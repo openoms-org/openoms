@@ -155,7 +155,7 @@ func (p *Provider) mapOLXTransaction(tx *olxsdk.Transaction) integration.Marketp
 
 	// Shipping address
 	if tx.ShippingAddr != nil {
-		mo.ShippingAddress = integration.ShippingAddress{
+		mo.ShippingAddress = model.ShippingAddress{
 			Name:       tx.ShippingAddr.Name,
 			Street:     tx.ShippingAddr.Street,
 			City:       tx.ShippingAddr.City,
@@ -165,7 +165,7 @@ func (p *Provider) mapOLXTransaction(tx *olxsdk.Transaction) integration.Marketp
 			Email:      tx.BuyerEmail,
 		}
 	} else {
-		mo.ShippingAddress = integration.ShippingAddress{
+		mo.ShippingAddress = model.ShippingAddress{
 			Name:  tx.BuyerName,
 			Email: tx.BuyerEmail,
 			Phone: tx.BuyerPhone,

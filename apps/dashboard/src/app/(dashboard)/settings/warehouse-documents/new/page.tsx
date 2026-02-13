@@ -97,7 +97,7 @@ function ProductSearchInput({
               <button
                 key={p.id}
                 type="button"
-                className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
                 onClick={() => {
                   onSelect(p.id, p.name);
                   setSearch("");

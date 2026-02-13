@@ -58,7 +58,7 @@ export default function NewShipmentPage() {
   if (selectedCarrier) formDefaults.provider = selectedCarrier;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/shipments">
