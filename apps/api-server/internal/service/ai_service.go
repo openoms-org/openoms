@@ -168,7 +168,7 @@ func (s *AIService) SuggestCategories(ctx context.Context, tenantID uuid.UUID, p
 Opis: "%s"
 Dostepne kategorie (klucz:etykieta): %s
 
-Zasugeruj 1-3 najbardziej pasujace kategorie. Jesli zadna nie pasuje, zasugeruj nowe.
+Zasugeruj 1-3 najbardziej pasujace kategorie. Jesli zadna nie pasuje, zasugeruj now.
 Zwroc JSON: {"categories": ["klucz1", "klucz2"]}`,
 		productName, productDescription, catList,
 	)
@@ -242,8 +242,8 @@ Zwroc JSON: {"description": "tresc opisu"}`,
 // DescribeOptions holds optional parameters for enhanced description generation.
 type DescribeOptions struct {
 	Style       string `json:"style"`       // "professional" | "promotional" | "casual" | "seo"
-	Language    string `json:"language"`     // "pl" | "en" | "de"
-	Length      string `json:"length"`       // "short" | "medium" | "long"
+	Language    string `json:"language"`    // "pl" | "en" | "de"
+	Length      string `json:"length"`      // "short" | "medium" | "long"
 	Marketplace string `json:"marketplace"` // "" | "allegro" | "amazon" | "ebay"
 }
 

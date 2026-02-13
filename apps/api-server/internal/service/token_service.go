@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	accessTokenDuration      = 1 * time.Hour
-	refreshTokenDuration     = 30 * 24 * time.Hour
+	accessTokenDuration       = 1 * time.Hour
+	refreshTokenDuration      = 30 * 24 * time.Hour
 	twofaPendingTokenDuration = 5 * time.Minute
 )
 

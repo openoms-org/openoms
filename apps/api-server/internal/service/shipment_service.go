@@ -271,11 +271,12 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		}
 
 		// Order-shipment status sync
-		if req.Status == "delivered" {
+		switch req.Status {
+		case "delivered":
 			if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "delivered", nil, func() *time.Time { t := time.Now(); return &t }()); err != nil {
 				return fmt.Errorf("sync order status to delivered: %w", err)
 			}
-		} else if req.Status == "picked_up" || req.Status == "in_transit" {
+		case "picked_up", "in_transit":
 			order, err := s.orderRepo.FindByID(ctx, tx, existing.OrderID)
 			if err == nil && order != nil && order.Status != "shipped" && order.Status != "delivered" {
 				now := time.Now()

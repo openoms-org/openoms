@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -236,13 +237,13 @@ func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			if p.Category != nil {
 				category = *p.Category
 			}
-			tags := ""
+			var tags strings.Builder
 			if len(p.Tags) > 0 {
 				for i, t := range p.Tags {
 					if i > 0 {
-						tags += ","
+						tags.WriteString(",")
 					}
-					tags += t
+					tags.WriteString(t)
 				}
 			}
 			weight := ""
@@ -271,7 +272,7 @@ func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 				fmt.Sprintf("%.2f", p.Price),
 				fmt.Sprintf("%d", p.StockQuantity),
 				category,
-				tags,
+				tags.String(),
 				weight,
 				width,
 				height,

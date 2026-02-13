@@ -270,4 +270,3 @@ func (h *AuthHandler) clearRefreshCookie(w http.ResponseWriter) {
 		SameSite: http.SameSiteLaxMode,
 	})
 }
-

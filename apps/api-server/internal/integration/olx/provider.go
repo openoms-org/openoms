@@ -191,7 +191,7 @@ func (p *Provider) mapOLXTransaction(tx *olxsdk.Transaction) integration.Marketp
 	mo.RawData = map[string]any{
 		"olx_transaction_id": tx.ID,
 		"olx_advert_id":      tx.AdvertID,
-		"olx_status":          tx.Status,
+		"olx_status":         tx.Status,
 	}
 
 	return mo

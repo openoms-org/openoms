@@ -30,25 +30,25 @@ type WarehouseDocument struct {
 
 // WarehouseDocItem represents a line item in a warehouse document.
 type WarehouseDocItem struct {
-	ID        uuid.UUID  `json:"id"`
-	TenantID  uuid.UUID  `json:"tenant_id"`
-	DocumentID uuid.UUID `json:"document_id"`
-	ProductID uuid.UUID  `json:"product_id"`
-	VariantID *uuid.UUID `json:"variant_id,omitempty"`
-	Quantity  int        `json:"quantity"`
-	UnitPrice *float64   `json:"unit_price,omitempty"`
-	Notes     *string    `json:"notes,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
+	ID         uuid.UUID  `json:"id"`
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	DocumentID uuid.UUID  `json:"document_id"`
+	ProductID  uuid.UUID  `json:"product_id"`
+	VariantID  *uuid.UUID `json:"variant_id,omitempty"`
+	Quantity   int        `json:"quantity"`
+	UnitPrice  *float64   `json:"unit_price,omitempty"`
+	Notes      *string    `json:"notes,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 // CreateWarehouseDocumentRequest is the payload for creating a warehouse document.
 type CreateWarehouseDocumentRequest struct {
-	DocumentType      string                        `json:"document_type"`
-	WarehouseID       uuid.UUID                     `json:"warehouse_id"`
-	TargetWarehouseID *uuid.UUID                    `json:"target_warehouse_id,omitempty"`
-	SupplierID        *uuid.UUID                    `json:"supplier_id,omitempty"`
-	OrderID           *uuid.UUID                    `json:"order_id,omitempty"`
-	Notes             *string                       `json:"notes,omitempty"`
+	DocumentType      string                          `json:"document_type"`
+	WarehouseID       uuid.UUID                       `json:"warehouse_id"`
+	TargetWarehouseID *uuid.UUID                      `json:"target_warehouse_id,omitempty"`
+	SupplierID        *uuid.UUID                      `json:"supplier_id,omitempty"`
+	OrderID           *uuid.UUID                      `json:"order_id,omitempty"`
+	Notes             *string                         `json:"notes,omitempty"`
 	Items             []CreateWarehouseDocItemRequest `json:"items"`
 }
 

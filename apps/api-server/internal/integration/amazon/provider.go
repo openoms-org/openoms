@@ -175,8 +175,8 @@ func (p *Provider) mapAmazonOrder(o *amazonsdk.Order, items []amazonsdk.OrderIte
 		Currency:       "PLN",
 		RawData: map[string]any{
 			"fulfillment_channel": o.FulfillmentChannel,
-			"marketplace_id":     o.MarketplaceID,
-			"payment_method":     o.PaymentMethod,
+			"marketplace_id":      o.MarketplaceID,
+			"payment_method":      o.PaymentMethod,
 		},
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strconv"
 	"time"
 
@@ -117,9 +118,7 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
 	// Build product data from listingData, using product fields as defaults
 	data := make(map[string]any)
-	for k, v := range listingData {
-		data[k] = v
-	}
+	maps.Copy(data, listingData)
 	if _, ok := data["name"]; !ok {
 		data["name"] = product.Name
 	}

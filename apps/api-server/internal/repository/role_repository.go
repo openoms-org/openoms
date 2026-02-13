@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -155,12 +156,12 @@ func (r *RoleRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) er
 
 // joinStrings joins string slices — avoids importing strings package in this file.
 func joinStrings(parts []string, sep string) string {
-	result := ""
+	var result strings.Builder
 	for i, p := range parts {
 		if i > 0 {
-			result += sep
+			result.WriteString(sep)
 		}
-		result += p
+		result.WriteString(p)
 	}
-	return result
+	return result.String()
 }

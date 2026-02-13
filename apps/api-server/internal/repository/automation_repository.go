@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -190,17 +191,18 @@ func (r *AutomationRuleRepository) Update(ctx context.Context, tx pgx.Tx, id uui
 		return nil
 	}
 
-	query := "UPDATE automation_rules SET "
+	var query strings.Builder
+	query.WriteString("UPDATE automation_rules SET ")
 	for i, clause := range setClauses {
 		if i > 0 {
-			query += ", "
+			query.WriteString(", ")
 		}
-		query += clause
+		query.WriteString(clause)
 	}
-	query += fmt.Sprintf(" WHERE id = $%d", argIdx)
+	query.WriteString(fmt.Sprintf(" WHERE id = $%d", argIdx))
 	args = append(args, id)
 
-	ct, err := tx.Exec(ctx, query, args...)
+	ct, err := tx.Exec(ctx, query.String(), args...)
 	if err != nil {
 		return fmt.Errorf("update automation rule: %w", err)
 	}

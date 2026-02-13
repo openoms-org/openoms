@@ -73,11 +73,11 @@ type RateRequest struct {
 	FromCountry    string  `json:"from_country"`
 	ToPostalCode   string  `json:"to_postal_code"`
 	ToCountry      string  `json:"to_country"`
-	Weight         float64 `json:"weight"`          // kg
-	Width          float64 `json:"width"`           // cm
-	Height         float64 `json:"height"`          // cm
-	Length         float64 `json:"length"`          // cm
-	COD            float64 `json:"cod"`             // cash on delivery amount, 0 if none
+	Weight         float64 `json:"weight"` // kg
+	Width          float64 `json:"width"`  // cm
+	Height         float64 `json:"height"` // cm
+	Length         float64 `json:"length"` // cm
+	COD            float64 `json:"cod"`    // cash on delivery amount, 0 if none
 	IsPickupPoint  bool    `json:"is_pickup_point"`
 }
 

@@ -118,7 +118,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 	// InPost generates offers asynchronously. Poll until offers are available, then buy.
 	shipmentID := shipment.ID
 	var offerID int64
-	for attempt := 0; attempt < 10; attempt++ {
+	for attempt := range 10 {
 		if len(shipment.Offers) > 0 {
 			offerID = shipment.Offers[0].ID
 			break

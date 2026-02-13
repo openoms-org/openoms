@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"slices"
 	"text/template"
 
 	"github.com/google/uuid"
@@ -69,13 +70,7 @@ func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID,
 	}
 
 	// Check if this status is in the notify list
-	shouldNotify := false
-	for _, status := range cfg.NotifyOn {
-		if status == newStatus {
-			shouldNotify = true
-			break
-		}
-	}
+	shouldNotify := slices.Contains(cfg.NotifyOn, newStatus)
 	if !shouldNotify {
 		return
 	}
@@ -152,13 +147,7 @@ func (s *SMSService) SendShipmentStatusSMS(ctx context.Context, tenantID uuid.UU
 	}
 
 	// Check if this shipment status is in notify list
-	shouldNotify := false
-	for _, status := range cfg.NotifyOn {
-		if status == shipment.Status {
-			shouldNotify = true
-			break
-		}
-	}
+	shouldNotify := slices.Contains(cfg.NotifyOn, shipment.Status)
 	if !shouldNotify {
 		return
 	}

@@ -321,4 +321,3 @@ func (r *OrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) e
 	}
 	return nil
 }
-

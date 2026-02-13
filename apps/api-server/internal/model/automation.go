@@ -197,8 +197,8 @@ type TestAutomationRuleRequest struct {
 
 // TestAutomationRuleResponse is the response from a dry-run test.
 type TestAutomationRuleResponse struct {
-	ConditionResults []ConditionResult `json:"condition_results"`
-	AllConditionsMet bool              `json:"all_conditions_met"`
+	ConditionResults []ConditionResult  `json:"condition_results"`
+	AllConditionsMet bool               `json:"all_conditions_met"`
 	ActionsToExecute []AutomationAction `json:"actions_to_execute"`
 }
 

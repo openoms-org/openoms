@@ -21,15 +21,15 @@ type OrderList struct {
 
 // Order represents an Allegro checkout form (order).
 type Order struct {
-	ID         string      `json:"id"`
-	Buyer      Buyer       `json:"buyer"`
-	Payment    Payment     `json:"payment"`
-	Status     string      `json:"status"`
+	ID          string      `json:"id"`
+	Buyer       Buyer       `json:"buyer"`
+	Payment     Payment     `json:"payment"`
+	Status      string      `json:"status"`
 	Fulfillment Fulfillment `json:"fulfillment"`
-	Delivery   Delivery    `json:"delivery"`
-	Invoice    Invoice     `json:"invoice"`
-	LineItems  []LineItem  `json:"lineItems"`
-	UpdatedAt  time.Time   `json:"updatedAt"`
+	Delivery    Delivery    `json:"delivery"`
+	Invoice     Invoice     `json:"invoice"`
+	LineItems   []LineItem  `json:"lineItems"`
+	UpdatedAt   time.Time   `json:"updatedAt"`
 }
 
 // Buyer represents the buyer of an order.
@@ -165,15 +165,15 @@ type OfferSummary struct {
 
 // Offer represents a full offer/product detail.
 type Offer struct {
-	ID           string             `json:"id"`
-	Name         string             `json:"name"`
-	Category     *OfferCategory     `json:"category,omitempty"`
-	SellingMode  *OfferSellingMode  `json:"sellingMode,omitempty"`
-	Stock        *OfferStock        `json:"stock,omitempty"`
-	Publication  *OfferPublication  `json:"publication,omitempty"`
-	PrimaryImage *OfferImage        `json:"primaryImage,omitempty"`
-	Description  *OfferDescription  `json:"description,omitempty"`
-	External     *OfferExternal     `json:"external,omitempty"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Category     *OfferCategory    `json:"category,omitempty"`
+	SellingMode  *OfferSellingMode `json:"sellingMode,omitempty"`
+	Stock        *OfferStock       `json:"stock,omitempty"`
+	Publication  *OfferPublication `json:"publication,omitempty"`
+	PrimaryImage *OfferImage       `json:"primaryImage,omitempty"`
+	Description  *OfferDescription `json:"description,omitempty"`
+	External     *OfferExternal    `json:"external,omitempty"`
 }
 
 // OfferSellingMode represents the selling mode and price of an offer.
@@ -681,11 +681,11 @@ type CategoryRef struct {
 
 // CategoryOptions represents options for a category.
 type CategoryOptions struct {
-	Advertisement                      bool `json:"advertisement"`
-	AdvertisementPriceOptional         bool `json:"advertisementPriceOptional"`
-	VariantsByColorPattern             bool `json:"variantsByColorPatternAllowed"`
+	Advertisement                       bool `json:"advertisement"`
+	AdvertisementPriceOptional          bool `json:"advertisementPriceOptional"`
+	VariantsByColorPattern              bool `json:"variantsByColorPatternAllowed"`
 	OffersWithProductPublicationEnabled bool `json:"offersWithProductPublicationEnabled"`
-	ProductCreationEnabled             bool `json:"productCreationEnabled"`
+	ProductCreationEnabled              bool `json:"productCreationEnabled"`
 }
 
 // CategoryParameterList represents a list of category parameters.
@@ -1007,11 +1007,11 @@ type ShippingRateSet struct {
 
 // ShippingRateEntry represents a single rate within a shipping rate table.
 type ShippingRateEntry struct {
-	DeliveryMethod       ShippingDeliveryMethod `json:"deliveryMethod"`
-	MaxQuantityPerPackage int                   `json:"maxQuantityPerPackage"`
-	FirstItemRate        Amount                 `json:"firstItemRate"`
-	NextItemRate         Amount                 `json:"nextItemRate"`
-	ShippingTime         *ShippingTime          `json:"shippingTime,omitempty"`
+	DeliveryMethod        ShippingDeliveryMethod `json:"deliveryMethod"`
+	MaxQuantityPerPackage int                    `json:"maxQuantityPerPackage"`
+	FirstItemRate         Amount                 `json:"firstItemRate"`
+	NextItemRate          Amount                 `json:"nextItemRate"`
+	ShippingTime          *ShippingTime          `json:"shippingTime,omitempty"`
 }
 
 // ShippingDeliveryMethod represents a delivery method reference within a shipping rate.
@@ -1043,20 +1043,20 @@ type DeliveryMethodList struct {
 
 // AllegroDeliveryMethod represents an available Allegro delivery method.
 type AllegroDeliveryMethod struct {
-	ID                       string              `json:"id"`
-	Name                     string              `json:"name"`
-	PaymentPolicy            string              `json:"paymentPolicy"`
+	ID                       string               `json:"id"`
+	Name                     string               `json:"name"`
+	PaymentPolicy            string               `json:"paymentPolicy"`
 	ShippingRatesConstraints *ShippingConstraints `json:"shippingRatesConstraints,omitempty"`
 }
 
 // ShippingConstraints represents constraints for a delivery method.
 type ShippingConstraints struct {
-	Allowed               bool                `json:"allowed"`
-	MaxQuantityPerPackage *MaxQuantity        `json:"maxQuantityPerPackage,omitempty"`
-	AllowedForFree        bool                `json:"allowedForFreeShipping"`
-	FirstItemRate         *RateConstraint     `json:"firstItemRate,omitempty"`
-	NextItemRate          *RateConstraint     `json:"nextItemRate,omitempty"`
-	ShippingTime          *TimeConstraint     `json:"shippingTime,omitempty"`
+	Allowed               bool            `json:"allowed"`
+	MaxQuantityPerPackage *MaxQuantity    `json:"maxQuantityPerPackage,omitempty"`
+	AllowedForFree        bool            `json:"allowedForFreeShipping"`
+	FirstItemRate         *RateConstraint `json:"firstItemRate,omitempty"`
+	NextItemRate          *RateConstraint `json:"nextItemRate,omitempty"`
+	ShippingTime          *TimeConstraint `json:"shippingTime,omitempty"`
 }
 
 // RateConstraint represents min/max price constraints for a rate entry.

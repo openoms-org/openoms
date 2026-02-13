@@ -26,7 +26,7 @@ func (h *MarketingHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"synced": synced,
 		"failed": failed,
 	})
@@ -42,7 +42,7 @@ func (h *MarketingHandler) Status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	writeJSON(w, http.StatusOK, map[string]any{
 		"enabled":    settings.Enabled,
 		"configured": settings.APIKey != "" && settings.ListID != "",
 	})
@@ -72,7 +72,7 @@ func (h *MarketingHandler) CreateCampaign(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
+	writeJSON(w, http.StatusCreated, map[string]any{
 		"campaign_id": campaignID,
 	})
 }

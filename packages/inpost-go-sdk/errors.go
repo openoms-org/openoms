@@ -14,10 +14,10 @@ var (
 
 // APIError represents an error response from the InPost API.
 type APIError struct {
-	StatusCode int                    `json:"-"`
-	Message    string                 `json:"message"`
-	Details    map[string]interface{} `json:"details"`
-	Keys       map[string]string     `json:"keys"`
+	StatusCode int               `json:"-"`
+	Message    string            `json:"message"`
+	Details    map[string]any    `json:"details"`
+	Keys       map[string]string `json:"keys"`
 }
 
 func (e *APIError) Error() string {

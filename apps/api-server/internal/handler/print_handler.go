@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -52,18 +53,18 @@ type printItem struct {
 }
 
 type packingSlipData struct {
-	CompanyName    string
-	CompanyAddress string
-	CompanyNIP     string
-	OrderID        string
-	OrderDate      string
-	Source         string
-	CustomerName   string
+	CompanyName     string
+	CompanyAddress  string
+	CompanyNIP      string
+	OrderID         string
+	OrderDate       string
+	Source          string
+	CustomerName    string
 	ShippingAddress string
-	Items          []printItem
-	TotalAmount    string
-	Currency       string
-	Notes          string
+	Items           []printItem
+	TotalAmount     string
+	Currency        string
+	Notes           string
 }
 
 type orderSummaryData struct {
@@ -156,8 +157,8 @@ th { background: #f5f5f5; }
 {{if .CustomerPhone}}<p>Tel: {{.CustomerPhone}}</p>{{end}}
 </div>
 <div>
-{{if .ShippingAddress}}<p><strong>Adres dostawy:</strong><br>{{.ShippingAddress}}</p>{{end}}
-{{if .BillingAddress}}<p><strong>Adres rozliczeniowy:</strong><br>{{.BillingAddress}}</p>{{end}}
+{{if .ShippingAddress}}<p><strong>Address dostawy:</strong><br>{{.ShippingAddress}}</p>{{end}}
+{{if .BillingAddress}}<p><strong>Address rozliczeniowy:</strong><br>{{.BillingAddress}}</p>{{end}}
 </div>
 </div>
 </div>
@@ -206,7 +207,7 @@ var templateFuncs = template.FuncMap{
 
 // --- Helpers ---
 
-func (h *PrintHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, dest interface{}) error {
+func (h *PrintHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, dest any) error {
 	settings, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
 		return err
@@ -228,7 +229,7 @@ func (h *PrintHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenant
 	return nil
 }
 
-func (h *PrintHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, value interface{}) error {
+func (h *PrintHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, value any) error {
 	existing, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
 		return err
@@ -261,7 +262,7 @@ func (h *PrintHandler) loadPrintTemplates(ctx context.Context, tx pgx.Tx, tenant
 	return cfg
 }
 
-func renderTemplate(tmplStr string, data interface{}) ([]byte, error) {
+func renderTemplate(tmplStr string, data any) ([]byte, error) {
 	tmpl, err := template.New("print").Funcs(templateFuncs).Parse(tmplStr)
 	if err != nil {
 		return nil, fmt.Errorf("parse template: %w", err)
@@ -277,7 +278,7 @@ func formatAddress(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""
 	}
-	var addr map[string]interface{}
+	var addr map[string]any
 	if err := json.Unmarshal(raw, &addr); err != nil {
 		return ""
 	}
@@ -290,14 +291,14 @@ func formatAddress(raw json.RawMessage) string {
 			}
 		}
 	}
-	result := ""
+	var result strings.Builder
 	for i, p := range parts {
 		if i > 0 {
-			result += ", "
+			result.WriteString(", ")
 		}
-		result += p
+		result.WriteString(p)
 	}
-	return result
+	return result.String()
 }
 
 func parseOrderItems(raw json.RawMessage) []printItem {
@@ -412,18 +413,18 @@ func (h *PrintHandler) GetPackingSlip(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data := packingSlipData{
-			CompanyName:    company.CompanyName,
-			CompanyAddress: companyAddr,
-			CompanyNIP:     company.NIP,
-			OrderID:        shortUUID(order.ID),
-			OrderDate:      order.CreatedAt.Format("2006-01-02"),
-			Source:         order.Source,
-			CustomerName:   order.CustomerName,
+			CompanyName:     company.CompanyName,
+			CompanyAddress:  companyAddr,
+			CompanyNIP:      company.NIP,
+			OrderID:         shortUUID(order.ID),
+			OrderDate:       order.CreatedAt.Format("2006-01-02"),
+			Source:          order.Source,
+			CustomerName:    order.CustomerName,
 			ShippingAddress: formatAddress(order.ShippingAddress),
-			Items:          parseOrderItems(order.Items),
-			TotalAmount:    fmt.Sprintf("%.2f", order.TotalAmount),
-			Currency:       order.Currency,
-			Notes:          derefStr(order.Notes),
+			Items:           parseOrderItems(order.Items),
+			TotalAmount:     fmt.Sprintf("%.2f", order.TotalAmount),
+			Currency:        order.Currency,
+			Notes:           derefStr(order.Notes),
 		}
 
 		tmplStr := defaultPackingSlipTemplate

@@ -62,8 +62,8 @@ func (r *IntegrationRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid
 	}
 	if len(credsJSON) > 0 {
 		if err := json.Unmarshal(credsJSON, &i.EncryptedCredentials); err != nil {
-				slog.Warn("failed to unmarshal integration credentials", "error", err, "integration_id", i.ID)
-			}
+			slog.Warn("failed to unmarshal integration credentials", "error", err, "integration_id", i.ID)
+		}
 	}
 	return &i, nil
 }
@@ -84,8 +84,8 @@ func (r *IntegrationRepository) FindByProvider(ctx context.Context, tx pgx.Tx, p
 	}
 	if len(credsJSON) > 0 {
 		if err := json.Unmarshal(credsJSON, &i.EncryptedCredentials); err != nil {
-				slog.Warn("failed to unmarshal integration credentials", "error", err, "integration_id", i.ID)
-			}
+			slog.Warn("failed to unmarshal integration credentials", "error", err, "integration_id", i.ID)
+		}
 	}
 	return &i, nil
 }

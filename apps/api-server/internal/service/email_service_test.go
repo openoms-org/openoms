@@ -76,7 +76,7 @@ func TestRenderEmailTemplate_WithStatusConfig(t *testing.T) {
 
 	cfg := &model.OrderStatusConfig{
 		Statuses: []model.StatusDef{
-			{Key: "new", Label: "Nowe", Color: "blue", Position: 1},
+			{Key: "new", Label: "Now", Color: "blue", Position: 1},
 			{Key: "confirmed", Label: "Potwierdzone", Color: "green", Position: 2},
 		},
 	}

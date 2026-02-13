@@ -8,9 +8,9 @@ import (
 
 // Event represents an automation trigger event.
 type Event struct {
-	Type       string         // "order.created", "order.status_changed", etc.
+	Type       string // "order.created", "order.status_changed", etc.
 	TenantID   uuid.UUID
-	EntityType string         // "order", "shipment", "return"
+	EntityType string // "order", "shipment", "return"
 	EntityID   uuid.UUID
 	Data       map[string]any // event-specific data
 }

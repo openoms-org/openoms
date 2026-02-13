@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
@@ -63,12 +64,12 @@ var AllPermissions = []string{
 
 // PermissionGroups maps display group names to their permissions (for frontend).
 var PermissionGroups = map[string][]string{
-	"Zamówienia":   {PermOrdersView, PermOrdersCreate, PermOrdersEdit, PermOrdersDelete, PermOrdersExport},
-	"Produkty":     {PermProductsView, PermProductsCreate, PermProductsEdit, PermProductsDelete},
-	"Przesyłki":    {PermShipmentsView, PermShipmentsCreate, PermShipmentsEdit, PermShipmentsDelete},
-	"Zwroty":       {PermReturnsView, PermReturnsCreate, PermReturnsEdit, PermReturnsDelete},
-	"Klienci":      {PermCustomersView, PermCustomersCreate, PermCustomersEdit, PermCustomersDelete},
-	"Faktury":      {PermInvoicesView, PermInvoicesCreate, PermInvoicesDelete},
+	"Zamówienia":    {PermOrdersView, PermOrdersCreate, PermOrdersEdit, PermOrdersDelete, PermOrdersExport},
+	"Produkty":      {PermProductsView, PermProductsCreate, PermProductsEdit, PermProductsDelete},
+	"Przesyłki":     {PermShipmentsView, PermShipmentsCreate, PermShipmentsEdit, PermShipmentsDelete},
+	"Zwroty":        {PermReturnsView, PermReturnsCreate, PermReturnsEdit, PermReturnsDelete},
+	"Klienci":       {PermCustomersView, PermCustomersCreate, PermCustomersEdit, PermCustomersDelete},
+	"Faktury":       {PermInvoicesView, PermInvoicesCreate, PermInvoicesDelete},
 	"Administracja": {PermIntegrationsManage, PermSettingsManage, PermUsersManage, PermReportsView, PermAuditView, PermAutomationManage, PermWarehousesManage},
 }
 
@@ -78,9 +79,7 @@ var SystemRoleOwnerPermissions = AllPermissions
 // SystemRoleAdminPermissions — full access except users.manage.
 var SystemRoleAdminPermissions = func() []string {
 	perms := make([]string, 0, len(AllPermissions))
-	for _, p := range AllPermissions {
-		perms = append(perms, p)
-	}
+	perms = append(perms, AllPermissions...)
 	return perms
 }()
 
@@ -123,12 +122,7 @@ type Role struct {
 
 // HasPermission checks if this role has a given permission.
 func (r *Role) HasPermission(permission string) bool {
-	for _, p := range r.Permissions {
-		if p == permission {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(r.Permissions, permission)
 }
 
 // CreateRoleRequest is the payload for creating a new role.

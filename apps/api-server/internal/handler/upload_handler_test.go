@@ -90,8 +90,8 @@ func TestUploadHandler_Upload_ValidPNG(t *testing.T) {
 		'I', 'H', 'D', 'R', // chunk type
 		0x00, 0x00, 0x00, 0x01, // width: 1
 		0x00, 0x00, 0x00, 0x01, // height: 1
-		0x08, // bit depth: 8
-		0x02, // color type: RGB
+		0x08,             // bit depth: 8
+		0x02,             // color type: RGB
 		0x00, 0x00, 0x00, // compression, filter, interlace
 		0x00, 0x00, 0x00, 0x00, // CRC (fake but sufficient for content type detection)
 	}

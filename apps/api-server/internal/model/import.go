@@ -8,9 +8,9 @@ type ImportColumnMapping struct {
 
 // ImportPreviewRow represents one row from the CSV preview.
 type ImportPreviewRow struct {
-	Row    int                    `json:"row"`
-	Data   map[string]interface{} `json:"data"`
-	Errors []string               `json:"errors,omitempty"`
+	Row    int            `json:"row"`
+	Data   map[string]any `json:"data"`
+	Errors []string       `json:"errors,omitempty"`
 }
 
 // ImportPreviewResponse is returned by the CSV preview endpoint.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,10 +25,10 @@ var (
 
 // InvoicingSettings represents the invoicing section of tenant settings.
 type InvoicingSettings struct {
-	Provider            string   `json:"provider"`
-	AutoCreateOnStatus  []string `json:"auto_create_on_status"`
-	DefaultTaxRate      int      `json:"default_tax_rate"`
-	PaymentDays         int      `json:"payment_days"`
+	Provider           string   `json:"provider"`
+	AutoCreateOnStatus []string `json:"auto_create_on_status"`
+	DefaultTaxRate     int      `json:"default_tax_rate"`
+	PaymentDays        int      `json:"payment_days"`
 }
 
 type InvoiceService struct {
@@ -312,13 +313,7 @@ func (s *InvoiceService) HandleOrderStatusChange(ctx context.Context, tenantID u
 		}
 
 		// Check if auto-create is enabled for this status
-		shouldCreate := false
-		for _, status := range invoicingCfg.AutoCreateOnStatus {
-			if status == order.Status {
-				shouldCreate = true
-				break
-			}
-		}
+		shouldCreate := slices.Contains(invoicingCfg.AutoCreateOnStatus, order.Status)
 		if !shouldCreate {
 			return nil
 		}

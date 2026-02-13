@@ -35,12 +35,12 @@ type DelayedActionRepo interface {
 
 // Engine is the automation rules engine that processes events.
 type Engine struct {
-	ruleRepo       AutomationRuleRepo
-	logRepo        AutomationRuleLogRepo
-	delayedRepo    DelayedActionRepo
-	pool           *pgxpool.Pool
-	executor       ActionExecutor
-	logger         *slog.Logger
+	ruleRepo    AutomationRuleRepo
+	logRepo     AutomationRuleLogRepo
+	delayedRepo DelayedActionRepo
+	pool        *pgxpool.Pool
+	executor    ActionExecutor
+	logger      *slog.Logger
 }
 
 // NewEngine creates a new automation engine.

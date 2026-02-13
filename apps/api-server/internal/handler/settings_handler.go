@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"strings"
 
@@ -34,7 +35,7 @@ func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.A
 
 // getSettingsSection reads a specific section from the tenant's JSON settings blob.
 // If the section or settings don't exist, dest is left at its zero value.
-func (h *SettingsHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, dest interface{}) error {
+func (h *SettingsHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, dest any) error {
 	settings, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
 		return err
@@ -62,7 +63,7 @@ func (h *SettingsHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, ten
 
 // updateSettingsSection merges a value into the tenant's JSON settings blob under the given key,
 // persists it, and writes an audit log entry.
-func (h *SettingsHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, value interface{}) error {
+func (h *SettingsHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, value any) error {
 	existing, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
 		return err
@@ -594,11 +595,11 @@ func (h *SettingsHandler) GetInvoicingSettings(w http.ResponseWriter, r *http.Re
 
 	if invoicingCfg == nil {
 		invoicingCfg = map[string]any{
-			"provider":               "",
-			"auto_create_on_status":  []string{},
-			"default_tax_rate":       23,
-			"payment_days":           14,
-			"credentials":            map[string]any{},
+			"provider":              "",
+			"auto_create_on_status": []string{},
+			"default_tax_rate":      23,
+			"payment_days":          14,
+			"credentials":           map[string]any{},
 		}
 	}
 
@@ -848,9 +849,7 @@ func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request)
 		}
 
 		// Merge: overwrite provided sections, keep others
-		for k, v := range incoming {
-			allSettings[k] = v
-		}
+		maps.Copy(allSettings, incoming)
 
 		newSettings, err := json.Marshal(allSettings)
 		if err != nil {

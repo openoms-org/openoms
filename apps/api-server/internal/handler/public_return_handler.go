@@ -20,7 +20,7 @@ import (
 
 // PublicReturnHandler handles public (no auth) return endpoints.
 type PublicReturnHandler struct {
-	pool      *pgxpool.Pool
+	pool       *pgxpool.Pool
 	returnRepo repository.ReturnRepo
 	orderRepo  repository.OrderRepo
 }

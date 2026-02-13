@@ -165,7 +165,7 @@ func (h *IntegrationHandler) GetGeowidgetToken(w http.ResponseWriter, r *http.Re
 		if len(integration.Settings) == 0 {
 			return nil
 		}
-		var settings map[string]interface{}
+		var settings map[string]any
 		if err := json.Unmarshal(integration.Settings, &settings); err != nil {
 			return nil
 		}

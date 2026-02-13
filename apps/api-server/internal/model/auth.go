@@ -78,9 +78,9 @@ type TokenResponse struct {
 // LoginResponse is the unified login response that supports 2FA.
 type LoginResponse struct {
 	// Normal login fields (present when 2FA is not required)
-	AccessToken string `json:"access_token,omitempty"`
-	ExpiresIn   int    `json:"expires_in,omitempty"`
-	User        *User  `json:"user,omitempty"`
+	AccessToken string  `json:"access_token,omitempty"`
+	ExpiresIn   int     `json:"expires_in,omitempty"`
+	User        *User   `json:"user,omitempty"`
 	Tenant      *Tenant `json:"tenant,omitempty"`
 
 	// 2FA fields (present when 2FA is required)

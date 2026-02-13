@@ -97,16 +97,16 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 	}
 
 	product := &model.Product{
-		ID:            uuid.New(),
-		TenantID:      tenantID,
-		ExternalID:    req.ExternalID,
-		Source:        req.Source,
-		Name:          req.Name,
-		SKU:           req.SKU,
-		EAN:           req.EAN,
-		Price:         req.Price,
-		StockQuantity: req.StockQty,
-		Metadata:      metadata,
+		ID:               uuid.New(),
+		TenantID:         tenantID,
+		ExternalID:       req.ExternalID,
+		Source:           req.Source,
+		Name:             req.Name,
+		SKU:              req.SKU,
+		EAN:              req.EAN,
+		Price:            req.Price,
+		StockQuantity:    req.StockQty,
+		Metadata:         metadata,
 		Tags:             tags,
 		DescriptionShort: req.DescriptionShort,
 		DescriptionLong:  req.DescriptionLong,
@@ -116,7 +116,7 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		Depth:            req.Depth,
 		Category:         req.Category,
 		ImageURL:         req.ImageURL,
-		Images:        images,
+		Images:           images,
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

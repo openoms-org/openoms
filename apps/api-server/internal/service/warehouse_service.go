@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	ErrWarehouseNotFound        = errors.New("warehouse not found")
-	ErrStockEntryNotFound       = errors.New("stock entry not found")
-	ErrStrictInventoryControl   = errors.New("Tryb ścisłej kontroli magazynowej jest włączony. Zmiany stanów możliwe tylko przez dokumenty magazynowe.")
+	ErrWarehouseNotFound      = errors.New("warehouse not found")
+	ErrStockEntryNotFound     = errors.New("stock entry not found")
+	ErrStrictInventoryControl = errors.New("Tryb ścisłej kontroli magazynowej jest włączony. Zmiany stanów możliwe tylko przez dokumenty magazynowe.")
 )
 
 // WarehouseService provides business logic for warehouses and warehouse stock.
