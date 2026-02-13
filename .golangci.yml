@@ -15,8 +15,6 @@ linters:
     - revive
     - gocritic
     - modernize
-    - gofmt
-    - goimports
     - misspell
     - unconvert
     - unparam
@@ -29,3 +27,8 @@ linters:
         linters:
           - errcheck
           - gocritic
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
