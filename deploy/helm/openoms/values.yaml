@@ -3,7 +3,7 @@ namespace: openoms
 apiServer:
   replicaCount: 2
   image:
-    repository: ghcr.io/ralllf/openoms-api
+    repository: ghcr.io/openoms-org/openoms-api
     tag: ""  # defaults to Chart.appVersion
     pullPolicy: IfNotPresent
   port: 8080
@@ -74,7 +74,7 @@ worker:
 dashboard:
   replicaCount: 2
   image:
-    repository: ghcr.io/ralllf/openoms-dashboard
+    repository: ghcr.io/openoms-org/openoms-dashboard
     tag: ""
     pullPolicy: IfNotPresent
   port: 3000
@@ -117,7 +117,7 @@ dashboard:
 
 migration:
   image:
-    repository: ghcr.io/ralllf/openoms-migrate
+    repository: ghcr.io/openoms-org/openoms-migrate
     tag: ""
 
 ingress:
