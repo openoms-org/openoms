@@ -70,7 +70,7 @@ jobs:
             ${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}
             ${{ env.DASHBOARD_IMAGE }}:latest
           build-args: |
-            NEXT_PUBLIC_API_URL=https://api.openoms.loghawk.xyz
+            NEXT_PUBLIC_API_URL=https://openoms-api.loghawk.xyz
           cache-from: type=gha,scope=dashboard
           cache-to: type=gha,mode=max,scope=dashboard
 

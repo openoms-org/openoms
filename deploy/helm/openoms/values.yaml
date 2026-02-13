@@ -8,8 +8,8 @@ apiServer:
     pullPolicy: IfNotPresent
   port: 8080
   env: production
-  baseUrl: https://api.openoms.loghawk.xyz
-  frontendUrl: https://app.openoms.loghawk.xyz
+  baseUrl: https://openoms-api.loghawk.xyz
+  frontendUrl: https://openoms-app.loghawk.xyz
   uploadDir: /tmp/uploads
   maxUploadSize: "10485760"
   features:
@@ -127,10 +127,10 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   api:
-    host: api.openoms.loghawk.xyz
+    host: openoms-api.loghawk.xyz
     tlsSecret: openoms-api-tls
   dashboard:
-    host: app.openoms.loghawk.xyz
+    host: openoms-app.loghawk.xyz
     tlsSecret: openoms-dashboard-tls
 
 secrets:
