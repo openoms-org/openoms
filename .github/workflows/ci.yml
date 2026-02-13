@@ -64,28 +64,28 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Lint api-server
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.9.0
           working-directory: apps/api-server
           args: --timeout=5m
 
       - name: Lint allegro-go-sdk
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.9.0
           working-directory: packages/allegro-go-sdk
           args: --timeout=5m
 
       - name: Lint inpost-go-sdk
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.9.0
           working-directory: packages/inpost-go-sdk
           args: --timeout=5m
 
       - name: Lint order-engine
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.9.0
           working-directory: packages/order-engine
