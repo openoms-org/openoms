@@ -72,7 +72,9 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 - Outgoing webhooks (HMAC-SHA256 signed)
 - Audit log
 - Self-service returns portal
-- Prometheus metrics
+- Prometheus metrics (Bearer token auth)
+- Security headers (CSP, X-Frame-Options, HSTS, Referrer-Policy)
+- Kubernetes secrets encryption at rest, audit logging
 
 ---
 
@@ -90,9 +92,9 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 | Auth | Ed25519 JWT, bcrypt, TOTP |
 | API Spec | OpenAPI 3.1, Swagger UI |
 | E2E Tests | Playwright (12 specs) |
-| CI/CD | GitHub Actions |
-| Deployment | Docker Compose (dev + prod) |
-| Monitoring | Prometheus metrics |
+| CI/CD | GitHub Actions (lint, test, security scan, auto-format, Trivy) |
+| Deployment | Docker Compose (dev + prod), Helm chart (k3s/k8s) |
+| Monitoring | Prometheus metrics (token-protected) |
 
 ### Codebase at a Glance
 
@@ -107,7 +109,7 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 | Custom hooks | 45 |
 | Handlers / Services / Repos | 57 / 38 / 28 |
 | Background workers | 14 |
-| Middleware | 10 |
+| Middleware | 12 |
 | SDK packages | 21 |
 
 ---
@@ -171,12 +173,16 @@ openoms/
 │   └── dashboard/               # Next.js frontend (AGPLv3)
 │       └── src/
 ├── packages/                    # 21 standalone SDK libraries (MIT)
+├── deploy/
+│   └── helm/openoms/          # Helm chart for k3s/k8s
 ├── docs/
 │   └── system-documentation.md
 ├── docker-compose.dev.yml
 ├── docker-compose.prod.yml
 ├── Taskfile.yml
-├── .github/workflows/ci.yml
+├── .github/workflows/
+│   ├── ci.yml                 # Lint, test, security scan, auto-format
+│   └── deploy.yml             # Build images, Trivy scan, Helm deploy
 └── .env.example
 ```
 
@@ -233,11 +239,25 @@ docker-compose -f docker-compose.prod.yml up -d --build
 
 The production compose file includes PostgreSQL, Redis, automatic database migrations, the API server, and the Next.js dashboard. All services include health checks and restart policies.
 
+### Kubernetes (Helm)
+
+A Helm chart is provided for k3s/k8s deployments:
+
+```bash
+helm upgrade --install openoms deploy/helm/openoms \
+  -n openoms \
+  --set apiServer.image.tag=latest \
+  --set dashboard.image.tag=latest \
+  --set migration.image.tag=latest
+```
+
+The CI/CD pipeline (`.github/workflows/deploy.yml`) builds Docker images, scans them with Trivy, and deploys to k3s via Helm on push to `main`.
+
 ### Infrastructure Requirements
 
 - PostgreSQL 16+
 - Redis 7+
-- Reverse proxy (nginx / Caddy / Traefik) for TLS termination
+- Reverse proxy (nginx / Caddy / Traefik / ingress-nginx) for TLS termination
 
 The Docker images are stateless and can be deployed behind a load balancer or on single-node setups like k3s.
 

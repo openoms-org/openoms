@@ -104,6 +104,12 @@ spec:
                   name: {{ include "openoms.secretName" . }}
                   key: OPENAI_API_KEY
                   optional: true
+            - name: METRICS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: METRICS_TOKEN
+                  optional: true
           livenessProbe:
             {{- toYaml .Values.apiServer.livenessProbe | nindent 12 }}
           readinessProbe:
