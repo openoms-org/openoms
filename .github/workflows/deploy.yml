@@ -164,6 +164,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
             helm upgrade --install openoms /tmp/openoms-deploy/openoms \
               -n openoms \
               --set apiServer.image.tag=${{ github.sha }} \
