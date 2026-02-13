@@ -163,6 +163,24 @@ jobs:
           echo "Client cert present: $(grep -c 'client-certificate-data' ~/.kube/config)"
           echo "Client key present: $(grep -c 'client-key-data' ~/.kube/config)"
 
+      - name: Debug TLS connection
+        run: |
+          # Extract CA, client cert and key from kubeconfig
+          grep 'certificate-authority-data' ~/.kube/config | awk '{print $2}' | base64 -d > /tmp/ca.pem
+          grep 'client-certificate-data' ~/.kube/config | awk '{print $2}' | base64 -d > /tmp/client.pem
+          grep 'client-key-data' ~/.kube/config | awk '{print $2}' | base64 -d > /tmp/client-key.pem
+          echo "CA cert subject:"
+          openssl x509 -in /tmp/ca.pem -noout -subject 2>&1 || echo "CA cert invalid"
+          echo "Client cert subject:"
+          openssl x509 -in /tmp/client.pem -noout -subject 2>&1 || echo "Client cert invalid"
+          echo "Client cert issuer:"
+          openssl x509 -in /tmp/client.pem -noout -issuer 2>&1 || echo "N/A"
+          echo "Client key valid:"
+          openssl ec -in /tmp/client-key.pem -check -noout 2>&1 || echo "Key invalid"
+          echo "TLS handshake test:"
+          curl -v --cacert /tmp/ca.pem --cert /tmp/client.pem --key /tmp/client-key.pem https://37.27.209.172:6443/healthz 2>&1 || true
+          rm -f /tmp/ca.pem /tmp/client.pem /tmp/client-key.pem
+
       - name: Verify cluster access
         run: kubectl get nodes
 
