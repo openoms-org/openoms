@@ -33,34 +33,44 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 - Stocktaking (inventory counts)
 
 ### Marketplace Integrations (8)
-- **Allegro** -- OAuth2, full offer management, listing creation
-- **Amazon SP-API** -- orders and catalog sync
-- **WooCommerce** -- bidirectional order and product sync
-- **eBay** -- order import and listing management
-- **Kaufland** -- marketplace integration
-- **OLX** -- listing and order management
-- **Mirakl / Empik** -- marketplace connector
-- **Erli** -- Polish marketplace integration
+
+| Integration | Description | Status |
+|---|---|---|
+| **Allegro** | OAuth2, full offer management, listing creation | Verified |
+| **Amazon SP-API** | Orders and catalog sync | In Development |
+| **WooCommerce** | Bidirectional order and product sync | In Development |
+| **eBay** | Order import and listing management | In Development |
+| **Kaufland** | Marketplace integration | In Development |
+| **OLX** | Listing and order management | In Development |
+| **Mirakl / Empik** | Marketplace connector | In Development |
+| **Erli** | Polish marketplace integration | In Development |
 
 ### Carrier Integrations (8)
-- **InPost** -- Paczkomaty (parcel lockers) + courier
-- **DHL** -- domestic and international shipping
-- **DPD** -- parcel shipping
-- **GLS** -- parcel shipping
-- **UPS** -- domestic and international shipping
-- **Poczta Polska** -- national postal service
-- **Orlen Paczka** -- parcel lockers
-- **FedEx** -- international shipping
-- Carrier rate shopping across all providers
+
+| Integration | Description | Status |
+|---|---|---|
+| **InPost** | Paczkomaty (parcel lockers) + courier | Verified |
+| **DHL** | Domestic and international shipping | In Development |
+| **DPD** | Parcel shipping | In Development |
+| **GLS** | Parcel shipping | In Development |
+| **UPS** | Domestic and international shipping | In Development |
+| **Poczta Polska** | National postal service | In Development |
+| **Orlen Paczka** | Parcel lockers | In Development |
+| **FedEx** | International shipping | In Development |
+
+Carrier rate shopping across all providers.
 
 ### Other Integrations
-- **Fakturownia** -- invoice generation
-- **KSeF** -- Polish national e-invoicing system
-- **Mailchimp** -- marketing automation
-- **Freshdesk** -- helpdesk tickets
-- **SMSAPI / Twilio** -- SMS notifications
-- **OpenAI** -- AI product categorization and descriptions
-- **NBP** -- exchange rates (multi-currency support)
+
+| Integration | Description | Status |
+|---|---|---|
+| **Fakturownia** | Invoice generation | In Development |
+| **KSeF** | Polish national e-invoicing system | In Development |
+| **Mailchimp** | Marketing automation | In Development |
+| **Freshdesk** | Helpdesk tickets | In Development |
+| **SMSAPI / Twilio** | SMS notifications | In Development |
+| **OpenAI** | AI product categorization and descriptions | Verified |
+| **NBP** | Exchange rates (multi-currency support) | Verified |
 
 ### Platform
 - Multi-tenant SaaS with PostgreSQL Row-Level Security

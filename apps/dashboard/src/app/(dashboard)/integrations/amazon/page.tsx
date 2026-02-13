@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { apiClient } from "@/lib/api-client";
@@ -89,6 +90,8 @@ export default function AmazonSetupPage() {
             </p>
           </div>
         </div>
+
+        <DevelopmentBanner />
 
         <Card className="max-w-2xl">
           <CardHeader>

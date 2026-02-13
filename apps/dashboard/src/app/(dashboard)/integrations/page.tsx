@@ -15,6 +15,8 @@ import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
+import { DevelopmentBadge } from "@/components/shared/development-banner";
+import { isInDevelopment } from "@/lib/integration-status";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -108,8 +110,11 @@ export default function IntegrationsPage() {
                   onClick={() => router.push(href)}
                 >
                   <TableCell className="font-medium">
-                    {integration.provider.charAt(0).toUpperCase() +
-                      integration.provider.slice(1)}
+                    <span className="inline-flex items-center">
+                      {integration.provider.charAt(0).toUpperCase() +
+                        integration.provider.slice(1)}
+                      {isInDevelopment(integration.provider) && <DevelopmentBadge />}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <StatusBadge

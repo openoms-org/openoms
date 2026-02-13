@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Save } from "lucide-react";
+import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { apiClient } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import type { FreshdeskSettings } from "@/types/api";
@@ -87,6 +88,8 @@ export default function HelpdeskSettingsPage() {
             Integracja z Freshdesk do obsługi zgłoszeń klientów
           </p>
         </div>
+
+        <DevelopmentBanner />
 
         {/* Configuration card */}
         <Card>

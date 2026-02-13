@@ -28,6 +28,7 @@ import {
   PROVIDERS_WITH_DEDICATED_PAGES,
 } from "@/lib/constants";
 import type { CredentialField } from "@/lib/constants";
+import { isInDevelopment } from "@/lib/integration-status";
 
 const integrationSchema = z.object({
   provider: z.string().min(1, "Dostawca jest wymagany"),
@@ -321,6 +322,7 @@ export function IntegrationForm({
                     <SelectItem key={provider} value={provider}>
                       {INTEGRATION_PROVIDER_LABELS[provider] ??
                         provider.charAt(0).toUpperCase() + provider.slice(1)}
+                      {isInDevelopment(provider) ? " (W budowie)" : ""}
                     </SelectItem>
                   ))}
                 </SelectGroup>

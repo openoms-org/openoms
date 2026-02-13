@@ -19,7 +19,7 @@ apiServer:
     enabled: true
     bucket: openoms-uploads
     region: eu-central-1
-    endpoint: "http://minio.default.svc.cluster.local:9000"
+    endpoint: ""
     publicUrl: ""
   openai:
     model: gpt-4o-mini
@@ -143,3 +143,6 @@ secrets:
 
 imagePullSecrets:
   - name: ghcr-pull-secret
+
+database:
+  host: postgres

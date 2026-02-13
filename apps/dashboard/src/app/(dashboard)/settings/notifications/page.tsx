@@ -31,6 +31,7 @@ import {
   useSendTestSMS,
 } from "@/hooks/use-sms-settings";
 import { Loader2, Send, Save } from "lucide-react";
+import { DevelopmentBanner } from "@/components/shared/development-banner";
 import type { EmailSettings } from "@/types/api";
 import type { SMSSettings } from "@/types/api";
 
@@ -173,6 +174,8 @@ export default function NotificationsPage() {
             Konfiguracja kanałów powiadomień do klientów
           </p>
         </div>
+
+        <DevelopmentBanner />
 
         <Tabs defaultValue="email">
           <TabsList>
