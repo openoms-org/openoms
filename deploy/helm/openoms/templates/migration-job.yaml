@@ -24,6 +24,26 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       restartPolicy: Never
+      initContainers:
+        - name: wait-for-db
+          image: postgres:16-alpine
+          command: ['sh', '-c', 'for i in $(seq 1 12); do pg_isready -h postgres.apps-core.svc.cluster.local -U openoms -t 5 && exit 0; echo "Waiting for DB (attempt $i)..."; sleep 5; done; exit 1']
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
       containers:
         - name: migrate
           image: {{ include "openoms.migration.image" . }}
