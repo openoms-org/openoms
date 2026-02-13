@@ -28,6 +28,8 @@ export const ORDER_TRANSITIONS: Record<string, string[]> = {
   on_hold: ["confirmed", "processing", "cancelled"],
   cancelled: ["refunded"],
   refunded: [],
+  merged: [],
+  split: [],
 };
 
 export const SHIPMENT_STATUSES: Record<string, { label: string; color: string }> = {
