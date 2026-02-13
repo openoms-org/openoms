@@ -20,6 +20,9 @@ linters:
     - misspell
     - unconvert
     - unparam
+    - gosec
+    - bodyclose
+    - nilerr
 
 issues:
   exclude-rules:
