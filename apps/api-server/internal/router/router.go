@@ -86,6 +86,7 @@ func New(deps RouterDeps) *chi.Mux {
 	if deps.MetricsCollector != nil {
 		r.Use(deps.MetricsCollector.Middleware())
 	}
+	r.Use(middleware.SecurityHeaders)
 	r.Use(middleware.Logging)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS([]string{deps.Config.FrontendURL}))
@@ -94,9 +95,9 @@ func New(deps RouterDeps) *chi.Mux {
 	healthHandler := &handler.HealthHandler{DB: deps.Pool}
 	r.Get("/health", healthHandler.ServeHTTP)
 
-	// Prometheus metrics — no auth
+	// Prometheus metrics — protected by Bearer token
 	if deps.MetricsCollector != nil {
-		r.Get("/metrics", deps.MetricsCollector.Handler())
+		r.With(middleware.MetricsAuth(deps.Config.MetricsToken)).Get("/metrics", deps.MetricsCollector.Handler())
 	}
 
 	// OpenAPI spec and Swagger UI — no auth
@@ -116,13 +117,16 @@ func New(deps RouterDeps) *chi.Mux {
 
 	// Public auth routes — no JWT required, rate-limited
 	r.Route("/v1/auth", func(r chi.Router) {
-		r.Use(middleware.RateLimit(100, 1*time.Minute))
 		r.Use(middleware.MaxBodySize(1 << 20)) // 1MB
-		r.Post("/register", deps.Auth.Register)
-		r.Post("/login", deps.Auth.Login)
-		r.Post("/refresh", deps.Auth.Refresh)
-		r.Post("/logout", deps.Auth.Logout)
-		r.Post("/2fa/login", deps.Auth.TwoFALogin)
+
+		// Login/register — strict rate limit (10 req/min per IP)
+		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/register", deps.Auth.Register)
+		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/login", deps.Auth.Login)
+		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/2fa/login", deps.Auth.TwoFALogin)
+
+		// Token refresh/logout — lighter rate limit (60 req/min per IP)
+		r.With(middleware.RateLimit(60, 1*time.Minute)).Post("/refresh", deps.Auth.Refresh)
+		r.With(middleware.RateLimit(60, 1*time.Minute)).Post("/logout", deps.Auth.Logout)
 
 		// 2FA management — JWT required (inside /v1/auth to avoid chi prefix conflict)
 		r.Route("/2fa", func(r chi.Router) {

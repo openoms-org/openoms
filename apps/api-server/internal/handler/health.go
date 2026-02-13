@@ -14,7 +14,6 @@ type HealthHandler struct {
 type healthResponse struct {
 	Status   string `json:"status"`
 	Database string `json:"database"`
-	Version  string `json:"version"`
 }
 
 func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +33,5 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(healthResponse{
 		Status:   status,
 		Database: dbStatus,
-		Version:  "0.1.0",
 	})
 }

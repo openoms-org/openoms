@@ -17,7 +17,6 @@ func TestWriteJSON_HealthLikeResponse(t *testing.T) {
 	writeJSON(rr, http.StatusOK, healthResponse{
 		Status:   "ok",
 		Database: "connected",
-		Version:  "0.1.0",
 	})
 
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -28,5 +27,4 @@ func TestWriteJSON_HealthLikeResponse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "ok", resp.Status)
 	assert.Equal(t, "connected", resp.Database)
-	assert.Equal(t, "0.1.0", resp.Version)
 }

@@ -311,17 +311,17 @@ OpenOMS/
 
 ## 5. Backend API
 
-### Middleware Stack (10 middleware)
+### Middleware Stack (12 middleware)
 
 ```
-Request -> RequestID -> RealIP -> Prometheus -> Logger -> Recoverer -> CORS
+Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Recoverer -> CORS
     -> JWTAuth -> TokenBlacklist -> RequireRole -> RequirePermission
-    -> RateLimit -> MaxBodySize -> Handler
+    -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
 
 ### Wszystkie endpointy (~296)
 
-#### Autentykacja (publiczne, rate limit 100/min)
+#### Autentykacja (publiczne, rate limit 10/min login, 60/min refresh)
 
 | Metoda | Sciezka | Opis |
 |--------|---------|------|
@@ -755,8 +755,8 @@ Request -> RequestID -> RealIP -> Prometheus -> Logger -> Recoverer -> CORS
 | GET | `/v1/product-categories` | Kategorie produktow (read-only) |
 | POST | `/v1/webhooks/{provider}/{tenant_id}` | Webhook przychodzacy |
 | POST | `/v1/webhooks/allegro` | Webhook Allegro (HMAC) |
-| GET | `/health` | Health check |
-| GET | `/metrics` | Prometheus metrics |
+| GET | `/health` | Health check (no version disclosed) |
+| GET | `/metrics` | Prometheus metrics (requires Bearer token) |
 | GET | `/v1/openapi.yaml` | Specyfikacja OpenAPI |
 | GET | `/v1/docs` | Swagger UI |
 
@@ -1159,14 +1159,31 @@ Uprawnienia np.:
 | Zagrozenie | Mitygacja |
 |-----------|-----------|
 | SQL Injection | Parametryzowane zapytania (pgx driver) |
-| XSS | Sanityzacja HTML w inputach (strip tags) |
+| XSS | Sanityzacja HTML w inputach (strip tags) + CSP header |
 | CSRF | SameSite cookies + CORS whitelist |
+| Clickjacking | X-Frame-Options: DENY + CSP frame-ancestors 'none' |
 | Tenant leakage | RLS + FORCE ROW LEVEL SECURITY |
 | Token theft | SHA-256 hash w blacklist, httpOnly cookies |
 | SSRF | Webhook dispatcher sprawdza private IP ranges |
-| Brute force | Rate limiting (100/min auth, 30/min public) |
+| Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public) |
 | DoS | Max body size (1MB default, 10MB upload) |
 | Account takeover | 2FA/TOTP, bcrypt, Ed25519 JWT |
+| Info disclosure | Brak wersji w /health, brak X-Powered-By, /metrics chroniony tokenem |
+| MIME sniffing | X-Content-Type-Options: nosniff |
+| Referrer leak | Referrer-Policy: strict-origin-when-cross-origin |
+
+### Bezpieczenstwo infrastruktury (Kubernetes)
+
+| Warstwa | Mechanizm |
+|---------|-----------|
+| Secrets encryption at rest | AES-CBC w k3s (EncryptionConfiguration) |
+| K8s audit logging | Audit policy z logowaniem zmian w secrets, RBAC, write ops |
+| Pod Security Standards | PSS enforce: restricted (apps), baseline (system), privileged (storage) |
+| NetworkPolicies | Default-deny ingress na wszystkich 15 namespacach |
+| State DB permissions | chmod 600 (wylacznie root) |
+| TLS | Mutual TLS do API servera k3s, TLS 1.2+ z strong cipher suites |
+| Image scanning | Trivy CRITICAL+HIGH w CI/CD pipeline |
+| Vulnerability scanning | govulncheck (Go) + npm audit (frontend) w CI |
 
 ---
 
@@ -1603,6 +1620,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 # -- Workers ----------------------
 WORKERS_ENABLED=true
 
+# -- Monitoring -------------------
+METRICS_TOKEN=...                    # Bearer token dla /metrics (openssl rand -base64 32)
+
 # -- Integracje (opcjonalne) ------
 INPOST_API_TOKEN=...
 INPOST_ORG_ID=...
@@ -1642,7 +1662,7 @@ Haslo testowe: `password123`
 | **Serwisy Go** | 38 |
 | **Repozytoria Go** | 28 |
 | **Background workers** | 14 (10 zarejestrowanych + 4 infra) |
-| **Middleware** | 10 |
+| **Middleware** | 12 |
 | **Pakiety SDK** | 21 |
 | **Testy E2E** | 12 specow Playwright |
 | **Jezyki** | Go, TypeScript, SQL |
