@@ -7,9 +7,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  API_IMAGE: ghcr.io/ralllf/openoms-api
-  DASHBOARD_IMAGE: ghcr.io/ralllf/openoms-dashboard
-  MIGRATE_IMAGE: ghcr.io/ralllf/openoms-migrate
+  API_IMAGE: ghcr.io/openoms-org/openoms-api
+  DASHBOARD_IMAGE: ghcr.io/openoms-org/openoms-dashboard
+  MIGRATE_IMAGE: ghcr.io/openoms-org/openoms-migrate
 
 jobs:
   build-api:
