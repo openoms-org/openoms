@@ -156,11 +156,15 @@ jobs:
           KUBECONFIG_B64: ${{ secrets.KUBECONFIG }}
         run: |
           mkdir -p ~/.kube
-          printf '%s' "$KUBECONFIG_B64" | base64 -d > ~/.kube/config
+          printf '%s' "$KUBECONFIG_B64" | tr -d '[:space:]' | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+          echo "Kubeconfig size: $(wc -c < ~/.kube/config) bytes"
+          echo "Server: $(grep 'server:' ~/.kube/config)"
+          echo "Client cert present: $(grep -c 'client-certificate-data' ~/.kube/config)"
+          echo "Client key present: $(grep -c 'client-key-data' ~/.kube/config)"
 
       - name: Verify cluster access
-        run: kubectl cluster-info
+        run: kubectl get nodes
 
       - name: Deploy with Helm
         run: |
