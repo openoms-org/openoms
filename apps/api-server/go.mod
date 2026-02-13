@@ -11,9 +11,33 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/go-chi/chi/v5 v5.2.3
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.8.0
+	github.com/openoms-org/openoms/packages/allegro-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/amazon-sp-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/dhl-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/dpd-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/ebay-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/erli-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/fakturownia-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/fedex-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/gls-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/inpost-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/iof-parser v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/kaufland-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/ksef-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/mirakl-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/olx-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/order-engine v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/orlen-paczka-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/poczta-polska-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/smsapi-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/ups-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/woocommerce-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/pquerna/otp v1.5.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.47.0
 )
 
@@ -34,12 +58,14 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6 // indirect
 	github.com/aws/smithy-go v1.24.0 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/pquerna/otp v1.5.0 // indirect
-	github.com/stretchr/testify v1.11.1 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
