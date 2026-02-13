@@ -141,28 +141,41 @@ jobs:
 
   deploy:
     name: Deploy to k3s
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: [build-api, build-dashboard, build-migrate]
-    permissions:
-      packages: write
-      contents: read
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy with Helm
-        run: |
-          helm upgrade --install openoms deploy/helm/openoms \
-            -n openoms \
-            --set apiServer.image.tag=${{ github.sha }} \
-            --set dashboard.image.tag=${{ github.sha }} \
-            --set migration.image.tag=${{ github.sha }} \
-            --wait \
-            --timeout 5m
+      - name: Copy Helm chart to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: deploy/helm/openoms
+          target: /tmp/openoms-deploy
+          strip_components: 2
 
-      - name: Verify deployment health
-        run: |
-          echo "Checking deployment rollout status..."
-          kubectl rollout status deployment/openoms-api -n openoms --timeout=120s
-          kubectl rollout status deployment/openoms-dashboard -n openoms --timeout=120s
-          kubectl rollout status deployment/openoms-worker -n openoms --timeout=120s
-          echo "All deployments are healthy."
+      - name: Deploy with Helm via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            helm upgrade --install openoms /tmp/openoms-deploy/openoms \
+              -n openoms \
+              --set apiServer.image.tag=${{ github.sha }} \
+              --set dashboard.image.tag=${{ github.sha }} \
+              --set migration.image.tag=${{ github.sha }} \
+              --wait \
+              --timeout 5m
+
+            echo "Checking deployment rollout status..."
+            kubectl rollout status deployment/openoms-api -n openoms --timeout=120s
+            kubectl rollout status deployment/openoms-dashboard -n openoms --timeout=120s
+            kubectl rollout status deployment/openoms-worker -n openoms --timeout=120s
+            echo "All deployments are healthy."
+
+            rm -rf /tmp/openoms-deploy
