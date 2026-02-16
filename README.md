@@ -1,6 +1,6 @@
 # OpenOMS
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+[![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev/)
 [![Build](https://img.shields.io/github/actions/workflow/status/openoms-org/openoms/ci.yml?branch=main&label=CI)](https://github.com/openoms-org/openoms/actions)
 
@@ -176,11 +176,11 @@ task clean       # Stop containers and remove volumes
 ```
 openoms/
 ├── apps/
-│   ├── api-server/              # Go backend (AGPLv3)
+│   ├── api-server/              # Go backend (BSL 1.1)
 │   │   ├── cmd/server/          # Entrypoint
 │   │   ├── internal/            # Handlers, services, repositories, workers
 │   │   └── migrations/          # 46 SQL migrations
-│   └── dashboard/               # Next.js frontend (AGPLv3)
+│   └── dashboard/               # Next.js frontend (BSL 1.1)
 │       └── src/
 ├── packages/                    # 21 standalone SDK libraries (MIT)
 ├── deploy/
@@ -192,7 +192,7 @@ openoms/
 ├── Taskfile.yml
 ├── .github/workflows/
 │   ├── ci.yml                 # Lint, test, security scan, auto-format
-│   └── deploy.yml             # Build images, Trivy scan, Helm deploy
+│   └── release.yml            # CI/CD workflow that builds Docker images
 └── .env.example
 ```
 
@@ -261,7 +261,7 @@ helm upgrade --install openoms deploy/helm/openoms \
   --set migration.image.tag=latest
 ```
 
-The CI/CD pipeline (`.github/workflows/deploy.yml`) builds Docker images, scans them with Trivy, and deploys to k3s via Helm on push to `main`.
+The CI/CD pipeline (`.github/workflows/release.yml`) builds Docker images, scans them with Trivy, and deploys to k3s via Helm on push to `main`.
 
 ### Infrastructure Requirements
 
@@ -286,9 +286,23 @@ Please open an [issue](https://github.com/openoms-org/openoms/issues) first for 
 
 ---
 
+## CI/CD
+
+This project uses a two-repository deployment model:
+
+- **Public repo** (`openoms-org/openoms`): Builds Docker images on every push to `main`, pushes to GHCR, runs Trivy security scans
+- **Enterprise repo** (private): Deploys to production via Helm with environment-specific values overlay
+
+Docker images are public on GHCR:
+- `ghcr.io/openoms-org/openoms-api`
+- `ghcr.io/openoms-org/openoms-dashboard`
+- `ghcr.io/openoms-org/openoms-migrate`
+
+---
+
 ## License
 
-- **Core applications** (`apps/`): [GNU Affero General Public License v3.0](LICENSE)
+- **Core applications** (`apps/`): [Business Source License 1.1](LICENSE) (converts to AGPLv3 on 2030-02-13)
 - **SDK packages** (`packages/`): [MIT License](packages/allegro-go-sdk/LICENSE)
 
 ---

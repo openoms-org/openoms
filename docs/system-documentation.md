@@ -45,7 +45,7 @@
 
 ### Licencja
 
-- `apps/` -- AGPLv3 (core)
+- `apps/` -- BSL 1.1 (core, converts to AGPLv3 on 2030-02-13)
 - `packages/` -- MIT (SDK-i)
 
 ---
@@ -123,6 +123,54 @@ CREATE POLICY tenant_isolation ON orders
     USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
 ```
 
+### CI/CD i Deployment
+
+#### Dwa repozytoria
+
+| Repo | Widocznosc | Zawartosc |
+|------|-----------|-----------|
+| `openoms-org/openoms` | Publiczne | Kod aplikacji, Helm chart, Dockerfiles |
+| `openoms-org/openoms-enterprise` | Prywatne | values-production.yaml, deploy.yml |
+
+#### Pipeline
+
+1. Push do `main` -> `release.yml` (publiczne repo):
+   - Buduje 3 obrazy Docker -> GHCR (publiczne)
+   - `ghcr.io/openoms-org/openoms-api`
+   - `ghcr.io/openoms-org/openoms-dashboard`
+   - `ghcr.io/openoms-org/openoms-migrate`
+   - Skanuje obrazy (Trivy, CRITICAL+HIGH)
+   - Wysyla `repository_dispatch` do enterprise repo
+
+2. Enterprise `deploy.yml`:
+   - Trigger: `repository_dispatch` lub `workflow_dispatch` (reczny)
+   - Checkout obu repozytoriow
+   - `helm upgrade --install` z overlay `values-production.yaml`
+   - Health check (`kubectl rollout status`)
+
+#### Helm Chart
+
+- Chart: `deploy/helm/openoms/`
+- Domyslne wartosci: `values.yaml` (generyczne, example.com)
+- Produkcyjne overlay: `values-production.yaml` (w enterprise repo)
+- Migration job: pre-upgrade hook, `activeDeadlineSeconds: 600`
+
+#### Obrazy Docker
+
+| Obraz | Dockerfile | Zawartosc |
+|-------|-----------|-----------|
+| `openoms-api` | `apps/api-server/Dockerfile` | Go binary (distroless) |
+| `openoms-dashboard` | `apps/dashboard/Dockerfile` | Next.js standalone |
+| `openoms-migrate` | `deploy/Dockerfile.migrate` | golang-migrate + SQL |
+
+Obrazy sa publiczne na GHCR -- nie wymagaja `imagePullSecrets`.
+
+#### Konfiguracja produkcyjna
+
+Sekrety (hasla DB, JWT, klucze API) sa wstrzykiwane przez K8s Secrets w runtime -- nie sa w obrazach Docker.
+
+Domyslna liczba replik: 1 (API, Dashboard, Worker). Skalowanie przez `replicaCount` w values overlay.
+
 ---
 
 ## 3. Stos technologiczny
@@ -165,11 +213,11 @@ CREATE POLICY tenant_isolation ON orders
 ```
 OpenOMS/
 +-- apps/
-|   +-- api-server/          <- Go backend (AGPLv3)
+|   +-- api-server/          <- Go backend (BSL 1.1)
 |   |   +-- cmd/server/      <- punkt wejscia
 |   |   +-- internal/        <- logika aplikacji (386 plikow Go, 71 testow)
 |   |   +-- migrations/      <- 46 migracji SQL (000001-000046)
-|   +-- dashboard/           <- Next.js frontend (AGPLv3)
+|   +-- dashboard/           <- Next.js frontend (BSL 1.1)
 |       +-- src/app/         <- 81 stron (App Router)
 |       +-- src/components/  <- 81 komponentow React
 |       +-- src/hooks/       <- 45 custom hooks
@@ -1666,7 +1714,7 @@ Haslo testowe: `password123`
 | **Pakiety SDK** | 21 |
 | **Testy E2E** | 12 specow Playwright |
 | **Jezyki** | Go, TypeScript, SQL |
-| **Licencja** | AGPLv3 (apps) + MIT (packages) |
+| **Licencja** | BSL 1.1 (apps) + MIT (packages) |
 
 ### Testy
 
