@@ -115,7 +115,7 @@ func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid
 }
 
 // executeSetStatus transitions an order to the target status specified in action params.
-func (e *DefaultActionExecutor) executeSetStatus(ctx context.Context, tenantID uuid.UUID, action Action, event Event) error {
+func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uuid.UUID, action Action, event Event) error {
 	e.logger.Info("automation action: set_status",
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
@@ -167,7 +167,7 @@ func (e *DefaultActionExecutor) executeSetStatus(ctx context.Context, tenantID u
 }
 
 // executeAddTag appends a tag to an order's tags array, skipping duplicates.
-func (e *DefaultActionExecutor) executeAddTag(ctx context.Context, tenantID uuid.UUID, action Action, event Event) error {
+func (e *DefaultActionExecutor) executeAddTag(_ context.Context, tenantID uuid.UUID, action Action, event Event) error {
 	e.logger.Info("automation action: add_tag",
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
@@ -209,7 +209,7 @@ func (e *DefaultActionExecutor) executeAddTag(ctx context.Context, tenantID uuid
 			return nil
 		}
 
-		newTags := append(order.Tags, tag)
+		newTags := append(order.Tags, tag) //nolint:gocritic // intentionally creating new slice for update
 		updateReq := model.UpdateOrderRequest{
 			Tags: &newTags,
 		}
@@ -236,7 +236,7 @@ func (e *DefaultActionExecutor) executeAddTag(ctx context.Context, tenantID uuid
 }
 
 // executeSendEmail sends a status notification email for the order.
-func (e *DefaultActionExecutor) executeSendEmail(ctx context.Context, tenantID uuid.UUID, action Action, event Event) error {
+func (e *DefaultActionExecutor) executeSendEmail(_ context.Context, tenantID uuid.UUID, action Action, event Event) error {
 	e.logger.Info("automation action: send_email",
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
