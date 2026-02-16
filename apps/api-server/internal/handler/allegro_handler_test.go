@@ -22,15 +22,6 @@ func newChiContextWithParam(key, value string) context.Context {
 	return context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
 }
 
-// newChiContextWithParams creates a context with multiple chi URL parameters set.
-func newChiContextWithParams(params map[string]string) context.Context {
-	rctx := chi.NewRouteContext()
-	for k, v := range params {
-		rctx.URLParams.Add(k, v)
-	}
-	return context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
-}
-
 // --- UpdateFulfillment ---
 
 func TestAllegroHandler_UpdateFulfillment_InvalidOrderID(t *testing.T) {

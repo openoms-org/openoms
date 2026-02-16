@@ -59,10 +59,10 @@ func TestInPostPointHandler_Search_EmptyQuery(t *testing.T) {
 func TestInPostPointHandler_Search_ExactlyTwoCharsAccepted(t *testing.T) {
 	// A query with exactly 2 characters should pass validation and reach the API call.
 	// We set up a fake InPost Points API server to handle the request.
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items:      []inpost.Point{},
 			Count:      0,
 			Page:       1,
@@ -91,7 +91,7 @@ func TestInPostPointHandler_Search_SuccessWithResults(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items: []inpost.Point{
 				{
 					Name:   "KRA01M",
@@ -150,10 +150,10 @@ func TestInPostPointHandler_Search_SuccessWithResults(t *testing.T) {
 }
 
 func TestInPostPointHandler_Search_EmptyResults(t *testing.T) {
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items:      []inpost.Point{},
 			Count:      0,
 			Page:       1,
@@ -181,9 +181,9 @@ func TestInPostPointHandler_Search_EmptyResults(t *testing.T) {
 }
 
 func TestInPostPointHandler_Search_ServiceError(t *testing.T) {
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"message": "internal error"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "internal error"})
 	}))
 	defer pointsSrv.Close()
 
@@ -203,9 +203,9 @@ func TestInPostPointHandler_Search_ServiceError(t *testing.T) {
 }
 
 func TestInPostPointHandler_Search_ServiceUnauthorized(t *testing.T) {
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{"message": "invalid token"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "invalid token"})
 	}))
 	defer pointsSrv.Close()
 
@@ -234,7 +234,7 @@ func TestInPostPointHandler_Search_PointCodeQuery(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items: []inpost.Point{
 				{
 					Name:   "KRA01M",
@@ -270,10 +270,10 @@ func TestInPostPointHandler_Search_PointCodeQuery(t *testing.T) {
 func TestInPostPointHandler_Search_POPPointType(t *testing.T) {
 	// The handler currently hardcodes PointTypeParcelLocker, but verify the response
 	// can include points of different types from the API.
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items: []inpost.Point{
 				{
 					Name:   "POP-KRA001",
@@ -311,10 +311,10 @@ func TestInPostPointHandler_Search_POPPointType(t *testing.T) {
 }
 
 func TestInPostPointHandler_Search_MixedPointTypes(t *testing.T) {
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items: []inpost.Point{
 				{
 					Name: "KRA45A",
@@ -356,7 +356,7 @@ func TestInPostPointHandler_Search_MixedPointTypes(t *testing.T) {
 
 func TestInPostPointHandler_Search_ConnectionError(t *testing.T) {
 	// Create a client pointing to a closed server to simulate a connection error.
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	pointsSrvURL := pointsSrv.URL
 	pointsSrv.Close() // Close immediately to cause connection refused
 
@@ -385,10 +385,10 @@ func TestInPostPointHandler_Search_LargeResultSet(t *testing.T) {
 		}
 	}
 
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items:      points,
 			Count:      10,
 			Page:       1,
@@ -417,10 +417,10 @@ func TestInPostPointHandler_Search_LargeResultSet(t *testing.T) {
 }
 
 func TestInPostPointHandler_Search_PointWithAddressDetails(t *testing.T) {
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items: []inpost.Point{
 				{
 					Name:   "WAW123M",
@@ -472,10 +472,10 @@ func TestInPostPointHandler_Search_PointWithAddressDetails(t *testing.T) {
 }
 
 func TestInPostPointHandler_Search_ResponseContentType(t *testing.T) {
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(inpost.PointSearchResponse{
+		_ = json.NewEncoder(w).Encode(inpost.PointSearchResponse{
 			Items:      []inpost.Point{},
 			Count:      0,
 			Page:       1,
@@ -498,9 +498,9 @@ func TestInPostPointHandler_Search_ResponseContentType(t *testing.T) {
 }
 
 func TestInPostPointHandler_Search_ApiReturns422Validation(t *testing.T) {
-	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	pointsSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(w).Encode(map[string]string{"message": "validation failed"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"message": "validation failed"})
 	}))
 	defer pointsSrv.Close()
 
