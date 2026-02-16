@@ -425,18 +425,16 @@ func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
 	if errors.As(err, &apiErr) {
 		status := http.StatusBadGateway
 		switch {
+		case apiErr.StatusCode == 401:
+			status = http.StatusUnauthorized
+		case apiErr.StatusCode == 403:
+			status = http.StatusForbidden
+		case apiErr.StatusCode == 404:
+			status = http.StatusNotFound
+		case apiErr.StatusCode == 429:
+			status = http.StatusTooManyRequests
 		case apiErr.StatusCode >= 400 && apiErr.StatusCode < 500:
 			status = http.StatusBadRequest
-			switch apiErr.StatusCode {
-			case 401:
-				status = http.StatusUnauthorized
-			case 403:
-				status = http.StatusForbidden
-			case 404:
-				status = http.StatusNotFound
-			case 429:
-				status = http.StatusTooManyRequests
-			}
 		case apiErr.StatusCode >= 500:
 			status = http.StatusBadGateway
 		}
