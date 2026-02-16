@@ -216,7 +216,7 @@ OpenOMS/
 |   +-- api-server/          <- Go backend (BSL 1.1)
 |   |   +-- cmd/server/      <- punkt wejscia
 |   |   +-- internal/        <- logika aplikacji (386 plikow Go, 71 testow)
-|   |   +-- migrations/      <- 46 migracji SQL (000001-000046)
+|   |   +-- migrations/      <- 94 migracji SQL (000001-000094)
 |   +-- dashboard/           <- Next.js frontend (BSL 1.1)
 |       +-- src/app/         <- 81 stron (App Router)
 |       +-- src/components/  <- 81 komponentow React
@@ -1521,9 +1521,9 @@ Oferta opublikowana na Allegro
 
 ---
 
-## 11. Background Workers (14 plikow)
+## 11. Background Workers (15 plikow)
 
-### Workery (10 zarejestrowanych)
+### Workery (11 zarejestrowanych)
 
 | Worker | Interwal | Cel |
 |--------|----------|-----|
@@ -1699,18 +1699,18 @@ Haslo testowe: `password123`
 
 | Metryka | Wartosc |
 |---------|--------|
-| **Pliki Go** | 395 (w tym 80 testow) |
-| **Pliki TypeScript/TSX** | 234 |
+| **Pliki Go** | 429 (w tym 78 testow) |
+| **Pliki TypeScript/TSX** | 231 |
 | **Tabele DB** | 32 |
-| **Migracje SQL** | 46 (000001-000046) |
-| **Endpointy API** | ~298 |
+| **Migracje SQL** | 94 (000001-000094) |
+| **Endpointy API** | ~291 |
 | **Strony frontend** | 82 |
-| **Komponenty React** | 81 |
-| **Custom hooks** | 48 |
-| **Handlery Go** | 57 |
-| **Serwisy Go** | 38 |
+| **Komponenty React** | 82 |
+| **Custom hooks** | 45 |
+| **Handlery Go** | 58 |
+| **Serwisy Go** | 39 |
 | **Repozytoria Go** | 28 |
-| **Background workers** | 14 (10 zarejestrowanych + 4 infra) |
+| **Background workers** | 15 (11 zarejestrowanych + 4 infra) |
 | **Middleware** | 12 |
 | **Pakiety SDK** | 21 |
 | **Testy E2E** | 12 specow Playwright |
@@ -1730,5 +1730,5 @@ Haslo testowe: `password123`
 
 ---
 
-*Dokument wygenerowany: 2026-02-13*
-*Wersja: OpenOMS v3.1*
+*Dokument wygenerowany: 2026-02-16*
+*Wersja: OpenOMS v3.2*

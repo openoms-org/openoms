@@ -6,7 +6,7 @@
 
 **Open-source Order Management System for e-commerce.**
 
-OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboard pages, and integrations with 8 marketplaces and 8 carriers. Built with Go and Next.js, designed for teams that need full control over their order operations.
+OpenOMS is a self-hostable, multi-tenant OMS with 291 API endpoints, 82 dashboard pages, and integrations with 8 marketplaces and 8 carriers. Built with Go and Next.js, designed for teams that need full control over their order operations.
 
 > **Status: Active Development**
 
@@ -24,6 +24,7 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 - Automation rules engine (trigger, conditions, actions)
 - Print templates (orders, invoices, shipping labels)
 - CSV import/export
+- Action delays (scheduled automation)
 
 ### Products and Inventory
 - Product variants and bundles
@@ -31,6 +32,8 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 - Multi-warehouse stock management
 - Warehouse documents (PZ/WZ/MM)
 - Stocktaking (inventory counts)
+- Product CSV import with preview
+- Product categories with color badges
 
 ### Marketplace Integrations (8)
 
@@ -74,14 +77,16 @@ Carrier rate shopping across all providers.
 
 ### Platform
 - Multi-tenant SaaS with PostgreSQL Row-Level Security
-- 296 REST API endpoints with OpenAPI 3.1 spec (Swagger UI)
-- 81 dashboard pages with dark mode, PWA support, keyboard shortcuts
+- 291 REST API endpoints with OpenAPI 3.1 spec (Swagger UI)
+- 82 dashboard pages with dark mode, PWA support, keyboard shortcuts
 - RBAC with custom roles
 - 2FA / TOTP authentication
 - WebSocket real-time updates
 - Outgoing webhooks (HMAC-SHA256 signed)
 - Audit log
 - Self-service returns portal
+- Multi-currency with NBP exchange rates
+- Customer management (CRM)
 - Prometheus metrics (Bearer token auth)
 - Security headers (CSP, X-Frame-Options, HSTS, Referrer-Policy)
 - Kubernetes secrets encryption at rest, audit logging
@@ -110,15 +115,15 @@ Carrier rate shopping across all providers.
 
 | Metric | Count |
 |---|---|
-| Go source files | 386 (71 test files) |
-| TypeScript / TSX files | 234 |
-| SQL migrations | 46 |
-| API endpoints | 296 |
-| Dashboard pages | 81 |
-| React components | 81 |
+| Go source files | 429 (78 test files) |
+| TypeScript / TSX files | 231 |
+| SQL migrations | 94 |
+| API endpoints | 291 |
+| Dashboard pages | 82 |
+| React components | 82 |
 | Custom hooks | 45 |
-| Handlers / Services / Repos | 57 / 38 / 28 |
-| Background workers | 14 |
+| Handlers / Services / Repos | 58 / 39 / 28 |
+| Background workers | 15 |
 | Middleware | 12 |
 | SDK packages | 21 |
 
@@ -179,7 +184,7 @@ openoms/
 │   ├── api-server/              # Go backend (BSL 1.1)
 │   │   ├── cmd/server/          # Entrypoint
 │   │   ├── internal/            # Handlers, services, repositories, workers
-│   │   └── migrations/          # 46 SQL migrations
+│   │   └── migrations/          # 94 SQL migrations
 │   └── dashboard/               # Next.js frontend (BSL 1.1)
 │       └── src/
 ├── packages/                    # 21 standalone SDK libraries (MIT)
