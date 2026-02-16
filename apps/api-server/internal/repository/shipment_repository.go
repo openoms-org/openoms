@@ -52,7 +52,7 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, order_id, provider, integration_id,
-		        tracking_number, status, label_url, carrier_data,
+		        external_id, tracking_number, status, label_url, carrier_data,
 		        warehouse_id, created_at, updated_at
 		 FROM shipments %s
 		 %s
@@ -72,7 +72,7 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 		var s model.Shipment
 		if err := rows.Scan(
 			&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
-			&s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
+			&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
 			&s.WarehouseID, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan shipment: %w", err)
@@ -86,12 +86,12 @@ func (r *ShipmentRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 	var s model.Shipment
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, order_id, provider, integration_id,
-		        tracking_number, status, label_url, carrier_data,
+		        external_id, tracking_number, status, label_url, carrier_data,
 		        warehouse_id, created_at, updated_at
 		 FROM shipments WHERE id = $1`, id,
 	).Scan(
 		&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
-		&s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
+		&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
 		&s.WarehouseID, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
@@ -103,15 +103,37 @@ func (r *ShipmentRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 	return &s, nil
 }
 
+// FindByExternalID looks up a shipment by its external system ID (e.g. Allegro shipment ID).
+func (r *ShipmentRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, externalID string) (*model.Shipment, error) {
+	var s model.Shipment
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, order_id, provider, integration_id,
+		        external_id, tracking_number, status, label_url, carrier_data,
+		        warehouse_id, created_at, updated_at
+		 FROM shipments WHERE external_id = $1`, externalID,
+	).Scan(
+		&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
+		&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
+		&s.WarehouseID, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find shipment by external id: %w", err)
+	}
+	return &s, nil
+}
+
 func (r *ShipmentRepository) Create(ctx context.Context, tx pgx.Tx, shipment *model.Shipment) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO shipments (
 			id, tenant_id, order_id, provider, integration_id,
-			tracking_number, status, label_url, carrier_data, warehouse_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			external_id, tracking_number, status, label_url, carrier_data, warehouse_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING created_at, updated_at`,
 		shipment.ID, shipment.TenantID, shipment.OrderID, shipment.Provider, shipment.IntegrationID,
-		shipment.TrackingNumber, shipment.Status, shipment.LabelURL, shipment.CarrierData,
+		shipment.ExternalID, shipment.TrackingNumber, shipment.Status, shipment.LabelURL, shipment.CarrierData,
 		shipment.WarehouseID,
 	).Scan(&shipment.CreatedAt, &shipment.UpdatedAt)
 }

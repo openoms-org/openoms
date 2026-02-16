@@ -15,6 +15,7 @@ type Shipment struct {
 	OrderID        uuid.UUID       `json:"order_id"`
 	Provider       string          `json:"provider"`
 	IntegrationID  *uuid.UUID      `json:"integration_id,omitempty"`
+	ExternalID     *string         `json:"external_id,omitempty"`
 	TrackingNumber *string         `json:"tracking_number,omitempty"`
 	Status         string          `json:"status"`
 	LabelURL       *string         `json:"label_url,omitempty"`
@@ -28,6 +29,7 @@ type CreateShipmentRequest struct {
 	OrderID        uuid.UUID       `json:"order_id"`
 	Provider       string          `json:"provider"`
 	IntegrationID  *uuid.UUID      `json:"integration_id,omitempty"`
+	ExternalID     *string         `json:"external_id,omitempty"`
 	TrackingNumber *string         `json:"tracking_number,omitempty"`
 	LabelURL       *string         `json:"label_url,omitempty"`
 	CarrierData    json.RawMessage `json:"carrier_data,omitempty"`

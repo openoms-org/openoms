@@ -89,6 +89,7 @@ type AuditRepo interface {
 type ShipmentRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.ShipmentListFilter) ([]model.Shipment, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Shipment, error)
+	FindByExternalID(ctx context.Context, tx pgx.Tx, externalID string) (*model.Shipment, error)
 	Create(ctx context.Context, tx pgx.Tx, shipment *model.Shipment) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateShipmentRequest) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error

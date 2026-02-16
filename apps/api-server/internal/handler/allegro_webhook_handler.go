@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -8,15 +9,24 @@ import (
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 )
 
+// AllegroOrderSyncer defines the interface for webhook-triggered order import/update.
+// Implemented by worker.AllegroWebhookSyncer.
+type AllegroOrderSyncer interface {
+	ImportOrder(ctx context.Context, allegroOrderID string)
+	UpdateOrderStatus(ctx context.Context, allegroOrderID string)
+}
+
 // AllegroWebhookHandler handles incoming Allegro webhook events.
 type AllegroWebhookHandler struct {
 	webhookSecret string
+	orderSyncer   AllegroOrderSyncer
 }
 
 // NewAllegroWebhookHandler creates a new AllegroWebhookHandler.
-func NewAllegroWebhookHandler(webhookSecret string) *AllegroWebhookHandler {
+func NewAllegroWebhookHandler(webhookSecret string, orderSyncer AllegroOrderSyncer) *AllegroWebhookHandler {
 	return &AllegroWebhookHandler{
 		webhookSecret: webhookSecret,
+		orderSyncer:   orderSyncer,
 	}
 }
 
@@ -56,19 +66,35 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Log the event for now; full processing (order status updates, etc.) can be added later
+	orderID := event.OrderID()
+
 	slog.Info("allegro webhook: received event",
 		"event_type", event.Type,
 		"event_id", event.ID,
 		"occurred_at", event.OccurredAt,
+		"order_id", orderID,
 	)
 
-	// Dispatch by event type
+	// Dispatch by event type — process asynchronously after returning 200
 	switch event.Type {
-	case "ORDER_STATUS_CHANGED":
-		slog.Info("allegro webhook: order status changed", "event_id", event.ID)
 	case "ORDER_FILLED_IN":
-		slog.Info("allegro webhook: order filled in", "event_id", event.ID)
+		slog.Info("allegro webhook: order filled in — triggering import",
+			"event_id", event.ID,
+			"order_id", orderID,
+		)
+		if h.orderSyncer != nil && orderID != "" {
+			go h.orderSyncer.ImportOrder(context.Background(), orderID)
+		}
+
+	case "ORDER_STATUS_CHANGED":
+		slog.Info("allegro webhook: order status changed — triggering status update",
+			"event_id", event.ID,
+			"order_id", orderID,
+		)
+		if h.orderSyncer != nil && orderID != "" {
+			go h.orderSyncer.UpdateOrderStatus(context.Background(), orderID)
+		}
+
 	default:
 		slog.Debug("allegro webhook: unhandled event type", "type", event.Type)
 	}

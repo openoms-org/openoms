@@ -164,6 +164,9 @@ func main() {
 	orderService.SetSMSService(smsService)
 	orderService.SetShipmentService(shipmentService)
 	shipmentService.SetSMSService(smsService)
+	allegroSyncService := service.NewAllegroSyncService(integrationService)
+	orderService.SetAllegroSyncService(allegroSyncService)
+	shipmentService.SetAllegroSyncService(allegroSyncService)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
 	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, tenantRepo, pool)
@@ -182,6 +185,9 @@ func main() {
 	automationRuleLogRepo := repository.NewAutomationRuleLogRepository()
 	delayedActionRepo := repository.NewDelayedActionRepository()
 	automationExecutor := automation.NewDefaultActionExecutor(slog.Default())
+	automationExecutor.SetOrderServices(orderService, orderService, orderRepo, pool)
+	automationExecutor.SetEmailSender(emailService)
+	automationExecutor.SetInvoiceCreator(invoiceService)
 	automationEngine := automation.NewEngine(automationRuleRepo, automationRuleLogRepo, pool, automationExecutor, slog.Default())
 	automationEngine.SetDelayedActionRepo(delayedActionRepo)
 	automationService := service.NewAutomationService(automationRuleRepo, automationRuleLogRepo, pool, automationEngine, slog.Default())
@@ -223,13 +229,16 @@ func main() {
 	allegroHandler := handler.NewAllegroHandler(integrationService, orderService, encryptionKey)
 
 	// Allegro shipment management handler ("Wysyłam z Allegro")
-	allegroShipmentHandler := handler.NewAllegroShipmentHandler(integrationService, encryptionKey)
+	allegroShipmentHandler := handler.NewAllegroShipmentHandler(integrationService, shipmentService, orderRepo, shipmentRepo, pool, encryptionKey)
 
 	// Allegro communications handler (messaging, returns, refunds)
 	allegroCommsHandler := handler.NewAllegroCommsHandler(integrationService, encryptionKey)
 
+	// Allegro webhook syncer — handles on-demand order import/update triggered by webhooks
+	allegroWebhookSyncer := worker.NewAllegroWebhookSyncer(pool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default())
+
 	// Allegro webhook handler (public endpoint, HMAC-verified)
-	allegroWebhookHandler := handler.NewAllegroWebhookHandler(cfg.AllegroWebhookSecret)
+	allegroWebhookHandler := handler.NewAllegroWebhookHandler(cfg.AllegroWebhookSecret, allegroWebhookSyncer)
 
 	// InPost webhook handler (public endpoint, HMAC-verified)
 	inpostWebhookHandler := handler.NewInPostWebhookHandler(cfg.InPostWebhookSecret)

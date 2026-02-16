@@ -24,7 +24,7 @@ func computeHMAC(secret string, body []byte) string {
 // --- Valid webhook ---
 
 func TestAllegroWebhookHandler_ValidSignature_OrderStatusChanged(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-1","occurredAt":"2026-01-15T10:00:00Z","payload":{}}`
 	signature := computeHMAC(testWebhookSecret, []byte(body))
@@ -40,7 +40,7 @@ func TestAllegroWebhookHandler_ValidSignature_OrderStatusChanged(t *testing.T) {
 }
 
 func TestAllegroWebhookHandler_ValidSignature_OrderFilledIn(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := `{"type":"ORDER_FILLED_IN","id":"evt-2","occurredAt":"2026-01-15T11:00:00Z","payload":{"orderId":"ord-123"}}`
 	signature := computeHMAC(testWebhookSecret, []byte(body))
@@ -55,7 +55,7 @@ func TestAllegroWebhookHandler_ValidSignature_OrderFilledIn(t *testing.T) {
 }
 
 func TestAllegroWebhookHandler_ValidSignature_UnknownEventType(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := `{"type":"SOME_NEW_EVENT","id":"evt-3","occurredAt":"2026-01-15T12:00:00Z","payload":{}}`
 	signature := computeHMAC(testWebhookSecret, []byte(body))
@@ -73,7 +73,7 @@ func TestAllegroWebhookHandler_ValidSignature_UnknownEventType(t *testing.T) {
 // --- Invalid HMAC signature ---
 
 func TestAllegroWebhookHandler_InvalidSignature(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-4","occurredAt":"2026-01-15T13:00:00Z","payload":{}}`
 
@@ -89,7 +89,7 @@ func TestAllegroWebhookHandler_InvalidSignature(t *testing.T) {
 }
 
 func TestAllegroWebhookHandler_WrongSecret(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-5","occurredAt":"2026-01-15T14:00:00Z","payload":{}}`
 	// Sign with a different secret
@@ -108,7 +108,7 @@ func TestAllegroWebhookHandler_WrongSecret(t *testing.T) {
 // --- Missing signature header ---
 
 func TestAllegroWebhookHandler_MissingSignatureHeader(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-6","occurredAt":"2026-01-15T15:00:00Z","payload":{}}`
 
@@ -125,7 +125,7 @@ func TestAllegroWebhookHandler_MissingSignatureHeader(t *testing.T) {
 // --- Malformed body ---
 
 func TestAllegroWebhookHandler_MalformedJSON(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := `not valid json at all`
 	signature := computeHMAC(testWebhookSecret, []byte(body))
@@ -141,7 +141,7 @@ func TestAllegroWebhookHandler_MalformedJSON(t *testing.T) {
 }
 
 func TestAllegroWebhookHandler_EmptyBody(t *testing.T) {
-	h := NewAllegroWebhookHandler(testWebhookSecret)
+	h := NewAllegroWebhookHandler(testWebhookSecret, nil)
 
 	body := ""
 	signature := computeHMAC(testWebhookSecret, []byte(body))
@@ -160,7 +160,7 @@ func TestAllegroWebhookHandler_EmptyBody(t *testing.T) {
 
 func TestAllegroWebhookHandler_NoSecretConfigured_ValidEvent(t *testing.T) {
 	// When no secret is configured, signature verification is skipped entirely
-	h := NewAllegroWebhookHandler("")
+	h := NewAllegroWebhookHandler("", nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-7","occurredAt":"2026-01-15T16:00:00Z","payload":{}}`
 
@@ -174,7 +174,7 @@ func TestAllegroWebhookHandler_NoSecretConfigured_ValidEvent(t *testing.T) {
 }
 
 func TestAllegroWebhookHandler_NoSecretConfigured_MalformedBody(t *testing.T) {
-	h := NewAllegroWebhookHandler("")
+	h := NewAllegroWebhookHandler("", nil)
 
 	body := `{broken json`
 
@@ -191,7 +191,7 @@ func TestAllegroWebhookHandler_NoSecretConfigured_MalformedBody(t *testing.T) {
 
 func TestAllegroWebhookHandler_NoSecretConfigured_WithSignatureHeader(t *testing.T) {
 	// When no secret is configured, signature verification is skipped even if header is present
-	h := NewAllegroWebhookHandler("")
+	h := NewAllegroWebhookHandler("", nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-8","occurredAt":"2026-01-15T17:00:00Z","payload":{}}`
 

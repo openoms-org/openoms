@@ -31,6 +31,7 @@ type ShipmentService struct {
 	webhookDispatch   *WebhookDispatchService
 	smsService        *SMSService
 	automationService *AutomationService
+	allegroSync       *AllegroSyncService
 }
 
 // SetSMSService sets the SMS service for sending SMS notifications on shipment status change.
@@ -41,6 +42,12 @@ func (s *ShipmentService) SetSMSService(smsSvc *SMSService) {
 // SetAutomationService sets the automation service for rule processing.
 func (s *ShipmentService) SetAutomationService(automationSvc *AutomationService) {
 	s.automationService = automationSvc
+}
+
+// SetAllegroSyncService sets the Allegro sync service for auto-syncing tracking info.
+// Called after construction to avoid circular dependency.
+func (s *ShipmentService) SetAllegroSyncService(allegroSync *AllegroSyncService) {
+	s.allegroSync = allegroSync
 }
 
 func NewShipmentService(
@@ -112,6 +119,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		OrderID:        req.OrderID,
 		Provider:       req.Provider,
 		IntegrationID:  req.IntegrationID,
+		ExternalID:     req.ExternalID,
 		TrackingNumber: req.TrackingNumber,
 		Status:         "created",
 		LabelURL:       req.LabelURL,
@@ -119,6 +127,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		WarehouseID:    req.WarehouseID,
 	}
 
+	var associatedOrder *model.Order
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		order, err := s.orderRepo.FindByID(ctx, tx, req.OrderID)
 		if err != nil {
@@ -127,6 +136,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		if order == nil {
 			return ErrOrderNotFoundForShipment
 		}
+		associatedOrder = order
 
 		if err := s.shipmentRepo.Create(ctx, tx, shipment); err != nil {
 			return err
@@ -148,6 +158,10 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.created", shipment.ID, map[string]any{
 		"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
 	})
+	// Auto-sync tracking to Allegro if shipment has a tracking number (async, best-effort)
+	if s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
+		go s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber)
+	}
 	return shipment, nil
 }
 
@@ -157,6 +171,8 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 	}
 
 	var shipment *model.Shipment
+	var associatedOrder *model.Order
+	trackingChanged := false
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.shipmentRepo.FindByID(ctx, tx, shipmentID)
 		if err != nil {
@@ -166,6 +182,17 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 			return ErrShipmentNotFound
 		}
 
+		// Detect if tracking number is being set or changed
+		if req.TrackingNumber != nil && *req.TrackingNumber != "" {
+			oldTracking := ""
+			if existing.TrackingNumber != nil {
+				oldTracking = *existing.TrackingNumber
+			}
+			if *req.TrackingNumber != oldTracking {
+				trackingChanged = true
+			}
+		}
+
 		if err := s.shipmentRepo.Update(ctx, tx, shipmentID, req); err != nil {
 			return err
 		}
@@ -173,6 +200,14 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 		shipment, err = s.shipmentRepo.FindByID(ctx, tx, shipmentID)
 		if err != nil {
 			return err
+		}
+
+		// Fetch associated order for Allegro sync if tracking changed
+		if trackingChanged && s.allegroSync != nil {
+			order, err := s.orderRepo.FindByID(ctx, tx, shipment.OrderID)
+			if err == nil && order != nil {
+				associatedOrder = order
+			}
 		}
 
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
@@ -186,6 +221,10 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 	})
 	if err == nil && shipment != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.updated", shipment)
+		// Auto-sync tracking to Allegro when tracking number is set/changed (async, best-effort)
+		if trackingChanged && s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
+			go s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber)
+		}
 	}
 	return shipment, err
 }

@@ -14,6 +14,34 @@ type WebhookEvent struct {
 	ID         string          `json:"id"`
 	OccurredAt string          `json:"occurredAt"`
 	Payload    json.RawMessage `json:"payload"`
+	Order      *WebhookOrder   `json:"order,omitempty"`
+}
+
+// WebhookOrder contains the order reference from an Allegro webhook event.
+type WebhookOrder struct {
+	ID     string         `json:"id"`
+	Seller *WebhookSeller `json:"seller,omitempty"`
+}
+
+// WebhookSeller contains the seller reference from an Allegro webhook event.
+type WebhookSeller struct {
+	ID string `json:"id"`
+}
+
+// OrderID returns the order ID from the webhook event, or empty string if not present.
+func (e *WebhookEvent) OrderID() string {
+	if e.Order != nil {
+		return e.Order.ID
+	}
+	return ""
+}
+
+// SellerID returns the seller ID from the webhook event, or empty string if not present.
+func (e *WebhookEvent) SellerID() string {
+	if e.Order != nil && e.Order.Seller != nil {
+		return e.Order.Seller.ID
+	}
+	return ""
 }
 
 // VerifyWebhook verifies the HMAC-SHA256 signature of a webhook request body.

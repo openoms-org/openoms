@@ -21,6 +21,8 @@ export interface AllegroCreateShipmentCommand {
     packages: AllegroShipmentPackage[];
     labelFormat?: string;
   };
+  // Optional: OpenOMS order UUID or Allegro external order ID to link the shipment
+  order_id?: string;
 }
 
 export interface AllegroShipmentAddress {

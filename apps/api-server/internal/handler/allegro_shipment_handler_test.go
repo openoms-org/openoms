@@ -16,7 +16,7 @@ import (
 // --- CreateShipment ---
 
 func TestAllegroShipmentHandler_CreateShipment_InvalidJSON(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/shipments", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -33,7 +33,7 @@ func TestAllegroShipmentHandler_CreateShipment_InvalidJSON(t *testing.T) {
 // --- GetLabel ---
 
 func TestAllegroShipmentHandler_GetLabel_MissingShipmentID(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	// Without chi route context, shipmentId will be empty
 	req := httptest.NewRequest(http.MethodGet, "/v1/integrations/allegro/shipments//label", nil)
@@ -49,7 +49,7 @@ func TestAllegroShipmentHandler_GetLabel_MissingShipmentID(t *testing.T) {
 }
 
 func TestAllegroShipmentHandler_GetLabel_EmptyShipmentIDInRoute(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("shipmentId", "")
@@ -70,7 +70,7 @@ func TestAllegroShipmentHandler_GetLabel_EmptyShipmentIDInRoute(t *testing.T) {
 // --- CancelShipment ---
 
 func TestAllegroShipmentHandler_CancelShipment_MissingShipmentID(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/v1/integrations/allegro/shipments/", nil)
 	rr := httptest.NewRecorder()
@@ -85,7 +85,7 @@ func TestAllegroShipmentHandler_CancelShipment_MissingShipmentID(t *testing.T) {
 }
 
 func TestAllegroShipmentHandler_CancelShipment_EmptyShipmentIDInRoute(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("shipmentId", "")
@@ -106,7 +106,7 @@ func TestAllegroShipmentHandler_CancelShipment_EmptyShipmentIDInRoute(t *testing
 // --- GetPickupProposals ---
 
 func TestAllegroShipmentHandler_GetPickupProposals_InvalidJSON(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/pickup-proposals", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -123,7 +123,7 @@ func TestAllegroShipmentHandler_GetPickupProposals_InvalidJSON(t *testing.T) {
 // --- SchedulePickup ---
 
 func TestAllegroShipmentHandler_SchedulePickup_InvalidJSON(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/pickups", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -140,7 +140,7 @@ func TestAllegroShipmentHandler_SchedulePickup_InvalidJSON(t *testing.T) {
 // --- GenerateProtocol ---
 
 func TestAllegroShipmentHandler_GenerateProtocol_InvalidJSON(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/protocol", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -155,7 +155,7 @@ func TestAllegroShipmentHandler_GenerateProtocol_InvalidJSON(t *testing.T) {
 }
 
 func TestAllegroShipmentHandler_GenerateProtocol_EmptyShipmentIDs(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/protocol", strings.NewReader(`{"shipment_ids":[]}`))
 	rr := httptest.NewRecorder()
@@ -170,7 +170,7 @@ func TestAllegroShipmentHandler_GenerateProtocol_EmptyShipmentIDs(t *testing.T) 
 }
 
 func TestAllegroShipmentHandler_GenerateProtocol_MissingShipmentIDsKey(t *testing.T) {
-	h := NewAllegroShipmentHandler(nil, nil)
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/protocol", strings.NewReader(`{}`))
 	rr := httptest.NewRecorder()

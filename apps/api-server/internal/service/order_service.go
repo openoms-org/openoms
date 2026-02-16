@@ -34,6 +34,7 @@ type OrderService struct {
 	smsService        *SMSService
 	automationService *AutomationService
 	shipmentService   *ShipmentService
+	allegroSync       *AllegroSyncService
 }
 
 func NewOrderService(
@@ -84,6 +85,12 @@ func (s *OrderService) SetSMSService(smsSvc *SMSService) {
 // SetShipmentService sets the shipment service for auto-creating shipments with orders.
 func (s *OrderService) SetShipmentService(shipmentSvc *ShipmentService) {
 	s.shipmentService = shipmentSvc
+}
+
+// SetAllegroSyncService sets the Allegro sync service for auto-syncing fulfillment status.
+// Called after construction to avoid circular dependency.
+func (s *OrderService) SetAllegroSyncService(allegroSync *AllegroSyncService) {
+	s.allegroSync = allegroSync
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
@@ -417,6 +424,10 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 			"total_amount": order.TotalAmount, "currency": order.Currency,
 			"payment_status": order.PaymentStatus,
 		})
+		// Auto-sync fulfillment status to Allegro (async, best-effort)
+		if s.allegroSync != nil && order.Source == "allegro" {
+			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, req.Status)
+		}
 	}
 	return order, err
 }
@@ -536,6 +547,10 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
 		if s.smsService != nil {
 			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+		}
+		// Auto-sync fulfillment status to Allegro (async, best-effort)
+		if s.allegroSync != nil && n.order.Source == "allegro" {
+			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, n.order, n.newStatus)
 		}
 	}
 	for _, n := range pendingWebhooks {
