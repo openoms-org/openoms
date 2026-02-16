@@ -445,7 +445,7 @@ func main() {
 	// Start background workers (use workerPool for cross-tenant queries)
 	workerMgr := worker.NewManager(workerPool, slog.Default())
 	workerMgr.Register(worker.NewOAuthRefresher(workerPool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, labelService, slog.Default()))
 	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()))
 	workerMgr.Register(worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, slog.Default()))
 	workerMgr.Register(worker.NewAmazonOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))

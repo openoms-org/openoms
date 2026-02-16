@@ -13,17 +13,18 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
-func NewAllegroOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repository.OrderRepo, shipmentRepo repository.ShipmentRepo, auditRepo repository.AuditRepo, logger *slog.Logger) *MarketplaceOrderPoller {
+func NewAllegroOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repository.OrderRepo, shipmentRepo repository.ShipmentRepo, auditRepo repository.AuditRepo, labelGen LabelGenerator, logger *slog.Logger) *MarketplaceOrderPoller {
 	return NewMarketplaceOrderPoller(MarketplaceOrderPollerConfig{
-		Pool:          pool,
-		EncryptionKey: encryptionKey,
-		OrderRepo:     orderRepo,
-		ShipmentRepo:  shipmentRepo,
-		AuditRepo:     auditRepo,
-		Logger:        logger,
-		ProviderName:  "allegro",
-		Interval:      45 * time.Second,
-		MapOrder:      allegroOrderMapper,
+		Pool:           pool,
+		EncryptionKey:  encryptionKey,
+		OrderRepo:      orderRepo,
+		ShipmentRepo:   shipmentRepo,
+		AuditRepo:      auditRepo,
+		LabelGenerator: labelGen,
+		Logger:         logger,
+		ProviderName:   "allegro",
+		Interval:       45 * time.Second,
+		MapOrder:       allegroOrderMapper,
 	})
 }
 

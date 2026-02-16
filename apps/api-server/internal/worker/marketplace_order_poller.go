@@ -22,16 +22,23 @@ import (
 // The default implementation is used if nil.
 type OrderMapper func(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order
 
+// LabelGenerator generates a shipping label for a shipment.
+// Implemented by service.LabelService.
+type LabelGenerator interface {
+	GenerateLabel(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.GenerateLabelRequest, actorID uuid.UUID, ip string) (*model.Shipment, error)
+}
+
 // MarketplaceOrderPoller is a generic order poller for any marketplace provider.
 type MarketplaceOrderPoller struct {
-	pool          *pgxpool.Pool
-	encryptionKey []byte
-	orderRepo     repository.OrderRepo
-	shipmentRepo  repository.ShipmentRepo
-	auditRepo     repository.AuditRepo
-	logger        *slog.Logger
-	providerName  string
-	interval      time.Duration
+	pool           *pgxpool.Pool
+	encryptionKey  []byte
+	orderRepo      repository.OrderRepo
+	shipmentRepo   repository.ShipmentRepo
+	auditRepo      repository.AuditRepo
+	labelGenerator LabelGenerator
+	logger         *slog.Logger
+	providerName   string
+	interval       time.Duration
 	// mapOrder allows provider-specific customization of the order mapping.
 	// If nil, a default mapping is used.
 	mapOrder OrderMapper
@@ -39,28 +46,30 @@ type MarketplaceOrderPoller struct {
 
 // MarketplaceOrderPollerConfig configures a MarketplaceOrderPoller.
 type MarketplaceOrderPollerConfig struct {
-	Pool          *pgxpool.Pool
-	EncryptionKey []byte
-	OrderRepo     repository.OrderRepo
-	ShipmentRepo  repository.ShipmentRepo
-	AuditRepo     repository.AuditRepo
-	Logger        *slog.Logger
-	ProviderName  string
-	Interval      time.Duration
-	MapOrder      OrderMapper
+	Pool           *pgxpool.Pool
+	EncryptionKey  []byte
+	OrderRepo      repository.OrderRepo
+	ShipmentRepo   repository.ShipmentRepo
+	AuditRepo      repository.AuditRepo
+	LabelGenerator LabelGenerator
+	Logger         *slog.Logger
+	ProviderName   string
+	Interval       time.Duration
+	MapOrder       OrderMapper
 }
 
 func NewMarketplaceOrderPoller(cfg MarketplaceOrderPollerConfig) *MarketplaceOrderPoller {
 	return &MarketplaceOrderPoller{
-		pool:          cfg.Pool,
-		encryptionKey: cfg.EncryptionKey,
-		orderRepo:     cfg.OrderRepo,
-		shipmentRepo:  cfg.ShipmentRepo,
-		auditRepo:     cfg.AuditRepo,
-		logger:        cfg.Logger,
-		providerName:  cfg.ProviderName,
-		interval:      cfg.Interval,
-		mapOrder:      cfg.MapOrder,
+		pool:           cfg.Pool,
+		encryptionKey:  cfg.EncryptionKey,
+		orderRepo:      cfg.OrderRepo,
+		shipmentRepo:   cfg.ShipmentRepo,
+		auditRepo:      cfg.AuditRepo,
+		labelGenerator: cfg.LabelGenerator,
+		logger:         cfg.Logger,
+		providerName:   cfg.ProviderName,
+		interval:       cfg.Interval,
+		mapOrder:       cfg.MapOrder,
 	}
 }
 
@@ -144,7 +153,8 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 				}
 				carrier := resolveCarrier(ti.Settings, dm)
 				if carrier != "" {
-					if err := p.autoCreateShipment(ctx, ti, order, carrier); err != nil {
+					shipment, err := p.autoCreateShipment(ctx, ti, order, carrier)
+					if err != nil {
 						p.logger.Error("auto-create shipment failed (non-fatal)",
 							"order_id", order.ID,
 							"carrier", carrier,
@@ -155,6 +165,22 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 							"order_id", order.ID,
 							"carrier", carrier,
 						)
+
+						// Auto-generate label if enabled (best effort)
+						if shipment != nil && p.labelGenerator != nil && shouldAutoLabel(ti.Settings) {
+							if err := p.autoGenerateLabel(ctx, ti, order, shipment); err != nil {
+								p.logger.Error("auto-generate label failed (non-fatal)",
+									"order_id", order.ID,
+									"shipment_id", shipment.ID,
+									"error", err,
+								)
+							} else {
+								p.logger.Info("auto-generated label for marketplace order",
+									"order_id", order.ID,
+									"shipment_id", shipment.ID,
+								)
+							}
+						}
 					}
 				}
 			}
@@ -271,7 +297,7 @@ func resolveCarrier(settings json.RawMessage, deliveryMethod string) string {
 	return s.DefaultCarrier
 }
 
-func (p *MarketplaceOrderPoller) autoCreateShipment(ctx context.Context, ti TenantIntegration, order model.Order, carrier string) error {
+func (p *MarketplaceOrderPoller) autoCreateShipment(ctx context.Context, ti TenantIntegration, order model.Order, carrier string) (*model.Shipment, error) {
 	shipment := &model.Shipment{
 		ID:       uuid.New(),
 		TenantID: ti.TenantID,
@@ -290,7 +316,7 @@ func (p *MarketplaceOrderPoller) autoCreateShipment(ctx context.Context, ti Tena
 		shipment.CarrierData = json.RawMessage("{}")
 	}
 
-	return database.WithTenant(ctx, p.pool, ti.TenantID, func(tx pgx.Tx) error {
+	err := database.WithTenant(ctx, p.pool, ti.TenantID, func(tx pgx.Tx) error {
 		if err := p.shipmentRepo.Create(ctx, tx, shipment); err != nil {
 			return err
 		}
@@ -307,4 +333,66 @@ func (p *MarketplaceOrderPoller) autoCreateShipment(ctx context.Context, ti Tena
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return shipment, nil
+}
+
+// shouldAutoLabel checks if auto_generate_label is enabled in integration settings.
+func shouldAutoLabel(settings json.RawMessage) bool {
+	if len(settings) == 0 {
+		return false
+	}
+	var s struct {
+		AutoGenerateLabel bool `json:"auto_generate_label"`
+	}
+	if err := json.Unmarshal(settings, &s); err != nil {
+		return false
+	}
+	return s.AutoGenerateLabel
+}
+
+// autoLabelSettings holds defaults for auto-label generation from integration settings.
+type autoLabelSettings struct {
+	DefaultParcelSize    string `json:"default_parcel_size"`
+	DefaultSendingMethod string `json:"default_sending_method"`
+}
+
+func parseAutoLabelSettings(settings json.RawMessage) autoLabelSettings {
+	var s autoLabelSettings
+	if len(settings) > 0 {
+		_ = json.Unmarshal(settings, &s)
+	}
+	return s
+}
+
+func (p *MarketplaceOrderPoller) autoGenerateLabel(ctx context.Context, ti TenantIntegration, order model.Order, shipment *model.Shipment) error {
+	als := parseAutoLabelSettings(ti.Settings)
+
+	// Determine service type from carrier + target point
+	serviceType := ""
+	hasTargetPoint := order.PickupPointID != nil && *order.PickupPointID != ""
+	switch shipment.Provider {
+	case "inpost":
+		if hasTargetPoint {
+			serviceType = "inpost_locker_standard"
+		} else {
+			serviceType = "inpost_courier_standard"
+		}
+	default:
+		serviceType = shipment.Provider + "_standard"
+	}
+
+	req := model.GenerateLabelRequest{
+		ServiceType:   serviceType,
+		ParcelSize:    als.DefaultParcelSize,
+		LabelFormat:   "pdf",
+		SendingMethod: als.DefaultSendingMethod,
+	}
+
+	// target_point is already in carrier_data; LabelService reads it from there
+
+	_, err := p.labelGenerator.GenerateLabel(ctx, ti.TenantID, shipment.ID, req, uuid.Nil, "worker")
+	return err
 }
