@@ -83,7 +83,8 @@ func main() {
 	workerPool, err := database.Connect(context.Background(), workerDBURL)
 	if err != nil {
 		slog.Error("failed to connect worker database", "error", err)
-		os.Exit(1)
+		pool.Close()
+		os.Exit(1) //nolint:gocritic // pool closed above
 	}
 	defer workerPool.Close()
 
