@@ -13,8 +13,8 @@ import (
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 
-	allegroprovider "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	allegroprovider "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -189,11 +189,11 @@ func (h *AllegroShipmentHandler) linkAllegroShipment(
 
 	// Build carrier_data with Allegro-specific details.
 	carrierData, _ := json.Marshal(map[string]any{
-		"allegro_command_id":      resp.CommandID,
-		"allegro_shipment_id":     resp.ShipmentID,
-		"allegro_status":          resp.Status,
-		"delivery_method_id":      cmd.Input.DeliveryMethodID,
-		"managed_by":              "allegro",
+		"allegro_command_id":  resp.CommandID,
+		"allegro_shipment_id": resp.ShipmentID,
+		"allegro_status":      resp.Status,
+		"delivery_method_id":  cmd.Input.DeliveryMethodID,
+		"managed_by":          "allegro",
 	})
 
 	integrationID := integration.ID
