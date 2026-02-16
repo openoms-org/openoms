@@ -51,7 +51,7 @@ func (h *AllegroPoliciesHandler) ListReturnPolicies(w http.ResponseWriter, r *ht
 	result, err := client.AfterSales.ListReturnPolicies(r.Context())
 	if err != nil {
 		slog.Error("allegro policies: failed to list return policies", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac polityk zwrotow")
+		writeAllegroError(w, "Nie udalo sie pobrac polityk zwrotow", err)
 		return
 	}
 
@@ -78,7 +78,7 @@ func (h *AllegroPoliciesHandler) GetReturnPolicy(w http.ResponseWriter, r *http.
 	result, err := client.AfterSales.GetReturnPolicy(r.Context(), policyID)
 	if err != nil {
 		slog.Error("allegro policies: failed to get return policy", "error", err, "policy_id", policyID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac polityki zwrotow")
+		writeAllegroError(w, "Nie udalo sie pobrac polityki zwrotow", err)
 		return
 	}
 
@@ -105,7 +105,7 @@ func (h *AllegroPoliciesHandler) CreateReturnPolicy(w http.ResponseWriter, r *ht
 	result, err := client.AfterSales.CreateReturnPolicy(r.Context(), body)
 	if err != nil {
 		slog.Error("allegro policies: failed to create return policy", "error", err)
-		writeError(w, http.StatusBadGateway, allegroErrorMessage("Nie udalo sie utworzyc polityki zwrotow", err))
+		writeAllegroError(w, "Nie udalo sie utworzyc polityki zwrotow", err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (h *AllegroPoliciesHandler) UpdateReturnPolicy(w http.ResponseWriter, r *ht
 	result, err := client.AfterSales.UpdateReturnPolicy(r.Context(), policyID, body)
 	if err != nil {
 		slog.Error("allegro policies: failed to update return policy", "error", err, "policy_id", policyID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zaktualizowac polityki zwrotow")
+		writeAllegroError(w, "Nie udalo sie zaktualizowac polityki zwrotow", err)
 		return
 	}
 
@@ -161,7 +161,7 @@ func (h *AllegroPoliciesHandler) ListWarranties(w http.ResponseWriter, r *http.R
 	result, err := client.AfterSales.ListWarranties(r.Context())
 	if err != nil {
 		slog.Error("allegro policies: failed to list warranties", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac rekojmi")
+		writeAllegroError(w, "Nie udalo sie pobrac rekojmi", err)
 		return
 	}
 
@@ -188,7 +188,7 @@ func (h *AllegroPoliciesHandler) GetWarranty(w http.ResponseWriter, r *http.Requ
 	result, err := client.AfterSales.GetWarranty(r.Context(), warrantyID)
 	if err != nil {
 		slog.Error("allegro policies: failed to get warranty", "error", err, "warranty_id", warrantyID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac rekojmi")
+		writeAllegroError(w, "Nie udalo sie pobrac rekojmi", err)
 		return
 	}
 
@@ -215,7 +215,7 @@ func (h *AllegroPoliciesHandler) CreateWarranty(w http.ResponseWriter, r *http.R
 	result, err := client.AfterSales.CreateWarranty(r.Context(), body)
 	if err != nil {
 		slog.Error("allegro policies: failed to create warranty", "error", err)
-		writeError(w, http.StatusBadGateway, allegroErrorMessage("Nie udalo sie utworzyc rekojmi", err))
+		writeAllegroError(w, "Nie udalo sie utworzyc rekojmi", err)
 		return
 	}
 
@@ -248,7 +248,7 @@ func (h *AllegroPoliciesHandler) UpdateWarranty(w http.ResponseWriter, r *http.R
 	result, err := client.AfterSales.UpdateWarranty(r.Context(), warrantyID, body)
 	if err != nil {
 		slog.Error("allegro policies: failed to update warranty", "error", err, "warranty_id", warrantyID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zaktualizowac rekojmi")
+		writeAllegroError(w, "Nie udalo sie zaktualizowac rekojmi", err)
 		return
 	}
 
@@ -271,7 +271,7 @@ func (h *AllegroPoliciesHandler) ListSizeTables(w http.ResponseWriter, r *http.R
 	result, err := client.SizeTables.List(r.Context())
 	if err != nil {
 		slog.Error("allegro policies: failed to list size tables", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac tabel rozmiarow")
+		writeAllegroError(w, "Nie udalo sie pobrac tabel rozmiarow", err)
 		return
 	}
 
@@ -298,7 +298,7 @@ func (h *AllegroPoliciesHandler) GetSizeTable(w http.ResponseWriter, r *http.Req
 	result, err := client.SizeTables.Get(r.Context(), tableID)
 	if err != nil {
 		slog.Error("allegro policies: failed to get size table", "error", err, "table_id", tableID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac tabeli rozmiarow")
+		writeAllegroError(w, "Nie udalo sie pobrac tabeli rozmiarow", err)
 		return
 	}
 
@@ -325,7 +325,7 @@ func (h *AllegroPoliciesHandler) CreateSizeTable(w http.ResponseWriter, r *http.
 	result, err := client.SizeTables.Create(r.Context(), body)
 	if err != nil {
 		slog.Error("allegro policies: failed to create size table", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie utworzyc tabeli rozmiarow")
+		writeAllegroError(w, "Nie udalo sie utworzyc tabeli rozmiarow", err)
 		return
 	}
 
@@ -358,7 +358,7 @@ func (h *AllegroPoliciesHandler) UpdateSizeTable(w http.ResponseWriter, r *http.
 	result, err := client.SizeTables.Update(r.Context(), tableID, body)
 	if err != nil {
 		slog.Error("allegro policies: failed to update size table", "error", err, "table_id", tableID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zaktualizowac tabeli rozmiarow")
+		writeAllegroError(w, "Nie udalo sie zaktualizowac tabeli rozmiarow", err)
 		return
 	}
 
@@ -384,7 +384,7 @@ func (h *AllegroPoliciesHandler) DeleteSizeTable(w http.ResponseWriter, r *http.
 
 	if err := client.SizeTables.Delete(r.Context(), tableID); err != nil {
 		slog.Error("allegro policies: failed to delete size table", "error", err, "table_id", tableID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie usunac tabeli rozmiarow")
+		writeAllegroError(w, "Nie udalo sie usunac tabeli rozmiarow", err)
 		return
 	}
 
@@ -417,4 +417,30 @@ func allegroErrorMessage(fallback string, err error) string {
 		}
 	}
 	return fallback
+}
+
+// writeAllegroError maps Allegro SDK API errors to appropriate HTTP status codes.
+func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
+	var apiErr *allegrosdk.APIError
+	if errors.As(err, &apiErr) {
+		status := http.StatusBadGateway
+		switch {
+		case apiErr.StatusCode >= 400 && apiErr.StatusCode < 500:
+			status = http.StatusBadRequest
+			if apiErr.StatusCode == 401 {
+				status = http.StatusUnauthorized
+			} else if apiErr.StatusCode == 403 {
+				status = http.StatusForbidden
+			} else if apiErr.StatusCode == 404 {
+				status = http.StatusNotFound
+			} else if apiErr.StatusCode == 429 {
+				status = http.StatusTooManyRequests
+			}
+		case apiErr.StatusCode >= 500:
+			status = http.StatusBadGateway
+		}
+		writeError(w, status, allegroErrorMessage(fallback, err))
+		return
+	}
+	writeError(w, http.StatusBadGateway, fallback)
 }

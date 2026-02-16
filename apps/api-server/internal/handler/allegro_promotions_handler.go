@@ -44,6 +44,12 @@ func (h *AllegroPromotionsHandler) ListPromotions(w http.ResponseWriter, r *http
 	defer client.Close()
 
 	params := &allegrosdk.ListPromotionsParams{}
+	if v := r.URL.Query().Get("type"); v != "" {
+		params.PromotionType = v
+	}
+	if params.PromotionType == "" {
+		params.PromotionType = "BUNDLE"
+	}
 	if v := r.URL.Query().Get("limit"); v != "" {
 		params.Limit, _ = strconv.Atoi(v)
 	}
@@ -54,7 +60,7 @@ func (h *AllegroPromotionsHandler) ListPromotions(w http.ResponseWriter, r *http
 	promotions, err := client.Promotions.List(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro promotions: failed to list promotions", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac promocji z Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac promocji z Allegro", err)
 		return
 	}
 
@@ -81,7 +87,7 @@ func (h *AllegroPromotionsHandler) GetPromotion(w http.ResponseWriter, r *http.R
 	promotion, err := client.Promotions.Get(r.Context(), promotionID)
 	if err != nil {
 		slog.Error("allegro promotions: failed to get promotion", "error", err, "promotion_id", promotionID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac promocji")
+		writeAllegroError(w, "Nie udalo sie pobrac promocji", err)
 		return
 	}
 
@@ -108,7 +114,7 @@ func (h *AllegroPromotionsHandler) CreatePromotion(w http.ResponseWriter, r *htt
 	promotion, err := client.Promotions.Create(r.Context(), body)
 	if err != nil {
 		slog.Error("allegro promotions: failed to create promotion", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie utworzyc promocji")
+		writeAllegroError(w, "Nie udalo sie utworzyc promocji", err)
 		return
 	}
 
@@ -141,7 +147,7 @@ func (h *AllegroPromotionsHandler) UpdatePromotion(w http.ResponseWriter, r *htt
 	promotion, err := client.Promotions.Update(r.Context(), promotionID, body)
 	if err != nil {
 		slog.Error("allegro promotions: failed to update promotion", "error", err, "promotion_id", promotionID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zaktualizowac promocji")
+		writeAllegroError(w, "Nie udalo sie zaktualizowac promocji", err)
 		return
 	}
 
@@ -167,7 +173,7 @@ func (h *AllegroPromotionsHandler) DeletePromotion(w http.ResponseWriter, r *htt
 
 	if err := client.Promotions.Delete(r.Context(), promotionID); err != nil {
 		slog.Error("allegro promotions: failed to delete promotion", "error", err, "promotion_id", promotionID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie usunac promocji")
+		writeAllegroError(w, "Nie udalo sie usunac promocji", err)
 		return
 	}
 
@@ -188,7 +194,7 @@ func (h *AllegroPromotionsHandler) ListBadges(w http.ResponseWriter, r *http.Req
 	badges, err := client.Promotions.ListBadges(r.Context())
 	if err != nil {
 		slog.Error("allegro promotions: failed to list badges", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac pakietow promocyjnych")
+		writeAllegroError(w, "Nie udalo sie pobrac pakietow promocyjnych", err)
 		return
 	}
 

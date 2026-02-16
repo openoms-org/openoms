@@ -18,6 +18,9 @@ func (s *PromotionService) List(ctx context.Context, params *ListPromotionsParam
 
 	if params != nil {
 		v := url.Values{}
+		if params.PromotionType != "" {
+			v.Set("promotionType", params.PromotionType)
+		}
 		if params.Limit > 0 {
 			v.Set("limit", strconv.Itoa(params.Limit))
 		}

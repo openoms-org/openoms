@@ -92,7 +92,7 @@ func (h *AllegroHandler) UpdateFulfillment(w http.ResponseWriter, r *http.Reques
 
 	if err := provider.UpdateFulfillment(ctx, *order.ExternalID, body.Status); err != nil {
 		slog.Error("allegro fulfillment: update failed", "order_id", orderIDStr, "error", err)
-		writeError(w, http.StatusBadGateway, "failed to update fulfillment on Allegro")
+		writeAllegroError(w, "failed to update fulfillment on Allegro", err)
 		return
 	}
 
@@ -147,7 +147,7 @@ func (h *AllegroHandler) AddTracking(w http.ResponseWriter, r *http.Request) {
 
 	if err := provider.AddTracking(ctx, *order.ExternalID, body.CarrierID, body.Waybill); err != nil {
 		slog.Error("allegro tracking: add failed", "order_id", orderIDStr, "error", err)
-		writeError(w, http.StatusBadGateway, "failed to add tracking on Allegro")
+		writeAllegroError(w, "failed to add tracking on Allegro", err)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (h *AllegroHandler) ListCarriers(w http.ResponseWriter, r *http.Request) {
 	carriers, err := provider.ListCarriers(ctx)
 	if err != nil {
 		slog.Error("allegro carriers: list failed", "error", err)
-		writeError(w, http.StatusBadGateway, "failed to list carriers from Allegro")
+		writeAllegroError(w, "failed to list carriers from Allegro", err)
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *AllegroHandler) SyncOrders(w http.ResponseWriter, r *http.Request) {
 	orders, cursor, err := provider.PollOrders(ctx, "")
 	if err != nil {
 		slog.Error("allegro sync: poll failed", "error", err)
-		writeError(w, http.StatusBadGateway, "failed to poll orders from Allegro")
+		writeAllegroError(w, "failed to poll orders from Allegro", err)
 		return
 	}
 

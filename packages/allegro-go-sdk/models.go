@@ -897,8 +897,9 @@ type RatingRemovalRequest struct {
 
 // ListPromotionsParams are the optional parameters for listing promotions.
 type ListPromotionsParams struct {
-	Limit  int
-	Offset int
+	Limit         int
+	Offset        int
+	PromotionType string // Required by Allegro: "BUNDLE", "MULTIPACK", "CROSS_OFFER_MULTIPACK", "WHOLESALE_PRICING", "SECOND_ITEM_DISCOUNT"
 }
 
 // PromotionList represents a paginated list of promotions.

@@ -59,7 +59,7 @@ func (h *AllegroShipmentHandler) ListDeliveryServices(w http.ResponseWriter, r *
 	services, err := provider.ListDeliveryServices(r.Context())
 	if err != nil {
 		slog.Error("allegro shipment: failed to list delivery services", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać usług dostawy z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać usług dostawy z Allegro", err)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (h *AllegroShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.R
 	resp, err := provider.CreateShipment(r.Context(), cmd)
 	if err != nil {
 		slog.Error("allegro shipment: failed to create shipment", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się utworzyć przesyłki w Allegro")
+		writeAllegroError(w, "Nie udało się utworzyć przesyłki w Allegro", err)
 		return
 	}
 
@@ -118,7 +118,7 @@ func (h *AllegroShipmentHandler) GetLabel(w http.ResponseWriter, r *http.Request
 	pdfBytes, err := provider.GetLabel(r.Context(), []string{shipmentID})
 	if err != nil {
 		slog.Error("allegro shipment: failed to get label", "error", err, "shipment_id", shipmentID)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać etykiety z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać etykiety z Allegro", err)
 		return
 	}
 
@@ -148,7 +148,7 @@ func (h *AllegroShipmentHandler) CancelShipment(w http.ResponseWriter, r *http.R
 
 	if err := provider.CancelShipment(r.Context(), []string{shipmentID}); err != nil {
 		slog.Error("allegro shipment: failed to cancel shipment", "error", err, "shipment_id", shipmentID)
-		writeError(w, http.StatusBadGateway, "Nie udało się anulować przesyłki w Allegro")
+		writeAllegroError(w, "Nie udało się anulować przesyłki w Allegro", err)
 		return
 	}
 
@@ -177,7 +177,7 @@ func (h *AllegroShipmentHandler) GetPickupProposals(w http.ResponseWriter, r *ht
 	proposals, err := provider.GetPickupProposals(r.Context(), req)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get pickup proposals", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać propozycji odbioru z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać propozycji odbioru z Allegro", err)
 		return
 	}
 
@@ -207,7 +207,7 @@ func (h *AllegroShipmentHandler) SchedulePickup(w http.ResponseWriter, r *http.R
 
 	if err := provider.SchedulePickup(r.Context(), cmd); err != nil {
 		slog.Error("allegro shipment: failed to schedule pickup", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się zaplanować odbioru w Allegro")
+		writeAllegroError(w, "Nie udało się zaplanować odbioru w Allegro", err)
 		return
 	}
 
@@ -242,7 +242,7 @@ func (h *AllegroShipmentHandler) GenerateProtocol(w http.ResponseWriter, r *http
 	pdfBytes, err := provider.GenerateProtocol(r.Context(), body.ShipmentIDs)
 	if err != nil {
 		slog.Error("allegro shipment: failed to generate protocol", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się wygenerować protokołu z Allegro")
+		writeAllegroError(w, "Nie udało się wygenerować protokołu z Allegro", err)
 		return
 	}
 

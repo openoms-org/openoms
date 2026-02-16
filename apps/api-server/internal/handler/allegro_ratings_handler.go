@@ -54,7 +54,7 @@ func (h *AllegroRatingsHandler) ListRatings(w http.ResponseWriter, r *http.Reque
 	result, err := client.Ratings.List(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro ratings: failed to list ratings", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac ocen z Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac ocen z Allegro", err)
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h *AllegroRatingsHandler) GetAnswer(w http.ResponseWriter, r *http.Request
 	result, err := client.Ratings.GetAnswer(r.Context(), ratingID)
 	if err != nil {
 		slog.Error("allegro ratings: failed to get answer", "error", err, "ratingId", ratingID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac odpowiedzi na ocene")
+		writeAllegroError(w, "Nie udalo sie pobrac odpowiedzi na ocene", err)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *AllegroRatingsHandler) CreateAnswer(w http.ResponseWriter, r *http.Requ
 	})
 	if err != nil {
 		slog.Error("allegro ratings: failed to create answer", "error", err, "ratingId", ratingID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zapisac odpowiedzi na ocene")
+		writeAllegroError(w, "Nie udalo sie zapisac odpowiedzi na ocene", err)
 		return
 	}
 
@@ -149,7 +149,7 @@ func (h *AllegroRatingsHandler) DeleteAnswer(w http.ResponseWriter, r *http.Requ
 	err = client.Ratings.DeleteAnswer(r.Context(), ratingID)
 	if err != nil {
 		slog.Error("allegro ratings: failed to delete answer", "error", err, "ratingId", ratingID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie usunac odpowiedzi na ocene")
+		writeAllegroError(w, "Nie udalo sie usunac odpowiedzi na ocene", err)
 		return
 	}
 
@@ -188,7 +188,7 @@ func (h *AllegroRatingsHandler) RequestRemoval(w http.ResponseWriter, r *http.Re
 	err = client.Ratings.RequestRemoval(r.Context(), ratingID, body.Reason)
 	if err != nil {
 		slog.Error("allegro ratings: failed to request removal", "error", err, "ratingId", ratingID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zglosic oceny do usuniecia")
+		writeAllegroError(w, "Nie udalo sie zglosic oceny do usuniecia", err)
 		return
 	}
 

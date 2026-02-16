@@ -55,7 +55,7 @@ func (h *AllegroCommsHandler) ListThreads(w http.ResponseWriter, r *http.Request
 	result, err := client.Messages.ListThreads(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list threads", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać wątków z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać wątków z Allegro", err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *AllegroCommsHandler) GetMessages(w http.ResponseWriter, r *http.Request
 	result, err := client.Messages.ListMessages(r.Context(), threadID, params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list messages", "error", err, "threadId", threadID)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać wiadomości z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać wiadomości z Allegro", err)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (h *AllegroCommsHandler) SendMessage(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		slog.Error("allegro comms: failed to send message", "error", err, "threadId", threadID)
-		writeError(w, http.StatusBadGateway, "Nie udało się wysłać wiadomości")
+		writeAllegroError(w, "Nie udało się wysłać wiadomości", err)
 		return
 	}
 
@@ -157,7 +157,7 @@ func (h *AllegroCommsHandler) ListAllegroReturns(w http.ResponseWriter, r *http.
 	result, err := client.Returns.ListReturns(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list returns", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać zwrotów z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać zwrotów z Allegro", err)
 		return
 	}
 
@@ -179,7 +179,7 @@ func (h *AllegroCommsHandler) GetAllegroReturn(w http.ResponseWriter, r *http.Re
 	result, err := client.Returns.GetReturn(r.Context(), returnID)
 	if err != nil {
 		slog.Error("allegro comms: failed to get return", "error", err, "returnId", returnID)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać zwrotu z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać zwrotu z Allegro", err)
 		return
 	}
 
@@ -215,7 +215,7 @@ func (h *AllegroCommsHandler) RejectAllegroReturn(w http.ResponseWriter, r *http
 	})
 	if err != nil {
 		slog.Error("allegro comms: failed to reject return", "error", err, "returnId", returnID)
-		writeError(w, http.StatusBadGateway, "Nie udało się odrzucić zwrotu")
+		writeAllegroError(w, "Nie udało się odrzucić zwrotu", err)
 		return
 	}
 
@@ -251,7 +251,7 @@ func (h *AllegroCommsHandler) CreateRefund(w http.ResponseWriter, r *http.Reques
 	result, err := client.Payments.CreateRefund(r.Context(), body)
 	if err != nil {
 		slog.Error("allegro comms: failed to create refund", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się utworzyć zwrotu pieniędzy")
+		writeAllegroError(w, "Nie udało się utworzyć zwrotu pieniędzy", err)
 		return
 	}
 
@@ -279,7 +279,7 @@ func (h *AllegroCommsHandler) ListRefunds(w http.ResponseWriter, r *http.Request
 	result, err := client.Payments.ListRefunds(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list refunds", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać listy zwrotów pieniędzy")
+		writeAllegroError(w, "Nie udało się pobrać listy zwrotów pieniędzy", err)
 		return
 	}
 

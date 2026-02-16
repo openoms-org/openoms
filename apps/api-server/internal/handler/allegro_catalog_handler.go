@@ -59,7 +59,7 @@ func (h *AllegroCatalogHandler) ListCategories(w http.ResponseWriter, r *http.Re
 	categories, err := client.Categories.List(r.Context(), parentID)
 	if err != nil {
 		slog.Error("allegro catalog: failed to list categories", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac kategorii Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac kategorii Allegro", err)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *AllegroCatalogHandler) GetCategory(w http.ResponseWriter, r *http.Reque
 	category, err := client.Categories.Get(r.Context(), categoryID)
 	if err != nil {
 		slog.Error("allegro catalog: failed to get category", "error", err, "category_id", categoryID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac kategorii Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac kategorii Allegro", err)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *AllegroCatalogHandler) GetCategoryParameters(w http.ResponseWriter, r *
 	params, err := client.Categories.GetParameters(r.Context(), categoryID)
 	if err != nil {
 		slog.Error("allegro catalog: failed to get category parameters", "error", err, "category_id", categoryID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac parametrow kategorii")
+		writeAllegroError(w, "Nie udalo sie pobrac parametrow kategorii", err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (h *AllegroCatalogHandler) SearchCategories(w http.ResponseWriter, r *http.
 	result, err := client.Categories.SearchMatching(r.Context(), name)
 	if err != nil {
 		slog.Error("allegro catalog: failed to search categories", "error", err, "name", name)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie wyszukac kategorii")
+		writeAllegroError(w, "Nie udalo sie wyszukac kategorii", err)
 		return
 	}
 
@@ -185,7 +185,7 @@ func (h *AllegroCatalogHandler) SearchProducts(w http.ResponseWriter, r *http.Re
 	products, err := client.ProductCatalog.Search(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro catalog: failed to search products", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie wyszukac produktow w katalogu Allegro")
+		writeAllegroError(w, "Nie udalo sie wyszukac produktow w katalogu Allegro", err)
 		return
 	}
 
@@ -212,7 +212,7 @@ func (h *AllegroCatalogHandler) GetProduct(w http.ResponseWriter, r *http.Reques
 	product, err := client.ProductCatalog.Get(r.Context(), productID)
 	if err != nil {
 		slog.Error("allegro catalog: failed to get product", "error", err, "product_id", productID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac produktu z katalogu Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac produktu z katalogu Allegro", err)
 		return
 	}
 
@@ -239,7 +239,7 @@ func (h *AllegroCatalogHandler) GetFeePreview(w http.ResponseWriter, r *http.Req
 	fees, err := client.Pricing.GetFeePreview(r.Context(), offerID)
 	if err != nil {
 		slog.Error("allegro pricing: failed to get fee preview", "error", err, "offer_id", offerID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie obliczyc prowizji dla oferty")
+		writeAllegroError(w, "Nie udalo sie obliczyc prowizji dla oferty", err)
 		return
 	}
 
@@ -266,7 +266,7 @@ func (h *AllegroCatalogHandler) GetCommissions(w http.ResponseWriter, r *http.Re
 	commissions, err := client.Pricing.GetCommissions(r.Context(), categoryID)
 	if err != nil {
 		slog.Error("allegro pricing: failed to get commissions", "error", err, "category_id", categoryID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac stawek prowizji")
+		writeAllegroError(w, "Nie udalo sie pobrac stawek prowizji", err)
 		return
 	}
 

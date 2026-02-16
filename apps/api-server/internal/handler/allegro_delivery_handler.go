@@ -49,7 +49,7 @@ func (h *AllegroDeliveryHandler) GetDeliverySettings(w http.ResponseWriter, r *h
 	settings, err := client.DeliverySettings.Get(r.Context())
 	if err != nil {
 		slog.Error("allegro delivery: failed to get delivery settings", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac ustawien dostawy")
+		writeAllegroError(w, "Nie udalo sie pobrac ustawien dostawy", err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *AllegroDeliveryHandler) UpdateDeliverySettings(w http.ResponseWriter, r
 
 	if err := client.DeliverySettings.Update(r.Context(), body); err != nil {
 		slog.Error("allegro delivery: failed to update delivery settings", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zaktualizowac ustawien dostawy")
+		writeAllegroError(w, "Nie udalo sie zaktualizowac ustawien dostawy", err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (h *AllegroDeliveryHandler) ListShippingRates(w http.ResponseWriter, r *htt
 	rates, err := client.DeliverySettings.ListShippingRates(r.Context())
 	if err != nil {
 		slog.Error("allegro delivery: failed to list shipping rates", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac cennikow wysylki")
+		writeAllegroError(w, "Nie udalo sie pobrac cennikow wysylki", err)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (h *AllegroDeliveryHandler) GetShippingRate(w http.ResponseWriter, r *http.
 	rate, err := client.DeliverySettings.GetShippingRate(r.Context(), rateID)
 	if err != nil {
 		slog.Error("allegro delivery: failed to get shipping rate", "error", err, "rate_id", rateID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac cennika wysylki")
+		writeAllegroError(w, "Nie udalo sie pobrac cennika wysylki", err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (h *AllegroDeliveryHandler) CreateShippingRate(w http.ResponseWriter, r *ht
 	rate, err := client.DeliverySettings.CreateShippingRate(r.Context(), body)
 	if err != nil {
 		slog.Error("allegro delivery: failed to create shipping rate", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie utworzyc cennika wysylki")
+		writeAllegroError(w, "Nie udalo sie utworzyc cennika wysylki", err)
 		return
 	}
 
@@ -183,7 +183,7 @@ func (h *AllegroDeliveryHandler) UpdateShippingRate(w http.ResponseWriter, r *ht
 	rate, err := client.DeliverySettings.UpdateShippingRate(r.Context(), rateID, body)
 	if err != nil {
 		slog.Error("allegro delivery: failed to update shipping rate", "error", err, "rate_id", rateID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie zaktualizowac cennika wysylki")
+		writeAllegroError(w, "Nie udalo sie zaktualizowac cennika wysylki", err)
 		return
 	}
 
@@ -204,7 +204,7 @@ func (h *AllegroDeliveryHandler) ListDeliveryMethods(w http.ResponseWriter, r *h
 	methods, err := client.DeliverySettings.ListDeliveryMethods(r.Context())
 	if err != nil {
 		slog.Error("allegro delivery: failed to list delivery methods", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac metod dostawy")
+		writeAllegroError(w, "Nie udalo sie pobrac metod dostawy", err)
 		return
 	}
 
@@ -247,7 +247,7 @@ func (h *AllegroDeliveryHandler) AutoGenerateShippingRate(w http.ResponseWriter,
 	methods, err := client.DeliverySettings.ListDeliveryMethods(r.Context())
 	if err != nil {
 		slog.Error("allegro delivery: failed to list delivery methods", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac metod dostawy Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac metod dostawy Allegro", err)
 		return
 	}
 
@@ -382,7 +382,7 @@ func (h *AllegroDeliveryHandler) AutoGenerateShippingRate(w http.ResponseWriter,
 	})
 	if err != nil {
 		slog.Error("allegro delivery: failed to create auto shipping rate", "error", err)
-		writeError(w, http.StatusBadGateway, allegroErrorMessage("Nie udalo sie utworzyc cennika wysylki", err))
+		writeAllegroError(w, "Nie udalo sie utworzyc cennika wysylki", err)
 		return
 	}
 

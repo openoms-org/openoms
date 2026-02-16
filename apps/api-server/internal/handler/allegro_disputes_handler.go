@@ -57,7 +57,7 @@ func (h *AllegroDisputesHandler) ListDisputes(w http.ResponseWriter, r *http.Req
 	result, err := client.Disputes.List(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro disputes: failed to list disputes", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac sporow z Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac sporow z Allegro", err)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (h *AllegroDisputesHandler) GetDispute(w http.ResponseWriter, r *http.Reque
 	result, err := client.Disputes.Get(r.Context(), disputeID)
 	if err != nil {
 		slog.Error("allegro disputes: failed to get dispute", "error", err, "disputeId", disputeID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac sporu z Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac sporu z Allegro", err)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *AllegroDisputesHandler) ListDisputeMessages(w http.ResponseWriter, r *h
 	result, err := client.Disputes.ListMessages(r.Context(), disputeID)
 	if err != nil {
 		slog.Error("allegro disputes: failed to list dispute messages", "error", err, "disputeId", disputeID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie pobrac wiadomosci sporu z Allegro")
+		writeAllegroError(w, "Nie udalo sie pobrac wiadomosci sporu z Allegro", err)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (h *AllegroDisputesHandler) SendDisputeMessage(w http.ResponseWriter, r *ht
 	})
 	if err != nil {
 		slog.Error("allegro disputes: failed to send message", "error", err, "disputeId", disputeID)
-		writeError(w, http.StatusBadGateway, "Nie udalo sie wyslac wiadomosci w sporze")
+		writeAllegroError(w, "Nie udalo sie wyslac wiadomosci w sporze", err)
 		return
 	}
 

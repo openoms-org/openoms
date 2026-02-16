@@ -46,7 +46,7 @@ func (h *AllegroAccountHandler) GetAccount(w http.ResponseWriter, r *http.Reques
 	user, err := client.Account.GetMe(r.Context())
 	if err != nil {
 		slog.Error("allegro account: failed to get user", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać danych konta Allegro")
+		writeAllegroError(w, "Nie udało się pobrać danych konta Allegro", err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *AllegroAccountHandler) GetBilling(w http.ResponseWriter, r *http.Reques
 	billing, err := client.Account.ListBilling(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro billing: failed to list billing", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać danych rozliczeniowych")
+		writeAllegroError(w, "Nie udało się pobrać danych rozliczeniowych", err)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (h *AllegroAccountHandler) ListOffers(w http.ResponseWriter, r *http.Reques
 	offers, err := client.Offers.List(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro offers: failed to list offers", "error", err)
-		writeError(w, http.StatusBadGateway, "Nie udało się pobrać ofert z Allegro")
+		writeAllegroError(w, "Nie udało się pobrać ofert z Allegro", err)
 		return
 	}
 
@@ -149,7 +149,7 @@ func (h *AllegroAccountHandler) DeactivateOffer(w http.ResponseWriter, r *http.R
 
 	if err := client.Offers.Deactivate(r.Context(), offerID); err != nil {
 		slog.Error("allegro offers: failed to deactivate", "error", err, "offer_id", offerID)
-		writeError(w, http.StatusBadGateway, "Nie udało się dezaktywować oferty")
+		writeAllegroError(w, "Nie udało się dezaktywować oferty", err)
 		return
 	}
 
@@ -175,7 +175,7 @@ func (h *AllegroAccountHandler) ActivateOffer(w http.ResponseWriter, r *http.Req
 
 	if err := client.Offers.Activate(r.Context(), offerID); err != nil {
 		slog.Error("allegro offers: failed to activate", "error", err, "offer_id", offerID)
-		writeError(w, http.StatusBadGateway, "Nie udało się aktywować oferty")
+		writeAllegroError(w, "Nie udało się aktywować oferty", err)
 		return
 	}
 
@@ -209,7 +209,7 @@ func (h *AllegroAccountHandler) UpdateOfferStock(w http.ResponseWriter, r *http.
 
 	if err := client.Offers.UpdateStock(r.Context(), offerID, body.Quantity); err != nil {
 		slog.Error("allegro offers: failed to update stock", "error", err, "offer_id", offerID)
-		writeError(w, http.StatusBadGateway, "Nie udało się zaktualizować stanu magazynowego")
+		writeAllegroError(w, "Nie udało się zaktualizować stanu magazynowego", err)
 		return
 	}
 
@@ -228,10 +228,26 @@ func (h *AllegroAccountHandler) UpdateOfferPrice(w http.ResponseWriter, r *http.
 	var body struct {
 		Amount   float64 `json:"amount"`
 		Currency string  `json:"currency"`
+		Price    *struct {
+			Amount   interface{} `json:"amount"` // can be string or number
+			Currency string      `json:"currency"`
+		} `json:"price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+	// Support nested {"price":{"amount":"269.50","currency":"PLN"}} format (Allegro style)
+	if body.Price != nil {
+		switch v := body.Price.Amount.(type) {
+		case float64:
+			body.Amount = v
+		case string:
+			body.Amount, _ = strconv.ParseFloat(v, 64)
+		}
+		if body.Price.Currency != "" {
+			body.Currency = body.Price.Currency
+		}
 	}
 	if body.Currency == "" {
 		body.Currency = "PLN"
@@ -247,7 +263,7 @@ func (h *AllegroAccountHandler) UpdateOfferPrice(w http.ResponseWriter, r *http.
 
 	if err := client.Offers.UpdatePrice(r.Context(), offerID, body.Amount, body.Currency); err != nil {
 		slog.Error("allegro offers: failed to update price", "error", err, "offer_id", offerID)
-		writeError(w, http.StatusBadGateway, "Nie udało się zaktualizować ceny")
+		writeAllegroError(w, "Nie udało się zaktualizować ceny", err)
 		return
 	}
 
