@@ -35,15 +35,21 @@ func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider st
 	var result []TenantIntegration
 	for rows.Next() {
 		var ti TenantIntegration
+		var credsJSON json.RawMessage
 		if err := rows.Scan(
 			&ti.TenantID,
 			&ti.IntegrationID,
 			&ti.Provider,
 			&ti.SyncCursor,
-			&ti.Credentials,
+			&credsJSON,
 			&ti.Settings,
 		); err != nil {
 			return nil, err
+		}
+		// credentials column is JSONB storing a JSON string value (e.g. "base64...").
+		// Unmarshal to strip the JSON quotes and get the raw base64 string.
+		if len(credsJSON) > 0 {
+			_ = json.Unmarshal(credsJSON, &ti.Credentials)
 		}
 		result = append(result, ti)
 	}
@@ -66,15 +72,19 @@ func ListAllActiveMarketplaceIntegrations(ctx context.Context, pool *pgxpool.Poo
 	var result []TenantIntegration
 	for rows.Next() {
 		var ti TenantIntegration
+		var credsJSON json.RawMessage
 		if err := rows.Scan(
 			&ti.TenantID,
 			&ti.IntegrationID,
 			&ti.Provider,
 			&ti.SyncCursor,
-			&ti.Credentials,
+			&credsJSON,
 			&ti.Settings,
 		); err != nil {
 			return nil, err
+		}
+		if len(credsJSON) > 0 {
+			_ = json.Unmarshal(credsJSON, &ti.Credentials)
 		}
 		result = append(result, ti)
 	}
