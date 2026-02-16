@@ -12,8 +12,9 @@ type Config struct {
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:3000"`
 
-	DatabaseURL string `env:"DATABASE_URL,required"`
-	RedisURL    string `env:"REDIS_URL" envDefault:"redis://localhost:6379"`
+	DatabaseURL       string `env:"DATABASE_URL,required"`
+	WorkerDatabaseURL string `env:"WORKER_DATABASE_URL"` // superuser pool for cross-tenant worker queries; falls back to DATABASE_URL
+	RedisURL          string `env:"REDIS_URL" envDefault:"redis://localhost:6379"`
 
 	JWTSecret     string `env:"JWT_SECRET,required"`
 	EncryptionKey string `env:"ENCRYPTION_KEY,required"`

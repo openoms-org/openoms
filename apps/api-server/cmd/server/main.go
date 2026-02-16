@@ -74,6 +74,19 @@ func main() {
 	defer pool.Close()
 	slog.Info("connected to PostgreSQL")
 
+	// Worker pool — superuser connection for cross-tenant queries (bypasses RLS).
+	// Falls back to main DATABASE_URL if WORKER_DATABASE_URL is not set.
+	workerDBURL := cfg.WorkerDatabaseURL
+	if workerDBURL == "" {
+		workerDBURL = cfg.DatabaseURL
+	}
+	workerPool, err := database.Connect(context.Background(), workerDBURL)
+	if err != nil {
+		slog.Error("failed to connect worker database", "error", err)
+		os.Exit(1)
+	}
+	defer workerPool.Close()
+
 	// Initialize storage backend
 	var objectStorage storage.ObjectStorage
 	if cfg.S3Enabled {
@@ -235,7 +248,7 @@ func main() {
 	allegroCommsHandler := handler.NewAllegroCommsHandler(integrationService, encryptionKey)
 
 	// Allegro webhook syncer — handles on-demand order import/update triggered by webhooks
-	allegroWebhookSyncer := worker.NewAllegroWebhookSyncer(pool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default())
+	allegroWebhookSyncer := worker.NewAllegroWebhookSyncer(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default())
 
 	// Allegro webhook handler (public endpoint, HMAC-verified)
 	allegroWebhookHandler := handler.NewAllegroWebhookHandler(cfg.AllegroWebhookSecret, allegroWebhookSyncer)
@@ -428,18 +441,18 @@ func main() {
 		AllegroListings:   allegroListingsHandler,
 	})
 
-	// Start background workers
-	workerMgr := worker.NewManager(pool, slog.Default())
-	workerMgr.Register(worker.NewOAuthRefresher(pool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewAllegroOrderPoller(pool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewStockSyncWorker(pool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewTrackingPoller(pool, encryptionKey, shipmentRepo, slog.Default()))
-	workerMgr.Register(worker.NewAmazonOrderPoller(pool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewWooCommerceOrderPoller(pool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewSupplierSyncWorker(pool, supplierService, slog.Default()))
-	workerMgr.Register(worker.NewExchangeRateWorker(pool, exchangeRateService, slog.Default()))
-	workerMgr.Register(worker.NewKSeFStatusWorker(pool, ksefService, slog.Default()))
-	workerMgr.Register(worker.NewDelayedActionWorker(pool, delayedActionRepo, automationExecutor, slog.Default()))
+	// Start background workers (use workerPool for cross-tenant queries)
+	workerMgr := worker.NewManager(workerPool, slog.Default())
+	workerMgr.Register(worker.NewOAuthRefresher(workerPool, encryptionKey, slog.Default()))
+	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()))
+	workerMgr.Register(worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, slog.Default()))
+	workerMgr.Register(worker.NewAmazonOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewWooCommerceOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewSupplierSyncWorker(workerPool, supplierService, slog.Default()))
+	workerMgr.Register(worker.NewExchangeRateWorker(workerPool, exchangeRateService, slog.Default()))
+	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
+	workerMgr.Register(worker.NewDelayedActionWorker(workerPool, delayedActionRepo, automationExecutor, slog.Default()))
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}
