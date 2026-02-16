@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	inpostsdk "github.com/openoms-org/openoms/packages/inpost-go-sdk"
@@ -68,7 +69,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 		Weight: inpostsdk.Weight{Amount: req.Parcel.WeightKg, Unit: "kg"},
 	}
 	if req.Parcel.SizeCode != "" {
-		parcel.Template = inpostsdk.ParcelTemplate(req.Parcel.SizeCode)
+		parcel.Template = mapParcelTemplate(req.Parcel.SizeCode)
 	}
 	if req.Parcel.WidthCm > 0 || req.Parcel.HeightCm > 0 || req.Parcel.DepthCm > 0 {
 		parcel.Dimensions = &inpostsdk.Dimensions{
@@ -336,6 +337,20 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 	}
 
 	return rates, nil
+}
+
+// mapParcelTemplate maps common size codes (A/B/C) to InPost API template names.
+func mapParcelTemplate(sizeCode string) inpostsdk.ParcelTemplate {
+	switch strings.ToUpper(strings.TrimSpace(sizeCode)) {
+	case "A", "SMALL", "S":
+		return inpostsdk.ParcelSmall
+	case "B", "MEDIUM", "M":
+		return inpostsdk.ParcelMedium
+	case "C", "LARGE", "L":
+		return inpostsdk.ParcelLarge
+	default:
+		return inpostsdk.ParcelTemplate(sizeCode)
+	}
 }
 
 func (p *InPostProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {

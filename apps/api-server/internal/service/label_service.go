@@ -123,8 +123,17 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 			return ErrOrderNotFoundForShipment
 		}
 
-		// Check customer contact info
+		// Fallback: extract phone from shipping address if customer_phone is empty
 		hasPhone := order.CustomerPhone != nil && *order.CustomerPhone != ""
+		if !hasPhone && len(order.ShippingAddress) > 0 {
+			var sa model.ShippingAddress
+			if err := json.Unmarshal(order.ShippingAddress, &sa); err == nil && sa.Phone != "" {
+				order.CustomerPhone = &sa.Phone
+				hasPhone = true
+			}
+		}
+
+		// Check customer contact info
 		hasEmail := order.CustomerEmail != nil && *order.CustomerEmail != ""
 		if !hasPhone && !hasEmail {
 			return ErrNoCustomerContact

@@ -51,6 +51,11 @@ func allegroOrderMapper(mo integration.MarketplaceOrder, ti TenantIntegration, r
 		order.PaymentStatus = "pending"
 	}
 
+	// Fallback: if buyer phone is missing, use shipping address phone
+	if (order.CustomerPhone == nil || *order.CustomerPhone == "") && mo.ShippingAddress.Phone != "" {
+		order.CustomerPhone = &mo.ShippingAddress.Phone
+	}
+
 	addrJSON, err := json.Marshal(mo.ShippingAddress)
 	if err == nil {
 		order.ShippingAddress = addrJSON
