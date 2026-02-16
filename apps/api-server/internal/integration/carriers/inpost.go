@@ -204,7 +204,17 @@ func (p *InPostProvider) GetTracking(ctx context.Context, trackingNumber string)
 }
 
 func (p *InPostProvider) CancelShipment(ctx context.Context, externalID string) error {
-	return fmt.Errorf("inpost: cancel shipment not implemented")
+	id, err := strconv.ParseInt(externalID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("inpost: invalid shipment ID %q: %w", externalID, err)
+	}
+
+	// InPost ShipX allows deleting shipments that have not yet been confirmed.
+	// For confirmed shipments, the API will return an error.
+	if err := p.client.Shipments.Delete(ctx, id); err != nil {
+		return fmt.Errorf("inpost: cancel shipment %d: %w", id, err)
+	}
+	return nil
 }
 
 func (p *InPostProvider) CreateDispatchOrder(ctx context.Context, shipmentExternalIDs []int64, address integration.DispatchOrderAddress, contact integration.DispatchOrderContact) (int64, error) {

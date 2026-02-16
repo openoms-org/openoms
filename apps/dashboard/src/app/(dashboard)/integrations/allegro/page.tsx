@@ -698,6 +698,19 @@ function ConnectedState({
               </CardContent>
             </Card>
           </Link>
+          <Link href="/integrations/allegro/shipments">
+            <Card className="cursor-pointer transition-colors hover:bg-muted/50">
+              <CardContent className="flex items-center gap-4 pt-6">
+                <Package className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="font-semibold">Wysylam z Allegro</p>
+                  <p className="text-sm text-muted-foreground">
+                    Przesylki, etykiety i odbior kurierski
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
       )}
 

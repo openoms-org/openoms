@@ -169,6 +169,66 @@ export async function downloadAllegroLabel(shipmentId: string) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
+// Cancel a managed shipment
+export function useCancelAllegroShipment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (shipmentId: string) =>
+      apiClient<void>(
+        `/v1/integrations/allegro/shipments/${shipmentId}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allegro", "shipments"] });
+    },
+  });
+}
+
+// Pickup proposal types
+export interface AllegroPickupTimeWindow {
+  from: string;
+  to: string;
+}
+
+export interface AllegroPickupProposal {
+  date: string;
+  timeWindows: AllegroPickupTimeWindow[];
+}
+
+// Get pickup proposals
+export function useAllegroPickupProposals() {
+  return useMutation({
+    mutationFn: (req: { deliveryMethodId: string; shipmentIds: string[] }) =>
+      apiClient<{ proposals: AllegroPickupProposal[] }>(
+        "/v1/integrations/allegro/pickup-proposals",
+        {
+          method: "POST",
+          body: JSON.stringify(req),
+        }
+      ),
+  });
+}
+
+// Schedule a courier pickup
+export function useScheduleAllegroPickup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (cmd: {
+      commandId: string;
+      pickupDate: string;
+      timeWindow: AllegroPickupTimeWindow;
+      shipmentIds: string[];
+    }) =>
+      apiClient<void>("/v1/integrations/allegro/pickups", {
+        method: "POST",
+        body: JSON.stringify(cmd),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allegro", "shipments"] });
+    },
+  });
+}
+
 export async function downloadAllegroProtocol(shipmentIds: string[]) {
   const res = await apiFetch("/v1/integrations/allegro/protocol", {
     method: "POST",

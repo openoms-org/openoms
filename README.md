@@ -36,7 +36,7 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 
 | Integration | Description | Status |
 |---|---|---|
-| **Allegro** | OAuth2, full offer management, listing creation | Verified |
+| **Allegro** | OAuth2, full offer management, listing creation, "Wysylam z Allegro" shipments | Verified |
 | **Amazon SP-API** | Orders and catalog sync | In Development |
 | **WooCommerce** | Bidirectional order and product sync | In Development |
 | **eBay** | Order import and listing management | In Development |
@@ -49,7 +49,7 @@ OpenOMS is a self-hostable, multi-tenant OMS with 296 API endpoints, 81 dashboar
 
 | Integration | Description | Status |
 |---|---|---|
-| **InPost** | Paczkomaty (parcel lockers) + courier | Verified |
+| **InPost** | Paczkomaty (parcel lockers) + courier + webhooks + dispatch orders | Verified |
 | **DHL** | Domestic and international shipping | In Development |
 | **DPD** | Parcel shipping | In Development |
 | **GLS** | Parcel shipping | In Development |

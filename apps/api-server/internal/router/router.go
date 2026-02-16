@@ -67,6 +67,7 @@ type RouterDeps struct {
 	Rate              *handler.RateHandler
 	AllegroComms      *handler.AllegroCommsHandler
 	AllegroWebhook    *handler.AllegroWebhookHandler
+	InPostWebhook     *handler.InPostWebhookHandler
 	AllegroAccount    *handler.AllegroAccountHandler
 	AllegroCatalog    *handler.AllegroCatalogHandler
 	AllegroDisputes   *handler.AllegroDisputesHandler
@@ -144,6 +145,11 @@ func New(deps RouterDeps) *chi.Mux {
 	// Public Allegro webhook endpoint — no JWT, HMAC-verified
 	if deps.AllegroWebhook != nil {
 		r.Post("/v1/webhooks/allegro", deps.AllegroWebhook.HandleWebhook)
+	}
+
+	// Public InPost webhook endpoint — no JWT, HMAC-verified
+	if deps.InPostWebhook != nil {
+		r.Post("/v1/webhooks/inpost", deps.InPostWebhook.HandleWebhook)
 	}
 
 	// Public return self-service routes — no JWT, rate-limited

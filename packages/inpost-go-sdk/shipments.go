@@ -46,3 +46,14 @@ func (s *ShipmentService) Get(ctx context.Context, id int64) (*Shipment, error) 
 	}
 	return &shipment, nil
 }
+
+// Delete removes a shipment that has not yet been confirmed (bought).
+// InPost ShipX only allows deletion of shipments in pre-confirmed statuses
+// (e.g. "created", "offers_prepared", "offer_selected").
+func (s *ShipmentService) Delete(ctx context.Context, id int64) error {
+	path := fmt.Sprintf("/v1/shipments/%d", id)
+	if err := s.client.do(ctx, http.MethodDelete, path, nil, nil); err != nil {
+		return err
+	}
+	return nil
+}

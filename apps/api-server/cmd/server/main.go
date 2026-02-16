@@ -231,6 +231,9 @@ func main() {
 	// Allegro webhook handler (public endpoint, HMAC-verified)
 	allegroWebhookHandler := handler.NewAllegroWebhookHandler(cfg.AllegroWebhookSecret)
 
+	// InPost webhook handler (public endpoint, HMAC-verified)
+	inpostWebhookHandler := handler.NewInPostWebhookHandler(cfg.InPostWebhookSecret)
+
 	// Allegro account & offers handler
 	allegroAccountHandler := handler.NewAllegroAccountHandler(integrationService, encryptionKey)
 
@@ -405,6 +408,7 @@ func main() {
 		Rate:              rateHandler,
 		AllegroComms:      allegroCommsHandler,
 		AllegroWebhook:    allegroWebhookHandler,
+		InPostWebhook:     inpostWebhookHandler,
 		AllegroAccount:    allegroAccountHandler,
 		AllegroCatalog:    allegroCatalogHandler,
 		AllegroPolicies:   allegroPoliciesHandler,

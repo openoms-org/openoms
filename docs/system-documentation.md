@@ -803,6 +803,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Rec
 | GET | `/v1/product-categories` | Kategorie produktow (read-only) |
 | POST | `/v1/webhooks/{provider}/{tenant_id}` | Webhook przychodzacy |
 | POST | `/v1/webhooks/allegro` | Webhook Allegro (HMAC) |
+| POST | `/v1/webhooks/inpost` | Webhook InPost (HMAC-SHA256) |
 | GET | `/health` | Health check (no version disclosed) |
 | GET | `/metrics` | Prometheus metrics (requires Bearer token) |
 | GET | `/v1/openapi.yaml` | Specyfikacja OpenAPI |
@@ -812,7 +813,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Rec
 
 ## 6. Frontend Dashboard
 
-### Mapa stron (81 stron)
+### Mapa stron (82 stron)
 
 #### Publiczne (bez logowania)
 
@@ -978,7 +979,7 @@ Pulpit (Dashboard)
 
 --- Integracje (admin) ---
   Integracje
-  Allegro (podstrony)
+  Allegro (podstrony: dashboard, oferty, wiadomosci, zwroty, dostawa, spory, finanse, polityki, promocje, oceny, katalog, wysylam z allegro)
   Automatyzacja
   Waluty
   Marketing
@@ -1501,7 +1502,7 @@ Oferta opublikowana na Allegro
 | | OLX | REST API |
 | | Mirakl/Empik | REST API |
 | | Erli | REST API |
-| **Carrier** | InPost | Paczkomaty, kurier, Geowidget |
+| **Carrier** | InPost | Paczkomaty, kurier, Geowidget, webhook, dispatch orders |
 | | DHL | Miedzynarodowe |
 | | DPD | Polska |
 | | GLS | Europa |
@@ -1698,14 +1699,14 @@ Haslo testowe: `password123`
 
 | Metryka | Wartosc |
 |---------|--------|
-| **Pliki Go** | 386 (w tym 71 testow) |
+| **Pliki Go** | 395 (w tym 80 testow) |
 | **Pliki TypeScript/TSX** | 234 |
 | **Tabele DB** | 32 |
 | **Migracje SQL** | 46 (000001-000046) |
-| **Endpointy API** | ~296 |
-| **Strony frontend** | 81 |
+| **Endpointy API** | ~298 |
+| **Strony frontend** | 82 |
 | **Komponenty React** | 81 |
-| **Custom hooks** | 45 |
+| **Custom hooks** | 48 |
 | **Handlery Go** | 57 |
 | **Serwisy Go** | 38 |
 | **Repozytoria Go** | 28 |
@@ -1730,4 +1731,4 @@ Haslo testowe: `password123`
 ---
 
 *Dokument wygenerowany: 2026-02-13*
-*Wersja: OpenOMS v3.0*
+*Wersja: OpenOMS v3.1*
