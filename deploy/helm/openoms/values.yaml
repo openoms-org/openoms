@@ -1,7 +1,7 @@
 namespace: openoms
 
 apiServer:
-  replicaCount: 2
+  replicaCount: 1
   image:
     repository: ghcr.io/openoms-org/openoms-api
     tag: ""  # defaults to Chart.appVersion
@@ -74,7 +74,7 @@ worker:
       memory: 384Mi
 
 dashboard:
-  replicaCount: 2
+  replicaCount: 1
   image:
     repository: ghcr.io/openoms-org/openoms-dashboard
     tag: ""
