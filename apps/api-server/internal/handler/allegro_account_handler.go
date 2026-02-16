@@ -229,8 +229,8 @@ func (h *AllegroAccountHandler) UpdateOfferPrice(w http.ResponseWriter, r *http.
 		Amount   float64 `json:"amount"`
 		Currency string  `json:"currency"`
 		Price    *struct {
-			Amount   interface{} `json:"amount"` // can be string or number
-			Currency string      `json:"currency"`
+			Amount   any    `json:"amount"` // can be string or number
+			Currency string `json:"currency"`
 		} `json:"price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
