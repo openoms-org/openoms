@@ -1001,18 +1001,28 @@ func TestInPostGetLabel_UnknownFormatDefaultsPDF(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Test: CancelShipment returns not-implemented error
+// Test: CancelShipment calls SDK Delete
 // ---------------------------------------------------------------------------
 
-func TestInPostCancelShipment_NotImplemented(t *testing.T) {
-	provider := newTestProvider(t, "http://unused")
+func TestInPostCancelShipment_Success(t *testing.T) {
+	var deletedID string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete && strings.Contains(r.URL.Path, "/v1/shipments/") {
+			deletedID = strings.TrimPrefix(r.URL.Path, "/v1/shipments/")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
 
+	provider := newTestProvider(t, srv.URL)
 	err := provider.CancelShipment(context.Background(), "12345")
-	if err == nil {
-		t.Fatal("expected error from CancelShipment")
+	if err != nil {
+		t.Fatalf("CancelShipment error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got: %s", err.Error())
+	if deletedID != "12345" {
+		t.Errorf("expected deleted ID 12345, got %s", deletedID)
 	}
 }
 
