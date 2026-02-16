@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenOMS — Open-Source OMS dla e-commerce</title>
-    <meta name="description" content="OpenOMS to otwarty system zarządzania zamówieniami. Allegro, InPost, WooCommerce w jednym miejscu. Self-host lub cloud.">
+    <title>OpenOMS — Open-Source Order Management System</title>
+    <meta name="description" content="OpenOMS to otwarty system zarządzania zamówieniami z 291 endpointami API. Self-host za darmo. Allegro, InPost i 14 innych integracji.">
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="manifest" href="site.webmanifest">
-    <meta name="theme-color" content="#0a0a0a">
+    <meta name="theme-color" content="#09090b">
 
-    <!-- Open Graph (Facebook, LinkedIn) -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://openoms.org">
-    <meta property="og:title" content="OpenOMS — Open-Source OMS dla e-commerce">
-    <meta property="og:description" content="Otwarty system zarządzania zamówieniami dla polskiego e-commerce. Allegro, InPost, WooCommerce w jednym miejscu. Self-hosted za darmo lub cloud od 199 zł/mies.">
+    <meta property="og:title" content="OpenOMS — Open-Source OMS for E-commerce">
+    <meta property="og:description" content="291 API endpoints. 82 dashboard pages. 21 SDK packages. Self-hosted order management system. Built with Go + Next.js.">
     <meta property="og:image" content="https://openoms.org/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -26,140 +26,257 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="OpenOMS — Open-Source OMS dla e-commerce">
-    <meta name="twitter:description" content="Otwarty system zarządzania zamówieniami dla polskiego e-commerce. Self-hosted za darmo lub cloud od 199 zł/mies.">
+    <meta name="twitter:title" content="OpenOMS — Open-Source OMS for E-commerce">
+    <meta name="twitter:description" content="291 API endpoints. 82 dashboard pages. Self-hosted order management. Built with Go + Next.js.">
     <meta name="twitter:image" content="https://openoms.org/og-image.png">
 
     <!-- SEO -->
     <link rel="canonical" href="https://openoms.org">
     <meta name="robots" content="index, follow">
     <meta name="author" content="OpenOMS">
-    <meta name="keywords" content="OMS, order management system, open source, e-commerce, Allegro, InPost, WooCommerce, Base alternatywa, BaseLinker alternatywa, zarządzanie zamówieniami">
+    <meta name="keywords" content="OMS, order management system, open source, e-commerce, Allegro, InPost, WooCommerce, BaseLinker alternatywa, zarządzanie zamówieniami, Go, Next.js">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <style>
-        /* ============================================================
-           DESIGN SYSTEM
-           Architekt: przejrzysta hierarchia, jasny conversion funnel
-           UI/UX: spójny design system, 8px grid, ograniczona paleta
-           Usability: kontrast WCAG AA, focus states, czytelność
-        ============================================================ */
+        /* ==========================================================
+           DESIGN SYSTEM — Dark Hacker Aesthetic
+           Syne + Outfit + JetBrains Mono
+           #09090b bg, #22c55e accent
+        ========================================================== */
         :root {
-            --navy: #0f172a;
-            --navy-light: #1e293b;
+            --bg: #09090b;
+            --bg-raised: #111113;
+            --bg-elevated: #18181b;
+            --bg-surface: #1c1c1f;
+
+            --border: #27272a;
+            --border-hover: #3f3f46;
+
+            --text: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --text-dim: #52525b;
+
+            --accent: #22c55e;
+            --accent-light: #4ade80;
+            --accent-dim: #166534;
+            --accent-glow: rgba(34, 197, 94, 0.12);
+            --accent-glow-strong: rgba(34, 197, 94, 0.25);
+
+            --red: #ef4444;
+            --amber: #f59e0b;
             --blue: #3b82f6;
-            --blue-hover: #2563eb;
-            --blue-subtle: #dbeafe;
-            --light-blue: #60a5fa;
-            --green: #10b981;
-            --green-bg: #ecfdf5;
-            --error: #ef4444;
-            --error-light: #fca5a5;
-            --text: #1e293b;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --bg: #ffffff;
-            --bg-alt: #f8fafc;
-            --border: #e2e8f0;
+
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+
             --radius: 12px;
             --radius-sm: 8px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-            --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
-            --transition: 0.2s ease;
+            --radius-lg: 16px;
             --nav-height: 64px;
+            --transition: 0.2s ease;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* scroll-behavior handled via JS for better control */
-
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: var(--font-body);
+            background: var(--bg);
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             overflow-x: hidden;
         }
 
-        /* ============================================================
-           USABILITY: Focus states for keyboard navigation
-        ============================================================ */
+        ::selection {
+            background: var(--accent);
+            color: var(--bg);
+        }
+
         a:focus-visible, button:focus-visible, input:focus-visible {
-            outline: 2px solid var(--blue);
+            outline: 2px solid var(--accent);
             outline-offset: 2px;
             border-radius: 4px;
         }
 
-        /* Code inline styling */
-        code {
-            background: var(--bg-alt);
-            border: 1px solid var(--border);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Courier New', monospace;
-            font-size: 0.88em;
-            color: var(--navy);
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+        /* ==========================================================
+           BACKGROUND LAYERS
+        ========================================================== */
+        .noise {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
         }
 
-        /* Dark bg code variant */
-        .trust code, .hero code, .waitlist code {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(255,255,255,0.15);
-            color: var(--light-blue);
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px);
+            background-size: 24px 24px;
         }
 
-        /* ============================================================
+        /* ==========================================================
            LAYOUT
-        ============================================================ */
+        ========================================================== */
         .container {
             max-width: 1120px;
             margin: 0 auto;
             padding: 0 24px;
+            position: relative;
+            z-index: 2;
         }
 
         .section {
-            padding: 96px 0;
+            padding: 120px 0;
+            position: relative;
         }
 
-        /* ============================================================
+        /* ==========================================================
+           SECTION LABELS — code comment style
+        ========================================================== */
+        .section-label {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .section-label::before {
+            content: '// ';
+            opacity: 0.5;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 640px;
+            margin: 0 auto 72px;
+        }
+
+        .section-header h2 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-weight: 300;
+        }
+
+        /* ==========================================================
+           BUTTONS
+        ========================================================== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: var(--radius-sm);
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg);
+            box-shadow: 0 0 20px var(--accent-glow), 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+            box-shadow: 0 0 30px var(--accent-glow-strong), 0 6px 20px rgba(0,0,0,0.4);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-raised);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent-dim);
+        }
+
+        .btn-outline:hover {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
+
+        /* ==========================================================
            NAVIGATION
-           Architekt: max 4 items + 1 CTA (cognitive load)
-           Usability: hamburger na mobile, sticky header
-        ============================================================ */
+        ========================================================== */
         .nav {
             position: fixed;
             top: 0;
             width: 100%;
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            z-index: 100;
-            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            background: rgba(9, 9, 11, 0.8);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border-bottom: 1px solid rgba(39, 39, 42, 0.5);
         }
 
         .nav-inner {
             max-width: 1120px;
             margin: 0 auto;
             padding: 0 24px;
-            height: 64px;
+            height: var(--nav-height);
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
         .nav-logo {
-            font-size: 1.25rem;
+            font-family: var(--font-display);
+            font-size: 1.3rem;
             font-weight: 800;
-            color: var(--navy);
+            color: var(--text);
             text-decoration: none;
             letter-spacing: -0.5px;
         }
 
-        .nav-logo span { color: var(--blue); }
+        .nav-logo span { color: var(--accent); }
 
         .nav-links {
             display: flex;
@@ -170,7 +287,7 @@
 
         .nav-links a {
             text-decoration: none;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             font-size: 0.9rem;
             font-weight: 500;
             transition: color var(--transition);
@@ -178,55 +295,147 @@
 
         .nav-links a:hover { color: var(--text); }
 
+        .nav-github {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary) !important;
+            transition: all var(--transition);
+        }
+
+        .nav-github:hover {
+            border-color: var(--border-hover);
+            color: var(--text) !important;
+            background: var(--bg-raised);
+        }
+
+        .nav-github svg { opacity: 0.7; }
+
         .nav-cta {
-            background: var(--blue);
-            color: #fff !important;
+            background: var(--accent) !important;
+            color: var(--bg) !important;
             padding: 8px 20px;
             border-radius: var(--radius-sm);
             font-weight: 600;
-            transition: background var(--transition);
+            transition: all var(--transition);
         }
 
-        .nav-cta:hover { background: var(--blue-hover); }
+        .nav-cta:hover {
+            background: var(--accent-light) !important;
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
 
-        /* Mobile hamburger */
         .nav-toggle {
             display: none;
             background: none;
-            border: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
             cursor: pointer;
-            padding: 8px;
+            padding: 6px;
+            color: var(--text);
         }
 
         .nav-toggle svg {
-            width: 24px;
-            height: 24px;
-            stroke: var(--text);
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
         }
 
-        /* ============================================================
+        /* ==========================================================
+           TERMINAL COMPONENT
+        ========================================================== */
+        .terminal {
+            background: #0c0c0c;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px rgba(34, 197, 94, 0.05),
+                0 20px 50px rgba(0,0,0,0.5),
+                0 0 80px rgba(34, 197, 94, 0.03);
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot--red { background: #ff5f57; }
+        .terminal-dot--yellow { background: #febc2e; }
+        .terminal-dot--green { background: #28c840; }
+
+        .terminal-title {
+            margin-left: auto;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .terminal-body {
+            padding: 20px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            min-height: 200px;
+        }
+
+        .terminal-prompt { color: var(--accent); }
+        .terminal-cmd { color: var(--text); }
+        .terminal-flag { color: var(--accent-light); }
+        .terminal-string { color: #f59e0b; }
+        .terminal-key { color: var(--blue); }
+        .terminal-number { color: #c084fc; }
+        .terminal-comment { color: var(--text-dim); font-style: italic; }
+
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.1em;
+            background: var(--accent);
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* ==========================================================
            HERO
-           Architekt: 1 jasna propozycja wartości, 2 CTA (primary + secondary)
-           UI/UX: duża typografia, gradient tła, visual interest
-           Usability: czytelny kontrast, jasna hierarchia
-        ============================================================ */
+        ========================================================== */
         .hero {
-            padding: calc(var(--nav-height) + 80px) 0 100px;
-            background: linear-gradient(160deg, var(--navy) 0%, #0c2444 50%, #0e3158 100%);
-            color: #fff;
+            padding: calc(var(--nav-height) + 80px) 0 40px;
             position: relative;
             overflow: hidden;
         }
 
-        .hero::after {
-            content: '';
+        .hero-glow {
             position: absolute;
             top: -200px;
-            right: -200px;
-            width: 600px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
             height: 600px;
-            background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
-            border-radius: 50%;
+            background: radial-gradient(ellipse, rgba(34, 197, 94, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
         }
 
         .hero-container {
@@ -234,70 +443,53 @@
             grid-template-columns: 1fr 1fr;
             gap: 64px;
             align-items: center;
-            position: relative;
-            z-index: 2;
         }
 
-        .hero-content {
-            max-width: 560px;
-        }
-
-        .hero-illustration {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* UI/UX: badge buduje wiarygodność i context */
         .hero-badge {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(59,130,246,0.15);
-            border: 1px solid rgba(59,130,246,0.25);
+            background: var(--bg-raised);
+            border: 1px solid var(--border);
             padding: 6px 16px;
             border-radius: 100px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: var(--light-blue);
-            margin-bottom: 24px;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-bottom: 28px;
         }
 
         .hero-badge-dot {
             width: 6px;
             height: 6px;
-            background: var(--green);
+            background: var(--accent);
             border-radius: 50%;
-            animation: pulse 2s infinite;
+            animation: pulse 2s ease infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--accent-glow-strong); }
+            50% { opacity: 0.6; box-shadow: 0 0 0 4px transparent; }
         }
 
         .hero h1 {
-            font-size: clamp(2.2rem, 5vw, 3.5rem);
-            font-weight: 900;
-            line-height: 1.15;
-            letter-spacing: -1.5px;
+            font-family: var(--font-display);
+            font-size: clamp(2.5rem, 5vw, 3.8rem);
+            font-weight: 800;
+            line-height: 1.08;
+            letter-spacing: -2px;
             margin-bottom: 20px;
         }
 
-        .hero h1 em {
-            font-style: normal;
-            color: var(--light-blue);
-        }
-
-        .nowrap { white-space: nowrap; }
+        .hero h1 .accent { color: var(--accent); }
 
         .hero-sub {
-            font-size: clamp(1.05rem, 2vw, 1.25rem);
-            color: #cbd5e1;
+            font-size: 1.15rem;
+            color: var(--text-secondary);
             line-height: 1.7;
             margin-bottom: 36px;
-            max-width: 560px;
-            font-weight: 400;
+            font-weight: 300;
+            max-width: 480px;
         }
 
         .hero-ctas {
@@ -306,365 +498,376 @@
             flex-wrap: wrap;
         }
 
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            font-size: 0.95rem;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            transition: all var(--transition);
-            font-family: inherit;
+        /* ==========================================================
+           STATS STRIP
+        ========================================================== */
+        .stats {
+            padding: 60px 0;
+            border-bottom: 1px solid var(--border);
         }
 
-        .btn-primary {
-            background: var(--blue);
-            color: #fff;
-            box-shadow: 0 4px 14px rgba(59,130,246,0.35);
-        }
-
-        .btn-primary:hover {
-            background: var(--blue-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(59,130,246,0.4);
-        }
-
-        .btn-ghost {
-            background: rgba(255,255,255,0.08);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .btn-ghost:hover {
-            background: rgba(255,255,255,0.15);
-            border-color: rgba(255,255,255,0.35);
-        }
-
-        .btn-outline {
-            background: transparent;
-            color: var(--blue);
-            border: 2px solid var(--blue);
-        }
-
-        .btn-outline:hover {
-            background: var(--blue);
-            color: #fff;
-        }
-
-        /* Architekt: social proof pod CTA wzmacnia konwersję */
-        .hero-proof {
-            margin-top: 48px;
-            display: flex;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 32px;
-            flex-wrap: wrap;
-        }
-
-        .hero-proof-item {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .hero-proof-value {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #fff;
-        }
-
-        .hero-proof-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        /* ============================================================
-           HERO IMAGE
-        ============================================================ */
-        .hero-img {
-            width: 100%;
-            max-width: 500px;
-            height: auto;
-            border-radius: 12px;
-            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.3));
-        }
-
-        /* ============================================================
-           PAIN POINTS
-           Architekt: 3 bóle → rozwiązanie (klasyczny PAS framework)
-           UI/UX: ikony + krótki tekst, skanowalne
-           Usability: nie atakujemy konkurencji, opisujemy problem branżowy
-        ============================================================ */
-        .pain {
-            background: var(--bg);
-        }
-
-        .section-header {
             text-align: center;
-            max-width: 600px;
-            margin: 0 auto 64px;
         }
 
-        .section-label {
-            display: inline-block;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--blue);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 12px;
-        }
-
-        .section-header h2 {
-            font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+        .stat-value {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
             font-weight: 800;
-            color: var(--navy);
             letter-spacing: -1px;
-            line-height: 1.2;
+            color: var(--text);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .stat-value .accent { color: var(--accent); }
+
+        .stat-label {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ==========================================================
+           DUAL AUDIENCE
+        ========================================================== */
+        .audience {
+            padding: 120px 0;
+        }
+
+        .audience-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .audience-card {
+            padding: 48px 40px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            background: var(--bg-raised);
+            transition: border-color 0.3s ease;
+        }
+
+        .audience-card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .audience-card-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+        }
+
+        .audience-card h3 {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
             margin-bottom: 16px;
         }
 
-        .section-header p {
-            font-size: 1.05rem;
+        .audience-card p {
             color: var(--text-secondary);
+            font-weight: 300;
+            margin-bottom: 24px;
             line-height: 1.7;
         }
 
-        .section-image {
-            text-align: center;
-            margin-bottom: 48px;
+        .audience-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .section-image img {
-            max-width: 100%;
-            width: 800px;
-            height: auto;
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-            aspect-ratio: 2/1;
-            object-fit: cover;
-        }
-
-        .pain-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-        }
-
-        .pain-card {
-            padding: 32px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            background: var(--bg);
-            transition: all 0.3s ease;
-        }
-
-        .pain-card:hover {
-            box-shadow: var(--shadow-md);
-            border-color: var(--blue);
-            transform: translateY(-4px);
-        }
-
-        .pain-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 12px;
+        .audience-list li {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            flex-shrink: 0;
-            font-size: 2rem;
-        }
-
-        .pain-icon-red { background: #fef2f2; }
-        .pain-icon-amber { background: #fffbeb; }
-        .pain-icon-purple { background: #faf5ff; }
-
-        .pain-card h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--navy);
-        }
-
-        .pain-card p {
-            font-size: 0.9rem;
+            gap: 12px;
+            font-size: 0.95rem;
             color: var(--text-secondary);
-            line-height: 1.7;
         }
 
-        /* ============================================================
-           HOW IT WORKS
-           Architekt: 3 kroki — redukuje niepewność, buduje zrozumienie
-           UI/UX: numbered steps, connector line
-        ============================================================ */
-        .how {
-            background: var(--bg-alt);
-        }
-
-        .how-steps {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 48px;
-            position: relative;
-        }
-
-        .how-step {
-            text-align: center;
-            position: relative;
-        }
-
-        .how-num {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: var(--blue);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            font-weight: 800;
-            margin: 0 auto 20px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .how-step h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--navy);
-        }
-
-        .how-step p {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            max-width: 280px;
-            margin: 0 auto;
-        }
-
-        /* connector line */
-        .how-steps::before {
+        .audience-list li::before {
             content: '';
-            position: absolute;
-            top: 28px;
-            left: calc(16.66% + 28px);
-            right: calc(16.66% + 28px);
-            height: 2px;
-            background: var(--border);
-            z-index: 1;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
         }
 
-        /* ============================================================
-           FEATURES
-           Architekt: 2×2 grid — scannable, nie przytłacza
-           UI/UX: karty z subtelnymi ikonami, consistent spacing
-        ============================================================ */
-        .features {
-            background: var(--bg);
-        }
-
+        /* ==========================================================
+           FEATURES GRID
+        ========================================================== */
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 24px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
         }
 
         .feature-card {
-            padding: 32px;
+            padding: 28px;
             border-radius: var(--radius);
             border: 1px solid var(--border);
-            background: var(--bg);
+            background: var(--bg-raised);
             transition: all 0.3s ease;
         }
 
         .feature-card:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-4px);
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 24px var(--accent-glow);
         }
 
-        .feature-card-icon {
-            width: 64px;
-            height: 64px;
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 16px;
-            flex-shrink: 0;
-            font-size: 2rem;
+            color: var(--accent);
         }
 
         .feature-card h3 {
-            font-size: 1.15rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: var(--navy);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 6px;
         }
 
         .feature-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-weight: 300;
+        }
+
+        /* ==========================================================
+           TERMINAL DEMO
+        ========================================================== */
+        .demo {
+            padding: 120px 0;
+        }
+
+        .demo .terminal {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .demo .terminal-body {
+            min-height: 280px;
+        }
+
+        /* ==========================================================
+           INTEGRATIONS
+        ========================================================== */
+        .integrations-groups {
+            display: flex;
+            flex-direction: column;
+            gap: 48px;
+        }
+
+        .integration-group h3 {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 20px;
+        }
+
+        .integration-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .integration-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 100px;
+            border: 1px solid var(--border);
+            background: var(--bg-raised);
             font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all var(--transition);
+        }
+
+        .integration-pill:hover {
+            border-color: var(--border-hover);
+            color: var(--text);
+        }
+
+        .integration-pill .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-verified { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow-strong); }
+        .status-dev { background: var(--amber); opacity: 0.7; }
+
+        /* ==========================================================
+           ARCHITECTURE
+        ========================================================== */
+        .arch-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            flex-wrap: wrap;
+            margin-top: 48px;
+        }
+
+        .arch-box {
+            padding: 20px 28px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-raised);
+            text-align: center;
+            min-width: 140px;
+        }
+
+        .arch-box-name {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .arch-box-tech {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .arch-box--highlight {
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .arch-arrow {
+            font-family: var(--font-mono);
+            color: var(--text-dim);
+            padding: 0 16px;
+            font-size: 1.2rem;
+        }
+
+        .arch-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* ==========================================================
+           OPEN SOURCE
+        ========================================================== */
+        .oss-inner {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 64px;
+            align-items: center;
+        }
+
+        .oss-text h2 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 4vw, 2.75rem);
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+
+        .oss-text p {
+            font-size: 1.05rem;
             color: var(--text-secondary);
             line-height: 1.7;
+            margin-bottom: 24px;
+            font-weight: 300;
         }
 
-        /* ============================================================
-           PRICING
-           Architekt: 3 tiers — jasna progresja, 1 wyróżniony
-           UI/UX: featured card wysunięta, badge "Popularne"
-           Usability: czytelne ceny, jasne CTA, feature list z checkmarks
-        ============================================================ */
-        .pricing {
-            background: var(--bg-alt);
+        .oss-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 32px;
         }
 
-        /* Pricing Guidance */
-        .pricing-guidance {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-            margin-bottom: 48px;
-        }
-
-        .pricing-persona {
-            text-align: center;
-            padding: 16px;
-        }
-
-        .pricing-persona-emoji {
-            font-size: 2rem;
-            margin-bottom: 8px;
-        }
-
-        .pricing-persona-title {
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: var(--navy);
-            margin-bottom: 4px;
-        }
-
-        .pricing-persona-desc {
-            font-size: 0.8rem;
+        .oss-list li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
             color: var(--text-secondary);
-            line-height: 1.5;
         }
 
+        .oss-list li::before {
+            content: '\2713';
+            color: var(--accent);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .oss-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .oss-stat {
+            padding: 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--bg-raised);
+            text-align: center;
+        }
+
+        .oss-stat-value {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        .oss-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ==========================================================
+           PRICING
+        ========================================================== */
         .pricing-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
+            gap: 20px;
             align-items: start;
         }
 
         .price-card {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
             padding: 36px 28px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            background: var(--bg-raised);
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
@@ -672,62 +875,63 @@
         }
 
         .price-card:hover {
-            box-shadow: var(--shadow-md);
+            border-color: var(--border-hover);
         }
 
         .price-card.featured {
-            border: 2px solid var(--blue);
-            box-shadow: var(--shadow-lg);
-            transform: scale(1.03);
-            background: linear-gradient(180deg, var(--blue-subtle) 0%, var(--bg) 40%);
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 40px var(--accent-glow), 0 20px 60px rgba(0,0,0,0.3);
         }
 
         .price-badge {
             position: absolute;
-            top: -14px;
+            top: -12px;
             left: 50%;
             transform: translateX(-50%);
-            background: var(--blue);
-            color: #fff;
+            background: var(--accent);
+            color: var(--bg);
             padding: 4px 16px;
             border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 700;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 500;
             white-space: nowrap;
+            letter-spacing: 0.5px;
         }
 
         .price-name {
-            font-size: 1.15rem;
+            font-family: var(--font-display);
+            font-size: 1.2rem;
             font-weight: 700;
-            color: var(--navy);
             margin-bottom: 4px;
         }
 
         .price-desc {
             font-size: 0.85rem;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             margin-bottom: 20px;
         }
 
         .price-amount {
-            font-size: 2.75rem;
-            font-weight: 900;
-            color: var(--navy);
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 800;
             letter-spacing: -2px;
             line-height: 1;
             margin-bottom: 4px;
         }
 
         .price-amount span {
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 400;
             color: var(--text-muted);
             letter-spacing: 0;
         }
 
         .price-period {
             font-size: 0.8rem;
-            color: var(--text-muted);
+            color: var(--text-dim);
             margin-bottom: 24px;
         }
 
@@ -738,7 +942,7 @@
         }
 
         .price-features li {
-            padding: 8px 0;
+            padding: 7px 0;
             font-size: 0.9rem;
             color: var(--text-secondary);
             display: flex;
@@ -748,162 +952,17 @@
 
         .price-features li::before {
             content: '\2713';
-            color: var(--green);
+            color: var(--accent);
             font-weight: 700;
             flex-shrink: 0;
-            margin-top: 1px;
+            margin-top: 2px;
         }
 
-        .price-card .btn {
-            width: 100%;
-            justify-content: center;
-        }
+        .price-card .btn { width: 100%; justify-content: center; }
 
-        /* ============================================================
-           EARLY ACCESS / SOCIAL PROOF
-           Architekt: uczciwy social proof — budujemy publicznie
-           Bez fake testimonials — realne fakty o projekcie
-        ============================================================ */
-        .early-access {
-            background: var(--bg);
-        }
-
-        .ea-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 32px;
-            margin-bottom: 48px;
-        }
-
-        .ea-card {
-            text-align: center;
-            padding: 32px 24px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            background: var(--bg);
-        }
-
-        .ea-icon {
-            font-size: 2.5rem;
-            margin-bottom: 16px;
-        }
-
-        .ea-card h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--navy);
-            margin-bottom: 8px;
-        }
-
-        .ea-card p {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        .ea-cta {
-            text-align: center;
-            padding: 40px;
-            background: var(--bg-alt);
-            border-radius: var(--radius);
-            border: 2px dashed var(--border);
-        }
-
-        .ea-cta h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--navy);
-            margin-bottom: 8px;
-        }
-
-        .ea-cta p {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            max-width: 480px;
-            margin: 0 auto 24px;
-        }
-
-        /* ============================================================
-           OPEN SOURCE / TRUST
-           Architekt: sekcja budująca zaufanie — open source = transparencja
-        ============================================================ */
-        .trust {
-            background: var(--navy);
-            color: #fff;
-        }
-
-        .trust-inner {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 64px;
-            align-items: center;
-        }
-
-        .trust-text h2 {
-            font-size: clamp(1.8rem, 3.5vw, 2.5rem);
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-bottom: 16px;
-        }
-
-        .trust-text p {
-            font-size: 1.05rem;
-            color: #94a3b8;
-            line-height: 1.7;
-            margin-bottom: 24px;
-        }
-
-        .trust-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 32px;
-        }
-
-        .trust-list li {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 0.95rem;
-            color: #cbd5e1;
-        }
-
-        .trust-list li::before {
-            content: '\2713';
-            color: var(--green);
-            font-weight: 700;
-            font-size: 1rem;
-        }
-
-        .trust-illustration {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .section-label--light { color: var(--light-blue); }
-
-        .btn-ghost--dark { border-color: rgba(255,255,255,0.2); }
-
-        .trust-illustration img {
-            width: 100%;
-            max-width: 460px;
-            height: auto;
-            border-radius: 16px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
-        }
-
-        /* ============================================================
+        /* ==========================================================
            FAQ
-           Architekt: redukuje niepewność, odpowiada na realne obiekcje
-           UI/UX: prosty accordion, czytelna typografia
-        ============================================================ */
-        .faq {
-            background: var(--bg-alt);
-        }
-
+        ========================================================== */
         .faq-list {
             max-width: 720px;
             margin: 0 auto;
@@ -923,17 +982,16 @@
             border: none;
             cursor: pointer;
             text-align: left;
-            font-family: inherit;
+            font-family: var(--font-body);
             font-size: 1.05rem;
             font-weight: 600;
-            color: var(--navy);
+            color: var(--text);
             line-height: 1.4;
             gap: 16px;
+            transition: color var(--transition);
         }
 
-        .faq-question:hover {
-            color: var(--blue);
-        }
+        .faq-question:hover { color: var(--accent); }
 
         .faq-chevron {
             width: 20px;
@@ -943,66 +1001,52 @@
             stroke: var(--text-muted);
         }
 
-        .faq-item.open .faq-chevron {
-            transform: rotate(180deg);
-        }
+        .faq-item.open .faq-chevron { transform: rotate(180deg); }
 
         .faq-answer {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease, padding 0.3s ease;
+            transition: max-height 0.35s ease;
         }
 
-        .faq-item.open .faq-answer {
-            max-height: 500px;
-        }
+        .faq-item.open .faq-answer { max-height: 500px; }
 
         .faq-answer-inner {
             padding-bottom: 24px;
             font-size: 0.95rem;
             color: var(--text-secondary);
             line-height: 1.7;
+            font-weight: 300;
         }
 
-        /* ============================================================
-           CTA / WAITLIST
-           Architekt: ostatni krok funnela — minimalistyczny, 1 input
-           Usability: jasny komunikat, brak rozpraszaczy
-        ============================================================ */
+        .faq-answer-inner code {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.88em;
+            color: var(--accent);
+        }
+
+        /* ==========================================================
+           WAITLIST CTA
+        ========================================================== */
         .waitlist {
-            background: linear-gradient(160deg, var(--navy) 0%, #0c2444 100%);
-            color: #fff;
-            padding: 80px 0;
+            padding: 100px 0;
             position: relative;
             overflow: hidden;
         }
 
-        .waitlist::before {
-            content: '';
+        .waitlist-glow {
             position: absolute;
-            top: -100px;
-            right: -100px;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-
-        .waitlist-bg-decoration {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            overflow: hidden;
-            opacity: 0.15;
-            z-index: 1;
-        }
-
-        .waitlist-bg-decoration img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(34, 197, 94, 0.06) 0%, transparent 70%);
+            pointer-events: none;
         }
 
         .waitlist-inner {
@@ -1014,17 +1058,19 @@
         }
 
         .waitlist-inner h2 {
-            font-size: clamp(1.8rem, 3.5vw, 2.25rem);
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 4vw, 2.75rem);
             font-weight: 800;
+            letter-spacing: -1px;
             margin-bottom: 12px;
-            letter-spacing: -0.5px;
         }
 
-        .waitlist-inner p {
-            color: #94a3b8;
+        .waitlist-inner > p {
+            color: var(--text-secondary);
             font-size: 1rem;
             margin-bottom: 32px;
             line-height: 1.7;
+            font-weight: 300;
         }
 
         .waitlist-form {
@@ -1036,85 +1082,135 @@
         .waitlist-form input {
             flex: 1;
             padding: 14px 20px;
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid var(--border);
             border-radius: var(--radius-sm);
-            background: rgba(255,255,255,0.06);
-            color: #fff;
+            background: var(--bg-raised);
+            color: var(--text);
             font-size: 0.95rem;
-            font-family: inherit;
+            font-family: var(--font-body);
             transition: border var(--transition);
         }
 
-        .waitlist-form input::placeholder { color: #64748b; }
-
+        .waitlist-form input::placeholder { color: var(--text-dim); }
         .waitlist-form input:focus {
-            border-color: var(--blue);
+            border-color: var(--accent);
             outline: none;
-            background: rgba(255,255,255,0.1);
+            box-shadow: 0 0 0 3px var(--accent-glow);
         }
 
-        .waitlist-form input.input-error {
-            border-color: var(--error);
-        }
+        .waitlist-form input.input-error { border-color: var(--red); }
 
-        .waitlist-form button {
-            padding: 14px 28px;
-            white-space: nowrap;
-        }
-
-        .waitlist-form button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
+        .waitlist-form button { padding: 14px 28px; white-space: nowrap; }
+        .waitlist-form button:disabled { opacity: 0.7; cursor: not-allowed; }
 
         .waitlist-note {
-            font-size: 0.8rem;
-            color: #475569;
+            font-size: 0.78rem;
+            color: var(--text-dim);
         }
 
         .waitlist-error {
             font-size: 0.85rem;
-            color: var(--error-light);
+            color: var(--red);
             margin-bottom: 12px;
             min-height: 1.2em;
         }
 
-        /* Success state */
         .waitlist-success {
             display: none;
             text-align: center;
             animation: fadeInUp 0.4s ease;
         }
 
-        .waitlist-success.show {
-            display: block;
-        }
+        .waitlist-success.show { display: block; }
 
         .waitlist-success-icon {
             width: 64px;
             height: 64px;
             border-radius: 50%;
-            background: rgba(16, 185, 129, 0.15);
+            background: var(--accent-glow-strong);
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 16px;
-            font-size: 2rem;
+            font-size: 1.5rem;
+            color: var(--accent);
         }
 
         .waitlist-success h3 {
+            font-family: var(--font-display);
             font-size: 1.25rem;
             font-weight: 700;
             margin-bottom: 8px;
         }
 
-        .waitlist-success p {
-            color: #94a3b8;
-            font-size: 0.95rem;
+        .waitlist-success p { color: var(--text-secondary); font-size: 0.95rem; }
+
+        /* ==========================================================
+           FOOTER
+        ========================================================== */
+        .footer {
+            border-top: 1px solid var(--border);
+            padding: 48px 0 32px;
         }
 
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 40px;
+        }
+
+        .footer-brand p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-top: 12px;
+        }
+
+        .footer-col h4 {
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            font-size: 0.72rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 16px;
+        }
+
+        .footer-col a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 4px 0;
+            transition: color var(--transition);
+        }
+
+        .footer-col a:hover { color: var(--text); }
+
+        .footer-bottom {
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .footer-bottom a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color var(--transition);
+        }
+
+        .footer-bottom a:hover { color: var(--text); }
+
+        /* ==========================================================
+           ANIMATIONS
+        ========================================================== */
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(12px); }
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -1128,96 +1224,10 @@
             to { transform: rotate(360deg); }
         }
 
-        .waitlist-form button .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            vertical-align: middle;
-            margin-right: 6px;
-        }
-
-        .form-fadeout {
-            animation: fadeOut 0.3s ease forwards;
-        }
-
-        /* ============================================================
-           FOOTER
-        ============================================================ */
-        .footer {
-            background: #080e1a;
-            color: #64748b;
-            padding: 48px 0 32px;
-            border-top: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .footer-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 48px;
-            margin-bottom: 40px;
-        }
-
-        .footer-logo { font-size: 1.1rem; }
-
-        .footer-brand p {
-            font-size: 0.85rem;
-            line-height: 1.7;
-            margin-top: 12px;
-        }
-
-        .footer-col h4 {
-            color: #cbd5e1;
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 16px;
-        }
-
-        .footer-col a {
-            display: block;
-            color: #64748b;
-            text-decoration: none;
-            font-size: 0.9rem;
-            padding: 4px 0;
-            transition: color var(--transition);
-        }
-
-        .footer-col a:hover { color: #cbd5e1; }
-
-        .footer-bottom {
-            padding-top: 24px;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8rem;
-        }
-
-        .footer-bottom-links {
-            display: flex;
-            gap: 24px;
-        }
-
-        .footer-bottom-links a {
-            color: #475569;
-            text-decoration: none;
-            transition: color var(--transition);
-        }
-
-        .footer-bottom-links a:hover { color: #94a3b8; }
-
-        /* ============================================================
-           SCROLL ANIMATIONS
-        ============================================================ */
         .reveal {
             opacity: 0;
             transform: translateY(24px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
+            transition: opacity 0.6s ease, transform 0.6s ease;
         }
 
         .reveal.visible {
@@ -1228,42 +1238,66 @@
         .reveal-d1 { transition-delay: 0.1s; }
         .reveal-d2 { transition-delay: 0.2s; }
         .reveal-d3 { transition-delay: 0.3s; }
+        .reveal-d4 { transition-delay: 0.4s; }
+        .reveal-d5 { transition-delay: 0.5s; }
 
-        /* ============================================================
+        .hero-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .hero-reveal-d1 { animation-delay: 0.1s; }
+        .hero-reveal-d2 { animation-delay: 0.2s; }
+        .hero-reveal-d3 { animation-delay: 0.3s; }
+        .hero-reveal-d4 { animation-delay: 0.5s; }
+
+        .form-fadeout { animation: fadeOut 0.3s ease forwards; }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(9,9,11,0.3);
+            border-top-color: var(--bg);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        /* ==========================================================
            RESPONSIVE
-           Usability: mobile-first breakpoints, hamburger nav
-        ============================================================ */
+        ========================================================== */
         @media (max-width: 900px) {
-            .pain-grid,
-            .features-grid,
-            .pricing-grid,
-            .pricing-guidance,
-            .ea-grid,
-            .how-steps {
-                grid-template-columns: 1fr;
-            }
-
-            .hero-container {
+            .hero-container,
+            .audience-grid,
+            .oss-inner {
                 grid-template-columns: 1fr;
                 gap: 40px;
             }
 
-            .hero-illustration {
-                order: -1;
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
 
-            .trust-inner {
+            .pricing-grid {
                 grid-template-columns: 1fr;
+                max-width: 400px;
+                margin: 0 auto;
             }
 
-            .trust-illustration { margin-top: 40px; }
+            .price-card.featured { order: -1; }
 
-            .price-card.featured {
-                transform: none;
-                order: -1;
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 24px;
             }
 
-            .how-steps::before { display: none; }
+            .arch-diagram { flex-direction: column; }
+            .arch-arrow { transform: rotate(90deg); padding: 8px 0; }
+
+            .oss-stats { margin-top: 40px; }
 
             .footer-grid {
                 grid-template-columns: 1fr 1fr;
@@ -1272,9 +1306,8 @@
 
         @media (max-width: 640px) {
             .nav-links { display: none; }
-            .nav-toggle { display: block; }
+            .nav-toggle { display: flex; }
 
-            /* Mobile menu — proper touch targets */
             .nav-links.open {
                 display: flex;
                 flex-direction: column;
@@ -1282,10 +1315,9 @@
                 top: var(--nav-height);
                 left: 0;
                 right: 0;
-                background: #fff;
+                background: var(--bg);
                 border-bottom: 1px solid var(--border);
                 padding: 12px 24px;
-                box-shadow: var(--shadow-md);
                 gap: 0;
             }
 
@@ -1301,13 +1333,12 @@
                 text-align: center;
                 justify-content: center;
                 margin-top: 8px;
+                width: 100%;
             }
 
             .container { padding: 0 16px; }
-
-            .section { padding: 64px 0; }
-
-            .hero { padding: calc(var(--nav-height) + 48px) 0 64px; }
+            .section { padding: 80px 0; }
+            .hero { padding: calc(var(--nav-height) + 48px) 0 24px; }
 
             .hero-ctas {
                 flex-direction: column;
@@ -1315,21 +1346,18 @@
 
             .hero-ctas .btn { width: 100%; justify-content: center; }
 
-            .hero-img {
-                max-width: 100%;
+            .features-grid { grid-template-columns: 1fr; }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
             }
 
-            .hero-proof {
-                justify-content: center;
-                gap: 24px;
-            }
+            .stat-value { font-size: 1.8rem; }
 
             .btn { padding: 12px 20px; }
 
-            .waitlist-form {
-                flex-direction: column;
-            }
-
+            .waitlist-form { flex-direction: column; }
             .waitlist-form button { width: 100%; justify-content: center; }
 
             .footer-grid { grid-template-columns: 1fr; gap: 32px; }
@@ -1340,545 +1368,650 @@
                 text-align: center;
             }
 
-            .hero-illustration {
-                max-width: 100%;
-            }
-
-            .section-header {
-                margin: 0 auto 48px;
-            }
+            .audience-card { padding: 32px 24px; }
         }
 
-        /* Extra small screens */
         @media (max-width: 400px) {
             .container { padding: 0 12px; }
-            .hero-proof { flex-direction: column; align-items: center; gap: 16px; }
-            .hero-proof-item { align-items: center; }
         }
     </style>
 </head>
 <body>
-    <!-- ========== NAVIGATION ========== -->
-    <nav class="nav" role="navigation" aria-label="Menu główne">
-        <div class="nav-inner">
-            <a href="#hero" class="nav-logo" aria-label="OpenOMS strona główna">Open<span>OMS</span></a>
+    <!-- Background layers -->
+    <div class="noise" aria-hidden="true"></div>
+    <div class="grid-bg" aria-hidden="true"></div>
 
-            <button class="nav-toggle" aria-label="Otwórz menu" aria-expanded="false" aria-controls="nav-menu" id="nav-toggle-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
+    <!-- ========== NAVIGATION ========== -->
+    <nav class="nav" role="navigation" aria-label="Menu">
+        <div class="nav-inner">
+            <a href="#" class="nav-logo">Open<span>OMS</span></a>
+
+            <button class="nav-toggle" aria-label="Menu" aria-expanded="false" id="nav-toggle-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
 
-            <ul class="nav-links" id="nav-menu" role="menubar">
-                <li role="none"><a href="#jak-dziala" role="menuitem">Jak to działa</a></li>
-                <li role="none"><a href="#funkcje" role="menuitem">Funkcje</a></li>
-                <li role="none"><a href="#cennik" role="menuitem">Cennik</a></li>
-                <li role="none"><a href="#faq" role="menuitem">FAQ</a></li>
-                <li role="none"><a href="#open-source" role="menuitem">Open Source</a></li>
-                <li role="none"><a href="#dolacz" class="nav-cta" role="menuitem">Zapisz się</a></li>
+            <ul class="nav-links" id="nav-menu">
+                <li><a href="#features">Funkcje</a></li>
+                <li><a href="#integrations">Integracje</a></li>
+                <li><a href="#open-source">Open Source</a></li>
+                <li><a href="#pricing">Cennik</a></li>
+                <li><a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener" class="nav-github">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a></li>
+                <li><a href="#waitlist" class="nav-cta">Waitlista</a></li>
             </ul>
         </div>
     </nav>
 
-    <!-- ========== HERO ========== -->
-    <section class="hero" aria-labelledby="hero-heading">
-        <div class="container">
-            <div class="hero-container">
-                <div class="hero-content">
-                    <div class="hero-badge">
-                        <span class="hero-badge-dot" aria-hidden="true"></span>
-                        Source Available &middot; BSL 1.1
+    <main>
+        <!-- ========== HERO ========== -->
+        <section class="hero" id="hero">
+            <div class="hero-glow" aria-hidden="true"></div>
+            <div class="container">
+                <div class="hero-container">
+                    <div class="hero-content">
+                        <div class="hero-badge hero-reveal">
+                            <span class="hero-badge-dot" aria-hidden="true"></span>
+                            Source Available &middot; BSL 1.1
+                        </div>
+
+                        <h1 class="hero-reveal hero-reveal-d1">
+                            Zamówienia<br>pod <span class="accent">Twoją</span><br>kontrolą.
+                        </h1>
+
+                        <p class="hero-sub hero-reveal hero-reveal-d2">
+                            Open-source OMS z 291 endpointami API, 82 stronami dashboardu
+                            i integracjami z Allegro, InPost i 14 innymi serwisami.
+                            Self-host za darmo lub wybierz nasz cloud.
+                        </p>
+
+                        <div class="hero-ctas hero-reveal hero-reveal-d3">
+                            <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener" class="btn btn-primary">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                                Zobacz na GitHub
+                            </a>
+                            <a href="#waitlist" class="btn btn-ghost">
+                                Dołącz do waitlisty
+                            </a>
+                        </div>
                     </div>
 
-                    <h1 id="hero-heading"><span class="nowrap">OMS dla e&#8209;commerce,</span> <em class="nowrap">który kontrolujesz Ty</em></h1>
+                    <div class="hero-terminal hero-reveal hero-reveal-d4">
+                        <div class="terminal">
+                            <div class="terminal-header">
+                                <div class="terminal-dot terminal-dot--red"></div>
+                                <div class="terminal-dot terminal-dot--yellow"></div>
+                                <div class="terminal-dot terminal-dot--green"></div>
+                                <span class="terminal-title">bash &mdash; openoms</span>
+                            </div>
+                            <div class="terminal-body">
+                                <div><span class="terminal-prompt">$</span> <span class="terminal-cmd">curl</span> <span class="terminal-flag">-s</span> <span class="terminal-cmd">localhost:8080/health</span> | <span class="terminal-cmd">jq</span> <span class="terminal-flag">.</span></div>
+                                <div>{</div>
+                                <div>&nbsp;&nbsp;<span class="terminal-key">"status"</span>: <span class="terminal-string">"ok"</span>,</div>
+                                <div>&nbsp;&nbsp;<span class="terminal-key">"version"</span>: <span class="terminal-string">"3.2.0"</span>,</div>
+                                <div>&nbsp;&nbsp;<span class="terminal-key">"endpoints"</span>: <span class="terminal-number">291</span>,</div>
+                                <div>&nbsp;&nbsp;<span class="terminal-key">"uptime"</span>: <span class="terminal-string">"43d 7h 22m"</span></div>
+                                <div>}</div>
+                                <div style="margin-top:8px"><span class="terminal-prompt">$</span> <span class="terminal-cursor"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-                    <p class="hero-sub">
-                        Zarządzaj zamówieniami z Allegro, InPost i innych kanałów
-                        w jednym miejscu. Self-host za darmo lub wybierz nasz cloud.
-                        Bez vendor lock-in. Bez niespodzianek cenowych.
-                    </p>
+        <!-- ========== STATS STRIP ========== -->
+        <section class="stats" aria-label="Statystyki projektu">
+            <div class="container">
+                <div class="stats-grid">
+                    <div class="reveal">
+                        <div class="stat-value"><span class="accent" data-count="291">0</span></div>
+                        <div class="stat-label">API Endpoints</div>
+                    </div>
+                    <div class="reveal reveal-d1">
+                        <div class="stat-value"><span class="accent" data-count="82">0</span></div>
+                        <div class="stat-label">Dashboard Pages</div>
+                    </div>
+                    <div class="reveal reveal-d2">
+                        <div class="stat-value"><span class="accent" data-count="21">0</span></div>
+                        <div class="stat-label">SDK Packages</div>
+                    </div>
+                    <div class="reveal reveal-d3">
+                        <div class="stat-value"><span class="accent" data-count="94">0</span></div>
+                        <div class="stat-label">SQL Migrations</div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-                    <div class="hero-ctas">
-                        <a href="#dolacz" class="btn btn-primary">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                            Zapisz się na waitlistę
-                        </a>
+        <!-- ========== DUAL AUDIENCE ========== -->
+        <section class="audience" aria-label="Dla kogo">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">DLA KOGO</span>
+                    <h2>Jedno narzędzie,<br>dwa światy</h2>
+                </div>
+
+                <div class="audience-grid">
+                    <div class="audience-card reveal">
+                        <div class="audience-card-label">// FOR DEVELOPERS</div>
+                        <h3>Twój stack, Twoje zasady</h3>
+                        <p>Go + Next.js monorepo z czystą architekturą. Fork, extend, deploy na swojej infrastrukturze.</p>
+                        <ul class="audience-list">
+                            <li>Go 1.24 + chi router + pgx/v5</li>
+                            <li>Next.js 16 + React 19 + TypeScript</li>
+                            <li>PostgreSQL RLS multi-tenancy</li>
+                            <li>OpenAPI 3.1 + Swagger UI</li>
+                            <li>Docker Compose / Helm chart</li>
+                            <li>21 standalone SDK pakietów (MIT)</li>
+                        </ul>
+                    </div>
+
+                    <div class="audience-card reveal reveal-d1">
+                        <div class="audience-card-label">// FOR SELLERS</div>
+                        <h3>Skup się na sprzedaży</h3>
+                        <p>82 gotowe strony dashboardu. Zamówienia, przesyłki, zwroty, faktury — wszystko w jednym miejscu.</p>
+                        <ul class="audience-list">
+                            <li>Allegro + InPost — działają od startu</li>
+                            <li>Auto-etykiety i śledzenie paczek</li>
+                            <li>Automatyzacja zamówień (rules engine)</li>
+                            <li>Zwroty i reklamacje (RMA)</li>
+                            <li>Raporty, CSV export, wydruki</li>
+                            <li>Kanban board + barcode scanning</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== FEATURES ========== -->
+        <section class="section" id="features">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">FEATURES</span>
+                    <h2>Wszystko w jednym systemie</h2>
+                    <p>12 modułów, od zamówień po faktury. Każdy z pełnym API i UI.</p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card reveal">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
+                        <h3>Zamówienia</h3>
+                        <p>Statusy, tagi, custom fields, merge/split, bulk operacje, Kanban board.</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d1">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+                        <h3>Produkty</h3>
+                        <p>Warianty, bundling, kategorie, waga/wymiary, zdjęcia, import CSV.</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d2">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+                        <h3>Magazyny</h3>
+                        <p>Multi-warehouse, dokumenty PZ/WZ/MM, inwentaryzacja, strict inventory.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 10 3 3 10 3"/><path d="M3 3l18 18"/><polyline points="21 14 21 21 14 21"/></svg></div>
+                        <h3>Zwroty (RMA)</h3>
+                        <p>6-statusowy lifecycle, self-service portal, auto-refund, print slip.</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d1">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+                        <h3>Automatyzacja</h3>
+                        <p>Rules engine: trigger + conditions + actions. Scheduled delays.</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d2">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="23 7 16 12 16 2 23 7"/></svg></div>
+                        <h3>Przesyłki</h3>
+                        <p>8 przewoźników, auto-label, rate shopping, tracking, batch labels.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg></div>
+                        <h3>Marketplace</h3>
+                        <p>8 integracji: Allegro, Amazon, WooCommerce, eBay, Kaufland, OLX, Mirakl, Erli.</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d1">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                        <h3>Faktury</h3>
+                        <p>Fakturownia, KSeF (e-faktury), print templates, multi-currency (NBP).</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d2">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+                        <h3>Raporty</h3>
+                        <p>Revenue charts, trends, advanced reports, Prometheus metrics.</p>
+                    </div>
+                    <div class="feature-card reveal">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div>
+                        <h3>Webhooks</h3>
+                        <p>Outgoing webhooks z HMAC-SHA256, delivery log, retry policy.</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d1">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
+                        <h3>Multi-tenant</h3>
+                        <p>PostgreSQL RLS, izolacja danych, per-tenant settings, custom branding.</p>
+                    </div>
+                    <div class="feature-card reveal reveal-d2">
+                        <div class="feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                        <h3>Security</h3>
+                        <p>RBAC, 2FA/TOTP, Ed25519 JWT, audit log, CSP headers, encryption at rest.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== TERMINAL DEMO ========== -->
+        <section class="demo" id="demo">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">API</span>
+                    <h2>291 endpointów<br>do Twojej dyspozycji</h2>
+                    <p>RESTful API z pełną dokumentacją OpenAPI 3.1. Swagger UI w zestawie.</p>
+                </div>
+
+                <div class="terminal reveal">
+                    <div class="terminal-header">
+                        <div class="terminal-dot terminal-dot--red"></div>
+                        <div class="terminal-dot terminal-dot--yellow"></div>
+                        <div class="terminal-dot terminal-dot--green"></div>
+                        <span class="terminal-title">bash &mdash; api demo</span>
+                    </div>
+                    <div class="terminal-body" id="demo-terminal">
+                        <div class="terminal-comment"># Typing demo starts when visible...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== INTEGRATIONS ========== -->
+        <section class="section" id="integrations">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">INTEGRATIONS</span>
+                    <h2>16 integracji.<br>2 zweryfikowane.</h2>
+                    <p>Allegro i InPost działają produkcyjnie. Reszta w aktywnym developmencie.</p>
+                </div>
+
+                <div class="integrations-groups">
+                    <div class="integration-group reveal">
+                        <h3>Marketplace (8)</h3>
+                        <div class="integration-pills">
+                            <div class="integration-pill"><span class="status-dot status-verified"></span> Allegro</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> Amazon SP-API</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> WooCommerce</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> eBay</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> Kaufland</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> OLX</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> Mirakl / Empik</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> Erli</div>
+                        </div>
+                    </div>
+
+                    <div class="integration-group reveal reveal-d1">
+                        <h3>Carriers (8)</h3>
+                        <div class="integration-pills">
+                            <div class="integration-pill"><span class="status-dot status-verified"></span> InPost</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> DHL</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> DPD</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> GLS</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> UPS</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> Poczta Polska</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> Orlen Paczka</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> FedEx</div>
+                        </div>
+                    </div>
+
+                    <div class="integration-group reveal reveal-d2">
+                        <h3>Other</h3>
+                        <div class="integration-pills">
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> Fakturownia</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> KSeF</div>
+                            <div class="integration-pill"><span class="status-dot status-verified"></span> OpenAI</div>
+                            <div class="integration-pill"><span class="status-dot status-dev"></span> SMSAPI</div>
+                            <div class="integration-pill"><span class="status-dot status-verified"></span> NBP</div>
+                        </div>
+                    </div>
+
+                    <div class="reveal reveal-d3" style="display:flex; gap:24px; align-items:center; padding-top:8px">
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-muted)">
+                            <span class="status-dot status-verified"></span> Zweryfikowane produkcyjnie
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-muted)">
+                            <span class="status-dot status-dev"></span> W budowie
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== ARCHITECTURE ========== -->
+        <section class="section" id="architecture" style="padding-top:0">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">ARCHITECTURE</span>
+                    <h2>Prosty stack,<br>sprawdzone technologie</h2>
+                </div>
+
+                <div class="arch-diagram reveal">
+                    <div class="arch-box">
+                        <div class="arch-box-name">Browser</div>
+                        <div class="arch-box-tech">PWA + Shortcuts</div>
+                    </div>
+                    <div class="arch-arrow">&rarr;</div>
+                    <div class="arch-box">
+                        <div class="arch-box-name">Next.js 16</div>
+                        <div class="arch-box-tech">React 19 + TypeScript</div>
+                    </div>
+                    <div class="arch-arrow">&rarr;</div>
+                    <div class="arch-box arch-box--highlight">
+                        <div class="arch-box-name">Go API</div>
+                        <div class="arch-box-tech">chi/v5 + pgx/v5</div>
+                    </div>
+                    <div class="arch-arrow">&rarr;</div>
+                    <div class="arch-stack">
+                        <div class="arch-box">
+                            <div class="arch-box-name">PostgreSQL 16</div>
+                            <div class="arch-box-tech">Row-Level Security</div>
+                        </div>
+                        <div class="arch-box">
+                            <div class="arch-box-name">Redis 7</div>
+                            <div class="arch-box-tech">Cache + Queue</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== OPEN SOURCE ========== -->
+        <section class="section" id="open-source">
+            <div class="container">
+                <div class="oss-inner">
+                    <div class="oss-text reveal">
+                        <span class="section-label">OPEN SOURCE</span>
+                        <h2>Twój OMS,<br>Twoje zasady</h2>
+                        <p>
+                            Każda linia kodu jest publiczna, audytowalna i modyfikowalna.
+                            Zero vendor lock-in — jeśli przestaniemy istnieć, Twój system
+                            dalej działa.
+                        </p>
+                        <ul class="oss-list">
+                            <li>Pełny kod na GitHub (BSL 1.1 &rarr; AGPLv3)</li>
+                            <li>Self-host na dowolnej infrastrukturze</li>
+                            <li>21 pakietów SDK licencjonowanych MIT</li>
+                            <li>Docker Compose + Helm chart</li>
+                            <li>CI/CD z GitHub Actions + Trivy scan</li>
+                        </ul>
                         <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener" class="btn btn-ghost">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-                            GitHub
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                            Zobacz repozytorium
                         </a>
                     </div>
 
-                    <div class="hero-proof">
-                        <div class="hero-proof-item">
-                            <span class="hero-proof-value">BSL 1.1</span>
-                            <span class="hero-proof-label">Licencja source available</span>
+                    <div class="oss-stats reveal reveal-d2">
+                        <div class="oss-stat">
+                            <div class="oss-stat-value">429</div>
+                            <div class="oss-stat-label">Go source files</div>
                         </div>
-                        <div class="hero-proof-item">
-                            <span class="hero-proof-value">Go + React</span>
-                            <span class="hero-proof-label">Nowoczesny stack</span>
+                        <div class="oss-stat">
+                            <div class="oss-stat-value">231</div>
+                            <div class="oss-stat-label">TypeScript files</div>
                         </div>
-                        <div class="hero-proof-item">
-                            <span class="hero-proof-value">Multi-tenant</span>
-                            <span class="hero-proof-label">Izolacja danych (RLS)</span>
+                        <div class="oss-stat">
+                            <div class="oss-stat-value">78</div>
+                            <div class="oss-stat-label">Test files</div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="hero-illustration">
-                    <picture>
-                        <source srcset="hero.webp" type="image/webp">
-                        <img src="hero.png" alt="Dashboard OpenOMS pokazujący widok zamówień z kartami statusów i nawigacją boczną" class="hero-img" loading="eager" width="500" height="264">
-                    </picture>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========== PAIN POINTS ========== -->
-    <section class="pain section" aria-labelledby="pain-heading">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Problem</span>
-                <h2 id="pain-heading">Dlaczego sprzedawcy szukają alternatyw</h2>
-                <p>Zamknięte systemy OMS ograniczają Twój biznes. Czas na zmianę.</p>
-            </div>
-
-            <div class="section-image">
-                <picture>
-                    <source srcset="pain-points.webp" type="image/webp">
-                    <img src="pain-points.png" alt="Trzy ikony problemów zamkniętych systemów: rosnące koszty, kłódka vendor lock-in, czarna skrzynka braku transparencji" loading="lazy" width="800" height="400">
-                </picture>
-            </div>
-
-            <div class="pain-grid">
-                <div class="pain-card reveal">
-                    <div class="pain-icon pain-icon-red" aria-hidden="true">📈</div>
-                    <h3>Nieprzewidywalne koszty</h3>
-                    <p>Zamknięte platformy mogą podnieść ceny w dowolnym momencie. Twój budżet nie powinien zależeć od decyzji cenowych vendora.</p>
-                </div>
-                <div class="pain-card reveal reveal-d1">
-                    <div class="pain-icon pain-icon-amber" aria-hidden="true">🔒</div>
-                    <h3>Vendor lock-in</h3>
-                    <p>Twoje dane, procesy i integracje są uwięzione w zamkniętym systemie. Migracja staje się kosztowna i bolesna.</p>
-                </div>
-                <div class="pain-card reveal reveal-d2">
-                    <div class="pain-icon pain-icon-purple" aria-hidden="true">👁</div>
-                    <h3>Brak transparencji</h3>
-                    <p>Zamknięty kod to czarna skrzynka. Nie wiesz, jak Twoje dane są przetwarzane ani jakie decyzje podejmuje algorytm.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========== HOW IT WORKS ========== -->
-    <section class="how section" id="jak-dziala" aria-labelledby="how-heading">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Jak to działa</span>
-                <h2 id="how-heading">Zacznij w 3 prostych krokach</h2>
-            </div>
-
-            <div class="section-image">
-                <picture>
-                    <source srcset="how-it-works.webp" type="image/webp">
-                    <img src="how-it-works.png" alt="Diagram trzech kroków: uruchomienie Docker, połączenie integracji Allegro i InPost, zarządzanie zamówieniami z dashboardu" loading="lazy" width="800" height="267">
-                </picture>
-            </div>
-
-            <div class="how-steps">
-                <div class="how-step reveal">
-                    <div class="how-num" aria-hidden="true">1</div>
-                    <h3>Uruchom</h3>
-                    <p>Self-host przez <code>docker compose up</code> lub załóż konto w naszym cloudzie. Gotowe w 5 minut.</p>
-                </div>
-                <div class="how-step reveal reveal-d1">
-                    <div class="how-num" aria-hidden="true">2</div>
-                    <h3>Połącz</h3>
-                    <p>Podepnij swoje konto Allegro i InPost jednym kliknięciem. Zamówienia synchronizują się automatycznie.</p>
-                </div>
-                <div class="how-step reveal reveal-d2">
-                    <div class="how-num" aria-hidden="true">3</div>
-                    <h3>Zarządzaj</h3>
-                    <p>Obsługuj zamówienia, generuj etykiety i śledź przesyłki z jednego dashboardu.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========== FEATURES ========== -->
-    <section class="features section" id="funkcje" aria-labelledby="features-heading">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Funkcje</span>
-                <h2 id="features-heading">Wszystko, czego potrzebujesz</h2>
-                <p>Jeden system do zarządzania zamówieniami z wielu kanałów sprzedaży.</p>
-            </div>
-
-            <div class="section-image">
-                <picture>
-                    <source srcset="features.webp" type="image/webp">
-                    <img src="features.png" alt="Cztery moduły funkcji OpenOMS: centralne zamówienia, integracje, multi-tenant, open source" loading="lazy" width="800" height="800">
-                </picture>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card reveal">
-                    <div class="feature-card-icon" aria-hidden="true">📦</div>
-                    <h3>Centralne zamówienia</h3>
-                    <p>Zamówienia z Allegro, WooCommerce i innych kanałów w jednym widoku. Filtruj, sortuj, zmieniaj statusy hurtowo.</p>
-                </div>
-                <div class="feature-card reveal reveal-d1">
-                    <div class="feature-card-icon" aria-hidden="true">🔗</div>
-                    <h3>Integracje</h3>
-                    <p>Allegro i InPost działają od startu. DHL, DPD, WooCommerce, Shopify i Fakturownia w planach na najbliższe miesiące.</p>
-                </div>
-                <div class="feature-card reveal reveal-d2">
-                    <div class="feature-card-icon" aria-hidden="true">🏢</div>
-                    <h3>Multi-tenant</h3>
-                    <p>Każdy sprzedawca ma całkowicie izolowane dane dzięki PostgreSQL Row-Level Security. Zero ryzyka wycieku między kontami.</p>
-                </div>
-                <div class="feature-card reveal reveal-d3">
-                    <div class="feature-card-icon" aria-hidden="true">🛡</div>
-                    <h3>Source available (BSL 1.1)</h3>
-                    <p>Pełna kontrola nad kodem. Audituj, modyfikuj, deployuj na własnej infrastrukturze. Żadnych ukrytych komponentów.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========== PRICING ========== -->
-    <section class="pricing section" id="cennik" aria-labelledby="pricing-heading">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Cennik</span>
-                <h2 id="pricing-heading">Przejrzysty i przewidywalny</h2>
-                <p>Wybierz plan dopasowany do Twojego biznesu. Bez ukrytych opłat.</p>
-            </div>
-
-            <!-- Pricing Guidance: Która opcja dla mnie? -->
-            <div class="pricing-guidance reveal">
-                <div class="pricing-persona">
-                    <div class="pricing-persona-emoji" aria-hidden="true">🛠</div>
-                    <div class="pricing-persona-title">Mam zespół IT</div>
-                    <div class="pricing-persona-desc">Chcesz pełną kontrolę i hostować u siebie? Wybierz Self-hosted.</div>
-                </div>
-                <div class="pricing-persona">
-                    <div class="pricing-persona-emoji" aria-hidden="true">🚀</div>
-                    <div class="pricing-persona-title">Sprzedaję na Allegro</div>
-                    <div class="pricing-persona-desc">Do 1000 zamówień miesięcznie? Cloud Lite da Ci wszystko, czego potrzebujesz.</div>
-                </div>
-                <div class="pricing-persona">
-                    <div class="pricing-persona-emoji" aria-hidden="true">🏭</div>
-                    <div class="pricing-persona-title">Duża operacja</div>
-                    <div class="pricing-persona-desc">Potrzebujesz SLA, priority support i custom integracji? Cloud Pro jest dla Ciebie.</div>
-                </div>
-            </div>
-
-            <div class="pricing-grid">
-                <!-- Self-hosted -->
-                <div class="price-card reveal" role="article" aria-label="Plan Self-hosted: darmowy">
-                    <div class="price-name">Self-hosted</div>
-                    <div class="price-desc">Dla zespołów technicznych</div>
-                    <div class="price-amount">0 <span>PLN</span></div>
-                    <div class="price-period">Na zawsze, za darmo</div>
-                    <ul class="price-features">
-                        <li>Pełny kod źródłowy (BSL 1.1)</li>
-                        <li>Docker Compose &mdash; 1 komenda</li>
-                        <li>Community support (GitHub)</li>
-                        <li>Własna infrastruktura</li>
-                        <li>Bez limitów zamówień</li>
-                    </ul>
-                    <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener" class="btn btn-outline">Zobacz na GitHub</a>
-                </div>
-
-                <!-- Cloud Lite — FEATURED -->
-                <div class="price-card featured reveal reveal-d1" role="article" aria-label="Plan Cloud Lite: 199 PLN miesięcznie, najpopularniejszy">
-                    <span class="price-badge">Popularne</span>
-                    <div class="price-name">Cloud Lite</div>
-                    <div class="price-desc">Dla małych sprzedawców</div>
-                    <div class="price-amount">199 <span>PLN/mies</span></div>
-                    <div class="price-period">Bez umowy, możesz odejść kiedy chcesz</div>
-                    <ul class="price-features">
-                        <li>Do 1 000 zamówień / miesiąc</li>
-                        <li>Allegro + InPost</li>
-                        <li>Email support (SLA 24h)</li>
-                        <li>Automatyczne backupy</li>
-                        <li>Aktualizacje bez przestojów</li>
-                    </ul>
-                    <a href="#dolacz" class="btn btn-primary">Zapisz się na waitlistę</a>
-                </div>
-
-                <!-- Cloud Pro -->
-                <div class="price-card reveal reveal-d2" role="article" aria-label="Plan Cloud Pro: 399 PLN miesięcznie">
-                    <div class="price-name">Cloud Pro</div>
-                    <div class="price-desc">Dla większych operacji</div>
-                    <div class="price-amount">399 <span>PLN/mies</span></div>
-                    <div class="price-period">Wszystko z Lite, plus:</div>
-                    <ul class="price-features">
-                        <li>Bez limitu zamówień</li>
-                        <li>Priority support (SLA 4h)</li>
-                        <li>Custom integracje na życzenie</li>
-                        <li>SLA 99.9% uptime</li>
-                        <li>Dedykowany onboarding</li>
-                    </ul>
-                    <a href="#dolacz" class="btn btn-outline">Zapisz się na waitlistę</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========== EARLY ACCESS / SOCIAL PROOF ========== -->
-    <section class="early-access section" id="early-access" aria-labelledby="ea-heading">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Early Access</span>
-                <h2 id="ea-heading">Budujemy publicznie</h2>
-                <p>OpenOMS jest w fazie aktywnego rozwoju. Dołącz do grona pierwszych użytkowników i współtwórz produkt.</p>
-            </div>
-
-            <div class="ea-grid">
-                <div class="ea-card reveal">
-                    <div class="ea-icon" aria-hidden="true">🔨</div>
-                    <h3>Aktywny rozwój</h3>
-                    <p>Kod powstaje na GitHub. Każdy commit, PR i decyzja architektoniczna są publiczne i transparentne.</p>
-                </div>
-                <div class="ea-card reveal reveal-d1">
-                    <div class="ea-icon" aria-hidden="true">🤝</div>
-                    <h3>Wpływ na produkt</h3>
-                    <p>Pierwsi użytkownicy mają realny wpływ na roadmapę. Twoje potrzeby kształtują funkcje, które budujemy.</p>
-                </div>
-                <div class="ea-card reveal reveal-d2">
-                    <div class="ea-icon" aria-hidden="true">🎁</div>
-                    <h3>Founding Member</h3>
-                    <p>Early adopters otrzymają specjalne warunki i status Founding Member — na stałe, jako podziękowanie za zaufanie.</p>
-                </div>
-            </div>
-
-            <div class="ea-cta reveal">
-                <h3>Szukamy pierwszych beta testerów</h3>
-                <p>Jeśli sprzedajesz na Allegro i chcesz wypróbować OpenOMS jako jeden z pierwszych — zapisz się na waitlistę. Skontaktujemy się osobiście.</p>
-                <a href="#dolacz" class="btn btn-primary">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                    Zapisz się na early access
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========== OPEN SOURCE / TRUST ========== -->
-    <section class="trust section" id="open-source" aria-labelledby="trust-heading">
-        <div class="container">
-            <div class="trust-inner">
-                <div class="trust-text">
-                    <span class="section-label section-label--light">Open Source</span>
-                    <h2 id="trust-heading">Twój OMS, Twoje zasady</h2>
-                    <p>
-                        OpenOMS jest w pełni otwarty. Każda linia kodu jest publiczna,
-                        audytowalna i modyfikowalna. Zero vendor lock-in &mdash; jeśli
-                        przestaniemy istnieć, Twój system dalej działa.
-                    </p>
-                    <ul class="trust-list">
-                        <li>Pełny kod na GitHub (BSL 1.1)</li>
-                        <li>Self-host na dowolnej infrastrukturze</li>
-                        <li>Brak ukrytych komponentów czy „premium core"</li>
-                        <li>Community-driven development</li>
-                    </ul>
-                    <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener" class="btn btn-ghost btn-ghost--dark">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-                        Zobacz repozytorium
-                    </a>
-                </div>
-
-                <div class="trust-illustration">
-                    <picture>
-                        <source srcset="open-source.webp" type="image/webp">
-                        <img src="open-source.png" alt="Ilustracja repozytorium open source z transparentnym serwerem, diagramem Git branch i symbolami społeczności" loading="lazy" width="460" height="460">
-                    </picture>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ========== FAQ ========== -->
-    <section class="faq section" id="faq" aria-labelledby="faq-heading">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">FAQ</span>
-                <h2 id="faq-heading">Częste pytania</h2>
-                <p>Odpowiedzi na najważniejsze pytania o OpenOMS.</p>
-            </div>
-
-            <div class="faq-list" role="list">
-                <div class="faq-item" role="listitem">
-                    <button class="faq-question" aria-expanded="false" onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
-                        Co jeśli OpenOMS przestanie istnieć?
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">
-                            To największa zaleta open source. Kod jest publiczny na GitHub pod licencją BSL 1.1. Nawet gdyby firma przestała istnieć, Twój system dalej działa. Możesz go hostować, modyfikować i rozwijać samodzielnie lub z community. Żadnej zależności od jednego vendora.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item" role="listitem">
-                    <button class="faq-question" aria-expanded="false" onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
-                        Jak szybko mogę zacząć korzystać?
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">
-                            Self-hosted: jedno polecenie <code>docker compose up</code> i masz działający system w 5 minut. Cloud: rejestracja, podpięcie Allegro i jesteś gotowy. Nie potrzebujesz zespołu DevOps ani specjalistycznej wiedzy.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item" role="listitem">
-                    <button class="faq-question" aria-expanded="false" onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
-                        Czy mogę przenieść dane z innego systemu OMS?
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">
-                            Tak, planujemy narzędzia do importu danych z popularnych systemów OMS. Jako open source, możesz również napisać własny skrypt migracyjny lub połączyć się bezpośrednio z bazą PostgreSQL. Dane są Twoje — w standardowym formacie.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item" role="listitem">
-                    <button class="faq-question" aria-expanded="false" onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
-                        W jakim języku jest support?
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">
-                            Support dla planów Cloud jest po polsku i angielsku. Community na GitHub komunikuje się głównie po angielsku, ale polska społeczność jest aktywna. Dokumentacja będzie dostępna w obu językach.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item" role="listitem">
-                    <button class="faq-question" aria-expanded="false" onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
-                        Czy cloud jest też open source?
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">
-                            Tak. Cloud OpenOMS używa dokładnie tego samego kodu co wersja self-hosted. Płacisz za hosting, monitoring, backupy i support — nie za oprogramowanie. Możesz w każdej chwili przenieść się na self-host bez utraty danych.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item" role="listitem">
-                    <button class="faq-question" aria-expanded="false" onclick="this.parentElement.classList.toggle('open'); this.setAttribute('aria-expanded', this.parentElement.classList.contains('open'))">
-                        Jakie integracje są planowane?
-                        <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="faq-answer" role="region">
-                        <div class="faq-answer-inner">
-                            Na start: Allegro i InPost. W roadmapie na najbliższe miesiące: DHL, DPD, WooCommerce, Shopify, Fakturownia. Jako early adopter możesz wpłynąć na kolejność — powiemy Ci, które integracje są najważniejsze dla Ciebie.
+                        <div class="oss-stat">
+                            <div class="oss-stat-value">15</div>
+                            <div class="oss-stat-label">Background workers</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- ========== WAITLIST CTA ========== -->
-    <section class="waitlist" id="dolacz" aria-labelledby="waitlist-heading">
-        <div class="waitlist-bg-decoration" aria-hidden="true">
-            <picture>
-                <source srcset="waitlist-bg.webp" type="image/webp">
-                <img src="waitlist-bg.png" alt="" loading="lazy">
-            </picture>
-        </div>
-
-        <div class="container">
-            <div class="waitlist-inner">
-                <h2 id="waitlist-heading">Bądź w gronie pierwszych użytkowników</h2>
-                <p>Zapisz się, a powiadomimy Cię, gdy OpenOMS będzie gotowy do testów. Bez spamu &mdash; tylko ważne aktualizacje.</p>
-
-                <div id="waitlist-form-container">
-                    <form class="waitlist-form" id="waitlist-form" action="https://formspree.io/f/xkovgrgb" method="POST" aria-label="Formularz zapisu na waitlistę" novalidate>
-                        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
-                        <input type="email" placeholder="Twój adres e-mail" required name="email" autocomplete="email" aria-label="Adres e-mail" aria-describedby="waitlist-error-msg" id="waitlist-email">
-                        <button type="submit" class="btn btn-primary" id="waitlist-submit-btn">Zapisz się</button>
-                    </form>
-                    <p class="waitlist-error" id="waitlist-error-msg" role="alert" aria-live="polite"></p>
-                    <p class="waitlist-note">Zgodne z RODO. Możesz wypisać się w każdej chwili.</p>
+        <!-- ========== PRICING ========== -->
+        <section class="section" id="pricing">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">PRICING</span>
+                    <h2>Przejrzyste ceny,<br>bez niespodzianek</h2>
+                    <p>Self-hosted za darmo, na zawsze. Cloud dla tych, którzy wolą nie zarządzać infra.</p>
                 </div>
 
-                <div class="waitlist-success" id="waitlist-success" role="status" aria-live="polite">
-                    <div class="waitlist-success-icon" aria-hidden="true">✓</div>
-                    <h3>Dziękujemy za zapis!</h3>
-                    <p id="waitlist-success-msg">Powiadomimy Cię na podany adres, gdy OpenOMS będzie gotowy do testów.</p>
+                <div class="pricing-grid">
+                    <div class="price-card reveal">
+                        <div class="price-name">Self-hosted</div>
+                        <div class="price-desc">Dla zespołów technicznych</div>
+                        <div class="price-amount">0 <span>PLN</span></div>
+                        <div class="price-period">Na zawsze, za darmo</div>
+                        <ul class="price-features">
+                            <li>Pełny kod źródłowy (BSL 1.1)</li>
+                            <li>Docker Compose — 1 komenda</li>
+                            <li>Community support (GitHub)</li>
+                            <li>Własna infrastruktura</li>
+                            <li>Bez limitów zamówień</li>
+                        </ul>
+                        <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener" class="btn btn-ghost">Zobacz na GitHub</a>
+                    </div>
+
+                    <div class="price-card featured reveal reveal-d1">
+                        <span class="price-badge">POPULARNE</span>
+                        <div class="price-name">Cloud Lite</div>
+                        <div class="price-desc">Dla sprzedawców na Allegro</div>
+                        <div class="price-amount">199 <span>PLN/mies</span></div>
+                        <div class="price-period">Bez umowy, cancel anytime</div>
+                        <ul class="price-features">
+                            <li>Do 1 000 zamówień / miesiąc</li>
+                            <li>Allegro + InPost od startu</li>
+                            <li>Email support (SLA 24h)</li>
+                            <li>Automatyczne backupy</li>
+                            <li>Zero-downtime aktualizacje</li>
+                        </ul>
+                        <a href="#waitlist" class="btn btn-primary">Dołącz do waitlisty</a>
+                    </div>
+
+                    <div class="price-card reveal reveal-d2">
+                        <div class="price-name">Cloud Pro</div>
+                        <div class="price-desc">Dla dużych operacji</div>
+                        <div class="price-amount">399 <span>PLN/mies</span></div>
+                        <div class="price-period">Wszystko z Lite, plus:</div>
+                        <ul class="price-features">
+                            <li>Bez limitu zamówień</li>
+                            <li>Priority support (SLA 4h)</li>
+                            <li>Custom integracje</li>
+                            <li>SLA 99.9% uptime</li>
+                            <li>Dedykowany onboarding</li>
+                        </ul>
+                        <a href="#waitlist" class="btn btn-outline">Dołącz do waitlisty</a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
+
+        <!-- ========== FAQ ========== -->
+        <section class="section" id="faq">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-label">FAQ</span>
+                    <h2>Częste pytania</h2>
+                </div>
+
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            Co jeśli OpenOMS przestanie istnieć?
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><div class="faq-answer-inner">
+                            Kod jest publiczny na GitHub pod licencją BSL 1.1. Nawet gdyby firma przestała istnieć, Twój system dalej działa. Możesz go hostować, modyfikować i rozwijać samodzielnie. Żadnej zależności od jednego vendora.
+                        </div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            Jak szybko mogę zacząć?
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><div class="faq-answer-inner">
+                            Self-hosted: <code>docker compose up</code> i masz działający system w 5 minut. Cloud: rejestracja, podpięcie Allegro OAuth i jesteś gotowy.
+                        </div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            Czy mogę przenieść dane z innego OMS?
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><div class="faq-answer-inner">
+                            Tak. API obsługuje CSV import, a dane leżą w standardowym PostgreSQL. Możesz napisać skrypt migracyjny lub skorzystać z naszych narzędzi importu.
+                        </div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            Czym różni się BSL 1.1 od AGPL?
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><div class="faq-answer-inner">
+                            BSL 1.1 pozwala na dowolne użycie poza hostowaniem konkurencyjnego SaaS. 13 lutego 2030 licencja automatycznie konwertuje się na AGPLv3. SDK pakiety (21 bibliotek) są od razu pod MIT.
+                        </div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            Jakie integracje są w roadmapie?
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><div class="faq-answer-inner">
+                            Na start: Allegro + InPost (zweryfikowane). W aktywnym developmencie: DHL, DPD, WooCommerce, Amazon, Fakturownia, KSeF. Jako early adopter wpływasz na kolejność.
+                        </div></div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">
+                            Czy cloud jest też open source?
+                            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <div class="faq-answer"><div class="faq-answer-inner">
+                            Tak. Cloud używa dokładnie tego samego kodu co self-hosted. Płacisz za hosting, monitoring, backupy i support — nie za oprogramowanie.
+                        </div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========== WAITLIST ========== -->
+        <section class="waitlist" id="waitlist">
+            <div class="waitlist-glow" aria-hidden="true"></div>
+            <div class="container">
+                <div class="waitlist-inner">
+                    <span class="section-label" style="text-align:center;display:block">EARLY ACCESS</span>
+                    <h2>Gotowy na zmianę?</h2>
+                    <p>Zapisz się, a powiadomimy Cię, gdy OpenOMS będzie gotowy do testów. Bez spamu — tylko ważne aktualizacje.</p>
+
+                    <div id="waitlist-form-container">
+                        <form class="waitlist-form" id="waitlist-form" action="https://formspree.io/f/xkovgrgb" method="POST" novalidate>
+                            <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+                            <input type="email" placeholder="twoj@email.pl" required name="email" autocomplete="email" aria-label="Adres e-mail" id="waitlist-email">
+                            <button type="submit" class="btn btn-primary" id="waitlist-submit-btn">Zapisz się</button>
+                        </form>
+                        <p class="waitlist-error" id="waitlist-error-msg" role="alert" aria-live="polite"></p>
+                        <p class="waitlist-note">Zgodne z RODO. Wypisz się kiedy chcesz.</p>
+                    </div>
+
+                    <div class="waitlist-success" id="waitlist-success" role="status" aria-live="polite">
+                        <div class="waitlist-success-icon" aria-hidden="true">&#10003;</div>
+                        <h3>Dziękujemy!</h3>
+                        <p id="waitlist-success-msg">Powiadomimy Cię, gdy OpenOMS będzie gotowy.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
     <!-- ========== FOOTER ========== -->
-    <footer class="footer" role="contentinfo">
+    <footer class="footer">
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <a href="#hero" class="nav-logo footer-logo" aria-label="OpenOMS strona główna">Open<span>OMS</span></a>
-                    <p>Open-source Order Management System<br>dla polskiego e-commerce.</p>
+                    <a href="#" class="nav-logo">Open<span>OMS</span></a>
+                    <p>Open-source Order Management System<br>dla e-commerce. Budowane w Polsce.</p>
                 </div>
                 <div class="footer-col">
                     <h4>Produkt</h4>
-                    <a href="#funkcje">Funkcje</a>
-                    <a href="#cennik">Cennik</a>
+                    <a href="#features">Funkcje</a>
+                    <a href="#integrations">Integracje</a>
+                    <a href="#pricing">Cennik</a>
                     <a href="#faq">FAQ</a>
                 </div>
                 <div class="footer-col">
-                    <h4>Projekt</h4>
+                    <h4>Open Source</h4>
                     <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener">GitHub</a>
-                    <a href="#open-source">Open Source</a>
-                    <a href="#dolacz">Dołącz do waitlisty</a>
+                    <a href="#open-source">Licencja</a>
+                    <a href="https://github.com/openoms-org/openoms/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
                 </div>
                 <div class="footer-col">
                     <h4>Kontakt</h4>
                     <a href="mailto:hello@openoms.org">hello@openoms.org</a>
+                    <a href="https://github.com/openoms-org/openoms/issues" target="_blank" rel="noopener">Issue Tracker</a>
                 </div>
             </div>
 
             <div class="footer-bottom">
-                <span>&copy; 2026 OpenOMS. Budowane w Polsce.</span>
-                <div class="footer-bottom-links">
-                    <a href="https://mariadb.com/bsl11/" target="_blank" rel="noopener">Licencja BSL 1.1</a>
-                </div>
+                <span>&copy; 2026 OpenOMS.</span>
+                <a href="https://mariadb.com/bsl11/" target="_blank" rel="noopener">BSL 1.1 License</a>
             </div>
         </div>
     </footer>
 
     <!-- ========== SCRIPTS ========== -->
     <script>
-        // Intersection Observer — reveal on scroll
-        const observer = new IntersectionObserver(
+        // ===== Intersection Observer — reveal on scroll =====
+        const revealObserver = new IntersectionObserver(
             (entries) => entries.forEach(e => {
                 if (e.isIntersecting) {
                     e.target.classList.add('visible');
-                    observer.unobserve(e.target);
+                    revealObserver.unobserve(e.target);
                 }
             }),
-            { threshold: 0.15, rootMargin: '0px 0px -40px 0px' }
+            { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
         );
-        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 
-        // Mobile nav toggle with aria-expanded
+        // ===== Counter animation =====
+        const counterObserver = new IntersectionObserver(
+            (entries) => entries.forEach(e => {
+                if (e.isIntersecting) {
+                    const el = e.target;
+                    const target = parseInt(el.dataset.count, 10);
+                    if (!target) return;
+                    counterObserver.unobserve(el);
+                    const duration = 1200;
+                    const start = performance.now();
+                    const step = (now) => {
+                        const progress = Math.min((now - start) / duration, 1);
+                        const eased = 1 - Math.pow(1 - progress, 3);
+                        el.textContent = Math.floor(eased * target);
+                        if (progress < 1) requestAnimationFrame(step);
+                        else el.textContent = target;
+                    };
+                    requestAnimationFrame(step);
+                }
+            }),
+            { threshold: 0.5 }
+        );
+        document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
+
+        // ===== Mobile nav toggle =====
         const navToggle = document.getElementById('nav-toggle-btn');
         const navMenu = document.getElementById('nav-menu');
         if (navToggle && navMenu) {
             navToggle.addEventListener('click', () => {
                 const isOpen = navMenu.classList.toggle('open');
                 navToggle.setAttribute('aria-expanded', isOpen);
-                navToggle.setAttribute('aria-label', isOpen ? 'Zamknij menu' : 'Otwórz menu');
             });
         }
 
-        // Smooth scroll
+        // ===== Smooth scroll =====
         document.querySelectorAll('a[href^="#"]').forEach(a => {
             a.addEventListener('click', e => {
                 const href = a.getAttribute('href');
@@ -1887,15 +2020,153 @@
                 const target = document.querySelector(href);
                 if (target) {
                     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    // Close mobile menu if open
                     navMenu?.classList.remove('open');
                     navToggle?.setAttribute('aria-expanded', 'false');
-                    navToggle?.setAttribute('aria-label', 'Otwórz menu');
                 }
             });
         });
 
-        // Waitlist form handler — inline success message
+        // ===== FAQ accordion =====
+        document.querySelectorAll('.faq-question').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const item = btn.parentElement;
+                const isOpen = item.classList.contains('open');
+                // close all
+                document.querySelectorAll('.faq-item.open').forEach(i => {
+                    i.classList.remove('open');
+                    i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+                });
+                if (!isOpen) {
+                    item.classList.add('open');
+                    btn.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
+
+        // ===== Terminal typing demo =====
+        const demoTerminal = document.getElementById('demo-terminal');
+        const demoCommands = [
+            {
+                lines: [
+                    { type: 'prompt', text: '$ curl -X POST /v1/orders \\' },
+                    { type: 'cont', text: '    -H "Authorization: Bearer ey..." \\' },
+                    { type: 'cont', text: '    -d \'{"customer_email":"jan@firma.pl","items":[...]}\'' },
+                ],
+                response: [
+                    '{',
+                    '  <span class="terminal-key">"id"</span>: <span class="terminal-string">"ord_8f3k2j1"</span>,',
+                    '  <span class="terminal-key">"status"</span>: <span class="terminal-string">"new"</span>,',
+                    '  <span class="terminal-key">"total"</span>: <span class="terminal-number">249.99</span>,',
+                    '  <span class="terminal-key">"created_at"</span>: <span class="terminal-string">"2026-02-16T14:22:01Z"</span>',
+                    '}',
+                ]
+            },
+            {
+                lines: [
+                    { type: 'prompt', text: '$ curl -X POST /v1/shipments/shp_9x2m/label \\' },
+                    { type: 'cont', text: '    -H "Authorization: Bearer ey..."' },
+                ],
+                response: [
+                    '{',
+                    '  <span class="terminal-key">"tracking_number"</span>: <span class="terminal-string">"605500359631612012571695"</span>,',
+                    '  <span class="terminal-key">"carrier"</span>: <span class="terminal-string">"inpost"</span>,',
+                    '  <span class="terminal-key">"status"</span>: <span class="terminal-string">"label_ready"</span>,',
+                    '  <span class="terminal-key">"label_url"</span>: <span class="terminal-string">"/v1/shipments/shp_9x2m/label.pdf"</span>',
+                    '}',
+                ]
+            },
+            {
+                lines: [
+                    { type: 'prompt', text: '$ curl /v1/returns?status=requested \\' },
+                    { type: 'cont', text: '    -H "Authorization: Bearer ey..."' },
+                ],
+                response: [
+                    '{',
+                    '  <span class="terminal-key">"items"</span>: [',
+                    '    { <span class="terminal-key">"id"</span>: <span class="terminal-string">"ret_b019"</span>, <span class="terminal-key">"reason"</span>: <span class="terminal-string">"Nie odpowiada opisowi"</span> }',
+                    '  ],',
+                    '  <span class="terminal-key">"total"</span>: <span class="terminal-number">3</span>,',
+                    '  <span class="terminal-key">"page"</span>: <span class="terminal-number">1</span>',
+                    '}',
+                ]
+            }
+        ];
+
+        let demoIdx = 0;
+        let demoRunning = false;
+
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        async function typeDemo() {
+            if (demoRunning) return;
+            demoRunning = true;
+
+            while (true) {
+                const cmd = demoCommands[demoIdx % demoCommands.length];
+                demoTerminal.innerHTML = '';
+
+                // type command lines character by character
+                for (const line of cmd.lines) {
+                    const div = document.createElement('div');
+                    demoTerminal.appendChild(div);
+                    const text = line.text;
+                    for (let i = 0; i < text.length; i++) {
+                        if (line.type === 'prompt' && i === 0) {
+                            div.innerHTML = '<span class="terminal-prompt">$</span> ';
+                            i = 1; // skip '$ '
+                        }
+                        div.innerHTML = div.innerHTML.replace('<span class="terminal-cursor"></span>', '');
+                        const char = text[i] === ' ' ? '&nbsp;' : text[i].replace('<', '&lt;').replace('>', '&gt;').replace('&', '&amp;');
+                        if (line.type === 'prompt' && i <= 1) {
+                            // already added prompt
+                        } else if (line.type === 'cont') {
+                            div.textContent += text[i];
+                        } else {
+                            div.innerHTML += text[i] === ' ' ? ' ' : text[i];
+                        }
+                        div.innerHTML += '<span class="terminal-cursor"></span>';
+                        await sleep(25 + Math.random() * 15);
+                    }
+                    div.innerHTML = div.innerHTML.replace('<span class="terminal-cursor"></span>', '');
+                }
+
+                await sleep(400);
+
+                // show response instantly
+                const responseSeparator = document.createElement('div');
+                responseSeparator.style.height = '8px';
+                demoTerminal.appendChild(responseSeparator);
+
+                for (const rLine of cmd.response) {
+                    const div = document.createElement('div');
+                    div.innerHTML = rLine;
+                    demoTerminal.appendChild(div);
+                }
+
+                // add blinking cursor
+                const cursorLine = document.createElement('div');
+                cursorLine.style.marginTop = '8px';
+                cursorLine.innerHTML = '<span class="terminal-prompt">$</span> <span class="terminal-cursor"></span>';
+                demoTerminal.appendChild(cursorLine);
+
+                demoIdx++;
+                await sleep(4000);
+            }
+        }
+
+        // start typing demo when visible
+        const demoObserver = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    demoObserver.disconnect();
+                    typeDemo();
+                }
+            },
+            { threshold: 0.3 }
+        );
+        if (demoTerminal) demoObserver.observe(demoTerminal);
+
+        // ===== Waitlist form =====
         const waitlistForm = document.getElementById('waitlist-form');
         const waitlistFormContainer = document.getElementById('waitlist-form-container');
         const waitlistSuccess = document.getElementById('waitlist-success');
@@ -1917,7 +2188,6 @@
                 e.preventDefault();
                 const email = waitlistEmail.value.trim();
 
-                // Validation
                 if (!email) {
                     waitlistError.textContent = 'Podaj adres e-mail.';
                     waitlistEmail.classList.add('input-error');
@@ -1932,16 +2202,14 @@
                     return;
                 }
 
-                // Loading state with spinner
                 waitlistSubmitBtn.disabled = true;
                 waitlistSubmitBtn.innerHTML = '<span class="spinner"></span>Zapisywanie...';
                 waitlistError.textContent = '';
 
-                // Send to Formspree
                 fetch('https://formspree.io/f/xkovgrgb', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ email: email })
+                    body: JSON.stringify({ email })
                 })
                 .then(response => {
                     if (response.ok) {
@@ -1950,10 +2218,10 @@
                             waitlistFormContainer.style.display = 'none';
                             waitlistSuccess.classList.add('show');
                             document.getElementById('waitlist-success-msg').textContent =
-                                'Powiadomimy Cię na ' + email + ', gdy OpenOMS będzie gotowy do testów.';
+                                'Powiadomimy Cię na ' + email + ', gdy OpenOMS będzie gotowy.';
                         }, 300);
                     } else {
-                        throw new Error('Błąd serwera');
+                        throw new Error('Server error');
                     }
                 })
                 .catch(() => {
