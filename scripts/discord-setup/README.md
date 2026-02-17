@@ -1,11 +1,12 @@
 # OpenOMS Discord Server Setup
 
-Jednorazowy skrypt konfigurujący serwer Discord z kanałami, rolami, uprawnieniami i politykami bezpieczeństwa.
+Jednorazowy skrypt konfigurujący serwer Discord z kanałami, rolami, uprawnieniami, politykami bezpieczeństwa i community features.
 
 ## Wymagania
 
 - Node.js 18+
 - Bot Discord z uprawnieniami Administratora
+- Włączone intenty: Server Members, Message Content
 
 ## Jak użyć
 
@@ -53,63 +54,122 @@ Dla bogatszych powiadomień (issues, PR, stars):
 
 ## Co skrypt konfiguruje
 
-### Membership Screening (bramka wejściowa)
+### 1. Membership Screening (bramka wejściowa)
 
 | Funkcja | Opis |
 |---------|------|
 | **Community mode** | Włączony automatycznie, #zasady jako kanał regulaminu |
-| **Formularz akceptacji** | Nowi członkowie muszą zaakceptować 5 punktów regulaminu zanim uzyskają dostęp |
+| **Formularz akceptacji** | Nowi członkowie muszą zaakceptować 5 punktów regulaminu |
 | **#zasady** | Read-only kanał z pełnym regulaminem serwera |
 
-> Nowy użytkownik widzi popup → klika "Zgadzam się" → dopiero wtedy może pisać. Boty/spamerzy tego nie robią.
+> Nowy użytkownik widzi popup → klika "Zgadzam się" → dopiero wtedy może pisać.
 
-### Bezpieczeństwo serwera
+### 2. Community Onboarding (personalizacja powitalna)
+
+| Pytanie | Opcje |
+|---------|-------|
+| **Co Cię tu sprowadza?** | Oceniam OpenOMS / Jestem użytkownikiem / Chcę kontrybuować / Przeglądam |
+| **Jakie integracje?** | Allegro / InPost & Kurierzy / WooCommerce & Shopify / Wszystko |
+
+Każda odpowiedź automatycznie:
+- Przypisuje rolę (@Uzytkownik lub @Contributor)
+- Pokazuje odpowiednie kanały
+
+### 3. Server Guide (ekran powitalny)
+
+Strona powitalna z linkami do 4 kluczowych kanałów:
+- #general — ogólne rozmowy
+- #pomoc-instalacja — pomoc z instalacją
+- #contributing — kontrybuowanie
+- #bugs — zgłaszanie bugów
+
+### 4. Bezpieczeństwo serwera
 
 | Zabezpieczenie | Opis |
 |----------------|------|
 | **Verification Level: Medium** | Nowi użytkownicy muszą mieć konto Discord 5+ minut |
-| **Content Filter: All Members** | Skanowanie wiadomości WSZYSTKICH użytkowników (nie tylko bez roli) |
-| **2FA dla moderatorów** | Moderatorzy muszą mieć włączone 2FA żeby banować/kickać/zarządzać |
-| **Default notifications: Only @mentions** | Nowi członkowie nie dostają powiadomień z każdej wiadomości |
+| **Content Filter: All Members** | Skanowanie wiadomości WSZYSTKICH użytkowników |
+| **2FA dla moderatorów** | Moderatorzy muszą mieć włączone 2FA |
+| **Default notifications: Only @mentions** | Brak spamu powiadomień |
 | **@everyone hardening** | Zablokowane: @everyone/@here, manage channels/roles/webhooks, kick/ban, create invites |
+| **Webhook hardening** | ManageWebhooks tylko dla @Maintainer na wszystkich kanałach |
 
-### AutoMod (automatyczna moderacja)
+### 5. AutoMod (6 reguł automatycznej moderacji)
 
 | Reguła | Co robi |
 |--------|---------|
 | **Blokada spamu** | Filtruje scamy (free nitro, crypto, phishing URLs, NSFW) — blokuje + alert |
 | **Mass mention** | Limit 5 wzmianek na wiadomość — blokuje + 5 min timeout |
 | **Discord invites** | Blokuje linki zaproszeniowe do innych serwerów |
+| **Skracacz URL** | Blokuje bit.ly, tinyurl, t.co itp. (wektor phishingowy) |
+| **Pliki wykonywalne** | Blokuje linki do .exe, .bat, .msi, .ps1 itp. |
+| **Crypto/web3 spam** | Blokuje presale, whitelist mint, token launch + 10 min timeout |
 
 > Maintainerzy są wykluczeni z AutoMod — mogą pisać wszystko.
 
-### Kanały
+### 6. Kanały
 
-| Kategoria | Kanał | Zabezpieczenia |
-|-----------|-------|----------------|
-| INFORMACJE | #zasady | Read-only, regulamin serwera |
-| | #ogloszenia | Read-only, wiadomość powitalna |
-| | #roadmap | Read-only |
-| | #changelog | Read-only |
-| SPOLECZNOSC | #general | Standardowe |
-| | #pokaz-swoje | Standardowe |
-| | #pomysly | Standardowe |
-| POMOC | #instalacja | Slow mode 10s |
-| | #konfiguracja | Slow mode 10s |
-| | #integracje | Slow mode 10s |
-| ROZWOJ | #contributing | Standardowe |
-| | #bugs | Standardowe |
-| | #pull-requests | Standardowe |
-| BOTY | #github-feed | Read-only, alerty AutoMod |
+| Kategoria | Kanał | Typ | Zabezpieczenia |
+|-----------|-------|-----|----------------|
+| INFORMACJE | #zasady | Text | Read-only, regulamin |
+| | #ogloszenia | Text | Read-only, wiadomość powitalna |
+| | #roadmap | Text | Read-only |
+| | #changelog | Text | Read-only |
+| SPOLECZNOSC | #general | Text | Standardowe |
+| | #off-topic | Text | Luźne rozmowy |
+| | #pokaz-swoje | Text | Showcase |
+| POMOC | #pomoc-instalacja | **Forum** | Tagi: Docker, From Source, PostgreSQL, Solved |
+| | #pomoc-konfiguracja | **Forum** | Tagi: SMTP, Auth, Integracje, RBAC, Solved |
+| | #pomoc-integracje | **Forum** | Tagi: Allegro, InPost, DHL, WooCommerce, Solved |
+| ROZWOJ | #contributing | Text | Standardowe |
+| | #pull-requests | Text | Standardowe |
+| | #bugs | **Forum** | Tagi: Backend, Frontend, API, Critical, Confirmed, Fixed |
+| | #pomysly | **Forum** | Tagi: Under Review, Planned, Implemented, Won't Fix |
+| BOTY | #github-feed | Text | Read-only, alerty AutoMod |
+| GLOS | #office-hours | Voice | Kanał głosowy na eventy |
 
-### Role
+### 7. Role
 
 | Rola | Kolor | Specjalne uprawnienia |
 |------|-------|----------------------|
-| @Maintainer | Czerwony | Pisanie na kanałach read-only, omija AutoMod |
+| @Maintainer | Czerwony | Pisanie na kanałach read-only, omija AutoMod, zarządzanie webhookami |
 | @Contributor | Zielony | Widoczna na liście członków |
 | @Uzytkownik | Niebieski | Bazowe uprawnienia |
 
+### 8. Scheduled Events
+
+- **OpenOMS Office Hours** — najbliższa sobota 18:00 CET
+- 1 godzina Q&A z maintainerami na kanale głosowym #office-hours
+- Język: polski / angielski
+
+## Opcjonalne — do dodania ręcznie
+
+### Carl-bot (darmowy)
+
+Reakcja-role, system sugestii, audit log.
+
+1. Zaproś bota: https://carl.gg
+2. Skonfiguruj reaction roles w #zasady
+3. Włącz logging (message edits, deletes, joins)
+
+### Answer Overflow (darmowy dla open-source)
+
+Indeksuje forum channele na Google — ludzie mogą znaleźć odpowiedzi bez dołączania do Discorda.
+
+1. Zaproś bota: https://www.answeroverflow.com
+2. Wybierz kanały forum do indeksowania
+
+### Cold Owner Account (zalecane)
+
+Przenieś ownership serwera na dedykowane "zimne" konto:
+
+1. Stwórz nowe konto Discord z silnym hasłem + 2FA (klucz sprzętowy)
+2. Dołącz do serwera, nadaj rolę admin
+3. Server Settings → Members → PPM na konto → Transfer Ownership
+4. Wyloguj się z zimnego konta, schowaj credentials w password managerze
+
+Jeśli Twoje główne konto zostanie zhackowane, serwer jest bezpieczny.
+
 ## Idempotentność
 
-Skrypt można uruchomić wielokrotnie — nie tworzy duplikatów. Istniejące kanały/role/reguły są pomijane.
+Skrypt można uruchomić wielokrotnie — nie tworzy duplikatów. Istniejące kanały/role/reguły są pomijane. Brakujące tagi na forach są dodawane.

@@ -25,6 +25,8 @@ import {
   AutoModerationRuleEventType,
   AutoModerationRuleTriggerType,
   AutoModerationActionType,
+  GuildScheduledEventPrivacyLevel,
+  GuildScheduledEventEntityType,
 } from "discord.js";
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
@@ -63,6 +65,7 @@ const ROLES = [
   },
 ];
 
+// Text channels (standard)
 const CATEGORIES = [
   {
     name: "INFORMACJE",
@@ -102,37 +105,14 @@ const CATEGORIES = [
           "Ogólne rozmowy o OpenOMS, e-commerce i zarządzaniu zamówieniami.",
       },
       {
+        name: "off-topic",
+        topic:
+          "Luźne rozmowy niezwiązane z OpenOMS. Memy, ciekawostki, życie.",
+      },
+      {
         name: "pokaz-swoje",
         topic:
           "Pochwal się swoją instalacją OpenOMS, customizacjami, integracjami.",
-      },
-      {
-        name: "pomysly",
-        topic:
-          "Propozycje nowych funkcji i usprawnień. Głosuj reakcjami!",
-      },
-    ],
-  },
-  {
-    name: "POMOC",
-    channels: [
-      {
-        name: "instalacja",
-        topic:
-          "Pomoc z instalacją: Docker, Go, Node.js, PostgreSQL, konfiguracja .env",
-        slowMode: 10,
-      },
-      {
-        name: "konfiguracja",
-        topic:
-          "Ustawienia tenanta, SMTP, CORS, JWT, szyfrowanie, RBAC, 2FA",
-        slowMode: 10,
-      },
-      {
-        name: "integracje",
-        topic:
-          "Allegro, InPost, DHL, marketplace'y, feedy IOF, API webhooks",
-        slowMode: 10,
       },
     ],
   },
@@ -143,11 +123,6 @@ const CATEGORIES = [
         name: "contributing",
         topic:
           "Dyskusje o kodzie, architekturze, PR review. CONTRIBUTING.md: https://github.com/openoms-org/openoms/blob/main/CONTRIBUTING.md",
-      },
-      {
-        name: "bugs",
-        topic:
-          "Zgłaszanie i dyskusja o bugach. Dla oficjalnych zgłoszeń użyj GitHub Issues.",
       },
       {
         name: "pull-requests",
@@ -168,6 +143,90 @@ const CATEGORIES = [
   },
 ];
 
+// Forum channels (organized Q&A with tags)
+const FORUM_CHANNELS = [
+  {
+    category: "POMOC",
+    name: "pomoc-instalacja",
+    topic:
+      "Pomoc z instalacją: Docker, Go, Node.js, PostgreSQL, konfiguracja .env",
+    slowMode: 10,
+    tags: [
+      { name: "Docker", emoji: "🐳" },
+      { name: "From Source", emoji: "🔧" },
+      { name: "PostgreSQL", emoji: "🐘" },
+      { name: "Solved", emoji: "✅", moderated: true },
+      { name: "Unsolved", emoji: "❓" },
+    ],
+    guidelines:
+      "Opisz problem. Podaj: system operacyjny, wersję Docker/Go/Node, logi błędów.\nOznacz post tagiem. Maintainer oznaczy jako Solved po rozwiązaniu.",
+  },
+  {
+    category: "POMOC",
+    name: "pomoc-konfiguracja",
+    topic:
+      "Ustawienia tenanta, SMTP, CORS, JWT, szyfrowanie, RBAC, 2FA, webhooks",
+    slowMode: 10,
+    tags: [
+      { name: "SMTP/Email", emoji: "📧" },
+      { name: "Auth/JWT", emoji: "🔑" },
+      { name: "Integracje", emoji: "🔗" },
+      { name: "RBAC/Uprawnienia", emoji: "🛡️" },
+      { name: "Solved", emoji: "✅", moderated: true },
+      { name: "Unsolved", emoji: "❓" },
+    ],
+    guidelines:
+      "Opisz co konfigurujesz i jaki masz problem. NIE wklejaj tokenów, haseł ani kluczy API!",
+  },
+  {
+    category: "POMOC",
+    name: "pomoc-integracje",
+    topic:
+      "Allegro, InPost, DHL, marketplace'y, feedy IOF, kurierzy, API webhooks",
+    slowMode: 10,
+    tags: [
+      { name: "Allegro", emoji: "🛒" },
+      { name: "InPost", emoji: "📦" },
+      { name: "DHL/Kurierzy", emoji: "🚚" },
+      { name: "WooCommerce", emoji: "🌐" },
+      { name: "Inne", emoji: "🔌" },
+      { name: "Solved", emoji: "✅", moderated: true },
+    ],
+    guidelines:
+      "Podaj: której integracji dotyczy problem, wersję OpenOMS, logi błędów (bez danych wrażliwych).",
+  },
+  {
+    category: "ROZWOJ",
+    name: "bugs",
+    topic:
+      "Zgłaszanie i dyskusja o bugach. Dla oficjalnych zgłoszeń użyj GitHub Issues.",
+    tags: [
+      { name: "Backend", emoji: "⚙️" },
+      { name: "Frontend", emoji: "🖥️" },
+      { name: "API", emoji: "🔌" },
+      { name: "Critical", emoji: "🔴" },
+      { name: "Confirmed", emoji: "✅", moderated: true },
+      { name: "Fixed", emoji: "🎉", moderated: true },
+    ],
+    guidelines:
+      "Opisz buga: co zrobiłeś, co się stało, co powinno się stać. Dołącz logi i screenshoty.",
+  },
+  {
+    category: "ROZWOJ",
+    name: "pomysly",
+    topic:
+      "Propozycje nowych funkcji i usprawnień. Głosuj reakcjami 👍/👎!",
+    tags: [
+      { name: "Under Review", emoji: "🔍", moderated: true },
+      { name: "Planned", emoji: "📋", moderated: true },
+      { name: "Implemented", emoji: "✅", moderated: true },
+      { name: "Won't Fix", emoji: "❌", moderated: true },
+    ],
+    guidelines:
+      "Opisz funkcję: jaki problem rozwiązuje, kto z niej skorzysta, jak powinna działać. Głosuj na istniejące pomysły zanim tworzysz duplikat.",
+  },
+];
+
 const WELCOME_MESSAGE = `# Witaj na serwerze OpenOMS!
 
 Open-source Order Management System dla polskiego e-commerce.
@@ -180,10 +239,12 @@ Open-source Order Management System dla polskiego e-commerce.
 
 ## Kanały
 - **#general** — ogólne rozmowy
-- **#instalacja** — pomoc z setupem
-- **#integracje** — Allegro, InPost, marketplace'y
+- **#off-topic** — luźne rozmowy
+- **#pomoc-instalacja** — pomoc z setupem (forum)
+- **#pomoc-integracje** — Allegro, InPost, marketplace'y (forum)
 - **#contributing** — chcesz pomóc? Zacznij tutaj!
-- **#pomysly** — zaproponuj nową funkcję
+- **#pomysly** — zaproponuj nową funkcję (forum)
+- **#bugs** — zgłoś buga (forum)
 
 ## Role
 - **@Maintainer** — core team
@@ -194,8 +255,8 @@ Open-source Order Management System dla polskiego e-commerce.
 1. Bądź kulturalny — szanuj innych
 2. Pisz po polsku lub angielsku
 3. Nie spamuj, nie reklamuj
-4. Pytania techniczne → odpowiedni kanał w POMOC
-5. Bugi → GitHub Issues (nie tutaj)
+4. Pytania techniczne → odpowiedni kanał forum w POMOC
+5. Bugi → #bugs lub GitHub Issues
 
 Licencja: AGPLv3 (core) + MIT (SDK packages)
 `;
@@ -242,7 +303,7 @@ const AUTOMOD_RULES = [
       },
       {
         type: AutoModerationActionType.SendAlertMessage,
-        metadata: { channelId: null }, // set dynamically to #github-feed or first mod channel
+        metadata: { channelId: null },
       },
     ],
   },
@@ -263,7 +324,7 @@ const AUTOMOD_RULES = [
       },
       {
         type: AutoModerationActionType.Timeout,
-        metadata: { durationSeconds: 300 }, // 5 min timeout
+        metadata: { durationSeconds: 300 },
       },
     ],
   },
@@ -286,6 +347,160 @@ const AUTOMOD_RULES = [
       },
     ],
   },
+  // NEW: Block URL shorteners (phishing vector)
+  {
+    name: "[OpenOMS] Blokada skracaczy URL",
+    eventType: AutoModerationRuleEventType.MessageSend,
+    triggerType: AutoModerationRuleTriggerType.Keyword,
+    triggerMetadata: {
+      regexPatterns: [
+        "(?:https?://)?(?:bit\\.ly|tinyurl\\.com|t\\.co|goo\\.gl|rb\\.gy|shorturl\\.at|is\\.gd|v\\.gd|cutt\\.ly)/\\S+",
+      ],
+    },
+    actions: [
+      {
+        type: AutoModerationActionType.BlockMessage,
+        metadata: {
+          customMessage:
+            "Skrócone linki (bit.ly, tinyurl itp.) nie są dozwolone ze względów bezpieczeństwa. Użyj pełnego URL.",
+        },
+      },
+      {
+        type: AutoModerationActionType.SendAlertMessage,
+        metadata: { channelId: null },
+      },
+    ],
+  },
+  // NEW: Block executable file links
+  {
+    name: "[OpenOMS] Blokada plikow wykonywalnych",
+    eventType: AutoModerationRuleEventType.MessageSend,
+    triggerType: AutoModerationRuleTriggerType.Keyword,
+    triggerMetadata: {
+      regexPatterns: [
+        "https?://\\S+\\.(?:exe|bat|cmd|msi|scr|ps1|vbs|wsf|com|pif)(?:\\s|$)",
+      ],
+    },
+    actions: [
+      {
+        type: AutoModerationActionType.BlockMessage,
+        metadata: {
+          customMessage:
+            "Linki do plików wykonywalnych (.exe, .bat, .msi itp.) nie są dozwolone.",
+        },
+      },
+      {
+        type: AutoModerationActionType.SendAlertMessage,
+        metadata: { channelId: null },
+      },
+    ],
+  },
+  // NEW: Block crypto/web3 spam
+  {
+    name: "[OpenOMS] Blokada crypto/web3 spam",
+    eventType: AutoModerationRuleEventType.MessageSend,
+    triggerType: AutoModerationRuleTriggerType.Keyword,
+    triggerMetadata: {
+      regexPatterns: [
+        "(?i)(?:presale|whitelist\\s*mint|web3\\s*earn|token\\s*launch|pump\\s*group|binance\\s*listing)",
+      ],
+    },
+    actions: [
+      {
+        type: AutoModerationActionType.BlockMessage,
+        metadata: {
+          customMessage:
+            "Treści związane z crypto/web3 spam nie są dozwolone.",
+        },
+      },
+      {
+        type: AutoModerationActionType.Timeout,
+        metadata: { durationSeconds: 600 },
+      },
+    ],
+  },
+];
+
+// ── Community Onboarding config ──────────────────────────────────
+
+const ONBOARDING_PROMPTS = [
+  {
+    title: "Co Cię tu sprowadza?",
+    options: [
+      {
+        title: "Oceniam OpenOMS dla mojego sklepu",
+        emoji: "🛒",
+        description: "Szukam systemu do zarządzania zamówieniami",
+        roleNames: ["Uzytkownik"],
+        channelNames: [
+          "pomoc-instalacja",
+          "pomoc-konfiguracja",
+          "pomoc-integracje",
+          "general",
+        ],
+      },
+      {
+        title: "Jestem użytkownikiem OpenOMS",
+        emoji: "📦",
+        description: "Już używam OpenOMS i potrzebuję pomocy lub chcę dyskutować",
+        roleNames: ["Uzytkownik"],
+        channelNames: [
+          "pomoc-instalacja",
+          "pomoc-konfiguracja",
+          "pomoc-integracje",
+          "general",
+          "pomysly",
+        ],
+      },
+      {
+        title: "Chcę kontrybuować kod",
+        emoji: "💻",
+        description: "Programista chcący pomóc w rozwoju projektu",
+        roleNames: ["Contributor"],
+        channelNames: [
+          "contributing",
+          "pull-requests",
+          "bugs",
+          "general",
+        ],
+      },
+      {
+        title: "Przeglądam / jestem ciekawy",
+        emoji: "👀",
+        description: "Chcę zobaczyć co tu się dzieje",
+        channelNames: ["general", "off-topic", "ogloszenia"],
+      },
+    ],
+  },
+  {
+    title: "Jakie integracje Cię interesują?",
+    options: [
+      {
+        title: "Allegro",
+        emoji: "🛍️",
+        description: "Marketplace Allegro — oferty, zamówienia, wysyłka",
+        channelNames: ["pomoc-integracje"],
+      },
+      {
+        title: "InPost / Kurierzy",
+        emoji: "📬",
+        description: "InPost, DHL, DPD, GLS, UPS, Poczta Polska",
+        channelNames: ["pomoc-integracje"],
+      },
+      {
+        title: "WooCommerce / Shopify / Shoper",
+        emoji: "🌐",
+        description: "Integracje ze sklepami internetowymi",
+        channelNames: ["pomoc-integracje"],
+      },
+      {
+        title: "Wszystko / Inne",
+        emoji: "🔌",
+        description: "Amazon, eBay, Erli, Empik, fakturowanie, dostawcy",
+        channelNames: ["pomoc-integracje", "pomoc-konfiguracja"],
+      },
+    ],
+  },
 ];
 
 // ── Script ───────────────────────────────────────────────────────
@@ -295,6 +510,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.AutoModerationConfiguration,
+    GatewayIntentBits.GuildScheduledEvents,
   ],
 });
 
@@ -348,9 +564,8 @@ async function run() {
   );
 
   // ── 1. Server-level security settings ──
-  console.log("=== SECURITY SETTINGS ===");
+  console.log("=== 1. SECURITY SETTINGS ===");
 
-  // Verification level: Medium — must be registered on Discord for 5+ min
   if (guild.verificationLevel !== GuildVerificationLevel.Medium) {
     await guild.setVerificationLevel(GuildVerificationLevel.Medium);
     console.log(
@@ -360,7 +575,6 @@ async function run() {
     console.log("  [skip] Verification level already Medium");
   }
 
-  // Content filter: scan messages from all members (not just no-role)
   if (
     guild.explicitContentFilter !==
     GuildExplicitContentFilter.AllMembers
@@ -375,7 +589,6 @@ async function run() {
     console.log("  [skip] Content filter already on All members");
   }
 
-  // Default notifications: only @mentions (no spam from every message)
   if (
     guild.defaultMessageNotifications !==
     GuildDefaultMessageNotifications.OnlyMentions
@@ -390,13 +603,10 @@ async function run() {
     console.log("  [skip] Notifications already Only @mentions");
   }
 
-  // 2FA requirement for moderator actions
   try {
     if (guild.mfaLevel === 0) {
       await guild.setMFALevel(1);
-      console.log(
-        "  [set] 2FA required for moderators"
-      );
+      console.log("  [set] 2FA required for moderators");
     } else {
       console.log("  [skip] 2FA for moderators already enabled");
     }
@@ -407,7 +617,7 @@ async function run() {
   }
 
   // ── 2. Roles ──
-  console.log("\n=== ROLES ===");
+  console.log("\n=== 2. ROLES ===");
   await guild.roles.fetch();
   const roleMap = {};
 
@@ -428,39 +638,32 @@ async function run() {
   const everyoneRole = guild.roles.everyone;
 
   // ── 3. Harden @everyone permissions ──
-  console.log("\n=== @EVERYONE PERMISSIONS ===");
+  console.log("\n=== 3. @EVERYONE PERMISSIONS ===");
   const denyEveryone = [
-    PermissionFlagsBits.MentionEveryone, // no @everyone/@here
-    PermissionFlagsBits.ManageMessages, // no message management
-    PermissionFlagsBits.ManageChannels, // no channel management
-    PermissionFlagsBits.ManageRoles, // no role management
-    PermissionFlagsBits.ManageGuild, // no server settings
-    PermissionFlagsBits.Administrator, // obviously
-    PermissionFlagsBits.BanMembers, // no bans
-    PermissionFlagsBits.KickMembers, // no kicks
-    PermissionFlagsBits.ManageWebhooks, // no webhook tampering
-    PermissionFlagsBits.ManageNicknames, // no nickname changing of others
-    PermissionFlagsBits.CreateInstantInvite, // no invite creation (maintainers only)
+    PermissionFlagsBits.MentionEveryone,
+    PermissionFlagsBits.ManageMessages,
+    PermissionFlagsBits.ManageChannels,
+    PermissionFlagsBits.ManageRoles,
+    PermissionFlagsBits.ManageGuild,
+    PermissionFlagsBits.Administrator,
+    PermissionFlagsBits.BanMembers,
+    PermissionFlagsBits.KickMembers,
+    PermissionFlagsBits.ManageWebhooks,
+    PermissionFlagsBits.ManageNicknames,
+    PermissionFlagsBits.CreateInstantInvite,
   ];
 
-  const currentDenied = everyoneRole.permissions;
-  const needsUpdate = denyEveryone.some(
-    (perm) => currentDenied.has(perm)
-  );
-  if (needsUpdate || true) {
-    // always apply to be safe
-    const newPerms = everyoneRole.permissions;
-    for (const perm of denyEveryone) {
-      newPerms.remove(perm);
-    }
-    await everyoneRole.setPermissions(newPerms);
-    console.log(
-      "  [set] @everyone: removed dangerous permissions (mention everyone, manage channels/roles, create invites, kick/ban)"
-    );
+  const newPerms = everyoneRole.permissions;
+  for (const perm of denyEveryone) {
+    newPerms.remove(perm);
   }
+  await everyoneRole.setPermissions(newPerms);
+  console.log(
+    "  [set] @everyone: removed dangerous permissions"
+  );
 
-  // ── 4. Categories & Channels ──
-  console.log("\n=== CHANNELS ===");
+  // ── 4. Text channels ──
+  console.log("\n=== 4. TEXT CHANNELS ===");
   await guild.channels.fetch();
 
   for (const catDef of CATEGORIES) {
@@ -490,7 +693,6 @@ async function run() {
           })
       );
 
-      // Move to correct category if it exists but is in wrong category
       if (channel.parentId !== category.id) {
         await channel.setParent(category.id, {
           lockPermissions: false,
@@ -500,12 +702,10 @@ async function run() {
         );
       }
 
-      // Set topic if missing
       if (chDef.topic && channel.topic !== chDef.topic) {
         await channel.setTopic(chDef.topic);
       }
 
-      // Set slow mode if configured
       if (
         chDef.slowMode &&
         channel.rateLimitPerUser !== chDef.slowMode
@@ -516,7 +716,6 @@ async function run() {
         );
       }
 
-      // Read-only channels: only Maintainers can send
       if (chDef.readOnly) {
         await channel.permissionOverwrites.set([
           {
@@ -539,10 +738,123 @@ async function run() {
     }
   }
 
-  // ── 5. AutoMod rules ──
-  console.log("\n=== AUTOMOD RULES ===");
+  // ── 5. Forum channels ──
+  console.log("\n=== 5. FORUM CHANNELS ===");
+  await guild.channels.fetch(); // refresh cache
 
-  // Find alert channel (use github-feed or first available)
+  for (const forumDef of FORUM_CHANNELS) {
+    // Find or create the parent category
+    let category = guild.channels.cache.find(
+      (c) =>
+        c.type === ChannelType.GuildCategory &&
+        c.name.toLowerCase() === forumDef.category.toLowerCase()
+    );
+    if (!category) {
+      category = await guild.channels.create({
+        name: forumDef.category,
+        type: ChannelType.GuildCategory,
+      });
+      console.log(`  [created] category "${forumDef.category}"`);
+    }
+
+    // Check if forum already exists
+    const existing = guild.channels.cache.find(
+      (c) => c.name.toLowerCase() === forumDef.name.toLowerCase()
+    );
+
+    if (existing) {
+      console.log(`  [skip] forum "${forumDef.name}" already exists`);
+
+      // Ensure tags exist even on existing forum
+      if (existing.type === ChannelType.GuildForum) {
+        const existingTagNames = existing.availableTags.map((t) =>
+          t.name.toLowerCase()
+        );
+        const missingTags = forumDef.tags.filter(
+          (t) =>
+            !existingTagNames.includes(t.name.toLowerCase())
+        );
+        if (missingTags.length > 0) {
+          const newTags = [
+            ...existing.availableTags,
+            ...missingTags.map((t) => ({
+              name: t.name,
+              moderated: t.moderated || false,
+              emoji: t.emoji ? { name: t.emoji } : undefined,
+            })),
+          ];
+          await existing.setAvailableTags(newTags);
+          console.log(
+            `  [updated] "${forumDef.name}" tags: +${missingTags.map((t) => t.name).join(", ")}`
+          );
+        }
+      }
+      continue;
+    }
+
+    // Create the forum channel
+    const forum = await guild.channels.create({
+      name: forumDef.name,
+      type: ChannelType.GuildForum,
+      parent: category.id,
+      topic: forumDef.topic,
+      rateLimitPerUser: forumDef.slowMode || 0,
+      availableTags: forumDef.tags.map((t) => ({
+        name: t.name,
+        moderated: t.moderated || false,
+        emoji: t.emoji ? { name: t.emoji } : undefined,
+      })),
+      defaultForumLayout: 1, // List view
+    });
+    console.log(`  [created] forum "${forumDef.name}"`);
+
+    // Set guidelines (post creation template)
+    if (forumDef.guidelines) {
+      try {
+        await forum.edit({
+          defaultThreadRateLimitPerUser: forumDef.slowMode || 0,
+        });
+        // Guidelines are set via topic for forums
+        if (forum.topic !== forumDef.topic) {
+          await forum.setTopic(forumDef.topic);
+        }
+      } catch {
+        // Some settings may not be available
+      }
+    }
+  }
+
+  // ── 6. Voice channel ──
+  console.log("\n=== 6. VOICE CHANNEL ===");
+  await guild.channels.fetch();
+
+  let voiceCategory = guild.channels.cache.find(
+    (c) =>
+      c.type === ChannelType.GuildCategory &&
+      c.name.toLowerCase() === "glos"
+  );
+  if (!voiceCategory) {
+    voiceCategory = await guild.channels.create({
+      name: "GLOS",
+      type: ChannelType.GuildCategory,
+    });
+    console.log('  [created] category "GLOS"');
+  }
+
+  const voiceChannel = await findOrCreate(
+    guild.channels,
+    "office-hours",
+    () =>
+      guild.channels.create({
+        name: "office-hours",
+        type: ChannelType.GuildVoice,
+        parent: voiceCategory.id,
+      })
+  );
+
+  // ── 7. AutoMod rules ──
+  console.log("\n=== 7. AUTOMOD RULES ===");
+
   const alertChannel = guild.channels.cache.find(
     (c) => c.name === "github-feed"
   );
@@ -558,7 +870,6 @@ async function run() {
       continue;
     }
 
-    // Set alert channel on SendAlertMessage actions
     const actions = ruleDef.actions
       .map((a) => {
         if (
@@ -574,7 +885,7 @@ async function run() {
           a.type === AutoModerationActionType.SendAlertMessage &&
           !alertChannel
         ) {
-          return null; // skip alert if no channel
+          return null;
         }
         return a;
       })
@@ -588,7 +899,7 @@ async function run() {
         triggerType: ruleDef.triggerType,
         triggerMetadata: ruleDef.triggerMetadata,
         actions,
-        exemptRoles: [maintainerRole.id], // Maintainers bypass AutoMod
+        exemptRoles: [maintainerRole.id],
       });
       console.log(`  [created] "${ruleDef.name}"`);
     } catch (err) {
@@ -598,8 +909,64 @@ async function run() {
     }
   }
 
-  // ── 6. Welcome message in #ogloszenia ──
-  console.log("\n=== WELCOME MESSAGE ===");
+  // ── 8. Webhook hardening ──
+  console.log("\n=== 8. WEBHOOK HARDENING ===");
+
+  // Restrict ManageWebhooks to Maintainer on all channels
+  let webhookHardenedCount = 0;
+  for (const [, channel] of guild.channels.cache) {
+    if (
+      channel.type !== ChannelType.GuildText &&
+      channel.type !== ChannelType.GuildForum
+    )
+      continue;
+
+    try {
+      const perms = channel.permissionOverwrites.cache;
+      const everyoneOverwrite = perms.get(everyoneRole.id);
+
+      // Only set if not already denied
+      if (
+        !everyoneOverwrite ||
+        !everyoneOverwrite.deny.has(
+          PermissionFlagsBits.ManageWebhooks
+        )
+      ) {
+        await channel.permissionOverwrites.edit(everyoneRole.id, {
+          ManageWebhooks: false,
+        });
+        webhookHardenedCount++;
+      }
+    } catch {
+      // Some channels may not support this
+    }
+  }
+  console.log(
+    `  [set] ManageWebhooks denied for @everyone on ${webhookHardenedCount} channels`
+  );
+
+  // Ensure Maintainer can manage webhooks
+  try {
+    if (!maintainerRole.permissions.has(PermissionFlagsBits.ManageWebhooks)) {
+      const updatedPerms = maintainerRole.permissions;
+      updatedPerms.add(PermissionFlagsBits.ManageWebhooks);
+      await maintainerRole.setPermissions(updatedPerms);
+      console.log(
+        "  [set] @Maintainer: ManageWebhooks granted"
+      );
+    } else {
+      console.log(
+        "  [skip] @Maintainer already has ManageWebhooks"
+      );
+    }
+  } catch (err) {
+    console.log(
+      `  [skip] Maintainer webhook perms: ${err.message}`
+    );
+  }
+
+  // ── 9. Welcome message in #ogloszenia ──
+  console.log("\n=== 9. WELCOME MESSAGE ===");
   const announceChannel = guild.channels.cache.find(
     (c) => c.name === "ogloszenia"
   );
@@ -618,8 +985,8 @@ async function run() {
     }
   }
 
-  // ── 7. Community + Membership Screening ──
-  console.log("\n=== COMMUNITY & MEMBERSHIP SCREENING ===");
+  // ── 10. Community + Membership Screening ──
+  console.log("\n=== 10. COMMUNITY & MEMBERSHIP SCREENING ===");
 
   const zasadyChannel = guild.channels.cache.find(
     (c) => c.name === "zasady"
@@ -628,7 +995,6 @@ async function run() {
     (c) => c.name === "changelog"
   );
 
-  // Enable Community features (required for Membership Screening)
   if (zasadyChannel && changelogChannel) {
     try {
       await guild.edit({
@@ -645,7 +1011,6 @@ async function run() {
     }
   }
 
-  // Post rules in #zasady if not already there
   if (zasadyChannel) {
     const msgs = await zasadyChannel.messages.fetch({ limit: 5 });
     const hasRules = msgs.some((m) =>
@@ -656,11 +1021,12 @@ async function run() {
 
 1. **Szanuj innych** — bądź kulturalny, zero hejtu i obrażania
 2. **Nie spamuj** — żadnych reklam, linków afiliacyjnych, crypto scamów
-3. **Pisz w odpowiednich kanałach** — pomoc w #instalacja/#konfiguracja, bugi w #bugs
+3. **Pisz w odpowiednich kanałach** — pomoc w forach POMOC, bugi w #bugs
 4. **Język: polski i angielski** — oba mile widziane
 5. **Nie wysyłaj DM maintainerom** bez zaproszenia — pytaj publicznie
 6. **Bez NSFW** — treści dla dorosłych są zakazane
-7. **Przestrzegaj Discord ToS** — https://discord.com/terms
+7. **Nie wklejaj tokenów/haseł** — nigdy nie udostępniaj kluczy API, haseł DB ani tokenów
+8. **Przestrzegaj Discord ToS** — https://discord.com/terms
 
 Łamanie zasad = ostrzeżenie → timeout → ban.
 Spam boty = natychmiastowy ban.`);
@@ -670,7 +1036,6 @@ Spam boty = natychmiastowy ban.`);
     }
   }
 
-  // Set up Membership Screening form (the popup new members must accept)
   try {
     await client.rest.put(`/guilds/${guild.id}/member-verification`, {
       body: {
@@ -694,7 +1059,7 @@ Spam boty = natychmiastowy ban.`);
       },
     });
     console.log(
-      "  [set] Membership Screening — nowi członkowie muszą zaakceptować regulamin"
+      "  [set] Membership Screening — nowi muszą zaakceptować regulamin"
     );
   } catch (err) {
     console.log(
@@ -702,22 +1067,198 @@ Spam boty = natychmiastowy ban.`);
     );
   }
 
-  // ── 8. Server settings ──
-  console.log("\n=== SERVER SETTINGS ===");
-  const generalChannel = guild.channels.cache.find(
+  // ── 11. Community Onboarding ──
+  console.log("\n=== 11. COMMUNITY ONBOARDING ===");
+
+  await guild.channels.fetch(); // refresh after forum creation
+
+  try {
+    // Build onboarding prompts with resolved IDs
+    const prompts = ONBOARDING_PROMPTS.map((prompt) => ({
+      type: 0, // MULTIPLE_CHOICE
+      title: prompt.title,
+      single_select: false,
+      required: true,
+      in_onboarding: true,
+      options: prompt.options.map((opt) => {
+        const channelIds = (opt.channelNames || [])
+          .map((name) => {
+            const ch = guild.channels.cache.find(
+              (c) => c.name.toLowerCase() === name.toLowerCase()
+            );
+            return ch?.id;
+          })
+          .filter(Boolean);
+
+        const roleIds = (opt.roleNames || [])
+          .map((name) => roleMap[name]?.id)
+          .filter(Boolean);
+
+        return {
+          title: opt.title,
+          description: opt.description || "",
+          emoji: opt.emoji ? { name: opt.emoji } : undefined,
+          channel_ids: channelIds,
+          role_ids: roleIds,
+        };
+      }),
+    }));
+
+    // Collect default channel IDs (required: at least 7)
+    const defaultChannelNames = [
+      "zasady",
+      "ogloszenia",
+      "roadmap",
+      "changelog",
+      "general",
+      "off-topic",
+      "contributing",
+      "github-feed",
+      "pomoc-instalacja",
+    ];
+    const defaultChannelIds = defaultChannelNames
+      .map((name) => {
+        const ch = guild.channels.cache.find(
+          (c) => c.name.toLowerCase() === name.toLowerCase()
+        );
+        return ch?.id;
+      })
+      .filter(Boolean);
+
+    await client.rest.put(`/guilds/${guild.id}/onboarding`, {
+      body: {
+        prompts,
+        default_channel_ids: defaultChannelIds,
+        enabled: true,
+        mode: 0, // ONBOARDING_DEFAULT
+      },
+    });
+    console.log(
+      "  [set] Community Onboarding — pytania powitalne + auto-role"
+    );
+  } catch (err) {
+    console.log(
+      `  [skip] Community Onboarding: ${err.message}`
+    );
+  }
+
+  // ── 12. Server Guide ──
+  console.log("\n=== 12. SERVER GUIDE ===");
+
+  try {
+    // Server Guide uses the "welcome screen" API
+    const generalChannel = guild.channels.cache.find(
+      (c) => c.name === "general"
+    );
+    const contributingChannel = guild.channels.cache.find(
+      (c) => c.name === "contributing"
+    );
+    const installChannel = guild.channels.cache.find(
+      (c) => c.name === "pomoc-instalacja"
+    );
+    const bugsChannel = guild.channels.cache.find(
+      (c) => c.name === "bugs"
+    );
+
+    const welcomeChannels = [
+      generalChannel && {
+        channel_id: generalChannel.id,
+        description: "Ogólne rozmowy o OpenOMS i e-commerce",
+        emoji_name: "💬",
+      },
+      installChannel && {
+        channel_id: installChannel.id,
+        description: "Potrzebujesz pomocy z instalacją? Tutaj!",
+        emoji_name: "🔧",
+      },
+      contributingChannel && {
+        channel_id: contributingChannel.id,
+        description: "Chcesz pomóc? Zacznij od tego kanału",
+        emoji_name: "💻",
+      },
+      bugsChannel && {
+        channel_id: bugsChannel.id,
+        description: "Znalazłeś buga? Zgłoś go tutaj",
+        emoji_name: "🐛",
+      },
+    ].filter(Boolean);
+
+    await client.rest.patch(`/guilds/${guild.id}/welcome-screen`, {
+      body: {
+        enabled: true,
+        description:
+          "OpenOMS — open-source Order Management System dla polskiego e-commerce. Wybierz kanał aby zacząć!",
+        welcome_channels: welcomeChannels.slice(0, 5), // max 5
+      },
+    });
+    console.log(
+      "  [set] Server Guide (welcome screen) z 4 kanałami"
+    );
+  } catch (err) {
+    console.log(
+      `  [skip] Server Guide: ${err.message}`
+    );
+  }
+
+  // ── 13. Scheduled Event — first Office Hours ──
+  console.log("\n=== 13. SCHEDULED EVENTS ===");
+
+  try {
+    const existingEvents = await guild.scheduledEvents.fetch();
+    const hasOfficeHours = existingEvents.some((e) =>
+      e.name.includes("Office Hours")
+    );
+
+    if (!hasOfficeHours) {
+      // Schedule first Office Hours — next Saturday at 18:00 CET
+      const now = new Date();
+      const daysUntilSaturday = (6 - now.getDay() + 7) % 7 || 7;
+      const nextSaturday = new Date(now);
+      nextSaturday.setDate(now.getDate() + daysUntilSaturday);
+      nextSaturday.setHours(18, 0, 0, 0);
+
+      const endTime = new Date(nextSaturday);
+      endTime.setMinutes(endTime.getMinutes() + 60);
+
+      await guild.scheduledEvents.create({
+        name: "OpenOMS Office Hours",
+        description:
+          "Godzina pytań i odpowiedzi z maintainerami OpenOMS.\n\n" +
+          "Pytaj o cokolwiek: instalacja, konfiguracja, integracje, contributing.\n" +
+          "Dołącz do kanału głosowego #office-hours.\n\n" +
+          "Język: polski / angielski",
+        scheduledStartTime: nextSaturday.toISOString(),
+        scheduledEndTime: endTime.toISOString(),
+        privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+        entityType: GuildScheduledEventEntityType.Voice,
+        channel: voiceChannel.id,
+      });
+      console.log(
+        `  [created] "OpenOMS Office Hours" — ${nextSaturday.toLocaleDateString("pl-PL")} 18:00 CET`
+      );
+    } else {
+      console.log(
+        "  [skip] Office Hours event already exists"
+      );
+    }
+  } catch (err) {
+    console.log(`  [skip] Scheduled event: ${err.message}`);
+  }
+
+  // ── 14. Server settings ──
+  console.log("\n=== 14. SERVER SETTINGS ===");
+  const generalCh = guild.channels.cache.find(
     (c) => c.name === "general"
   );
 
-  // Set system channel to #general
   if (
-    generalChannel &&
-    guild.systemChannelId !== generalChannel.id
+    generalCh &&
+    guild.systemChannelId !== generalCh.id
   ) {
-    await guild.setSystemChannel(generalChannel.id);
+    await guild.setSystemChannel(generalCh.id);
     console.log("  [set] System channel -> #general");
   }
 
-  // Set server description
   const description =
     "OpenOMS — open-source Order Management System dla polskiego e-commerce. AGPLv3 + MIT.";
   if (guild.description !== description) {
@@ -732,40 +1273,62 @@ Spam boty = natychmiastowy ban.`);
   }
 
   // ── Summary ──
-  console.log("\n╔══════════════════════════════════════════╗");
-  console.log("║       SETUP COMPLETE                     ║");
-  console.log("╚══════════════════════════════════════════╝\n");
+  console.log("\n╔══════════════════════════════════════════════════════╗");
+  console.log("║             SETUP COMPLETE                           ║");
+  console.log("╚══════════════════════════════════════════════════════╝\n");
 
-  console.log("Security applied:");
+  console.log("What was configured:");
+  console.log("  SECURITY:");
   console.log(
-    "  - Membership Screening: nowi musza zaakceptowac regulamin"
+    "    - Membership Screening (rules acceptance popup)"
   );
   console.log(
-    "  - Community enabled: #zasady jako kanał regulaminu"
+    "    - Community Onboarding (personalized welcome flow)"
   );
   console.log(
-    "  - Verification level: Medium (registered 5+ min)"
+    "    - Server Guide (welcome screen with channel links)"
   );
   console.log(
-    "  - Content filter: scan ALL members' messages"
-  );
-  console.log("  - Default notifications: Only @mentions");
-  console.log("  - 2FA required for moderator actions");
-  console.log(
-    "  - @everyone: no mention-everyone, no invites, no manage"
+    "    - Verification: Medium (5+ min account age)"
   );
   console.log(
-    "  - AutoMod: spam filter, mass mention block, Discord invite block"
+    "    - Content filter: ALL members' messages scanned"
+  );
+  console.log("    - 2FA required for moderators");
+  console.log(
+    "    - @everyone hardened (no mention-all, no invites, no manage)"
   );
   console.log(
-    "  - Slow mode (10s) on help channels"
+    "    - Webhook permissions: only @Maintainer can manage"
+  );
+  console.log("  AUTOMOD (6 rules):");
+  console.log("    - Spam/scam keyword filter");
+  console.log("    - Mass mention block (5 max + timeout)");
+  console.log("    - Discord invite block");
+  console.log("    - URL shortener block (bit.ly, tinyurl...)");
+  console.log("    - Executable file link block (.exe, .bat...)");
+  console.log(
+    "    - Crypto/web3 spam block (+ 10 min timeout)"
+  );
+  console.log("  CHANNELS:");
+  console.log(
+    "    - 4 read-only: #zasady, #ogloszenia, #roadmap, #changelog"
   );
   console.log(
-    "  - Read-only: #zasady, #ogloszenia, #roadmap, #changelog, #github-feed"
+    "    - 4 text: #general, #off-topic, #pokaz-swoje, #contributing, #pull-requests"
   );
   console.log(
-    "  - Maintainers exempt from AutoMod\n"
+    "    - 5 forum: #pomoc-instalacja, #pomoc-konfiguracja, #pomoc-integracje, #bugs, #pomysly"
   );
+  console.log(
+    "    - 1 read-only: #github-feed (webhook + AutoMod alerts)"
+  );
+  console.log("    - 1 voice: #office-hours");
+  console.log("  EVENTS:");
+  console.log(
+    "    - Office Hours scheduled (next Saturday 18:00)"
+  );
+  console.log("");
 
   console.log("Manual steps remaining:");
   console.log(
@@ -776,6 +1339,15 @@ Spam boty = natychmiastowy ban.`);
   );
   console.log(
     "  3. Set server icon and banner"
+  );
+  console.log(
+    "  4. (Optional) Add Carl-bot: https://carl.gg — reaction roles, suggestions, audit log"
+  );
+  console.log(
+    "  5. (Optional) Add Answer Overflow: https://www.answeroverflow.com — index forum posts on Google"
+  );
+  console.log(
+    "  6. (Optional) Cold owner: transfer ownership to a dedicated secure account"
   );
 
   client.destroy();
