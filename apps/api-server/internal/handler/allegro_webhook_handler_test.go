@@ -159,21 +159,21 @@ func TestAllegroWebhookHandler_EmptyBody(t *testing.T) {
 // --- No webhook secret configured ---
 
 func TestAllegroWebhookHandler_NoSecretConfigured_ValidEvent(t *testing.T) {
-	// When no secret is configured, signature verification is skipped entirely
+	// When no secret is configured, webhooks are rejected (503)
 	h := NewAllegroWebhookHandler("", nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-7","occurredAt":"2026-01-15T16:00:00Z","payload":{}}`
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/allegro", strings.NewReader(body))
-	// No signature header needed when secret is empty
 	rr := httptest.NewRecorder()
 
 	h.HandleWebhook(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
 }
 
 func TestAllegroWebhookHandler_NoSecretConfigured_MalformedBody(t *testing.T) {
+	// When no secret is configured, webhooks are rejected before parsing body
 	h := NewAllegroWebhookHandler("", nil)
 
 	body := `{broken json`
@@ -183,14 +183,13 @@ func TestAllegroWebhookHandler_NoSecretConfigured_MalformedBody(t *testing.T) {
 
 	h.HandleWebhook(rr, req)
 
-	// Even with malformed body, returns 200 (graceful handling)
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
 }
 
 // --- Signature header present but secret is empty ---
 
 func TestAllegroWebhookHandler_NoSecretConfigured_WithSignatureHeader(t *testing.T) {
-	// When no secret is configured, signature verification is skipped even if header is present
+	// When no secret is configured, webhooks are rejected even if signature header is present
 	h := NewAllegroWebhookHandler("", nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-8","occurredAt":"2026-01-15T17:00:00Z","payload":{}}`
@@ -201,5 +200,5 @@ func TestAllegroWebhookHandler_NoSecretConfigured_WithSignatureHeader(t *testing
 
 	h.HandleWebhook(rr, req)
 
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
 }
