@@ -503,6 +503,19 @@ const ONBOARDING_PROMPTS = [
   },
 ];
 
+// ── Helpers ──────────────────────────────────────────────────────
+
+// Generate a Discord snowflake-like ID (required by some APIs for new entities)
+let snowflakeCounter = 0n;
+function generateSnowflake() {
+  const DISCORD_EPOCH = 1420070400000n;
+  const timestamp = BigInt(Date.now()) - DISCORD_EPOCH;
+  snowflakeCounter++;
+  return String(
+    (timestamp << 22n) | (1n << 17n) | (snowflakeCounter & 0xFFFn)
+  );
+}
+
 // ── Script ───────────────────────────────────────────────────────
 
 const client = new Client({
@@ -881,7 +894,7 @@ async function run() {
         if (alertChannel) {
           actions.push({
             type: a.type,
-            metadata: { channelId: alertChannel.id },
+            metadata: { channel_id: alertChannel.id },
           });
         }
         // else skip this action entirely
@@ -890,15 +903,25 @@ async function run() {
       }
     }
 
+    // Use REST API directly to avoid discord.js metadata key issues
     try {
-      await guild.autoModerationRules.create({
-        name: ruleDef.name,
-        enabled: true,
-        eventType: ruleDef.eventType,
-        triggerType: ruleDef.triggerType,
-        triggerMetadata: ruleDef.triggerMetadata,
-        actions,
-        exemptRoles: [maintainerRole.id],
+      await client.rest.post(`/guilds/${guild.id}/auto-moderation/rules`, {
+        body: {
+          name: ruleDef.name,
+          enabled: true,
+          event_type: ruleDef.eventType,
+          trigger_type: ruleDef.triggerType,
+          trigger_metadata: {
+            keyword_filter: ruleDef.triggerMetadata.keywordFilter,
+            regex_patterns: ruleDef.triggerMetadata.regexPatterns,
+            mention_total_limit: ruleDef.triggerMetadata.mentionTotalLimit,
+          },
+          actions: actions.map((a) => ({
+            type: a.type,
+            metadata: a.metadata,
+          })),
+          exempt_roles: [maintainerRole.id],
+        },
       });
       console.log(`  [created] "${ruleDef.name}"`);
     } catch (err) {
@@ -1080,7 +1103,7 @@ Spam boty = natychmiastowy ban.`);
         const existingOpt = existingPrompt?.options?.[optIdx];
 
         return {
-          ...(existingOpt?.id ? { id: existingOpt.id } : {}),
+          id: existingOpt?.id || generateSnowflake(),
           title: opt.title,
           description: opt.description || "",
           emoji: opt.emoji ? { name: opt.emoji } : undefined,
@@ -1090,7 +1113,7 @@ Spam boty = natychmiastowy ban.`);
       });
 
       return {
-        ...(existingPrompt?.id ? { id: existingPrompt.id } : {}),
+        id: existingPrompt?.id || generateSnowflake(),
         type: 0, // MULTIPLE_CHOICE
         title: prompt.title,
         single_select: false,
@@ -1142,63 +1165,77 @@ Spam boty = natychmiastowy ban.`);
   console.log("\n=== 12. SERVER GUIDE ===");
 
   try {
-    // Ensure WELCOME_SCREEN feature is available (requires Community)
+    // Try to enable Community by setting features via guild edit
     const refetchedGuild = await guild.fetch();
     const hasCommunity = refetchedGuild.features.includes("COMMUNITY");
+    console.log(
+      `  Community: ${hasCommunity ? "enabled" : "not enabled"}, features: ${refetchedGuild.features.join(", ") || "none"}`
+    );
+
+    // Try to enable welcome screen regardless — the API will tell us if it fails
+    const wsGeneralCh = guild.channels.cache.find(
+      (c) => c.name === "general"
+    );
+    const wsContribCh = guild.channels.cache.find(
+      (c) => c.name === "contributing"
+    );
+    const wsInstallCh = guild.channels.cache.find(
+      (c) => c.name === "pomoc-instalacja"
+    );
+    const wsBugsCh = guild.channels.cache.find(
+      (c) => c.name === "bugs"
+    );
+
+    const welcomeChannels = [
+      wsGeneralCh && {
+        channel_id: wsGeneralCh.id,
+        description: "Ogólne rozmowy o OpenOMS i e-commerce",
+        emoji_name: "\uD83D\uDCAC",
+      },
+      wsInstallCh && {
+        channel_id: wsInstallCh.id,
+        description: "Potrzebujesz pomocy z instalacja? Tutaj!",
+        emoji_name: "\uD83D\uDD27",
+      },
+      wsContribCh && {
+        channel_id: wsContribCh.id,
+        description: "Chcesz pomoc w rozwoju? Zacznij tutaj",
+        emoji_name: "\uD83D\uDCBB",
+      },
+      wsBugsCh && {
+        channel_id: wsBugsCh.id,
+        description: "Znalazles buga? Zglos go tutaj",
+        emoji_name: "\uD83D\uDC1B",
+      },
+    ].filter(Boolean);
 
     if (!hasCommunity) {
-      console.log(
-        "  [skip] Server Guide requires Community (enable in Discord Settings)"
-      );
-    } else {
-      const wsGeneralCh = guild.channels.cache.find(
-        (c) => c.name === "general"
-      );
-      const wsContribCh = guild.channels.cache.find(
-        (c) => c.name === "contributing"
-      );
-      const wsInstallCh = guild.channels.cache.find(
-        (c) => c.name === "pomoc-instalacja"
-      );
-      const wsBugsCh = guild.channels.cache.find(
-        (c) => c.name === "bugs"
-      );
-
-      const welcomeChannels = [
-        wsGeneralCh && {
-          channel_id: wsGeneralCh.id,
-          description: "Ogólne rozmowy o OpenOMS i e-commerce",
-          emoji_name: "\uD83D\uDCAC",
-        },
-        wsInstallCh && {
-          channel_id: wsInstallCh.id,
-          description: "Potrzebujesz pomocy z instalacją? Tutaj!",
-          emoji_name: "\uD83D\uDD27",
-        },
-        wsContribCh && {
-          channel_id: wsContribCh.id,
-          description: "Chcesz pomóc w rozwoju? Zacznij tutaj",
-          emoji_name: "\uD83D\uDCBB",
-        },
-        wsBugsCh && {
-          channel_id: wsBugsCh.id,
-          description: "Znalazłeś buga? Zgłoś go tutaj",
-          emoji_name: "\uD83D\uDC1B",
-        },
-      ].filter(Boolean);
-
-      await client.rest.patch(`/guilds/${guild.id}/welcome-screen`, {
-        body: {
-          enabled: true,
-          description:
-            "OpenOMS — open-source Order Management System dla polskiego e-commerce. Wybierz kanał aby zacząć!",
-          welcome_channels: welcomeChannels.slice(0, 5),
-        },
-      });
-      console.log(
-        "  [set] Server Guide (welcome screen) z 4 kanałami"
-      );
+      // Try enabling Community via guild edit with required fields
+      try {
+        await guild.edit({
+          rulesChannelId: zasadyChannel?.id,
+          publicUpdatesChannelId: changelogChannel?.id,
+          features: [...refetchedGuild.features, "COMMUNITY"],
+        });
+        console.log("  [set] Community feature enabled");
+      } catch {
+        console.log(
+          "  [info] Community must be enabled manually: Server Settings → Community → Enable Community"
+        );
+      }
     }
+
+    await client.rest.patch(`/guilds/${guild.id}/welcome-screen`, {
+      body: {
+        enabled: true,
+        description:
+          "OpenOMS — open-source OMS dla polskiego e-commerce. Wybierz kanal aby zaczac!",
+        welcome_channels: welcomeChannels.slice(0, 5),
+      },
+    });
+    console.log(
+      "  [set] Server Guide (welcome screen) z 4 kanałami"
+    );
   } catch (err) {
     console.log(
       `  [skip] Server Guide: ${err.message}`
