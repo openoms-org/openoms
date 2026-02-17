@@ -5,6 +5,7 @@ import {
   RotateCcw,
   FileText,
   Receipt,
+  CreditCard,
   Package,
   Plug,
   Users,
@@ -43,6 +44,8 @@ import {
   Calculator,
   Ruler,
   Rss,
+  PackageCheck,
+  Leaf,
 } from "lucide-react";
 
 export interface NavItem {
@@ -73,10 +76,12 @@ export const navItems: NavItem[] = [
   { href: "/shipments", label: "Przesyłki", icon: Truck, group: "Sprzedaż" },
   { href: "/returns", label: "Zwroty", icon: RotateCcw, group: "Sprzedaż" },
   { href: "/invoices", label: "Faktury", icon: FileText, group: "Sprzedaż" },
+  { href: "/reconciliation", label: "Rozliczenia", icon: CreditCard, adminOnly: true, group: "Sprzedaż" },
   { href: "/orders/import", label: "Import", icon: Upload, group: "Sprzedaż" },
   { href: "/customers", label: "Klienci", icon: Contact, group: "Sprzedaż" },
   { href: "/packing", label: "Pakowanie", icon: ScanBarcode, group: "Sprzedaż" },
   { href: "/reports", label: "Raporty", icon: BarChart3, adminOnly: true, group: "Sprzedaż" },
+  { href: "/reports/carbon", label: "Ślad węglowy", icon: Leaf, adminOnly: true, group: "Sprzedaż" },
   // Katalog
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
   { href: "/products/import", label: "Import produktów", icon: Upload, group: "Katalog" },
@@ -114,6 +119,7 @@ export const navItems: NavItem[] = [
   { href: "/settings/custom-fields", label: "Pola niestandardowe", icon: TextCursorInput, adminOnly: true, group: "Sprzedaż - ustawienia" },
   { href: "/settings/price-lists", label: "Cenniki", icon: BadgePercent, adminOnly: true, group: "Sprzedaż - ustawienia" },
   { href: "/settings/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Sprzedaż - ustawienia" },
+  { href: "/settings/accounting", label: "Księgowość", icon: Calculator, adminOnly: true, group: "Sprzedaż - ustawienia" },
   { href: "/settings/ksef", label: "KSeF", icon: FileText, adminOnly: true, group: "Sprzedaż - ustawienia" },
   // Powiadomienia
   { href: "/settings/notifications", label: "Powiadomienia", icon: Bell, adminOnly: true, group: "Powiadomienia" },
@@ -123,6 +129,7 @@ export const navItems: NavItem[] = [
   { href: "/settings/warehouses", label: "Magazyny", icon: Warehouse, adminOnly: true, group: "Magazyn" },
   { href: "/settings/warehouse-documents", label: "Dokumenty magazynowe", icon: ClipboardList, adminOnly: true, group: "Magazyn" },
   { href: "/stocktakes", label: "Inwentaryzacja", icon: ClipboardCheck, adminOnly: true, group: "Magazyn" },
+  { href: "/pick-pack", label: "Pick & Pack", icon: PackageCheck, group: "Magazyn" },
   // Narzędzia
   { href: "/integrations", label: "Połączenia", icon: Plug, adminOnly: true, group: "Narzędzia" },
   { href: "/settings/automation", label: "Automatyzacja", icon: Zap, adminOnly: true, group: "Narzędzia" },

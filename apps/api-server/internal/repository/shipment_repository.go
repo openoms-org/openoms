@@ -20,7 +20,9 @@ func NewShipmentRepository() *ShipmentRepository {
 const shipmentColumns = `id, tenant_id, order_id, provider, integration_id,
 		        external_id, tracking_number, status, label_url, carrier_data,
 		        warehouse_id, package_number, weight, dimensions_length,
-		        dimensions_width, dimensions_height, notes, created_at, updated_at`
+		        dimensions_width, dimensions_height, notes,
+		        carbon_kg, distance_km, carbon_method,
+		        created_at, updated_at`
 
 // scanShipment scans a row into a Shipment struct using the canonical column order.
 func scanShipment(row interface{ Scan(dest ...any) error }) (model.Shipment, error) {
@@ -29,7 +31,9 @@ func scanShipment(row interface{ Scan(dest ...any) error }) (model.Shipment, err
 		&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
 		&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
 		&s.WarehouseID, &s.PackageNumber, &s.Weight, &s.Length,
-		&s.Width, &s.Height, &s.Notes, &s.CreatedAt, &s.UpdatedAt,
+		&s.Width, &s.Height, &s.Notes,
+		&s.CarbonKg, &s.DistanceKm, &s.CarbonMethod,
+		&s.CreatedAt, &s.UpdatedAt,
 	)
 	return s, err
 }
@@ -142,13 +146,15 @@ func (r *ShipmentRepository) Create(ctx context.Context, tx pgx.Tx, shipment *mo
 			id, tenant_id, order_id, provider, integration_id,
 			external_id, tracking_number, status, label_url, carrier_data,
 			warehouse_id, package_number, weight, dimensions_length,
-			dimensions_width, dimensions_height, notes
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			dimensions_width, dimensions_height, notes,
+			carbon_kg, distance_km, carbon_method
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		RETURNING created_at, updated_at`,
 		shipment.ID, shipment.TenantID, shipment.OrderID, shipment.Provider, shipment.IntegrationID,
 		shipment.ExternalID, shipment.TrackingNumber, shipment.Status, shipment.LabelURL, shipment.CarrierData,
 		shipment.WarehouseID, shipment.PackageNumber, shipment.Weight, shipment.Length,
 		shipment.Width, shipment.Height, shipment.Notes,
+		shipment.CarbonKg, shipment.DistanceKm, shipment.CarbonMethod,
 	).Scan(&shipment.CreatedAt, &shipment.UpdatedAt)
 }
 

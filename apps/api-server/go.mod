@@ -24,6 +24,7 @@ require (
 	github.com/openoms-org/openoms/packages/fakturownia-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/fedex-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/gls-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/infakt-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/inpost-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/iof-parser v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/kaufland-go-sdk v0.0.0-20260213093925-f69d292073cb
@@ -35,6 +36,7 @@ require (
 	github.com/openoms-org/openoms/packages/poczta-polska-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/smsapi-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/ups-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/wfirma-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/woocommerce-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/pquerna/otp v1.5.0
 	github.com/stretchr/testify v1.11.1
@@ -69,3 +71,7 @@ require (
 	golang.org/x/text v0.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/openoms-org/openoms/packages/wfirma-go-sdk => ../../packages/wfirma-go-sdk
+
+replace github.com/openoms-org/openoms/packages/infakt-go-sdk => ../../packages/infakt-go-sdk

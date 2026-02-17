@@ -79,6 +79,10 @@ type RouterDeps struct {
 	Tracking          *handler.TrackingHandler
 	Feed              *handler.FeedHandler
 	PurchaseOrder     *handler.PurchaseOrderHandler
+	PickPack          *handler.PickPackHandler
+	Accounting        *handler.AccountingHandler
+	Reconciliation    *handler.ReconciliationHandler
+	Carbon            *handler.CarbonHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -225,6 +229,11 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/ksef", deps.KSeF.GetSettings)
 				r.Put("/ksef", deps.KSeF.UpdateSettings)
 				r.Post("/ksef/test", deps.KSeF.TestConnection)
+				if deps.Accounting != nil {
+					r.Get("/accounting", deps.Accounting.GetAccountingSettings)
+					r.Put("/accounting", deps.Accounting.UpdateAccountingSettings)
+					r.Post("/accounting/test", deps.Accounting.TestConnection)
+				}
 				if deps.Feed != nil {
 					r.Get("/feeds", deps.Feed.GetConfig)
 					r.Put("/feeds", deps.Feed.UpdateConfig)
@@ -584,6 +593,14 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/payment-methods", deps.Stats.GetPaymentMethodStats)
 			})
 
+			// Carbon footprint — any authenticated user
+			if deps.Carbon != nil {
+				r.Route("/carbon", func(r chi.Router) {
+					r.Get("/stats", deps.Carbon.GetStats)
+					r.Get("/report", deps.Carbon.GetReport)
+				})
+			}
+
 			// Barcode lookup — any authenticated user
 			r.Get("/barcode/{code}", deps.Barcode.Lookup)
 
@@ -673,9 +690,38 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Get("/inpost/points", deps.InPostPoint.Search)
 			r.Get("/inpost/geowidget-token", deps.Integration.GetGeowidgetToken)
 
+			// Pick & Pack workflow — any authenticated user
+			r.Route("/pick-pack/sessions", func(r chi.Router) {
+				r.Post("/", deps.PickPack.CreateSession)
+				r.Get("/", deps.PickPack.ListSessions)
+				r.Get("/{id}", deps.PickPack.GetSession)
+				r.Post("/{id}/scan", deps.PickPack.ScanItem)
+				r.Post("/{id}/move-to-packing", deps.PickPack.MoveToPacking)
+				r.Post("/{id}/items/{itemId}/pack", deps.PickPack.MarkItemPacked)
+				r.Post("/{id}/complete", deps.PickPack.CompleteSession)
+				r.Post("/{id}/cancel", deps.PickPack.CancelSession)
+			})
+
 			// Shipping rate comparison — any authenticated user
 			r.Post("/shipping/rates", deps.Rate.GetRates)
+
+			// Payment reconciliation — admin only
+			r.Route("/reconciliation", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Post("/settlements", deps.Reconciliation.CreateSettlement)
+				r.Get("/settlements", deps.Reconciliation.ListSettlements)
+				r.Get("/settlements/{id}", deps.Reconciliation.GetSettlement)
+				r.Post("/settlements/{id}/auto-match", deps.Reconciliation.AutoMatch)
+				r.Get("/transactions", deps.Reconciliation.ListTransactions)
+				r.Post("/transactions/{id}/match", deps.Reconciliation.ManualMatch)
+				r.Post("/transactions/{id}/unmatch", deps.Reconciliation.Unmatch)
+				r.Get("/summary", deps.Reconciliation.GetSummary)
+			})
+
 		})
+
+		// CSV import for reconciliation — outside MaxBodySize group (uses its own 10MB limit)
+		r.With(middleware.RequireRole("admin")).Post("/reconciliation/import-csv", deps.Reconciliation.ImportCSV)
 	})
 
 	return r

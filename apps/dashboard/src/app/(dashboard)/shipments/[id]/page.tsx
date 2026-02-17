@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag, MapPin, Route, Truck } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, ExternalLink, FileDown, Tag, MapPin, Route, Truck, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -305,6 +305,23 @@ export default function ShipmentDetailPage() {
                   <p className="text-sm">
                     {shipment.length ?? "-"} x {shipment.width ?? "-"} x {shipment.height ?? "-"}
                   </p>
+                </div>
+              )}
+              {shipment.carbon_kg != null && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
+                  <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1.5">
+                    <Leaf className="h-4 w-4" />
+                    Szacunkowy slad weglowy
+                  </p>
+                  <p className="text-lg font-bold text-green-800 dark:text-green-300 mt-1">
+                    {shipment.carbon_kg.toFixed(3)} kg CO2
+                  </p>
+                  {shipment.distance_km != null && (
+                    <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">
+                      Dystans: ~{shipment.distance_km.toFixed(0)} km
+                      {shipment.carbon_method === "estimate" && " (szacunkowy)"}
+                    </p>
+                  )}
                 </div>
               )}
               {shipment.notes && (

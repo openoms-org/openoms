@@ -23,4 +23,6 @@ use (
 	./packages/kaufland-go-sdk
 	./packages/olx-go-sdk
 	./packages/ksef-go-sdk
+	./packages/wfirma-go-sdk
+	./packages/infakt-go-sdk
 )

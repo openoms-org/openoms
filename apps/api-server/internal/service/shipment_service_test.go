@@ -13,7 +13,7 @@ import (
 )
 
 func TestShipmentService_Create_ValidationError_MissingOrderID(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil)
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateShipmentRequest{
 		Provider: "inpost",
@@ -26,7 +26,7 @@ func TestShipmentService_Create_ValidationError_MissingOrderID(t *testing.T) {
 }
 
 func TestShipmentService_Create_ValidationError_MissingProvider(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil)
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateShipmentRequest{
 		OrderID: uuid.New(),
@@ -39,7 +39,7 @@ func TestShipmentService_Create_ValidationError_MissingProvider(t *testing.T) {
 }
 
 func TestShipmentService_Update_ValidationError_NoFields(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil)
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Update(context.Background(), uuid.New(), uuid.New(), model.UpdateShipmentRequest{}, uuid.New(), "127.0.0.1")
 
@@ -49,7 +49,7 @@ func TestShipmentService_Update_ValidationError_NoFields(t *testing.T) {
 }
 
 func TestShipmentService_TransitionStatus_ValidationError_EmptyStatus(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil)
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.TransitionStatus(context.Background(), uuid.New(), uuid.New(),
 		model.ShipmentStatusTransitionRequest{Status: ""}, uuid.New(), "127.0.0.1")

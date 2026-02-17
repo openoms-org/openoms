@@ -238,6 +238,9 @@ export interface Shipment {
   width?: number;
   height?: number;
   notes: string;
+  carbon_kg?: number;
+  distance_km?: number;
+  carbon_method?: string;
   created_at: string;
   updated_at: string;
 }
@@ -542,6 +545,29 @@ export interface DailyOrderTrend {
   date: string;
   count: number;
   avg_value: number;
+}
+
+// === Carbon Footprint ===
+export interface CarbonStats {
+  total_shipments: number;
+  total_carbon_kg: number;
+  avg_carbon_per_shipment: number;
+  total_distance_km: number;
+  by_carrier: CarrierCarbonStats[];
+  monthly_trend: MonthlyCarbonStat[];
+}
+
+export interface CarrierCarbonStats {
+  carrier: string;
+  shipments: number;
+  total_carbon_kg: number;
+  avg_carbon_kg: number;
+}
+
+export interface MonthlyCarbonStat {
+  month: string;
+  shipments: number;
+  total_carbon_kg: number;
 }
 
 // === Audit Log ===
@@ -1751,6 +1777,184 @@ export interface ReceiveItemEntry {
 export interface PurchaseOrderListParams extends PaginationParams {
   status?: string;
   supplier_id?: string;
+}
+
+// === Pick & Pack ===
+export interface PickPackSession {
+  id: string;
+  tenant_id: string;
+  session_type: "single" | "batch";
+  status: "picking" | "packing" | "completed" | "cancelled";
+  assigned_to?: string;
+  started_at: string;
+  completed_at?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  items?: PickPackItem[];
+  stats?: PickPackStats;
+}
+
+export interface PickPackItem {
+  id: string;
+  tenant_id: string;
+  session_id: string;
+  order_id: string;
+  product_id?: string;
+  sku: string;
+  product_name: string;
+  quantity_required: number;
+  quantity_picked: number;
+  quantity_packed: number;
+  pick_location?: string;
+  picked_at?: string;
+  packed_at?: string;
+  created_at: string;
+}
+
+export interface PickPackStats {
+  total_items: number;
+  total_picked: number;
+  total_packed: number;
+  total_required: number;
+  order_count: number;
+  all_picked: boolean;
+  all_packed: boolean;
+}
+
+export interface CreatePickPackSessionRequest {
+  order_ids: string[];
+  notes?: string;
+}
+
+export interface ScanItemRequest {
+  barcode: string;
+}
+
+export interface ScanItemResponse {
+  item: PickPackItem;
+  remaining: number;
+  message: string;
+}
+
+export interface MarkPackedRequest {
+  quantity: number;
+}
+
+export interface PickPackSessionListParams extends PaginationParams {
+  status?: string;
+  assigned_to?: string;
+}
+
+// === Payment Reconciliation ===
+export interface PaymentSettlement {
+  id: string;
+  tenant_id: string;
+  provider: string;
+  settlement_id?: string;
+  settlement_date: string;
+  total_amount: number;
+  fee_amount: number;
+  net_amount: number;
+  currency: string;
+  status: string;
+  notes?: string;
+  imported_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentSettlementWithTransactions extends PaymentSettlement {
+  transactions: PaymentTransaction[];
+}
+
+export interface PaymentTransaction {
+  id: string;
+  tenant_id: string;
+  settlement_id?: string;
+  order_id?: string;
+  provider: string;
+  external_transaction_id?: string;
+  amount: number;
+  fee: number;
+  net_amount: number;
+  currency: string;
+  transaction_type: string;
+  transaction_date: string;
+  match_status: string;
+  match_notes?: string;
+  created_at: string;
+}
+
+export interface CreateSettlementRequest {
+  provider: string;
+  settlement_id?: string;
+  settlement_date: string;
+  total_amount: number;
+  fee_amount: number;
+  net_amount: number;
+  currency?: string;
+  notes?: string;
+  transactions?: CreateTransactionRequest[];
+}
+
+export interface CreateTransactionRequest {
+  external_transaction_id?: string;
+  amount: number;
+  fee: number;
+  net_amount: number;
+  currency?: string;
+  transaction_type?: string;
+  transaction_date: string;
+}
+
+export interface ManualMatchRequest {
+  order_id: string;
+  notes?: string;
+}
+
+export interface ReconciliationSummary {
+  total_transactions: number;
+  matched_count: number;
+  unmatched_count: number;
+  discrepancy_count: number;
+  manual_match_count: number;
+  total_amount: number;
+  total_fees: number;
+  total_net: number;
+  matched_amount: number;
+  unmatched_amount: number;
+}
+
+export interface MatchResult {
+  transaction_id: string;
+  order_id?: string;
+  status: string;
+  notes?: string;
+}
+
+export interface AutoMatchResponse {
+  settlement_id: string;
+  results: MatchResult[];
+  matched: number;
+  unmatched: number;
+  discrepancy: number;
+}
+
+export interface SettlementListParams extends PaginationParams {
+  provider?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface TransactionListParams extends PaginationParams {
+  settlement_id?: string;
+  match_status?: string;
+  provider?: string;
+  transaction_type?: string;
+  date_from?: string;
+  date_to?: string;
 }
 
 // === WebSocket Events ===

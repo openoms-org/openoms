@@ -652,6 +652,14 @@ export default function OrderDetailPage() {
                       )}
                     </div>
 
+                    {shipment.carbon_kg != null && (
+                      <div className="text-sm flex items-center gap-1.5 text-green-700 dark:text-green-400">
+                        <span>CO2: {shipment.carbon_kg.toFixed(3)} kg</span>
+                        {shipment.distance_km != null && (
+                          <span className="text-muted-foreground">({shipment.distance_km.toFixed(0)} km)</span>
+                        )}
+                      </div>
+                    )}
                     {shipment.notes && (
                       <div className="text-sm">
                         <p className="text-muted-foreground">Notatki</p>
@@ -660,6 +668,16 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                 ))}
+                {/* Total carbon for all shipments */}
+                {orderShipments.some((s) => s.carbon_kg != null) && (
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30 mt-2">
+                    <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                      Szacunkowy slad weglowy zamowienia: {orderShipments
+                        .reduce((sum, s) => sum + (s.carbon_kg ?? 0), 0)
+                        .toFixed(3)} kg CO2
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">

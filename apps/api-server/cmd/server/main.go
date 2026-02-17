@@ -25,6 +25,7 @@ import (
 	// Register carrier providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/carriers"
 	// Register invoicing providers via init().
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/accounting"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/fakturownia"
 
 	"github.com/openoms-org/openoms/apps/api-server/docs"
@@ -165,6 +166,7 @@ func main() {
 	stocktakeItemRepo := repository.NewStocktakeItemRepository()
 	purchaseOrderRepo := repository.NewPurchaseOrderRepository()
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepository()
+	pickPackRepo := repository.NewPickPackRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -174,7 +176,7 @@ func main() {
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
 	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
-	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, auditRepo, pool, webhookDispatchService)
+	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, auditRepo, tenantRepo, pool, webhookDispatchService)
 	productService := service.NewProductService(productRepo, auditRepo, pool, webhookDispatchService)
 	integrationService := service.NewIntegrationService(integrationRepo, auditRepo, pool, encryptionKey)
 	labelService := service.NewLabelService(
@@ -204,6 +206,7 @@ func main() {
 	ksefService := service.NewKSeFService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool)
 	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
 	purchaseOrderService := service.NewPurchaseOrderService(purchaseOrderRepo, purchaseOrderItemRepo, warehouseStockRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	pickPackService := service.NewPickPackService(pickPackRepo, orderRepo, productRepo, variantRepo, auditRepo, pool)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -302,6 +305,9 @@ func main() {
 	// KSeF handler
 	ksefHandler := handler.NewKSeFHandler(ksefService)
 
+	// Accounting handler (wFirma, inFakt provider settings)
+	accountingHandler := handler.NewAccountingHandler(tenantRepo, auditRepo, pool)
+
 	// Supplier handler
 	supplierHandler := handler.NewSupplierHandler(supplierService)
 
@@ -376,6 +382,9 @@ func main() {
 	// Purchase order handler
 	purchaseOrderHandler := handler.NewPurchaseOrderHandler(purchaseOrderService)
 
+	// Pick & Pack handler
+	pickPackHandler := handler.NewPickPackHandler(pickPackService)
+
 	// Print handler
 	printHandler := handler.NewPrintHandler(tenantRepo, orderRepo, returnRepo, pool)
 
@@ -396,6 +405,15 @@ func main() {
 	// Product feed service & handler (Ceneo, Google Shopping)
 	feedService := service.NewFeedService(tenantRepo, productRepo, pool, cfg.BaseURL)
 	feedHandler := handler.NewFeedHandler(feedService)
+
+	// Carbon footprint service & handler
+	carbonService := service.NewCarbonService(pool)
+	carbonHandler := handler.NewCarbonHandler(carbonService)
+
+	// Payment reconciliation service & handler
+	paymentRepo := repository.NewPaymentRepository()
+	reconciliationService := service.NewReconciliationService(paymentRepo, orderRepo, auditRepo, pool)
+	reconciliationHandler := handler.NewReconciliationHandler(reconciliationService)
 
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
@@ -465,6 +483,10 @@ func main() {
 		Tracking:          trackingHandler,
 		Feed:              feedHandler,
 		PurchaseOrder:     purchaseOrderHandler,
+		PickPack:          pickPackHandler,
+		Accounting:        accountingHandler,
+		Reconciliation:    reconciliationHandler,
+		Carbon:            carbonHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)

@@ -27,6 +27,7 @@ type ShipmentService struct {
 	shipmentRepo      repository.ShipmentRepo
 	orderRepo         repository.OrderRepo
 	auditRepo         repository.AuditRepo
+	tenantRepo        repository.TenantRepo
 	pool              *pgxpool.Pool
 	webhookDispatch   *WebhookDispatchService
 	smsService        *SMSService
@@ -54,6 +55,7 @@ func NewShipmentService(
 	shipmentRepo repository.ShipmentRepo,
 	orderRepo repository.OrderRepo,
 	auditRepo repository.AuditRepo,
+	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
 ) *ShipmentService {
@@ -61,6 +63,7 @@ func NewShipmentService(
 		shipmentRepo:    shipmentRepo,
 		orderRepo:       orderRepo,
 		auditRepo:       auditRepo,
+		tenantRepo:      tenantRepo,
 		pool:            pool,
 		webhookDispatch: webhookDispatch,
 	}
@@ -170,6 +173,9 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 			return fmt.Errorf("count existing shipments: %w", err)
 		}
 		shipment.PackageNumber = count + 1
+
+		// Auto-calculate carbon footprint estimate
+		s.estimateCarbon(ctx, tx, tenantID, shipment, order)
 
 		if err := s.shipmentRepo.Create(ctx, tx, shipment); err != nil {
 			return err
@@ -482,4 +488,53 @@ func readLabelFile(labelURL string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("label file not found for URL: %s", labelURL)
+}
+
+// estimateCarbon auto-calculates carbon footprint estimate for a shipment.
+// Best-effort: any errors are silently ignored (carbon is supplementary data).
+func (s *ShipmentService) estimateCarbon(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, shipment *model.Shipment, order *model.Order) {
+	// Parse destination postal code from order's shipping address
+	destPostalCode := ""
+	if order.ShippingAddress != nil && len(order.ShippingAddress) > 0 {
+		var addr model.ShippingAddress
+		if err := json.Unmarshal(order.ShippingAddress, &addr); err == nil {
+			destPostalCode = addr.PostalCode
+		}
+	}
+
+	if destPostalCode == "" {
+		return // Cannot estimate without destination
+	}
+
+	// Get origin postal code from tenant's company settings
+	originPostalCode := ""
+	if s.tenantRepo != nil {
+		tenant, err := s.tenantRepo.FindByID(ctx, tx, tenantID)
+		if err == nil && tenant != nil && tenant.Settings != nil {
+			var settings map[string]json.RawMessage
+			if err := json.Unmarshal(tenant.Settings, &settings); err == nil {
+				if companyRaw, ok := settings["company"]; ok {
+					var company model.CompanySettings
+					if err := json.Unmarshal(companyRaw, &company); err == nil {
+						originPostalCode = company.PostCode
+					}
+				}
+			}
+		}
+	}
+
+	if originPostalCode == "" {
+		originPostalCode = "00-001" // Default: Warsaw
+	}
+
+	distanceKm := EstimateDistance(originPostalCode, destPostalCode)
+	weightKg := 1.0
+	if shipment.Weight != nil && *shipment.Weight > 0 {
+		weightKg = *shipment.Weight
+	}
+	carbonKg := EstimateCarbon(shipment.Provider, weightKg, distanceKm)
+
+	shipment.DistanceKm = &distanceKm
+	shipment.CarbonKg = &carbonKg
+	shipment.CarbonMethod = "estimate"
 }

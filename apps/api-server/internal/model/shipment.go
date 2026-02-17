@@ -27,6 +27,9 @@ type Shipment struct {
 	Width          *float64        `json:"width,omitempty"`
 	Height         *float64        `json:"height,omitempty"`
 	Notes          string          `json:"notes"`
+	CarbonKg       *float64        `json:"carbon_kg,omitempty"`
+	DistanceKm     *float64        `json:"distance_km,omitempty"`
+	CarbonMethod   string          `json:"carbon_method,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 }

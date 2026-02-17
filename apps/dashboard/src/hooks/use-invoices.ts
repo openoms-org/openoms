@@ -89,6 +89,51 @@ export function useUpdateInvoicingSettings() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "invoicing"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "accounting"] });
     },
+  });
+}
+
+// === Accounting Settings (wFirma, inFakt, Fakturownia connection management) ===
+
+export interface AccountingConfig {
+  provider: string;
+  credentials: Record<string, string>;
+  connected: boolean;
+}
+
+export interface AccountingTestResult {
+  success: boolean;
+  message: string;
+}
+
+export function useAccountingSettings() {
+  return useQuery({
+    queryKey: ["settings", "accounting"],
+    queryFn: () => apiClient<AccountingConfig>("/v1/settings/accounting"),
+  });
+}
+
+export function useUpdateAccountingSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { provider: string; credentials: Record<string, string> }) =>
+      apiClient<{ message: string; provider: string }>("/v1/settings/accounting", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "accounting"] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "invoicing"] });
+    },
+  });
+}
+
+export function useTestAccountingConnection() {
+  return useMutation({
+    mutationFn: () =>
+      apiClient<AccountingTestResult>("/v1/settings/accounting/test", {
+        method: "POST",
+      }),
   });
 }

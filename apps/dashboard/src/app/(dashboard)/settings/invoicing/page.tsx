@@ -108,13 +108,19 @@ export default function InvoicingSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Credentials */}
+      {/* Credentials — Fakturownia */}
       {form.provider === "fakturownia" && (
         <Card>
           <CardHeader>
-            <CardTitle>Dane dostępowe Fakturownia</CardTitle>
+            <CardTitle>Dane dostepowe Fakturownia</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Uzyskaj dane z{" "}
+              <a href="https://fakturownia.pl" target="_blank" rel="noopener noreferrer" className="underline">
+                fakturownia.pl
+              </a>
+            </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Subdomena</Label>
@@ -146,6 +152,70 @@ export default function InvoicingSettingsPage() {
                   placeholder="Token API z Fakturowni"
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Credentials — wFirma */}
+      {form.provider === "wfirma" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dane dostepowe wFirma</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Wygeneruj klucz API w panelu{" "}
+              <a href="https://wfirma.pl" target="_blank" rel="noopener noreferrer" className="underline">
+                wfirma.pl
+              </a>
+              {" "}w sekcji Ustawienia &rarr; Integracje &rarr; API.
+            </p>
+            <div className="max-w-sm space-y-2">
+              <Label>Klucz API</Label>
+              <Input
+                type="password"
+                value={form.credentials.api_key || ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    credentials: { ...form.credentials, api_key: e.target.value },
+                  })
+                }
+                placeholder="Klucz API z wFirma"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Credentials — inFakt */}
+      {form.provider === "infakt" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Dane dostepowe inFakt</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Wygeneruj klucz API w panelu{" "}
+              <a href="https://app.infakt.pl" target="_blank" rel="noopener noreferrer" className="underline">
+                app.infakt.pl
+              </a>
+              {" "}w sekcji Ustawienia &rarr; Integracje.
+            </p>
+            <div className="max-w-sm space-y-2">
+              <Label>Klucz API</Label>
+              <Input
+                type="password"
+                value={form.credentials.api_key || ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    credentials: { ...form.credentials, api_key: e.target.value },
+                  })
+                }
+                placeholder="Klucz API z inFakt"
+              />
             </div>
           </CardContent>
         </Card>

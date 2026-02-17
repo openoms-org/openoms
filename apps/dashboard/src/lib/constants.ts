@@ -181,10 +181,12 @@ export const INVOICE_TYPE_LABELS: Record<string, string> = {
   receipt: "Paragon",
 };
 
-export const INVOICING_PROVIDERS = ["fakturownia"] as const;
+export const INVOICING_PROVIDERS = ["fakturownia", "wfirma", "infakt"] as const;
 
 export const INVOICING_PROVIDER_LABELS: Record<string, string> = {
   fakturownia: "Fakturownia",
+  wfirma: "wFirma",
+  infakt: "inFakt",
 };
 
 // === KSeF ===
