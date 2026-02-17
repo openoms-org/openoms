@@ -53,6 +53,16 @@ Dla bogatszych powiadomień (issues, PR, stars):
 
 ## Co skrypt konfiguruje
 
+### Membership Screening (bramka wejściowa)
+
+| Funkcja | Opis |
+|---------|------|
+| **Community mode** | Włączony automatycznie, #zasady jako kanał regulaminu |
+| **Formularz akceptacji** | Nowi członkowie muszą zaakceptować 5 punktów regulaminu zanim uzyskają dostęp |
+| **#zasady** | Read-only kanał z pełnym regulaminem serwera |
+
+> Nowy użytkownik widzi popup → klika "Zgadzam się" → dopiero wtedy może pisać. Boty/spamerzy tego nie robią.
+
 ### Bezpieczeństwo serwera
 
 | Zabezpieczenie | Opis |
@@ -77,7 +87,8 @@ Dla bogatszych powiadomień (issues, PR, stars):
 
 | Kategoria | Kanał | Zabezpieczenia |
 |-----------|-------|----------------|
-| INFORMACJE | #ogloszenia | Read-only, wiadomość powitalna |
+| INFORMACJE | #zasady | Read-only, regulamin serwera |
+| | #ogloszenia | Read-only, wiadomość powitalna |
 | | #roadmap | Read-only |
 | | #changelog | Read-only |
 | SPOLECZNOSC | #general | Standardowe |

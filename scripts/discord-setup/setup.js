@@ -68,6 +68,12 @@ const CATEGORIES = [
     name: "INFORMACJE",
     channels: [
       {
+        name: "zasady",
+        topic:
+          "Regulamin serwera OpenOMS. Przeczytaj przed pisaniem na kanałach.",
+        readOnly: true,
+      },
+      {
         name: "ogloszenia",
         topic:
           "Oficjalne ogłoszenia projektu OpenOMS. Tylko maintainerzy mogą pisać.",
@@ -612,7 +618,91 @@ async function run() {
     }
   }
 
-  // ── 7. Server settings ──
+  // ── 7. Community + Membership Screening ──
+  console.log("\n=== COMMUNITY & MEMBERSHIP SCREENING ===");
+
+  const zasadyChannel = guild.channels.cache.find(
+    (c) => c.name === "zasady"
+  );
+  const changelogChannel = guild.channels.cache.find(
+    (c) => c.name === "changelog"
+  );
+
+  // Enable Community features (required for Membership Screening)
+  if (zasadyChannel && changelogChannel) {
+    try {
+      await guild.edit({
+        rulesChannelId: zasadyChannel.id,
+        publicUpdatesChannelId: changelogChannel.id,
+      });
+      console.log(
+        "  [set] Community enabled (rules: #zasady, updates: #changelog)"
+      );
+    } catch (err) {
+      console.log(
+        `  [skip] Community: ${err.message}`
+      );
+    }
+  }
+
+  // Post rules in #zasady if not already there
+  if (zasadyChannel) {
+    const msgs = await zasadyChannel.messages.fetch({ limit: 5 });
+    const hasRules = msgs.some((m) =>
+      m.content.includes("Regulamin serwera")
+    );
+    if (!hasRules) {
+      await zasadyChannel.send(`# Regulamin serwera OpenOMS
+
+1. **Szanuj innych** — bądź kulturalny, zero hejtu i obrażania
+2. **Nie spamuj** — żadnych reklam, linków afiliacyjnych, crypto scamów
+3. **Pisz w odpowiednich kanałach** — pomoc w #instalacja/#konfiguracja, bugi w #bugs
+4. **Język: polski i angielski** — oba mile widziane
+5. **Nie wysyłaj DM maintainerom** bez zaproszenia — pytaj publicznie
+6. **Bez NSFW** — treści dla dorosłych są zakazane
+7. **Przestrzegaj Discord ToS** — https://discord.com/terms
+
+Łamanie zasad = ostrzeżenie → timeout → ban.
+Spam boty = natychmiastowy ban.`);
+      console.log("  [sent] Rules in #zasady");
+    } else {
+      console.log("  [skip] Rules already in #zasady");
+    }
+  }
+
+  // Set up Membership Screening form (the popup new members must accept)
+  try {
+    await client.rest.put(`/guilds/${guild.id}/member-verification`, {
+      body: {
+        version: "2021-01-31T00:00:00.000000+00:00",
+        form_fields: [
+          {
+            field_type: "TERMS",
+            label: "Akceptuję regulamin serwera OpenOMS",
+            required: true,
+            values: [
+              "Szanuję innych — zero hejtu i obrażania",
+              "Nie spamię — żadnych reklam, crypto, linków afiliacyjnych",
+              "Piszę w odpowiednich kanałach",
+              "Nie wysyłam DM maintainerom bez zaproszenia",
+              "Przestrzegam Discord Terms of Service",
+            ],
+          },
+        ],
+        description:
+          "Witaj w społeczności OpenOMS! Zaakceptuj regulamin, żeby uzyskać pełny dostęp do serwera.",
+      },
+    });
+    console.log(
+      "  [set] Membership Screening — nowi członkowie muszą zaakceptować regulamin"
+    );
+  } catch (err) {
+    console.log(
+      `  [skip] Membership Screening: ${err.message}`
+    );
+  }
+
+  // ── 8. Server settings ──
   console.log("\n=== SERVER SETTINGS ===");
   const generalChannel = guild.channels.cache.find(
     (c) => c.name === "general"
@@ -648,6 +738,12 @@ async function run() {
 
   console.log("Security applied:");
   console.log(
+    "  - Membership Screening: nowi musza zaakceptowac regulamin"
+  );
+  console.log(
+    "  - Community enabled: #zasady jako kanał regulaminu"
+  );
+  console.log(
     "  - Verification level: Medium (registered 5+ min)"
   );
   console.log(
@@ -665,7 +761,7 @@ async function run() {
     "  - Slow mode (10s) on help channels"
   );
   console.log(
-    "  - Read-only: #ogloszenia, #roadmap, #changelog, #github-feed"
+    "  - Read-only: #zasady, #ogloszenia, #roadmap, #changelog, #github-feed"
   );
   console.log(
     "  - Maintainers exempt from AutoMod\n"
@@ -680,9 +776,6 @@ async function run() {
   );
   console.log(
     "  3. Set server icon and banner"
-  );
-  console.log(
-    "  4. Enable Community in Discord settings (optional, for discovery)"
   );
 
   client.destroy();
