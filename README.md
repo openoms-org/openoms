@@ -3,12 +3,13 @@
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev/)
 [![Build](https://img.shields.io/github/actions/workflow/status/openoms-org/openoms/ci.yml?branch=main&label=CI)](https://github.com/openoms-org/openoms/actions)
+[![Discord](https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/3Z5hzeH5)
 
 **Open-source Order Management System for e-commerce.**
 
 OpenOMS is a self-hostable, multi-tenant OMS with 291 API endpoints, 82 dashboard pages, and integrations with 8 marketplaces and 8 carriers. Built with Go and Next.js, designed for teams that need full control over their order operations.
 
-> **Status: Active Development**
+> **Status: Active Development** — Looking for beta testers! [Join our Discord](https://discord.gg/3Z5hzeH5)
 
 <!-- ![OpenOMS Dashboard](docs/screenshot.png) -->
 
@@ -278,9 +279,51 @@ The Docker images are stateless and can be deployed behind a load balancer or on
 
 ---
 
+## Roadmap
+
+### Done
+
+- Allegro integration (OAuth2, offers, orders, "Wysylam z Allegro" shipments)
+- InPost integration (Paczkomaty, courier, label generation, tracking, webhooks)
+- Dashboard with Kanban board, dark mode, and PWA support
+- Order, product, and customer management
+- Automation rules engine (triggers, conditions, actions, delays)
+- Packing station with barcode scanner
+- Reports and CSV export
+- 2FA/TOTP, RBAC with custom roles
+
+### In Progress (code written, needs production testing)
+
+- 7 additional carriers (DHL, DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx)
+- 10 marketplaces (Amazon, eBay, WooCommerce, Kaufland, OLX, Empik, Erli, Shoper, PrestaShop, Shopify)
+- Repricing engine (4 pricing strategies)
+- Multi-warehouse with PZ/WZ/MM documents
+- Invoicing (Fakturownia, inFakt, wFirma) + KSeF e-invoicing
+- Product variants and bundles
+- Multi-currency (NBP exchange rates)
+
+### Planned
+
+- Public SaaS (hosted version)
+- Mobile application
+- Plugin/extension marketplace
+- Customer self-service portal
+
+---
+
+## Community
+
+- **Discord:** [discord.gg/3Z5hzeH5](https://discord.gg/3Z5hzeH5) — ask questions, report bugs, suggest features
+- **Issues:** [GitHub Issues](https://github.com/openoms-org/openoms/issues)
+- **Website:** [openoms.org](https://openoms.org)
+
+We're looking for beta testers — Polish e-commerce sellers who want to try OpenOMS on real orders. Join Discord for details.
+
+---
+
 ## Contributing
 
-Contributions are welcome. To get started:
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for full details.
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/your-feature`)

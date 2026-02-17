@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenOMS — Otwarty System Zarządzania Zamówieniami</title>
+  <meta name="description" content="Otwartoźródłowy OMS dla polskich sprzedawców e-commerce. Allegro, InPost, automatyzacje, repricing, multi-magazyn — bez opłat za zamówienie." />
+  <meta property="og:title" content="OpenOMS — Zarządzaj zamówieniami bez vendor lock-in" />
+  <meta property="og:description" content="Open-source OMS. Allegro, InPost, automatyzacje, repricing. Self-hosted, bez opłat za zamówienie." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://openoms.org" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230a0a0b'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='18' font-weight='bold' fill='%2334d399'>O</text></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    ::selection { background: rgba(52, 211, 153, 0.3); color: #fff; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 64px 64px;
+    }
+    .noise {
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+    }
+    @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .pulse-slow { animation: pulse-slow 2s ease-in-out infinite; }
+
+    /* Lucide icon replacement - simple SVG icons inline */
+    .icon { width: 1em; height: 1em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body class="bg-[#0a0a0b] text-[#e8e8e8] antialiased">
+  <!-- Noise overlay -->
+  <div class="noise pointer-events-none fixed inset-0 z-50"></div>
+
+  <!-- Nav -->
+  <nav class="fixed top-0 z-40 w-full border-b border-white/5 bg-[#0a0a0b]/80 backdrop-blur-xl">
+    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+      <div class="flex items-center gap-3">
+        <div class="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500/10 font-mono text-sm font-bold text-emerald-400">O</div>
+        <span class="font-mono text-sm font-semibold tracking-wide text-white">OpenOMS</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 font-mono text-xs text-[#a0a0a0] transition-all hover:border-white/20 hover:text-white">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+        <a href="https://discord.gg/3Z5hzeH5" target="_blank" rel="noopener noreferrer" class="rounded-lg bg-emerald-500/10 px-4 py-2 font-mono text-xs font-medium text-emerald-400 transition-all hover:bg-emerald-500/20">
+          Discord
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="relative flex min-h-[85vh] items-center justify-center overflow-hidden pt-16">
+    <div class="grid-bg pointer-events-none absolute inset-0"></div>
+    <div class="pointer-events-none absolute left-1/2 top-1/3 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/5 blur-[120px]"></div>
+
+    <div class="relative z-10 mx-auto max-w-4xl px-6 text-center">
+      <div class="fade-in">
+        <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-4 py-1.5 font-mono text-xs text-emerald-400">
+          <span class="pulse-slow h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+          Open Source &middot; Self-hosted &middot; Bez opłat za zamówienie
+        </div>
+      </div>
+
+      <div class="fade-in" style="transition-delay: 100ms">
+        <h1 class="mb-6 text-4xl font-bold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
+          Zarządzaj zamówieniami<br />
+          <span class="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">bez vendor lock-in</span>
+        </h1>
+      </div>
+
+      <div class="fade-in" style="transition-delay: 200ms">
+        <p class="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-[#808080] sm:text-xl">
+          Otwartoźródłowy OMS dla polskich sprzedawców e-commerce.<br class="hidden sm:block" />
+          Allegro, InPost, automatyzacje, repricing, multi-magazyn —<br class="hidden sm:block" />
+          wszystko w jednym systemie, pod Twoją kontrolą.
+        </p>
+      </div>
+
+      <div class="fade-in" style="transition-delay: 300ms">
+        <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <a href="https://discord.gg/3Z5hzeH5" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 rounded-xl bg-emerald-500 px-8 py-4 font-semibold text-[#0a0a0b] shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 hover:shadow-emerald-500/30">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+            Dołącz na Discord
+            <svg class="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-semibold text-white transition-all hover:border-white/20 hover:bg-white/10">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            Zobacz na GitHub
+            <svg class="h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="fade-in" style="transition-delay: 500ms">
+        <div class="mt-16 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 font-mono text-xs text-[#555]">
+          <span>AGPLv3 + MIT</span>
+          <span class="hidden sm:inline h-3 w-px bg-white/10"></span>
+          <span>Go + Next.js</span>
+          <span class="hidden sm:inline h-3 w-px bg-white/10"></span>
+          <span>PostgreSQL</span>
+          <span class="hidden sm:inline h-3 w-px bg-white/10"></span>
+          <span>Self-hosted lub SaaS</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Anti-pitch: 3 columns -->
+  <section class="relative border-t border-white/5 py-24">
+    <div class="mx-auto max-w-6xl px-6">
+      <div class="fade-in">
+        <div class="grid gap-px overflow-hidden rounded-2xl border border-white/5 bg-white/5 md:grid-cols-3">
+          <div class="bg-[#0f0f10] p-8 md:p-10">
+            <div class="mb-1 font-mono text-4xl font-bold text-emerald-400 md:text-5xl">0 zł</div>
+            <div class="mb-3 font-mono text-sm uppercase tracking-widest text-[#666]">za zamówienie</div>
+            <p class="text-sm leading-relaxed text-[#888]">Żadnych opłat za wolumen. Płacisz tylko za hosting (lub nic, jeśli self-hosted).</p>
+          </div>
+          <div class="bg-[#0f0f10] p-8 md:p-10">
+            <div class="mb-1 font-mono text-4xl font-bold text-emerald-400 md:text-5xl">100%</div>
+            <div class="mb-3 font-mono text-sm uppercase tracking-widest text-[#666]">Twój kod</div>
+            <p class="text-sm leading-relaxed text-[#888]">Open source. Forkuj, modyfikuj, dodawaj własne integracje. Żadnych limitów API.</p>
+          </div>
+          <div class="bg-[#0f0f10] p-8 md:p-10">
+            <div class="mb-1 font-mono text-4xl font-bold text-emerald-400 md:text-5xl">0</div>
+            <div class="mb-3 font-mono text-sm uppercase tracking-widest text-[#666]">vendor lock-in</div>
+            <p class="text-sm leading-relaxed text-[#888]">Twoje dane na Twoim serwerze. Migracja? Eksportuj i wyjdź w dowolnym momencie.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="relative border-t border-white/5 py-24">
+    <div class="mx-auto max-w-6xl px-6">
+      <div class="fade-in">
+        <h2 class="mb-4 text-center font-mono text-xs uppercase tracking-[0.2em] text-emerald-400">Funkcje</h2>
+        <p class="mb-16 text-center text-3xl font-bold text-white sm:text-4xl">Wszystko czego potrzebujesz do sprzedaży</p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Zamówienia z jednego miejsca</h3>
+          <p class="text-xs leading-relaxed text-[#777]">Allegro, Amazon, WooCommerce, eBay, Kaufland, OLX, Empik — wszystko w jednym dashboardzie. Kanban, filtry, bulk akcje.</p>
+        </div>
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]" style="transition-delay: 60ms">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Etykiety jednym klikiem</h3>
+          <p class="text-xs leading-relaxed text-[#777]">InPost, DHL, DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx. Zbiorcze drukowanie, śledzenie, powiadomienia.</p>
+        </div>
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]" style="transition-delay: 120ms">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Automatyzacje</h3>
+          <p class="text-xs leading-relaxed text-[#777]">Reguły: gdy zamówienie spełnia warunki — zmień status, wyślij email, wygeneruj etykietę, wyślij SMS. Opóźnienia, harmonogramy.</p>
+        </div>
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]" style="transition-delay: 180ms">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Repricing</h3>
+          <p class="text-xs leading-relaxed text-[#777]">Automatyczne zarządzanie cenami. Strategie: marża, harmonogram, stan magazynowy. Symulacja przed zastosowaniem.</p>
+        </div>
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]" style="transition-delay: 240ms">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v7c0 1.1.9 2 2 2h7"/><path d="M21 21v-7c0-1.1-.9-2-2-2h-7"/><path d="M12 3v7"/><path d="M3 12h7"/><path d="M12 14v7"/><path d="M14 12h7"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Multi-magazyn</h3>
+          <p class="text-xs leading-relaxed text-[#777]">Wiele magazynów, dokumenty PZ/WZ/MM, inwentaryzacja, rezerwacje, alerty niskiego stanu. Synchronizacja z marketplace'ami.</p>
+        </div>
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]" style="transition-delay: 300ms">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Faktury i KSeF</h3>
+          <p class="text-xs leading-relaxed text-[#777]">Integracja z Fakturownią, inFakt, wFirma. Gotowość na KSeF (Krajowy System e-Faktur). Szablony wydruku.</p>
+        </div>
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]" style="transition-delay: 360ms">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h10"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Stacja pakowania</h3>
+          <p class="text-xs leading-relaxed text-[#777]">Skanuj kod kreskowy — zobacz zamówienie — drukuj etykietę. Pick &amp; pack workflow krok po kroku.</p>
+        </div>
+
+        <div class="fade-in group h-full rounded-xl border border-white/5 bg-[#0f0f10] p-6 transition-all hover:border-emerald-500/20 hover:bg-[#111112]" style="transition-delay: 420ms">
+          <svg class="mb-4 h-6 w-6 text-emerald-400/70 transition-colors group-hover:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <h3 class="mb-2 text-sm font-semibold text-white">Raporty i analityka</h3>
+          <p class="text-xs leading-relaxed text-[#777]">Przychody, trendy, bestsellery, prognoza popytu AI. Eksport CSV. Raporty zaawansowane z filtrami.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Integrations -->
+  <section class="relative border-t border-white/5 py-24">
+    <div class="mx-auto max-w-6xl px-6">
+      <div class="fade-in">
+        <h2 class="mb-4 text-center font-mono text-xs uppercase tracking-[0.2em] text-emerald-400">Integracje</h2>
+        <p class="mb-16 text-center text-3xl font-bold text-white sm:text-4xl">Marketplace'y i kurierzy</p>
+      </div>
+
+      <div class="grid gap-12 md:grid-cols-2">
+        <!-- Marketplaces -->
+        <div class="fade-in">
+          <h3 class="mb-6 font-mono text-xs uppercase tracking-widest text-[#666]">Marketplace'y</h3>
+          <div class="space-y-2" id="marketplaces"></div>
+        </div>
+        <!-- Carriers -->
+        <div class="fade-in" style="transition-delay: 100ms">
+          <h3 class="mb-6 font-mono text-xs uppercase tracking-widest text-[#666]">Kurierzy</h3>
+          <div class="space-y-2" id="carriers"></div>
+
+          <h3 class="mb-6 mt-10 font-mono text-xs uppercase tracking-widest text-[#666]">Inne</h3>
+          <div class="space-y-2" id="other"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Roadmap -->
+  <section class="relative border-t border-white/5 py-24">
+    <div class="mx-auto max-w-6xl px-6">
+      <div class="fade-in">
+        <h2 class="mb-4 text-center font-mono text-xs uppercase tracking-[0.2em] text-emerald-400">Roadmap</h2>
+        <p class="mb-16 text-center text-3xl font-bold text-white sm:text-4xl">Co jest gotowe, co planujemy</p>
+      </div>
+
+      <div class="grid gap-8 md:grid-cols-3">
+        <div class="fade-in">
+          <div class="h-full rounded-xl border border-emerald-500/10 bg-emerald-500/[0.02] p-8">
+            <div class="mb-6 flex items-center gap-2">
+              <svg class="h-5 w-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <h3 class="font-mono text-sm font-semibold uppercase tracking-wider text-emerald-400">Gotowe</h3>
+            </div>
+            <ul class="space-y-3" id="roadmap-done"></ul>
+          </div>
+        </div>
+
+        <div class="fade-in" style="transition-delay: 100ms">
+          <div class="h-full rounded-xl border border-cyan-500/10 bg-cyan-500/[0.02] p-8">
+            <div class="mb-6 flex items-center gap-2">
+              <svg class="h-5 w-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <h3 class="font-mono text-sm font-semibold uppercase tracking-wider text-cyan-400">W trakcie budowy</h3>
+            </div>
+            <p class="mb-4 text-xs text-[#666]">Kod napisany, wymaga testów produkcyjnych</p>
+            <ul class="space-y-3" id="roadmap-progress"></ul>
+          </div>
+        </div>
+
+        <div class="fade-in" style="transition-delay: 200ms">
+          <div class="h-full rounded-xl border border-amber-500/10 bg-amber-500/[0.02] p-8">
+            <div class="mb-6 flex items-center gap-2">
+              <svg class="h-5 w-5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <h3 class="font-mono text-sm font-semibold uppercase tracking-wider text-amber-400">W planach</h3>
+            </div>
+            <ul class="space-y-3" id="roadmap-next"></ul>
+            <div class="mt-8 rounded-lg border border-dashed border-white/10 bg-white/[0.02] p-4 text-center">
+              <p class="text-xs text-[#666]">Masz pomysł na funkcję? <a href="https://discord.gg/3Z5hzeH5" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline">Daj znać na Discordzie</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Beta CTA -->
+  <section class="relative border-t border-white/5 py-24">
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/[0.02] to-transparent"></div>
+    <div class="relative mx-auto max-w-3xl px-6 text-center">
+      <div class="fade-in">
+        <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-4 py-1.5 font-mono text-xs text-emerald-400">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+          Szukamy beta-testerów
+        </div>
+      </div>
+
+      <div class="fade-in" style="transition-delay: 100ms">
+        <h2 class="mb-6 text-3xl font-bold text-white sm:text-4xl">
+          Sprzedajesz na Allegro?<br />Przetestuj z nami.
+        </h2>
+      </div>
+
+      <div class="fade-in" style="transition-delay: 200ms">
+        <p class="mb-10 text-lg text-[#808080]">
+          Szukamy 10 osób które chcą przetestować OpenOMS na żywym organizmie. Nie musisz być techniczny — wystarczy, że masz zamówienia i chęć powiedzieć co działa, a co nie.<br />
+          <span class="text-emerald-400/80">Beta-testerzy dostaną dożywotni darmowy plan na SaaS.</span>
+        </p>
+      </div>
+
+      <div class="fade-in" style="transition-delay: 300ms">
+        <a href="https://discord.gg/3Z5hzeH5" target="_blank" rel="noopener noreferrer" class="group inline-flex items-center gap-3 rounded-xl bg-emerald-500 px-10 py-4 text-lg font-semibold text-[#0a0a0b] shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-400 hover:shadow-emerald-500/30">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+          Dołącz na Discord
+          <svg class="h-5 w-5 transition-transform group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 py-12">
+    <div class="mx-auto max-w-6xl px-6">
+      <div class="flex flex-col items-center justify-between gap-6 md:flex-row">
+        <div class="flex items-center gap-3">
+          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10 font-mono text-xs font-bold text-emerald-400">O</div>
+          <span class="font-mono text-sm text-[#555]">OpenOMS &copy; 2026</span>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-6 font-mono text-xs text-[#444]">
+          <a href="https://github.com/openoms-org/openoms" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-[#888]">GitHub</a>
+          <a href="https://discord.gg/3Z5hzeH5" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-[#888]">Discord</a>
+          <a href="https://github.com/openoms-org/openoms/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-[#888]">Contributing</a>
+          <a href="https://github.com/openoms-org/openoms/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer" class="transition-colors hover:text-[#888]">Security</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Fade-in observer
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }});
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+    // Integration lists
+    function badge(verified) {
+      if (verified) return '<span class="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-emerald-400"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Verified</span>';
+      return '<span class="flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-amber-400"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> W budowie</span>';
+    }
+    function row(name, v) {
+      return `<div class="flex items-center justify-between rounded-lg border border-white/5 bg-[#0f0f10] px-4 py-3"><span class="text-sm text-[#ccc]">${name}</span>${badge(v)}</div>`;
+    }
+    function tagRow(name, label) {
+      return `<div class="flex items-center justify-between rounded-lg border border-white/5 bg-[#0f0f10] px-4 py-3"><span class="text-sm text-[#ccc]">${name}</span><span class="rounded-full bg-white/5 px-2.5 py-0.5 font-mono text-[10px] text-[#666]">${label}</span></div>`;
+    }
+
+    const mp = [['Allegro',1],['Amazon',0],['WooCommerce',0],['eBay',0],['Kaufland',0],['OLX',0],['Empik / Mirakl',0],['Erli',0],['Shoper',0],['PrestaShop',0],['Shopify',0]];
+    const cr = [['InPost',1],['DHL',0],['DPD',0],['GLS',0],['UPS',0],['Poczta Polska',0],['Orlen Paczka',0],['FedEx',0]];
+    const ot = [['Fakturownia / inFakt / wFirma','Faktury'],['KSeF','E-faktury'],['SMSAPI / Twilio','SMS'],['OpenAI','AI']];
+
+    document.getElementById('marketplaces').innerHTML = mp.map(m => row(m[0],m[1])).join('');
+    document.getElementById('carriers').innerHTML = cr.map(c => row(c[0],c[1])).join('');
+    document.getElementById('other').innerHTML = ot.map(o => tagRow(o[0],o[1])).join('');
+
+    // Roadmap
+    const done = [
+      'Integracja Allegro (oferty, zamówienia, Wysyłam z Allegro)',
+      'Integracja InPost (paczkomaty, kurier, etykiety, tracking)',
+      'Dashboard z kanbanem, ciemnym motywem i PWA',
+      'Zarządzanie zamówieniami, produktami, klientami',
+      'Silnik automatyzacji (reguły, warunki, akcje)',
+      'Stacja pakowania ze skanerem kodów kreskowych',
+      'Raporty i eksport CSV',
+      '2FA/TOTP, role i uprawnienia',
+    ];
+    const progress = [
+      'Kolejne 7 kurierów (DHL, DPD, GLS, UPS, Poczta Polska, Orlen, FedEx)',
+      '10 marketplace\'ów (Amazon, eBay, WooCommerce, Kaufland, OLX...)',
+      'Repricing (4 strategie cenowe)',
+      'Multi-magazyn z dokumentami PZ/WZ/MM',
+      'Faktury (Fakturownia, inFakt, wFirma) + KSeF',
+      'Warianty produktów i bundleki',
+      'Wielowalutowość (kursy NBP)',
+    ];
+    const next = [
+      'Publiczny SaaS (hosted wersja)',
+      'Aplikacja mobilna',
+      'Marketplace dla wtyczek',
+      'Panel klienta (self-service zwroty)',
+    ];
+
+    document.getElementById('roadmap-done').innerHTML = done.map(i =>
+      `<li class="flex items-start gap-3 text-sm text-[#999]"><svg class="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>${i}</li>`
+    ).join('');
+    document.getElementById('roadmap-progress').innerHTML = progress.map(i =>
+      `<li class="flex items-start gap-3 text-sm text-[#999]"><div class="mt-1.5 h-2 w-2 shrink-0 rounded-full border border-cyan-500/40 bg-cyan-500/20"></div>${i}</li>`
+    ).join('');
+    document.getElementById('roadmap-next').innerHTML = next.map(i =>
+      `<li class="flex items-start gap-3 text-sm text-[#999]"><div class="mt-1.5 h-2 w-2 shrink-0 rounded-full border border-amber-500/40"></div>${i}</li>`
+    ).join('');
+  </script>
+</body>
+</html>

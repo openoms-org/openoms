@@ -124,4 +124,5 @@ If you contribute code, you agree that your contributions will be licensed under
 
 ## Questions?
 
-Open an [issue](https://github.com/openoms-org/openoms/issues) and we will be happy to help.
+- **Discord:** [discord.gg/3Z5hzeH5](https://discord.gg/3Z5hzeH5) -- the fastest way to get help
+- **Issues:** [GitHub Issues](https://github.com/openoms-org/openoms/issues) -- for bug reports and feature requests
