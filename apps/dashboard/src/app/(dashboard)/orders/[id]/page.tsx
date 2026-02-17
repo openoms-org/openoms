@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown, Weight, Ruler, FileBarChart } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown, Weight, Ruler, FileBarChart, Factory } from "lucide-react";
 import { RateShopping } from "@/components/shipping/rate-shopping";
 import { AllegroShipmentDialog } from "@/components/integrations/allegro-shipment-dialog";
 import { useAllegroCarriers, useAllegroFulfillment, useAllegroTracking } from "@/hooks/use-allegro";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus, useDuplicateOrder } from "@/hooks/use-orders";
 import { useOrderShipments, useCreateOrderShipment } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
+import { useOrderDropshipOrders, useAutoRouteDropship } from "@/hooks/use-dropship-orders";
 import { useOrderGroups, useSplitOrder } from "@/hooks/use-order-groups";
 import { useOrderTickets, useCreateOrderTicket } from "@/hooks/use-helpdesk";
 import {
@@ -133,6 +134,8 @@ export default function OrderDetailPage() {
   const { data: ticketsData, isLoading: isLoadingTickets } = useOrderTickets(params.id);
   const createTicket = useCreateOrderTicket(params.id);
   const duplicateOrder = useDuplicateOrder();
+  const { data: dropshipOrders, isLoading: isLoadingDropship } = useOrderDropshipOrders(params.id);
+  const autoRouteDropship = useAutoRouteDropship();
 
   useEffect(() => {
     if (order && !internalNotesDirty) {
@@ -753,6 +756,113 @@ export default function OrderDetailPage() {
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <RotateCcw className="h-8 w-8 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">Brak zwrotów dla tego zamówienia.</p>
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* Dropshipping */}
+          <CollapsibleSection
+            title="Dropshipping"
+            icon={Factory}
+            defaultOpen={!!(dropshipOrders && dropshipOrders.length > 0)}
+            badge={
+              dropshipOrders && dropshipOrders.length > 0 ? (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {dropshipOrders.length}
+                </span>
+              ) : undefined
+            }
+            headerAction={
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={autoRouteDropship.isPending}
+                onClick={async () => {
+                  try {
+                    const result = await autoRouteDropship.mutateAsync(params.id);
+                    if (result.length === 0) {
+                      toast.info("Brak produktów dropship w tym zamówieniu");
+                    } else {
+                      toast.success(`Utworzono ${result.length} zamówień dropship`);
+                    }
+                  } catch (error) {
+                    toast.error(getErrorMessage(error));
+                  }
+                }}
+              >
+                {autoRouteDropship.isPending ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Factory className="mr-1 h-4 w-4" />
+                )}
+                Przekaż do dostawców
+              </Button>
+            }
+          >
+            {isLoadingDropship ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ) : dropshipOrders && dropshipOrders.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Dostawca</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Koszt</TableHead>
+                    <TableHead>Nr śledzenia</TableHead>
+                    <TableHead>Utworzono</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dropshipOrders.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell>
+                        <Link
+                          href={`/dropship-orders/${d.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {shortId(d.id)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {d.supplier_name}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          status={d.status}
+                          statusMap={{
+                            pending: { label: "Oczekujące", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+                            sent: { label: "Wysłane", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
+                            confirmed: { label: "Potwierdzone", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
+                            shipped: { label: "W transporcie", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
+                            delivered: { label: "Dostarczone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
+                            cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {formatCurrency(d.total_cost, d.currency)}
+                      </TableCell>
+                      <TableCell>
+                        {d.tracking_number || "---"}
+                      </TableCell>
+                      <TableCell>{formatDate(d.created_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Factory className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Brak zamówień dropship dla tego zamówienia.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Kliknij &quot;Przekaż do dostawców&quot; aby automatycznie utworzyć zamówienia dla produktów dropship.
+                </p>
               </div>
             )}
           </CollapsibleSection>

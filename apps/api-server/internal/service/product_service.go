@@ -114,9 +114,11 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		Width:            req.Width,
 		Height:           req.Height,
 		Depth:            req.Depth,
-		Category:         req.Category,
-		ImageURL:         req.ImageURL,
-		Images:           images,
+		Category:           req.Category,
+		ImageURL:           req.ImageURL,
+		Images:             images,
+		IsDropship:         req.IsDropship != nil && *req.IsDropship,
+		DropshipSupplierID: req.DropshipSupplierID,
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

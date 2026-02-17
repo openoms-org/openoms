@@ -23,11 +23,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TagInput } from "@/components/shared/tag-input";
+import { Separator } from "@/components/ui/separator";
 import type { Product, CreateProductRequest, UpdateProductRequest } from "@/types/api";
 import { uploadFile, getErrorMessage } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useProductCategories } from "@/hooks/use-product-categories";
 import { useImproveDescription, useTranslateDescription } from "@/hooks/use-ai";
+import { useSuppliers } from "@/hooks/use-suppliers";
+import { Switch } from "@/components/ui/switch";
 
 const PRODUCT_SOURCES = ["manual", "allegro", "woocommerce"] as const;
 
@@ -70,6 +73,9 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   );
   const [tags, setTags] = useState<string[]>(product?.tags || []);
   const [selectedCategory, setSelectedCategory] = useState<string>(product?.category || "");
+  const [isDropship, setIsDropship] = useState(product?.is_dropship || false);
+  const [dropshipSupplierId, setDropshipSupplierId] = useState<string>(product?.dropship_supplier_id || "");
+  const { data: suppliersData } = useSuppliers({ limit: 100 });
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const mainFileRef = useRef<HTMLInputElement>(null);
@@ -159,6 +165,8 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         .map((img, i) => ({ url: img.url, alt: img.alt || undefined, position: i + 1 })),
       tags: tags.length > 0 ? tags : undefined,
       category: selectedCategory && selectedCategory !== "__none__" ? selectedCategory : undefined,
+      is_dropship: isDropship || undefined,
+      dropship_supplier_id: isDropship && dropshipSupplierId ? dropshipSupplierId : undefined,
     });
   };
 
@@ -561,6 +569,39 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
           />
         </div>
       </div>
+
+      <Separator />
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>Produkt dropship</Label>
+            <p className="text-xs text-muted-foreground">
+              Zamowienia z tym produktem beda automatycznie routowane do dostawcy
+            </p>
+          </div>
+          <Switch checked={isDropship} onCheckedChange={setIsDropship} />
+        </div>
+        {isDropship && (
+          <div className="space-y-2">
+            <Label>Dostawca dropship</Label>
+            <Select value={dropshipSupplierId} onValueChange={setDropshipSupplierId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wybierz dostawce" />
+              </SelectTrigger>
+              <SelectContent>
+                {suppliersData?.items?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      <Separator />
 
       <div className="space-y-2">
         <Label>Tagi</Label>

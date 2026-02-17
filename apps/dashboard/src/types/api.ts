@@ -328,6 +328,8 @@ export interface Product {
   images: ProductImage[];
   has_variants: boolean;
   is_bundle: boolean;
+  is_dropship: boolean;
+  dropship_supplier_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -351,6 +353,8 @@ export interface CreateProductRequest {
   depth?: number;
   image_url?: string;
   images?: ProductImage[];
+  is_dropship?: boolean;
+  dropship_supplier_id?: string;
 }
 
 export interface UpdateProductRequest {
@@ -750,8 +754,49 @@ export interface Supplier {
   settings: Record<string, unknown>;
   last_sync_at?: string;
   error_message?: string;
+  portal_enabled: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// === Supplier Portal ===
+export interface SupplierPortalPO {
+  id: string;
+  po_number: string;
+  status: string;
+  notes?: string;
+  expected_delivery_date?: string;
+  total_amount: number;
+  currency: string;
+  items?: PurchaseOrderItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierPortalOrdersResponse {
+  supplier: { id: string; name: string };
+  orders: SupplierPortalPO[];
+}
+
+export interface SupplierMessage {
+  id: string;
+  tenant_id: string;
+  purchase_order_id: string;
+  supplier_id?: string;
+  user_id?: string;
+  message: string;
+  is_from_supplier: boolean;
+  created_at: string;
+}
+
+export interface SupplierPortalLinkResponse {
+  url: string;
+  expires_at: string;
+}
+
+export interface SupplierPortalStatus {
+  portal_enabled: boolean;
+  last_used_at?: string;
 }
 
 export interface SupplierProduct {
@@ -1962,4 +2007,200 @@ export interface WSEvent {
   type: string;
   tenant_id: string;
   payload?: Record<string, unknown>;
+}
+
+// === VAT OSS ===
+export interface VATRateSet {
+  standard: number;
+  reduced_1?: number;
+  reduced_2?: number;
+  super_reduced?: number;
+}
+
+export interface VATCalculation {
+  net_amount: number;
+  vat_amount: number;
+  gross_amount: number;
+  vat_rate: number;
+  country: string;
+  rate_type: string;
+}
+
+export interface OSSConfig {
+  enabled: boolean;
+  home_country: string;
+  default_vat_rate: string;
+}
+
+export interface OSSReport {
+  quarter: number;
+  year: number;
+  home_country: string;
+  total_sales: number;
+  total_vat: number;
+  by_country: OSSCountryReport[];
+  generated_at: string;
+}
+
+export interface OSSCountryReport {
+  country: string;
+  country_name: string;
+  order_count: number;
+  total_sales: number;
+  vat_rate: number;
+  vat_amount: number;
+}
+
+export interface ThresholdStatus {
+  year: number;
+  total_cross_border_eur: number;
+  threshold_eur: number;
+  exceeded: boolean;
+  remaining_eur: number;
+}
+
+export interface VATCalculateRequest {
+  amount: number;
+  country: string;
+  rate_type: string;
+}
+
+// === Dropship Orders ===
+export interface DropshipOrder {
+  id: string;
+  tenant_id: string;
+  order_id: string;
+  supplier_id: string;
+  supplier_name: string;
+  status: string;
+  supplier_reference?: string;
+  tracking_number?: string;
+  carrier?: string;
+  notes?: string;
+  total_cost: number;
+  currency: string;
+  sent_at?: string;
+  confirmed_at?: string;
+  shipped_at?: string;
+  delivered_at?: string;
+  items?: DropshipOrderItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DropshipOrderItem {
+  id: string;
+  tenant_id: string;
+  dropship_order_id: string;
+  product_id?: string;
+  sku: string;
+  product_name: string;
+  quantity: number;
+  unit_cost: number;
+  created_at: string;
+}
+
+export interface CreateDropshipOrderRequest {
+  order_id: string;
+  supplier_id: string;
+  notes?: string;
+  currency?: string;
+  items: CreateDropshipOrderItemReq[];
+}
+
+export interface CreateDropshipOrderItemReq {
+  product_id?: string;
+  sku: string;
+  product_name: string;
+  quantity: number;
+  unit_cost: number;
+}
+
+export interface UpdateDropshipStatusRequest {
+  status: string;
+  tracking_number?: string;
+  carrier?: string;
+  supplier_reference?: string;
+  notes?: string;
+}
+
+export interface DropshipOrderListParams extends PaginationParams {
+  status?: string;
+  supplier_id?: string;
+  order_id?: string;
+}
+
+// === Recurring Orders (Subscriptions) ===
+export interface RecurringOrder {
+  id: string;
+  tenant_id: string;
+  customer_id?: string;
+  customer_name: string;
+  customer_email?: string;
+  status: string;
+  frequency: string;
+  interval_days: number;
+  next_order_date: string;
+  last_order_date?: string;
+  end_date?: string;
+  total_orders_created: number;
+  max_orders?: number;
+  shipping_address?: Address;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  items?: RecurringOrderItem[];
+}
+
+export interface RecurringOrderItem {
+  id: string;
+  tenant_id: string;
+  recurring_order_id: string;
+  product_id?: string;
+  sku: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  created_at: string;
+}
+
+export interface CreateRecurringOrderItemRequest {
+  product_id?: string;
+  sku: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+}
+
+export interface CreateRecurringOrderRequest {
+  customer_id?: string;
+  customer_name: string;
+  customer_email?: string;
+  frequency: string;
+  next_order_date: string;
+  end_date?: string;
+  max_orders?: number;
+  shipping_address?: Address;
+  notes?: string;
+  items: CreateRecurringOrderItemRequest[];
+}
+
+export interface UpdateRecurringOrderRequest {
+  customer_id?: string;
+  customer_name?: string;
+  customer_email?: string;
+  frequency?: string;
+  next_order_date?: string;
+  end_date?: string;
+  max_orders?: number;
+  shipping_address?: Address;
+  notes?: string;
+  items?: CreateRecurringOrderItemRequest[];
+}
+
+export interface RecurringOrderListParams extends PaginationParams {
+  status?: string;
+  customer_id?: string;
+  next_date_before?: string;
 }

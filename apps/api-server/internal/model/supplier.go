@@ -10,18 +10,19 @@ import (
 )
 
 type Supplier struct {
-	ID           uuid.UUID       `json:"id"`
-	TenantID     uuid.UUID       `json:"tenant_id"`
-	Name         string          `json:"name"`
-	Code         *string         `json:"code,omitempty"`
-	FeedURL      *string         `json:"feed_url,omitempty"`
-	FeedFormat   string          `json:"feed_format"`
-	Status       string          `json:"status"`
-	Settings     json.RawMessage `json:"settings"`
-	LastSyncAt   *time.Time      `json:"last_sync_at,omitempty"`
-	ErrorMessage *string         `json:"error_message,omitempty"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	ID            uuid.UUID       `json:"id"`
+	TenantID      uuid.UUID       `json:"tenant_id"`
+	Name          string          `json:"name"`
+	Code          *string         `json:"code,omitempty"`
+	FeedURL       *string         `json:"feed_url,omitempty"`
+	FeedFormat    string          `json:"feed_format"`
+	Status        string          `json:"status"`
+	Settings      json.RawMessage `json:"settings"`
+	LastSyncAt    *time.Time      `json:"last_sync_at,omitempty"`
+	ErrorMessage  *string         `json:"error_message,omitempty"`
+	PortalEnabled bool            `json:"portal_enabled"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
 type SupplierProduct struct {
@@ -69,19 +70,20 @@ func (r *CreateSupplierRequest) Validate() error {
 }
 
 type UpdateSupplierRequest struct {
-	Name         *string          `json:"name,omitempty"`
-	Code         *string          `json:"code,omitempty"`
-	FeedURL      *string          `json:"feed_url,omitempty"`
-	FeedFormat   *string          `json:"feed_format,omitempty"`
-	Status       *string          `json:"status,omitempty"`
-	Settings     *json.RawMessage `json:"settings,omitempty"`
-	ErrorMessage *string          `json:"error_message,omitempty"`
+	Name          *string          `json:"name,omitempty"`
+	Code          *string          `json:"code,omitempty"`
+	FeedURL       *string          `json:"feed_url,omitempty"`
+	FeedFormat    *string          `json:"feed_format,omitempty"`
+	Status        *string          `json:"status,omitempty"`
+	Settings      *json.RawMessage `json:"settings,omitempty"`
+	ErrorMessage  *string          `json:"error_message,omitempty"`
+	PortalEnabled *bool            `json:"portal_enabled,omitempty"`
 }
 
 func (r *UpdateSupplierRequest) Validate() error {
 	if r.Name == nil && r.Code == nil && r.FeedURL == nil &&
 		r.FeedFormat == nil && r.Status == nil && r.Settings == nil &&
-		r.ErrorMessage == nil {
+		r.ErrorMessage == nil && r.PortalEnabled == nil {
 		return errors.New("at least one field must be provided")
 	}
 	if r.FeedFormat != nil {

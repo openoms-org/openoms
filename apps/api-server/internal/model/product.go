@@ -30,31 +30,35 @@ type Product struct {
 	Category         *string         `json:"category,omitempty"`
 	ImageURL         *string         `json:"image_url,omitempty"`
 	Images           json.RawMessage `json:"images"`
-	HasVariants      bool            `json:"has_variants"`
-	IsBundle         bool            `json:"is_bundle"`
-	CreatedAt        time.Time       `json:"created_at"`
-	UpdatedAt        time.Time       `json:"updated_at"`
+	HasVariants        bool            `json:"has_variants"`
+	IsBundle           bool            `json:"is_bundle"`
+	IsDropship         bool            `json:"is_dropship"`
+	DropshipSupplierID *uuid.UUID      `json:"dropship_supplier_id,omitempty"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
 }
 
 type CreateProductRequest struct {
-	ExternalID       *string         `json:"external_id,omitempty"`
-	Source           string          `json:"source"`
-	Name             string          `json:"name"`
-	SKU              *string         `json:"sku,omitempty"`
-	EAN              *string         `json:"ean,omitempty"`
-	Price            float64         `json:"price"`
-	StockQty         int             `json:"stock_quantity"`
-	Metadata         json.RawMessage `json:"metadata,omitempty"`
-	Tags             []string        `json:"tags,omitempty"`
-	DescriptionShort string          `json:"description_short,omitempty"`
-	DescriptionLong  string          `json:"description_long,omitempty"`
-	Weight           *float64        `json:"weight,omitempty"`
-	Width            *float64        `json:"width,omitempty"`
-	Height           *float64        `json:"height,omitempty"`
-	Depth            *float64        `json:"depth,omitempty"`
-	Category         *string         `json:"category,omitempty"`
-	ImageURL         *string         `json:"image_url,omitempty"`
-	Images           json.RawMessage `json:"images,omitempty"`
+	ExternalID         *string         `json:"external_id,omitempty"`
+	Source             string          `json:"source"`
+	Name               string          `json:"name"`
+	SKU                *string         `json:"sku,omitempty"`
+	EAN                *string         `json:"ean,omitempty"`
+	Price              float64         `json:"price"`
+	StockQty           int             `json:"stock_quantity"`
+	Metadata           json.RawMessage `json:"metadata,omitempty"`
+	Tags               []string        `json:"tags,omitempty"`
+	DescriptionShort   string          `json:"description_short,omitempty"`
+	DescriptionLong    string          `json:"description_long,omitempty"`
+	Weight             *float64        `json:"weight,omitempty"`
+	Width              *float64        `json:"width,omitempty"`
+	Height             *float64        `json:"height,omitempty"`
+	Depth              *float64        `json:"depth,omitempty"`
+	Category           *string         `json:"category,omitempty"`
+	ImageURL           *string         `json:"image_url,omitempty"`
+	Images             json.RawMessage `json:"images,omitempty"`
+	IsDropship         *bool           `json:"is_dropship,omitempty"`
+	DropshipSupplierID *uuid.UUID      `json:"dropship_supplier_id,omitempty"`
 }
 
 func (r *CreateProductRequest) Validate() error {
@@ -97,25 +101,27 @@ func (r *CreateProductRequest) Validate() error {
 }
 
 type UpdateProductRequest struct {
-	ExternalID       *string          `json:"external_id,omitempty"`
-	Source           *string          `json:"source,omitempty"`
-	Name             *string          `json:"name,omitempty"`
-	SKU              *string          `json:"sku,omitempty"`
-	EAN              *string          `json:"ean,omitempty"`
-	Price            *float64         `json:"price,omitempty"`
-	StockQuantity    *int             `json:"stock_quantity,omitempty"`
-	Metadata         *json.RawMessage `json:"metadata,omitempty"`
-	Tags             *[]string        `json:"tags,omitempty"`
-	DescriptionShort *string          `json:"description_short,omitempty"`
-	DescriptionLong  *string          `json:"description_long,omitempty"`
-	Weight           *float64         `json:"weight,omitempty"`
-	Width            *float64         `json:"width,omitempty"`
-	Height           *float64         `json:"height,omitempty"`
-	Depth            *float64         `json:"depth,omitempty"`
-	Category         *string          `json:"category,omitempty"`
-	ImageURL         *string          `json:"image_url,omitempty"`
-	Images           *json.RawMessage `json:"images,omitempty"`
-	IsBundle         *bool            `json:"is_bundle,omitempty"`
+	ExternalID         *string          `json:"external_id,omitempty"`
+	Source             *string          `json:"source,omitempty"`
+	Name               *string          `json:"name,omitempty"`
+	SKU                *string          `json:"sku,omitempty"`
+	EAN                *string          `json:"ean,omitempty"`
+	Price              *float64         `json:"price,omitempty"`
+	StockQuantity      *int             `json:"stock_quantity,omitempty"`
+	Metadata           *json.RawMessage `json:"metadata,omitempty"`
+	Tags               *[]string        `json:"tags,omitempty"`
+	DescriptionShort   *string          `json:"description_short,omitempty"`
+	DescriptionLong    *string          `json:"description_long,omitempty"`
+	Weight             *float64         `json:"weight,omitempty"`
+	Width              *float64         `json:"width,omitempty"`
+	Height             *float64         `json:"height,omitempty"`
+	Depth              *float64         `json:"depth,omitempty"`
+	Category           *string          `json:"category,omitempty"`
+	ImageURL           *string          `json:"image_url,omitempty"`
+	Images             *json.RawMessage `json:"images,omitempty"`
+	IsBundle           *bool            `json:"is_bundle,omitempty"`
+	IsDropship         *bool            `json:"is_dropship,omitempty"`
+	DropshipSupplierID *uuid.UUID       `json:"dropship_supplier_id,omitempty"`
 }
 
 func (r *UpdateProductRequest) Validate() error {
@@ -123,7 +129,8 @@ func (r *UpdateProductRequest) Validate() error {
 		r.EAN == nil && r.Price == nil && r.StockQuantity == nil && r.Metadata == nil &&
 		r.Tags == nil && r.DescriptionShort == nil && r.DescriptionLong == nil &&
 		r.Weight == nil && r.Width == nil && r.Height == nil && r.Depth == nil &&
-		r.Category == nil && r.ImageURL == nil && r.Images == nil && r.IsBundle == nil {
+		r.Category == nil && r.ImageURL == nil && r.Images == nil && r.IsBundle == nil &&
+		r.IsDropship == nil && r.DropshipSupplierID == nil {
 		return errors.New("at least one field must be provided")
 	}
 	if r.Source != nil {

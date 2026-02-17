@@ -8,6 +8,8 @@ import type {
   UpdateSupplierRequest,
   SupplierProduct,
   SupplierProductListParams,
+  SupplierPortalLinkResponse,
+  SupplierPortalStatus,
 } from "@/types/api";
 
 export function useSuppliers(params: SupplierListParams = {}) {
@@ -132,5 +134,52 @@ export function useSupplierProducts(
         `/v1/suppliers/${supplierId}/products${qs ? `?${qs}` : ""}`
       ),
     enabled: !!supplierId,
+  });
+}
+
+// === Supplier Portal (Admin) ===
+
+export function useSupplierPortalStatus(supplierId: string) {
+  return useQuery({
+    queryKey: ["supplier-portal-status", supplierId],
+    queryFn: () =>
+      apiClient<SupplierPortalStatus>(
+        `/v1/suppliers/${supplierId}/portal/status`
+      ),
+    enabled: !!supplierId,
+  });
+}
+
+export function useGeneratePortalLink(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient<SupplierPortalLinkResponse>(
+        `/v1/suppliers/${supplierId}/portal/generate-link`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-portal-status", supplierId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["suppliers", supplierId] });
+    },
+  });
+}
+
+export function useRevokePortalAccess(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient<{ message: string }>(
+        `/v1/suppliers/${supplierId}/portal/revoke`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-portal-status", supplierId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["suppliers", supplierId] });
+    },
   });
 }

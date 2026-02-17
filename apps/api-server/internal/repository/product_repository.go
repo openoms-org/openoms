@@ -68,7 +68,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, created_at, updated_at
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id, created_at, updated_at
 		 FROM products %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
@@ -87,7 +87,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 			&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 			&p.DescriptionShort, &p.DescriptionLong,
 			&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
-			&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan product: %w", err)
 		}
 		products = append(products, p)
@@ -98,13 +98,13 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Product, error) {
 	var p model.Product
 	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, created_at, updated_at
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id, created_at, updated_at
 		 FROM products WHERE id = $1`, id,
 	).Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
 		&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 		&p.DescriptionShort, &p.DescriptionLong,
 		&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
-		&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.CreatedAt, &p.UpdatedAt)
+		&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -120,14 +120,14 @@ func (r *ProductRepository) Create(ctx context.Context, tx pgx.Tx, product *mode
 		tags = []string{}
 	}
 	return tx.QueryRow(ctx,
-		`INSERT INTO products (id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, is_bundle)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+		`INSERT INTO products (id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, is_bundle, is_dropship, dropship_supplier_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
 		 RETURNING created_at, updated_at`,
 		product.ID, product.TenantID, product.ExternalID, product.Source, product.Name,
 		product.SKU, product.EAN, product.Price, product.StockQuantity, product.Metadata, tags,
 		product.DescriptionShort, product.DescriptionLong,
 		product.Weight, product.Width, product.Height, product.Depth, product.Category,
-		product.ImageURL, product.Images, product.IsBundle,
+		product.ImageURL, product.Images, product.IsBundle, product.IsDropship, product.DropshipSupplierID,
 	).Scan(&product.CreatedAt, &product.UpdatedAt)
 }
 
@@ -231,6 +231,16 @@ func (r *ProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID,
 		args = append(args, *req.IsBundle)
 		argIdx++
 	}
+	if req.IsDropship != nil {
+		setClauses = append(setClauses, fmt.Sprintf("is_dropship = $%d", argIdx))
+		args = append(args, *req.IsDropship)
+		argIdx++
+	}
+	if req.DropshipSupplierID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("dropship_supplier_id = $%d", argIdx))
+		args = append(args, *req.DropshipSupplierID)
+		argIdx++
+	}
 
 	if len(setClauses) == 0 {
 		return nil
@@ -254,13 +264,13 @@ func (r *ProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID,
 func (r *ProductRepository) FindBySKU(ctx context.Context, tx pgx.Tx, sku string) (*model.Product, error) {
 	var p model.Product
 	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, created_at, updated_at
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id, created_at, updated_at
 		 FROM products WHERE sku = $1 LIMIT 1`, sku,
 	).Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
 		&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 		&p.DescriptionShort, &p.DescriptionLong,
 		&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
-		&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.CreatedAt, &p.UpdatedAt)
+		&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -273,13 +283,13 @@ func (r *ProductRepository) FindBySKU(ctx context.Context, tx pgx.Tx, sku string
 func (r *ProductRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.Product, error) {
 	var p model.Product
 	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, created_at, updated_at
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id, created_at, updated_at
 		 FROM products WHERE ean = $1 LIMIT 1`, ean,
 	).Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
 		&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 		&p.DescriptionShort, &p.DescriptionLong,
 		&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
-		&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.CreatedAt, &p.UpdatedAt)
+		&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

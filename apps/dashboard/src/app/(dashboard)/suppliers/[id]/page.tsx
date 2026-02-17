@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, Link2, Search } from "lucide-react";
+import { RefreshCw, ArrowLeft, Link2, Search, Copy, ShieldOff, ExternalLink } from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useSupplier,
@@ -11,6 +11,9 @@ import {
   useSyncSupplier,
   useSupplierProducts,
   useLinkSupplierProduct,
+  useSupplierPortalStatus,
+  useGeneratePortalLink,
+  useRevokePortalAccess,
 } from "@/hooks/use-suppliers";
 import { useProducts } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -60,6 +63,11 @@ export default function SupplierDetailPage() {
   const syncSupplier = useSyncSupplier();
   const { data: productsData } = useSupplierProducts(id);
   const linkProduct = useLinkSupplierProduct(id);
+
+  const { data: portalStatus } = useSupplierPortalStatus(id);
+  const generateLink = useGeneratePortalLink(id);
+  const revokeAccess = useRevokePortalAccess(id);
+  const [portalLink, setPortalLink] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [linkingProductId, setLinkingProductId] = useState<string | null>(null);
@@ -232,6 +240,90 @@ export default function SupplierDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Portal dostawcy</CardTitle>
+          <CardDescription>
+            Zewnetrzny portal, przez ktory dostawca moze potwierdzac zamowienia, oznaczac wysylke i komunikowac sie
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                Status: {supplier.portal_enabled ? (
+                  <Badge variant="default" className="ml-2">Aktywny</Badge>
+                ) : (
+                  <Badge variant="secondary" className="ml-2">Nieaktywny</Badge>
+                )}
+              </p>
+              {portalStatus?.last_used_at && (
+                <p className="text-xs text-muted-foreground">
+                  Ostatni dostep: {formatDate(portalStatus.last_used_at)}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  generateLink.mutate(undefined, {
+                    onSuccess: (data) => {
+                      setPortalLink(data.url);
+                      toast.success("Link wygenerowany");
+                    },
+                    onError: (error) => toast.error(getErrorMessage(error)),
+                  });
+                }}
+                disabled={generateLink.isPending}
+                size="sm"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                {generateLink.isPending ? "Generowanie..." : "Generuj link"}
+              </Button>
+              {supplier.portal_enabled && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    revokeAccess.mutate(undefined, {
+                      onSuccess: () => {
+                        setPortalLink(null);
+                        toast.success("Dostep odwolany");
+                      },
+                      onError: (error) => toast.error(getErrorMessage(error)),
+                    });
+                  }}
+                  disabled={revokeAccess.isPending}
+                >
+                  <ShieldOff className="h-4 w-4 mr-2" />
+                  {revokeAccess.isPending ? "Odwolywanie..." : "Odwolaj dostep"}
+                </Button>
+              )}
+            </div>
+          </div>
+          {portalLink && (
+            <div className="rounded-md border bg-muted/50 p-3">
+              <p className="text-xs text-muted-foreground mb-1">Link portalu (wazny 30 dni):</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs bg-background rounded px-2 py-1 overflow-auto">
+                  {portalLink}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(portalLink);
+                    toast.success("Skopiowano do schowka");
+                  }}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

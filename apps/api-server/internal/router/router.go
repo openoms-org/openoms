@@ -83,6 +83,10 @@ type RouterDeps struct {
 	Accounting        *handler.AccountingHandler
 	Reconciliation    *handler.ReconciliationHandler
 	Carbon            *handler.CarbonHandler
+	VATOSS            *handler.VATOSSHandler
+	Dropship          *handler.DropshipHandler
+	SupplierPortal    *handler.SupplierPortalHandler
+	RecurringOrder    *handler.RecurringOrderHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -171,6 +175,20 @@ func New(deps RouterDeps) *chi.Mux {
 	// Public order tracking — no JWT, rate-limited (10 req/min per IP)
 	r.With(middleware.RateLimit(10, 1*time.Minute)).
 		Get("/v1/tracking/{tenant_slug}/{order_id}", deps.Tracking.TrackOrder)
+
+	// Public supplier portal routes — no JWT, token-authenticated, rate-limited (30 req/min per IP)
+	if deps.SupplierPortal != nil {
+		r.Route("/v1/supplier-portal", func(r chi.Router) {
+			r.Use(middleware.RateLimit(30, 1*time.Minute))
+			r.Use(middleware.MaxBodySize(1 << 20))
+			r.Get("/orders", deps.SupplierPortal.ListOrders)
+			r.Get("/orders/{id}", deps.SupplierPortal.GetOrder)
+			r.Post("/orders/{id}/confirm", deps.SupplierPortal.ConfirmOrder)
+			r.Post("/orders/{id}/ship", deps.SupplierPortal.ShipOrder)
+			r.Post("/orders/{id}/messages", deps.SupplierPortal.AddMessage)
+			r.Get("/orders/{id}/messages", deps.SupplierPortal.ListMessages)
+		})
+	}
 
 	// Public product feed routes — no JWT, token-authenticated, rate-limited (60 req/hour per IP)
 	if deps.Feed != nil {
@@ -528,6 +546,13 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/sync", deps.Supplier.Sync)
 				r.Get("/{id}/products", deps.Supplier.ListProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
+
+				// Supplier portal management
+				if deps.SupplierPortal != nil {
+					r.Post("/{id}/portal/generate-link", deps.SupplierPortal.GenerateLink)
+					r.Post("/{id}/portal/revoke", deps.SupplierPortal.RevokeAccess)
+					r.Get("/{id}/portal/status", deps.SupplierPortal.GetPortalStatus)
+				}
 			})
 
 			// Purchase Orders — any authenticated user can view, admin/manager can create/edit
@@ -546,6 +571,24 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Post("/{id}/cancel", deps.PurchaseOrder.Cancel)
 				})
 			})
+
+			// Dropship Orders — any authenticated user can view, admin can create/edit
+			r.Route("/dropship-orders", func(r chi.Router) {
+				r.Get("/", deps.Dropship.List)
+				r.Get("/{id}", deps.Dropship.Get)
+
+				// Write operations — admin only
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Post("/", deps.Dropship.Create)
+					r.Put("/{id}/status", deps.Dropship.UpdateStatus)
+					r.Post("/{id}/cancel", deps.Dropship.Cancel)
+				})
+			})
+
+			// Order dropship auto-route
+			r.Post("/orders/{order_id}/dropship", deps.Dropship.AutoRoute)
+			r.Get("/orders/{order_id}/dropship-orders", deps.Dropship.GetByOrderID)
 
 			// Warehouses — admin only
 			r.Route("/warehouses", func(r chi.Router) {
@@ -567,6 +610,18 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Patch("/{id}", deps.Customer.Update)
 				r.Delete("/{id}", deps.Customer.Delete)
 				r.Get("/{id}/orders", deps.Customer.ListOrders)
+			})
+
+			// Recurring orders (subscriptions) — any authenticated user
+			r.Route("/recurring-orders", func(r chi.Router) {
+				r.Get("/", deps.RecurringOrder.List)
+				r.Post("/", deps.RecurringOrder.Create)
+				r.Get("/{id}", deps.RecurringOrder.Get)
+				r.Put("/{id}", deps.RecurringOrder.Update)
+				r.Delete("/{id}", deps.RecurringOrder.Delete)
+				r.Post("/{id}/pause", deps.RecurringOrder.Pause)
+				r.Post("/{id}/resume", deps.RecurringOrder.Resume)
+				r.Post("/{id}/cancel", deps.RecurringOrder.Cancel)
 			})
 
 			// Automation rules — admin only
@@ -600,6 +655,19 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Get("/report", deps.Carbon.GetReport)
 				})
 			}
+
+			// VAT OSS — admin only
+			r.Route("/vat-oss", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/rates", deps.VATOSS.GetAllRates)
+				r.Get("/rates/{country}", deps.VATOSS.GetCountryRates)
+				r.Post("/calculate", deps.VATOSS.Calculate)
+				r.Get("/config", deps.VATOSS.GetConfig)
+				r.Put("/config", deps.VATOSS.UpdateConfig)
+				r.Get("/report", deps.VATOSS.GetReport)
+				r.Get("/report/csv", deps.VATOSS.GetReportCSV)
+				r.Get("/threshold", deps.VATOSS.GetThreshold)
+			})
 
 			// Barcode lookup — any authenticated user
 			r.Get("/barcode/{code}", deps.Barcode.Lookup)

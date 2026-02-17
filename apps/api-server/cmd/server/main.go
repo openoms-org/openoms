@@ -167,6 +167,9 @@ func main() {
 	purchaseOrderRepo := repository.NewPurchaseOrderRepository()
 	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepository()
 	pickPackRepo := repository.NewPickPackRepository()
+	dropshipRepo := repository.NewDropshipOrderRepository()
+	dropshipItemRepo := repository.NewDropshipOrderItemRepository()
+	recurringOrderRepo := repository.NewRecurringOrderRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -207,6 +210,8 @@ func main() {
 	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
 	purchaseOrderService := service.NewPurchaseOrderService(purchaseOrderRepo, purchaseOrderItemRepo, warehouseStockRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	pickPackService := service.NewPickPackService(pickPackRepo, orderRepo, productRepo, variantRepo, auditRepo, pool)
+	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -382,6 +387,12 @@ func main() {
 	// Purchase order handler
 	purchaseOrderHandler := handler.NewPurchaseOrderHandler(purchaseOrderService)
 
+	// Dropship handler
+	dropshipHandler := handler.NewDropshipHandler(dropshipService)
+
+	// Recurring order handler
+	recurringOrderHandler := handler.NewRecurringOrderHandler(recurringOrderService)
+
 	// Pick & Pack handler
 	pickPackHandler := handler.NewPickPackHandler(pickPackService)
 
@@ -409,6 +420,20 @@ func main() {
 	// Carbon footprint service & handler
 	carbonService := service.NewCarbonService(pool)
 	carbonHandler := handler.NewCarbonHandler(carbonService)
+
+	// Supplier portal service & handler
+	supplierPortalTokenRepo := repository.NewSupplierPortalTokenRepository()
+	supplierMessageRepo := repository.NewSupplierMessageRepository()
+	supplierPortalService := service.NewSupplierPortalService(
+		supplierPortalTokenRepo, supplierMessageRepo, supplierRepo,
+		purchaseOrderRepo, purchaseOrderItemRepo, auditRepo,
+		pool, cfg.FrontendURL, slog.Default(),
+	)
+	supplierPortalHandler := handler.NewSupplierPortalHandler(supplierPortalService)
+
+	// VAT OSS service & handler
+	vatOSSService := service.NewVATOSSService(tenantRepo, pool)
+	vatOSSHandler := handler.NewVATOSSHandler(vatOSSService)
 
 	// Payment reconciliation service & handler
 	paymentRepo := repository.NewPaymentRepository()
@@ -487,6 +512,10 @@ func main() {
 		Accounting:        accountingHandler,
 		Reconciliation:    reconciliationHandler,
 		Carbon:            carbonHandler,
+		VATOSS:            vatOSSHandler,
+		Dropship:          dropshipHandler,
+		SupplierPortal:    supplierPortalHandler,
+		RecurringOrder:    recurringOrderHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)
@@ -501,6 +530,7 @@ func main() {
 	workerMgr.Register(worker.NewExchangeRateWorker(workerPool, exchangeRateService, slog.Default()))
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
 	workerMgr.Register(worker.NewDelayedActionWorker(workerPool, delayedActionRepo, automationExecutor, slog.Default()))
+	workerMgr.Register(worker.NewRecurringOrderWorker(workerPool, recurringOrderService, slog.Default()))
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

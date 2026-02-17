@@ -344,3 +344,36 @@ type PriceListRepo interface {
 	DeleteItem(ctx context.Context, tx pgx.Tx, itemID uuid.UUID) error
 	FindItemsByProduct(ctx context.Context, tx pgx.Tx, priceListID, productID uuid.UUID, variantID *uuid.UUID, quantity int) ([]model.PriceListItem, error)
 }
+
+// DropshipOrderRepo defines the interface for dropship order persistence operations.
+type DropshipOrderRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.DropshipOrderListFilter) ([]model.DropshipOrder, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error)
+	FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error)
+	Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error
+	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
+	UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}
+
+// DropshipOrderItemRepo defines the interface for dropship order item persistence operations.
+type DropshipOrderItemRepo interface {
+	CreateItem(ctx context.Context, tx pgx.Tx, item *model.DropshipOrderItem) error
+	ListByDropshipOrderID(ctx context.Context, tx pgx.Tx, dropshipOrderID uuid.UUID) ([]model.DropshipOrderItem, error)
+	DeleteByDropshipOrderID(ctx context.Context, tx pgx.Tx, dropshipOrderID uuid.UUID) error
+}
+
+// RecurringOrderRepo defines the interface for recurring/subscription order persistence operations.
+type RecurringOrderRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.RecurringOrderListFilter) ([]model.RecurringOrder, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.RecurringOrder, error)
+	Create(ctx context.Context, tx pgx.Tx, ro *model.RecurringOrder) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRecurringOrderRequest) error
+	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	FindDue(ctx context.Context, tx pgx.Tx, today time.Time) ([]model.RecurringOrder, error)
+	UpdateAfterCreation(ctx context.Context, tx pgx.Tx, id uuid.UUID, nextDate time.Time, count int) error
+	ListItems(ctx context.Context, tx pgx.Tx, recurringOrderID uuid.UUID) ([]model.RecurringOrderItem, error)
+	CreateItem(ctx context.Context, tx pgx.Tx, item *model.RecurringOrderItem) error
+	DeleteItemsByRecurringOrderID(ctx context.Context, tx pgx.Tx, recurringOrderID uuid.UUID) error
+}
