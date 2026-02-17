@@ -358,7 +358,7 @@ func (s *StockSyncService) PushStockToAllChannels(ctx context.Context, tenantID,
 		baseAvailable := max(totalQty-reservedQty, 0)
 
 		for _, ch := range channels {
-			available := max(baseAvailable-ch.StockBuffer, 0)
+			_ = max(baseAvailable-ch.StockBuffer, 0) // available qty for this channel (used when pushing to marketplace API)
 
 			// Update sync status — in production, this would push to the marketplace API
 			if err := s.channelRepo.UpdateSyncStatus(ctx, tx, ch.ID, nil); err != nil {

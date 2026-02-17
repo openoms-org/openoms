@@ -149,13 +149,15 @@ function ForecastChart({ forecast }: { forecast: NonNullable<ReturnType<typeof u
 
   const chartData: { day: string; historical?: number; forecast?: number; low?: number; high?: number }[] = [];
 
-  // Historical portion (last 30 days) - we simulate with avg daily + random variation
+  // Historical portion (last 30 days) - we simulate with avg daily + seeded variation
   for (let i = 30; i > 0; i--) {
     const date = new Date();
     date.setDate(date.getDate() - i);
+    // Deterministic variation based on day index to avoid Math.random() in render
+    const variation = ((i * 7 + 13) % 20 - 10) / 20;
     chartData.push({
       day: `${date.getDate()}.${date.getMonth() + 1}`,
-      historical: Math.max(0, Math.round(avgDaily + (Math.random() - 0.5) * avgDaily * 0.6)),
+      historical: Math.max(0, Math.round(avgDaily + variation * avgDaily * 0.6)),
     });
   }
 
