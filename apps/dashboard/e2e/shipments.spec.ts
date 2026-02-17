@@ -20,4 +20,15 @@ test.describe('Shipments', () => {
     const headers = page.locator('table thead th');
     await expect(headers.filter({ hasText: 'Status' })).toBeVisible();
   });
+
+  test('new shipment form page loads', async ({ page }) => {
+    await page.goto('/shipments/new');
+    await expect(page.getByRole('heading', { name: /Nowa przesyłka/ })).toBeVisible({ timeout: 5000 });
+  });
+
+  test('shipment table has provider column', async ({ page }) => {
+    await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
+    const headers = page.locator('table thead th');
+    await expect(headers.filter({ hasText: /Kurier|Przewoźnik|Provider/ })).toBeVisible();
+  });
 });

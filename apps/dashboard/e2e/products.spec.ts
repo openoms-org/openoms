@@ -38,4 +38,21 @@ test.describe('Products', () => {
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Na stronie:')).toBeVisible({ timeout: 5000 });
   });
+
+  test('product form page loads with required fields', async ({ page }) => {
+    await page.goto('/products/new');
+    await expect(page.getByRole('heading', { name: /Nowy produkt|Dodaj produkt/ })).toBeVisible({ timeout: 5000 });
+    // Name and Price fields should be present
+    await expect(page.getByLabel(/Nazwa/i)).toBeVisible();
+    await expect(page.getByLabel(/Cena/i)).toBeVisible();
+  });
+
+  test('product detail page loads correctly', async ({ page }) => {
+    await gotoWithAuth(page, '/products');
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
+    await page.locator('table tbody tr').first().getByRole('link').first().click();
+    await expect(page).toHaveURL(/\/products\/[a-f0-9-]+/, { timeout: 10000 });
+    // Should show product details
+    await expect(page.getByText(/Szczegóły|SKU|Cena/)).toBeVisible({ timeout: 5000 });
+  });
 });

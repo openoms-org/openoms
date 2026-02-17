@@ -114,6 +114,61 @@ export const mockTenant = {
   updated_at: "2025-01-01T00:00:00Z",
 };
 
+export const mockShipments = [
+  {
+    id: "shp-001",
+    tenant_id: "t-1",
+    order_id: "ord-001",
+    provider: "inpost",
+    tracking_number: "INP123456789",
+    status: "created",
+    package_number: 1,
+    weight: 1.5,
+    created_at: "2025-01-15T11:00:00Z",
+    updated_at: "2025-01-15T11:00:00Z",
+  },
+  {
+    id: "shp-002",
+    tenant_id: "t-1",
+    order_id: "ord-002",
+    provider: "dhl",
+    tracking_number: "DHL987654321",
+    status: "shipped",
+    package_number: 1,
+    weight: 2.3,
+    created_at: "2025-01-14T09:00:00Z",
+    updated_at: "2025-01-15T13:00:00Z",
+  },
+];
+
+export const mockEmailSettings = {
+  enabled: true,
+  smtp_host: "smtp.example.com",
+  smtp_port: 587,
+  smtp_user: "user@example.com",
+  smtp_pass: "",
+  from_email: "noreply@example.com",
+  from_name: "Test Company",
+  notify_on: ["order_created", "order_shipped"],
+};
+
+export const mockCompanySettings = {
+  name: "Test Company",
+  company_name: "Test Company",
+  logo_url: "",
+  address: "ul. Testowa 1",
+  city: "Warszawa",
+  post_code: "00-001",
+  nip: "1234567890",
+  phone: "+48123456789",
+  email: "contact@example.com",
+  website: "https://example.com",
+};
+
+export const mockInventorySettings = {
+  strict_mode: false,
+};
+
 export const handlers = [
   // Orders
   http.get(`${API_URL}/v1/orders`, () => {
@@ -130,6 +185,16 @@ export const handlers = [
     return HttpResponse.json({
       items: mockProducts,
       total: mockProducts.length,
+      limit: 20,
+      offset: 0,
+    });
+  }),
+
+  // Shipments
+  http.get(`${API_URL}/v1/shipments`, () => {
+    return HttpResponse.json({
+      items: mockShipments,
+      total: mockShipments.length,
       limit: 20,
       offset: 0,
     });
@@ -158,5 +223,35 @@ export const handlers = [
       user: mockUser,
       tenant: mockTenant,
     });
+  }),
+
+  // Settings: onboarding
+  http.get(`${API_URL}/v1/settings/onboarding`, () => {
+    return HttpResponse.json({ dismissed: false, completed_at: "" });
+  }),
+
+  // Settings: company (used by onboarding hook)
+  http.get(`${API_URL}/v1/settings/company`, () => {
+    return HttpResponse.json(mockCompanySettings);
+  }),
+
+  // Settings: email
+  http.get(`${API_URL}/v1/settings/email`, () => {
+    return HttpResponse.json(mockEmailSettings);
+  }),
+
+  // Settings: inventory
+  http.get(`${API_URL}/v1/settings/inventory`, () => {
+    return HttpResponse.json(mockInventorySettings);
+  }),
+
+  // Settings: onboarding dismiss
+  http.put(`${API_URL}/v1/settings/onboarding`, () => {
+    return HttpResponse.json({ dismissed: true });
+  }),
+
+  // Integrations
+  http.get(`${API_URL}/v1/integrations`, () => {
+    return HttpResponse.json([]);
   }),
 ];

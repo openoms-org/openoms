@@ -36,4 +36,19 @@ test.describe('Settings', () => {
     await page.goto('/settings/automation');
     await expect(page.getByRole('heading', { name: /Automatyzacja/ })).toBeVisible();
   });
+
+  test('email settings page loads', async ({ page }) => {
+    await page.goto('/settings/email');
+    await expect(page.getByRole('heading', { name: /Email|Powiadomienia/ })).toBeVisible({ timeout: 5000 });
+  });
+
+  test('custom fields page loads', async ({ page }) => {
+    await page.goto('/settings/custom-fields');
+    await expect(page.getByRole('heading', { name: /Pola|Niestandardowe/ })).toBeVisible({ timeout: 5000 });
+  });
+
+  test('inventory settings page loads', async ({ page }) => {
+    await page.goto('/settings/inventory');
+    await expect(page.getByRole('heading', { name: /Inwentaryzacja|Magazyn/ })).toBeVisible({ timeout: 5000 });
+  });
 });
