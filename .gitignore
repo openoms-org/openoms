@@ -62,6 +62,15 @@ docs/competitive-analysis.md
 docs/market-research-report.md
 docs/qa-seller-test-report.md
 
+# Sensitive internal docs (move to openoms-enterprise repo)
+docs/security-audit-*.md
+docs/gap-analysis-*.md
+docs/social-media-launch-kit.md
+docs/plans/
+competitive-analysis.md
+market-research-report.md
+qa-seller-test-report.md
+
 # Old project files (pre-monorepo)
 openoms-*.docx
 openoms-*.md
