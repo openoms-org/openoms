@@ -546,6 +546,52 @@ func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, config)
 }
 
+func (h *SettingsHandler) GetOnboardingSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	var cfg model.OnboardingSettings
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		return h.getSettingsSection(r.Context(), tx, tenantID, "onboarding", &cfg)
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load onboarding settings")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, cfg)
+}
+
+func (h *SettingsHandler) UpdateOnboardingSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var cfg model.OnboardingSettings
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "onboarding", cfg); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "settings.onboarding_updated",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save onboarding settings")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, cfg)
+}
+
 func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

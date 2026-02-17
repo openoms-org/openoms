@@ -257,6 +257,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/sms/test", deps.Settings.SendTestSMS)
 				r.Get("/inventory", deps.Settings.GetInventorySettings)
 				r.Put("/inventory", deps.Settings.UpdateInventorySettings)
+				r.Get("/onboarding", deps.Settings.GetOnboardingSettings)
+				r.Put("/onboarding", deps.Settings.UpdateOnboardingSettings)
 				r.Get("/print-templates", deps.Print.GetPrintTemplates)
 				r.Put("/print-templates", deps.Print.UpdatePrintTemplates)
 				r.Get("/ksef", deps.KSeF.GetSettings)

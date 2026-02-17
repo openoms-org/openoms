@@ -68,6 +68,12 @@ type InventorySettings struct {
 	StrictMode bool `json:"strict_mode"`
 }
 
+// OnboardingSettings tracks the onboarding state for a tenant.
+type OnboardingSettings struct {
+	Dismissed   bool   `json:"dismissed"`
+	CompletedAt string `json:"completed_at,omitempty"` // RFC3339 timestamp
+}
+
 // AuditEntry represents an audit log record.
 type AuditEntry struct {
 	TenantID   uuid.UUID `json:"tenant_id"`

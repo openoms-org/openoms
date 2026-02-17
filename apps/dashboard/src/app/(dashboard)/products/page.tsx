@@ -372,8 +372,9 @@ export default function ProductsPage() {
           <EmptyState
             icon={Package}
             title="Brak produktów"
-            description="Nie znaleziono produktów do wyświetlenia."
-            action={{ label: "Nowy produkt", href: "/products/new" }}
+            description="Importuj produkty z Allegro lub dodaj je ręcznie."
+            action={{ label: "Importuj z Allegro", href: "/integrations" }}
+            secondaryAction={{ label: "Dodaj produkt", href: "/products/new" }}
           />
         }
         sortBy={sortBy}

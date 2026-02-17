@@ -386,8 +386,9 @@ export default function OrdersPage() {
                 <EmptyState
                   icon={ShoppingCart}
                   title="Brak zamówień"
-                  description="Nie znaleziono zamówień do wyświetlenia."
-                  action={{ label: "Nowe zamówienie", href: "/orders/new" }}
+                  description="Połącz Allegro, aby automatycznie importować zamówienia, lub dodaj je ręcznie."
+                  action={{ label: "Połącz Allegro", href: "/integrations" }}
+                  secondaryAction={{ label: "Dodaj zamówienie", href: "/orders/new" }}
                 />
               }
               onRowClick={(row) => router.push(`/orders/${row.id}`)}

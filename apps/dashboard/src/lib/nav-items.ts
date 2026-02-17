@@ -53,6 +53,7 @@ import {
   Award,
   Workflow,
   ArrowUpDown,
+  HelpCircle,
 } from "lucide-react";
 
 export interface NavItem {
@@ -164,4 +165,6 @@ export const navItems: NavItem[] = [
   { href: "/settings/sync-jobs", label: "Synchronizacja", icon: RefreshCw, adminOnly: true, group: "Monitoring" },
   { href: "/settings/webhooks/deliveries", label: "Dostawy webhooków", icon: Webhook, adminOnly: true, group: "Monitoring" },
   { href: "/audit", label: "Dziennik aktywności", icon: ScrollText, adminOnly: true, group: "Monitoring" },
+  // Pomoc
+  { href: "/help", label: "Pomoc", icon: HelpCircle, group: "Pomoc" },
 ];

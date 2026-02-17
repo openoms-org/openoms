@@ -8,6 +8,7 @@ import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
 import { OrderSourceChart } from "@/components/dashboard/order-source-chart";
 import { RecentOrdersTable } from "@/components/dashboard/recent-orders-table";
 import { Button } from "@/components/ui/button";
+import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 
 export default function DashboardPage() {
   const { data: stats, isLoading, isError, refetch } = useDashboardStats();
@@ -37,6 +38,8 @@ export default function DashboardPage() {
           </Button>
         </div>
       )}
+
+      <OnboardingWizard />
 
       <StatCards orderCounts={stats?.order_counts} isLoading={isLoading} />
 
