@@ -39,9 +39,9 @@ export default function AllegroMessagesPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Wiadomosci Allegro</h1>
+            <h1 className="text-2xl font-bold">Wiadomości Allegro</h1>
             <p className="text-muted-foreground">
-              Odpowiadaj na wiadomosci od kupujacych
+              Odpowiadaj na wiadomości od kupujących
             </p>
           </div>
         </div>
@@ -60,7 +60,7 @@ export default function AllegroMessagesPage() {
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="text-center space-y-2">
                   <MessageSquare className="h-12 w-12 mx-auto opacity-30" />
-                  <p className="text-sm">Wybierz watek, aby wyswietlic wiadomosci</p>
+                  <p className="text-sm">Wybierz wątek, aby wyświetlić wiadomości</p>
                 </div>
               </div>
             )}
@@ -101,9 +101,9 @@ function ThreadList({
   if (isError) {
     return (
       <div className="p-4 text-center space-y-2">
-        <p className="text-sm text-destructive">Blad ladowania watkow</p>
+        <p className="text-sm text-destructive">Błąd ładowania wątków</p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Sprobuj ponownie
+          Spróbuj ponownie
         </Button>
       </div>
     );
@@ -116,7 +116,7 @@ function ThreadList({
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="text-center space-y-2">
           <Mail className="h-8 w-8 mx-auto text-muted-foreground opacity-30" />
-          <p className="text-sm text-muted-foreground">Brak watkow</p>
+          <p className="text-sm text-muted-foreground">Brak wątków</p>
         </div>
       </div>
     );
@@ -194,13 +194,13 @@ function MessageView({ threadId }: { threadId: string }) {
     sendMessage.mutate(text, {
       onSuccess: () => {
         setMessageText("");
-        toast.success("Wiadomosc wyslana");
+        toast.success("Wiadomość wysłana");
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udalo sie wyslac wiadomosci"
+            : "Nie udało się wysłać wiadomości"
         );
       },
     });
@@ -225,9 +225,9 @@ function MessageView({ threadId }: { threadId: string }) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-sm text-destructive">Blad ladowania wiadomosci</p>
+          <p className="text-sm text-destructive">Błąd ładowania wiadomości</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       </div>
@@ -292,7 +292,7 @@ function MessageView({ threadId }: { threadId: string }) {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Napisz wiadomosc... (Enter aby wyslac, Shift+Enter nowa linia)"
+            placeholder="Napisz wiadomość... (Enter aby wysłać, Shift+Enter nowa linia)"
             className="min-h-[60px] max-h-[120px] resize-none"
             disabled={sendMessage.isPending}
           />

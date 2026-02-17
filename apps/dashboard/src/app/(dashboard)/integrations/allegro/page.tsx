@@ -601,7 +601,7 @@ function ConnectedState({
                 <div>
                   <p className="font-semibold">Oferty</p>
                   <p className="text-sm text-muted-foreground">
-                    Zarzadzaj ofertami na Allegro
+                    Zarządzaj ofertami na Allegro
                   </p>
                 </div>
               </CardContent>
@@ -612,9 +612,9 @@ function ConnectedState({
               <CardContent className="flex items-center gap-4 pt-6">
                 <MessageSquare className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="font-semibold">Wiadomosci</p>
+                  <p className="font-semibold">Wiadomości</p>
                   <p className="text-sm text-muted-foreground">
-                    Centrum wiadomosci Allegro
+                    Centrum wiadomości Allegro
                   </p>
                 </div>
               </CardContent>
@@ -664,9 +664,9 @@ function ConnectedState({
               <CardContent className="flex items-center gap-4 pt-6">
                 <Shield className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="font-semibold">Polityki sprzedazy</p>
+                  <p className="font-semibold">Polityki sprzedaży</p>
                   <p className="text-sm text-muted-foreground">
-                    Zwroty, rekojmia i tabele rozmiarow
+                    Zwroty, rękojmia i tabele rozmiarów
                   </p>
                 </div>
               </CardContent>
@@ -692,7 +692,7 @@ function ConnectedState({
                 <div>
                   <p className="font-semibold">Dostawa</p>
                   <p className="text-sm text-muted-foreground">
-                    Ustawienia dostawy i cenniki wysylki
+                    Ustawienia dostawy i cenniki wysyłki
                   </p>
                 </div>
               </CardContent>
@@ -703,9 +703,9 @@ function ConnectedState({
               <CardContent className="flex items-center gap-4 pt-6">
                 <Package className="h-8 w-8 text-primary" />
                 <div>
-                  <p className="font-semibold">Wysylam z Allegro</p>
+                  <p className="font-semibold">Wysyłam z Allegro</p>
                   <p className="text-sm text-muted-foreground">
-                    Przesylki, etykiety i odbior kurierski
+                    Przesyłki, etykiety i odbiór kurierski
                   </p>
                 </div>
               </CardContent>

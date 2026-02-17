@@ -68,7 +68,7 @@ function statusLabel(status?: string) {
     case "INACTIVE":
       return "Nieaktywna";
     case "ENDED":
-      return "Zakonczona";
+      return "Zakończona";
     default:
       return status ?? "---";
   }
@@ -100,7 +100,7 @@ export default function AllegroOffersPage() {
           <div>
             <h1 className="text-2xl font-bold">Oferty Allegro</h1>
             <p className="text-muted-foreground">
-              Zarzadzaj swoimi ofertami na Allegro
+              Zarządzaj swoimi ofertami na Allegro
             </p>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function AllegroOffersPage() {
                   <SelectItem value="all">Wszystkie</SelectItem>
                   <SelectItem value="ACTIVE">Aktywne</SelectItem>
                   <SelectItem value="INACTIVE">Nieaktywne</SelectItem>
-                  <SelectItem value="ENDED">Zakonczone</SelectItem>
+                  <SelectItem value="ENDED">Zakończone</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -152,7 +152,7 @@ export default function AllegroOffersPage() {
               Oferty
               {data && (
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({data.totalCount} lacznie)
+                  ({data.totalCount} łącznie)
                 </span>
               )}
               {isFetching && (
@@ -169,14 +169,14 @@ export default function AllegroOffersPage() {
               </div>
             ) : !data?.offers?.length ? (
               <p className="py-8 text-center text-muted-foreground">
-                Brak ofert do wyswietlenia
+                Brak ofert do wyświetlenia
               </p>
             ) : (
               <>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-16">Zdjecie</TableHead>
+                      <TableHead className="w-16">Zdjęcie</TableHead>
                       <TableHead>Nazwa</TableHead>
                       <TableHead className="w-28">Cena</TableHead>
                       <TableHead className="w-24">Stan</TableHead>
@@ -212,7 +212,7 @@ export default function AllegroOffersPage() {
                       disabled={(page + 1) * PAGE_SIZE >= data.totalCount}
                       onClick={() => setPage((p) => p + 1)}
                     >
-                      Nastepna
+                      Następna
                     </Button>
                   </div>
                 </div>
@@ -246,12 +246,12 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
     if (isActive) {
       deactivate.mutate(offer.id, {
         onSuccess: () => toast.success("Oferta dezaktywowana"),
-        onError: () => toast.error("Nie udalo sie dezaktywowac oferty"),
+        onError: () => toast.error("Nie udało się dezaktywować oferty"),
       });
     } else {
       activate.mutate(offer.id, {
         onSuccess: () => toast.success("Oferta aktywowana"),
-        onError: () => toast.error("Nie udalo sie aktywowac oferty"),
+        onError: () => toast.error("Nie udało się aktywować oferty"),
       });
     }
   };
@@ -259,7 +259,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
   const handleSaveStock = () => {
     const qty = parseInt(stockValue, 10);
     if (isNaN(qty) || qty < 0) {
-      toast.error("Nieprawidlowa wartosc stanu");
+      toast.error("Nieprawidłowa wartość stanu");
       return;
     }
     updateStock.mutate(
@@ -269,7 +269,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
           toast.success("Stan zaktualizowany");
           setEditingStock(false);
         },
-        onError: () => toast.error("Nie udalo sie zaktualizowac stanu"),
+        onError: () => toast.error("Nie udało się zaktualizować stanu"),
       }
     );
   };
@@ -277,7 +277,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
   const handleSavePrice = () => {
     const amt = parseFloat(priceValue);
     if (isNaN(amt) || amt < 0) {
-      toast.error("Nieprawidlowa wartosc ceny");
+      toast.error("Nieprawidłowa wartość ceny");
       return;
     }
     updatePrice.mutate(
@@ -291,7 +291,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
           toast.success("Cena zaktualizowana");
           setEditingPrice(false);
         },
-        onError: () => toast.error("Nie udalo sie zaktualizowac ceny"),
+        onError: () => toast.error("Nie udało się zaktualizować ceny"),
       }
     );
   };

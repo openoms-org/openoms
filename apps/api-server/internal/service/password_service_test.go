@@ -1,62 +1,72 @@
 package service
 
-import "testing"
+import (
+	"strings"
+	"testing"
 
-func TestHashAndCompare(t *testing.T) {
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestPasswordService_Hash_And_Compare_RoundTrip(t *testing.T) {
 	svc := NewPasswordService()
-	hash, err := svc.Hash("password123")
-	if err != nil {
-		t.Fatalf("Hash: %v", err)
-	}
-	if err := svc.Compare(hash, "password123"); err != nil {
-		t.Errorf("Compare should succeed: %v", err)
-	}
+
+	hash, err := svc.Hash("StrongP@ss123")
+	require.NoError(t, err)
+	require.NotEmpty(t, hash)
+
+	err = svc.Compare(hash, "StrongP@ss123")
+	assert.NoError(t, err)
 }
 
-func TestCompareWrongPassword(t *testing.T) {
+func TestPasswordService_Compare_WrongPassword(t *testing.T) {
 	svc := NewPasswordService()
-	hash, _ := svc.Hash("password123")
-	if err := svc.Compare(hash, "wrongpassword"); err == nil {
-		t.Error("Compare should fail for wrong password")
-	}
+
+	hash, err := svc.Hash("password1")
+	require.NoError(t, err)
+
+	err = svc.Compare(hash, "password2")
+	assert.Error(t, err)
 }
 
-func TestValidateStrength_TooShort(t *testing.T) {
+func TestPasswordService_ValidateStrength_TooShort(t *testing.T) {
 	svc := NewPasswordService()
-	if err := svc.ValidateStrength("short"); err == nil {
-		t.Error("expected error for short password")
-	}
+
+	err := svc.ValidateStrength("Abc1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "at least 8 characters")
 }
 
-func TestValidateStrength_OK(t *testing.T) {
+func TestPasswordService_ValidateStrength_TooLong(t *testing.T) {
 	svc := NewPasswordService()
-	if err := svc.ValidateStrength("longpassword1"); err != nil {
-		t.Errorf("expected no error: %v", err)
-	}
+
+	// 73 characters: exceeds bcrypt's 72-byte limit
+	longPassword := "Aa1" + strings.Repeat("a", 70)
+
+	err := svc.ValidateStrength(longPassword)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "72")
 }
 
-func TestValidateStrength_TooLong(t *testing.T) {
+func TestPasswordService_ValidateStrength_NoLetter(t *testing.T) {
 	svc := NewPasswordService()
-	long := make([]byte, 73)
-	for i := range long {
-		long[i] = 'a'
-	}
-	long[0] = '1' // include a digit
-	if err := svc.ValidateStrength(string(long)); err == nil {
-		t.Error("expected error for password exceeding 72 characters")
-	}
+
+	err := svc.ValidateStrength("12345678")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "letter")
 }
 
-func TestValidateStrength_NoDigit(t *testing.T) {
+func TestPasswordService_ValidateStrength_NoDigit(t *testing.T) {
 	svc := NewPasswordService()
-	if err := svc.ValidateStrength("longpassword"); err == nil {
-		t.Error("expected error for password without digit")
-	}
+
+	err := svc.ValidateStrength("abcdefgh")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "digit")
 }
 
-func TestValidateStrength_NoLetter(t *testing.T) {
+func TestPasswordService_ValidateStrength_Valid(t *testing.T) {
 	svc := NewPasswordService()
-	if err := svc.ValidateStrength("12345678"); err == nil {
-		t.Error("expected error for password without letter")
-	}
+
+	err := svc.ValidateStrength("StrongP@ss123")
+	assert.NoError(t, err)
 }

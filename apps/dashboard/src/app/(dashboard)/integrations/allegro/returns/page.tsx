@@ -59,7 +59,7 @@ const RETURN_STATUS_MAP: Record<string, { label: string; variant: "default" | "s
   EXCHANGE: { label: "Wymiana", variant: "secondary" },
   REFUND: { label: "Zwrot", variant: "default" },
   REFUND_AND_RETURN: { label: "Zwrot + odesłanie", variant: "default" },
-  WAITING: { label: "Oczekujacy", variant: "outline" },
+  WAITING: { label: "Oczekujący", variant: "outline" },
   ACCEPTED: { label: "Zaakceptowany", variant: "default" },
   REJECTED: { label: "Odrzucony", variant: "destructive" },
   CANCELLED: { label: "Anulowany", variant: "secondary" },
@@ -93,7 +93,7 @@ export default function AllegroReturnsPage() {
           <div>
             <h1 className="text-2xl font-bold">Zwroty Allegro</h1>
             <p className="text-muted-foreground">
-              Zarzadzaj zwrotami od kupujacych na Allegro
+              Zarządzaj zwrotami od kupujących na Allegro
             </p>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function AllegroReturnsPage() {
                 <SelectItem value="all">Wszystkie</SelectItem>
                 <SelectItem value="EXCHANGE">Wymiana</SelectItem>
                 <SelectItem value="REFUND">Zwrot</SelectItem>
-                <SelectItem value="WAITING">Oczekujacy</SelectItem>
+                <SelectItem value="WAITING">Oczekujący</SelectItem>
                 <SelectItem value="ACCEPTED">Zaakceptowany</SelectItem>
                 <SelectItem value="REJECTED">Odrzucony</SelectItem>
               </SelectContent>
@@ -122,7 +122,7 @@ export default function AllegroReturnsPage() {
           </div>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Odswiez
+            Odśwież
           </Button>
         </div>
 
@@ -130,7 +130,7 @@ export default function AllegroReturnsPage() {
           <Card className="border-destructive">
             <CardContent className="pt-4">
               <p className="text-sm text-destructive">
-                Blad podczas ladowania zwrotow. Sprawdz polaczenie z Allegro.
+                Błąd podczas ładowania zwrotów. Sprawdź połączenie z Allegro.
               </p>
               <Button
                 variant="outline"
@@ -138,7 +138,7 @@ export default function AllegroReturnsPage() {
                 className="mt-2"
                 onClick={() => refetch()}
               >
-                Sprobuj ponownie
+                Spróbuj ponownie
               </Button>
             </CardContent>
           </Card>
@@ -155,8 +155,8 @@ export default function AllegroReturnsPage() {
         {!isLoading && returns.length === 0 && (
           <EmptyState
             icon={RotateCcw}
-            title="Brak zwrotow"
-            description="Nie znaleziono zwrotow do wyswietlenia na Allegro."
+            title="Brak zwrotów"
+            description="Nie znaleziono zwrotów do wyświetlenia na Allegro."
           />
         )}
 
@@ -181,7 +181,7 @@ export default function AllegroReturnsPage() {
         {data && data.count > limit && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Wyswietlanie {offset + 1}-{Math.min(offset + limit, data.count)} z{" "}
+              Wyświetlanie {offset + 1}-{Math.min(offset + limit, data.count)} z{" "}
               {data.count}
             </p>
             <div className="flex gap-2">
@@ -199,7 +199,7 @@ export default function AllegroReturnsPage() {
                 disabled={offset + limit >= data.count}
                 onClick={() => setOffset(offset + limit)}
               >
-                Nastepna
+                Następna
               </Button>
             </div>
           </div>
@@ -256,12 +256,12 @@ function ReturnCard({
                 <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span>Kupujacy: {ret.buyer.login}</span>
+                <span>Kupujący: {ret.buyer.login}</span>
                 <span>{formatDate(ret.createdAt)}</span>
                 {ret.parcelSentByBuyer && (
                   <Badge variant="outline" className="text-[10px]">
                     <Package className="mr-1 h-3 w-3" />
-                    Paczka wyslana
+                    Paczka wysłana
                   </Badge>
                 )}
               </div>
@@ -322,7 +322,7 @@ function ReturnCard({
                   onClick={onReject}
                 >
                   <XCircle className="mr-2 h-4 w-4" />
-                  Odrzuc zwrot
+                  Odrzuć zwrot
                 </Button>
                 <Button
                   variant="outline"
@@ -330,7 +330,7 @@ function ReturnCard({
                   onClick={onRefund}
                 >
                   <CreditCard className="mr-2 h-4 w-4" />
-                  Zwroc pieniadze
+                  Zwróć pieniądze
                 </Button>
               </div>
             </div>
@@ -353,20 +353,20 @@ function RejectDialog({
 
   const handleReject = () => {
     if (!reason.trim()) {
-      toast.error("Podaj powod odrzucenia");
+      toast.error("Podaj powód odrzucenia");
       return;
     }
 
     rejectMutation.mutate(reason.trim(), {
       onSuccess: () => {
-        toast.success("Zwrot zostal odrzucony");
+        toast.success("Zwrot został odrzucony");
         onClose();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udalo sie odrzucic zwrotu"
+            : "Nie udało się odrzucić zwrotu"
         );
       },
     });
@@ -376,7 +376,7 @@ function RejectDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Odrzuc zwrot</DialogTitle>
+          <DialogTitle>Odrzuć zwrot</DialogTitle>
           <DialogDescription>
             Zwrot {ret.referenceNumber || ret.id.slice(0, 12)} od{" "}
             {ret.buyer.login}
@@ -385,12 +385,12 @@ function RejectDialog({
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="reject-reason">Powod odrzucenia</Label>
+            <Label htmlFor="reject-reason">Powód odrzucenia</Label>
             <Textarea
               id="reject-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Opisz powod odrzucenia zwrotu..."
+              placeholder="Opisz powód odrzucenia zwrotu..."
               className="mt-1"
             />
           </div>
@@ -408,7 +408,7 @@ function RejectDialog({
             {rejectMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Odrzuc
+            Odrzuć
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -429,11 +429,11 @@ function RefundDialog({
 
   const handleRefund = () => {
     if (!reason.trim()) {
-      toast.error("Podaj powod zwrotu pieniedzy");
+      toast.error("Podaj powód zwrotu pieniędzy");
       return;
     }
     if (!paymentId.trim()) {
-      toast.error("Podaj ID platnosci");
+      toast.error("Podaj ID płatności");
       return;
     }
 
@@ -454,14 +454,14 @@ function RefundDialog({
 
     createRefund.mutate(request, {
       onSuccess: () => {
-        toast.success("Zwrot pieniedzy zostal utworzony");
+        toast.success("Zwrot pieniędzy został utworzony");
         onClose();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udalo sie utworzyc zwrotu pieniedzy"
+            : "Nie udało się utworzyć zwrotu pieniędzy"
         );
       },
     });
@@ -471,9 +471,9 @@ function RefundDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Zwrot pieniedzy</DialogTitle>
+          <DialogTitle>Zwrot pieniędzy</DialogTitle>
           <DialogDescription>
-            Utworz zwrot pieniedzy dla zwrotu{" "}
+            Utwórz zwrot pieniędzy dla zwrotu{" "}
             {ret.referenceNumber || ret.id.slice(0, 12)}
           </DialogDescription>
         </DialogHeader>
