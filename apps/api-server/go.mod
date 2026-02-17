@@ -37,6 +37,9 @@ require (
 	github.com/openoms-org/openoms/packages/smsapi-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/ups-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/wfirma-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/prestashop-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/shoper-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/shopify-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/woocommerce-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/pquerna/otp v1.5.0
 	github.com/stretchr/testify v1.11.1
@@ -75,3 +78,9 @@ require (
 replace github.com/openoms-org/openoms/packages/wfirma-go-sdk => ../../packages/wfirma-go-sdk
 
 replace github.com/openoms-org/openoms/packages/infakt-go-sdk => ../../packages/infakt-go-sdk
+
+replace github.com/openoms-org/openoms/packages/shoper-go-sdk => ../../packages/shoper-go-sdk
+
+replace github.com/openoms-org/openoms/packages/prestashop-go-sdk => ../../packages/prestashop-go-sdk
+
+replace github.com/openoms-org/openoms/packages/shopify-go-sdk => ../../packages/shopify-go-sdk

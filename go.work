@@ -25,4 +25,7 @@ use (
 	./packages/ksef-go-sdk
 	./packages/wfirma-go-sdk
 	./packages/infakt-go-sdk
+	./packages/shoper-go-sdk
+	./packages/prestashop-go-sdk
+	./packages/shopify-go-sdk
 )

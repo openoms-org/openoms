@@ -1058,6 +1058,58 @@ export interface ConditionResult {
   met: boolean;
 }
 
+// === Workflow Builder ===
+export interface WorkflowPosition {
+  x: number;
+  y: number;
+}
+
+export interface WorkflowViewport {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+export interface WorkflowNode {
+  id: string;
+  type: "trigger" | "condition" | "action";
+  position: WorkflowPosition;
+  data: Record<string, unknown>;
+}
+
+export interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+  label?: string;
+}
+
+export interface WorkflowDefinition {
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+  viewport: WorkflowViewport;
+}
+
+export interface WorkflowTemplate {
+  id: string;
+  name: string;
+  description: string;
+  definition: WorkflowDefinition;
+}
+
+export interface ValidateWorkflowResponse {
+  valid: boolean;
+  errors: string[];
+}
+
+export interface ConvertWorkflowResponse {
+  trigger_event: string;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+}
+
 // === Import ===
 export interface ImportColumnMapping {
   csv_column: string;
@@ -2491,3 +2543,162 @@ export interface RedeemPointsRequest {
 }
 
 export interface LoyaltyProgramListParams extends PaginationParams {}
+
+// === Listing Sync ===
+export interface ListingSyncConfig {
+  id: string;
+  tenant_id: string;
+  integration_id: string;
+  sync_direction: "push" | "pull" | "bidirectional";
+  auto_sync: boolean;
+  sync_interval_minutes: number;
+  field_mapping: Record<string, unknown>;
+  price_rule: "same" | "markup_pct" | "markup_fixed" | "custom";
+  price_modifier: number;
+  stock_buffer: number;
+  status: "active" | "paused" | "error";
+  last_sync_at?: string;
+  last_error?: string;
+  created_at: string;
+  updated_at: string;
+  integration_provider?: string;
+  integration_label?: string;
+}
+
+export interface ListingSyncLog {
+  id: string;
+  tenant_id: string;
+  config_id: string;
+  direction: "push" | "pull";
+  entity_type: "product" | "price" | "stock" | "offer";
+  product_id?: string;
+  external_id?: string;
+  status: "success" | "failed" | "skipped";
+  changes?: Record<string, unknown>;
+  error_message?: string;
+  created_at: string;
+}
+
+export interface CreateListingSyncConfigRequest {
+  integration_id: string;
+  sync_direction: "push" | "pull" | "bidirectional";
+  auto_sync?: boolean;
+  sync_interval_minutes?: number;
+  field_mapping?: Record<string, unknown>;
+  price_rule?: "same" | "markup_pct" | "markup_fixed" | "custom";
+  price_modifier?: number;
+  stock_buffer?: number;
+}
+
+export interface UpdateListingSyncConfigRequest {
+  sync_direction?: "push" | "pull" | "bidirectional";
+  auto_sync?: boolean;
+  sync_interval_minutes?: number;
+  field_mapping?: Record<string, unknown>;
+  price_rule?: "same" | "markup_pct" | "markup_fixed" | "custom";
+  price_modifier?: number;
+  stock_buffer?: number;
+  status?: "active" | "paused" | "error";
+}
+
+export interface SyncResult {
+  items_processed: number;
+  items_failed: number;
+  message: string;
+}
+
+export interface ListingSyncConfigListParams extends PaginationParams {
+  integration_id?: string;
+  status?: string;
+}
+
+export interface ListingSyncLogListParams extends PaginationParams {
+  direction?: string;
+  entity_type?: string;
+  status?: string;
+}
+
+// === Stock Sync ===
+export interface StockSyncChannel {
+  id: string;
+  tenant_id: string;
+  integration_id?: string;
+  channel_type: string;
+  enabled: boolean;
+  stock_buffer: number;
+  sync_mode: "realtime" | "scheduled" | "manual";
+  priority: number;
+  last_sync_at?: string;
+  last_error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StockSyncEvent {
+  id: string;
+  tenant_id: string;
+  product_id?: string;
+  sku?: string;
+  trigger_type: string;
+  old_quantity: number;
+  new_quantity: number;
+  available_quantity: number;
+  channels_notified: number;
+  channels_failed: number;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface StockAllocation {
+  channel_id: string;
+  channel_type: string;
+  total_stock: number;
+  reserved: number;
+  buffer: number;
+  available_quantity: number;
+}
+
+export interface ChannelSummary {
+  id: string;
+  channel_type: string;
+  enabled: boolean;
+  sync_mode: string;
+  stock_buffer: number;
+  last_sync_at?: string;
+  last_error?: string;
+  status: "ok" | "warning" | "error" | "disabled";
+}
+
+export interface StockSyncDashboard {
+  total_products: number;
+  active_channels: number;
+  recent_errors: number;
+  last_sync_at?: string;
+  channel_summaries: ChannelSummary[];
+}
+
+export interface CreateStockSyncChannelRequest {
+  integration_id?: string;
+  channel_type: string;
+  enabled?: boolean;
+  stock_buffer?: number;
+  sync_mode?: string;
+  priority?: number;
+}
+
+export interface UpdateStockSyncChannelRequest {
+  enabled?: boolean;
+  stock_buffer?: number;
+  sync_mode?: string;
+  priority?: number;
+}
+
+export interface StockSyncChannelListParams extends PaginationParams {
+  enabled?: boolean;
+  channel_type?: string;
+}
+
+export interface StockSyncEventListParams extends PaginationParams {
+  product_id?: string;
+  trigger_type?: string;
+}

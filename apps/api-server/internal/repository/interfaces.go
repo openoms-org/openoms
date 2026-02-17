@@ -393,3 +393,22 @@ type RepricingRepo interface {
 	ListLog(ctx context.Context, tx pgx.Tx, limit, offset int) ([]model.RepricingLog, int, error)
 	GetSummary(ctx context.Context, tx pgx.Tx) (*model.RepricingSummary, error)
 }
+
+// StockSyncChannelRepo defines the interface for stock sync channel persistence operations.
+type StockSyncChannelRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.StockSyncChannelListFilter) ([]model.StockSyncChannel, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.StockSyncChannel, error)
+	ListEnabled(ctx context.Context, tx pgx.Tx) ([]model.StockSyncChannel, error)
+	Create(ctx context.Context, tx pgx.Tx, ch *model.StockSyncChannel) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateStockSyncChannelRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastError *string) error
+}
+
+// StockSyncEventRepo defines the interface for stock sync event persistence operations.
+type StockSyncEventRepo interface {
+	Create(ctx context.Context, tx pgx.Tx, event *model.StockSyncEvent) error
+	List(ctx context.Context, tx pgx.Tx, filter model.StockSyncEventListFilter) ([]model.StockSyncEvent, int, error)
+	CountRecentErrors(ctx context.Context, tx pgx.Tx) (int, error)
+	GetAvailableStock(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (totalQty int, reservedQty int, err error)
+}

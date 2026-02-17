@@ -51,6 +51,8 @@ import {
   TrendingUp,
   Eraser,
   Award,
+  Workflow,
+  ArrowUpDown,
 } from "lucide-react";
 
 export interface NavItem {
@@ -119,7 +121,11 @@ export const navItems: NavItem[] = [
     ],
   },
   { href: "/integrations/amazon", label: "Amazon", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
+  { href: "/integrations/shoper", label: "Shoper", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
+  { href: "/integrations/prestashop", label: "PrestaShop", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
+  { href: "/integrations/shopify", label: "Shopify", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
   { href: "/settings/feeds", label: "Feedy produktowe", icon: Rss, adminOnly: true, group: "Kanały sprzedaży" },
+  { href: "/listing-sync", label: "Synchronizacja ofert", icon: ArrowUpDown, adminOnly: true, group: "Kanały sprzedaży" },
   // Ogólne
   { href: "/settings/security", label: "Bezpieczeństwo", icon: ShieldCheck, group: "Ogólne" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Ogólne" },
@@ -141,9 +147,11 @@ export const navItems: NavItem[] = [
   { href: "/settings/warehouses", label: "Magazyny", icon: Warehouse, adminOnly: true, group: "Magazyn" },
   { href: "/settings/warehouse-documents", label: "Dokumenty magazynowe", icon: ClipboardList, adminOnly: true, group: "Magazyn" },
   { href: "/stocktakes", label: "Inwentaryzacja", icon: ClipboardCheck, adminOnly: true, group: "Magazyn" },
+  { href: "/stock-sync", label: "Sync magazynu", icon: RefreshCw, adminOnly: true, group: "Magazyn" },
   { href: "/pick-pack", label: "Pick & Pack", icon: PackageCheck, group: "Magazyn" },
   // Narzędzia
   { href: "/integrations", label: "Połączenia", icon: Plug, adminOnly: true, group: "Narzędzia" },
+  { href: "/workflows", label: "Workflow Builder", icon: Workflow, adminOnly: true, group: "Narzędzia" },
   { href: "/settings/automation", label: "Automatyzacja", icon: Zap, adminOnly: true, group: "Narzędzia" },
   { href: "/settings/currencies", label: "Waluty", icon: Coins, adminOnly: true, group: "Narzędzia" },
   { href: "/settings/marketing", label: "Marketing", icon: Send, adminOnly: true, group: "Narzędzia" },

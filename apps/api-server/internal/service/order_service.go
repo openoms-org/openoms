@@ -35,6 +35,7 @@ type OrderService struct {
 	automationService *AutomationService
 	shipmentService   *ShipmentService
 	allegroSync       *AllegroSyncService
+	stockSyncService  *StockSyncService
 }
 
 func NewOrderService(
@@ -91,6 +92,12 @@ func (s *OrderService) SetShipmentService(shipmentSvc *ShipmentService) {
 // Called after construction to avoid circular dependency.
 func (s *OrderService) SetAllegroSyncService(allegroSync *AllegroSyncService) {
 	s.allegroSync = allegroSync
+}
+
+// SetStockSyncService sets the stock sync service for real-time stock synchronization.
+// Called after construction to avoid circular dependency.
+func (s *OrderService) SetStockSyncService(stockSync *StockSyncService) {
+	s.stockSyncService = stockSync
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {

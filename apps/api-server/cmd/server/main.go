@@ -20,6 +20,9 @@ import (
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/kaufland"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/mirakl"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/olx"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/prestashop"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/shoper"
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/shopify"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/woocommerce"
 
 	// Register carrier providers via init().
@@ -213,6 +216,14 @@ func main() {
 	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
+	// Stock Sync
+	stockSyncChannelRepo := repository.NewStockSyncChannelRepository()
+	stockSyncEventRepo := repository.NewStockSyncEventRepository()
+	stockSyncService := service.NewStockSyncService(stockSyncChannelRepo, stockSyncEventRepo, productRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+
+	// Wire stock sync into order service (setter pattern)
+	orderService.SetStockSyncService(stockSyncService)
+
 	// Segment & Loyalty
 	segmentRepo := repository.NewCustomerSegmentRepository()
 	loyaltyRepo := repository.NewLoyaltyRepository()
@@ -310,6 +321,9 @@ func main() {
 	// Amazon auth handler
 	amazonAuthHandler := handler.NewAmazonAuthHandler(integrationService, encryptionKey)
 
+	// Store platform auth handler (Shoper, PrestaShop, Shopify)
+	storeAuthHandler := handler.NewStoreAuthHandler(integrationService, encryptionKey)
+
 	// Invoice handler
 	invoiceHandler := handler.NewInvoiceHandler(invoiceService)
 
@@ -328,6 +342,9 @@ func main() {
 
 	// Automation handler
 	automationHandler := handler.NewAutomationHandler(automationService)
+
+	// Workflow builder handler
+	workflowHandler := handler.NewWorkflowHandler(automationService)
 
 	// Variant handler
 	variantHandler := handler.NewVariantHandler(variantService)
@@ -414,6 +431,9 @@ func main() {
 	segmentHandler := handler.NewSegmentHandler(segmentService)
 	loyaltyHandler := handler.NewLoyaltyHandler(loyaltyService)
 
+	// Stock Sync handler
+	stockSyncHandler := handler.NewStockSyncHandler(stockSyncService)
+
 	// Pick & Pack handler
 	pickPackHandler := handler.NewPickPackHandler(pickPackService)
 
@@ -466,6 +486,11 @@ func main() {
 	repricingService := service.NewRepricingService(repricingRepo, productRepo, auditRepo, pool, slog.Default())
 	repricingHandler := handler.NewRepricingHandler(repricingService)
 
+	// Listing sync service & handler
+	listingSyncRepo := repository.NewListingSyncRepository()
+	listingSyncService := service.NewListingSyncService(listingSyncRepo, productRepo, productListingRepo, auditRepo, pool, slog.Default())
+	listingSyncHandler := handler.NewListingSyncHandler(listingSyncService)
+
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
 
@@ -493,9 +518,11 @@ func main() {
 		Allegro:           allegroHandler,
 		AllegroShipment:   allegroShipmentHandler,
 		AmazonAuth:        amazonAuthHandler,
+		StoreAuth:         storeAuthHandler,
 		Supplier:          supplierHandler,
 		Invoice:           invoiceHandler,
 		Automation:        automationHandler,
+		Workflow:          workflowHandler,
 		Import:            importHandler,
 		Variant:           variantHandler,
 		SyncJob:           syncJobHandler,
@@ -547,6 +574,8 @@ func main() {
 		BGRemoval:         bgRemovalHandler,
 		Segment:           segmentHandler,
 		Loyalty:           loyaltyHandler,
+		StockSync:         stockSyncHandler,
+		ListingSync:       listingSyncHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)
@@ -557,12 +586,16 @@ func main() {
 	workerMgr.Register(worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, slog.Default()))
 	workerMgr.Register(worker.NewAmazonOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewWooCommerceOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewShoperOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewPrestaShopOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewShopifyOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewSupplierSyncWorker(workerPool, supplierService, slog.Default()))
 	workerMgr.Register(worker.NewExchangeRateWorker(workerPool, exchangeRateService, slog.Default()))
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
 	workerMgr.Register(worker.NewDelayedActionWorker(workerPool, delayedActionRepo, automationExecutor, slog.Default()))
 	workerMgr.Register(worker.NewRecurringOrderWorker(workerPool, recurringOrderService, slog.Default()))
 	workerMgr.Register(worker.NewRepricingWorker(workerPool, repricingService, slog.Default()))
+	workerMgr.Register(worker.NewListingSyncWorker(workerPool, listingSyncRepo, listingSyncService, slog.Default()))
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

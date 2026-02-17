@@ -92,6 +92,10 @@ type RouterDeps struct {
 	BGRemoval         *handler.BGRemovalHandler
 	Segment           *handler.SegmentHandler
 	Loyalty           *handler.LoyaltyHandler
+	Workflow          *handler.WorkflowHandler
+	StockSync         *handler.StockSyncHandler
+	ListingSync       *handler.ListingSyncHandler
+	StoreAuth         *handler.StoreAuthHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -544,6 +548,13 @@ func New(deps RouterDeps) *chi.Mux {
 				// Amazon SP-API setup
 				r.Post("/amazon/setup", deps.AmazonAuth.Setup)
 
+				// Store platform integrations (Shoper, PrestaShop, Shopify)
+				if deps.StoreAuth != nil {
+					r.Post("/shoper/setup", deps.StoreAuth.SetupShoper)
+					r.Post("/prestashop/setup", deps.StoreAuth.SetupPrestaShop)
+					r.Post("/shopify/setup", deps.StoreAuth.SetupShopify)
+				}
+
 				r.Get("/", deps.Integration.List)
 				r.Post("/", deps.Integration.Create)
 				r.Get("/{id}", deps.Integration.Get)
@@ -686,6 +697,15 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Get("/{id}/logs", deps.Automation.GetLogs)
 					r.Post("/{id}/test", deps.Automation.TestRule)
 				})
+			})
+
+			// Workflow builder — admin only
+			r.Route("/workflows", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/templates", deps.Workflow.ListTemplates)
+				r.Post("/validate", deps.Workflow.Validate)
+				r.Post("/convert", deps.Workflow.Convert)
+				r.Get("/rules/{id}/workflow", deps.Workflow.GetWorkflowForRule)
 			})
 
 			// Stats — any authenticated user
@@ -848,6 +868,40 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/log", deps.Repricing.ListLog)
 				r.Get("/summary", deps.Repricing.GetSummary)
 			})
+
+			// Stock sync — admin only
+			if deps.StockSync != nil {
+				r.Route("/stock-sync", func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Get("/channels", deps.StockSync.ListChannels)
+					r.Post("/channels", deps.StockSync.CreateChannel)
+					r.Get("/channels/{id}", deps.StockSync.GetChannel)
+					r.Put("/channels/{id}", deps.StockSync.UpdateChannel)
+					r.Delete("/channels/{id}", deps.StockSync.DeleteChannel)
+					r.Post("/push", deps.StockSync.PushAll)
+					r.Post("/push/{product_id}", deps.StockSync.PushProduct)
+					r.Post("/reconcile/{product_id}", deps.StockSync.ReconcileProduct)
+					r.Get("/events", deps.StockSync.ListEvents)
+					r.Get("/dashboard", deps.StockSync.GetDashboard)
+					r.Get("/allocations/{product_id}", deps.StockSync.GetAllocations)
+				})
+			}
+
+			// Listing sync — admin only
+			if deps.ListingSync != nil {
+				r.Route("/listing-sync/configs", func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Get("/", deps.ListingSync.ListConfigs)
+					r.Post("/", deps.ListingSync.CreateConfig)
+					r.Get("/{id}", deps.ListingSync.GetConfig)
+					r.Put("/{id}", deps.ListingSync.UpdateConfig)
+					r.Delete("/{id}", deps.ListingSync.DeleteConfig)
+					r.Post("/{id}/sync", deps.ListingSync.TriggerSync)
+					r.Post("/{id}/sync-prices", deps.ListingSync.TriggerSyncPrices)
+					r.Post("/{id}/sync-stock", deps.ListingSync.TriggerSyncStock)
+					r.Get("/{id}/logs", deps.ListingSync.ListLogs)
+				})
+			}
 
 			// Payment reconciliation — admin only
 			r.Route("/reconciliation", func(r chi.Router) {

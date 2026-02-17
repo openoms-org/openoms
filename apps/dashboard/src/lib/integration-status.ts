@@ -25,6 +25,9 @@ export const INTEGRATION_STATUS: Record<string, IntegrationMaturity> = {
   smsapi: "in_development",
   mailchimp: "in_development",
   freshdesk: "in_development",
+  shoper: "in_development",
+  prestashop: "in_development",
+  shopify: "in_development",
 };
 
 export function isInDevelopment(provider: string): boolean {
