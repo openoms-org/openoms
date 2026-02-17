@@ -46,20 +46,19 @@ services:
 
   # ── Database migrations ────────────────────────────────────────
   # Runs golang-migrate, then exits. api-server waits for this.
+  # Built from source (Go 1.24 + distroless) to avoid CVEs in prebuilt image.
   migrate:
-    image: migrate/migrate:v4.19.1
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.migrate
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - internal
-    volumes:
-      - ./apps/api-server/migrations:/migrations:ro
     command: >
       -path=/migrations
       -database=postgres://openoms:${POSTGRES_PASSWORD}@postgres:5432/openoms?sslmode=disable
-      # NOTE: sslmode=disable is safe within Docker bridge network only.
-      # For external DB connections, use sslmode=require or sslmode=verify-full.
       up
     restart: "no"
 

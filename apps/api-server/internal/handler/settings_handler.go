@@ -546,6 +546,7 @@ func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, config)
 }
 
+// GetOnboardingSettings returns the onboarding wizard state for the tenant.
 func (h *SettingsHandler) GetOnboardingSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -561,6 +562,7 @@ func (h *SettingsHandler) GetOnboardingSettings(w http.ResponseWriter, r *http.R
 	writeJSON(w, http.StatusOK, cfg)
 }
 
+// UpdateOnboardingSettings saves the onboarding wizard state (e.g. dismissed).
 func (h *SettingsHandler) UpdateOnboardingSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
