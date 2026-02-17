@@ -76,6 +76,7 @@ export default function SupplierDetailPage() {
   const [code, setCode] = useState("");
   const [feedUrl, setFeedUrl] = useState("");
   const [feedFormat, setFeedFormat] = useState("iof");
+  const [syncInterval, setSyncInterval] = useState("60");
   const [status, setStatus] = useState("active");
 
   const { data: localProducts } = useProducts({
@@ -89,6 +90,7 @@ export default function SupplierDetailPage() {
       setCode(supplier.code || "");
       setFeedUrl(supplier.feed_url || "");
       setFeedFormat(supplier.feed_format);
+      setSyncInterval(String(supplier.sync_interval_minutes ?? 60));
       setStatus(supplier.status);
     }
   }, [supplier]);
@@ -103,7 +105,7 @@ export default function SupplierDetailPage() {
 
   const handleUpdate = () => {
     updateSupplier.mutate(
-      { name, code: code || undefined, feed_url: feedUrl || undefined, feed_format: feedFormat, status },
+      { name, code: code || undefined, feed_url: feedUrl || undefined, feed_format: feedFormat, sync_interval_minutes: parseInt(syncInterval, 10), status },
       {
         onSuccess: () => toast.success("Dostawca zaktualizowany"),
         onError: (error) =>
@@ -206,6 +208,22 @@ export default function SupplierDetailPage() {
                 </Select>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>Interwał synchronizacji</Label>
+              <Select value={syncInterval} onValueChange={setSyncInterval}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">Co 5 minut</SelectItem>
+                  <SelectItem value="15">Co 15 minut</SelectItem>
+                  <SelectItem value="30">Co 30 minut</SelectItem>
+                  <SelectItem value="60">Co 1 godzinę</SelectItem>
+                  <SelectItem value="120">Co 2 godziny</SelectItem>
+                  <SelectItem value="360">Co 6 godzin</SelectItem>
+                  <SelectItem value="720">Co 12 godzin</SelectItem>
+                  <SelectItem value="1440">Raz dziennie</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={handleUpdate} disabled={updateSupplier.isPending} className="w-full">
               {updateSupplier.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
             </Button>
@@ -220,6 +238,10 @@ export default function SupplierDetailPage() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Ostatnia synchronizacja</span>
               <span>{supplier.last_sync_at ? formatDate(supplier.last_sync_at) : "Nigdy"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Interwał synca</span>
+              <span>{supplier.sync_interval_minutes >= 60 ? `${supplier.sync_interval_minutes / 60}h` : `${supplier.sync_interval_minutes} min`}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Produkty dostawcy</span>

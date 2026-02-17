@@ -102,15 +102,21 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		settings = json.RawMessage("{}")
 	}
 
+	syncInterval := 60
+	if req.SyncIntervalMinutes != nil {
+		syncInterval = *req.SyncIntervalMinutes
+	}
+
 	supplier := &model.Supplier{
-		ID:         uuid.New(),
-		TenantID:   tenantID,
-		Name:       req.Name,
-		Code:       req.Code,
-		FeedURL:    req.FeedURL,
-		FeedFormat: req.FeedFormat,
-		Status:     "active",
-		Settings:   settings,
+		ID:                  uuid.New(),
+		TenantID:            tenantID,
+		Name:                req.Name,
+		Code:                req.Code,
+		FeedURL:             req.FeedURL,
+		FeedFormat:          req.FeedFormat,
+		Status:              "active",
+		Settings:            settings,
+		SyncIntervalMinutes: syncInterval,
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

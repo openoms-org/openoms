@@ -32,14 +32,15 @@ func (w *SupplierSyncWorker) Name() string {
 }
 
 func (w *SupplierSyncWorker) Interval() time.Duration {
-	return 1 * time.Hour
+	return 1 * time.Minute
 }
 
 func (w *SupplierSyncWorker) Run(ctx context.Context) error {
-	// Query all active suppliers with feed URLs across all tenants (bypasses RLS)
+	// Query active suppliers whose sync interval has elapsed (bypasses RLS)
 	rows, err := w.pool.Query(ctx,
 		`SELECT id, tenant_id FROM suppliers
-		 WHERE status = 'active' AND feed_url IS NOT NULL AND feed_url != ''`,
+		 WHERE status = 'active' AND feed_url IS NOT NULL AND feed_url != ''
+		   AND (last_sync_at IS NULL OR last_sync_at + (sync_interval_minutes || ' minutes')::interval < NOW())`,
 	)
 	if err != nil {
 		return err

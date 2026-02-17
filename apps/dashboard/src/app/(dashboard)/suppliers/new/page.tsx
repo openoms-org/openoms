@@ -32,6 +32,7 @@ const supplierSchema = z.object({
   code: z.string().optional(),
   feed_url: z.string().optional(),
   feed_format: z.string().optional(),
+  sync_interval_minutes: z.number().min(5).max(1440).optional(),
 });
 
 type SupplierForm = z.infer<typeof supplierSchema>;
@@ -47,7 +48,7 @@ export default function NewSupplierPage() {
     formState: { errors },
   } = useForm<SupplierForm>({
     resolver: zodResolver(supplierSchema),
-    defaultValues: { feed_format: "iof" },
+    defaultValues: { feed_format: "iof", sync_interval_minutes: 60 },
   });
 
   const onSubmit = (data: SupplierForm) => {
@@ -98,19 +99,40 @@ export default function NewSupplierPage() {
                 placeholder="https://example.com/feed.xml"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Format feeda</Label>
-              <Select
-                defaultValue="iof"
-                onValueChange={(v) => setValue("feed_format", v)}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="iof">IOF (Internet Offer Format)</SelectItem>
-                  <SelectItem value="csv">CSV</SelectItem>
-                  <SelectItem value="xml">XML</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Format feeda</Label>
+                <Select
+                  defaultValue="iof"
+                  onValueChange={(v) => setValue("feed_format", v)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="iof">IOF (Internet Offer Format)</SelectItem>
+                    <SelectItem value="csv">CSV</SelectItem>
+                    <SelectItem value="xml">XML</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sync_interval_minutes">Interwał synchronizacji (min)</Label>
+                <Select
+                  defaultValue="60"
+                  onValueChange={(v) => setValue("sync_interval_minutes", parseInt(v, 10))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">Co 5 minut</SelectItem>
+                    <SelectItem value="15">Co 15 minut</SelectItem>
+                    <SelectItem value="30">Co 30 minut</SelectItem>
+                    <SelectItem value="60">Co 1 godzinę</SelectItem>
+                    <SelectItem value="120">Co 2 godziny</SelectItem>
+                    <SelectItem value="360">Co 6 godzin</SelectItem>
+                    <SelectItem value="720">Co 12 godzin</SelectItem>
+                    <SelectItem value="1440">Raz dziennie</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex gap-2 pt-4">
               <Button type="submit" disabled={createSupplier.isPending}>
