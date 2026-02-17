@@ -426,7 +426,12 @@ func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
 		status := http.StatusBadGateway
 		switch {
 		case apiErr.StatusCode == 401:
-			status = http.StatusUnauthorized
+			// Allegro token expired/invalid — this is an integration error,
+			// NOT a user auth error. Return 502 so the frontend doesn't
+			// confuse it with a JWT 401 and enter a refresh loop.
+			status = http.StatusBadGateway
+			writeError(w, status, "Token Allegro wygasł lub jest nieprawidłowy. Połącz ponownie konto Allegro w ustawieniach integracji.")
+			return
 		case apiErr.StatusCode == 403:
 			status = http.StatusForbidden
 		case apiErr.StatusCode == 404:
