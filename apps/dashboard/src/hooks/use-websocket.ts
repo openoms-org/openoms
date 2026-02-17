@@ -3,9 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth";
+import { API_URL } from "@/lib/api-client";
 import type { WSEvent } from "@/types/api";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // Convert http(s) to ws(s)
 function getWSUrl(token: string): string {
@@ -17,12 +16,20 @@ function getWSUrl(token: string): string {
 const EVENT_INVALIDATION_MAP: Record<string, string[][]> = {
   "order.created": [["orders"]],
   "order.updated": [["orders"]],
+  "order.deleted": [["orders"]],
   "order.status_changed": [["orders"], ["stats"]],
   "shipment.created": [["shipments"]],
   "shipment.updated": [["shipments"]],
+  "shipment.deleted": [["shipments"]],
+  "shipment.status_changed": [["shipments"]],
+  "product.created": [["products"]],
   "product.updated": [["products"], ["product-stock"]],
+  "product.deleted": [["products"]],
   "return.created": [["returns"]],
   "return.updated": [["returns"]],
+  "return.deleted": [["returns"]],
+  "return.status_changed": [["returns"]],
+  "stock.changed": [["warehouse-stock"], ["products"]],
   "warehouse_document.created": [["warehouse-documents"]],
   "warehouse_document.confirmed": [["warehouse-documents"], ["warehouse-stock"], ["product-stock"]],
   "warehouse_document.cancelled": [["warehouse-documents"]],
@@ -46,7 +53,9 @@ export function useWebSocket(): UseWebSocketReturn {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const connect = useCallback(() => {
-    if (!token || !isAuthenticated) return;
+    // Re-read token from store to avoid stale closure value
+    const freshToken = useAuthStore.getState().token;
+    if (!freshToken || !isAuthenticated) return;
 
     // Clean up any existing connection
     if (wsRef.current) {
@@ -55,7 +64,7 @@ export function useWebSocket(): UseWebSocketReturn {
     }
 
     try {
-      const ws = new WebSocket(getWSUrl(token));
+      const ws = new WebSocket(getWSUrl(freshToken));
       wsRef.current = ws;
 
       ws.onopen = () => {

@@ -266,14 +266,22 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 			return errors.New("order not found")
 		}
 
+		// Sanitize user-facing text fields to prevent stored XSS
+		customerName := model.StripHTMLTags(existing.CustomerName)
+		var notes *string
+		if existing.Notes != nil {
+			sanitized := model.StripHTMLTags(*existing.Notes)
+			notes = &sanitized
+		}
+
 		newOrder = &model.Order{
 			ID:              uuid.New(),
 			TenantID:        existing.TenantID,
-			ExternalID:      existing.ExternalID,
+			ExternalID:      nil, // Clear ExternalID to avoid duplicate external references
 			Source:          existing.Source,
 			IntegrationID:   existing.IntegrationID,
 			Status:          "new",
-			CustomerName:    existing.CustomerName,
+			CustomerName:    customerName,
 			CustomerEmail:   existing.CustomerEmail,
 			CustomerPhone:   existing.CustomerPhone,
 			ShippingAddress: existing.ShippingAddress,
@@ -281,7 +289,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 			Items:           existing.Items,
 			TotalAmount:     existing.TotalAmount,
 			Currency:        existing.Currency,
-			Notes:           existing.Notes,
+			Notes:           notes,
 			Metadata:        existing.Metadata,
 			Tags:            existing.Tags,
 			OrderedAt:       existing.OrderedAt,
@@ -316,6 +324,11 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to duplicate order", "error", err)
 		writeError(w, http.StatusInternalServerError, "failed to duplicate order")
 		return
+	}
+
+	// Dispatch webhook for the duplicated order (async, best-effort)
+	if wd := h.orderService.WebhookDispatch(); wd != nil {
+		go wd.Dispatch(context.Background(), tenantID, "order.created", newOrder)
 	}
 
 	writeJSON(w, http.StatusCreated, newOrder)

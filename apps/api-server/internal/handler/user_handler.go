@@ -77,6 +77,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
+	claims := middleware.ClaimsFromContext(r.Context())
 
 	targetID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
@@ -90,11 +91,18 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.userService.UpdateUser(r.Context(), tenantID, targetID, req, actorID, clientIP(r))
+	actorRole := ""
+	if claims != nil {
+		actorRole = claims.Role
+	}
+
+	user, err := h.userService.UpdateUser(r.Context(), tenantID, targetID, req, actorID, actorRole, clientIP(r))
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrUserNotFound):
 			writeError(w, http.StatusNotFound, "user not found")
+		case errors.Is(err, service.ErrOwnerRoleEscalation):
+			writeError(w, http.StatusForbidden, "only owners can assign the owner role")
 		default:
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())

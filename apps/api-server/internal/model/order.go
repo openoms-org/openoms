@@ -252,9 +252,10 @@ type BulkStatusResult struct {
 }
 
 type BulkStatusTransitionResponse struct {
-	Results   []BulkStatusResult `json:"results"`
-	Succeeded int                `json:"succeeded"`
-	Failed    int                `json:"failed"`
+	Results       []BulkStatusResult `json:"results"`
+	Succeeded     int                `json:"succeeded"`
+	Failed        int                `json:"failed"`
+	AuditFailures []string           `json:"audit_failures,omitempty"`
 }
 
 // --- Custom Order Statuses ---

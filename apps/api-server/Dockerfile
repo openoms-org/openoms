@@ -71,4 +71,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
   CMD ["/healthcheck"]
 
+USER nonroot:nonroot
+
 ENTRYPOINT ["/server"]

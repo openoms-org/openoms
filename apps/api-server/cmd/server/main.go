@@ -337,7 +337,7 @@ func main() {
 	supplierHandler := handler.NewSupplierHandler(supplierService)
 
 	// Import service & handler
-	importService := service.NewImportService(orderRepo, auditRepo, pool)
+	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool)
 	importHandler := handler.NewImportHandler(importService)
 
 	// Automation handler
@@ -372,7 +372,8 @@ func main() {
 
 	// WebSocket hub and handler
 	wsHub := ws.NewHub()
-	go wsHub.Run()
+	wsCtx, wsCancel := context.WithCancel(context.Background())
+	go wsHub.Run(wsCtx)
 	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, cfg.FrontendURL)
 
 	// Wire hub into webhook dispatch service for real-time events
@@ -583,7 +584,7 @@ func main() {
 	workerMgr.Register(worker.NewOAuthRefresher(workerPool, encryptionKey, slog.Default()))
 	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, labelService, slog.Default()))
 	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, slog.Default()))
+	workerMgr.Register(worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, shipmentService, slog.Default()))
 	workerMgr.Register(worker.NewAmazonOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewWooCommerceOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewShoperOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
@@ -629,6 +630,7 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		slog.Error("server shutdown error", "error", err)
 	}
+	wsCancel()
 	workerMgr.Stop()
 	slog.Info("server stopped")
 }

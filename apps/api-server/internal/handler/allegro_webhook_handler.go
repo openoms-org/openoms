@@ -43,20 +43,25 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 	}
 	defer r.Body.Close()
 
-	// Verify signature if webhook secret is configured
-	if h.webhookSecret != "" {
-		signature := r.Header.Get("X-Allegro-Signature")
-		if signature == "" {
-			slog.Warn("allegro webhook: missing signature header")
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	// Reject requests if webhook secret is not configured
+	if h.webhookSecret == "" {
+		slog.Warn("allegro webhook: webhook secret not configured, rejecting request")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
 
-		if err := allegrosdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
-			slog.Warn("allegro webhook: invalid signature", "error", err)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	// Verify HMAC-SHA256 signature
+	signature := r.Header.Get("X-Allegro-Signature")
+	if signature == "" {
+		slog.Warn("allegro webhook: missing signature header")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if err := allegrosdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
+		slog.Warn("allegro webhook: invalid signature", "error", err)
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 
 	// Parse the webhook event

@@ -1,9 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, API_URL } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
 import type { BGRemovalResult, BGRemovalStatus } from "@/types/api";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 /** Check if background removal is configured on the server. */
 export function useBGRemovalStatus() {

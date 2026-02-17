@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -22,18 +23,47 @@ import (
 
 // ImportService handles CSV import of orders.
 type ImportService struct {
-	orderRepo repository.OrderRepo
-	auditRepo repository.AuditRepo
-	pool      *pgxpool.Pool
+	orderRepo  repository.OrderRepo
+	auditRepo  repository.AuditRepo
+	tenantRepo repository.TenantRepo
+	pool       *pgxpool.Pool
 }
 
 // NewImportService creates a new ImportService.
-func NewImportService(orderRepo repository.OrderRepo, auditRepo repository.AuditRepo, pool *pgxpool.Pool) *ImportService {
+func NewImportService(orderRepo repository.OrderRepo, auditRepo repository.AuditRepo, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *ImportService {
 	return &ImportService{
-		orderRepo: orderRepo,
-		auditRepo: auditRepo,
-		pool:      pool,
+		orderRepo:  orderRepo,
+		auditRepo:  auditRepo,
+		tenantRepo: tenantRepo,
+		pool:       pool,
 	}
+}
+
+// loadStatusConfig loads the tenant's order status configuration.
+func (s *ImportService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) *model.OrderStatusConfig {
+	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
+	if err != nil {
+		slog.Warn("import: failed to load tenant settings for status validation", "error", err)
+		cfg := model.DefaultOrderStatusConfig()
+		return &cfg
+	}
+
+	if settings != nil {
+		var allSettings map[string]json.RawMessage
+		if err := json.Unmarshal(settings, &allSettings); err == nil {
+			if raw, ok := allSettings["order_statuses"]; ok {
+				var config model.OrderStatusConfig
+				if err := json.Unmarshal(raw, &config); err != nil {
+					slog.Warn("import: failed to unmarshal order status config", "error", err)
+				} else if len(config.Statuses) > 0 {
+					return &config
+				}
+			}
+		}
+	}
+
+	cfg := model.DefaultOrderStatusConfig()
+	return &cfg
 }
 
 // stripBOM removes the UTF-8 BOM (byte order mark) from the beginning of data if present.
@@ -219,9 +249,11 @@ func (s *ImportService) ImportOrders(
 	}
 
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		statusConfig := s.loadStatusConfig(ctx, tx, tenantID)
+
 		for rowNum := 1; rowNum < len(records); rowNum++ {
 			row := records[rowNum]
-			rowErrors := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result)
+			rowErrors := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result, statusConfig)
 			if len(rowErrors) > 0 {
 				result.Errors = append(result.Errors, rowErrors...)
 				result.Skipped++
@@ -262,6 +294,7 @@ func (s *ImportService) importRow(
 	fieldToCol map[string]int,
 	rowNum int,
 	result *model.ImportResult,
+	statusConfig *model.OrderStatusConfig,
 ) []model.ImportError {
 	var rowErrors []model.ImportError
 
@@ -324,6 +357,14 @@ func (s *ImportService) importRow(
 	status := getVal("status")
 	if status == "" {
 		status = "new"
+	}
+	if statusConfig != nil && !statusConfig.IsValidStatus(status) {
+		rowErrors = append(rowErrors, model.ImportError{
+			Row:     rowNum,
+			Field:   "status",
+			Message: fmt.Sprintf("unknown status %q, not in tenant config", status),
+		})
+		return rowErrors
 	}
 
 	// Payment status

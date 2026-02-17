@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"sync"
@@ -40,9 +41,22 @@ func NewHub() *Hub {
 }
 
 // Run starts the hub event loop. Should be run as a goroutine.
-func (h *Hub) Run() {
+// It returns when the provided context is cancelled, closing all client connections.
+func (h *Hub) Run(ctx context.Context) {
 	for {
 		select {
+		case <-ctx.Done():
+			h.mu.Lock()
+			for tenantID, clients := range h.tenants {
+				for client := range clients {
+					close(client.send)
+				}
+				delete(h.tenants, tenantID)
+			}
+			h.mu.Unlock()
+			slog.Info("ws: hub stopped")
+			return
+
 		case client := <-h.register:
 			h.mu.Lock()
 			if _, ok := h.tenants[client.TenantID]; !ok {

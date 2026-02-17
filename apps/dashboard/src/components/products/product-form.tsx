@@ -467,6 +467,11 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
+              if (file.size > 5 * 1024 * 1024) {
+                toast.error("Plik jest za duży. Maksymalny rozmiar: 5 MB.");
+                e.target.value = "";
+                return;
+              }
               setUploadingMain(true);
               try {
                 const { url } = await uploadFile(file);
@@ -555,6 +560,11 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             onChange={async (e) => {
               const file = e.target.files?.[0];
               if (!file) return;
+              if (file.size > 5 * 1024 * 1024) {
+                toast.error("Plik jest za duży. Maksymalny rozmiar: 5 MB.");
+                e.target.value = "";
+                return;
+              }
               setUploadingIdx(imageList.length);
               try {
                 const { url } = await uploadFile(file);

@@ -130,6 +130,22 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 					return err
 				}
 
+				// Log audit entry for the created order
+				if p.auditRepo != nil {
+					if err := p.auditRepo.Log(ctx, tx, model.AuditEntry{
+						TenantID:   ti.TenantID,
+						UserID:     uuid.Nil,
+						Action:     "order.created",
+						EntityType: "order",
+						EntityID:   order.ID,
+						Changes:    map[string]string{"source": p.providerName, "external_id": mo.ExternalID, "auto": "true"},
+						IPAddress:  "worker",
+					}); err != nil {
+						p.logger.Error("worker: failed to log audit for order creation",
+							"order_id", order.ID, "error", err)
+					}
+				}
+
 				p.logger.Info("worker: order created",
 					"operation", "order.create",
 					"tenant_id", ti.TenantID,

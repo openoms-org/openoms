@@ -66,6 +66,11 @@ func (s *OrderService) AuditRepo() repository.AuditRepo {
 	return s.auditRepo
 }
 
+// WebhookDispatch returns the webhook dispatch service for direct access.
+func (s *OrderService) WebhookDispatch() *WebhookDispatchService {
+	return s.webhookDispatch
+}
+
 // SetInvoiceService sets the invoice service for auto-invoicing on status change.
 // Called after both services are constructed to avoid circular dependency.
 func (s *OrderService) SetInvoiceService(invoiceSvc *InvoiceService) {
@@ -111,7 +116,9 @@ func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID
 		if err := json.Unmarshal(settings, &allSettings); err == nil {
 			if raw, ok := allSettings["order_statuses"]; ok {
 				var config model.OrderStatusConfig
-				if err := json.Unmarshal(raw, &config); err == nil && len(config.Statuses) > 0 {
+				if err := json.Unmarshal(raw, &config); err != nil {
+					slog.Warn("failed to unmarshal order status config", "error", err)
+				} else if len(config.Statuses) > 0 {
 					return &config, nil
 				}
 			}
@@ -523,7 +530,9 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 				Changes:    map[string]string{"from": existing.Status, "to": req.Status},
 				IPAddress:  ip,
 			}); err != nil {
-				slog.Error("bulk status transition: failed to log audit", "order_id", orderID, "error", err)
+				slog.Warn("bulk status transition: audit log failed, status update succeeded without audit record",
+				"order_id", orderID, "error", err)
+			resp.AuditFailures = append(resp.AuditFailures, orderID.String())
 			}
 
 			updated, err := s.orderRepo.FindByID(ctx, tx, orderID)

@@ -56,7 +56,7 @@ func TestUserService_CreateUser_ValidationError_InvalidRole(t *testing.T) {
 func TestUserService_UpdateUser_ValidationError_NoFields(t *testing.T) {
 	svc := NewUserService(nil, nil, nil, nil)
 
-	_, err := svc.UpdateUser(context.Background(), uuid.New(), uuid.New(), model.UpdateUserRequest{}, uuid.New(), "127.0.0.1")
+	_, err := svc.UpdateUser(context.Background(), uuid.New(), uuid.New(), model.UpdateUserRequest{}, uuid.New(), "admin", "127.0.0.1")
 
 	require.Error(t, err)
 	var ve *ValidationError
@@ -69,7 +69,7 @@ func TestUserService_UpdateUser_ValidationError_InvalidRole(t *testing.T) {
 
 	_, err := svc.UpdateUser(context.Background(), uuid.New(), uuid.New(), model.UpdateUserRequest{
 		Role: &badRole,
-	}, uuid.New(), "127.0.0.1")
+	}, uuid.New(), "admin", "127.0.0.1")
 
 	require.Error(t, err)
 	var ve *ValidationError

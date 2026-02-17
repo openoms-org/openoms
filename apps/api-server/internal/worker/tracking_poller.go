@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
-	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -27,20 +26,28 @@ type trackableShipment struct {
 	Settings       json.RawMessage
 }
 
-// TrackingPoller periodically polls carrier APIs for shipment tracking updates.
-type TrackingPoller struct {
-	pool          *pgxpool.Pool
-	encryptionKey []byte
-	shipmentRepo  repository.ShipmentRepo
-	logger        *slog.Logger
+// ShipmentStatusTransitioner abstracts the ShipmentService.TransitionStatus method
+// to avoid importing the service package from the worker package.
+type ShipmentStatusTransitioner interface {
+	TransitionStatus(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.ShipmentStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Shipment, error)
 }
 
-func NewTrackingPoller(pool *pgxpool.Pool, encryptionKey []byte, shipmentRepo repository.ShipmentRepo, logger *slog.Logger) *TrackingPoller {
+// TrackingPoller periodically polls carrier APIs for shipment tracking updates.
+type TrackingPoller struct {
+	pool            *pgxpool.Pool
+	encryptionKey   []byte
+	shipmentService ShipmentStatusTransitioner
+	logger          *slog.Logger
+}
+
+func NewTrackingPoller(pool *pgxpool.Pool, encryptionKey []byte, shipmentRepo repository.ShipmentRepo, shipmentService ShipmentStatusTransitioner, logger *slog.Logger) *TrackingPoller {
+	// Note: shipmentRepo is accepted for backward compatibility but status transitions
+	// now go through shipmentService to ensure webhooks, audit, and order sync fire.
 	return &TrackingPoller{
-		pool:          pool,
-		encryptionKey: encryptionKey,
-		shipmentRepo:  shipmentRepo,
-		logger:        logger,
+		pool:            pool,
+		encryptionKey:   encryptionKey,
+		shipmentService: shipmentService,
+		logger:          logger,
 	}
 }
 
@@ -152,12 +159,13 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 				continue
 			}
 
-			// Update shipment status within tenant context
-			err = database.WithTenant(ctx, w.pool, ts.TenantID, func(tx pgx.Tx) error {
-				return w.shipmentRepo.UpdateStatus(ctx, tx, ts.ID, omsStatus)
-			})
+			// Transition shipment status through the service layer
+			// This ensures webhooks, audit logs, and order status sync are triggered
+			_, err = w.shipmentService.TransitionStatus(ctx, ts.TenantID, ts.ID,
+				model.ShipmentStatusTransitionRequest{Status: omsStatus},
+				uuid.Nil, "tracking_poller")
 			if err != nil {
-				w.logger.Error("tracking poller: update status failed",
+				w.logger.Error("tracking poller: transition status failed",
 					"operation", "shipment.status_update",
 					"tenant_id", ts.TenantID,
 					"entity_id", ts.ID,

@@ -574,7 +574,8 @@ func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.emailService.SendTestEmail(r.Context(), emailCfg, req.ToEmail); err != nil {
-		writeError(w, http.StatusBadGateway, "failed to send test email: "+err.Error())
+		slog.Error("failed to send test email", "error", err, "tenant_id", tenantID)
+		writeError(w, http.StatusBadGateway, "Nie udało się wysłać testowego emaila. Sprawdź konfigurację SMTP.")
 		return
 	}
 
@@ -779,7 +780,8 @@ func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.smsService.SendTestSMS(r.Context(), smsCfg, req.Phone); err != nil {
-		writeError(w, http.StatusBadGateway, "failed to send test SMS: "+err.Error())
+		slog.Error("failed to send test SMS", "error", err, "tenant_id", tenantID)
+		writeError(w, http.StatusBadGateway, "Nie udało się wysłać testowego SMS. Sprawdź konfigurację.")
 		return
 	}
 
@@ -804,10 +806,81 @@ func (h *SettingsHandler) ExportSettings(w http.ResponseWriter, r *http.Request)
 		settings = json.RawMessage("{}")
 	}
 
+	// Mask sensitive fields before export
+	settings = maskSensitiveSettings(settings)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", `attachment; filename="settings-export.json"`)
 	w.WriteHeader(http.StatusOK)
 	w.Write(settings)
+}
+
+// maskSensitiveSettings redacts credentials and secrets from settings JSON before export.
+func maskSensitiveSettings(raw json.RawMessage) json.RawMessage {
+	var allSettings map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &allSettings); err != nil {
+		return raw
+	}
+
+	// Mask email SMTP password
+	if emailRaw, ok := allSettings["email"]; ok {
+		var emailCfg map[string]any
+		if err := json.Unmarshal(emailRaw, &emailCfg); err == nil {
+			if _, has := emailCfg["smtp_pass"]; has {
+				emailCfg["smtp_pass"] = "**REDACTED**"
+			}
+			if masked, err := json.Marshal(emailCfg); err == nil {
+				allSettings["email"] = masked
+			}
+		}
+	}
+
+	// Mask SMS API token
+	if smsRaw, ok := allSettings["sms"]; ok {
+		var smsCfg map[string]any
+		if err := json.Unmarshal(smsRaw, &smsCfg); err == nil {
+			if _, has := smsCfg["api_token"]; has {
+				smsCfg["api_token"] = "**REDACTED**"
+			}
+			if masked, err := json.Marshal(smsCfg); err == nil {
+				allSettings["sms"] = masked
+			}
+		}
+	}
+
+	// Mask invoicing credentials
+	if invRaw, ok := allSettings["invoicing"]; ok {
+		var invCfg map[string]any
+		if err := json.Unmarshal(invRaw, &invCfg); err == nil {
+			if _, has := invCfg["credentials"]; has {
+				invCfg["credentials"] = map[string]any{}
+			}
+			if masked, err := json.Marshal(invCfg); err == nil {
+				allSettings["invoicing"] = masked
+			}
+		}
+	}
+
+	// Mask webhook endpoint secrets
+	if whRaw, ok := allSettings["webhooks"]; ok {
+		var whCfg model.WebhookConfig
+		if err := json.Unmarshal(whRaw, &whCfg); err == nil {
+			for i := range whCfg.Endpoints {
+				if whCfg.Endpoints[i].Secret != "" {
+					whCfg.Endpoints[i].Secret = "**REDACTED**"
+				}
+			}
+			if masked, err := json.Marshal(whCfg); err == nil {
+				allSettings["webhooks"] = masked
+			}
+		}
+	}
+
+	result, err := json.Marshal(allSettings)
+	if err != nil {
+		return raw
+	}
+	return result
 }
 
 func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request) {
@@ -830,6 +903,19 @@ func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request)
 	if err := json.Unmarshal(rawBody, &incoming); err != nil {
 		writeError(w, http.StatusBadRequest, "request body must be a JSON object")
 		return
+	}
+
+	// SSRF protection: validate webhook URLs in imported settings
+	if whRaw, ok := incoming["webhooks"]; ok {
+		var whCfg model.WebhookConfig
+		if err := json.Unmarshal(whRaw, &whCfg); err == nil {
+			for _, ep := range whCfg.Endpoints {
+				if ep.URL != "" && netutil.IsPrivateURL(ep.URL) {
+					writeError(w, http.StatusBadRequest, fmt.Sprintf("imported webhook URL %q resolves to a private/internal address", ep.URL))
+					return
+				}
+			}
+		}
 	}
 
 	var updatedSettings json.RawMessage

@@ -14,6 +14,8 @@ export function useAuth() {
   const router = useRouter();
   const { user, tenant, isAuthenticated, isLoading } = useAuthStore();
 
+  const secureFlag = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+
   const login = async (data: LoginRequest): Promise<LoginResult> => {
     const res = await apiClient<LoginResponse>("/v1/auth/login", {
       method: "POST",
@@ -26,7 +28,7 @@ export function useAuth() {
 
     if (res.access_token && res.user && res.tenant) {
       useAuthStore.getState().setAuth(res.access_token, res.user, res.tenant);
-      document.cookie = "has_session=1; path=/; SameSite=Lax; max-age=2592000";
+      document.cookie = `has_session=1; path=/; SameSite=Lax; max-age=2592000${secureFlag}`;
       router.push("/");
     }
 
@@ -39,7 +41,7 @@ export function useAuth() {
       body: JSON.stringify({ temp_token: tempToken, code }),
     });
     useAuthStore.getState().setAuth(res.access_token, res.user, res.tenant);
-    document.cookie = "has_session=1; path=/; SameSite=Lax; max-age=2592000";
+    document.cookie = `has_session=1; path=/; SameSite=Lax; max-age=2592000${secureFlag}`;
     router.push("/");
   };
 
@@ -49,14 +51,14 @@ export function useAuth() {
       body: JSON.stringify(data),
     });
     useAuthStore.getState().setAuth(res.access_token, res.user, res.tenant);
-    document.cookie = "has_session=1; path=/; SameSite=Lax; max-age=2592000";
+    document.cookie = `has_session=1; path=/; SameSite=Lax; max-age=2592000${secureFlag}`;
     router.push("/");
   };
 
   const logout = async () => {
     await apiClient("/v1/auth/logout", { method: "POST" }).catch(() => {});
     useAuthStore.getState().clearAuth();
-    document.cookie = "has_session=; path=/; max-age=0";
+    document.cookie = `has_session=; path=/; max-age=0${secureFlag}`;
     router.push("/login");
   };
 

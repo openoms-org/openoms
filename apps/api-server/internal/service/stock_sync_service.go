@@ -272,7 +272,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 
 	// Dispatch webhook for stock change
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(ctx, tenantID, "stock.changed", event)
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event)
 	}
 
 	s.logger.Info("stock sync: stock change recorded",

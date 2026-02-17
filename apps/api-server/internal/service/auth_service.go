@@ -457,6 +457,9 @@ func (s *AuthService) ValidateRefreshToken(tokenStr string) (*RefreshTokenInfo, 
 	if err != nil {
 		return nil, err
 	}
+	if claims.Type != "refresh" {
+		return nil, fmt.Errorf("invalid token type")
+	}
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		return nil, err

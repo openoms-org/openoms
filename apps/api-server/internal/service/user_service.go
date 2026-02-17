@@ -20,6 +20,7 @@ var (
 	ErrCannotDeleteSelf      = errors.New("cannot delete your own account")
 	ErrCannotDeleteLastOwner = errors.New("cannot delete the last owner of the tenant")
 	ErrDuplicateEmail        = errors.New("email already exists in this tenant")
+	ErrOwnerRoleEscalation   = errors.New("only owners can assign the owner role")
 )
 
 type UserService struct {
@@ -123,9 +124,14 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 	return user, nil
 }
 
-func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID, req model.UpdateUserRequest, actorID uuid.UUID, ip string) (*model.User, error) {
+func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID, req model.UpdateUserRequest, actorID uuid.UUID, actorRole string, ip string) (*model.User, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
+	}
+
+	// Only owners can assign the owner role
+	if req.Role != nil && *req.Role == "owner" && actorRole != "owner" {
+		return nil, ErrOwnerRoleEscalation
 	}
 
 	var user *model.User

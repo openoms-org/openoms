@@ -98,6 +98,14 @@ export default function CompanySettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Plik jest za duży. Maksymalny rozmiar: 5 MB.");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
     setUploading(true);
     try {
       const result = await uploadFile(file);
@@ -155,7 +163,7 @@ export default function CompanySettingsPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="hidden"
                 onChange={handleLogoUpload}
               />

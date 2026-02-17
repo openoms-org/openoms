@@ -21,7 +21,10 @@ const registerSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug może zawierać tylko małe litery, cyfry i myślniki"),
   name: z.string().min(1, "Imię i nazwisko jest wymagane"),
   email: z.string().email("Nieprawidłowy adres email"),
-  password: z.string().min(8, "Hasło musi mieć minimum 8 znaków"),
+  password: z.string()
+    .min(8, "Hasło musi mieć minimum 8 znaków")
+    .regex(/[A-Z]/, "Hasło musi zawierać wielką literę")
+    .regex(/[0-9]/, "Hasło musi zawierać cyfrę"),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
