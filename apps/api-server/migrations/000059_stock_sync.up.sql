@@ -48,7 +48,7 @@ CREATE INDEX idx_stock_sync_events_tenant_created ON stock_sync_events(tenant_id
 -- Triggers
 CREATE TRIGGER update_stock_sync_channels_updated_at
     BEFORE UPDATE ON stock_sync_channels
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- Grants
 GRANT SELECT, INSERT, UPDATE, DELETE ON stock_sync_channels TO openoms_app;
