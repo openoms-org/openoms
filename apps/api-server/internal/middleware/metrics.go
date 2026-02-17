@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"bufio"
 	"fmt"
+	"net"
 	"net/http"
 	"sort"
 	"strconv"
@@ -90,6 +92,21 @@ func (w *metricsResponseWriter) Write(b []byte) (int, error) {
 // Unwrap supports http.ResponseController introduced in Go 1.20.
 func (w *metricsResponseWriter) Unwrap() http.ResponseWriter {
 	return w.ResponseWriter
+}
+
+// Hijack implements http.Hijacker so WebSocket upgrades work through the metrics middleware.
+func (w *metricsResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hj, ok := w.ResponseWriter.(http.Hijacker); ok {
+		return hj.Hijack()
+	}
+	return nil, nil, fmt.Errorf("upstream ResponseWriter does not implement http.Hijacker")
+}
+
+// Flush implements http.Flusher for streaming/SSE support.
+func (w *metricsResponseWriter) Flush() {
+	if fl, ok := w.ResponseWriter.(http.Flusher); ok {
+		fl.Flush()
+	}
 }
 
 // Middleware returns an HTTP middleware that records request metrics.
