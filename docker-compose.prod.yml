@@ -47,7 +47,7 @@ services:
   # ── Database migrations ────────────────────────────────────────
   # Runs golang-migrate, then exits. api-server waits for this.
   migrate:
-    image: migrate/migrate:v4.18.1
+    image: migrate/migrate:v4.19.1
     depends_on:
       postgres:
         condition: service_healthy
