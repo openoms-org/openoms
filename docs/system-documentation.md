@@ -45,7 +45,7 @@
 
 ### Licencja
 
-- `apps/` -- BSL 1.1 (core, converts to AGPLv3 on 2030-02-13)
+- `apps/` -- AGPLv3 (core, converts to AGPLv3 on 2030-02-13)
 - `packages/` -- MIT (SDK-i)
 
 ---
@@ -213,11 +213,11 @@ Domyslna liczba replik: 1 (API, Dashboard, Worker). Skalowanie przez `replicaCou
 ```
 OpenOMS/
 +-- apps/
-|   +-- api-server/          <- Go backend (BSL 1.1)
+|   +-- api-server/          <- Go backend (AGPLv3)
 |   |   +-- cmd/server/      <- punkt wejscia
 |   |   +-- internal/        <- logika aplikacji (386 plikow Go, 71 testow)
 |   |   +-- migrations/      <- 94 migracji SQL (000001-000094)
-|   +-- dashboard/           <- Next.js frontend (BSL 1.1)
+|   +-- dashboard/           <- Next.js frontend (AGPLv3)
 |       +-- src/app/         <- 81 stron (App Router)
 |       +-- src/components/  <- 81 komponentow React
 |       +-- src/hooks/       <- 45 custom hooks
@@ -1715,7 +1715,7 @@ Haslo testowe: `password123`
 | **Pakiety SDK** | 21 |
 | **Testy E2E** | 12 specow Playwright |
 | **Jezyki** | Go, TypeScript, SQL |
-| **Licencja** | BSL 1.1 (apps) + MIT (packages) |
+| **Licencja** | AGPLv3 (apps) + MIT (packages) |
 
 ### Testy
 

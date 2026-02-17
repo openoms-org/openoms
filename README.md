@@ -1,6 +1,6 @@
 # OpenOMS
 
-[![License: BSL 1.1](https://img.shields.io/badge/License-BSL%201.1-orange.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev/)
 [![Build](https://img.shields.io/github/actions/workflow/status/openoms-org/openoms/ci.yml?branch=main&label=CI)](https://github.com/openoms-org/openoms/actions)
 [![Discord](https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/3Z5hzeH5)
@@ -182,11 +182,11 @@ task clean       # Stop containers and remove volumes
 ```
 openoms/
 ├── apps/
-│   ├── api-server/              # Go backend (BSL 1.1)
+│   ├── api-server/              # Go backend (AGPLv3)
 │   │   ├── cmd/server/          # Entrypoint
 │   │   ├── internal/            # Handlers, services, repositories, workers
 │   │   └── migrations/          # 94 SQL migrations
-│   └── dashboard/               # Next.js frontend (BSL 1.1)
+│   └── dashboard/               # Next.js frontend (AGPLv3)
 │       └── src/
 ├── packages/                    # 21 standalone SDK libraries (MIT)
 ├── deploy/
@@ -350,7 +350,7 @@ Docker images are public on GHCR:
 
 ## License
 
-- **Core applications** (`apps/`): [Business Source License 1.1](LICENSE) (converts to AGPLv3 on 2030-02-13)
+- **Core applications** (`apps/`): [GNU Affero General Public License v3](LICENSE)
 - **SDK packages** (`packages/`): [MIT License](packages/allegro-go-sdk/LICENSE)
 
 ---
