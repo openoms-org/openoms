@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -101,14 +102,14 @@ func TestShipmentService_Create_ValidationError_ProviderTooLong(t *testing.T) {
 	svc := NewShipmentService(nil, nil, nil, nil, nil, nil)
 
 	// CreateShipmentRequest.Validate() checks validateMaxLength("provider", ..., 100)
-	longProvider := ""
-	for i := 0; i < 101; i++ {
-		longProvider += "x"
+	var longProvider strings.Builder
+	for range 101 {
+		longProvider.WriteString("x")
 	}
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateShipmentRequest{
 		OrderID:  uuid.New(),
-		Provider: longProvider,
+		Provider: longProvider.String(),
 	}, uuid.New(), "127.0.0.1")
 
 	require.Error(t, err)
