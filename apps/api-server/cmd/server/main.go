@@ -123,6 +123,14 @@ func main() {
 	}
 	slog.Info("token service initialized (Ed25519)")
 
+	// Warn about missing webhook secrets
+	if cfg.AllegroWebhookSecret == "" {
+		slog.Warn("ALLEGRO_WEBHOOK_SECRET is empty — Allegro webhook signature verification is DISABLED")
+	}
+	if cfg.InPostWebhookSecret == "" {
+		slog.Warn("INPOST_WEBHOOK_SECRET is empty — InPost webhook signature verification is DISABLED")
+	}
+
 	// Initialize services
 	passwordSvc := service.NewPasswordService()
 
@@ -328,7 +336,7 @@ func main() {
 	// WebSocket hub and handler
 	wsHub := ws.NewHub()
 	go wsHub.Run()
-	wsHandler := handler.NewWSHandler(wsHub, tokenSvc)
+	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, cfg.FrontendURL)
 
 	// Wire hub into webhook dispatch service for real-time events
 	webhookDispatchService.SetWSBroadcast(func(tenantID uuid.UUID, eventType string, payload any) {

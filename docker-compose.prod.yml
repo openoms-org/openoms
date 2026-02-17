@@ -58,6 +58,8 @@ services:
     command: >
       -path=/migrations
       -database=postgres://openoms:${POSTGRES_PASSWORD}@postgres:5432/openoms?sslmode=disable
+      # NOTE: sslmode=disable is safe within Docker bridge network only.
+      # For external DB connections, use sslmode=require or sslmode=verify-full.
       up
     restart: "no"
 
@@ -73,6 +75,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # NOTE: sslmode=disable is safe within Docker bridge network only.
       DATABASE_URL: postgres://openoms_app:${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env}@postgres:5432/openoms?sslmode=disable
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}

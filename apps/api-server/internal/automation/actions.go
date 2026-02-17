@@ -16,6 +16,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 // ActionExecutor executes a single automation action.
@@ -72,10 +73,8 @@ type DefaultActionExecutor struct {
 
 func NewDefaultActionExecutor(logger *slog.Logger) *DefaultActionExecutor {
 	return &DefaultActionExecutor{
-		logger: logger,
-		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+		logger:     logger,
+		httpClient: netutil.SafeHTTPClient(10 * time.Second),
 	}
 }
 

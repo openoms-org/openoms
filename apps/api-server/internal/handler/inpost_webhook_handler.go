@@ -25,6 +25,7 @@ func NewInPostWebhookHandler(webhookSecret string) *InPostWebhookHandler {
 // POST /v1/webhooks/inpost
 // This endpoint is public (no JWT auth) but verifies HMAC-SHA256 signature.
 func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB limit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("inpost webhook: failed to read body", "error", err)

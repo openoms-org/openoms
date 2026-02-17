@@ -34,31 +34,9 @@ type WebhookDispatchService struct {
 	wsBroadcast  wsBroadcastFunc
 }
 
-// noPrivateDialer returns a DialContext function that refuses to connect to private IP addresses.
-// This prevents SSRF TOCTOU attacks by checking the resolved IP at connect time (atomically).
+// noPrivateDialer delegates to netutil.NoPrivateDialer for SSRF protection.
 func noPrivateDialer() func(ctx context.Context, network, addr string) (net.Conn, error) {
-	dialer := &net.Dialer{Timeout: 5 * time.Second}
-	return func(ctx context.Context, network, addr string) (net.Conn, error) {
-		host, port, err := net.SplitHostPort(addr)
-		if err != nil {
-			return nil, fmt.Errorf("invalid address: %w", err)
-		}
-
-		ips, err := net.DefaultResolver.LookupHost(ctx, host)
-		if err != nil {
-			return nil, fmt.Errorf("DNS lookup failed: %w", err)
-		}
-
-		for _, ipStr := range ips {
-			ip := net.ParseIP(ipStr)
-			if ip != nil && netutil.IsPrivateIP(ip) {
-				return nil, fmt.Errorf("connection to private IP %s rejected", ipStr)
-			}
-		}
-
-		// Connect to the first resolved IP to avoid TOCTOU
-		return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0], port))
-	}
+	return netutil.NoPrivateDialer()
 }
 
 func NewWebhookDispatchService(

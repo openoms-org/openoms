@@ -34,6 +34,7 @@ func NewAllegroWebhookHandler(webhookSecret string, orderSyncer AllegroOrderSync
 // POST /v1/webhooks/allegro
 // This endpoint is public (no JWT auth) but verifies HMAC-SHA256 signature.
 func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB limit
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		slog.Error("allegro webhook: failed to read body", "error", err)

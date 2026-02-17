@@ -409,6 +409,13 @@ func (h *AllegroListingsHandler) uploadImageToAllegro(ctx context.Context, clien
 		uploadDir, _ := filepath.Abs(h.cfg.UploadDir)
 		filePath := filepath.Join(uploadDir, relPath)
 
+		// Prevent path traversal — ensure resolved path stays within upload dir
+		cleanPath := filepath.Clean(filePath)
+		cleanDir := filepath.Clean(uploadDir)
+		if !strings.HasPrefix(cleanPath, cleanDir+string(filepath.Separator)) && cleanPath != cleanDir {
+			return "", fmt.Errorf("path traversal blocked: %s escapes upload dir", relPath)
+		}
+
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return "", fmt.Errorf("read local image %s: %w", filePath, err)
