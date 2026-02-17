@@ -855,8 +855,12 @@ async function run() {
   // ── 7. AutoMod rules ──
   console.log("\n=== 7. AUTOMOD RULES ===");
 
+  await guild.channels.fetch(); // ensure fresh cache
   const alertChannel = guild.channels.cache.find(
     (c) => c.name === "github-feed"
+  );
+  console.log(
+    `  Alert channel: ${alertChannel ? `#${alertChannel.name} (${alertChannel.id})` : "not found"}`
   );
 
   const existingRules = await guild.autoModerationRules.fetch();
@@ -870,26 +874,21 @@ async function run() {
       continue;
     }
 
-    const actions = ruleDef.actions
-      .map((a) => {
-        if (
-          a.type === AutoModerationActionType.SendAlertMessage &&
-          alertChannel
-        ) {
-          return {
-            ...a,
-            metadata: { ...a.metadata, channelId: alertChannel.id },
-          };
+    // Build actions — resolve alert channel ID, skip alert if no channel
+    const actions = [];
+    for (const a of ruleDef.actions) {
+      if (a.type === AutoModerationActionType.SendAlertMessage) {
+        if (alertChannel) {
+          actions.push({
+            type: a.type,
+            metadata: { channelId: alertChannel.id },
+          });
         }
-        if (
-          a.type === AutoModerationActionType.SendAlertMessage &&
-          !alertChannel
-        ) {
-          return null;
-        }
-        return a;
-      })
-      .filter(Boolean);
+        // else skip this action entirely
+      } else {
+        actions.push(a);
+      }
+    }
 
     try {
       await guild.autoModerationRules.create({
@@ -1036,36 +1035,10 @@ Spam boty = natychmiastowy ban.`);
     }
   }
 
-  try {
-    await client.rest.put(`/guilds/${guild.id}/member-verification`, {
-      body: {
-        version: "2021-01-31T00:00:00.000000+00:00",
-        form_fields: [
-          {
-            field_type: "TERMS",
-            label: "Akceptuję regulamin serwera OpenOMS",
-            required: true,
-            values: [
-              "Szanuję innych — zero hejtu i obrażania",
-              "Nie spamię — żadnych reklam, crypto, linków afiliacyjnych",
-              "Piszę w odpowiednich kanałach",
-              "Nie wysyłam DM maintainerom bez zaproszenia",
-              "Przestrzegam Discord Terms of Service",
-            ],
-          },
-        ],
-        description:
-          "Witaj w społeczności OpenOMS! Zaakceptuj regulamin, żeby uzyskać pełny dostęp do serwera.",
-      },
-    });
-    console.log(
-      "  [set] Membership Screening — nowi muszą zaakceptować regulamin"
-    );
-  } catch (err) {
-    console.log(
-      `  [skip] Membership Screening: ${err.message}`
-    );
-  }
+  // Note: Membership Screening (member-verification API) is replaced by
+  // Community Onboarding (step 11). When Onboarding is enabled, Discord
+  // returns 405 for the old screening endpoint. Rules acceptance is now
+  // handled by the Onboarding flow + #zasady channel.
 
   // ── 11. Community Onboarding ──
   console.log("\n=== 11. COMMUNITY ONBOARDING ===");
@@ -1073,14 +1046,24 @@ Spam boty = natychmiastowy ban.`);
   await guild.channels.fetch(); // refresh after forum creation
 
   try {
+    // Get existing onboarding to preserve prompt IDs
+    let existingOnboarding = null;
+    try {
+      existingOnboarding = await client.rest.get(
+        `/guilds/${guild.id}/onboarding`
+      );
+    } catch {
+      // No existing onboarding
+    }
+
     // Build onboarding prompts with resolved IDs
-    const prompts = ONBOARDING_PROMPTS.map((prompt) => ({
-      type: 0, // MULTIPLE_CHOICE
-      title: prompt.title,
-      single_select: false,
-      required: true,
-      in_onboarding: true,
-      options: prompt.options.map((opt) => {
+    const prompts = ONBOARDING_PROMPTS.map((prompt, promptIdx) => {
+      // Try to match existing prompt by title to preserve its ID
+      const existingPrompt = existingOnboarding?.prompts?.find(
+        (p) => p.title === prompt.title
+      );
+
+      const options = prompt.options.map((opt, optIdx) => {
         const channelIds = (opt.channelNames || [])
           .map((name) => {
             const ch = guild.channels.cache.find(
@@ -1094,15 +1077,28 @@ Spam boty = natychmiastowy ban.`);
           .map((name) => roleMap[name]?.id)
           .filter(Boolean);
 
+        const existingOpt = existingPrompt?.options?.[optIdx];
+
         return {
+          ...(existingOpt?.id ? { id: existingOpt.id } : {}),
           title: opt.title,
           description: opt.description || "",
           emoji: opt.emoji ? { name: opt.emoji } : undefined,
           channel_ids: channelIds,
           role_ids: roleIds,
         };
-      }),
-    }));
+      });
+
+      return {
+        ...(existingPrompt?.id ? { id: existingPrompt.id } : {}),
+        type: 0, // MULTIPLE_CHOICE
+        title: prompt.title,
+        single_select: false,
+        required: true,
+        in_onboarding: true,
+        options,
+      };
+    });
 
     // Collect default channel IDs (required: at least 7)
     const defaultChannelNames = [
@@ -1142,58 +1138,67 @@ Spam boty = natychmiastowy ban.`);
     );
   }
 
-  // ── 12. Server Guide ──
+  // ── 12. Server Guide (Welcome Screen) ──
   console.log("\n=== 12. SERVER GUIDE ===");
 
   try {
-    // Server Guide uses the "welcome screen" API
-    const generalChannel = guild.channels.cache.find(
-      (c) => c.name === "general"
-    );
-    const contributingChannel = guild.channels.cache.find(
-      (c) => c.name === "contributing"
-    );
-    const installChannel = guild.channels.cache.find(
-      (c) => c.name === "pomoc-instalacja"
-    );
-    const bugsChannel = guild.channels.cache.find(
-      (c) => c.name === "bugs"
-    );
+    // Ensure WELCOME_SCREEN feature is available (requires Community)
+    const refetchedGuild = await guild.fetch();
+    const hasCommunity = refetchedGuild.features.includes("COMMUNITY");
 
-    const welcomeChannels = [
-      generalChannel && {
-        channel_id: generalChannel.id,
-        description: "Ogólne rozmowy o OpenOMS i e-commerce",
-        emoji_name: "💬",
-      },
-      installChannel && {
-        channel_id: installChannel.id,
-        description: "Potrzebujesz pomocy z instalacją? Tutaj!",
-        emoji_name: "🔧",
-      },
-      contributingChannel && {
-        channel_id: contributingChannel.id,
-        description: "Chcesz pomóc? Zacznij od tego kanału",
-        emoji_name: "💻",
-      },
-      bugsChannel && {
-        channel_id: bugsChannel.id,
-        description: "Znalazłeś buga? Zgłoś go tutaj",
-        emoji_name: "🐛",
-      },
-    ].filter(Boolean);
+    if (!hasCommunity) {
+      console.log(
+        "  [skip] Server Guide requires Community (enable in Discord Settings)"
+      );
+    } else {
+      const wsGeneralCh = guild.channels.cache.find(
+        (c) => c.name === "general"
+      );
+      const wsContribCh = guild.channels.cache.find(
+        (c) => c.name === "contributing"
+      );
+      const wsInstallCh = guild.channels.cache.find(
+        (c) => c.name === "pomoc-instalacja"
+      );
+      const wsBugsCh = guild.channels.cache.find(
+        (c) => c.name === "bugs"
+      );
 
-    await client.rest.patch(`/guilds/${guild.id}/welcome-screen`, {
-      body: {
-        enabled: true,
-        description:
-          "OpenOMS — open-source Order Management System dla polskiego e-commerce. Wybierz kanał aby zacząć!",
-        welcome_channels: welcomeChannels.slice(0, 5), // max 5
-      },
-    });
-    console.log(
-      "  [set] Server Guide (welcome screen) z 4 kanałami"
-    );
+      const welcomeChannels = [
+        wsGeneralCh && {
+          channel_id: wsGeneralCh.id,
+          description: "Ogólne rozmowy o OpenOMS i e-commerce",
+          emoji_name: "\uD83D\uDCAC",
+        },
+        wsInstallCh && {
+          channel_id: wsInstallCh.id,
+          description: "Potrzebujesz pomocy z instalacją? Tutaj!",
+          emoji_name: "\uD83D\uDD27",
+        },
+        wsContribCh && {
+          channel_id: wsContribCh.id,
+          description: "Chcesz pomóc w rozwoju? Zacznij tutaj",
+          emoji_name: "\uD83D\uDCBB",
+        },
+        wsBugsCh && {
+          channel_id: wsBugsCh.id,
+          description: "Znalazłeś buga? Zgłoś go tutaj",
+          emoji_name: "\uD83D\uDC1B",
+        },
+      ].filter(Boolean);
+
+      await client.rest.patch(`/guilds/${guild.id}/welcome-screen`, {
+        body: {
+          enabled: true,
+          description:
+            "OpenOMS — open-source Order Management System dla polskiego e-commerce. Wybierz kanał aby zacząć!",
+          welcome_channels: welcomeChannels.slice(0, 5),
+        },
+      });
+      console.log(
+        "  [set] Server Guide (welcome screen) z 4 kanałami"
+      );
+    }
   } catch (err) {
     console.log(
       `  [skip] Server Guide: ${err.message}`
