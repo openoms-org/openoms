@@ -54,7 +54,6 @@ apps/api-server/server
 # Legacy code (reference only, not part of new build)
 /mvp/
 /weekend-challenge/
-/github/
 
 # Internal research & notes (not part of published docs)
 docs/api-research/
