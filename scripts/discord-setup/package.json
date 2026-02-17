@@ -1,0 +1,12 @@
+{
+  "name": "openoms-discord-setup",
+  "version": "1.0.0",
+  "description": "One-shot script to configure the OpenOMS Discord server",
+  "type": "module",
+  "scripts": {
+    "setup": "node setup.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.17.0"
+  }
+}
