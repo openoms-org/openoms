@@ -213,6 +213,12 @@ func main() {
 	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
+	// Segment & Loyalty
+	segmentRepo := repository.NewCustomerSegmentRepository()
+	loyaltyRepo := repository.NewLoyaltyRepository()
+	segmentService := service.NewSegmentService(segmentRepo, auditRepo, pool, slog.Default())
+	loyaltyService := service.NewLoyaltyService(loyaltyRepo, auditRepo, pool, slog.Default())
+
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
 	automationRuleLogRepo := repository.NewAutomationRuleLogRepository()
@@ -364,6 +370,17 @@ func main() {
 		slog.Info("AI auto-categorization enabled", "model", cfg.OpenAIModel)
 	}
 
+	// Background removal service & handler
+	bgRemovalService := service.NewBGRemovalService(cfg.RemoveBGAPIKey)
+	bgRemovalHandler := handler.NewBGRemovalHandler(bgRemovalService, objectStorage, productRepo, pool, cfg.MaxUploadSize)
+	if cfg.RemoveBGAPIKey != "" {
+		slog.Info("background removal enabled (remove.bg)")
+	}
+
+	// Demand forecast service & handler
+	forecastService := service.NewForecastService(pool, productRepo, tenantRepo, orderRepo, supplierRepo)
+	forecastHandler := handler.NewForecastHandler(forecastService)
+
 	// Mailchimp marketing service & handler (Phase 34)
 	mailchimpService := service.NewMailchimpService(tenantRepo, customerRepo, pool, slog.Default())
 	marketingHandler := handler.NewMarketingHandler(mailchimpService)
@@ -392,6 +409,10 @@ func main() {
 
 	// Recurring order handler
 	recurringOrderHandler := handler.NewRecurringOrderHandler(recurringOrderService)
+
+	// Segment & Loyalty handlers
+	segmentHandler := handler.NewSegmentHandler(segmentService)
+	loyaltyHandler := handler.NewLoyaltyHandler(loyaltyService)
 
 	// Pick & Pack handler
 	pickPackHandler := handler.NewPickPackHandler(pickPackService)
@@ -439,6 +460,11 @@ func main() {
 	paymentRepo := repository.NewPaymentRepository()
 	reconciliationService := service.NewReconciliationService(paymentRepo, orderRepo, auditRepo, pool)
 	reconciliationHandler := handler.NewReconciliationHandler(reconciliationService)
+
+	// Repricing engine service & handler
+	repricingRepo := repository.NewRepricingRepository()
+	repricingService := service.NewRepricingService(repricingRepo, productRepo, auditRepo, pool, slog.Default())
+	repricingHandler := handler.NewRepricingHandler(repricingService)
 
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
@@ -516,6 +542,11 @@ func main() {
 		Dropship:          dropshipHandler,
 		SupplierPortal:    supplierPortalHandler,
 		RecurringOrder:    recurringOrderHandler,
+		Forecast:          forecastHandler,
+		Repricing:         repricingHandler,
+		BGRemoval:         bgRemovalHandler,
+		Segment:           segmentHandler,
+		Loyalty:           loyaltyHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)
@@ -531,6 +562,7 @@ func main() {
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
 	workerMgr.Register(worker.NewDelayedActionWorker(workerPool, delayedActionRepo, automationExecutor, slog.Default()))
 	workerMgr.Register(worker.NewRecurringOrderWorker(workerPool, recurringOrderService, slog.Default()))
+	workerMgr.Register(worker.NewRepricingWorker(workerPool, repricingService, slog.Default()))
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

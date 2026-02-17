@@ -377,3 +377,19 @@ type RecurringOrderRepo interface {
 	CreateItem(ctx context.Context, tx pgx.Tx, item *model.RecurringOrderItem) error
 	DeleteItemsByRecurringOrderID(ctx context.Context, tx pgx.Tx, recurringOrderID uuid.UUID) error
 }
+
+// RepricingRepo defines the interface for repricing rule and log persistence operations.
+type RepricingRepo interface {
+	ListRules(ctx context.Context, tx pgx.Tx, filter model.RepricingRuleListFilter) ([]model.RepricingRule, int, error)
+	FindRuleByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.RepricingRule, error)
+	CreateRule(ctx context.Context, tx pgx.Tx, rule *model.RepricingRule) error
+	UpdateRule(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRepricingRuleRequest) error
+	DeleteRule(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	ListActiveRules(ctx context.Context, tx pgx.Tx) ([]model.RepricingRule, error)
+	UpdateRuleApplied(ctx context.Context, tx pgx.Tx, id uuid.UUID, productsAffected int) error
+	CreateLog(ctx context.Context, tx pgx.Tx, log *model.RepricingLog) error
+	ListLogByRule(ctx context.Context, tx pgx.Tx, ruleID uuid.UUID, limit, offset int) ([]model.RepricingLog, int, error)
+	ListLogByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID, limit, offset int) ([]model.RepricingLog, int, error)
+	ListLog(ctx context.Context, tx pgx.Tx, limit, offset int) ([]model.RepricingLog, int, error)
+	GetSummary(ctx context.Context, tx pgx.Tx) (*model.RepricingSummary, error)
+}

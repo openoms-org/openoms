@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Pencil, ShoppingBag, Users, Award } from "lucide-react";
 import { useCustomer, useUpdateCustomer, useDeleteCustomer, useCustomerOrders } from "@/hooks/use-customers";
+import { useCustomerSegments } from "@/hooks/use-segments";
+import { useCustomerLoyaltyStatus } from "@/hooks/use-loyalty";
 import { usePriceLists } from "@/hooks/use-price-lists";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -57,6 +59,8 @@ export default function CustomerDetailPage() {
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
   const { data: priceListsData } = usePriceLists({ limit: 100, active: true });
   const priceLists = priceListsData?.items ?? [];
+  const { data: customerSegments } = useCustomerSegments(params.id);
+  const { data: loyaltyStatus } = useCustomerLoyaltyStatus(params.id);
 
   const [formData, setFormData] = useState<UpdateCustomerRequest>({});
 
@@ -393,6 +397,67 @@ export default function CustomerDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {customerSegments && customerSegments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="h-4 w-4" />
+                  Segmenty
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {customerSegments.map((seg) => (
+                    <Link
+                      key={seg.id}
+                      href={`/customers/segments/${seg.id}`}
+                      className="rounded-full px-2.5 py-0.5 text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={{
+                        backgroundColor: seg.color + "20",
+                        color: seg.color,
+                      }}
+                    >
+                      {seg.name}
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {loyaltyStatus && loyaltyStatus.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Award className="h-4 w-4" />
+                  Programy lojalnościowe
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {loyaltyStatus.map((ls) => (
+                  <Link
+                    key={ls.program_id}
+                    href={`/loyalty/${ls.program_id}`}
+                    className="block rounded-md border p-2 hover:bg-muted/50 transition-colors"
+                  >
+                    <p className="text-sm font-medium">{ls.program_name}</p>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                      {ls.program_type === "points" && (
+                        <span>{ls.points_balance.toLocaleString("pl-PL")} pkt</span>
+                      )}
+                      {ls.current_tier && (
+                        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-primary font-medium">
+                          {ls.current_tier}
+                        </span>
+                      )}
+                      <span>{ls.order_count} zamówień</span>
+                    </div>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

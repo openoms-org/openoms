@@ -48,6 +48,9 @@ import {
   Leaf,
   Globe,
   Repeat,
+  TrendingUp,
+  Eraser,
+  Award,
 } from "lucide-react";
 
 export interface NavItem {
@@ -81,11 +84,15 @@ export const navItems: NavItem[] = [
   { href: "/reconciliation", label: "Rozliczenia", icon: CreditCard, adminOnly: true, group: "Sprzedaż" },
   { href: "/orders/import", label: "Import", icon: Upload, group: "Sprzedaż" },
   { href: "/customers", label: "Klienci", icon: Contact, group: "Sprzedaż" },
+  { href: "/customers/segments", label: "Segmenty", icon: Users, group: "Sprzedaż" },
+  { href: "/loyalty", label: "Program lojalnościowy", icon: Award, group: "Sprzedaż" },
   { href: "/recurring-orders", label: "Subskrypcje", icon: Repeat, group: "Sprzedaż" },
   { href: "/packing", label: "Pakowanie", icon: ScanBarcode, group: "Sprzedaż" },
   { href: "/reports", label: "Raporty", icon: BarChart3, adminOnly: true, group: "Sprzedaż" },
   { href: "/reports/carbon", label: "Ślad węglowy", icon: Leaf, adminOnly: true, group: "Sprzedaż" },
   { href: "/reports/vat-oss", label: "Raport VAT OSS", icon: Globe, adminOnly: true, group: "Sprzedaż" },
+  { href: "/reports/forecast", label: "Prognoza popytu", icon: TrendingUp, adminOnly: true, group: "Sprzedaż" },
+  { href: "/repricing", label: "Repricing", icon: TrendingUp, adminOnly: true, group: "Sprzedaż" },
   // Katalog
   { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
   { href: "/products/import", label: "Import produktów", icon: Upload, group: "Katalog" },
@@ -144,6 +151,7 @@ export const navItems: NavItem[] = [
   { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true, group: "Narzędzia" },
   { href: "/purchase-orders", label: "Zamówienia zakupu", icon: ClipboardList, adminOnly: true, group: "Narzędzia" },
   { href: "/dropship-orders", label: "Dropshipping", icon: Truck, adminOnly: true, group: "Narzędzia" },
+  { href: "/tools/bg-removal", label: "Usuwanie tła", icon: Eraser, group: "Narzędzia" },
   // Monitoring
   { href: "/settings/sync-jobs", label: "Synchronizacja", icon: RefreshCw, adminOnly: true, group: "Monitoring" },
   { href: "/settings/webhooks/deliveries", label: "Dostawy webhooków", icon: Webhook, adminOnly: true, group: "Monitoring" },

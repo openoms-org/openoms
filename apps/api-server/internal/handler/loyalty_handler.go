@@ -1,0 +1,248 @@
+package handler
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+)
+
+type LoyaltyHandler struct {
+	loyaltyService *service.LoyaltyService
+}
+
+func NewLoyaltyHandler(loyaltyService *service.LoyaltyService) *LoyaltyHandler {
+	return &LoyaltyHandler{loyaltyService: loyaltyService}
+}
+
+func (h *LoyaltyHandler) ListPrograms(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	pagination := model.ParsePagination(r)
+
+	filter := model.LoyaltyProgramListFilter{
+		PaginationParams: pagination,
+	}
+
+	resp, err := h.loyaltyService.ListPrograms(r.Context(), tenantID, filter)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list loyalty programs")
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *LoyaltyHandler) GetProgram(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	programID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid program ID")
+		return
+	}
+
+	program, err := h.loyaltyService.GetProgram(r.Context(), tenantID, programID)
+	if err != nil {
+		if errors.Is(err, service.ErrLoyaltyProgramNotFound) {
+			writeError(w, http.StatusNotFound, "loyalty program not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to get loyalty program")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, program)
+}
+
+func (h *LoyaltyHandler) CreateProgram(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var req model.CreateLoyaltyProgramRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	program, err := h.loyaltyService.CreateProgram(r.Context(), tenantID, req, actorID, clientIP(r))
+	if err != nil {
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to create loyalty program")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, program)
+}
+
+func (h *LoyaltyHandler) UpdateProgram(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	programID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid program ID")
+		return
+	}
+
+	var req model.UpdateLoyaltyProgramRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	program, err := h.loyaltyService.UpdateProgram(r.Context(), tenantID, programID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrLoyaltyProgramNotFound):
+			writeError(w, http.StatusNotFound, "loyalty program not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to update loyalty program")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, program)
+}
+
+func (h *LoyaltyHandler) DeleteProgram(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	programID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid program ID")
+		return
+	}
+
+	err = h.loyaltyService.DeleteProgram(r.Context(), tenantID, programID, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrLoyaltyProgramNotFound):
+			writeError(w, http.StatusNotFound, "loyalty program not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to delete loyalty program")
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *LoyaltyHandler) GetCustomerLoyaltyStatus(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	customerID, err := uuid.Parse(chi.URLParam(r, "customer_id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid customer ID")
+		return
+	}
+
+	results, err := h.loyaltyService.GetCustomerLoyaltyStatus(r.Context(), tenantID, customerID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get customer loyalty status")
+		return
+	}
+	writeJSON(w, http.StatusOK, results)
+}
+
+func (h *LoyaltyHandler) AwardPoints(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	programID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid program ID")
+		return
+	}
+
+	var req model.AwardPointsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err = h.loyaltyService.AwardPoints(r.Context(), tenantID, programID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrLoyaltyProgramNotFound):
+			writeError(w, http.StatusNotFound, "loyalty program not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to award points")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *LoyaltyHandler) RedeemPoints(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	programID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid program ID")
+		return
+	}
+
+	var req model.RedeemPointsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err = h.loyaltyService.RedeemPoints(r.Context(), tenantID, programID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrLoyaltyProgramNotFound):
+			writeError(w, http.StatusNotFound, "loyalty program not found")
+		case errors.Is(err, service.ErrInsufficientPoints):
+			writeError(w, http.StatusBadRequest, "insufficient points")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to redeem points")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *LoyaltyHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	programID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid program ID")
+		return
+	}
+
+	limit := 20
+	if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 && l <= 100 {
+		limit = l
+	}
+
+	entries, err := h.loyaltyService.GetLeaderboard(r.Context(), tenantID, programID, limit)
+	if err != nil {
+		if errors.Is(err, service.ErrLoyaltyProgramNotFound) {
+			writeError(w, http.StatusNotFound, "loyalty program not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to get leaderboard")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, entries)
+}

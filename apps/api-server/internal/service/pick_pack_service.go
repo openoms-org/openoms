@@ -57,8 +57,8 @@ func NewPickPackService(
 	}
 }
 
-// orderItem represents a parsed order item from the items JSONB array.
-type orderItem struct {
+// pickPackOrderItem represents a parsed order item from the items JSONB array.
+type pickPackOrderItem struct {
 	ProductID *string `json:"product_id,omitempty"`
 	SKU       string  `json:"sku"`
 	Name      string  `json:"name"`
@@ -112,7 +112,7 @@ func (s *PickPackService) CreateSession(ctx context.Context, tenantID uuid.UUID,
 				return err
 			}
 
-			var items []orderItem
+			var items []pickPackOrderItem
 			if order.Items != nil {
 				if err := json.Unmarshal(order.Items, &items); err != nil {
 					return fmt.Errorf("parse order items for %s: %w", orderID, err)

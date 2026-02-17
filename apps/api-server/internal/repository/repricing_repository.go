@@ -1,0 +1,400 @@
+package repository
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+)
+
+type RepricingRepository struct{}
+
+func NewRepricingRepository() *RepricingRepository {
+	return &RepricingRepository{}
+}
+
+// --- Rules CRUD ---
+
+func (r *RepricingRepository) ListRules(ctx context.Context, tx pgx.Tx, filter model.RepricingRuleListFilter) ([]model.RepricingRule, int, error) {
+	where := "WHERE 1=1"
+	args := []any{}
+	argIdx := 1
+
+	if filter.Status != nil {
+		where += fmt.Sprintf(" AND status = $%d", argIdx)
+		args = append(args, *filter.Status)
+		argIdx++
+	}
+	if filter.Strategy != nil {
+		where += fmt.Sprintf(" AND strategy = $%d", argIdx)
+		args = append(args, *filter.Strategy)
+		argIdx++
+	}
+
+	var total int
+	countQuery := "SELECT COUNT(*) FROM repricing_rules " + where
+	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count repricing rules: %w", err)
+	}
+
+	allowedSortColumns := map[string]string{
+		"created_at": "created_at",
+		"priority":   "priority",
+		"name":       "name",
+		"status":     "status",
+		"strategy":   "strategy",
+	}
+	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
+
+	query := fmt.Sprintf(
+		`SELECT id, tenant_id, name, status, strategy, priority, scope_type, scope_value,
+		        params, min_price, max_price, channels, last_applied_at, products_affected,
+		        created_by, created_at, updated_at
+		 FROM repricing_rules %s
+		 %s
+		 LIMIT $%d OFFSET $%d`,
+		where, orderByClause, argIdx, argIdx+1,
+	)
+	args = append(args, filter.Limit, filter.Offset)
+
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list repricing rules: %w", err)
+	}
+	defer rows.Close()
+
+	var rules []model.RepricingRule
+	for rows.Next() {
+		var rule model.RepricingRule
+		if err := rows.Scan(
+			&rule.ID, &rule.TenantID, &rule.Name, &rule.Status, &rule.Strategy,
+			&rule.Priority, &rule.ScopeType, &rule.ScopeValue,
+			&rule.Params, &rule.MinPrice, &rule.MaxPrice, &rule.Channels,
+			&rule.LastAppliedAt, &rule.ProductsAffected,
+			&rule.CreatedBy, &rule.CreatedAt, &rule.UpdatedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan repricing rule: %w", err)
+		}
+		rules = append(rules, rule)
+	}
+	return rules, total, rows.Err()
+}
+
+func (r *RepricingRepository) FindRuleByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.RepricingRule, error) {
+	var rule model.RepricingRule
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, name, status, strategy, priority, scope_type, scope_value,
+		        params, min_price, max_price, channels, last_applied_at, products_affected,
+		        created_by, created_at, updated_at
+		 FROM repricing_rules WHERE id = $1`, id,
+	).Scan(
+		&rule.ID, &rule.TenantID, &rule.Name, &rule.Status, &rule.Strategy,
+		&rule.Priority, &rule.ScopeType, &rule.ScopeValue,
+		&rule.Params, &rule.MinPrice, &rule.MaxPrice, &rule.Channels,
+		&rule.LastAppliedAt, &rule.ProductsAffected,
+		&rule.CreatedBy, &rule.CreatedAt, &rule.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find repricing rule by id: %w", err)
+	}
+	return &rule, nil
+}
+
+func (r *RepricingRepository) CreateRule(ctx context.Context, tx pgx.Tx, rule *model.RepricingRule) error {
+	return tx.QueryRow(ctx,
+		`INSERT INTO repricing_rules (
+			id, tenant_id, name, status, strategy, priority, scope_type, scope_value,
+			params, min_price, max_price, channels, created_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		RETURNING created_at, updated_at`,
+		rule.ID, rule.TenantID, rule.Name, rule.Status, rule.Strategy,
+		rule.Priority, rule.ScopeType, rule.ScopeValue,
+		rule.Params, rule.MinPrice, rule.MaxPrice, rule.Channels, rule.CreatedBy,
+	).Scan(&rule.CreatedAt, &rule.UpdatedAt)
+}
+
+func (r *RepricingRepository) UpdateRule(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRepricingRuleRequest) error {
+	setClauses := []string{}
+	args := []any{}
+	argIdx := 1
+
+	if req.Name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
+		args = append(args, *req.Name)
+		argIdx++
+	}
+	if req.Status != nil {
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
+		args = append(args, *req.Status)
+		argIdx++
+	}
+	if req.Strategy != nil {
+		setClauses = append(setClauses, fmt.Sprintf("strategy = $%d", argIdx))
+		args = append(args, *req.Strategy)
+		argIdx++
+	}
+	if req.Priority != nil {
+		setClauses = append(setClauses, fmt.Sprintf("priority = $%d", argIdx))
+		args = append(args, *req.Priority)
+		argIdx++
+	}
+	if req.ScopeType != nil {
+		setClauses = append(setClauses, fmt.Sprintf("scope_type = $%d", argIdx))
+		args = append(args, *req.ScopeType)
+		argIdx++
+	}
+	if req.ScopeValue != nil {
+		setClauses = append(setClauses, fmt.Sprintf("scope_value = $%d", argIdx))
+		args = append(args, *req.ScopeValue)
+		argIdx++
+	}
+	if req.Params != nil {
+		setClauses = append(setClauses, fmt.Sprintf("params = $%d", argIdx))
+		args = append(args, *req.Params)
+		argIdx++
+	}
+	if req.MinPrice != nil {
+		setClauses = append(setClauses, fmt.Sprintf("min_price = $%d", argIdx))
+		args = append(args, *req.MinPrice)
+		argIdx++
+	}
+	if req.MaxPrice != nil {
+		setClauses = append(setClauses, fmt.Sprintf("max_price = $%d", argIdx))
+		args = append(args, *req.MaxPrice)
+		argIdx++
+	}
+	if req.Channels != nil {
+		setClauses = append(setClauses, fmt.Sprintf("channels = $%d", argIdx))
+		args = append(args, *req.Channels)
+		argIdx++
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	setClauses = append(setClauses, "updated_at = NOW()")
+	args = append(args, id)
+
+	query := fmt.Sprintf("UPDATE repricing_rules SET %s WHERE id = $%d",
+		strings.Join(setClauses, ", "), argIdx)
+
+	ct, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("update repricing rule: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("repricing rule not found")
+	}
+	return nil
+}
+
+func (r *RepricingRepository) DeleteRule(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	ct, err := tx.Exec(ctx, "DELETE FROM repricing_rules WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("delete repricing rule: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("repricing rule not found")
+	}
+	return nil
+}
+
+func (r *RepricingRepository) ListActiveRules(ctx context.Context, tx pgx.Tx) ([]model.RepricingRule, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, name, status, strategy, priority, scope_type, scope_value,
+		        params, min_price, max_price, channels, last_applied_at, products_affected,
+		        created_by, created_at, updated_at
+		 FROM repricing_rules
+		 WHERE status = 'active'
+		 ORDER BY priority DESC, created_at ASC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list active repricing rules: %w", err)
+	}
+	defer rows.Close()
+
+	var rules []model.RepricingRule
+	for rows.Next() {
+		var rule model.RepricingRule
+		if err := rows.Scan(
+			&rule.ID, &rule.TenantID, &rule.Name, &rule.Status, &rule.Strategy,
+			&rule.Priority, &rule.ScopeType, &rule.ScopeValue,
+			&rule.Params, &rule.MinPrice, &rule.MaxPrice, &rule.Channels,
+			&rule.LastAppliedAt, &rule.ProductsAffected,
+			&rule.CreatedBy, &rule.CreatedAt, &rule.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan active repricing rule: %w", err)
+		}
+		rules = append(rules, rule)
+	}
+	return rules, rows.Err()
+}
+
+func (r *RepricingRepository) UpdateRuleApplied(ctx context.Context, tx pgx.Tx, id uuid.UUID, productsAffected int) error {
+	_, err := tx.Exec(ctx,
+		"UPDATE repricing_rules SET last_applied_at = NOW(), products_affected = $1, updated_at = NOW() WHERE id = $2",
+		productsAffected, id,
+	)
+	return err
+}
+
+// --- Log entries ---
+
+func (r *RepricingRepository) CreateLog(ctx context.Context, tx pgx.Tx, log *model.RepricingLog) error {
+	return tx.QueryRow(ctx,
+		`INSERT INTO repricing_log (id, tenant_id, rule_id, product_id, old_price, new_price, reason, channel)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		 RETURNING applied_at`,
+		log.ID, log.TenantID, log.RuleID, log.ProductID,
+		log.OldPrice, log.NewPrice, log.Reason, log.Channel,
+	).Scan(&log.AppliedAt)
+}
+
+func (r *RepricingRepository) ListLogByRule(ctx context.Context, tx pgx.Tx, ruleID uuid.UUID, limit, offset int) ([]model.RepricingLog, int, error) {
+	var total int
+	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_log WHERE rule_id = $1", ruleID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count repricing log: %w", err)
+	}
+
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, rule_id, product_id, old_price, new_price, reason, channel, applied_at
+		 FROM repricing_log
+		 WHERE rule_id = $1
+		 ORDER BY applied_at DESC
+		 LIMIT $2 OFFSET $3`,
+		ruleID, limit, offset,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list repricing log by rule: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []model.RepricingLog
+	for rows.Next() {
+		var l model.RepricingLog
+		if err := rows.Scan(
+			&l.ID, &l.TenantID, &l.RuleID, &l.ProductID,
+			&l.OldPrice, &l.NewPrice, &l.Reason, &l.Channel, &l.AppliedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan repricing log: %w", err)
+		}
+		logs = append(logs, l)
+	}
+	return logs, total, rows.Err()
+}
+
+func (r *RepricingRepository) ListLogByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID, limit, offset int) ([]model.RepricingLog, int, error) {
+	var total int
+	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_log WHERE product_id = $1", productID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count repricing log by product: %w", err)
+	}
+
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, rule_id, product_id, old_price, new_price, reason, channel, applied_at
+		 FROM repricing_log
+		 WHERE product_id = $1
+		 ORDER BY applied_at DESC
+		 LIMIT $2 OFFSET $3`,
+		productID, limit, offset,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list repricing log by product: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []model.RepricingLog
+	for rows.Next() {
+		var l model.RepricingLog
+		if err := rows.Scan(
+			&l.ID, &l.TenantID, &l.RuleID, &l.ProductID,
+			&l.OldPrice, &l.NewPrice, &l.Reason, &l.Channel, &l.AppliedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan repricing log: %w", err)
+		}
+		logs = append(logs, l)
+	}
+	return logs, total, rows.Err()
+}
+
+func (r *RepricingRepository) ListLog(ctx context.Context, tx pgx.Tx, limit, offset int) ([]model.RepricingLog, int, error) {
+	var total int
+	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_log").Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count repricing log: %w", err)
+	}
+
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, rule_id, product_id, old_price, new_price, reason, channel, applied_at
+		 FROM repricing_log
+		 ORDER BY applied_at DESC
+		 LIMIT $1 OFFSET $2`,
+		limit, offset,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list repricing log: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []model.RepricingLog
+	for rows.Next() {
+		var l model.RepricingLog
+		if err := rows.Scan(
+			&l.ID, &l.TenantID, &l.RuleID, &l.ProductID,
+			&l.OldPrice, &l.NewPrice, &l.Reason, &l.Channel, &l.AppliedAt,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan repricing log: %w", err)
+		}
+		logs = append(logs, l)
+	}
+	return logs, total, rows.Err()
+}
+
+func (r *RepricingRepository) GetSummary(ctx context.Context, tx pgx.Tx) (*model.RepricingSummary, error) {
+	var s model.RepricingSummary
+
+	// Count active and paused rules
+	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_rules WHERE status = 'active'").Scan(&s.ActiveRules); err != nil {
+		return nil, fmt.Errorf("count active rules: %w", err)
+	}
+	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_rules WHERE status = 'paused'").Scan(&s.PausedRules); err != nil {
+		return nil, fmt.Errorf("count paused rules: %w", err)
+	}
+
+	// Changes today
+	if err := tx.QueryRow(ctx,
+		"SELECT COUNT(*) FROM repricing_log WHERE applied_at >= CURRENT_DATE",
+	).Scan(&s.ChangesToday); err != nil {
+		return nil, fmt.Errorf("count changes today: %w", err)
+	}
+
+	// Changes this week
+	if err := tx.QueryRow(ctx,
+		"SELECT COUNT(*) FROM repricing_log WHERE applied_at >= CURRENT_DATE - INTERVAL '7 days'",
+	).Scan(&s.ChangesWeek); err != nil {
+		return nil, fmt.Errorf("count changes week: %w", err)
+	}
+
+	// Average change percentage (this week)
+	if err := tx.QueryRow(ctx,
+		`SELECT COALESCE(AVG(ABS((new_price - old_price) / NULLIF(old_price, 0) * 100)), 0)
+		 FROM repricing_log
+		 WHERE applied_at >= CURRENT_DATE - INTERVAL '7 days'`,
+	).Scan(&s.AvgChangePct); err != nil {
+		return nil, fmt.Errorf("avg change pct: %w", err)
+	}
+
+	// Total affected products
+	if err := tx.QueryRow(ctx,
+		"SELECT COALESCE(SUM(products_affected), 0) FROM repricing_rules WHERE status = 'active'",
+	).Scan(&s.TotalAffected); err != nil {
+		return nil, fmt.Errorf("total affected: %w", err)
+	}
+
+	return &s, nil
+}

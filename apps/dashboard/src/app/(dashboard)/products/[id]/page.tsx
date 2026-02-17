@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Layers, Package, PackageOpen, Pencil, Plus, Store, Trash2, X, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Eraser, Layers, Package, PackageOpen, Pencil, Plus, Store, Trash2, X, Sparkles, Loader2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -69,6 +69,8 @@ import {
   useTranslateDescription,
 } from "@/hooks/use-ai";
 import type { CreateProductRequest, AISuggestion, AIDescribeRequest } from "@/types/api";
+import { useBGRemovalStatus, useRemoveProductImageBackground } from "@/hooks/use-bg-removal";
+import { useRepricingLog } from "@/hooks/use-repricing";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
@@ -94,6 +96,8 @@ export default function ProductDetailPage() {
 
   const { data: product, isLoading } = useProduct(params.id);
   const { data: categoriesConfig } = useProductCategories();
+  const { data: bgStatus } = useBGRemovalStatus();
+  const removeProductBg = useRemoveProductImageBackground(params.id);
   const updateProduct = useUpdateProduct(params.id);
   const deleteProduct = useDeleteProduct();
 
@@ -101,6 +105,7 @@ export default function ProductDetailPage() {
   const { data: bundleStockData } = useBundleStock(params.id);
   const addComponent = useAddBundleComponent(params.id);
   const removeComponent = useRemoveBundleComponent(params.id);
+  const { data: priceHistory } = useRepricingLog({ product_id: params.id, limit: 10 });
 
   const handleUpdate = (data: CreateProductRequest) => {
     updateProduct.mutate(
@@ -329,22 +334,66 @@ export default function ProductDetailPage() {
           <CardContent>
             {product.image_url ? (
               <div className="space-y-4">
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="max-w-sm rounded-lg border object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
+                <div className="relative group inline-block">
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="max-w-sm rounded-lg border object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  {bgStatus?.configured && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                      disabled={removeProductBg.isPending}
+                      onClick={() => {
+                        removeProductBg.mutate(-1, {
+                          onSuccess: () => toast.success("Tło zostało usunięte ze zdjęcia głównego"),
+                          onError: (error) => toast.error(error instanceof Error ? error.message : "Błąd usuwania tła"),
+                        });
+                      }}
+                    >
+                      {removeProductBg.isPending ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Eraser className="mr-1 h-3 w-3" />
+                      )}
+                      Usuń tło
+                    </Button>
+                  )}
+                </div>
                 {product.images && product.images.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {product.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img.url}
-                        alt={img.alt || `Zdjęcie ${i + 1}`}
-                        className="h-20 w-20 rounded border object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
+                      <div key={i} className="relative group">
+                        <img
+                          src={img.url}
+                          alt={img.alt || `Zdjęcie ${i + 1}`}
+                          className="h-20 w-20 rounded border object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        {bgStatus?.configured && (
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="absolute -top-1 -right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                            disabled={removeProductBg.isPending}
+                            onClick={() => {
+                              removeProductBg.mutate(i, {
+                                onSuccess: () => toast.success(`Tło usunięte ze zdjęcia ${i + 1}`),
+                                onError: (error) => toast.error(error instanceof Error ? error.message : "Błąd usuwania tła"),
+                              });
+                            }}
+                          >
+                            {removeProductBg.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Eraser className="h-3 w-3" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -614,6 +663,72 @@ export default function ProductDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Price History (Repricing Log) */}
+        {priceHistory && priceHistory.items.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Historia zmian cen
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Stara cena</TableHead>
+                    <TableHead>Nowa cena</TableHead>
+                    <TableHead>Zmiana</TableHead>
+                    <TableHead>Powód</TableHead>
+                    <TableHead>Data</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {priceHistory.items.map((log) => {
+                    const changePct =
+                      log.old_price > 0
+                        ? (
+                            ((log.new_price - log.old_price) / log.old_price) *
+                            100
+                          ).toFixed(1)
+                        : "0";
+                    const isIncrease = log.new_price > log.old_price;
+                    return (
+                      <TableRow key={log.id}>
+                        <TableCell>{formatCurrency(log.old_price)}</TableCell>
+                        <TableCell>{formatCurrency(log.new_price)}</TableCell>
+                        <TableCell>
+                          <span
+                            className={
+                              isIncrease ? "text-green-600" : "text-red-600"
+                            }
+                          >
+                            {isIncrease ? "+" : ""}
+                            {changePct}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                          {log.reason || "-"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(log.applied_at)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              <div className="mt-3 text-center">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/repricing">
+                    Zobacz wszystkie reguły repricing
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         </>
       )}
 

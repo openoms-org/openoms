@@ -51,6 +51,16 @@ export interface AIDescribeRequest {
   marketplace?: "allegro" | "amazon" | "ebay";
 }
 
+export interface BGRemovalResult {
+  url: string;
+  content_type: string;
+  message?: string;
+}
+
+export interface BGRemovalStatus {
+  configured: boolean;
+}
+
 export interface CreateUserRequest {
   email: string;
   name: string;
@@ -2204,3 +2214,280 @@ export interface RecurringOrderListParams extends PaginationParams {
   customer_id?: string;
   next_date_before?: string;
 }
+
+// === Demand Forecast ===
+export interface ProductForecast {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  current_stock: number;
+  days_ahead: number;
+  forecasted_units: number;
+  confidence_low: number;
+  confidence_high: number;
+  avg_daily_sales: number;
+  trend_direction: "up" | "down" | "stable";
+  trend_pct: number;
+  days_of_stock: number;
+  low_data_warning: boolean;
+}
+
+export interface ReorderRecommendation {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  current_stock: number;
+  forecasted_demand: number;
+  safety_stock: number;
+  reorder_point: number;
+  recommended_qty: number;
+  urgency: "critical" | "soon" | "planned";
+  days_until_stockout: number;
+  supplier_id?: string;
+  supplier_name?: string;
+  estimated_cost: number;
+}
+
+export interface SeasonalityData {
+  product_id: string;
+  product_name: string;
+  by_day_of_week: DayOfWeekSales[];
+  by_month: MonthSales[];
+}
+
+export interface DayOfWeekSales {
+  day: string;
+  avg_sales: number;
+  index: number;
+}
+
+export interface MonthSales {
+  month: string;
+  avg_sales: number;
+  index: number;
+}
+
+export interface ProductVelocity {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  total_revenue: number;
+  total_units: number;
+  abc_class: "A" | "B" | "C";
+  days_of_stock: number;
+  current_stock: number;
+}
+
+export interface ForecastConfig {
+  default_lead_time_days: number;
+  safety_stock_days: number;
+  forecast_days_ahead: number;
+}
+
+// === Repricing Engine ===
+export interface RepricingRule {
+  id: string;
+  tenant_id: string;
+  name: string;
+  status: "active" | "paused" | "archived";
+  strategy: "margin" | "competitive" | "time_based" | "stock_based";
+  priority: number;
+  scope_type: "all" | "category" | "tag" | "product_ids";
+  scope_value?: unknown;
+  params: Record<string, unknown>;
+  min_price?: number;
+  max_price?: number;
+  channels: string[];
+  last_applied_at?: string;
+  products_affected: number;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RepricingLog {
+  id: string;
+  tenant_id: string;
+  rule_id: string;
+  product_id: string;
+  old_price: number;
+  new_price: number;
+  reason?: string;
+  channel: string;
+  applied_at: string;
+}
+
+export interface CreateRepricingRuleRequest {
+  name: string;
+  strategy: string;
+  priority: number;
+  scope_type: string;
+  scope_value?: unknown;
+  params: Record<string, unknown>;
+  min_price?: number;
+  max_price?: number;
+  channels?: string[];
+}
+
+export interface UpdateRepricingRuleRequest {
+  name?: string;
+  status?: string;
+  strategy?: string;
+  priority?: number;
+  scope_type?: string;
+  scope_value?: unknown;
+  params?: Record<string, unknown>;
+  min_price?: number;
+  max_price?: number;
+  channels?: string[];
+}
+
+export interface RepricingSummary {
+  active_rules: number;
+  paused_rules: number;
+  changes_today: number;
+  changes_week: number;
+  avg_change_pct: number;
+  total_affected: number;
+}
+
+export interface SimulationResult {
+  product_id: string;
+  product_name: string;
+  sku?: string;
+  old_price: number;
+  new_price: number;
+  change_pct: number;
+  reason: string;
+}
+
+export interface ApplyResult {
+  rules_evaluated: number;
+  products_affected: number;
+  price_changes: number;
+}
+
+export interface RepricingRuleListParams extends PaginationParams {
+  status?: string;
+  strategy?: string;
+}
+
+// === Customer Segments ===
+export interface CustomerSegment {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  color: string;
+  segment_type: "manual" | "rfm_auto" | "rule_based";
+  rules?: Record<string, unknown>;
+  customer_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SegmentMember {
+  tenant_id: string;
+  segment_id: string;
+  customer_id: string;
+  added_at: string;
+  customer_name: string;
+  customer_email?: string;
+  total_orders: number;
+  total_spent: number;
+}
+
+export interface CustomerRFM {
+  customer_id: string;
+  customer_name: string;
+  customer_email?: string;
+  days_since_last_order: number;
+  order_count: number;
+  total_spent: number;
+  rfm: { recency: number; frequency: number; monetary: number };
+  segment_label: string;
+}
+
+export interface CreateSegmentRequest {
+  name: string;
+  description?: string;
+  color: string;
+  segment_type: "manual" | "rfm_auto" | "rule_based";
+  rules?: Record<string, unknown>;
+}
+
+export interface UpdateSegmentRequest {
+  name?: string;
+  description?: string;
+  color?: string;
+  rules?: Record<string, unknown>;
+}
+
+export interface AddSegmentMemberRequest {
+  customer_id: string;
+}
+
+export interface SegmentListParams extends PaginationParams {}
+
+// === Loyalty Programs ===
+export interface LoyaltyProgram {
+  id: string;
+  tenant_id: string;
+  name: string;
+  status: "active" | "paused" | "ended";
+  program_type: "points" | "tier" | "discount_after_n";
+  config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerLoyalty {
+  tenant_id: string;
+  customer_id: string;
+  program_id: string;
+  points_balance: number;
+  total_points_earned: number;
+  total_points_redeemed: number;
+  current_tier?: string;
+  total_spent: number;
+  order_count: number;
+  last_activity_at?: string;
+  created_at: string;
+  updated_at: string;
+  program_name: string;
+  program_type: string;
+}
+
+export interface LeaderboardEntry {
+  customer_id: string;
+  customer_name: string;
+  points: number;
+  total_spent: number;
+  order_count: number;
+  current_tier?: string;
+}
+
+export interface CreateLoyaltyProgramRequest {
+  name: string;
+  program_type: "points" | "tier" | "discount_after_n";
+  config: Record<string, unknown>;
+}
+
+export interface UpdateLoyaltyProgramRequest {
+  name?: string;
+  status?: "active" | "paused" | "ended";
+  config?: Record<string, unknown>;
+}
+
+export interface AwardPointsRequest {
+  customer_id: string;
+  points: number;
+  reason: string;
+}
+
+export interface RedeemPointsRequest {
+  customer_id: string;
+  points: number;
+}
+
+export interface LoyaltyProgramListParams extends PaginationParams {}

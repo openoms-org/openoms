@@ -87,6 +87,11 @@ type RouterDeps struct {
 	Dropship          *handler.DropshipHandler
 	SupplierPortal    *handler.SupplierPortalHandler
 	RecurringOrder    *handler.RecurringOrderHandler
+	Forecast          *handler.ForecastHandler
+	Repricing         *handler.RepricingHandler
+	BGRemoval         *handler.BGRemovalHandler
+	Segment           *handler.SegmentHandler
+	Loyalty           *handler.LoyaltyHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -208,6 +213,12 @@ func New(deps RouterDeps) *chi.Mux {
 
 		// Upload endpoint — has its own body size limit, no global MaxBodySize
 		r.Post("/uploads", deps.Upload.Upload)
+
+		// Background removal — has its own body size limit (accepts image uploads)
+		if deps.BGRemoval != nil {
+			r.Post("/images/remove-background", deps.BGRemoval.RemoveBackground)
+			r.Get("/images/remove-background/status", deps.BGRemoval.Status)
+		}
 
 		// All other authenticated routes get a 1MB body size limit
 		r.Group(func(r chi.Router) {
@@ -369,6 +380,11 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)
 				r.Get("/{id}/stock", deps.Warehouse.ListProductStock)
+
+				// Background removal for product images
+				if deps.BGRemoval != nil {
+					r.Post("/{id}/images/{index}/remove-background", deps.BGRemoval.RemoveProductImageBackground)
+				}
 
 				// Bundles
 				r.Route("/{id}/bundle", func(r chi.Router) {
@@ -612,6 +628,39 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/orders", deps.Customer.ListOrders)
 			})
 
+			// Customer segments — any authenticated user
+			if deps.Segment != nil {
+				r.Route("/segments", func(r chi.Router) {
+					r.Get("/", deps.Segment.List)
+					r.Post("/", deps.Segment.Create)
+					r.Post("/rfm-analysis", deps.Segment.RunRFMAnalysis)
+					r.Get("/customer/{customer_id}", deps.Segment.GetCustomerSegments)
+					r.Get("/{id}", deps.Segment.Get)
+					r.Put("/{id}", deps.Segment.Update)
+					r.Delete("/{id}", deps.Segment.Delete)
+					r.Get("/{id}/members", deps.Segment.ListMembers)
+					r.Post("/{id}/members", deps.Segment.AddMember)
+					r.Delete("/{id}/members/{customer_id}", deps.Segment.RemoveMember)
+				})
+			}
+
+			// Loyalty programs — any authenticated user
+			if deps.Loyalty != nil {
+				r.Route("/loyalty", func(r chi.Router) {
+					r.Route("/programs", func(r chi.Router) {
+						r.Get("/", deps.Loyalty.ListPrograms)
+						r.Post("/", deps.Loyalty.CreateProgram)
+						r.Get("/{id}", deps.Loyalty.GetProgram)
+						r.Put("/{id}", deps.Loyalty.UpdateProgram)
+						r.Delete("/{id}", deps.Loyalty.DeleteProgram)
+						r.Post("/{id}/award", deps.Loyalty.AwardPoints)
+						r.Post("/{id}/redeem", deps.Loyalty.RedeemPoints)
+						r.Get("/{id}/leaderboard", deps.Loyalty.GetLeaderboard)
+					})
+					r.Get("/customers/{customer_id}", deps.Loyalty.GetCustomerLoyaltyStatus)
+				})
+			}
+
 			// Recurring orders (subscriptions) — any authenticated user
 			r.Route("/recurring-orders", func(r chi.Router) {
 				r.Get("/", deps.RecurringOrder.List)
@@ -647,6 +696,19 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/trends", deps.Stats.GetOrderTrends)
 				r.Get("/payment-methods", deps.Stats.GetPaymentMethodStats)
 			})
+
+			// Demand forecast — any authenticated user (config update admin only)
+			if deps.Forecast != nil {
+				r.Route("/forecast", func(r chi.Router) {
+					r.Get("/products", deps.Forecast.ListForecasts)
+					r.Get("/products/{id}", deps.Forecast.GetForecast)
+					r.Get("/reorder", deps.Forecast.GetReorderRecommendations)
+					r.Get("/seasonality/{product_id}", deps.Forecast.GetSeasonality)
+					r.Get("/velocity", deps.Forecast.GetVelocity)
+					r.Get("/config", deps.Forecast.GetConfig)
+					r.With(middleware.RequireRole("admin")).Put("/config", deps.Forecast.UpdateConfig)
+				})
+			}
 
 			// Carbon footprint — any authenticated user
 			if deps.Carbon != nil {
@@ -772,6 +834,20 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Shipping rate comparison — any authenticated user
 			r.Post("/shipping/rates", deps.Rate.GetRates)
+
+			// Repricing engine — admin only
+			r.Route("/repricing", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Get("/rules", deps.Repricing.ListRules)
+				r.Post("/rules", deps.Repricing.CreateRule)
+				r.Get("/rules/{id}", deps.Repricing.GetRule)
+				r.Put("/rules/{id}", deps.Repricing.UpdateRule)
+				r.Delete("/rules/{id}", deps.Repricing.DeleteRule)
+				r.Post("/rules/{id}/simulate", deps.Repricing.SimulateRule)
+				r.Post("/apply", deps.Repricing.ApplyRules)
+				r.Get("/log", deps.Repricing.ListLog)
+				r.Get("/summary", deps.Repricing.GetSummary)
+			})
 
 			// Payment reconciliation — admin only
 			r.Route("/reconciliation", func(r chi.Router) {

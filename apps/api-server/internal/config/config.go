@@ -44,6 +44,8 @@ type Config struct {
 	OpenAIAPIKey string `env:"OPENAI_API_KEY"`
 	OpenAIModel  string `env:"OPENAI_MODEL" envDefault:"gpt-4o-mini"`
 
+	RemoveBGAPIKey string `env:"REMOVEBG_API_KEY"`
+
 	MetricsToken string `env:"METRICS_TOKEN"` // Bearer token for /metrics; if empty, metrics are disabled in production
 }
 
