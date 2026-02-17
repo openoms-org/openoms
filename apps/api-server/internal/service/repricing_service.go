@@ -99,19 +99,19 @@ func (s *RepricingService) Create(ctx context.Context, tenantID uuid.UUID, req m
 	}
 
 	rule := &model.RepricingRule{
-		ID:        uuid.New(),
-		TenantID:  tenantID,
-		Name:      req.Name,
-		Status:    "active",
-		Strategy:  req.Strategy,
-		Priority:  req.Priority,
-		ScopeType: req.ScopeType,
+		ID:         uuid.New(),
+		TenantID:   tenantID,
+		Name:       req.Name,
+		Status:     "active",
+		Strategy:   req.Strategy,
+		Priority:   req.Priority,
+		ScopeType:  req.ScopeType,
 		ScopeValue: req.ScopeValue,
-		Params:    params,
-		MinPrice:  req.MinPrice,
-		MaxPrice:  req.MaxPrice,
-		Channels:  channels,
-		CreatedBy: &actorID,
+		Params:     params,
+		MinPrice:   req.MinPrice,
+		MaxPrice:   req.MaxPrice,
+		Channels:   channels,
+		CreatedBy:  &actorID,
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

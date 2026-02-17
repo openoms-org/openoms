@@ -19,7 +19,7 @@ type AccountingProvider interface {
 
 // InvoiceData contains all data needed to create an invoice with an accounting provider.
 type InvoiceData struct {
-	Type          string           // vat, proforma, correction
+	Type          string // vat, proforma, correction
 	OrderID       uuid.UUID
 	OrderNumber   string
 	IssueDate     time.Time

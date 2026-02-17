@@ -10,26 +10,26 @@ import (
 )
 
 type Product struct {
-	ID               uuid.UUID       `json:"id"`
-	TenantID         uuid.UUID       `json:"tenant_id"`
-	ExternalID       *string         `json:"external_id,omitempty"`
-	Source           string          `json:"source"`
-	Name             string          `json:"name"`
-	SKU              *string         `json:"sku,omitempty"`
-	EAN              *string         `json:"ean,omitempty"`
-	Price            float64         `json:"price"`
-	StockQuantity    int             `json:"stock_quantity"`
-	Metadata         json.RawMessage `json:"metadata"`
-	Tags             []string        `json:"tags"`
-	DescriptionShort string          `json:"description_short"`
-	DescriptionLong  string          `json:"description_long"`
-	Weight           *float64        `json:"weight,omitempty"`
-	Width            *float64        `json:"width,omitempty"`
-	Height           *float64        `json:"height,omitempty"`
-	Depth            *float64        `json:"depth,omitempty"`
-	Category         *string         `json:"category,omitempty"`
-	ImageURL         *string         `json:"image_url,omitempty"`
-	Images           json.RawMessage `json:"images"`
+	ID                 uuid.UUID       `json:"id"`
+	TenantID           uuid.UUID       `json:"tenant_id"`
+	ExternalID         *string         `json:"external_id,omitempty"`
+	Source             string          `json:"source"`
+	Name               string          `json:"name"`
+	SKU                *string         `json:"sku,omitempty"`
+	EAN                *string         `json:"ean,omitempty"`
+	Price              float64         `json:"price"`
+	StockQuantity      int             `json:"stock_quantity"`
+	Metadata           json.RawMessage `json:"metadata"`
+	Tags               []string        `json:"tags"`
+	DescriptionShort   string          `json:"description_short"`
+	DescriptionLong    string          `json:"description_long"`
+	Weight             *float64        `json:"weight,omitempty"`
+	Width              *float64        `json:"width,omitempty"`
+	Height             *float64        `json:"height,omitempty"`
+	Depth              *float64        `json:"depth,omitempty"`
+	Category           *string         `json:"category,omitempty"`
+	ImageURL           *string         `json:"image_url,omitempty"`
+	Images             json.RawMessage `json:"images"`
 	HasVariants        bool            `json:"has_variants"`
 	IsBundle           bool            `json:"is_bundle"`
 	IsDropship         bool            `json:"is_dropship"`

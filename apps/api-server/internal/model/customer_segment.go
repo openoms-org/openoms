@@ -141,15 +141,15 @@ type LoyaltyProgram struct {
 
 // CustomerLoyalty represents a customer's status in a loyalty program.
 type CustomerLoyalty struct {
-	TenantID            uuid.UUID `json:"tenant_id"`
-	CustomerID          uuid.UUID `json:"customer_id"`
-	ProgramID           uuid.UUID `json:"program_id"`
-	PointsBalance       int       `json:"points_balance"`
-	TotalPointsEarned   int       `json:"total_points_earned"`
-	TotalPointsRedeemed int       `json:"total_points_redeemed"`
-	CurrentTier         *string   `json:"current_tier,omitempty"`
-	TotalSpent          float64   `json:"total_spent"`
-	OrderCount          int       `json:"order_count"`
+	TenantID            uuid.UUID  `json:"tenant_id"`
+	CustomerID          uuid.UUID  `json:"customer_id"`
+	ProgramID           uuid.UUID  `json:"program_id"`
+	PointsBalance       int        `json:"points_balance"`
+	TotalPointsEarned   int        `json:"total_points_earned"`
+	TotalPointsRedeemed int        `json:"total_points_redeemed"`
+	CurrentTier         *string    `json:"current_tier,omitempty"`
+	TotalSpent          float64    `json:"total_spent"`
+	OrderCount          int        `json:"order_count"`
 	LastActivityAt      *time.Time `json:"last_activity_at,omitempty"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`

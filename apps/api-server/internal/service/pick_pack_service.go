@@ -16,16 +16,16 @@ import (
 )
 
 var (
-	ErrPickPackSessionNotFound = errors.New("pick-pack session not found")
-	ErrPickPackItemNotFound    = errors.New("pick-pack item not found")
-	ErrPickPackNotPicking      = errors.New("session is not in picking status")
-	ErrPickPackNotPacking      = errors.New("session is not in packing status")
-	ErrPickPackNotActive       = errors.New("session is not active")
-	ErrPickPackBarcodeNoMatch  = errors.New("barcode does not match any item in this session")
+	ErrPickPackSessionNotFound  = errors.New("pick-pack session not found")
+	ErrPickPackItemNotFound     = errors.New("pick-pack item not found")
+	ErrPickPackNotPicking       = errors.New("session is not in picking status")
+	ErrPickPackNotPacking       = errors.New("session is not in packing status")
+	ErrPickPackNotActive        = errors.New("session is not active")
+	ErrPickPackBarcodeNoMatch   = errors.New("barcode does not match any item in this session")
 	ErrPickPackQuantityExceeded = errors.New("quantity would exceed required amount")
-	ErrPickPackNotAllPicked    = errors.New("not all items have been picked")
-	ErrPickPackNotAllPacked    = errors.New("not all items have been packed")
-	ErrOrderNotProcessing      = errors.New("order is not in processing status")
+	ErrPickPackNotAllPicked     = errors.New("not all items have been picked")
+	ErrPickPackNotAllPacked     = errors.New("not all items have been packed")
+	ErrOrderNotProcessing       = errors.New("order is not in processing status")
 )
 
 // PickPackService provides business logic for pick-and-pack workflow.

@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrRecurringOrderNotFound = errors.New("recurring order not found")
+	ErrRecurringOrderNotFound  = errors.New("recurring order not found")
 	ErrRecurringOrderNotActive = errors.New("recurring order is not active")
 	ErrRecurringOrderHasOrders = errors.New("cannot delete recurring order that has created orders")
 )

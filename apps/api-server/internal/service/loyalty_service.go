@@ -195,9 +195,9 @@ func (s *LoyaltyService) AwardPoints(ctx context.Context, tenantID uuid.UUID, pr
 		if cl == nil {
 			now := time.Now()
 			cl = &model.CustomerLoyalty{
-				TenantID:   tenantID,
-				CustomerID: req.CustomerID,
-				ProgramID:  programID,
+				TenantID:       tenantID,
+				CustomerID:     req.CustomerID,
+				ProgramID:      programID,
 				LastActivityAt: &now,
 			}
 			if err := s.loyaltyRepo.UpsertCustomerLoyalty(ctx, tx, cl); err != nil {

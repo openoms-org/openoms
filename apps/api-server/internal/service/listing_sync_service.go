@@ -280,10 +280,7 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 
 				// Apply stock buffer
 				if cfg.StockBuffer > 0 {
-					bufferedStock := product.StockQuantity - cfg.StockBuffer
-					if bufferedStock < 0 {
-						bufferedStock = 0
-					}
+					bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
 					listing.StockOverride = &bufferedStock
 				}
 
@@ -311,10 +308,7 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 				}
 
 				if cfg.StockBuffer > 0 {
-					bufferedStock := product.StockQuantity - cfg.StockBuffer
-					if bufferedStock < 0 {
-						bufferedStock = 0
-					}
+					bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
 					if existing.StockOverride == nil || *existing.StockOverride != bufferedStock {
 						updateReq.StockOverride = &bufferedStock
 						needsUpdate = true
@@ -486,10 +480,7 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 				continue
 			}
 
-			bufferedStock := product.StockQuantity - cfg.StockBuffer
-			if bufferedStock < 0 {
-				bufferedStock = 0
-			}
+			bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
 
 			if listing.StockOverride != nil && *listing.StockOverride == bufferedStock {
 				// No change needed
@@ -626,7 +617,7 @@ func (s *ListingSyncService) logSyncEntryWithChanges(ctx context.Context, tx pgx
 func (s *ListingSyncService) updateLastSync(ctx context.Context, tenantID uuid.UUID, configID uuid.UUID, hadErrors bool) {
 	var lastError *string
 	if hadErrors {
-		errMsg := "Niektóre elementy nie zostały zsynchronizowane"
+		errMsg := "Niektóre elementary nie zostały zsynchronizowane"
 		lastError = &errMsg
 	}
 	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

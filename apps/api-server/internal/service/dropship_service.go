@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,10 +18,10 @@ import (
 )
 
 var (
-	ErrDropshipOrderNotFound   = errors.New("dropship order not found")
-	ErrDropshipAlreadyCancelled = errors.New("dropship order is already cancelled")
+	ErrDropshipOrderNotFound     = errors.New("dropship order not found")
+	ErrDropshipAlreadyCancelled  = errors.New("dropship order is already cancelled")
 	ErrDropshipInvalidTransition = errors.New("invalid dropship status transition")
-	ErrNoDropshipItems         = errors.New("no dropship items found for this order")
+	ErrNoDropshipItems           = errors.New("no dropship items found for this order")
 )
 
 // DropshipService handles business logic for dropship orders.
@@ -224,10 +225,10 @@ func (s *DropshipService) AutoRouteOrder(ctx context.Context, tenantID, orderID,
 			}
 
 			dsItem := model.DropshipOrderItem{
-				ID:        uuid.New(),
-				TenantID:  tenantID,
-				ProductID: &productID,
-				SKU:       sku,
+				ID:          uuid.New(),
+				TenantID:    tenantID,
+				ProductID:   &productID,
+				SKU:         sku,
 				ProductName: item.Name,
 				Quantity:    item.Quantity,
 				UnitCost:    unitCost,
@@ -504,10 +505,5 @@ func isValidDropshipTransition(from, to string) bool {
 	if !ok {
 		return false
 	}
-	for _, s := range allowed {
-		if s == to {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allowed, to)
 }

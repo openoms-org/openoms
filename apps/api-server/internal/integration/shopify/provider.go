@@ -256,10 +256,10 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.ShopifyOrder) integration.Marke
 
 	// RawData
 	mo.RawData = map[string]any{
-		"shopify_order_id":    o.ID,
-		"order_name":          o.Name,
-		"fulfillment_status":  o.FulfillmentStatus,
-		"gateway":             o.Gateway,
+		"shopify_order_id":   o.ID,
+		"order_name":         o.Name,
+		"fulfillment_status": o.FulfillmentStatus,
+		"gateway":            o.Gateway,
 	}
 	if o.Note != "" {
 		mo.RawData["customer_note"] = o.Note

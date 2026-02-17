@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,13 +44,13 @@ type PickPackItem struct {
 
 // PickPackStats holds summary statistics for a pick-pack session.
 type PickPackStats struct {
-	TotalItems      int `json:"total_items"`
-	TotalPicked     int `json:"total_picked"`
-	TotalPacked     int `json:"total_packed"`
-	TotalRequired   int `json:"total_required"`
-	OrderCount      int `json:"order_count"`
-	AllPicked       bool `json:"all_picked"`
-	AllPacked       bool `json:"all_packed"`
+	TotalItems    int  `json:"total_items"`
+	TotalPicked   int  `json:"total_picked"`
+	TotalPacked   int  `json:"total_packed"`
+	TotalRequired int  `json:"total_required"`
+	OrderCount    int  `json:"order_count"`
+	AllPicked     bool `json:"all_picked"`
+	AllPacked     bool `json:"all_packed"`
 }
 
 // CreatePickPackSessionRequest is the payload for creating a new pick-pack session.
@@ -63,10 +64,8 @@ func (r *CreatePickPackSessionRequest) Validate() error {
 	if len(r.OrderIDs) == 0 {
 		return errors.New("at least one order_id is required")
 	}
-	for _, id := range r.OrderIDs {
-		if id == uuid.Nil {
-			return errors.New("order_ids must not contain empty UUIDs")
-		}
+	if slices.Contains(r.OrderIDs, uuid.Nil) {
+		return errors.New("order_ids must not contain empty UUIDs")
 	}
 	return nil
 }

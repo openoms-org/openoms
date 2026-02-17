@@ -51,7 +51,7 @@ type CreatePurchaseOrderRequest struct {
 	Notes                string                       `json:"notes"`
 	ExpectedDeliveryDate *string                      `json:"expected_delivery_date"`
 	Currency             string                       `json:"currency"`
-	Items                []CreatePurchaseOrderItemReq  `json:"items"`
+	Items                []CreatePurchaseOrderItemReq `json:"items"`
 }
 
 // Validate validates the create purchase order request.
@@ -102,13 +102,13 @@ func (r *CreatePurchaseOrderItemReq) Validate() error {
 
 // UpdatePurchaseOrderRequest is the payload for updating a purchase order.
 type UpdatePurchaseOrderRequest struct {
-	SupplierID           *uuid.UUID                    `json:"supplier_id,omitempty"`
-	SupplierName         *string                       `json:"supplier_name,omitempty"`
-	WarehouseID          *uuid.UUID                    `json:"warehouse_id,omitempty"`
-	Notes                *string                       `json:"notes,omitempty"`
-	ExpectedDeliveryDate *string                       `json:"expected_delivery_date,omitempty"`
-	Currency             *string                       `json:"currency,omitempty"`
-	Items                []CreatePurchaseOrderItemReq   `json:"items,omitempty"`
+	SupplierID           *uuid.UUID                   `json:"supplier_id,omitempty"`
+	SupplierName         *string                      `json:"supplier_name,omitempty"`
+	WarehouseID          *uuid.UUID                   `json:"warehouse_id,omitempty"`
+	Notes                *string                      `json:"notes,omitempty"`
+	ExpectedDeliveryDate *string                      `json:"expected_delivery_date,omitempty"`
+	Currency             *string                      `json:"currency,omitempty"`
+	Items                []CreatePurchaseOrderItemReq `json:"items,omitempty"`
 }
 
 // Validate validates the update purchase order request.

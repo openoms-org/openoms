@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	shopersdk "github.com/openoms-org/openoms/packages/shoper-go-sdk"
 	prestashopsdk "github.com/openoms-org/openoms/packages/prestashop-go-sdk"
+	shopersdk "github.com/openoms-org/openoms/packages/shoper-go-sdk"
 	shopifysdk "github.com/openoms-org/openoms/packages/shopify-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"

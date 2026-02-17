@@ -102,7 +102,7 @@ func storeOrderMapper(providerName string) OrderMapper {
 		}
 
 		metadata := map[string]any{
-			"external_id": mo.ExternalID,
+			"external_id":              mo.ExternalID,
 			providerName + "_order_id": mo.RawData[providerName+"_order_id"],
 		}
 		metadataJSON, _ := json.Marshal(metadata)

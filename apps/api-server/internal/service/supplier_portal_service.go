@@ -31,8 +31,8 @@ var (
 
 // SupplierPortalService handles business logic for the supplier portal.
 type SupplierPortalService struct {
-	tokenRepo   *repository.SupplierPortalTokenRepository
-	messageRepo *repository.SupplierMessageRepository
+	tokenRepo    *repository.SupplierPortalTokenRepository
+	messageRepo  *repository.SupplierMessageRepository
 	supplierRepo repository.SupplierRepo
 	poRepo       repository.PurchaseOrderRepo
 	poItemRepo   repository.PurchaseOrderItemRepo

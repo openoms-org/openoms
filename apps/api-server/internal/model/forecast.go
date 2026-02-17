@@ -21,19 +21,19 @@ type Forecast struct {
 
 // ReorderRecommendation describes a reorder suggestion for a product.
 type ReorderRecommendation struct {
-	ProductID          uuid.UUID  `json:"product_id"`
-	ProductName        string     `json:"product_name"`
-	SKU                string     `json:"sku"`
-	CurrentStock       int        `json:"current_stock"`
-	ForecastedDemand   float64    `json:"forecasted_demand"`
-	SafetyStock        int        `json:"safety_stock"`
-	ReorderPoint       int        `json:"reorder_point"`
-	RecommendedQty     int        `json:"recommended_qty"`
-	Urgency            string     `json:"urgency"` // "critical", "soon", "planned"
-	DaysUntilStockout  float64    `json:"days_until_stockout"`
-	SupplierID         *uuid.UUID `json:"supplier_id,omitempty"`
-	SupplierName       string     `json:"supplier_name,omitempty"`
-	EstimatedCost      float64    `json:"estimated_cost"`
+	ProductID         uuid.UUID  `json:"product_id"`
+	ProductName       string     `json:"product_name"`
+	SKU               string     `json:"sku"`
+	CurrentStock      int        `json:"current_stock"`
+	ForecastedDemand  float64    `json:"forecasted_demand"`
+	SafetyStock       int        `json:"safety_stock"`
+	ReorderPoint      int        `json:"reorder_point"`
+	RecommendedQty    int        `json:"recommended_qty"`
+	Urgency           string     `json:"urgency"` // "critical", "soon", "planned"
+	DaysUntilStockout float64    `json:"days_until_stockout"`
+	SupplierID        *uuid.UUID `json:"supplier_id,omitempty"`
+	SupplierName      string     `json:"supplier_name,omitempty"`
+	EstimatedCost     float64    `json:"estimated_cost"`
 }
 
 // SeasonalityData holds the sales seasonality analysis for a product.

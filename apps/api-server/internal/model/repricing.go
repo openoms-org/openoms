@@ -68,10 +68,10 @@ type TimeScheduleEntry struct {
 }
 
 type StockBasedParams struct {
-	LowStockThreshold     int     `json:"low_stock_threshold"`
-	LowStockMarkupPct     float64 `json:"low_stock_markup_pct"`
-	HighStockThreshold    int     `json:"high_stock_threshold"`
-	HighStockDiscountPct  float64 `json:"high_stock_discount_pct"`
+	LowStockThreshold    int     `json:"low_stock_threshold"`
+	LowStockMarkupPct    float64 `json:"low_stock_markup_pct"`
+	HighStockThreshold   int     `json:"high_stock_threshold"`
+	HighStockDiscountPct float64 `json:"high_stock_discount_pct"`
 }
 
 // Request types.
@@ -165,12 +165,12 @@ type RepricingRuleListFilter struct {
 
 // RepricingSummary provides dashboard-level stats.
 type RepricingSummary struct {
-	ActiveRules    int     `json:"active_rules"`
-	PausedRules    int     `json:"paused_rules"`
-	ChangesToday   int     `json:"changes_today"`
-	ChangesWeek    int     `json:"changes_week"`
-	AvgChangePct   float64 `json:"avg_change_pct"`
-	TotalAffected  int     `json:"total_affected"`
+	ActiveRules   int     `json:"active_rules"`
+	PausedRules   int     `json:"paused_rules"`
+	ChangesToday  int     `json:"changes_today"`
+	ChangesWeek   int     `json:"changes_week"`
+	AvgChangePct  float64 `json:"avg_change_pct"`
+	TotalAffected int     `json:"total_affected"`
 }
 
 // SimulationResult shows what a rule would change without applying.

@@ -18,10 +18,10 @@ import (
 
 // ForecastService provides statistical demand forecasting and reorder recommendations.
 type ForecastService struct {
-	pool        *pgxpool.Pool
-	productRepo repository.ProductRepo
-	tenantRepo  repository.TenantRepo
-	orderRepo   repository.OrderRepo
+	pool         *pgxpool.Pool
+	productRepo  repository.ProductRepo
+	tenantRepo   repository.TenantRepo
+	orderRepo    repository.OrderRepo
 	supplierRepo repository.SupplierRepo
 }
 
@@ -269,10 +269,7 @@ func computeForecast(pd *productSalesData, daysAhead int) model.Forecast {
 		weeklyTotals := make([]float64, numWeeks)
 		for i := 0; i < numWeeks; i++ {
 			weekStart := i * 7
-			weekEnd := weekStart + 7
-			if weekEnd > totalDays {
-				weekEnd = totalDays
-			}
+			weekEnd := min(weekStart+7, totalDays)
 			for j := weekStart; j < weekEnd; j++ {
 				weeklyTotals[i] += dailyArr[j]
 			}
@@ -504,10 +501,7 @@ func (s *ForecastService) GetReorderRecommendations(ctx context.Context, tenantI
 
 			// Recommended quantity: enough to cover lead time + safety stock + buffer
 			// Simplified EOQ: order enough for 2x lead time minus current stock
-			recommendedQty := int(math.Ceil(avgDaily*float64(leadTimeDays)*2)) + safetyStock - pd.Stock
-			if recommendedQty < 1 {
-				recommendedQty = 1
-			}
+			recommendedQty := max(int(math.Ceil(avgDaily*float64(leadTimeDays)*2))+safetyStock-pd.Stock, 1)
 
 			rec := model.ReorderRecommendation{
 				ProductID:         pd.ProductID,
@@ -602,7 +596,7 @@ func (s *ForecastService) GetSeasonalityAnalysis(ctx context.Context, tenantID, 
 		totalDayAvg := 0.0
 		dayAvgs := make([]float64, 7)
 		validDays := 0
-		for i := 0; i < 7; i++ {
+		for i := range 7 {
 			if dayCounts[i] > 0 {
 				dayAvgs[i] = daySums[i] / float64(dayCounts[i])
 				totalDayAvg += dayAvgs[i]
@@ -615,7 +609,7 @@ func (s *ForecastService) GetSeasonalityAnalysis(ctx context.Context, tenantID, 
 		}
 
 		byDayOfWeek := make([]model.DayOfWeekSales, 7)
-		for i := 0; i < 7; i++ {
+		for i := range 7 {
 			index := 0.0
 			if overallDayAvg > 0 {
 				index = dayAvgs[i] / overallDayAvg
@@ -644,7 +638,7 @@ func (s *ForecastService) GetSeasonalityAnalysis(ctx context.Context, tenantID, 
 		totalMonthAvg := 0.0
 		monthAvgs := make([]float64, 12)
 		validMonths := 0
-		for i := 0; i < 12; i++ {
+		for i := range 12 {
 			if monthDays[i] > 0 {
 				monthAvgs[i] = monthSums[i] / float64(monthDays[i])
 				totalMonthAvg += monthAvgs[i]
@@ -657,7 +651,7 @@ func (s *ForecastService) GetSeasonalityAnalysis(ctx context.Context, tenantID, 
 		}
 
 		byMonth := make([]model.MonthSales, 12)
-		for i := 0; i < 12; i++ {
+		for i := range 12 {
 			index := 0.0
 			if overallMonthAvg > 0 {
 				index = monthAvgs[i] / overallMonthAvg

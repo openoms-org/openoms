@@ -10,25 +10,25 @@ import (
 
 // DropshipOrder represents a forwarded order to a supplier for dropship fulfillment.
 type DropshipOrder struct {
-	ID                uuid.UUID          `json:"id"`
-	TenantID          uuid.UUID          `json:"tenant_id"`
-	OrderID           uuid.UUID          `json:"order_id"`
-	SupplierID        uuid.UUID          `json:"supplier_id"`
-	SupplierName      string             `json:"supplier_name"`
-	Status            string             `json:"status"`
-	SupplierReference *string            `json:"supplier_reference,omitempty"`
-	TrackingNumber    *string            `json:"tracking_number,omitempty"`
-	Carrier           *string            `json:"carrier,omitempty"`
-	Notes             *string            `json:"notes,omitempty"`
-	TotalCost         float64            `json:"total_cost"`
-	Currency          string             `json:"currency"`
-	SentAt            *time.Time         `json:"sent_at,omitempty"`
-	ConfirmedAt       *time.Time         `json:"confirmed_at,omitempty"`
-	ShippedAt         *time.Time         `json:"shipped_at,omitempty"`
-	DeliveredAt       *time.Time         `json:"delivered_at,omitempty"`
+	ID                uuid.UUID           `json:"id"`
+	TenantID          uuid.UUID           `json:"tenant_id"`
+	OrderID           uuid.UUID           `json:"order_id"`
+	SupplierID        uuid.UUID           `json:"supplier_id"`
+	SupplierName      string              `json:"supplier_name"`
+	Status            string              `json:"status"`
+	SupplierReference *string             `json:"supplier_reference,omitempty"`
+	TrackingNumber    *string             `json:"tracking_number,omitempty"`
+	Carrier           *string             `json:"carrier,omitempty"`
+	Notes             *string             `json:"notes,omitempty"`
+	TotalCost         float64             `json:"total_cost"`
+	Currency          string              `json:"currency"`
+	SentAt            *time.Time          `json:"sent_at,omitempty"`
+	ConfirmedAt       *time.Time          `json:"confirmed_at,omitempty"`
+	ShippedAt         *time.Time          `json:"shipped_at,omitempty"`
+	DeliveredAt       *time.Time          `json:"delivered_at,omitempty"`
 	Items             []DropshipOrderItem `json:"items,omitempty"`
-	CreatedAt         time.Time          `json:"created_at"`
-	UpdatedAt         time.Time          `json:"updated_at"`
+	CreatedAt         time.Time           `json:"created_at"`
+	UpdatedAt         time.Time           `json:"updated_at"`
 }
 
 // DropshipOrderItem represents a line item in a dropship order.

@@ -79,7 +79,7 @@ func (s *TrackingService) TrackOrder(ctx context.Context, tenantSlug, orderID, e
 		}
 
 		// Verify customer email
-		if order.CustomerEmail == nil || strings.ToLower(strings.TrimSpace(*order.CustomerEmail)) != strings.ToLower(strings.TrimSpace(email)) {
+		if order.CustomerEmail == nil || !strings.EqualFold(strings.TrimSpace(*order.CustomerEmail), strings.TrimSpace(email)) {
 			return ErrTrackingEmail
 		}
 

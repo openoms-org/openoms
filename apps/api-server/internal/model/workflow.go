@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/google/uuid"
 )
@@ -32,10 +33,10 @@ type WorkflowViewport struct {
 
 // WorkflowNode represents a single node in the visual workflow.
 type WorkflowNode struct {
-	ID       string            `json:"id"`
-	Type     WorkflowNodeType  `json:"type"`
-	Position WorkflowPosition  `json:"position"`
-	Data     map[string]any    `json:"data"`
+	ID       string           `json:"id"`
+	Type     WorkflowNodeType `json:"type"`
+	Position WorkflowPosition `json:"position"`
+	Data     map[string]any   `json:"data"`
 }
 
 // WorkflowEdge represents a connection between two nodes.
@@ -50,9 +51,9 @@ type WorkflowEdge struct {
 
 // WorkflowDefinition is the complete visual workflow graph.
 type WorkflowDefinition struct {
-	Nodes    []WorkflowNode    `json:"nodes"`
-	Edges    []WorkflowEdge    `json:"edges"`
-	Viewport WorkflowViewport  `json:"viewport"`
+	Nodes    []WorkflowNode   `json:"nodes"`
+	Edges    []WorkflowEdge   `json:"edges"`
+	Viewport WorkflowViewport `json:"viewport"`
 }
 
 // WorkflowTemplate is a pre-built workflow template.
@@ -84,7 +85,7 @@ type ConvertWorkflowRequest struct {
 
 // ConvertWorkflowResponse returns the generated automation rule fields.
 type ConvertWorkflowResponse struct {
-	TriggerEvent string             `json:"trigger_event"`
+	TriggerEvent string                `json:"trigger_event"`
 	Conditions   []AutomationCondition `json:"conditions"`
 	Actions      []AutomationAction    `json:"actions"`
 }
@@ -246,9 +247,7 @@ func WorkflowToAutomationRule(def WorkflowDefinition) (*ConvertWorkflowResponse,
 			})
 		}
 
-		for _, next := range adj[current] {
-			queue = append(queue, next)
-		}
+		queue = append(queue, adj[current]...)
 	}
 
 	if conditions == nil {
@@ -332,9 +331,7 @@ func AutomationRuleToWorkflow(rule AutomationRule) (*WorkflowDefinition, error) 
 			"actionType": a.Type,
 			"label":      a.Type,
 		}
-		for k, v := range a.Config {
-			data[k] = v
-		}
+		maps.Copy(data, a.Config)
 		if a.DelaySeconds > 0 {
 			data["delay_seconds"] = a.DelaySeconds
 		}

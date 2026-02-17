@@ -8,20 +8,20 @@ import (
 
 // PaymentSettlement represents an imported gateway payout/settlement.
 type PaymentSettlement struct {
-	ID             uuid.UUID  `json:"id"`
-	TenantID       uuid.UUID  `json:"tenant_id"`
-	Provider       string     `json:"provider"`
-	SettlementID   *string    `json:"settlement_id,omitempty"`
-	SettlementDate string     `json:"settlement_date"` // DATE as YYYY-MM-DD
-	TotalAmount    float64    `json:"total_amount"`
-	FeeAmount      float64    `json:"fee_amount"`
-	NetAmount      float64    `json:"net_amount"`
-	Currency       string     `json:"currency"`
-	Status         string     `json:"status"`
-	Notes          *string    `json:"notes,omitempty"`
-	ImportedAt     time.Time  `json:"imported_at"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID             uuid.UUID `json:"id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
+	Provider       string    `json:"provider"`
+	SettlementID   *string   `json:"settlement_id,omitempty"`
+	SettlementDate string    `json:"settlement_date"` // DATE as YYYY-MM-DD
+	TotalAmount    float64   `json:"total_amount"`
+	FeeAmount      float64   `json:"fee_amount"`
+	NetAmount      float64   `json:"net_amount"`
+	Currency       string    `json:"currency"`
+	Status         string    `json:"status"`
+	Notes          *string   `json:"notes,omitempty"`
+	ImportedAt     time.Time `json:"imported_at"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // PaymentSettlementWithTransactions combines a settlement with its transactions.
@@ -51,26 +51,26 @@ type PaymentTransaction struct {
 
 // CreateSettlementRequest is the request body for creating a settlement with transactions.
 type CreateSettlementRequest struct {
-	Provider       string                          `json:"provider"`
-	SettlementID   *string                         `json:"settlement_id,omitempty"`
-	SettlementDate string                          `json:"settlement_date"`
-	TotalAmount    float64                         `json:"total_amount"`
-	FeeAmount      float64                         `json:"fee_amount"`
-	NetAmount      float64                         `json:"net_amount"`
-	Currency       string                          `json:"currency,omitempty"`
-	Notes          *string                         `json:"notes,omitempty"`
-	Transactions   []CreateTransactionRequest      `json:"transactions,omitempty"`
+	Provider       string                     `json:"provider"`
+	SettlementID   *string                    `json:"settlement_id,omitempty"`
+	SettlementDate string                     `json:"settlement_date"`
+	TotalAmount    float64                    `json:"total_amount"`
+	FeeAmount      float64                    `json:"fee_amount"`
+	NetAmount      float64                    `json:"net_amount"`
+	Currency       string                     `json:"currency,omitempty"`
+	Notes          *string                    `json:"notes,omitempty"`
+	Transactions   []CreateTransactionRequest `json:"transactions,omitempty"`
 }
 
 // CreateTransactionRequest is the request body for a single transaction within an import.
 type CreateTransactionRequest struct {
-	ExternalTransactionID *string  `json:"external_transaction_id,omitempty"`
-	Amount                float64  `json:"amount"`
-	Fee                   float64  `json:"fee"`
-	NetAmount             float64  `json:"net_amount"`
-	Currency              string   `json:"currency,omitempty"`
-	TransactionType       string   `json:"transaction_type,omitempty"`
-	TransactionDate       string   `json:"transaction_date"`
+	ExternalTransactionID *string `json:"external_transaction_id,omitempty"`
+	Amount                float64 `json:"amount"`
+	Fee                   float64 `json:"fee"`
+	NetAmount             float64 `json:"net_amount"`
+	Currency              string  `json:"currency,omitempty"`
+	TransactionType       string  `json:"transaction_type,omitempty"`
+	TransactionDate       string  `json:"transaction_date"`
 }
 
 // ManualMatchRequest is the request body for manually matching a transaction to an order.

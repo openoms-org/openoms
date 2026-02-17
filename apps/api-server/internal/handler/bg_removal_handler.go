@@ -87,10 +87,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Validate content type
-	detectLen := len(imageData)
-	if detectLen > 512 {
-		detectLen = 512
-	}
+	detectLen := min(len(imageData), 512)
 	contentType := http.DetectContentType(imageData[:detectLen])
 	if _, ok := bgAllowedMimeTypes[contentType]; !ok {
 		writeError(w, http.StatusBadRequest, "nieobsługiwany typ pliku — dozwolone: JPEG, PNG, WEBP")
@@ -307,10 +304,7 @@ func (h *BGRemovalHandler) downloadImage(ctx context.Context, imageURL string) (
 		return nil, "", fmt.Errorf("read image: %w", err)
 	}
 
-	detectLen := len(data)
-	if detectLen > 512 {
-		detectLen = 512
-	}
+	detectLen := min(len(data), 512)
 	contentType := http.DetectContentType(data[:detectLen])
 	return data, contentType, nil
 }

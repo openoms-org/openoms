@@ -212,10 +212,10 @@ func (p *Provider) mapShoperOrder(o *shopersdk.ShoperOrder) integration.Marketpl
 
 	// RawData
 	mo.RawData = map[string]any{
-		"shoper_order_id":  o.ID,
-		"order_serial":     o.OrderSerial,
-		"shipping_id":      o.ShippingID,
-		"payment_id":       o.PaymentID,
+		"shoper_order_id": o.ID,
+		"order_serial":    o.OrderSerial,
+		"shipping_id":     o.ShippingID,
+		"payment_id":      o.PaymentID,
 	}
 	if o.Notes != "" {
 		mo.RawData["customer_note"] = o.Notes

@@ -305,4 +305,3 @@ func (r *CustomerSegmentRepository) FindByTypeAndName(ctx context.Context, tx pg
 	}
 	return s, nil
 }
-

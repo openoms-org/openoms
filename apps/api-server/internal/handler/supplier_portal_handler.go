@@ -107,8 +107,8 @@ func extractPortalToken(r *http.Request) string {
 	}
 	// Authorization: Bearer <token>
 	authHeader := r.Header.Get("Authorization")
-	if strings.HasPrefix(authHeader, "Bearer ") {
-		return strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	if after, ok := strings.CutPrefix(authHeader, "Bearer "); ok {
+		return strings.TrimSpace(after)
 	}
 	return ""
 }

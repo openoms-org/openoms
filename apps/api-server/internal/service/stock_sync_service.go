@@ -222,10 +222,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 		for _, ch := range channels {
 			totalBuffer += ch.StockBuffer
 		}
-		availableQty := totalQty - reservedQty - totalBuffer
-		if availableQty < 0 {
-			availableQty = 0
-		}
+		availableQty := max(totalQty-reservedQty-totalBuffer, 0)
 
 		// Count how many channels are realtime-enabled
 		realtimeCount := 0
@@ -242,9 +239,9 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 
 		// Create event record
 		details := map[string]any{
-			"total_stock":      totalQty,
-			"reserved":         reservedQty,
-			"total_buffer":     totalBuffer,
+			"total_stock":       totalQty,
+			"reserved":          reservedQty,
+			"total_buffer":      totalBuffer,
 			"realtime_channels": realtimeCount,
 		}
 		detailsJSON, _ := json.Marshal(details)
@@ -308,16 +305,10 @@ func (s *StockSyncService) CalculateAvailableStock(ctx context.Context, tenantID
 			totalBuffer += ch.StockBuffer
 		}
 
-		baseAvailable := totalQty - reservedQty
-		if baseAvailable < 0 {
-			baseAvailable = 0
-		}
+		baseAvailable := max(totalQty-reservedQty, 0)
 
 		for _, ch := range channels {
-			available := baseAvailable - ch.StockBuffer
-			if available < 0 {
-				available = 0
-			}
+			available := max(baseAvailable-ch.StockBuffer, 0)
 			allocations = append(allocations, model.StockAllocation{
 				ChannelID:         ch.ID,
 				ChannelType:       ch.ChannelType,
@@ -364,16 +355,10 @@ func (s *StockSyncService) PushStockToAllChannels(ctx context.Context, tenantID,
 		if err != nil {
 			return err
 		}
-		baseAvailable := totalQty - reservedQty
-		if baseAvailable < 0 {
-			baseAvailable = 0
-		}
+		baseAvailable := max(totalQty-reservedQty, 0)
 
 		for _, ch := range channels {
-			available := baseAvailable - ch.StockBuffer
-			if available < 0 {
-				available = 0
-			}
+			available := max(baseAvailable-ch.StockBuffer, 0)
 
 			// Update sync status — in production, this would push to the marketplace API
 			if err := s.channelRepo.UpdateSyncStatus(ctx, tx, ch.ID, nil); err != nil {
@@ -445,10 +430,7 @@ func (s *StockSyncService) ReconcileStock(ctx context.Context, tenantID, product
 			totalBuffer += ch.StockBuffer
 		}
 
-		availableQty := totalQty - reservedQty - totalBuffer
-		if availableQty < 0 {
-			availableQty = 0
-		}
+		availableQty := max(totalQty-reservedQty-totalBuffer, 0)
 
 		details := map[string]any{
 			"reconcile":    true,

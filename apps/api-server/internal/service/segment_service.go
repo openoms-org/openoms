@@ -311,10 +311,7 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 
 		for i := range rawData {
 			// Recency: lower days = higher score (inverse)
-			rawData[i].RFM.Recency = 6 - quintileScore(float64(rawData[i].DaysSince), recencyBreaks)
-			if rawData[i].RFM.Recency < 1 {
-				rawData[i].RFM.Recency = 1
-			}
+			rawData[i].RFM.Recency = max(6-quintileScore(float64(rawData[i].DaysSince), recencyBreaks), 1)
 			if rawData[i].RFM.Recency > 5 {
 				rawData[i].RFM.Recency = 5
 			}
@@ -333,12 +330,12 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 
 		// Auto-assign to RFM segments
 		rfmSegments := map[string][]model.CustomerRFM{
-			"Champions":          {},
-			"Lojalni klienci":    {},
+			"Champions":           {},
+			"Lojalni klienci":     {},
 			"Potencjalni lojalni": {},
-			"Zagrożeni":          {},
-			"Utraceni":           {},
-			"Pozostali":          {},
+			"Zagrożeni":           {},
+			"Utraceni":            {},
+			"Pozostali":           {},
 		}
 
 		for _, r := range results {
@@ -347,12 +344,12 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 
 		// Colors for auto-segments
 		segmentColors := map[string]string{
-			"Champions":          "#10b981",
-			"Lojalni klienci":    "#3b82f6",
+			"Champions":           "#10b981",
+			"Lojalni klienci":     "#3b82f6",
 			"Potencjalni lojalni": "#8b5cf6",
-			"Zagrożeni":          "#f59e0b",
-			"Utraceni":           "#ef4444",
-			"Pozostali":          "#6b7280",
+			"Zagrożeni":           "#f59e0b",
+			"Utraceni":            "#ef4444",
+			"Pozostali":           "#6b7280",
 		}
 
 		for segName, customers := range rfmSegments {
@@ -411,8 +408,8 @@ func quintileBreaks(values []float64) [4]float64 {
 	}
 
 	var breaks [4]float64
-	for i := 0; i < 4; i++ {
-		idx := int(math.Round(float64((i + 1) * n) / 5.0))
+	for i := range 4 {
+		idx := int(math.Round(float64((i+1)*n) / 5.0))
 		if idx >= n {
 			idx = n - 1
 		}
@@ -423,7 +420,7 @@ func quintileBreaks(values []float64) [4]float64 {
 
 // quintileScore returns 1-5 based on where value falls in the breaks.
 func quintileScore(value float64, breaks [4]float64) int {
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if value <= breaks[i] {
 			return i + 1
 		}
@@ -460,12 +457,12 @@ func rfmSegmentLabel(rfm model.RFMScores) string {
 
 func rfmSegmentDescription(name string) string {
 	descriptions := map[string]string{
-		"Champions":          "Najlepsi klienci — kupują często, ostatnio i za duże kwoty",
-		"Lojalni klienci":    "Klienci kupujący regularnie",
+		"Champions":           "Najlepsi klienci — kupują często, ostatnio i za duże kwoty",
+		"Lojalni klienci":     "Klienci kupujący regularnie",
 		"Potencjalni lojalni": "Ostatnio kupili, mogą stać się lojalnymi",
-		"Zagrożeni":          "Kiedyś kupowali regularnie, ale dawno ich nie było",
-		"Utraceni":           "Dawno nie kupowali i kupowali rzadko",
-		"Pozostali":          "Klienci nie pasujący do innych segmentów",
+		"Zagrożeni":           "Kiedyś kupowali regularnie, ale dawno ich nie było",
+		"Utraceni":            "Dawno nie kupowali i kupowali rzadko",
+		"Pozostali":           "Klienci nie pasujący do innych segmentów",
 	}
 	if d, ok := descriptions[name]; ok {
 		return d

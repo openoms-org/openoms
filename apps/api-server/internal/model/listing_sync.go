@@ -10,23 +10,23 @@ import (
 
 // ListingSyncConfig defines sync settings between a local product catalog and a marketplace integration.
 type ListingSyncConfig struct {
-	ID                   uuid.UUID       `json:"id"`
-	TenantID             uuid.UUID       `json:"tenant_id"`
-	IntegrationID        uuid.UUID       `json:"integration_id"`
-	SyncDirection        string          `json:"sync_direction"`
-	AutoSync             bool            `json:"auto_sync"`
-	SyncIntervalMinutes  int             `json:"sync_interval_minutes"`
-	FieldMapping         json.RawMessage `json:"field_mapping"`
-	PriceRule            string          `json:"price_rule"`
-	PriceModifier        float64         `json:"price_modifier"`
-	StockBuffer          int             `json:"stock_buffer"`
-	Status               string          `json:"status"`
-	LastSyncAt           *time.Time      `json:"last_sync_at,omitempty"`
-	LastError            *string         `json:"last_error,omitempty"`
-	CreatedAt            time.Time       `json:"created_at"`
-	UpdatedAt            time.Time       `json:"updated_at"`
-	IntegrationProvider  string          `json:"integration_provider,omitempty"`
-	IntegrationLabel     *string         `json:"integration_label,omitempty"`
+	ID                  uuid.UUID       `json:"id"`
+	TenantID            uuid.UUID       `json:"tenant_id"`
+	IntegrationID       uuid.UUID       `json:"integration_id"`
+	SyncDirection       string          `json:"sync_direction"`
+	AutoSync            bool            `json:"auto_sync"`
+	SyncIntervalMinutes int             `json:"sync_interval_minutes"`
+	FieldMapping        json.RawMessage `json:"field_mapping"`
+	PriceRule           string          `json:"price_rule"`
+	PriceModifier       float64         `json:"price_modifier"`
+	StockBuffer         int             `json:"stock_buffer"`
+	Status              string          `json:"status"`
+	LastSyncAt          *time.Time      `json:"last_sync_at,omitempty"`
+	LastError           *string         `json:"last_error,omitempty"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	IntegrationProvider string          `json:"integration_provider,omitempty"`
+	IntegrationLabel    *string         `json:"integration_label,omitempty"`
 }
 
 // ListingSyncLog records the result of an individual sync operation.
