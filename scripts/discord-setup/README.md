@@ -1,6 +1,6 @@
 # OpenOMS Discord Server Setup
 
-Jednorazowy skrypt konfigurujący serwer Discord z kanałami, rolami i uprawnieniami.
+Jednorazowy skrypt konfigurujący serwer Discord z kanałami, rolami, uprawnieniami i politykami bezpieczeństwa.
 
 ## Wymagania
 
@@ -51,30 +51,54 @@ Dla bogatszych powiadomień (issues, PR, stars):
 4. Content type: `application/json`
 5. Wybierz eventy: Releases, Issues, Pull requests, Stars
 
-## Co skrypt tworzy
+## Co skrypt konfiguruje
 
-### Role
-| Rola | Kolor | Opis |
-|------|-------|------|
-| @Maintainer | Czerwony | Core team — mogą pisać na kanałach read-only |
-| @Contributor | Zielony | Kontrybutorzy kodu |
-| @Uzytkownik | Niebieski | Użytkownicy |
+### Bezpieczeństwo serwera
+
+| Zabezpieczenie | Opis |
+|----------------|------|
+| **Verification Level: Medium** | Nowi użytkownicy muszą mieć konto Discord 5+ minut |
+| **Content Filter: All Members** | Skanowanie wiadomości WSZYSTKICH użytkowników (nie tylko bez roli) |
+| **2FA dla moderatorów** | Moderatorzy muszą mieć włączone 2FA żeby banować/kickać/zarządzać |
+| **Default notifications: Only @mentions** | Nowi członkowie nie dostają powiadomień z każdej wiadomości |
+| **@everyone hardening** | Zablokowane: @everyone/@here, manage channels/roles/webhooks, kick/ban, create invites |
+
+### AutoMod (automatyczna moderacja)
+
+| Reguła | Co robi |
+|--------|---------|
+| **Blokada spamu** | Filtruje scamy (free nitro, crypto, phishing URLs, NSFW) — blokuje + alert |
+| **Mass mention** | Limit 5 wzmianek na wiadomość — blokuje + 5 min timeout |
+| **Discord invites** | Blokuje linki zaproszeniowe do innych serwerów |
+
+> Maintainerzy są wykluczeni z AutoMod — mogą pisać wszystko.
 
 ### Kanały
-| Kategoria | Kanał | Opis |
-|-----------|-------|------|
-| INFORMACJE | #ogloszenia | Read-only, wiadomość powitalna |
-| | #roadmap | Read-only, link do ROADMAP.md |
-| | #changelog | Read-only, logi zmian |
-| SPOLECZNOSC | #general | Ogólne rozmowy |
-| | #pokaz-swoje | Showcase instalacji |
-| | #pomysly | Propozycje funkcji |
-| POMOC | #instalacja | Setup & deployment |
-| | #konfiguracja | Settings & config |
-| | #integracje | Allegro, InPost, marketplace'y |
-| ROZWOJ | #contributing | Architektura, code review |
-| | #bugs | Dyskusja o bugach |
-| | #pull-requests | PR discussions |
-| BOTY | #github-feed | Read-only, auto-notyfikacje |
 
-Skrypt jest idempotentny — ponowne uruchomienie nie tworzy duplikatów.
+| Kategoria | Kanał | Zabezpieczenia |
+|-----------|-------|----------------|
+| INFORMACJE | #ogloszenia | Read-only, wiadomość powitalna |
+| | #roadmap | Read-only |
+| | #changelog | Read-only |
+| SPOLECZNOSC | #general | Standardowe |
+| | #pokaz-swoje | Standardowe |
+| | #pomysly | Standardowe |
+| POMOC | #instalacja | Slow mode 10s |
+| | #konfiguracja | Slow mode 10s |
+| | #integracje | Slow mode 10s |
+| ROZWOJ | #contributing | Standardowe |
+| | #bugs | Standardowe |
+| | #pull-requests | Standardowe |
+| BOTY | #github-feed | Read-only, alerty AutoMod |
+
+### Role
+
+| Rola | Kolor | Specjalne uprawnienia |
+|------|-------|----------------------|
+| @Maintainer | Czerwony | Pisanie na kanałach read-only, omija AutoMod |
+| @Contributor | Zielony | Widoczna na liście członków |
+| @Uzytkownik | Niebieski | Bazowe uprawnienia |
+
+## Idempotentność
+
+Skrypt można uruchomić wielokrotnie — nie tworzy duplikatów. Istniejące kanały/role/reguły są pomijane.
