@@ -34,6 +34,11 @@ COPY packages/ebay-go-sdk/go.mod          ./packages/ebay-go-sdk/
 COPY packages/kaufland-go-sdk/go.mod      ./packages/kaufland-go-sdk/
 COPY packages/ksef-go-sdk/go.mod          ./packages/ksef-go-sdk/
 COPY packages/olx-go-sdk/go.mod           ./packages/olx-go-sdk/
+COPY packages/wfirma-go-sdk/go.mod        ./packages/wfirma-go-sdk/
+COPY packages/infakt-go-sdk/go.mod        ./packages/infakt-go-sdk/
+COPY packages/shoper-go-sdk/go.mod        ./packages/shoper-go-sdk/
+COPY packages/prestashop-go-sdk/go.mod    ./packages/prestashop-go-sdk/
+COPY packages/shopify-go-sdk/go.mod       ./packages/shopify-go-sdk/
 
 RUN cd apps/api-server && go mod download
 
