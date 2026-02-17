@@ -531,8 +531,8 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 				IPAddress:  ip,
 			}); err != nil {
 				slog.Warn("bulk status transition: audit log failed, status update succeeded without audit record",
-				"order_id", orderID, "error", err)
-			resp.AuditFailures = append(resp.AuditFailures, orderID.String())
+					"order_id", orderID, "error", err)
+				resp.AuditFailures = append(resp.AuditFailures, orderID.String())
 			}
 
 			updated, err := s.orderRepo.FindByID(ctx, tx, orderID)

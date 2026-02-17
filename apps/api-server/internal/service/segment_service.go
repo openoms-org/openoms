@@ -311,10 +311,7 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 
 		for i := range rawData {
 			// Recency: lower days = higher score (inverse)
-			rawData[i].RFM.Recency = max(6-quintileScore(float64(rawData[i].DaysSince), recencyBreaks), 1)
-			if rawData[i].RFM.Recency > 5 {
-				rawData[i].RFM.Recency = 5
-			}
+			rawData[i].RFM.Recency = min(max(6-quintileScore(float64(rawData[i].DaysSince), recencyBreaks), 1), 5)
 
 			// Frequency: more orders = higher score
 			rawData[i].RFM.Frequency = quintileScore(float64(rawData[i].OrderCount), frequencyBreaks)
