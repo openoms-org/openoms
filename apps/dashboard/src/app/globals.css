@@ -154,20 +154,3 @@
   line-height: 1.5;
 }
 
-/* Landing page animations */
-.landing-fade {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.landing-visible .landing-fade,
-.landing-fade.landing-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Landing page forced dark */
-.landing {
-  color-scheme: dark;
-}

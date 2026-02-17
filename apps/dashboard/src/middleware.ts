@@ -4,13 +4,17 @@ import type { NextRequest } from "next/server";
 const publicPaths = ["/login", "/register", "/return-request", "/track", "/supplier-portal"];
 
 function isPublicPath(pathname: string): boolean {
-  if (pathname === "/") return true;
   return publicPaths.some((p) => pathname.startsWith(p));
 }
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = request.cookies.has("has_session");
+
+  // Root "/" -> redirect to orders (logged in) or login (not logged in)
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL(hasSession ? "/orders" : "/login", request.url));
+  }
 
   // Authenticated user trying to access auth pages -> redirect to dashboard
   if (hasSession && ["/login", "/register"].some((p) => pathname.startsWith(p))) {
