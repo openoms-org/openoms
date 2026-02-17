@@ -90,6 +90,7 @@ type ShipmentRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.ShipmentListFilter) ([]model.Shipment, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Shipment, error)
 	FindByExternalID(ctx context.Context, tx pgx.Tx, externalID string) (*model.Shipment, error)
+	CountByOrder(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) (int, error)
 	Create(ctx context.Context, tx pgx.Tx, shipment *model.Shipment) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateShipmentRequest) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
@@ -308,6 +309,27 @@ type StocktakeItemRepo interface {
 	UpdateCount(ctx context.Context, tx pgx.Tx, itemID uuid.UUID, countedQty int, notes *string, countedBy uuid.UUID) error
 	GetStats(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID) (*model.StocktakeStats, error)
 	ListDiscrepancies(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID) ([]model.StocktakeItem, error)
+}
+
+// PurchaseOrderRepo defines the interface for purchase order persistence operations.
+type PurchaseOrderRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.PurchaseOrderListFilter) ([]model.PurchaseOrder, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PurchaseOrder, error)
+	Create(ctx context.Context, tx pgx.Tx, po *model.PurchaseOrder) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdatePurchaseOrderRequest) error
+	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
+	UpdateTotalAmount(ctx context.Context, tx pgx.Tx, id uuid.UUID, amount float64) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	GeneratePONumber(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (string, error)
+}
+
+// PurchaseOrderItemRepo defines the interface for purchase order item persistence operations.
+type PurchaseOrderItemRepo interface {
+	CreateItem(ctx context.Context, tx pgx.Tx, item *model.PurchaseOrderItem) error
+	ListByPOID(ctx context.Context, tx pgx.Tx, poID uuid.UUID) ([]model.PurchaseOrderItem, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PurchaseOrderItem, error)
+	UpdateReceived(ctx context.Context, tx pgx.Tx, id uuid.UUID, quantityReceived int) error
+	DeleteByPOID(ctx context.Context, tx pgx.Tx, poID uuid.UUID) error
 }
 
 // PriceListRepo defines the interface for price list persistence operations.

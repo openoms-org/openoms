@@ -72,6 +72,14 @@ export const RETURN_TRANSITIONS: Record<string, string[]> = {
   cancelled: [],
 };
 
+export const PURCHASE_ORDER_STATUSES: Record<string, { label: string; color: string }> = {
+  draft: { label: "Szkic", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  sent: { label: "Wysłane", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  partially_received: { label: "Częściowo odebrane", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  received: { label: "Odebrane", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+};
+
 export const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
   active: { label: "Aktywny", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
   inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },

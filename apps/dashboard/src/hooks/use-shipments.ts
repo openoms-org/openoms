@@ -33,6 +33,32 @@ export function useShipments(params: ShipmentListParams = {}) {
   });
 }
 
+// Returns all shipments for a specific order, sorted by package_number.
+export function useOrderShipments(orderId: string) {
+  return useQuery({
+    queryKey: ["orders", orderId, "shipments"],
+    queryFn: () =>
+      apiClient<Shipment[]>(`/v1/orders/${orderId}/shipments`),
+    enabled: !!orderId,
+  });
+}
+
+export function useCreateOrderShipment(orderId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Omit<CreateShipmentRequest, "order_id">) =>
+      apiClient<Shipment>(`/v1/orders/${orderId}/shipments`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders", orderId, "shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
+    },
+  });
+}
+
 export function useShipment(id: string) {
   return useQuery({
     queryKey: ["shipments", id],

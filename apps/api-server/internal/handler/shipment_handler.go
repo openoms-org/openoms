@@ -27,6 +27,61 @@ func NewShipmentHandler(shipmentService *service.ShipmentService, labelService *
 	return &ShipmentHandler{shipmentService: shipmentService, labelService: labelService}
 }
 
+// ListByOrder returns all shipments for a given order, sorted by package_number.
+// Route: GET /v1/orders/{id}/shipments
+func (h *ShipmentHandler) ListByOrder(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	orderID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid order ID")
+		return
+	}
+
+	shipments, err := h.shipmentService.ListByOrder(r.Context(), tenantID, orderID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list order shipments")
+		return
+	}
+	writeJSON(w, http.StatusOK, shipments)
+}
+
+// CreateForOrder creates a shipment for a specific order, taking order_id from the URL path.
+// Route: POST /v1/orders/{id}/shipments
+func (h *ShipmentHandler) CreateForOrder(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	orderID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid order ID")
+		return
+	}
+
+	var req model.CreateShipmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	req.OrderID = orderID
+
+	shipment, err := h.shipmentService.Create(r.Context(), tenantID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrOrderNotFoundForShipment):
+			writeError(w, http.StatusUnprocessableEntity, "order not found for shipment")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to create shipment")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, shipment)
+}
+
 func (h *ShipmentHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)

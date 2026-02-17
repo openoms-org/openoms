@@ -42,6 +42,7 @@ import {
   Scale,
   Calculator,
   Ruler,
+  Rss,
 } from "lucide-react";
 
 export interface NavItem {
@@ -102,6 +103,7 @@ export const navItems: NavItem[] = [
     ],
   },
   { href: "/integrations/amazon", label: "Amazon", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
+  { href: "/settings/feeds", label: "Feedy produktowe", icon: Rss, adminOnly: true, group: "Kanały sprzedaży" },
   // Ogólne
   { href: "/settings/security", label: "Bezpieczeństwo", icon: ShieldCheck, group: "Ogólne" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Ogólne" },
@@ -128,6 +130,7 @@ export const navItems: NavItem[] = [
   { href: "/settings/marketing", label: "Marketing", icon: Send, adminOnly: true, group: "Narzędzia" },
   { href: "/settings/helpdesk", label: "Helpdesk", icon: Headphones, adminOnly: true, group: "Narzędzia" },
   { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true, group: "Narzędzia" },
+  { href: "/purchase-orders", label: "Zamówienia zakupu", icon: ClipboardList, adminOnly: true, group: "Narzędzia" },
   // Monitoring
   { href: "/settings/sync-jobs", label: "Synchronizacja", icon: RefreshCw, adminOnly: true, group: "Monitoring" },
   { href: "/settings/webhooks/deliveries", label: "Dostawy webhooków", icon: Webhook, adminOnly: true, group: "Monitoring" },

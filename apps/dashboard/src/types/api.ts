@@ -232,6 +232,12 @@ export interface Shipment {
   label_url?: string;
   carrier_data?: Record<string, unknown>;
   warehouse_id?: string;
+  package_number: number;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  notes: string;
   created_at: string;
   updated_at: string;
 }
@@ -244,12 +250,22 @@ export interface CreateShipmentRequest {
   label_url?: string;
   carrier_data?: Record<string, unknown>;
   warehouse_id?: string;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  notes?: string;
 }
 
 export interface UpdateShipmentRequest {
   tracking_number?: string;
   label_url?: string;
   carrier_data?: Record<string, unknown>;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  notes?: string;
 }
 
 export interface ShipmentListParams extends PaginationParams {
@@ -1103,6 +1119,18 @@ export interface InventorySettings {
   strict_mode: boolean;
 }
 
+// === Product Feed Settings ===
+export interface ProductFeedConfig {
+  ceneo_enabled: boolean;
+  ceneo_feed_token: string;
+  google_enabled: boolean;
+  google_feed_token: string;
+  default_currency: string;
+  default_shipping_cost: string;
+  excluded_categories: string[];
+  exclude_out_of_stock: boolean;
+}
+
 // === Product Import ===
 export interface ProductImportPreview {
   headers: string[];
@@ -1646,6 +1674,83 @@ export interface GetRatesRequest {
 
 export interface GetRatesResponse {
   rates: ShippingRate[];
+}
+
+// === Purchase Orders ===
+export interface PurchaseOrder {
+  id: string;
+  tenant_id: string;
+  po_number: string;
+  supplier_id?: string;
+  supplier_name: string;
+  warehouse_id?: string;
+  status: string;
+  notes?: string;
+  expected_delivery_date?: string;
+  total_amount: number;
+  currency: string;
+  created_by?: string;
+  items?: PurchaseOrderItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  tenant_id: string;
+  purchase_order_id: string;
+  product_id?: string;
+  sku: string;
+  product_name: string;
+  quantity_ordered: number;
+  quantity_received: number;
+  unit_cost: number;
+  total_cost: number;
+  notes?: string;
+  created_at: string;
+}
+
+export interface CreatePurchaseOrderItemReq {
+  product_id?: string;
+  sku: string;
+  product_name: string;
+  quantity: number;
+  unit_cost: number;
+  notes?: string;
+}
+
+export interface CreatePurchaseOrderRequest {
+  supplier_id?: string;
+  supplier_name: string;
+  warehouse_id?: string;
+  notes?: string;
+  expected_delivery_date?: string;
+  currency?: string;
+  items: CreatePurchaseOrderItemReq[];
+}
+
+export interface UpdatePurchaseOrderRequest {
+  supplier_id?: string;
+  supplier_name?: string;
+  warehouse_id?: string;
+  notes?: string;
+  expected_delivery_date?: string;
+  currency?: string;
+  items?: CreatePurchaseOrderItemReq[];
+}
+
+export interface ReceiveItemsRequest {
+  items: ReceiveItemEntry[];
+}
+
+export interface ReceiveItemEntry {
+  item_id: string;
+  quantity_received: number;
+}
+
+export interface PurchaseOrderListParams extends PaginationParams {
+  status?: string;
+  supplier_id?: string;
 }
 
 // === WebSocket Events ===

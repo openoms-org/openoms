@@ -66,6 +66,27 @@ func NewShipmentService(
 	}
 }
 
+// ListByOrder returns all shipments for a given order, sorted by package_number.
+func (s *ShipmentService) ListByOrder(ctx context.Context, tenantID, orderID uuid.UUID) ([]model.Shipment, error) {
+	var shipments []model.Shipment
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		filter := model.ShipmentListFilter{
+			OrderID:          &orderID,
+			PaginationParams: model.PaginationParams{Limit: 1000, Offset: 0, SortBy: "package_number", SortOrder: "asc"},
+		}
+		result, _, err := s.shipmentRepo.List(ctx, tx, filter)
+		if err != nil {
+			return err
+		}
+		if result == nil {
+			result = []model.Shipment{}
+		}
+		shipments = result
+		return nil
+	})
+	return shipments, err
+}
+
 func (s *ShipmentService) List(ctx context.Context, tenantID uuid.UUID, filter model.ShipmentListFilter) (model.ListResponse[model.Shipment], error) {
 	var resp model.ListResponse[model.Shipment]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -125,6 +146,11 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		LabelURL:       req.LabelURL,
 		CarrierData:    carrierData,
 		WarehouseID:    req.WarehouseID,
+		Weight:         req.Weight,
+		Length:         req.Length,
+		Width:          req.Width,
+		Height:         req.Height,
+		Notes:          req.Notes,
 	}
 
 	var associatedOrder *model.Order
@@ -137,6 +163,13 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 			return ErrOrderNotFoundForShipment
 		}
 		associatedOrder = order
+
+		// Auto-assign package_number: count existing shipments for this order + 1
+		count, err := s.shipmentRepo.CountByOrder(ctx, tx, req.OrderID)
+		if err != nil {
+			return fmt.Errorf("count existing shipments: %w", err)
+		}
+		shipment.PackageNumber = count + 1
 
 		if err := s.shipmentRepo.Create(ctx, tx, shipment); err != nil {
 			return err
@@ -309,11 +342,31 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 			return err
 		}
 
-		// Order-shipment status sync
+		// Order-shipment status sync (multi-package aware)
 		switch req.Status {
 		case "delivered":
-			if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "delivered", nil, func() *time.Time { t := time.Now(); return &t }()); err != nil {
-				return fmt.Errorf("sync order status to delivered: %w", err)
+			// Only mark order as delivered if ALL shipments for this order are delivered
+			allDelivered := true
+			orderShipments, _, err := s.shipmentRepo.List(ctx, tx, model.ShipmentListFilter{
+				OrderID:          &existing.OrderID,
+				PaginationParams: model.PaginationParams{Limit: 1000, Offset: 0},
+			})
+			if err != nil {
+				return fmt.Errorf("list order shipments for status sync: %w", err)
+			}
+			for _, os := range orderShipments {
+				if os.ID == shipmentID {
+					continue // skip the one we just updated — it's now "delivered"
+				}
+				if os.Status != "delivered" {
+					allDelivered = false
+					break
+				}
+			}
+			if allDelivered {
+				if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "delivered", nil, func() *time.Time { t := time.Now(); return &t }()); err != nil {
+					return fmt.Errorf("sync order status to delivered: %w", err)
+				}
 			}
 		case "picked_up", "in_transit":
 			order, err := s.orderRepo.FindByID(ctx, tx, existing.OrderID)

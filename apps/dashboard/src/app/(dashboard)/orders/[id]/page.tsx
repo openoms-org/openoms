@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown, Weight, Ruler, FileBarChart } from "lucide-react";
 import { RateShopping } from "@/components/shipping/rate-shopping";
 import { AllegroShipmentDialog } from "@/components/integrations/allegro-shipment-dialog";
 import { useAllegroCarriers, useAllegroFulfillment, useAllegroTracking } from "@/hooks/use-allegro";
 import { useOrder, useUpdateOrder, useDeleteOrder, useTransitionOrderStatus, useDuplicateOrder } from "@/hooks/use-orders";
-import { useShipments } from "@/hooks/use-shipments";
+import { useOrderShipments, useCreateOrderShipment } from "@/hooks/use-shipments";
 import { useReturns } from "@/hooks/use-returns";
 import { useOrderGroups, useSplitOrder } from "@/hooks/use-order-groups";
 import { useOrderTickets, useCreateOrderTicket } from "@/hooks/use-helpdesk";
@@ -124,7 +124,9 @@ export default function OrderDetailPage() {
   const deleteOrder = useDeleteOrder();
   const transitionStatus = useTransitionOrderStatus(params.id);
 
-  const { data: shipmentsData, isLoading: isLoadingShipments } = useShipments({ order_id: params.id });
+  const { data: orderShipments, isLoading: isLoadingShipments } = useOrderShipments(params.id);
+  const createOrderShipment = useCreateOrderShipment(params.id);
+  const [showAddPackageDialog, setShowAddPackageDialog] = useState(false);
   const { data: returnsData, isLoading: isLoadingReturns } = useReturns({ order_id: params.id });
   const { data: orderGroups } = useOrderGroups(params.id);
   const splitOrder = useSplitOrder(params.id);
@@ -258,11 +260,9 @@ export default function OrderDetailPage() {
             <FileText className="mr-2 h-4 w-4" />
             List przewozowy
           </Button>
-          <Button variant="outline" asChild>
-            <Link href={`/shipments/new?order_id=${params.id}`}>
-              <Package className="mr-2 h-4 w-4" />
-              Utwórz przesyłkę
-            </Link>
+          <Button variant="outline" onClick={() => setShowAddPackageDialog(true)}>
+            <Package className="mr-2 h-4 w-4" />
+            Dodaj paczkę
           </Button>
           {order.source === "allegro" && order.external_id && (
             <>
@@ -556,15 +556,25 @@ export default function OrderDetailPage() {
           </Card>
 
           <CollapsibleSection
-            title="Przesyłki"
+            title="Paczki / Przesyłki"
             icon={Package}
-            defaultOpen={!!(shipmentsData?.items && shipmentsData.items.length > 0)}
+            defaultOpen={!!(orderShipments && orderShipments.length > 0)}
             badge={
-              shipmentsData?.items && shipmentsData.items.length > 0 ? (
+              orderShipments && orderShipments.length > 0 ? (
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                  {shipmentsData.items.length}
+                  {orderShipments.length}
                 </span>
               ) : undefined
+            }
+            headerAction={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddPackageDialog(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Dodaj paczkę
+              </Button>
             }
           >
             {isLoadingShipments ? (
@@ -572,37 +582,98 @@ export default function OrderDetailPage() {
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
               </div>
-            ) : shipmentsData?.items && shipmentsData.items.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Numer śledzenia</TableHead>
-                    <TableHead>Dostawca</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Utworzono</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {shipmentsData.items.map((shipment) => (
-                    <TableRow key={shipment.id}>
-                      <TableCell>
-                        <Link href={`/shipments/${shipment.id}`} className="font-medium text-primary hover:underline">
-                          {shipment.tracking_number || shortId(shipment.id)}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{shipment.provider}</TableCell>
-                      <TableCell>
+            ) : orderShipments && orderShipments.length > 0 ? (
+              <div className="space-y-4">
+                {orderShipments.map((shipment) => (
+                  <div
+                    key={shipment.id}
+                    className="rounded-lg border bg-card p-4 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                          {shipment.package_number}
+                        </span>
+                        <div>
+                          <Link
+                            href={`/shipments/${shipment.id}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            Paczka {shipment.package_number} z {orderShipments.length}
+                          </Link>
+                          <p className="text-xs text-muted-foreground">
+                            {shipment.provider.toUpperCase()} — {formatDate(shipment.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
-                      </TableCell>
-                      <TableCell>{formatDate(shipment.created_at)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/shipments/${shipment.id}`}>
+                            Szczegóły
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+                      <div>
+                        <p className="text-muted-foreground">Nr śledzenia</p>
+                        <p className="font-medium">
+                          {shipment.tracking_number || "—"}
+                        </p>
+                      </div>
+                      {shipment.weight != null && (
+                        <div>
+                          <p className="text-muted-foreground">Waga</p>
+                          <p className="font-medium">{shipment.weight} kg</p>
+                        </div>
+                      )}
+                      {(shipment.length != null || shipment.width != null || shipment.height != null) && (
+                        <div>
+                          <p className="text-muted-foreground">Wymiary (cm)</p>
+                          <p className="font-medium">
+                            {shipment.length ?? "—"} x {shipment.width ?? "—"} x {shipment.height ?? "—"}
+                          </p>
+                        </div>
+                      )}
+                      {shipment.label_url && (
+                        <div>
+                          <p className="text-muted-foreground">Etykieta</p>
+                          <a
+                            href={shipment.label_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-primary hover:underline"
+                          >
+                            Pobierz
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {shipment.notes && (
+                      <div className="text-sm">
+                        <p className="text-muted-foreground">Notatki</p>
+                        <p className="mt-0.5">{shipment.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Brak przesyłek dla tego zamówienia.</p>
+                <p className="text-sm text-muted-foreground">Brak paczek dla tego zamówienia.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => setShowAddPackageDialog(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Dodaj pierwszą paczkę
+                </Button>
               </div>
             )}
           </CollapsibleSection>
@@ -951,6 +1022,22 @@ export default function OrderDetailPage() {
         }}
         isLoading={createTicket.isPending}
       />
+
+      {/* Add Package Dialog */}
+      <AddPackageDialog
+        open={showAddPackageDialog}
+        onOpenChange={setShowAddPackageDialog}
+        onSubmit={async (data) => {
+          try {
+            await createOrderShipment.mutateAsync(data);
+            toast.success("Paczka została dodana");
+            setShowAddPackageDialog(false);
+          } catch (error) {
+            toast.error(getErrorMessage(error));
+          }
+        }}
+        isLoading={createOrderShipment.isPending}
+      />
     </div>
   );
 }
@@ -1131,6 +1218,165 @@ function SplitOrderDialog({
             disabled={isLoading || split1Items.length === 0 || split2Items.length === 0}
           >
             {isLoading ? "Dzielenie..." : "Podziel zamówienie"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddPackageDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  isLoading,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (data: {
+    provider: string;
+    tracking_number?: string;
+    weight?: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    notes?: string;
+  }) => void;
+  isLoading: boolean;
+}) {
+  const [provider, setProvider] = useState("manual");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [weight, setWeight] = useState("");
+  const [length, setLength] = useState("");
+  const [width, setWidth] = useState("");
+  const [height, setHeight] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setProvider("manual");
+      setTrackingNumber("");
+      setWeight("");
+      setLength("");
+      setWidth("");
+      setHeight("");
+      setNotes("");
+    }
+  }, [open]);
+
+  const handleSubmit = () => {
+    const data: Parameters<typeof onSubmit>[0] = { provider };
+    if (trackingNumber) data.tracking_number = trackingNumber;
+    if (weight) data.weight = parseFloat(weight);
+    if (length) data.length = parseFloat(length);
+    if (width) data.width = parseFloat(width);
+    if (height) data.height = parseFloat(height);
+    if (notes) data.notes = notes;
+    onSubmit(data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dodaj paczkę</DialogTitle>
+          <DialogDescription>
+            Dodaj kolejną paczkę do tego zamówienia. Numer paczki zostanie przypisany automatycznie.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Dostawca</Label>
+            <Select value={provider} onValueChange={setProvider}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"].map(
+                  (p) => (
+                    <SelectItem key={p} value={p}>
+                      {p.toUpperCase()}
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Numer śledzenia (opcjonalnie)</Label>
+            <Input
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="np. 6280012345678"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Waga (kg)</Label>
+              <Input
+                type="number"
+                step="0.001"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="np. 2.5"
+              />
+            </div>
+            <div>
+              <Label>Długość (cm)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                placeholder="np. 30"
+              />
+            </div>
+            <div>
+              <Label>Szerokość (cm)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={width}
+                onChange={(e) => setWidth(e.target.value)}
+                placeholder="np. 20"
+              />
+            </div>
+            <div>
+              <Label>Wysokość (cm)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="np. 15"
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Notatki (opcjonalnie)</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="np. Zawiera kruche przedmioty"
+              rows={2}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Anuluj
+          </Button>
+          <Button onClick={handleSubmit} disabled={!provider || isLoading}>
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
+            Dodaj paczkę
           </Button>
         </DialogFooter>
       </DialogContent>

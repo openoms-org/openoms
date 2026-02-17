@@ -242,6 +242,10 @@ export default function ShipmentDetailPage() {
                 />
               </div>
               <div>
+                <p className="text-sm text-muted-foreground">Numer paczki</p>
+                <p className="text-sm font-medium">Paczka #{shipment.package_number}</p>
+              </div>
+              <div>
                 <p className="text-sm text-muted-foreground">Numer śledzenia</p>
                 <p className="text-sm">
                   {shipment.tracking_number || "-"}
@@ -287,6 +291,26 @@ export default function ShipmentDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Zlecenie odbioru</p>
                   <p className="font-mono text-sm">#{String(shipment.carrier_data.dispatch_order_id)}</p>
+                </div>
+              )}
+              {shipment.weight != null && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Waga</p>
+                  <p className="text-sm">{shipment.weight} kg</p>
+                </div>
+              )}
+              {(shipment.length != null || shipment.width != null || shipment.height != null) && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Wymiary (cm)</p>
+                  <p className="text-sm">
+                    {shipment.length ?? "-"} x {shipment.width ?? "-"} x {shipment.height ?? "-"}
+                  </p>
+                </div>
+              )}
+              {shipment.notes && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Notatki</p>
+                  <p className="text-sm">{shipment.notes}</p>
                 </div>
               )}
               <div>

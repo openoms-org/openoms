@@ -16,6 +16,24 @@ func NewShipmentRepository() *ShipmentRepository {
 	return &ShipmentRepository{}
 }
 
+// shipmentColumns is the canonical column list for all SELECT queries.
+const shipmentColumns = `id, tenant_id, order_id, provider, integration_id,
+		        external_id, tracking_number, status, label_url, carrier_data,
+		        warehouse_id, package_number, weight, dimensions_length,
+		        dimensions_width, dimensions_height, notes, created_at, updated_at`
+
+// scanShipment scans a row into a Shipment struct using the canonical column order.
+func scanShipment(row interface{ Scan(dest ...any) error }) (model.Shipment, error) {
+	var s model.Shipment
+	err := row.Scan(
+		&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
+		&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
+		&s.WarehouseID, &s.PackageNumber, &s.Weight, &s.Length,
+		&s.Width, &s.Height, &s.Notes, &s.CreatedAt, &s.UpdatedAt,
+	)
+	return s, err
+}
+
 func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.ShipmentListFilter) ([]model.Shipment, int, error) {
 	where := "WHERE 1=1"
 	args := []any{}
@@ -44,20 +62,19 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 	}
 
 	allowedSortColumns := map[string]string{
-		"created_at": "created_at",
-		"provider":   "provider",
-		"status":     "status",
+		"created_at":     "created_at",
+		"provider":       "provider",
+		"status":         "status",
+		"package_number": "package_number",
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, order_id, provider, integration_id,
-		        external_id, tracking_number, status, label_url, carrier_data,
-		        warehouse_id, created_at, updated_at
+		`SELECT %s
 		 FROM shipments %s
 		 %s
 		 LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		shipmentColumns, where, orderByClause, argIdx, argIdx+1,
 	)
 	args = append(args, filter.Limit, filter.Offset)
 
@@ -69,12 +86,8 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 
 	var shipments []model.Shipment
 	for rows.Next() {
-		var s model.Shipment
-		if err := rows.Scan(
-			&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
-			&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
-			&s.WarehouseID, &s.CreatedAt, &s.UpdatedAt,
-		); err != nil {
+		s, err := scanShipment(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan shipment: %w", err)
 		}
 		shipments = append(shipments, s)
@@ -83,17 +96,10 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 }
 
 func (r *ShipmentRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Shipment, error) {
-	var s model.Shipment
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, order_id, provider, integration_id,
-		        external_id, tracking_number, status, label_url, carrier_data,
-		        warehouse_id, created_at, updated_at
-		 FROM shipments WHERE id = $1`, id,
-	).Scan(
-		&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
-		&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
-		&s.WarehouseID, &s.CreatedAt, &s.UpdatedAt,
+	row := tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM shipments WHERE id = $1`, shipmentColumns), id,
 	)
+	s, err := scanShipment(row)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -105,17 +111,10 @@ func (r *ShipmentRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 
 // FindByExternalID looks up a shipment by its external system ID (e.g. Allegro shipment ID).
 func (r *ShipmentRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, externalID string) (*model.Shipment, error) {
-	var s model.Shipment
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, order_id, provider, integration_id,
-		        external_id, tracking_number, status, label_url, carrier_data,
-		        warehouse_id, created_at, updated_at
-		 FROM shipments WHERE external_id = $1`, externalID,
-	).Scan(
-		&s.ID, &s.TenantID, &s.OrderID, &s.Provider, &s.IntegrationID,
-		&s.ExternalID, &s.TrackingNumber, &s.Status, &s.LabelURL, &s.CarrierData,
-		&s.WarehouseID, &s.CreatedAt, &s.UpdatedAt,
+	row := tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM shipments WHERE external_id = $1`, shipmentColumns), externalID,
 	)
+	s, err := scanShipment(row)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -125,16 +124,31 @@ func (r *ShipmentRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, ex
 	return &s, nil
 }
 
+// CountByOrder returns the number of shipments for the given order.
+func (r *ShipmentRepository) CountByOrder(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx,
+		"SELECT COUNT(*) FROM shipments WHERE order_id = $1", orderID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count shipments by order: %w", err)
+	}
+	return count, nil
+}
+
 func (r *ShipmentRepository) Create(ctx context.Context, tx pgx.Tx, shipment *model.Shipment) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO shipments (
 			id, tenant_id, order_id, provider, integration_id,
-			external_id, tracking_number, status, label_url, carrier_data, warehouse_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			external_id, tracking_number, status, label_url, carrier_data,
+			warehouse_id, package_number, weight, dimensions_length,
+			dimensions_width, dimensions_height, notes
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING created_at, updated_at`,
 		shipment.ID, shipment.TenantID, shipment.OrderID, shipment.Provider, shipment.IntegrationID,
 		shipment.ExternalID, shipment.TrackingNumber, shipment.Status, shipment.LabelURL, shipment.CarrierData,
-		shipment.WarehouseID,
+		shipment.WarehouseID, shipment.PackageNumber, shipment.Weight, shipment.Length,
+		shipment.Width, shipment.Height, shipment.Notes,
 	).Scan(&shipment.CreatedAt, &shipment.UpdatedAt)
 }
 
@@ -156,6 +170,31 @@ func (r *ShipmentRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	if req.CarrierData != nil {
 		setClauses = append(setClauses, fmt.Sprintf("carrier_data = $%d", argIdx))
 		args = append(args, req.CarrierData)
+		argIdx++
+	}
+	if req.Weight != nil {
+		setClauses = append(setClauses, fmt.Sprintf("weight = $%d", argIdx))
+		args = append(args, *req.Weight)
+		argIdx++
+	}
+	if req.Length != nil {
+		setClauses = append(setClauses, fmt.Sprintf("dimensions_length = $%d", argIdx))
+		args = append(args, *req.Length)
+		argIdx++
+	}
+	if req.Width != nil {
+		setClauses = append(setClauses, fmt.Sprintf("dimensions_width = $%d", argIdx))
+		args = append(args, *req.Width)
+		argIdx++
+	}
+	if req.Height != nil {
+		setClauses = append(setClauses, fmt.Sprintf("dimensions_height = $%d", argIdx))
+		args = append(args, *req.Height)
+		argIdx++
+	}
+	if req.Notes != nil {
+		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
+		args = append(args, *req.Notes)
 		argIdx++
 	}
 

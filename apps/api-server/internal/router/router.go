@@ -76,6 +76,9 @@ type RouterDeps struct {
 	AllegroDelivery   *handler.AllegroDeliveryHandler
 	AllegroPolicies   *handler.AllegroPoliciesHandler
 	AllegroListings   *handler.AllegroListingsHandler
+	Tracking          *handler.TrackingHandler
+	Feed              *handler.FeedHandler
+	PurchaseOrder     *handler.PurchaseOrderHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -161,6 +164,19 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Get("/{token}/status", deps.PublicReturn.GetStatusByToken)
 	})
 
+	// Public order tracking — no JWT, rate-limited (10 req/min per IP)
+	r.With(middleware.RateLimit(10, 1*time.Minute)).
+		Get("/v1/tracking/{tenant_slug}/{order_id}", deps.Tracking.TrackOrder)
+
+	// Public product feed routes — no JWT, token-authenticated, rate-limited (60 req/hour per IP)
+	if deps.Feed != nil {
+		r.Route("/v1/feeds", func(r chi.Router) {
+			r.Use(middleware.RateLimit(60, 1*time.Hour))
+			r.Get("/ceneo/{tenant_id}/{token}", deps.Feed.ServeCeneoFeed)
+			r.Get("/google/{tenant_id}/{token}", deps.Feed.ServeGoogleFeed)
+		})
+	}
+
 	// WebSocket endpoint — auth via query param, must be before JWT middleware
 	r.Get("/v1/ws", deps.WS.ServeWS)
 
@@ -209,6 +225,11 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/ksef", deps.KSeF.GetSettings)
 				r.Put("/ksef", deps.KSeF.UpdateSettings)
 				r.Post("/ksef/test", deps.KSeF.TestConnection)
+				if deps.Feed != nil {
+					r.Get("/feeds", deps.Feed.GetConfig)
+					r.Put("/feeds", deps.Feed.UpdateConfig)
+					r.Post("/feeds/regenerate-token", deps.Feed.RegenerateToken)
+				}
 			})
 
 			// Admin-only audit log and webhook deliveries
@@ -264,6 +285,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/pack", deps.Barcode.PackOrder)
 				r.Get("/{id}/tickets", deps.Helpdesk.ListOrderTickets)
 				r.Post("/{id}/tickets", deps.Helpdesk.CreateOrderTicket)
+				r.Get("/{id}/shipments", deps.Shipment.ListByOrder)
+				r.Post("/{id}/shipments", deps.Shipment.CreateForOrder)
 			})
 
 			// Invoices — any authenticated user
@@ -496,6 +519,23 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/sync", deps.Supplier.Sync)
 				r.Get("/{id}/products", deps.Supplier.ListProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
+			})
+
+			// Purchase Orders — any authenticated user can view, admin/manager can create/edit
+			r.Route("/purchase-orders", func(r chi.Router) {
+				r.Get("/", deps.PurchaseOrder.List)
+				r.Get("/{id}", deps.PurchaseOrder.Get)
+
+				// Write operations — admin only
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Post("/", deps.PurchaseOrder.Create)
+					r.Put("/{id}", deps.PurchaseOrder.Update)
+					r.Delete("/{id}", deps.PurchaseOrder.Delete)
+					r.Post("/{id}/send", deps.PurchaseOrder.Send)
+					r.Post("/{id}/receive", deps.PurchaseOrder.Receive)
+					r.Post("/{id}/cancel", deps.PurchaseOrder.Cancel)
+				})
 			})
 
 			// Warehouses — admin only

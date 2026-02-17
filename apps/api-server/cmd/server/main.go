@@ -163,6 +163,8 @@ func main() {
 	roleRepo := repository.NewRoleRepository()
 	stocktakeRepo := repository.NewStocktakeRepository()
 	stocktakeItemRepo := repository.NewStocktakeItemRepository()
+	purchaseOrderRepo := repository.NewPurchaseOrderRepository()
+	purchaseOrderItemRepo := repository.NewPurchaseOrderItemRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
@@ -201,6 +203,7 @@ func main() {
 	exchangeRateService := service.NewExchangeRateService(exchangeRateRepo, auditRepo, pool)
 	ksefService := service.NewKSeFService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool)
 	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
+	purchaseOrderService := service.NewPurchaseOrderService(purchaseOrderRepo, purchaseOrderItemRepo, warehouseStockRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -370,6 +373,9 @@ func main() {
 	// Stocktake handler (inventory counting)
 	stocktakeHandler := handler.NewStocktakeHandler(stocktakeService)
 
+	// Purchase order handler
+	purchaseOrderHandler := handler.NewPurchaseOrderHandler(purchaseOrderService)
+
 	// Print handler
 	printHandler := handler.NewPrintHandler(tenantRepo, orderRepo, returnRepo, pool)
 
@@ -382,6 +388,14 @@ func main() {
 	// Rate shopping service & handler
 	rateService := service.NewRateService(integrationRepo, pool, encryptionKey)
 	rateHandler := handler.NewRateHandler(rateService)
+
+	// Public order tracking service & handler
+	trackingService := service.NewTrackingService(tenantRepo, orderRepo, shipmentRepo, auditRepo, pool)
+	trackingHandler := handler.NewTrackingHandler(trackingService)
+
+	// Product feed service & handler (Ceneo, Google Shopping)
+	feedService := service.NewFeedService(tenantRepo, productRepo, pool, cfg.BaseURL)
+	feedHandler := handler.NewFeedHandler(feedService)
 
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
@@ -448,6 +462,9 @@ func main() {
 		AllegroDisputes:   allegroDisputesHandler,
 		AllegroRatings:    allegroRatingsHandler,
 		AllegroListings:   allegroListingsHandler,
+		Tracking:          trackingHandler,
+		Feed:              feedHandler,
+		PurchaseOrder:     purchaseOrderHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)

@@ -21,6 +21,12 @@ type Shipment struct {
 	LabelURL       *string         `json:"label_url,omitempty"`
 	CarrierData    json.RawMessage `json:"carrier_data,omitempty"`
 	WarehouseID    *uuid.UUID      `json:"warehouse_id,omitempty"`
+	PackageNumber  int             `json:"package_number"`
+	Weight         *float64        `json:"weight,omitempty"`
+	Length         *float64        `json:"length,omitempty"`
+	Width          *float64        `json:"width,omitempty"`
+	Height         *float64        `json:"height,omitempty"`
+	Notes          string          `json:"notes"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
@@ -34,6 +40,11 @@ type CreateShipmentRequest struct {
 	LabelURL       *string         `json:"label_url,omitempty"`
 	CarrierData    json.RawMessage `json:"carrier_data,omitempty"`
 	WarehouseID    *uuid.UUID      `json:"warehouse_id,omitempty"`
+	Weight         *float64        `json:"weight,omitempty"`
+	Length         *float64        `json:"length,omitempty"`
+	Width          *float64        `json:"width,omitempty"`
+	Height         *float64        `json:"height,omitempty"`
+	Notes          string          `json:"notes,omitempty"`
 }
 
 func (r *CreateShipmentRequest) Validate() error {
@@ -56,10 +67,16 @@ type UpdateShipmentRequest struct {
 	TrackingNumber *string         `json:"tracking_number,omitempty"`
 	LabelURL       *string         `json:"label_url,omitempty"`
 	CarrierData    json.RawMessage `json:"carrier_data,omitempty"`
+	Weight         *float64        `json:"weight,omitempty"`
+	Length         *float64        `json:"length,omitempty"`
+	Width          *float64        `json:"width,omitempty"`
+	Height         *float64        `json:"height,omitempty"`
+	Notes          *string         `json:"notes,omitempty"`
 }
 
 func (r *UpdateShipmentRequest) Validate() error {
-	if r.TrackingNumber == nil && r.LabelURL == nil && r.CarrierData == nil {
+	if r.TrackingNumber == nil && r.LabelURL == nil && r.CarrierData == nil &&
+		r.Weight == nil && r.Length == nil && r.Width == nil && r.Height == nil && r.Notes == nil {
 		return errors.New("at least one field must be provided")
 	}
 	return nil
