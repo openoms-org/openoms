@@ -306,8 +306,37 @@ async function findOrCreate(collection, name, createFn) {
 }
 
 async function run() {
+  console.log("Logging in...");
   await client.login(TOKEN);
-  const guild = await client.guilds.fetch(GUILD_ID);
+  console.log(`Logged in as: ${client.user.tag}\n`);
+
+  // Print invite URL for convenience
+  console.log(
+    `If the bot is not on your server yet, invite it:\n  https://discord.com/oauth2/authorize?client_id=${client.user.id}&permissions=8&scope=bot\n`
+  );
+
+  let guild;
+  try {
+    guild = await client.guilds.fetch(GUILD_ID);
+  } catch (err) {
+    if (err.status === 404 || err.message.includes("404")) {
+      console.error(`ERROR: Guild ${GUILD_ID} not found.\n`);
+      console.error("Possible causes:");
+      console.error(
+        "  1. Bot is not on the server — use the invite link above"
+      );
+      console.error(
+        "  2. Guild ID is wrong — right-click server > Copy Server ID (enable Developer Mode in Discord settings)"
+      );
+      console.error(
+        `  3. Bot is on a different server — currently on: ${client.guilds.cache.map((g) => `${g.name} (${g.id})`).join(", ") || "no servers"}`
+      );
+      client.destroy();
+      process.exit(1);
+    }
+    throw err;
+  }
+
   console.log(
     `Connected to: ${guild.name} (${guild.memberCount} members)\n`
   );
