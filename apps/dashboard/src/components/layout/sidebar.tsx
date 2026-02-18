@@ -6,8 +6,9 @@ import { usePathname } from "next/navigation";
 import { ChevronRight, Package, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth";
-import { navItems, type NavItem } from "@/lib/nav-items";
+import { navItems, navGroups, type NavItem } from "@/lib/nav-items";
 import { useSidebar } from "@/components/layout/sidebar-context";
+import { useGroupExpansion } from "@/hooks/use-group-expansion";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +21,7 @@ export function Sidebar() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin" || user?.role === "owner";
   const { collapsed, toggleSidebar } = useSidebar();
+  const { toggleGroup, isGroupExpanded } = useGroupExpansion();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   const toggleExpand = useCallback((href: string) => {
@@ -38,17 +40,8 @@ export function Sidebar() {
     (item) => !item.adminOnly || isAdmin
   );
 
-  // Separate ungrouped items (Dashboard) from grouped items
   const ungroupedItems = filteredItems.filter((item) => !item.group);
   const groupedItems = filteredItems.filter((item) => item.group);
-
-  // Preserve order: collect groups in the order they first appear
-  const groupOrder: string[] = [];
-  for (const item of groupedItems) {
-    if (item.group && !groupOrder.includes(item.group)) {
-      groupOrder.push(item.group);
-    }
-  }
 
   const renderNavLink = (item: NavItem, isChild = false) => {
     const isActive = isChild
@@ -58,10 +51,8 @@ export function Sidebar() {
         : pathname === item.href || (pathname.startsWith(item.href + "/") && !filteredItems.some((other) => other.href !== item.href && other.href.startsWith(item.href + "/") && pathname.startsWith(other.href)));
 
     const hasChildren = !isChild && item.children && item.children.length > 0;
-    // Expanded if manually toggled OR if pathname matches a child route
     const isExpanded = hasChildren && (expandedItems.has(item.href) || pathname.startsWith(item.href));
 
-    // Items with children: button toggles expand/collapse, no navigation
     if (hasChildren) {
       return (
         <div key={item.href}>
@@ -178,28 +169,63 @@ export function Sidebar() {
         {collapsed ? (
           <>
             {ungroupedItems.map((item) => renderCollapsedNavLink(item))}
-            {groupOrder.map((group) => (
-              <div key={group}>
-                <div className="my-2 border-t" />
-                {groupedItems
-                  .filter((item) => item.group === group)
-                  .map((item) => renderCollapsedNavLink(item))}
-              </div>
-            ))}
+            {navGroups.map((group) => {
+              const items = groupedItems.filter((item) => item.group === group.key);
+              if (items.length === 0) return null;
+
+              return (
+                <div key={group.key}>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="my-2 flex items-center justify-center">
+                          <group.icon className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="font-medium">
+                        {group.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {items.map((item) => renderCollapsedNavLink(item))}
+                </div>
+              );
+            })}
           </>
         ) : (
           <>
             {ungroupedItems.map((item) => renderNavLink(item))}
-            {groupOrder.map((group) => (
-              <div key={group}>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mt-4 mb-1 px-3">
-                  {group}
-                </p>
-                {groupedItems
-                  .filter((item) => item.group === group)
-                  .map((item) => renderNavLink(item))}
-              </div>
-            ))}
+            {navGroups.map((group) => {
+              const items = groupedItems.filter((item) => item.group === group.key);
+              if (items.length === 0) return null;
+              const expanded = isGroupExpanded(group.key);
+
+              return (
+                <div key={group.key} className="mt-1">
+                  <button
+                    onClick={() => toggleGroup(group.key)}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase text-muted-foreground hover:bg-sidebar-accent/30 hover:text-sidebar-accent-foreground transition-colors mt-2"
+                  >
+                    <ChevronRight
+                      className={cn(
+                        "h-3 w-3 shrink-0 transition-transform duration-200",
+                        expanded && "rotate-90"
+                      )}
+                    />
+                    <group.icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{group.label}</span>
+                    <span className="ml-auto text-[10px] font-normal tabular-nums text-muted-foreground/70">
+                      {items.length}
+                    </span>
+                  </button>
+                  {expanded && (
+                    <div className="mt-0.5 space-y-0.5">
+                      {items.map((item) => renderNavLink(item))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </>
         )}
       </nav>
