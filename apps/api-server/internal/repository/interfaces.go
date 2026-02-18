@@ -174,6 +174,7 @@ type ProductListingRepo interface {
 	FindByProductAndIntegration(ctx context.Context, tx pgx.Tx, productID, integrationID uuid.UUID) (*model.ProductListing, error)
 	ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error)
 	ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID) ([]*model.ProductListing, error)
+	ListAutoSyncByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error)
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 

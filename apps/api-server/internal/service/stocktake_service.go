@@ -25,14 +25,20 @@ var (
 
 // StocktakeService provides business logic for stocktaking.
 type StocktakeService struct {
-	stocktakeRepo   repository.StocktakeRepo
-	itemRepo        repository.StocktakeItemRepo
-	stockRepo       repository.WarehouseStockRepo
-	docRepo         repository.WarehouseDocumentRepo
-	docItemRepo     repository.WarehouseDocItemRepo
-	auditRepo       repository.AuditRepo
-	pool            *pgxpool.Pool
-	webhookDispatch *WebhookDispatchService
+	stocktakeRepo    repository.StocktakeRepo
+	itemRepo         repository.StocktakeItemRepo
+	stockRepo        repository.WarehouseStockRepo
+	docRepo          repository.WarehouseDocumentRepo
+	docItemRepo      repository.WarehouseDocItemRepo
+	auditRepo        repository.AuditRepo
+	pool             *pgxpool.Pool
+	webhookDispatch  *WebhookDispatchService
+	stockSyncService *StockSyncService
+}
+
+// SetStockSyncService sets the stock sync service for propagating stock changes after stocktake.
+func (s *StocktakeService) SetStockSyncService(svc *StockSyncService) {
+	s.stockSyncService = svc
 }
 
 // NewStocktakeService creates a new StocktakeService.
@@ -435,6 +441,25 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 	// Dispatch webhook asynchronously
 	if s.webhookDispatch != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "stocktake.completed", stocktake)
+	}
+
+	// Trigger stock sync for all products with discrepancies
+	if s.stockSyncService != nil {
+		// Re-read discrepancies (we need the product IDs outside the tx)
+		_ = database.WithTenant(context.Background(), s.pool, tenantID, func(tx pgx.Tx) error {
+			disc, err := s.itemRepo.ListDiscrepancies(ctx, tx, stocktakeID)
+			if err != nil {
+				return err
+			}
+			for _, item := range disc {
+				counted := 0
+				if item.CountedQuantity != nil {
+					counted = *item.CountedQuantity
+				}
+				go s.stockSyncService.OnStockChange(context.Background(), tenantID, item.ProductID, "recount", item.ExpectedQuantity, counted)
+			}
+			return nil
+		})
 	}
 
 	return stocktake, nil

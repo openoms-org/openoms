@@ -93,6 +93,7 @@ var validSyncModes = map[string]bool{
 var validTriggerTypes = map[string]bool{
 	"order_placed":    true,
 	"order_cancelled": true,
+	"order_shipped":   true,
 	"stock_adjusted":  true,
 	"manual":          true,
 	"recount":         true,

@@ -24,18 +24,19 @@ var (
 )
 
 type OrderService struct {
-	orderRepo         repository.OrderRepo
-	auditRepo         repository.AuditRepo
-	tenantRepo        repository.TenantRepo
-	pool              *pgxpool.Pool
-	emailService      *EmailService
-	webhookDispatch   *WebhookDispatchService
-	invoiceService    *InvoiceService
-	smsService        *SMSService
-	automationService *AutomationService
-	shipmentService   *ShipmentService
-	allegroSync       *AllegroSyncService
-	stockSyncService  *StockSyncService
+	orderRepo          repository.OrderRepo
+	auditRepo          repository.AuditRepo
+	tenantRepo         repository.TenantRepo
+	warehouseStockRepo repository.WarehouseStockRepo
+	pool               *pgxpool.Pool
+	emailService       *EmailService
+	webhookDispatch    *WebhookDispatchService
+	invoiceService     *InvoiceService
+	smsService         *SMSService
+	automationService  *AutomationService
+	shipmentService    *ShipmentService
+	allegroSync        *AllegroSyncService
+	stockSyncService   *StockSyncService
 }
 
 func NewOrderService(
@@ -103,6 +104,11 @@ func (s *OrderService) SetAllegroSyncService(allegroSync *AllegroSyncService) {
 // Called after construction to avoid circular dependency.
 func (s *OrderService) SetStockSyncService(stockSync *StockSyncService) {
 	s.stockSyncService = stockSync
+}
+
+// SetWarehouseStockRepo sets the warehouse stock repo for stock reservation/decrement.
+func (s *OrderService) SetWarehouseStockRepo(repo repository.WarehouseStockRepo) {
+	s.warehouseStockRepo = repo
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
@@ -253,6 +259,40 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	if err != nil {
 		return nil, err
 	}
+
+	// Reserve stock for order items (best-effort, async stock sync)
+	if s.warehouseStockRepo != nil {
+		productQtys := extractProductQuantities(order.Items)
+		if len(productQtys) > 0 {
+			_ = database.WithTenant(context.Background(), s.pool, tenantID, func(tx pgx.Tx) error {
+				for productID, qty := range productQtys {
+					stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
+					if err != nil || len(stocks) == 0 {
+						continue
+					}
+					remaining := qty
+					for _, stock := range stocks {
+						if remaining <= 0 {
+							break
+						}
+						available := stock.Quantity - stock.Reserved
+						if available <= 0 {
+							continue
+						}
+						reserveQty := min(remaining, available)
+						_, _ = tx.Exec(ctx,
+							`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
+							 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
+							reserveQty, stock.WarehouseID, productID)
+						remaining -= reserveQty
+					}
+				}
+				return nil
+			})
+			s.triggerStockSync(tenantID, productQtys, "order_placed")
+		}
+	}
+
 	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order)
 	FireAutomationEvent(s.automationService, tenantID, "order", "order.created", order.ID, map[string]any{
 		"status": order.Status, "source": order.Source,
@@ -442,6 +482,12 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		if s.allegroSync != nil && order.Source == "allegro" {
 			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, req.Status)
 		}
+		// Stock sync on status change
+		if req.Status == "shipped" {
+			go s.handleStockOnShip(context.Background(), tenantID, order)
+		} else if req.Status == "cancelled" {
+			go s.handleStockOnCancel(context.Background(), tenantID, order)
+		}
 	}
 	return order, err
 }
@@ -568,6 +614,12 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		if s.allegroSync != nil && n.order.Source == "allegro" {
 			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, n.order, n.newStatus)
 		}
+		// Stock sync on status change
+		if n.newStatus == "shipped" {
+			go s.handleStockOnShip(context.Background(), tenantID, n.order)
+		} else if n.newStatus == "cancelled" {
+			go s.handleStockOnCancel(context.Background(), tenantID, n.order)
+		}
 	}
 	for _, n := range pendingWebhooks {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
@@ -584,6 +636,138 @@ func (s *OrderService) GetAudit(ctx context.Context, tenantID, orderID uuid.UUID
 		return err
 	})
 	return entries, err
+}
+
+// extractProductQuantities parses order items JSON to extract product_id -> quantity map.
+func extractProductQuantities(items json.RawMessage) map[uuid.UUID]int {
+	result := make(map[uuid.UUID]int)
+	if len(items) == 0 {
+		return result
+	}
+
+	var parsed []struct {
+		ProductID *uuid.UUID `json:"product_id"`
+		Quantity  int        `json:"quantity"`
+	}
+	if err := json.Unmarshal(items, &parsed); err != nil {
+		return result
+	}
+	for _, item := range parsed {
+		if item.ProductID != nil && *item.ProductID != uuid.Nil && item.Quantity > 0 {
+			result[*item.ProductID] += item.Quantity
+		}
+	}
+	return result
+}
+
+// reserveStockForOrder increments reserved count in warehouse_stock for each product in order items.
+// Best-effort: errors are logged but don't fail the order.
+func (s *OrderService) reserveStockForOrder(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, items json.RawMessage) map[uuid.UUID]int {
+	if s.warehouseStockRepo == nil {
+		return nil
+	}
+	productQtys := extractProductQuantities(items)
+	for productID, qty := range productQtys {
+		stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
+		if err != nil || len(stocks) == 0 {
+			continue
+		}
+		// Reserve from first warehouse with stock
+		for _, stock := range stocks {
+			available := stock.Quantity - stock.Reserved
+			if available <= 0 {
+				continue
+			}
+			reserveQty := min(qty, available)
+			if err := s.warehouseStockRepo.AdjustQuantity(ctx, tx, stock.WarehouseID, productID, nil, 0); err != nil {
+				continue
+			}
+			// Direct SQL to increment reserved
+			_, _ = tx.Exec(ctx,
+				`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
+				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
+				reserveQty, stock.WarehouseID, productID)
+			qty -= reserveQty
+			if qty <= 0 {
+				break
+			}
+		}
+	}
+	return productQtys
+}
+
+// triggerStockSync fires OnStockChange for each product in the given map.
+func (s *OrderService) triggerStockSync(tenantID uuid.UUID, productQtys map[uuid.UUID]int, trigger string) {
+	if s.stockSyncService == nil {
+		return
+	}
+	for productID, qty := range productQtys {
+		go s.stockSyncService.OnStockChange(context.Background(), tenantID, productID, trigger, qty, qty)
+	}
+}
+
+// handleStockOnShip decrements quantity and reserved in warehouse_stock for shipped orders.
+func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID, order *model.Order) {
+	if s.warehouseStockRepo == nil {
+		return
+	}
+	productQtys := extractProductQuantities(order.Items)
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		for productID, qty := range productQtys {
+			stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
+			if err != nil || len(stocks) == 0 {
+				continue
+			}
+			remaining := qty
+			for _, stock := range stocks {
+				if remaining <= 0 {
+					break
+				}
+				deduct := min(remaining, stock.Quantity)
+				// Decrement both quantity and reserved
+				_, _ = tx.Exec(ctx,
+					`UPDATE warehouse_stock
+					 SET quantity = GREATEST(quantity - $1, 0),
+					     reserved = GREATEST(reserved - $1, 0),
+					     updated_at = NOW()
+					 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
+					deduct, stock.WarehouseID, productID)
+				remaining -= deduct
+			}
+		}
+		return nil
+	})
+	s.triggerStockSync(tenantID, productQtys, "order_shipped")
+}
+
+// handleStockOnCancel releases reserved stock for cancelled orders.
+func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UUID, order *model.Order) {
+	if s.warehouseStockRepo == nil {
+		return
+	}
+	productQtys := extractProductQuantities(order.Items)
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		for productID, qty := range productQtys {
+			stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
+			if err != nil || len(stocks) == 0 {
+				continue
+			}
+			remaining := qty
+			for _, stock := range stocks {
+				if remaining <= 0 {
+					break
+				}
+				release := min(remaining, stock.Reserved)
+				_, _ = tx.Exec(ctx,
+					`UPDATE warehouse_stock SET reserved = GREATEST(reserved - $1, 0), updated_at = NOW()
+					 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
+					release, stock.WarehouseID, productID)
+				remaining -= release
+			}
+		}
+		return nil
+	})
+	s.triggerStockSync(tenantID, productQtys, "order_cancelled")
 }
 
 func stringOrEmpty(s *string) string {

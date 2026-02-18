@@ -726,6 +726,7 @@ export interface ProductListing {
   sync_status: string;
   last_synced_at?: string;
   error_message?: string;
+  stock_sync_mode: 'auto' | 'manual';
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;

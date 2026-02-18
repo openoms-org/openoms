@@ -1632,6 +1632,7 @@ export interface ProductListing {
   sync_status: string;
   last_synced_at?: string;
   error_message?: string;
+  stock_sync_mode: 'auto' | 'manual';
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -1702,5 +1703,26 @@ export function useSyncProductListing(productId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", productId, "listings"] });
     },
+  });
+}
+
+export function useUpdateListingSyncMode(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ listingId, mode }: { listingId: string; mode: 'auto' | 'manual' }) =>
+      apiClient(
+        `/v1/products/${productId}/listings/${listingId}`,
+        { method: "PUT", body: JSON.stringify({ stock_sync_mode: mode }) }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", productId, "listings"] });
+    },
+  });
+}
+
+export function useForcePushListing() {
+  return useMutation({
+    mutationFn: (listingId: string) =>
+      apiClient(`/v1/stock-sync/push/listing/${listingId}`, { method: "POST" }),
   });
 }

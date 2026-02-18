@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -11,7 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -26,8 +29,11 @@ type StockSyncService struct {
 	eventRepo       repository.StockSyncEventRepo
 	productRepo     repository.ProductRepo
 	auditRepo       repository.AuditRepo
+	listingRepo     repository.ProductListingRepo
+	integrationRepo repository.IntegrationRepo
 	pool            *pgxpool.Pool
 	webhookDispatch *WebhookDispatchService
+	encryptionKey   []byte
 	logger          *slog.Logger
 }
 
@@ -37,8 +43,11 @@ func NewStockSyncService(
 	eventRepo repository.StockSyncEventRepo,
 	productRepo repository.ProductRepo,
 	auditRepo repository.AuditRepo,
+	listingRepo repository.ProductListingRepo,
+	integrationRepo repository.IntegrationRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
+	encryptionKey []byte,
 	logger *slog.Logger,
 ) *StockSyncService {
 	return &StockSyncService{
@@ -46,8 +55,11 @@ func NewStockSyncService(
 		eventRepo:       eventRepo,
 		productRepo:     productRepo,
 		auditRepo:       auditRepo,
+		listingRepo:     listingRepo,
+		integrationRepo: integrationRepo,
 		pool:            pool,
 		webhookDispatch: webhookDispatch,
+		encryptionKey:   encryptionKey,
 		logger:          logger,
 	}
 }
@@ -283,6 +295,9 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 		"new_qty", newQty,
 		"available", event.AvailableQuantity,
 	)
+
+	// Propagate stock to marketplaces asynchronously
+	go s.PropagateStockToMarketplaces(context.Background(), tenantID, productID)
 }
 
 // CalculateAvailableStock returns stock allocation per channel for a product.
@@ -343,40 +358,223 @@ func (s *StockSyncService) PushStockToChannel(ctx context.Context, tenantID, cha
 	})
 }
 
-// PushStockToAllChannels pushes stock for a product to all enabled channels.
+// PushStockToAllChannels pushes stock for a product to all enabled channels via marketplace APIs.
 func (s *StockSyncService) PushStockToAllChannels(ctx context.Context, tenantID, productID uuid.UUID) error {
-	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		channels, err := s.channelRepo.ListEnabled(ctx, tx)
-		if err != nil {
-			return err
-		}
+	s.PropagateStockToMarketplaces(ctx, tenantID, productID)
+	return nil
+}
 
+// PropagateStockToMarketplaces calculates available stock and pushes it to all auto-sync listings.
+// Uses a two-phase approach: Phase 1 gathers data inside a DB transaction, Phase 2 calls marketplace APIs outside the transaction.
+func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, tenantID, productID uuid.UUID) {
+	type pushJob struct {
+		listing       *model.ProductListing
+		availableQty  int
+		integration   *model.IntegrationWithCreds
+	}
+
+	var jobs []pushJob
+
+	// Phase 1: Gather data inside transaction
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		// Calculate available stock from warehouse tables
 		totalQty, reservedQty, err := s.eventRepo.GetAvailableStock(ctx, tx, productID)
 		if err != nil {
 			return err
 		}
 		baseAvailable := max(totalQty-reservedQty, 0)
 
-		for _, ch := range channels {
-			_ = max(baseAvailable-ch.StockBuffer, 0) // available qty for this channel (used when pushing to marketplace API)
+		// Get auto-sync listings for this product
+		listings, err := s.listingRepo.ListAutoSyncByProduct(ctx, tx, productID)
+		if err != nil {
+			return err
+		}
 
-			// Update sync status — in production, this would push to the marketplace API
-			if err := s.channelRepo.UpdateSyncStatus(ctx, tx, ch.ID, nil); err != nil {
-				s.logger.Error("stock sync: failed to update channel sync status",
-					"channel_id", ch.ID,
-					"error", err,
-				)
+		// Get channel buffers (keyed by integration_id match to channel)
+		channels, err := s.channelRepo.ListEnabled(ctx, tx)
+		if err != nil {
+			return err
+		}
+		channelBuffers := make(map[uuid.UUID]int) // integration_id -> buffer
+		for _, ch := range channels {
+			if ch.IntegrationID != nil {
+				channelBuffers[*ch.IntegrationID] = ch.StockBuffer
 			}
 		}
 
-		s.logger.Info("stock sync: pushed stock to all channels",
-			"tenant_id", tenantID,
-			"product_id", productID,
-			"channels", len(channels),
-			"available", baseAvailable,
-		)
+		for _, listing := range listings {
+			// Use stock_override if set
+			qty := baseAvailable
+			if listing.StockOverride != nil {
+				qty = *listing.StockOverride
+			} else {
+				// Apply channel buffer
+				if buffer, ok := channelBuffers[listing.IntegrationID]; ok {
+					qty = max(qty-buffer, 0)
+				}
+			}
+
+			// Get integration credentials
+			integ, err := s.integrationRepo.FindByID(ctx, tx, listing.IntegrationID)
+			if err != nil || integ == nil {
+				s.logger.Warn("stock sync: integration not found for listing",
+					"listing_id", listing.ID, "integration_id", listing.IntegrationID)
+				continue
+			}
+
+			jobs = append(jobs, pushJob{
+				listing:      listing,
+				availableQty: qty,
+				integration:  integ,
+			})
+		}
 		return nil
 	})
+	if err != nil {
+		s.logger.Error("stock sync: failed to gather propagation data",
+			"tenant_id", tenantID, "product_id", productID, "error", err)
+		return
+	}
+
+	if len(jobs) == 0 {
+		return
+	}
+
+	// Phase 2: Push to marketplace APIs outside the transaction
+	pushed, failed := 0, 0
+	for _, job := range jobs {
+		if job.integration.EncryptedCredentials == "" {
+			s.logger.Warn("stock sync: no credentials for integration", "integration_id", job.integration.ID)
+			failed++
+			continue
+		}
+
+		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, s.encryptionKey)
+		if err != nil {
+			s.logger.Error("stock sync: decrypt credentials failed",
+				"integration_id", job.integration.ID, "error", err)
+			failed++
+			continue
+		}
+
+		provider, err := integration.NewMarketplaceProvider(job.integration.Provider, credJSON, job.integration.Settings)
+		if err != nil {
+			s.logger.Error("stock sync: create provider failed",
+				"provider", job.integration.Provider, "error", err)
+			failed++
+			continue
+		}
+
+		if err := provider.UpdateStock(ctx, *job.listing.ExternalID, job.availableQty); err != nil {
+			s.logger.Error("stock sync: push stock failed",
+				"listing_id", job.listing.ID, "external_id", *job.listing.ExternalID,
+				"provider", job.integration.Provider, "error", err)
+
+			// Update listing sync status to error (best-effort)
+			errMsg := err.Error()
+			syncErr := "error"
+			_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+				return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
+					SyncStatus:   &syncErr,
+					ErrorMessage: &errMsg,
+				})
+			})
+			failed++
+			continue
+		}
+
+		// Update listing sync status to synced (best-effort)
+		syncOK := "synced"
+		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
+				SyncStatus: &syncOK,
+			})
+		})
+		pushed++
+	}
+
+	s.logger.Info("stock sync: propagation complete",
+		"tenant_id", tenantID, "product_id", productID,
+		"pushed", pushed, "failed", failed)
+}
+
+// PushSingleListing forces a stock push for a single listing (ignores sync_mode).
+func (s *StockSyncService) PushSingleListing(ctx context.Context, tenantID, listingID uuid.UUID) error {
+	var listing *model.ProductListing
+	var integ *model.IntegrationWithCreds
+	var availableQty int
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		listing, err = s.listingRepo.GetByID(ctx, tx, listingID)
+		if err != nil {
+			return err
+		}
+		if listing == nil {
+			return errors.New("listing not found")
+		}
+		if listing.ExternalID == nil || *listing.ExternalID == "" {
+			return errors.New("listing has no external_id")
+		}
+
+		totalQty, reservedQty, err := s.eventRepo.GetAvailableStock(ctx, tx, listing.ProductID)
+		if err != nil {
+			return err
+		}
+		availableQty = max(totalQty-reservedQty, 0)
+		if listing.StockOverride != nil {
+			availableQty = *listing.StockOverride
+		}
+
+		integ, err = s.integrationRepo.FindByID(ctx, tx, listing.IntegrationID)
+		if err != nil {
+			return err
+		}
+		if integ == nil {
+			return errors.New("integration not found")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if integ.EncryptedCredentials == "" {
+		return errors.New("integration has no credentials")
+	}
+	credJSON, err := crypto.Decrypt(integ.EncryptedCredentials, s.encryptionKey)
+	if err != nil {
+		return fmt.Errorf("decrypt credentials: %w", err)
+	}
+
+	provider, err := integration.NewMarketplaceProvider(integ.Provider, credJSON, integ.Settings)
+	if err != nil {
+		return fmt.Errorf("create provider: %w", err)
+	}
+
+	if err := provider.UpdateStock(ctx, *listing.ExternalID, availableQty); err != nil {
+		errMsg := err.Error()
+		syncErr := "error"
+		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.listingRepo.Update(ctx, tx, listing.ID, &model.UpdateProductListingRequest{
+				SyncStatus:   &syncErr,
+				ErrorMessage: &errMsg,
+			})
+		})
+		return fmt.Errorf("push stock: %w", err)
+	}
+
+	syncOK := "synced"
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.listingRepo.Update(ctx, tx, listing.ID, &model.UpdateProductListingRequest{
+			SyncStatus: &syncOK,
+		})
+	})
+
+	s.logger.Info("stock sync: single listing pushed",
+		"tenant_id", tenantID, "listing_id", listingID,
+		"external_id", *listing.ExternalID, "quantity", availableQty)
+	return nil
 }
 
 // PushAll triggers a stock push for all products across all enabled channels.

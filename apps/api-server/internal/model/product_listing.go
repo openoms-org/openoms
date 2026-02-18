@@ -21,6 +21,7 @@ type ProductListing struct {
 	SyncStatus    string          `json:"sync_status"`
 	LastSyncedAt  *time.Time      `json:"last_synced_at,omitempty"`
 	ErrorMessage  *string         `json:"error_message,omitempty"`
+	StockSyncMode string          `json:"stock_sync_mode"`
 	Metadata      json.RawMessage `json:"metadata"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
@@ -34,6 +35,7 @@ type CreateProductListingRequest struct {
 	URL           *string         `json:"url,omitempty"`
 	PriceOverride *float64        `json:"price_override,omitempty"`
 	StockOverride *int            `json:"stock_override,omitempty"`
+	StockSyncMode *string         `json:"stock_sync_mode,omitempty"`
 	Metadata      json.RawMessage `json:"metadata,omitempty"`
 }
 
@@ -56,6 +58,7 @@ type UpdateProductListingRequest struct {
 	URL           *string          `json:"url,omitempty"`
 	PriceOverride *float64         `json:"price_override,omitempty"`
 	StockOverride *int             `json:"stock_override,omitempty"`
+	StockSyncMode *string          `json:"stock_sync_mode,omitempty"`
 	SyncStatus    *string          `json:"sync_status,omitempty"`
 	ErrorMessage  *string          `json:"error_message,omitempty"`
 	Metadata      *json.RawMessage `json:"metadata,omitempty"`
@@ -63,9 +66,12 @@ type UpdateProductListingRequest struct {
 
 func (r *UpdateProductListingRequest) Validate() error {
 	if r.ExternalID == nil && r.Status == nil && r.URL == nil &&
-		r.PriceOverride == nil && r.StockOverride == nil &&
+		r.PriceOverride == nil && r.StockOverride == nil && r.StockSyncMode == nil &&
 		r.SyncStatus == nil && r.ErrorMessage == nil && r.Metadata == nil {
 		return errors.New("at least one field must be provided")
+	}
+	if r.StockSyncMode != nil && *r.StockSyncMode != "auto" && *r.StockSyncMode != "manual" {
+		return errors.New("stock_sync_mode must be 'auto' or 'manual'")
 	}
 	return nil
 }

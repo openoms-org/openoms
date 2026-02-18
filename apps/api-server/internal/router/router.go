@@ -899,6 +899,7 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Delete("/channels/{id}", deps.StockSync.DeleteChannel)
 					r.Post("/push", deps.StockSync.PushAll)
 					r.Post("/push/{product_id}", deps.StockSync.PushProduct)
+					r.Post("/push/listing/{listing_id}", deps.StockSync.PushListing)
 					r.Post("/reconcile/{product_id}", deps.StockSync.ReconcileProduct)
 					r.Get("/events", deps.StockSync.ListEvents)
 					r.Get("/dashboard", deps.StockSync.GetDashboard)

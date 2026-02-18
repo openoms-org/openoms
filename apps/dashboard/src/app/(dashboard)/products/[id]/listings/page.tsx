@@ -18,6 +18,7 @@ import {
   Search,
   Tag,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -28,6 +29,8 @@ import {
   useCreateProductListing,
   useDeleteProductListing,
   useSyncProductListing,
+  useUpdateListingSyncMode,
+  useForcePushListing,
   useAllegroCategories,
   useAllegroCategorySearch,
   useAllegroCategoryParams,
@@ -153,6 +156,8 @@ export default function ProductListingsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const deleteListing = useDeleteProductListing(params.id);
   const syncListing = useSyncProductListing(params.id);
+  const updateSyncMode = useUpdateListingSyncMode(params.id);
+  const forcePush = useForcePushListing();
 
   return (
     <AdminGuard>
@@ -231,6 +236,7 @@ export default function ProductListingsPage() {
                     <TableHead>Platforma</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>ID oferty</TableHead>
+                    <TableHead>Tryb sync</TableHead>
                     <TableHead>Synchronizacja</TableHead>
                     <TableHead>Ostatnia synch.</TableHead>
                     <TableHead className="text-right">Akcje</TableHead>
@@ -247,6 +253,25 @@ export default function ProductListingsPage() {
                             toast.success("Zsynchronizowano"),
                           onError: () =>
                             toast.error("Blad synchronizacji"),
+                        })
+                      }
+                      onToggleSyncMode={(id, mode) =>
+                        updateSyncMode.mutate(
+                          { listingId: id, mode },
+                          {
+                            onSuccess: () =>
+                              toast.success(mode === "auto" ? "Tryb automatyczny" : "Tryb reczny"),
+                            onError: () =>
+                              toast.error("Blad zmiany trybu"),
+                          }
+                        )
+                      }
+                      onForcePush={(id) =>
+                        forcePush.mutate(id, {
+                          onSuccess: () =>
+                            toast.success("Stan wyslany do marketplace"),
+                          onError: () =>
+                            toast.error("Blad wysylania stanu"),
                         })
                       }
                       onDelete={(id) => {
@@ -284,12 +309,18 @@ export default function ProductListingsPage() {
 function ListingRow({
   listing,
   onSync,
+  onToggleSyncMode,
+  onForcePush,
   onDelete,
 }: {
   listing: ProductListing;
   onSync: (id: string) => void;
+  onToggleSyncMode: (id: string, mode: 'auto' | 'manual') => void;
+  onForcePush: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const isAuto = listing.stock_sync_mode === "auto";
+
   return (
     <TableRow>
       <TableCell>
@@ -314,6 +345,30 @@ function ListingRow({
       </TableCell>
       <TableCell className="font-mono text-xs">
         {listing.external_id ?? "---"}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={isAuto ? "default" : "outline"}
+            size="sm"
+            className="text-xs h-7 px-2"
+            onClick={() => onToggleSyncMode(listing.id, isAuto ? "manual" : "auto")}
+          >
+            {isAuto ? "Auto" : "Reczny"}
+          </Button>
+          {!isAuto && listing.external_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 px-2"
+              onClick={() => onForcePush(listing.id)}
+              title="Wymus synchronizacje"
+            >
+              <Upload className="h-3 w-3 mr-1" />
+              Push
+            </Button>
+          )}
+        </div>
       </TableCell>
       <TableCell>
         <Badge

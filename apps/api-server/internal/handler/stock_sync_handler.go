@@ -230,6 +230,24 @@ func (h *StockSyncHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, dash)
 }
 
+// PushListing handles POST /v1/stock-sync/push/listing/{listing_id} — force push single listing.
+func (h *StockSyncHandler) PushListing(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	listingID, err := uuid.Parse(chi.URLParam(r, "listing_id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "nieprawidłowe ID listingu")
+		return
+	}
+
+	if err := h.stockSyncService.PushSingleListing(r.Context(), tenantID, listingID); err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"message": "stan zsynchronizowany",
+	})
+}
+
 // GetAllocations handles GET /v1/stock-sync/allocations/{product_id}.
 func (h *StockSyncHandler) GetAllocations(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())

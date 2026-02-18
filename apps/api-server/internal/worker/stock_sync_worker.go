@@ -58,12 +58,15 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 		}
 
 		if err := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
-			// Query product_listings with active status that have external_id
+			// Query auto-sync product_listings with warehouse-based available stock
 			rows, err := tx.Query(ctx,
-				`SELECT pl.id, pl.external_id, p.stock_quantity
+				`SELECT pl.id, pl.external_id, pl.stock_override,
+				        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
 				 FROM product_listings pl
-				 JOIN products p ON p.id = pl.product_id
-				 WHERE pl.integration_id = $1 AND pl.status = 'active' AND pl.external_id IS NOT NULL`,
+				 LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
+				 WHERE pl.integration_id = $1 AND pl.status = 'active'
+				   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
+				 GROUP BY pl.id, pl.external_id, pl.stock_override`,
 				ti.IntegrationID,
 			)
 			if err != nil {
@@ -73,10 +76,17 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 
 			for rows.Next() {
 				var listingID, externalID string
-				var stockQty int
-				if err := rows.Scan(&listingID, &externalID, &stockQty); err != nil {
+				var stockOverride *int
+				var availableQty int
+				if err := rows.Scan(&listingID, &externalID, &stockOverride, &availableQty); err != nil {
 					w.logger.Error("stock sync: scan listing", "error", err)
 					continue
+				}
+
+				// Use stock_override if set
+				stockQty := availableQty
+				if stockOverride != nil {
+					stockQty = *stockOverride
 				}
 
 				if err := provider.UpdateStock(ctx, externalID, stockQty); err != nil {
@@ -89,15 +99,15 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 					)
 					// Update listing sync status to error
 					_, _ = tx.Exec(ctx,
-						`UPDATE product_listings SET sync_status = 'error', updated_at = NOW() WHERE id = $1`,
-						listingID,
+						`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+						listingID, err.Error(),
 					)
 					continue
 				}
 
 				// Update listing sync status
 				_, _ = tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'synced', last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 					listingID,
 				)
 				w.logger.Info("worker: stock synced",

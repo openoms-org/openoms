@@ -216,13 +216,19 @@ func main() {
 	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
+	// Product listing repo (needed by both stock sync and allegro listings)
+	productListingRepo := repository.NewProductListingRepository()
+
 	// Stock Sync
 	stockSyncChannelRepo := repository.NewStockSyncChannelRepository()
 	stockSyncEventRepo := repository.NewStockSyncEventRepository()
-	stockSyncService := service.NewStockSyncService(stockSyncChannelRepo, stockSyncEventRepo, productRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	stockSyncService := service.NewStockSyncService(stockSyncChannelRepo, stockSyncEventRepo, productRepo, auditRepo, productListingRepo, integrationRepo, pool, webhookDispatchService, encryptionKey, slog.Default())
 
-	// Wire stock sync into order service (setter pattern)
+	// Wire stock sync into services (setter pattern)
 	orderService.SetStockSyncService(stockSyncService)
+	orderService.SetWarehouseStockRepo(warehouseStockRepo)
+	warehouseService.SetStockSyncService(stockSyncService)
+	stocktakeService.SetStockSyncService(stockSyncService)
 
 	// Segment & Loyalty
 	segmentRepo := repository.NewCustomerSegmentRepository()
@@ -303,7 +309,6 @@ func main() {
 	allegroAccountHandler := handler.NewAllegroAccountHandler(integrationService, encryptionKey)
 
 	// Allegro listings handler (publish products to Allegro)
-	productListingRepo := repository.NewProductListingRepository()
 	allegroListingsHandler := handler.NewAllegroListingsHandler(integrationService, productService, productListingRepo, encryptionKey, pool, cfg)
 
 	// Allegro catalog + finance handler

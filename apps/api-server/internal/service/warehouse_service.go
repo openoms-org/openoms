@@ -27,6 +27,12 @@ type WarehouseService struct {
 	auditRepo          repository.AuditRepo
 	tenantRepo         repository.TenantRepo
 	pool               *pgxpool.Pool
+	stockSyncService   *StockSyncService
+}
+
+// SetStockSyncService sets the stock sync service for propagating stock changes.
+func (s *WarehouseService) SetStockSyncService(svc *StockSyncService) {
+	s.stockSyncService = svc
 }
 
 // NewWarehouseService creates a new WarehouseService.
@@ -321,6 +327,12 @@ func (s *WarehouseService) UpsertStock(ctx context.Context, tenantID, warehouseI
 	if err != nil {
 		return nil, err
 	}
+
+	// Trigger stock sync after successful upsert
+	if s.stockSyncService != nil {
+		go s.stockSyncService.OnStockChange(context.Background(), tenantID, req.ProductID, "stock_adjusted", 0, req.Quantity)
+	}
+
 	return stock, nil
 }
 
