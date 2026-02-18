@@ -19,8 +19,8 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
-	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
