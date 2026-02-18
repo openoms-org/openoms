@@ -144,5 +144,14 @@ secrets:
 imagePullSecrets:
   - name: ghcr-pull-secret
 
+backup:
+  enabled: false
+  schedule: "0 3 * * *"  # daily at 3 AM
+  retentionDays: 30
+  s3:
+    bucket: openoms-backups
+    prefix: "backups/"
+    endpoint: ""
+
 database:
   host: postgres
