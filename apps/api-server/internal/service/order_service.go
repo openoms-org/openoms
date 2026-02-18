@@ -483,9 +483,10 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, req.Status)
 		}
 		// Stock sync on status change
-		if req.Status == "shipped" {
+		switch req.Status {
+		case "shipped":
 			go s.handleStockOnShip(context.Background(), tenantID, order)
-		} else if req.Status == "cancelled" {
+		case "cancelled":
 			go s.handleStockOnCancel(context.Background(), tenantID, order)
 		}
 	}
@@ -615,9 +616,10 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, n.order, n.newStatus)
 		}
 		// Stock sync on status change
-		if n.newStatus == "shipped" {
+		switch n.newStatus {
+		case "shipped":
 			go s.handleStockOnShip(context.Background(), tenantID, n.order)
-		} else if n.newStatus == "cancelled" {
+		case "cancelled":
 			go s.handleStockOnCancel(context.Background(), tenantID, n.order)
 		}
 	}

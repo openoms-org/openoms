@@ -368,9 +368,9 @@ func (s *StockSyncService) PushStockToAllChannels(ctx context.Context, tenantID,
 // Uses a two-phase approach: Phase 1 gathers data inside a DB transaction, Phase 2 calls marketplace APIs outside the transaction.
 func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, tenantID, productID uuid.UUID) {
 	type pushJob struct {
-		listing       *model.ProductListing
-		availableQty  int
-		integration   *model.IntegrationWithCreds
+		listing      *model.ProductListing
+		availableQty int
+		integration  *model.IntegrationWithCreds
 	}
 
 	var jobs []pushJob
