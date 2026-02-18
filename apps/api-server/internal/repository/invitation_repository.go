@@ -9,12 +9,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// InvitationRepository implements InvitationRepo with PostgreSQL.
 type InvitationRepository struct{}
 
+// NewInvitationRepository creates a new InvitationRepository.
 func NewInvitationRepository() *InvitationRepository {
 	return &InvitationRepository{}
 }
 
+// Create inserts a new invitation.
 func (r *InvitationRepository) Create(ctx context.Context, tx pgx.Tx, inv *model.Invitation) error {
 	_, err := tx.Exec(ctx,
 		`INSERT INTO invitations (id, tenant_id, email, token, role, expires_at, created_by)
@@ -24,6 +27,7 @@ func (r *InvitationRepository) Create(ctx context.Context, tx pgx.Tx, inv *model
 	return err
 }
 
+// List returns paginated invitations for the current tenant.
 func (r *InvitationRepository) List(ctx context.Context, tx pgx.Tx, limit, offset int) ([]model.Invitation, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM invitations`).Scan(&total); err != nil {
@@ -72,6 +76,7 @@ func (r *InvitationRepository) MarkUsed(ctx context.Context, pool *pgxpool.Pool,
 	return err
 }
 
+// Delete removes an invitation by ID.
 func (r *InvitationRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	_, err := tx.Exec(ctx, `DELETE FROM invitations WHERE id = $1`, id)
 	return err

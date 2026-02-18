@@ -12,10 +12,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// InvitationHandler manages admin CRUD for invitations.
 type InvitationHandler struct {
 	svc *service.InvitationService
 }
 
+// NewInvitationHandler creates a new InvitationHandler.
 func NewInvitationHandler(svc *service.InvitationService) *InvitationHandler {
 	return &InvitationHandler{svc: svc}
 }

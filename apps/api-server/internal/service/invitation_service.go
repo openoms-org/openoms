@@ -16,18 +16,21 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// Invitation sentinel errors.
 var (
 	ErrInvitationNotFound = errors.New("invitation not found")
 	ErrInvitationExpired  = errors.New("invitation has expired")
 	ErrInvitationUsed     = errors.New("invitation has already been used")
 )
 
+// InvitationService manages invitation lifecycle.
 type InvitationService struct {
 	invRepo   repository.InvitationRepo
 	auditRepo repository.AuditRepo
 	pool      *pgxpool.Pool
 }
 
+// NewInvitationService creates a new InvitationService.
 func NewInvitationService(invRepo repository.InvitationRepo, auditRepo repository.AuditRepo, pool *pgxpool.Pool) *InvitationService {
 	return &InvitationService{
 		invRepo:   invRepo,
@@ -36,6 +39,7 @@ func NewInvitationService(invRepo repository.InvitationRepo, auditRepo repositor
 	}
 }
 
+// Create generates a new invitation token and stores it.
 func (s *InvitationService) Create(ctx context.Context, tenantID, createdBy uuid.UUID, email, role string) (*model.InvitationResponse, error) {
 	if email == "" {
 		return nil, NewValidationError(errors.New("email is required"))
@@ -83,6 +87,7 @@ func (s *InvitationService) Create(ctx context.Context, tenantID, createdBy uuid
 	}, nil
 }
 
+// List returns paginated invitations for a tenant.
 func (s *InvitationService) List(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]model.Invitation, int, error) {
 	var invitations []model.Invitation
 	var total int
@@ -94,6 +99,7 @@ func (s *InvitationService) List(ctx context.Context, tenantID uuid.UUID, limit,
 	return invitations, total, err
 }
 
+// Delete removes an invitation.
 func (s *InvitationService) Delete(ctx context.Context, tenantID, id, deletedBy uuid.UUID) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := s.invRepo.Delete(ctx, tx, id); err != nil {

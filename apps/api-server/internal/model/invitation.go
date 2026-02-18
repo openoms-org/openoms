@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Invitation represents an invitation to register under an existing tenant.
 type Invitation struct {
 	ID        uuid.UUID  `json:"id"`
 	TenantID  uuid.UUID  `json:"tenant_id"`
@@ -18,11 +19,13 @@ type Invitation struct {
 	CreatedAt time.Time  `json:"created_at"`
 }
 
+// CreateInvitationRequest is the body of POST /v1/invitations.
 type CreateInvitationRequest struct {
 	Email string `json:"email"`
 	Role  string `json:"role"`
 }
 
+// InvitationResponse is returned when creating an invitation (includes the token).
 type InvitationResponse struct {
 	Invitation
 	InviteToken string `json:"invite_token,omitempty"` // only returned on creation
