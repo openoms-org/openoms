@@ -1,0 +1,29 @@
+{{- if gt (int .Values.apiServer.replicaCount) 1 }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "openoms.fullname" . }}-api
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "openoms.apiServer.selectorLabels" . | nindent 6 }}
+{{- end }}
+---
+{{- if gt (int .Values.dashboard.replicaCount) 1 }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "openoms.fullname" . }}-dashboard
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "openoms.dashboard.selectorLabels" . | nindent 6 }}
+{{- end }}
