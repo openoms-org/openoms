@@ -83,7 +83,7 @@ func (r *SupplierRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 		 FROM suppliers WHERE id = $1`, id,
 	).Scan(
 		&s.ID, &s.TenantID, &s.Name, &s.Code, &s.FeedURL, &s.FeedFormat,
-		&s.Status, &s.Settings, &s.LastSyncAt, &s.ErrorMessage,
+		&s.Status, &s.Settings, &s.SyncIntervalMinutes, &s.LastSyncAt, &s.ErrorMessage,
 		&s.PortalEnabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {

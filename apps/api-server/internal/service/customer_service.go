@@ -122,7 +122,9 @@ func (s *CustomerService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	if err != nil {
 		return nil, err
 	}
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.created", customer)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.created", customer)
+	}
 	return customer, nil
 }
 
@@ -162,7 +164,7 @@ func (s *CustomerService) Update(ctx context.Context, tenantID, customerID uuid.
 	if err != nil {
 		return nil, err
 	}
-	if customer != nil {
+	if customer != nil && s.webhookDispatch != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.updated", customer)
 	}
 	return customer, err
@@ -192,7 +194,7 @@ func (s *CustomerService) Delete(ctx context.Context, tenantID, customerID uuid.
 			IPAddress:  ip,
 		})
 	})
-	if err == nil {
+	if err == nil && s.webhookDispatch != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.deleted", map[string]any{"customer_id": customerID.String()})
 	}
 	return err

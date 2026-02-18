@@ -281,15 +281,16 @@ func (s *WarehouseDocumentService) Confirm(ctx context.Context, tenantID, docID 
 					return fmt.Errorf("WZ stock adjust: %w", err)
 				}
 			case "MM":
+				if existing.TargetWarehouseID == nil {
+					return errors.New("MM document requires a target warehouse")
+				}
 				// Subtract from source warehouse
 				if err := s.stockRepo.AdjustQuantity(ctx, tx, existing.WarehouseID, item.ProductID, item.VariantID, -item.Quantity); err != nil {
 					return fmt.Errorf("MM source stock adjust: %w", err)
 				}
 				// Add to target warehouse
-				if existing.TargetWarehouseID != nil {
-					if err := s.stockRepo.AdjustQuantity(ctx, tx, *existing.TargetWarehouseID, item.ProductID, item.VariantID, item.Quantity); err != nil {
-						return fmt.Errorf("MM target stock adjust: %w", err)
-					}
+				if err := s.stockRepo.AdjustQuantity(ctx, tx, *existing.TargetWarehouseID, item.ProductID, item.VariantID, item.Quantity); err != nil {
+					return fmt.Errorf("MM target stock adjust: %w", err)
 				}
 			}
 		}

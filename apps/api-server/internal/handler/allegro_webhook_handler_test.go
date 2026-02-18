@@ -159,7 +159,7 @@ func TestAllegroWebhookHandler_EmptyBody(t *testing.T) {
 // --- No webhook secret configured ---
 
 func TestAllegroWebhookHandler_NoSecretConfigured_ValidEvent(t *testing.T) {
-	// When no secret is configured, webhooks are rejected (503)
+	// When no secret is configured, webhooks are rejected (422)
 	h := NewAllegroWebhookHandler("", nil)
 
 	body := `{"type":"ORDER_STATUS_CHANGED","id":"evt-7","occurredAt":"2026-01-15T16:00:00Z","payload":{}}`
@@ -169,7 +169,7 @@ func TestAllegroWebhookHandler_NoSecretConfigured_ValidEvent(t *testing.T) {
 
 	h.HandleWebhook(rr, req)
 
-	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 }
 
 func TestAllegroWebhookHandler_NoSecretConfigured_MalformedBody(t *testing.T) {
@@ -183,7 +183,7 @@ func TestAllegroWebhookHandler_NoSecretConfigured_MalformedBody(t *testing.T) {
 
 	h.HandleWebhook(rr, req)
 
-	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 }
 
 // --- Signature header present but secret is empty ---
@@ -200,5 +200,5 @@ func TestAllegroWebhookHandler_NoSecretConfigured_WithSignatureHeader(t *testing
 
 	h.HandleWebhook(rr, req)
 
-	assert.Equal(t, http.StatusServiceUnavailable, rr.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 }

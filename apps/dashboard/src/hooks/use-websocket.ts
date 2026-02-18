@@ -94,7 +94,7 @@ export function useWebSocket(): UseWebSocketReturn {
         wsRef.current = null;
 
         // Auto-reconnect with exponential backoff
-        if (isAuthenticated) {
+        if (useAuthStore.getState().isAuthenticated) {
           const attempt = reconnectAttemptRef.current;
           const delay = Math.min(1000 * Math.pow(2, attempt), 30000); // max 30s
           reconnectAttemptRef.current = attempt + 1;

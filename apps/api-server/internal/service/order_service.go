@@ -264,9 +264,10 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	if s.warehouseStockRepo != nil {
 		productQtys := extractProductQuantities(order.Items)
 		if len(productQtys) > 0 {
-			_ = database.WithTenant(context.Background(), s.pool, tenantID, func(tx pgx.Tx) error {
+			bgCtx := context.Background()
+			_ = database.WithTenant(bgCtx, s.pool, tenantID, func(tx pgx.Tx) error {
 				for productID, qty := range productQtys {
-					stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
+					stocks, err := s.warehouseStockRepo.ListByProduct(bgCtx, tx, productID)
 					if err != nil || len(stocks) == 0 {
 						continue
 					}
@@ -280,7 +281,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 							continue
 						}
 						reserveQty := min(remaining, available)
-						_, _ = tx.Exec(ctx,
+						_, _ = tx.Exec(bgCtx,
 							`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
 							 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
 							reserveQty, stock.WarehouseID, productID)
@@ -293,7 +294,9 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		}
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order)
+	}
 	FireAutomationEvent(s.automationService, tenantID, "order", "order.created", order.ID, map[string]any{
 		"status": order.Status, "source": order.Source,
 		"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
@@ -355,7 +358,9 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 		})
 	})
 	if err == nil && order != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order)
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order)
+		}
 		FireAutomationEvent(s.automationService, tenantID, "order", "order.updated", order.ID, map[string]any{
 			"status": order.Status, "source": order.Source,
 			"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
@@ -390,7 +395,9 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 		})
 	})
 	if err == nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()})
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()})
+		}
 	}
 	return err
 }
@@ -464,8 +471,12 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		})
 	})
 	if err == nil && order != nil {
-		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
+		if s.emailService != nil {
+			go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
+		}
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
+		}
 		if s.invoiceService != nil {
 			go s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order)
 		}
@@ -607,7 +618,9 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 
 	// Dispatch notifications outside the transaction
 	for _, n := range pendingEmails {
-		go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+		if s.emailService != nil {
+			go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+		}
 		if s.smsService != nil {
 			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
 		}
@@ -624,7 +637,9 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		}
 	}
 	for _, n := range pendingWebhooks {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
+		}
 	}
 
 	return resp, nil
@@ -662,42 +677,6 @@ func extractProductQuantities(items json.RawMessage) map[uuid.UUID]int {
 	return result
 }
 
-// reserveStockForOrder increments reserved count in warehouse_stock for each product in order items.
-// Best-effort: errors are logged but don't fail the order.
-func (s *OrderService) reserveStockForOrder(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, items json.RawMessage) map[uuid.UUID]int {
-	if s.warehouseStockRepo == nil {
-		return nil
-	}
-	productQtys := extractProductQuantities(items)
-	for productID, qty := range productQtys {
-		stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
-		if err != nil || len(stocks) == 0 {
-			continue
-		}
-		// Reserve from first warehouse with stock
-		for _, stock := range stocks {
-			available := stock.Quantity - stock.Reserved
-			if available <= 0 {
-				continue
-			}
-			reserveQty := min(qty, available)
-			if err := s.warehouseStockRepo.AdjustQuantity(ctx, tx, stock.WarehouseID, productID, nil, 0); err != nil {
-				continue
-			}
-			// Direct SQL to increment reserved
-			_, _ = tx.Exec(ctx,
-				`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
-				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-				reserveQty, stock.WarehouseID, productID)
-			qty -= reserveQty
-			if qty <= 0 {
-				break
-			}
-		}
-	}
-	return productQtys
-}
-
 // triggerStockSync fires OnStockChange for each product in the given map.
 func (s *OrderService) triggerStockSync(tenantID uuid.UUID, productQtys map[uuid.UUID]int, trigger string) {
 	if s.stockSyncService == nil {
@@ -714,7 +693,7 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 		return
 	}
 	productQtys := extractProductQuantities(order.Items)
-	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for productID, qty := range productQtys {
 			stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
 			if err != nil || len(stocks) == 0 {
@@ -738,7 +717,9 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		slog.Error("handleStockOnShip: failed to adjust stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
+	}
 	s.triggerStockSync(tenantID, productQtys, "order_shipped")
 }
 
@@ -748,7 +729,7 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 		return
 	}
 	productQtys := extractProductQuantities(order.Items)
-	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for productID, qty := range productQtys {
 			stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
 			if err != nil || len(stocks) == 0 {
@@ -768,7 +749,9 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		slog.Error("handleStockOnCancel: failed to release reserved stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
+	}
 	s.triggerStockSync(tenantID, productQtys, "order_cancelled")
 }
 

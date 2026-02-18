@@ -95,8 +95,10 @@ func (r *StatsRepository) GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) 
 		`SELECT currency FROM orders GROUP BY currency ORDER BY COUNT(*) DESC LIMIT 1`,
 	).Scan(&currency)
 	if err != nil {
-		// No orders at all — return empty string, not an error
-		return "", nil
+		if err == pgx.ErrNoRows {
+			return "", nil
+		}
+		return "", fmt.Errorf("get most common currency: %w", err)
 	}
 	if currency == nil {
 		return "", nil

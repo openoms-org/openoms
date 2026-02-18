@@ -176,6 +176,7 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	// Read the raw request body so we can merge it onto existing settings.
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	rawBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "failed to read request body")
@@ -935,6 +936,7 @@ func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request)
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	rawBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "failed to read request body")

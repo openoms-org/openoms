@@ -45,10 +45,9 @@ import type {
   AllegroCategory,
   AllegroCategoryParameter,
   AllegroMatchingCategory,
-  ProductListing,
   CreateProductListingRequest,
 } from "@/hooks/use-allegro";
-import type { Product } from "@/types/api";
+import type { Product, ProductListing } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

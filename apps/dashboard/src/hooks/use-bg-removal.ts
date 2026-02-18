@@ -53,7 +53,7 @@ export function useRemoveProductImageBackground(productId: string) {
         { method: "POST" }
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      queryClient.invalidateQueries({ queryKey: ["products", productId] });
     },
   });
 }

@@ -1,12 +1,11 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
 	"slices"
-	"text/template"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -204,15 +203,9 @@ func (s *SMSService) SendTestSMS(ctx context.Context, settings model.SMSSettings
 }
 
 func renderSMSTemplate(tmplStr string, data map[string]string) (string, error) {
-	tmpl, err := template.New("sms").Parse(tmplStr)
-	if err != nil {
-		return "", err
+	result := tmplStr
+	for key, val := range data {
+		result = strings.ReplaceAll(result, "{{."+key+"}}", val)
 	}
-
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
+	return result, nil
 }

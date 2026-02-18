@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -155,7 +156,8 @@ func (h *ExchangeRateHandler) FetchNBP(w http.ResponseWriter, r *http.Request) {
 
 	count, err := h.exchangeRateService.FetchNBPRates(r.Context(), tenantID, actorID, clientIP(r))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to fetch NBP rates: "+err.Error())
+		slog.Error("failed to fetch NBP rates", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to fetch NBP rates")
 		return
 	}
 

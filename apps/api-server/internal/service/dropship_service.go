@@ -290,8 +290,10 @@ func (s *DropshipService) AutoRouteOrder(ctx context.Context, tenantID, orderID,
 		return nil, err
 	}
 
-	for _, ds := range result {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", ds)
+	if s.webhookDispatch != nil {
+		for _, ds := range result {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", ds)
+		}
 	}
 	return result, nil
 }
@@ -377,7 +379,9 @@ func (s *DropshipService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", d)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", d)
+	}
 	return d, nil
 }
 
@@ -433,7 +437,9 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.status_updated", d)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.status_updated", d)
+	}
 	return d, nil
 }
 
@@ -486,7 +492,9 @@ func (s *DropshipService) Cancel(ctx context.Context, tenantID, id uuid.UUID, ac
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.cancelled", d)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.cancelled", d)
+	}
 	return d, nil
 }
 

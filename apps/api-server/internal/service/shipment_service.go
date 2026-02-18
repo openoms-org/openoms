@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -193,7 +195,9 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	if err != nil {
 		return nil, err
 	}
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.created", shipment)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.created", shipment)
+	}
 	FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.created", shipment.ID, map[string]any{
 		"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
 	})
@@ -259,7 +263,9 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 		})
 	})
 	if err == nil && shipment != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.updated", shipment)
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.updated", shipment)
+		}
 		// Auto-sync tracking to Allegro when tracking number is set/changed (async, best-effort)
 		if trackingChanged && s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
 			go s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber)
@@ -293,7 +299,9 @@ func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, acto
 		})
 	})
 	if err == nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.deleted", map[string]any{"shipment_id": shipmentID.String()})
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.deleted", map[string]any{"shipment_id": shipmentID.String()})
+		}
 	}
 	return err
 }
@@ -387,7 +395,9 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		return nil
 	})
 	if err == nil && shipment != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment)
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment)
+		}
 		if s.smsService != nil {
 			go s.smsService.SendShipmentStatusSMS(context.Background(), tenantID, shipment, "")
 		}
@@ -464,8 +474,6 @@ func (s *ShipmentService) GetBatchLabelURLs(ctx context.Context, tenantID uuid.U
 func readLabelFile(labelURL string) ([]byte, error) {
 	// The label URL looks like: http://localhost:8080/uploads/tenant-uuid/filename.pdf
 	// We need to extract the path after /uploads/ and resolve it to disk.
-	// Since we don't have the upload dir here, we try to find "uploads/" in the URL
-	// and read from the filesystem relative to the working directory.
 	idx := 0
 	const marker = "/uploads/"
 	for i := range labelURL {
@@ -478,10 +486,16 @@ func readLabelFile(labelURL string) ([]byte, error) {
 		return nil, fmt.Errorf("invalid label URL format: %s", labelURL)
 	}
 
-	path := labelURL[idx:]
+	relPath := filepath.Clean(labelURL[idx:])
+	// Prevent path traversal
+	if strings.HasPrefix(relPath, "..") || filepath.IsAbs(relPath) {
+		return nil, fmt.Errorf("invalid label path")
+	}
+
 	// Try common upload directories
 	for _, base := range []string{"uploads", "./uploads", "/tmp/uploads"} {
-		data, err := os.ReadFile(base + "/" + path)
+		fullPath := filepath.Join(base, relPath)
+		data, err := os.ReadFile(fullPath)
 		if err == nil {
 			return data, nil
 		}

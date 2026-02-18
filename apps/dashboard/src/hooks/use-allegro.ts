@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiFetch } from "@/lib/api-client";
+import type { ProductListing } from "@/types/api";
 
 // --- Types ---
 
@@ -1618,25 +1619,6 @@ export interface AllegroUserRating {
 }
 
 // ==================== Product Listings ====================
-
-export interface ProductListing {
-  id: string;
-  tenant_id: string;
-  product_id: string;
-  integration_id: string;
-  external_id?: string;
-  status: string;
-  url?: string;
-  price_override?: number;
-  stock_override?: number;
-  sync_status: string;
-  last_synced_at?: string;
-  error_message?: string;
-  stock_sync_mode: 'auto' | 'manual';
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface CreateProductListingRequest {
   integration_id: string;

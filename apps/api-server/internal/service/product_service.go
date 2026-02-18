@@ -141,7 +141,9 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		}
 		return nil, err
 	}
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.created", product)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.created", product)
+	}
 	FireAutomationEvent(s.automationService, tenantID, "product", "product.created", product.ID, map[string]any{
 		"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 		"source": product.Source,
@@ -205,7 +207,9 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 		return nil, err
 	}
 	if product != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.updated", product)
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.updated", product)
+		}
 		FireAutomationEvent(s.automationService, tenantID, "product", "product.updated", product.ID, map[string]any{
 			"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 			"source": product.Source,
@@ -239,7 +243,9 @@ func (s *ProductService) Delete(ctx context.Context, tenantID, productID uuid.UU
 		})
 	})
 	if err == nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.deleted", map[string]any{"product_id": productID.String()})
+		if s.webhookDispatch != nil {
+			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.deleted", map[string]any{"product_id": productID.String()})
+		}
 	}
 	return err
 }

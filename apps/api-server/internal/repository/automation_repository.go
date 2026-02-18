@@ -191,6 +191,8 @@ func (r *AutomationRuleRepository) Update(ctx context.Context, tx pgx.Tx, id uui
 		return nil
 	}
 
+	setClauses = append(setClauses, "updated_at = NOW()")
+
 	var query strings.Builder
 	query.WriteString("UPDATE automation_rules SET ")
 	for i, clause := range setClauses {

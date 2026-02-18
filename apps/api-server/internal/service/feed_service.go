@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -138,9 +139,9 @@ func (s *FeedService) ValidateFeedToken(ctx context.Context, tenantID uuid.UUID,
 
 	switch feedType {
 	case "ceneo":
-		return cfg.CeneoEnabled && cfg.CeneoFeedToken == token, nil
+		return cfg.CeneoEnabled && subtle.ConstantTimeCompare([]byte(cfg.CeneoFeedToken), []byte(token)) == 1, nil
 	case "google":
-		return cfg.GoogleEnabled && cfg.GoogleFeedToken == token, nil
+		return cfg.GoogleEnabled && subtle.ConstantTimeCompare([]byte(cfg.GoogleFeedToken), []byte(token)) == 1, nil
 	default:
 		return false, nil
 	}

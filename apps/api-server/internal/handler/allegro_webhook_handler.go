@@ -46,7 +46,7 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 	// Reject requests if webhook secret is not configured
 	if h.webhookSecret == "" {
 		slog.Warn("allegro webhook: webhook secret not configured, rejecting request")
-		w.WriteHeader(http.StatusServiceUnavailable)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 

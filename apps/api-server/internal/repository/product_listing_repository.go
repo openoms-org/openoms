@@ -165,7 +165,7 @@ func (r *ProductListingRepository) ListByProduct(ctx context.Context, tx pgx.Tx,
 		if err := rows.Scan(
 			&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 			&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.Metadata,
+			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
 			&l.CreatedAt, &l.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan product listing: %w", err)
@@ -194,7 +194,7 @@ func (r *ProductListingRepository) ListByIntegration(ctx context.Context, tx pgx
 		if err := rows.Scan(
 			&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 			&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.Metadata,
+			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
 			&l.CreatedAt, &l.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan product listing: %w", err)

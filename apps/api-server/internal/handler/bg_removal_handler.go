@@ -62,7 +62,7 @@ var bgAllowedMimeTypes = map[string]string{
 // Accepts a multipart file upload, removes the background, saves the result and returns the URL.
 func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Request) {
 	if !h.bgService.IsConfigured() {
-		writeError(w, http.StatusServiceUnavailable, "Usuwanie tła nie jest skonfigurowane. Ustaw REMOVEBG_API_KEY.")
+		writeError(w, http.StatusUnprocessableEntity, "Usuwanie tła nie jest skonfigurowane. Ustaw REMOVEBG_API_KEY.")
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 // Use index -1 to process the main image_url, or 0+ for the images[] array.
 func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r *http.Request) {
 	if !h.bgService.IsConfigured() {
-		writeError(w, http.StatusServiceUnavailable, "Usuwanie tła nie jest skonfigurowane. Ustaw REMOVEBG_API_KEY.")
+		writeError(w, http.StatusUnprocessableEntity, "Usuwanie tła nie jest skonfigurowane. Ustaw REMOVEBG_API_KEY.")
 		return
 	}
 

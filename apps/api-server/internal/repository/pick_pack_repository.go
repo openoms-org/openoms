@@ -298,8 +298,8 @@ func (r *PickPackRepository) GetSessionStats(ctx context.Context, tx pgx.Tx, ses
 			COALESCE(SUM(quantity_packed), 0) AS total_packed,
 			COALESCE(SUM(quantity_required), 0) AS total_required,
 			COUNT(DISTINCT order_id) AS order_count,
-			BOOL_AND(quantity_picked >= quantity_required) AS all_picked,
-			BOOL_AND(quantity_packed >= quantity_required) AS all_packed
+			COALESCE(BOOL_AND(quantity_picked >= quantity_required), false) AS all_picked,
+			COALESCE(BOOL_AND(quantity_packed >= quantity_required), false) AS all_packed
 		 FROM pick_pack_items
 		 WHERE session_id = $1`,
 		sessionID,

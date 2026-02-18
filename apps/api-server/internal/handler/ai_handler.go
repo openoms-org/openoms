@@ -21,7 +21,7 @@ func NewAIHandler(aiService *service.AIService) *AIHandler {
 // Categorize handles POST /v1/ai/categorize
 func (h *AIHandler) Categorize(w http.ResponseWriter, r *http.Request) {
 	if !h.aiService.IsConfigured() {
-		writeError(w, http.StatusServiceUnavailable, "AI nie jest skonfigurowane")
+		writeError(w, http.StatusUnprocessableEntity, "AI nie jest skonfigurowane")
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *AIHandler) Categorize(w http.ResponseWriter, r *http.Request) {
 // Describe handles POST /v1/ai/describe
 func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 	if !h.aiService.IsConfigured() {
-		writeError(w, http.StatusServiceUnavailable, "AI nie jest skonfigurowane")
+		writeError(w, http.StatusUnprocessableEntity, "AI nie jest skonfigurowane")
 		return
 	}
 
@@ -100,7 +100,7 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 // Improve handles POST /v1/ai/improve
 func (h *AIHandler) Improve(w http.ResponseWriter, r *http.Request) {
 	if !h.aiService.IsConfigured() {
-		writeError(w, http.StatusServiceUnavailable, "AI nie jest skonfigurowane")
+		writeError(w, http.StatusUnprocessableEntity, "AI nie jest skonfigurowane")
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *AIHandler) Improve(w http.ResponseWriter, r *http.Request) {
 // Translate handles POST /v1/ai/translate
 func (h *AIHandler) Translate(w http.ResponseWriter, r *http.Request) {
 	if !h.aiService.IsConfigured() {
-		writeError(w, http.StatusServiceUnavailable, "AI nie jest skonfigurowane")
+		writeError(w, http.StatusUnprocessableEntity, "AI nie jest skonfigurowane")
 		return
 	}
 
@@ -163,7 +163,7 @@ func (h *AIHandler) Translate(w http.ResponseWriter, r *http.Request) {
 // BulkCategorize handles POST /v1/ai/bulk-categorize
 func (h *AIHandler) BulkCategorize(w http.ResponseWriter, r *http.Request) {
 	if !h.aiService.IsConfigured() {
-		writeError(w, http.StatusServiceUnavailable, "AI nie jest skonfigurowane")
+		writeError(w, http.StatusUnprocessableEntity, "AI nie jest skonfigurowane")
 		return
 	}
 

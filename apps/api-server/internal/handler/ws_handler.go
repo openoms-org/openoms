@@ -61,6 +61,12 @@ func (h *WSHandler) ServeWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject non-access tokens (refresh, 2fa_pending, etc.)
+	if claims.Type != "" && claims.Type != "access" {
+		writeError(w, http.StatusUnauthorized, "invalid token type")
+		return
+	}
+
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid user ID in token")

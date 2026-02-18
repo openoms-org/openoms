@@ -193,7 +193,9 @@ func (s *PurchaseOrderService) Create(ctx context.Context, tenantID uuid.UUID, r
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.created", po)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.created", po)
+	}
 	return po, nil
 }
 
@@ -274,7 +276,9 @@ func (s *PurchaseOrderService) Update(ctx context.Context, tenantID, poID uuid.U
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.updated", po)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.updated", po)
+	}
 	return po, nil
 }
 
@@ -306,7 +310,7 @@ func (s *PurchaseOrderService) Delete(ctx context.Context, tenantID, poID uuid.U
 			IPAddress:  ip,
 		})
 	})
-	if err == nil {
+	if err == nil && s.webhookDispatch != nil {
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.deleted", map[string]any{"id": poID.String()})
 	}
 	return err
@@ -358,7 +362,9 @@ func (s *PurchaseOrderService) Send(ctx context.Context, tenantID, poID uuid.UUI
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.sent", po)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.sent", po)
+	}
 	return po, nil
 }
 
@@ -472,7 +478,9 @@ func (s *PurchaseOrderService) ReceiveItems(ctx context.Context, tenantID, poID 
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.items_received", po)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.items_received", po)
+	}
 	return po, nil
 }
 
@@ -525,6 +533,8 @@ func (s *PurchaseOrderService) Cancel(ctx context.Context, tenantID, poID uuid.U
 		return nil, err
 	}
 
-	go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.cancelled", po)
+	if s.webhookDispatch != nil {
+		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.cancelled", po)
+	}
 	return po, nil
 }

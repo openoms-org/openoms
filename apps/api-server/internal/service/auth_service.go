@@ -409,14 +409,15 @@ func (s *AuthService) Disable2FA(ctx context.Context, userID, tenantID uuid.UUID
 	}
 
 	// Verify TOTP code
-	if encryptedSecret != nil {
-		secretBytes, err := crypto.Decrypt(*encryptedSecret, s.encryptionKey)
-		if err != nil {
-			return fmt.Errorf("decrypt totp secret: %w", err)
-		}
-		if !totp.Validate(code, string(secretBytes)) {
-			return ErrInvalid2FACode
-		}
+	if encryptedSecret == nil {
+		return errors.New("2FA is not set up")
+	}
+	secretBytes, err := crypto.Decrypt(*encryptedSecret, s.encryptionKey)
+	if err != nil {
+		return fmt.Errorf("decrypt totp secret: %w", err)
+	}
+	if !totp.Validate(code, string(secretBytes)) {
+		return ErrInvalid2FACode
 	}
 
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

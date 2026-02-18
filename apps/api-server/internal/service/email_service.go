@@ -184,9 +184,14 @@ func sendMail(cfg model.EmailSettings, to, subject, htmlBody string) error {
 		return fmt.Errorf("SMTP not configured")
 	}
 
+	// Sanitize header values to prevent header injection
+	sanitizer := strings.NewReplacer("\r", "", "\n", "")
+	fromName := sanitizer.Replace(cfg.FromName)
+	subject = sanitizer.Replace(subject)
+
 	from := cfg.FromEmail
-	if cfg.FromName != "" {
-		from = fmt.Sprintf("%s <%s>", cfg.FromName, cfg.FromEmail)
+	if fromName != "" {
+		from = fmt.Sprintf("%s <%s>", fromName, cfg.FromEmail)
 	}
 
 	headers := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n",

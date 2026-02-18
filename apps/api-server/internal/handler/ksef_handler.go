@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -180,7 +181,8 @@ func (h *KSeFHandler) GetUPO(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "invoice not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to download UPO: "+err.Error())
+		slog.Error("failed to download UPO", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to download UPO")
 		return
 	}
 

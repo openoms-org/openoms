@@ -99,7 +99,7 @@ func (r *PaymentRepository) ListSettlements(ctx context.Context, tx pgx.Tx, filt
 		settlements = append(settlements, s)
 	}
 
-	return settlements, total, nil
+	return settlements, total, rows.Err()
 }
 
 func (r *PaymentRepository) FindSettlementByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PaymentSettlement, error) {
@@ -228,7 +228,7 @@ func (r *PaymentRepository) ListTransactions(ctx context.Context, tx pgx.Tx, fil
 		transactions = append(transactions, t)
 	}
 
-	return transactions, total, nil
+	return transactions, total, rows.Err()
 }
 
 func (r *PaymentRepository) FindTransactionByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PaymentTransaction, error) {
@@ -277,7 +277,7 @@ func (r *PaymentRepository) FindTransactionsBySettlement(ctx context.Context, tx
 		}
 		transactions = append(transactions, t)
 	}
-	return transactions, nil
+	return transactions, rows.Err()
 }
 
 func (r *PaymentRepository) FindUnmatchedTransactions(ctx context.Context, tx pgx.Tx) ([]model.PaymentTransaction, error) {
@@ -299,7 +299,7 @@ func (r *PaymentRepository) FindUnmatchedTransactions(ctx context.Context, tx pg
 		}
 		transactions = append(transactions, t)
 	}
-	return transactions, nil
+	return transactions, rows.Err()
 }
 
 func (r *PaymentRepository) CreateTransaction(ctx context.Context, tx pgx.Tx, t *model.PaymentTransaction) error {
