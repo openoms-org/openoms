@@ -13,24 +13,76 @@ import (
 )
 
 type AuthHandler struct {
-	authService    *service.AuthService
-	isDev          bool
-	tokenBlacklist *middleware.TokenBlacklist
+	authService      *service.AuthService
+	invitationSvc    *service.InvitationService
+	isDev            bool
+	registrationMode string // "open", "invite", "disabled"
+	tokenBlacklist   *middleware.TokenBlacklist
 }
 
 func NewAuthHandler(authService *service.AuthService, isDev bool, blacklist ...*middleware.TokenBlacklist) *AuthHandler {
-	h := &AuthHandler{authService: authService, isDev: isDev}
+	h := &AuthHandler{authService: authService, isDev: isDev, registrationMode: "open"}
 	if len(blacklist) > 0 {
 		h.tokenBlacklist = blacklist[0]
 	}
 	return h
 }
 
+func (h *AuthHandler) SetRegistrationMode(mode string) {
+	h.registrationMode = mode
+}
+
+func (h *AuthHandler) SetInvitationService(svc *service.InvitationService) {
+	h.invitationSvc = svc
+}
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	// Check registration mode
+	switch h.registrationMode {
+	case "disabled":
+		writeError(w, http.StatusForbidden, "registration is disabled")
+		return
+	case "invite":
+		// handled below after decoding
+	case "open":
+		// allow
+	default:
+		// treat unknown as open
+	}
+
 	var req model.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+
+	// In invite mode, validate the invitation token
+	if h.registrationMode == "invite" {
+		if req.InviteToken == "" {
+			writeError(w, http.StatusBadRequest, "invite_token is required")
+			return
+		}
+		if h.invitationSvc == nil {
+			writeError(w, http.StatusInternalServerError, "invitation service not configured")
+			return
+		}
+		inv, err := h.invitationSvc.ValidateToken(r.Context(), req.InviteToken)
+		if err != nil {
+			switch err {
+			case service.ErrInvitationNotFound:
+				writeError(w, http.StatusBadRequest, "invalid invitation token")
+			case service.ErrInvitationExpired:
+				writeError(w, http.StatusBadRequest, "invitation has expired")
+			case service.ErrInvitationUsed:
+				writeError(w, http.StatusBadRequest, "invitation has already been used")
+			default:
+				slog.Error("invitation validation error", "error", err)
+				writeError(w, http.StatusInternalServerError, "failed to validate invitation")
+			}
+			return
+		}
+		// Override email with invitation email for security
+		req.Email = inv.Email
 	}
 
 	resp, refreshToken, err := h.authService.Register(r.Context(), req, clientIP(r))
@@ -47,6 +99,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		return
+	}
+
+	// Mark invitation as used after successful registration
+	if h.registrationMode == "invite" && req.InviteToken != "" && h.invitationSvc != nil {
+		if err := h.invitationSvc.MarkUsed(r.Context(), req.InviteToken); err != nil {
+			slog.Warn("failed to mark invitation as used", "error", err)
+		}
 	}
 
 	h.setRefreshCookie(w, refreshToken, 30*24*3600)

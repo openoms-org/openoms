@@ -96,6 +96,8 @@ type RouterDeps struct {
 	StockSync         *handler.StockSyncHandler
 	ListingSync       *handler.ListingSyncHandler
 	StoreAuth         *handler.StoreAuthHandler
+	PublicConfig      *handler.ConfigHandler
+	Invitation        *handler.InvitationHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -158,6 +160,11 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Get("/status", deps.Auth.TwoFAStatus)
 		})
 	})
+
+	// Public config endpoint — no auth required
+	if deps.PublicConfig != nil {
+		r.Get("/v1/config/public", deps.PublicConfig.PublicConfig)
+	}
 
 	// Public webhook routes — no JWT, signature-verified
 	r.Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
@@ -305,6 +312,16 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Patch("/{id}", deps.User.Update)
 				r.Delete("/{id}", deps.User.Delete)
 			})
+
+			// Admin/owner only invitation management
+			if deps.Invitation != nil {
+				r.Route("/invitations", func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Get("/", deps.Invitation.List)
+					r.Post("/", deps.Invitation.Create)
+					r.Delete("/{id}", deps.Invitation.Delete)
+				})
+			}
 
 			// Orders — any authenticated user
 			r.Route("/orders", func(r chi.Router) {

@@ -11,6 +11,7 @@ export interface RegisterRequest {
   name: string;
   tenant_name: string;
   tenant_slug: string;
+  invite_token?: string;
 }
 
 export interface TokenResponse {

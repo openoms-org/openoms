@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePublicConfig } from "@/hooks/use-public-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,8 +31,12 @@ const registerSchema = z.object({
 
 type RegisterForm = z.infer<typeof registerSchema>;
 
-export default function RegisterPage() {
+function RegisterForm() {
   const { register: registerUser } = useAuth();
+  const { registration_mode } = usePublicConfig();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("token") || "";
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -41,10 +47,19 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
   });
 
+  // Redirect to login if registration is disabled
+  if (registration_mode === "disabled") {
+    router.replace("/login");
+    return null;
+  }
+
   const onSubmit = async (data: RegisterForm) => {
     setIsSubmitting(true);
     try {
-      await registerUser(data);
+      await registerUser({
+        ...data,
+        ...(registration_mode === "invite" && inviteToken ? { invite_token: inviteToken } : {}),
+      });
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -56,10 +71,21 @@ export default function RegisterPage() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Rejestracja</CardTitle>
-        <CardDescription>Utwórz nową organizację w OpenOMS</CardDescription>
+        <CardDescription>
+          {registration_mode === "invite"
+            ? "Dokończ rejestrację z zaproszenia"
+            : "Utwórz nową organizację w OpenOMS"}
+        </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
+          {registration_mode === "invite" && !inviteToken && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
+              <p className="text-sm text-destructive">
+                Brak tokenu zaproszenia. Użyj linku otrzymanego w zaproszeniu.
+              </p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="tenant_name">Nazwa organizacji <span className="text-destructive">*</span></Label>
             <Input
@@ -124,7 +150,11 @@ export default function RegisterPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isSubmitting || (registration_mode === "invite" && !inviteToken)}
+          >
             {isSubmitting ? "Rejestracja..." : "Zarejestruj się"}
           </Button>
           <p className="text-sm text-muted-foreground">
@@ -136,5 +166,13 @@ export default function RegisterPage() {
         </CardFooter>
       </form>
     </Card>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -412,3 +412,12 @@ type StockSyncEventRepo interface {
 	CountRecentErrors(ctx context.Context, tx pgx.Tx) (int, error)
 	GetAvailableStock(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (totalQty int, reservedQty int, err error)
 }
+
+// InvitationRepo defines the interface for invitation persistence operations.
+type InvitationRepo interface {
+	Create(ctx context.Context, tx pgx.Tx, inv *model.Invitation) error
+	List(ctx context.Context, tx pgx.Tx, limit, offset int) ([]model.Invitation, int, error)
+	FindByToken(ctx context.Context, pool *pgxpool.Pool, token string) (*model.Invitation, error) // SECURITY DEFINER, no RLS
+	MarkUsed(ctx context.Context, pool *pgxpool.Pool, token string) error                         // SECURITY DEFINER, no RLS
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}

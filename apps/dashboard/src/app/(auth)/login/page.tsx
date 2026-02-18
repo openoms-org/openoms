@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Package, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
+import { usePublicConfig } from "@/hooks/use-public-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { login, verify2FALogin } = useAuth();
+  const { registration_mode } = usePublicConfig();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
@@ -214,12 +216,14 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Logowanie..." : "Zaloguj się"}
             </Button>
-            <p className="text-sm text-muted-foreground">
-              Nie masz konta?{" "}
-              <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-                Zarejestruj się
-              </Link>
-            </p>
+            {registration_mode === "open" && (
+              <p className="text-sm text-muted-foreground">
+                Nie masz konta?{" "}
+                <Link href="/register" className="text-primary underline-offset-4 hover:underline">
+                  Zarejestruj się
+                </Link>
+              </p>
+            )}
           </CardFooter>
         </form>
       </Card>

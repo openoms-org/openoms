@@ -249,11 +249,17 @@ func main() {
 	returnService.SetAutomationService(automationService)
 	productService.SetAutomationService(automationService)
 
+	// Invitation service (for invite-only registration mode)
+	invitationRepo := repository.NewInvitationRepository()
+	invitationService := service.NewInvitationService(invitationRepo, auditRepo, pool)
+
 	// Initialize token blacklist for server-side token revocation
 	tokenBlacklist := middleware.NewTokenBlacklist()
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment(), tokenBlacklist)
+	authHandler.SetRegistrationMode(cfg.RegistrationMode)
+	authHandler.SetInvitationService(invitationService)
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
@@ -447,6 +453,12 @@ func main() {
 	// OpenAPI docs handler
 	docsHandler := handler.NewDocsHandler(docs.OpenAPISpec)
 
+	// Public config handler
+	configHandler := handler.NewConfigHandler(cfg.RegistrationMode)
+
+	// Invitation handler (admin CRUD for invitations)
+	invitationHandler := handler.NewInvitationHandler(invitationService)
+
 	// Rate shopping service & handler
 	rateService := service.NewRateService(integrationRepo, pool, encryptionKey)
 	rateHandler := handler.NewRateHandler(rateService)
@@ -577,6 +589,8 @@ func main() {
 		Loyalty:           loyaltyHandler,
 		StockSync:         stockSyncHandler,
 		ListingSync:       listingSyncHandler,
+		PublicConfig:      configHandler,
+		Invitation:        invitationHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)

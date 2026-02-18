@@ -46,6 +46,7 @@ type RegisterRequest struct {
 	Name       string `json:"name"`
 	TenantName string `json:"tenant_name"`
 	TenantSlug string `json:"tenant_slug"`
+	InviteToken string `json:"invite_token,omitempty"` // required when REGISTRATION_MODE=invite
 }
 
 func (r *RegisterRequest) Validate() error {

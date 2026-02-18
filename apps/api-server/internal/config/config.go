@@ -47,6 +47,9 @@ type Config struct {
 	RemoveBGAPIKey string `env:"REMOVEBG_API_KEY"`
 
 	MetricsToken string `env:"METRICS_TOKEN"` // Bearer token for /metrics; if empty, metrics are disabled in production
+
+	// RegistrationMode controls public registration: "open" (default), "invite" (token required), "disabled".
+	RegistrationMode string `env:"REGISTRATION_MODE" envDefault:"open"`
 }
 
 func Load() (*Config, error) {
