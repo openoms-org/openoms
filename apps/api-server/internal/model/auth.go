@@ -41,11 +41,11 @@ func (r *LoginRequest) Validate() error {
 
 // RegisterRequest is the body of POST /v1/auth/register.
 type RegisterRequest struct {
-	Email      string `json:"email"`
-	Password   string `json:"password"`
-	Name       string `json:"name"`
-	TenantName string `json:"tenant_name"`
-	TenantSlug string `json:"tenant_slug"`
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	Name        string `json:"name"`
+	TenantName  string `json:"tenant_name"`
+	TenantSlug  string `json:"tenant_slug"`
 	InviteToken string `json:"invite_token,omitempty"` // required when REGISTRATION_MODE=invite
 }
 
