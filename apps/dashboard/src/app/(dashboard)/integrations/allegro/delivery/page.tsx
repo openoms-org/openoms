@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,8 @@ import {
 } from "@/components/ui/tabs";
 
 export default function AllegroDeliveryPage() {
+  const { error: settingsError, refetch: refetchSettings } = useAllegroDeliverySettings();
+
   return (
     <AdminGuard>
       <div className="space-y-6">
@@ -86,6 +89,8 @@ export default function AllegroDeliveryPage() {
             </p>
           </div>
         </div>
+
+        <AllegroErrorCard error={settingsError as Error | null} onRetry={() => refetchSettings()} />
 
         {/* Help section */}
         <div className="rounded-lg border bg-muted/50 p-4 flex gap-3">

@@ -45,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 
 const PAGE_SIZE = 20;
 
@@ -105,20 +106,7 @@ export default function AllegroOffersPage() {
           </div>
         </div>
 
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <p className="text-sm text-destructive">
-                {(error as Error).message?.includes("502") || (error as Error).message?.includes("Token")
-                  ? "Token Allegro wygasł lub jest nieprawidłowy. Połącz ponownie konto Allegro w ustawieniach integracji."
-                  : "Nie udało się pobrać ofert z Allegro. Sprawdź połączenie z kontem Allegro."}
-              </p>
-              <Button variant="outline" size="sm" className="mt-3" asChild>
-                <Link href="/integrations/allegro">Ustawienia Allegro</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        <AllegroErrorCard error={error as Error | null} />
 
         {/* Filters */}
         <Card>

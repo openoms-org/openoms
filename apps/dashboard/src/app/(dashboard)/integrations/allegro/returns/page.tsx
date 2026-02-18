@@ -53,6 +53,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 import { formatDate } from "@/lib/utils";
 
 const RETURN_STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -73,7 +74,7 @@ export default function AllegroReturnsPage() {
   const [rejectDialogReturn, setRejectDialogReturn] = useState<AllegroCustomerReturn | null>(null);
   const [refundDialogReturn, setRefundDialogReturn] = useState<AllegroCustomerReturn | null>(null);
 
-  const { data, isLoading, isError, refetch } = useAllegroReturns({
+  const { data, isLoading, isError, error, refetch } = useAllegroReturns({
     limit,
     offset,
     status: statusFilter || undefined,
@@ -126,23 +127,7 @@ export default function AllegroReturnsPage() {
           </Button>
         </div>
 
-        {isError && (
-          <Card className="border-destructive">
-            <CardContent className="pt-4">
-              <p className="text-sm text-destructive">
-                Błąd podczas ładowania zwrotów. Sprawdź połączenie z Allegro.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => refetch()}
-              >
-                Spróbuj ponownie
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        <AllegroErrorCard error={error as Error | null} onRetry={() => refetch()} />
 
         {isLoading && (
           <div className="space-y-3">

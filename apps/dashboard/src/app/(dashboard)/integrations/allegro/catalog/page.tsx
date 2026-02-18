@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 
 interface BreadcrumbItem {
   id: string;
@@ -55,7 +56,7 @@ export default function AllegroCatalogPage() {
   const [activeSearch, setActiveSearch] = useState("");
   const [searchCategoryId, setSearchCategoryId] = useState<string | null>(null);
 
-  const { data: categoriesData, isLoading: categoriesLoading } =
+  const { data: categoriesData, isLoading: categoriesLoading, error: categoriesError, refetch: refetchCategories } =
     useAllegroCategories(parentId);
 
   const { data: paramsData, isLoading: paramsLoading } =
@@ -116,6 +117,8 @@ export default function AllegroCatalogPage() {
             </p>
           </div>
         </div>
+
+        <AllegroErrorCard error={categoriesError as Error | null} onRetry={() => refetchCategories()} />
 
         {/* Help section */}
         <div className="rounded-lg border bg-muted/50 p-4 flex gap-3">

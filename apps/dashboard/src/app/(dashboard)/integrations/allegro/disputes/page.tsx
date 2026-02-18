@@ -42,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 import { cn, formatDate } from "@/lib/utils";
 
 const DISPUTE_STATUS_MAP: Record<
@@ -58,7 +59,7 @@ export default function AllegroDisputesPage() {
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const { data, isLoading, isError, refetch } = useAllegroDisputes({
+  const { data, isLoading, isError, error, refetch } = useAllegroDisputes({
     limit,
     offset,
     status: statusFilter || undefined,
@@ -122,23 +123,7 @@ export default function AllegroDisputesPage() {
           </Button>
         </div>
 
-        {isError && (
-          <Card className="border-destructive">
-            <CardContent className="pt-4">
-              <p className="text-sm text-destructive">
-                Blad podczas ladowania sporow. Sprawdz polaczenie z Allegro.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => refetch()}
-              >
-                Sprobuj ponownie
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        <AllegroErrorCard error={error as Error | null} onRetry={() => refetch()} />
 
         {isLoading && (
           <div className="space-y-3">

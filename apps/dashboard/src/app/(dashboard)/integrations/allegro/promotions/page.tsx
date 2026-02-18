@@ -67,6 +67,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 
 const PAGE_SIZE = 20;
 
@@ -120,7 +121,7 @@ export default function AllegroPromotionsPage() {
     offset: page * PAGE_SIZE,
   };
 
-  const { data, isLoading, isFetching } = useAllegroPromotions(queryParams);
+  const { data, isLoading, isFetching, error } = useAllegroPromotions(queryParams);
   const { data: badgesData, isLoading: badgesLoading } =
     useAllegroPromoBadges();
 
@@ -156,6 +157,8 @@ export default function AllegroPromotionsPage() {
             </DialogContent>
           </Dialog>
         </div>
+
+        <AllegroErrorCard error={error as Error | null} />
 
         {/* Help section */}
         <div className="rounded-lg border bg-muted/50 p-4 flex gap-3">
