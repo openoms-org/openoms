@@ -13,6 +13,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const hydrate = async () => {
       const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
+
+      // Skip refresh if no session cookie exists (e.g. on login page)
+      const hasSession = document.cookie.split(";").some((c) => c.trim().startsWith("has_session="));
+      if (!hasSession) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_URL}/v1/auth/refresh`, {
           method: "POST",
