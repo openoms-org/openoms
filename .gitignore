@@ -61,7 +61,7 @@ docs/competitive-analysis.md
 docs/market-research-report.md
 docs/qa-seller-test-report.md
 
-# Sensitive internal docs (move to openoms-enterprise repo)
+# Sensitive internal docs
 docs/security-audit-*.md
 docs/gap-analysis-*.md
 docs/social-media-launch-kit.md

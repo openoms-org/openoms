@@ -125,34 +125,26 @@ CREATE POLICY tenant_isolation ON orders
 
 ### CI/CD i Deployment
 
-#### Dwa repozytoria
-
-| Repo | Widocznosc | Zawartosc |
-|------|-----------|-----------|
-| `openoms-org/openoms` | Publiczne | Kod aplikacji, Helm chart, Dockerfiles |
-| `openoms-org/openoms-enterprise` | Prywatne | values-production.yaml, deploy.yml |
-
 #### Pipeline
 
-1. Push do `main` -> `release.yml` (publiczne repo):
-   - Buduje 3 obrazy Docker -> GHCR (publiczne)
+1. Push do `main` -> `release.yml`:
+   - Buduje 3 obrazy Docker -> GHCR
    - `ghcr.io/openoms-org/openoms-api`
    - `ghcr.io/openoms-org/openoms-dashboard`
    - `ghcr.io/openoms-org/openoms-migrate`
    - Skanuje obrazy (Trivy, CRITICAL+HIGH)
-   - Wysyla `repository_dispatch` do enterprise repo
+   - Opcjonalnie: wysyla `repository_dispatch` do prywatnego repo deploymentu (patrz komentarz w `release.yml`)
 
-2. Enterprise `deploy.yml`:
-   - Trigger: `repository_dispatch` lub `workflow_dispatch` (reczny)
-   - Checkout obu repozytoriow
-   - `helm upgrade --install` z overlay `values-production.yaml`
-   - Health check (`kubectl rollout status`)
+2. Deployment:
+   - Uzyj Helm chart z `deploy/helm/openoms/` + wlasny `values-production.yaml`
+   - `helm upgrade --install openoms ./deploy/helm/openoms -f values-production.yaml`
+   - Albo uzyj `docker-compose.prod.yml` dla prostszych setupow
 
 #### Helm Chart
 
 - Chart: `deploy/helm/openoms/`
 - Domyslne wartosci: `values.yaml` (generyczne, example.com)
-- Produkcyjne overlay: `values-production.yaml` (w enterprise repo)
+- Produkcyjne wartosci: utworz wlasny `values-production.yaml` z domenami i sekretami
 - Migration job: pre-upgrade hook, `activeDeadlineSeconds: 600`
 
 #### Obrazy Docker
