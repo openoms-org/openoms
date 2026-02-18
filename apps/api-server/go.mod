@@ -1,8 +1,8 @@
 module github.com/openoms-org/openoms/apps/api-server
 
-go 1.24.0
+go 1.25.0
 
-toolchain go1.24.3
+toolchain go1.25.7
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1
@@ -34,12 +34,12 @@ require (
 	github.com/openoms-org/openoms/packages/order-engine v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/orlen-paczka-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/poczta-polska-go-sdk v0.0.0-20260213093925-f69d292073cb
-	github.com/openoms-org/openoms/packages/smsapi-go-sdk v0.0.0-20260213093925-f69d292073cb
-	github.com/openoms-org/openoms/packages/ups-go-sdk v0.0.0-20260213093925-f69d292073cb
-	github.com/openoms-org/openoms/packages/wfirma-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/prestashop-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/shoper-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/shopify-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/smsapi-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/ups-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/wfirma-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/woocommerce-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/pquerna/otp v1.5.0
 	github.com/stretchr/testify v1.11.1
