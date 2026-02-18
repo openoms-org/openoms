@@ -622,8 +622,8 @@ func main() {
 
 	// Start server
 	srv := &http.Server{
-		Addr:         ":" + cfg.Port,
-		Handler:      r,
+		Addr:              ":" + cfg.Port,
+		Handler:           r,
 		ReadTimeout:       15 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       60 * time.Second,
