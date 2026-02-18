@@ -20,4 +20,5 @@ data:
   FEATURE_ALLEGRO: {{ .Values.apiServer.features.allegro | quote }}
   FEATURE_INPOST: {{ .Values.apiServer.features.inpost | quote }}
   OPENAI_MODEL: {{ .Values.apiServer.openai.model | quote }}
+  REGISTRATION_MODE: {{ .Values.apiServer.registrationMode | default "open" | quote }}
   REDIS_URL: "redis://localhost:6379"
