@@ -61,6 +61,13 @@ docs/competitive-analysis.md
 docs/market-research-report.md
 docs/qa-seller-test-report.md
 
+# Private keys / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
 # Sensitive internal docs
 docs/security-audit-*.md
 docs/gap-analysis-*.md

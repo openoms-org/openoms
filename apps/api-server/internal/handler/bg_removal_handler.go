@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -281,8 +283,14 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 }
 
 // downloadImage fetches image bytes from a URL.
+// Uses SafeHTTPClient to prevent SSRF attacks against internal services.
 func (h *BGRemovalHandler) downloadImage(ctx context.Context, imageURL string) ([]byte, string, error) {
-	client := &http.Client{Timeout: 30 * time.Second}
+	parsedURL, err := url.Parse(imageURL)
+	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		return nil, "", fmt.Errorf("invalid URL scheme: only http and https are allowed")
+	}
+
+	client := netutil.SafeHTTPClient(30 * time.Second)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 	if err != nil {

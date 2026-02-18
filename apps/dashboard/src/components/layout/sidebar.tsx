@@ -214,9 +214,6 @@ export function Sidebar() {
                     />
                     <group.icon className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{group.label}</span>
-                    <span className="ml-auto text-[10px] font-normal tabular-nums text-muted-foreground/70">
-                      {items.length}
-                    </span>
                   </button>
                   {expanded && (
                     <div className="mt-0.5 space-y-0.5">
