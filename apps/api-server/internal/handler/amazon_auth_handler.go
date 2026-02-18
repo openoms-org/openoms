@@ -57,7 +57,7 @@ func (h *AmazonAuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 	_, err := client.Orders.List(r.Context(), "", []string{body.MarketplaceID}, "")
 	if err != nil {
 		slog.Error("failed to verify Amazon credentials", "error", err)
-		writeError(w, http.StatusBadGateway, "failed to verify Amazon credentials")
+		writeError(w, http.StatusUnprocessableEntity, "failed to verify Amazon credentials")
 		return
 	}
 

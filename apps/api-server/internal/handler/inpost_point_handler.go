@@ -34,7 +34,7 @@ func (h *InPostPointHandler) Search(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		slog.Error("inpost point search failed", "error", err, "query", query)
-		writeError(w, http.StatusBadGateway, "failed to search InPost points")
+		writeError(w, http.StatusUnprocessableEntity, "failed to search InPost points")
 		return
 	}
 

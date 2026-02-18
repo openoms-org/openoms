@@ -195,7 +195,7 @@ func TestInPostPointHandler_Search_ServiceError(t *testing.T) {
 
 	h.Search(rr, req)
 
-	assert.Equal(t, http.StatusBadGateway, rr.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
@@ -217,8 +217,8 @@ func TestInPostPointHandler_Search_ServiceUnauthorized(t *testing.T) {
 
 	h.Search(rr, req)
 
-	// Any API error from InPost is mapped to 502 BadGateway by the handler
-	assert.Equal(t, http.StatusBadGateway, rr.Code)
+	// Any API error from InPost is mapped to 422 by the handler (not 502 — Cloudflare intercepts 502)
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
@@ -368,7 +368,7 @@ func TestInPostPointHandler_Search_ConnectionError(t *testing.T) {
 
 	h.Search(rr, req)
 
-	assert.Equal(t, http.StatusBadGateway, rr.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
@@ -512,7 +512,7 @@ func TestInPostPointHandler_Search_ApiReturns422Validation(t *testing.T) {
 
 	h.Search(rr, req)
 
-	assert.Equal(t, http.StatusBadGateway, rr.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)

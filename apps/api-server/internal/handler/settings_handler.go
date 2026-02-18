@@ -623,7 +623,7 @@ func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.emailService.SendTestEmail(r.Context(), emailCfg, req.ToEmail); err != nil {
 		slog.Error("failed to send test email", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusBadGateway, "Nie udało się wysłać testowego emaila. Sprawdź konfigurację SMTP.")
+		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wysłać testowego emaila. Sprawdź konfigurację SMTP.")
 		return
 	}
 
@@ -829,7 +829,7 @@ func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.smsService.SendTestSMS(r.Context(), smsCfg, req.Phone); err != nil {
 		slog.Error("failed to send test SMS", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusBadGateway, "Nie udało się wysłać testowego SMS. Sprawdź konfigurację.")
+		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wysłać testowego SMS. Sprawdź konfigurację.")
 		return
 	}
 

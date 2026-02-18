@@ -14,7 +14,7 @@ export function AllegroErrorCard({ error, onRetry }: AllegroErrorCardProps) {
   if (!error) return null;
 
   const msg = error.message || "";
-  const isTokenError = msg.includes("502") || msg.includes("Token") || msg.includes("401");
+  const isTokenError = msg.includes("502") || msg.includes("422") || msg.includes("Token") || msg.includes("401");
 
   return (
     <Card className="border-destructive">

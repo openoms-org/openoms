@@ -159,7 +159,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 
 	tok, err := client.ExchangeCode(r.Context(), body.Code)
 	if err != nil {
-		writeError(w, http.StatusBadGateway, "failed to exchange authorization code")
+		writeError(w, http.StatusUnprocessableEntity, "failed to exchange authorization code")
 		return
 	}
 

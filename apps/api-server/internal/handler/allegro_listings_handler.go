@@ -217,7 +217,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 	offer, err := client.Offers.Create(ctx, payload)
 	if err != nil {
 		slog.Error("allegro listings: failed to create offer", "error", err, "product_id", productID)
-		writeError(w, http.StatusBadGateway, allegroErrorMessage("Nie udało się utworzyć oferty na Allegro", err))
+		writeError(w, http.StatusUnprocessableEntity, allegroErrorMessage("Nie udało się utworzyć oferty na Allegro", err))
 		return
 	}
 
@@ -708,14 +708,14 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 	// Update stock on Allegro
 	if err := client.Offers.UpdateStock(ctx, externalID, stock); err != nil {
 		slog.Error("allegro listings: failed to sync stock", "error", err, "external_id", externalID)
-		writeError(w, http.StatusBadGateway, "Nie udało się zsynchronizować stanu magazynowego")
+		writeError(w, http.StatusUnprocessableEntity, "Nie udało się zsynchronizować stanu magazynowego")
 		return
 	}
 
 	// Update price on Allegro
 	if err := client.Offers.UpdatePrice(ctx, externalID, price, "PLN"); err != nil {
 		slog.Error("allegro listings: failed to sync price", "error", err, "external_id", externalID)
-		writeError(w, http.StatusBadGateway, "Nie udało się zsynchronizować ceny")
+		writeError(w, http.StatusUnprocessableEntity, "Nie udało się zsynchronizować ceny")
 		return
 	}
 

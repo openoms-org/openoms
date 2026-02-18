@@ -420,16 +420,18 @@ func allegroErrorMessage(fallback string, err error) string {
 }
 
 // writeAllegroError maps Allegro SDK API errors to appropriate HTTP status codes.
+// We use 422 instead of 502 for Allegro upstream errors because Cloudflare
+// intercepts 502 responses and replaces them with its own error page,
+// stripping CORS headers and breaking cross-origin browser requests.
 func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
 	var apiErr *allegrosdk.APIError
 	if errors.As(err, &apiErr) {
-		status := http.StatusBadGateway
+		status := http.StatusUnprocessableEntity // 422 — not intercepted by Cloudflare
 		switch {
 		case apiErr.StatusCode == 401:
 			// Allegro token expired/invalid — this is an integration error,
-			// NOT a user auth error. Return 502 so the frontend doesn't
+			// NOT a user auth error. Return 422 so the frontend doesn't
 			// confuse it with a JWT 401 and enter a refresh loop.
-			status = http.StatusBadGateway
 			writeError(w, status, "Token Allegro wygasł lub jest nieprawidłowy. Połącz ponownie konto Allegro w ustawieniach integracji.")
 			return
 		case apiErr.StatusCode == 403:
@@ -441,10 +443,10 @@ func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
 		case apiErr.StatusCode >= 400 && apiErr.StatusCode < 500:
 			status = http.StatusBadRequest
 		case apiErr.StatusCode >= 500:
-			status = http.StatusBadGateway
+			status = http.StatusUnprocessableEntity
 		}
 		writeError(w, status, allegroErrorMessage(fallback, err))
 		return
 	}
-	writeError(w, http.StatusBadGateway, fallback)
+	writeError(w, http.StatusUnprocessableEntity, fallback)
 }
