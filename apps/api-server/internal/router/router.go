@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -20,6 +21,7 @@ type RouterDeps struct {
 	Config            *config.Config
 	TokenSvc          *service.TokenService
 	TokenBlacklist    *middleware.TokenBlacklist
+	RateLimiter       middleware.RateLimiter
 	Auth              *handler.AuthHandler
 	User              *handler.UserHandler
 	Order             *handler.OrderHandler
@@ -113,6 +115,7 @@ func New(deps RouterDeps) *chi.Mux {
 	r.Use(middleware.Logging)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS([]string{deps.Config.FrontendURL}))
+	r.Use(middleware.CSRF(!deps.Config.IsDevelopment()))
 
 	// Health check — no auth, no tenant required
 	healthHandler := &handler.HealthHandler{DB: deps.Pool}
@@ -129,27 +132,43 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Get("/v1/docs", deps.Docs.ServeSwaggerUI)
 	}
 
-	// Serve uploaded files (public, cached)
+	// Serve uploaded files (authenticated, tenant-scoped)
 	fileServer := http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadDir)))
-	uploadFileHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=31536000")
-		fileServer.ServeHTTP(w, req)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+		uploadFileHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			// Extract tenant from the file path and verify it matches the authenticated tenant
+			pathParam := chi.URLParam(req, "*")
+			parts := strings.SplitN(pathParam, "/", 2)
+			if len(parts) < 2 {
+				http.NotFound(w, req)
+				return
+			}
+			fileTenantID := parts[0]
+			authTenantID := middleware.TenantIDFromContext(req.Context())
+			if fileTenantID != authTenantID.String() {
+				http.NotFound(w, req)
+				return
+			}
+			w.Header().Set("Cache-Control", "private, max-age=3600")
+			fileServer.ServeHTTP(w, req)
+		})
+		r.Get("/uploads/*", uploadFileHandler)
+		r.Head("/uploads/*", uploadFileHandler)
 	})
-	r.Get("/uploads/*", uploadFileHandler)
-	r.Head("/uploads/*", uploadFileHandler)
 
 	// Public auth routes — no JWT required, rate-limited
 	r.Route("/v1/auth", func(r chi.Router) {
 		r.Use(middleware.MaxBodySize(1 << 20)) // 1MB
 
 		// Login/register — strict rate limit (10 req/min per IP)
-		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/register", deps.Auth.Register)
-		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/login", deps.Auth.Login)
-		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/2fa/login", deps.Auth.TwoFALogin)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/register", deps.Auth.Register)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/login", deps.Auth.Login)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/2fa/login", deps.Auth.TwoFALogin)
 
 		// Token refresh/logout — lighter rate limit (60 req/min per IP)
-		r.With(middleware.RateLimit(60, 1*time.Minute)).Post("/refresh", deps.Auth.Refresh)
-		r.With(middleware.RateLimit(60, 1*time.Minute)).Post("/logout", deps.Auth.Logout)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).Post("/refresh", deps.Auth.Refresh)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).Post("/logout", deps.Auth.Logout)
 
 		// 2FA management — JWT required (inside /v1/auth to avoid chi prefix conflict)
 		r.Route("/2fa", func(r chi.Router) {
@@ -159,6 +178,10 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Post("/disable", deps.Auth.TwoFADisable)
 			r.Get("/status", deps.Auth.TwoFAStatus)
 		})
+
+		// WebSocket ticket — JWT required, issues short-lived single-use ticket for WS connections
+		r.With(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist)).
+			Post("/ws-ticket", deps.Auth.WSTicket)
 	})
 
 	// Public config endpoint — no auth required
@@ -166,22 +189,25 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Get("/v1/config/public", deps.PublicConfig.PublicConfig)
 	}
 
-	// Public webhook routes — no JWT, signature-verified
-	r.Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
+	// Public webhook routes — no JWT, signature-verified, rate-limited (120 req/min per IP)
+	r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+		Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
 
-	// Public Allegro webhook endpoint — no JWT, HMAC-verified
+	// Public Allegro webhook endpoint — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
 	if deps.AllegroWebhook != nil {
-		r.Post("/v1/webhooks/allegro", deps.AllegroWebhook.HandleWebhook)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+			Post("/v1/webhooks/allegro", deps.AllegroWebhook.HandleWebhook)
 	}
 
-	// Public InPost webhook endpoint — no JWT, HMAC-verified
+	// Public InPost webhook endpoint — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
 	if deps.InPostWebhook != nil {
-		r.Post("/v1/webhooks/inpost", deps.InPostWebhook.HandleWebhook)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+			Post("/v1/webhooks/inpost", deps.InPostWebhook.HandleWebhook)
 	}
 
 	// Public return self-service routes — no JWT, rate-limited
 	r.Route("/v1/public/returns", func(r chi.Router) {
-		r.Use(middleware.RateLimit(30, 1*time.Minute))
+		r.Use(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute))
 		r.Use(middleware.MaxBodySize(1 << 20))
 		r.Post("/", deps.PublicReturn.CreatePublicReturn)
 		r.Get("/{token}", deps.PublicReturn.GetByToken)
@@ -189,13 +215,13 @@ func New(deps RouterDeps) *chi.Mux {
 	})
 
 	// Public order tracking — no JWT, rate-limited (10 req/min per IP)
-	r.With(middleware.RateLimit(10, 1*time.Minute)).
+	r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).
 		Get("/v1/tracking/{tenant_slug}/{order_id}", deps.Tracking.TrackOrder)
 
 	// Public supplier portal routes — no JWT, token-authenticated, rate-limited (30 req/min per IP)
 	if deps.SupplierPortal != nil {
 		r.Route("/v1/supplier-portal", func(r chi.Router) {
-			r.Use(middleware.RateLimit(30, 1*time.Minute))
+			r.Use(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute))
 			r.Use(middleware.MaxBodySize(1 << 20))
 			r.Get("/orders", deps.SupplierPortal.ListOrders)
 			r.Get("/orders/{id}", deps.SupplierPortal.GetOrder)
@@ -209,7 +235,7 @@ func New(deps RouterDeps) *chi.Mux {
 	// Public product feed routes — no JWT, token-authenticated, rate-limited (60 req/hour per IP)
 	if deps.Feed != nil {
 		r.Route("/v1/feeds", func(r chi.Router) {
-			r.Use(middleware.RateLimit(60, 1*time.Hour))
+			r.Use(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Hour))
 			r.Get("/ceneo/{tenant_id}/{token}", deps.Feed.ServeCeneoFeed)
 			r.Get("/google/{tenant_id}/{token}", deps.Feed.ServeGoogleFeed)
 		})

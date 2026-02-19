@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 
 	// Register marketplace providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
@@ -30,6 +31,8 @@ import (
 	// Register invoicing providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/accounting"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/fakturownia"
+	// Register supplier providers via init().
+	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/btp"
 
 	"github.com/openoms-org/openoms/apps/api-server/docs"
 	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
@@ -52,6 +55,27 @@ func main() {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
+
+	// Connect to Redis (for rate limiting and token blacklist)
+	var redisClient *redis.Client
+	redisOpts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		slog.Warn("invalid REDIS_URL, falling back to in-memory stores", "error", err)
+	} else {
+		redisClient = redis.NewClient(redisOpts)
+		if err := redisClient.Ping(context.Background()).Err(); err != nil {
+			slog.Warn("Redis not available, falling back to in-memory stores", "error", err)
+			_ = redisClient.Close()
+			redisClient = nil
+		} else {
+			slog.Info("connected to Redis", "url", cfg.RedisURL)
+		}
+	}
+	defer func() {
+		if redisClient != nil {
+			_ = redisClient.Close()
+		}
+	}()
 
 	// Setup logger
 	logLevel := slog.LevelInfo
@@ -175,6 +199,18 @@ func main() {
 	recurringOrderRepo := repository.NewRecurringOrderRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
+
+	// Login lockout (per-account brute-force protection)
+	if redisClient != nil {
+		lockoutStore := service.NewRedisLoginLockoutStore(redisClient)
+		authService.SetLoginLockout(service.NewLoginLockout(lockoutStore))
+		slog.Info("using Redis login lockout")
+	} else {
+		lockoutStore := service.NewMemoryLoginLockoutStore()
+		authService.SetLoginLockout(service.NewLoginLockout(lockoutStore))
+		slog.Info("using in-memory login lockout")
+	}
+
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	roleService := service.NewRoleService(roleRepo, auditRepo, pool)
 	emailService := service.NewEmailService(tenantRepo, pool)
@@ -199,7 +235,7 @@ func main() {
 	allegroSyncService := service.NewAllegroSyncService(integrationService)
 	orderService.SetAllegroSyncService(allegroSyncService)
 	shipmentService.SetAllegroSyncService(allegroSyncService)
-	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
 	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, tenantRepo, pool)
 	orderGroupService := service.NewOrderGroupService(orderGroupRepo, orderRepo, auditRepo, pool)
@@ -260,12 +296,40 @@ func main() {
 	invitationService := service.NewInvitationService(invitationRepo, auditRepo, pool)
 
 	// Initialize token blacklist for server-side token revocation
-	tokenBlacklist := middleware.NewTokenBlacklist()
+	var tokenBlacklist *middleware.TokenBlacklist
+	if redisClient != nil {
+		tokenBlacklist = middleware.NewTokenBlacklistWithStore(middleware.NewRedisTokenBlacklist(redisClient))
+		slog.Info("using Redis token blacklist")
+	} else {
+		tokenBlacklist = middleware.NewTokenBlacklist()
+		slog.Info("using in-memory token blacklist")
+	}
+
+	// WebSocket ticket service (short-lived single-use tickets for WS connections)
+	var wsTicketSvc *service.WSTicketService
+	if redisClient != nil {
+		wsTicketSvc = service.NewWSTicketService(service.NewRedisWSTicketStore(redisClient))
+		slog.Info("using Redis WS ticket store")
+	} else {
+		wsTicketSvc = service.NewWSTicketService(service.NewMemoryWSTicketStore())
+		slog.Info("using in-memory WS ticket store")
+	}
+
+	// Initialize rate limiter
+	var rateLimiter middleware.RateLimiter
+	if redisClient != nil {
+		rateLimiter = middleware.NewRedisRateLimiter(redisClient)
+		slog.Info("using Redis rate limiter")
+	} else {
+		rateLimiter = middleware.NewMemoryRateLimiter()
+		slog.Info("using in-memory rate limiter")
+	}
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment(), tokenBlacklist)
 	authHandler.SetRegistrationMode(cfg.RegistrationMode)
 	authHandler.SetInvitationService(invitationService)
+	authHandler.SetWSTicketService(wsTicketSvc)
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
@@ -285,7 +349,15 @@ func main() {
 	inpostPointHandler := handler.NewInPostPointHandler(inpostClient)
 
 	// Allegro OAuth handler
-	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey)
+	var oauthStateStore handler.OAuthStateStore
+	if redisClient != nil {
+		oauthStateStore = handler.NewRedisOAuthStateStore(redisClient)
+		slog.Info("using Redis OAuth state store")
+	} else {
+		oauthStateStore = handler.NewMemoryOAuthStateStore()
+		slog.Info("using in-memory OAuth state store")
+	}
+	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
 
 	// Allegro fulfillment + tracking handler (Batch 1)
 	allegroHandler := handler.NewAllegroHandler(integrationService, orderService, encryptionKey)
@@ -385,7 +457,7 @@ func main() {
 	wsHub := ws.NewHub()
 	wsCtx, wsCancel := context.WithCancel(context.Background())
 	go wsHub.Run(wsCtx)
-	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, cfg.FrontendURL)
+	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, tokenBlacklist, wsTicketSvc, cfg.FrontendURL)
 
 	// Wire hub into webhook dispatch service for real-time events
 	webhookDispatchService.SetWSBroadcast(func(tenantID uuid.UUID, eventType string, payload any) {
@@ -518,6 +590,7 @@ func main() {
 		Config:            cfg,
 		TokenSvc:          tokenSvc,
 		TokenBlacklist:    tokenBlacklist,
+		RateLimiter:       rateLimiter,
 		Auth:              authHandler,
 		User:              userHandler,
 		Order:             orderHandler,
@@ -626,7 +699,9 @@ func main() {
 		Handler:           r,
 		ReadTimeout:       15 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1MB
 	}
 
 	go func() {

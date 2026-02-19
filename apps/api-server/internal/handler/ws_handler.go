@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/openoms-org/openoms/apps/api-server/internal/ws"
 )
 
@@ -16,13 +17,15 @@ import (
 type WSHandler struct {
 	hub           *ws.Hub
 	validator     middleware.TokenValidator
+	blacklist     *middleware.TokenBlacklist
+	ticketSvc     *service.WSTicketService
 	upgrader      websocket.Upgrader
 	allowedOrigin string
 }
 
 // NewWSHandler creates a new WSHandler.
-func NewWSHandler(hub *ws.Hub, validator middleware.TokenValidator, frontendURL string) *WSHandler {
-	h := &WSHandler{hub: hub, validator: validator, allowedOrigin: frontendURL}
+func NewWSHandler(hub *ws.Hub, validator middleware.TokenValidator, blacklist *middleware.TokenBlacklist, ticketSvc *service.WSTicketService, frontendURL string) *WSHandler {
+	h := &WSHandler{hub: hub, validator: validator, blacklist: blacklist, ticketSvc: ticketSvc, allowedOrigin: frontendURL}
 	h.upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -46,12 +49,23 @@ func NewWSHandler(hub *ws.Hub, validator middleware.TokenValidator, frontendURL 
 }
 
 // ServeWS upgrades the HTTP connection to a WebSocket and registers the client.
-// Authentication is performed via a JWT token passed as a query parameter (?token=xxx).
+// Authentication is performed via a short-lived ticket (?ticket=xxx) or a JWT token (?token=xxx, deprecated).
 func (h *WSHandler) ServeWS(w http.ResponseWriter, r *http.Request) {
-	// Authenticate via query parameter
-	tokenStr := r.URL.Query().Get("token")
-	if tokenStr == "" {
-		writeError(w, http.StatusUnauthorized, "missing token query parameter")
+	var tokenStr string
+
+	// Prefer ticket-based auth (keeps JWT out of URLs/logs)
+	if ticket := r.URL.Query().Get("ticket"); ticket != "" && h.ticketSvc != nil {
+		var err error
+		tokenStr, err = h.ticketSvc.Redeem(r.Context(), ticket)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "invalid or expired ticket")
+			return
+		}
+	} else if token := r.URL.Query().Get("token"); token != "" {
+		// Backward compatibility — direct token (deprecated)
+		tokenStr = token
+	} else {
+		writeError(w, http.StatusUnauthorized, "missing ticket or token query parameter")
 		return
 	}
 
@@ -59,6 +73,15 @@ func (h *WSHandler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid or expired token")
 		return
+	}
+
+	// Check token blacklist (revoked after logout)
+	if h.blacklist != nil {
+		tokenHash := middleware.HashToken(tokenStr)
+		if h.blacklist.IsRevoked(tokenHash) {
+			writeError(w, http.StatusUnauthorized, "token has been revoked")
+			return
+		}
 	}
 
 	// Reject non-access tokens (refresh, 2fa_pending, etc.)

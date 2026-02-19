@@ -15,6 +15,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -247,7 +248,7 @@ type nbpRate struct {
 
 // FetchNBPRates fetches exchange rates from NBP API (Polish National Bank) for PLN base.
 func (s *ExchangeRateService) FetchNBPRates(ctx context.Context, tenantID uuid.UUID, actorID uuid.UUID, ip string) (int, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := netutil.SafeHTTPClient(10 * time.Second)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.nbp.pl/api/exchangerates/tables/A/?format=json", nil)
 	if err != nil {

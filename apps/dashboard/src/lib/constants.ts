@@ -117,7 +117,7 @@ export const PAYMENT_STATUSES: Record<string, { label: string; color: string }> 
 
 export const PAYMENT_METHODS = ["przelew", "pobranie", "karta", "PayU", "Przelewy24", "BLIK"] as const;
 export const SHIPMENT_PROVIDERS = ["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"] as const;
-export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik", "inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka", "fakturownia"] as const;
+export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik", "inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka", "fakturownia", "btp"] as const;
 
 export const ORDER_SOURCE_LABELS: Record<string, string> = {
   manual: "Ręczne",
@@ -161,6 +161,7 @@ export const INTEGRATION_PROVIDER_LABELS: Record<string, string> = {
   poczta_polska: "Poczta Polska",
   orlen_paczka: "Orlen Paczka",
   fakturownia: "Fakturownia",
+  btp: "BTP.pro",
 };
 
 export const INVOICE_STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -287,6 +288,7 @@ export const PROVIDER_CATEGORIES: Record<string, { label: string; providers: str
   marketplace: { label: "Marketplace", providers: ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik"] },
   carrier: { label: "Kurierzy", providers: ["inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka"] },
   invoicing: { label: "Fakturowanie", providers: ["fakturownia"] },
+  supplier: { label: "Hurtownie", providers: ["btp"] },
 };
 
 /** Providers with dedicated setup pages — excluded from the generic "New Integration" form */
@@ -395,6 +397,11 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   fakturownia: [
     { key: "api_token", label: "Token API", placeholder: "Twój token API Fakturownia", helpText: "Ustawienia > Ustawienia konta > Integracja > Kod autoryzacyjny API", type: "password", required: true },
     { key: "subdomain", label: "Subdomena", placeholder: "twoja-firma", helpText: "Nazwa Twojego konta, np. 'twoja-firma' z twoja-firma.fakturownia.pl", type: "text", required: true },
+  ],
+  btp: [
+    { key: "username", label: "Nazwa użytkownika", placeholder: "Login do BTP.pro API", helpText: "Dane logowania do Client API na ext.btp.pro", type: "text", required: true },
+    { key: "password", label: "Hasło", placeholder: "Hasło do BTP.pro API", type: "password", required: true },
+    { key: "base_url", label: "Adres API", placeholder: "https://ext.btp.pro", helpText: "Domyślnie https://ext.btp.pro — zmień tylko jeśli masz dedykowaną instancję", type: "url", required: false },
   ],
 };
 

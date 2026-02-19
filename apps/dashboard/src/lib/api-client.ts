@@ -3,6 +3,11 @@ import type { TokenResponse, ApiError } from "@/types/api";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+function getCSRFToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshToken(): Promise<string | null> {
@@ -88,6 +93,11 @@ export async function apiClient<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const csrfToken = getCSRFToken();
+  if (csrfToken && options.method && options.method !== "GET") {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+
   let res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
@@ -136,6 +146,11 @@ export async function apiFetch(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const csrfToken = getCSRFToken();
+  if (csrfToken && init?.method && init.method !== "GET") {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+
   let res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers,
@@ -178,6 +193,11 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
   const headers: Record<string, string> = {};
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const csrfToken = getCSRFToken();
+  if (csrfToken) {
+    headers["X-CSRF-Token"] = csrfToken;
   }
 
   let res = await fetch(`${API_URL}/v1/uploads`, {

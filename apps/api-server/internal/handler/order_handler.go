@@ -393,6 +393,7 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const batchSize = 500
+	const maxExportRows = 50000
 	offset := 0
 
 	for {
@@ -487,5 +488,10 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		offset += batchSize
+
+		if offset >= maxExportRows {
+			_ = writer.Write([]string{"--- Export limited to " + fmt.Sprint(maxExportRows) + " rows ---"})
+			break
+		}
 	}
 }

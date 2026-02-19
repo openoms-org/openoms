@@ -7,7 +7,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"sync"
 	"time"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
@@ -26,20 +25,21 @@ type allegroOAuthState struct {
 	Sandbox      bool
 }
 
+// AllegroAuthHandler handles the Allegro OAuth2 authorization flow.
 type AllegroAuthHandler struct {
 	cfg                *config.Config
 	integrationService *service.IntegrationService
 	encryptionKey      []byte
-	stateMu            sync.Mutex
-	stateStore         map[string]*allegroOAuthState
+	stateStore         OAuthStateStore
 }
 
-func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte) *AllegroAuthHandler {
+// NewAllegroAuthHandler creates a new AllegroAuthHandler with the given dependencies.
+func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte, stateStore OAuthStateStore) *AllegroAuthHandler {
 	return &AllegroAuthHandler{
 		cfg:                cfg,
 		integrationService: integrationService,
 		encryptionKey:      encryptionKey,
-		stateStore:         make(map[string]*allegroOAuthState),
+		stateStore:         stateStore,
 	}
 }
 
@@ -80,20 +80,17 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	state := hex.EncodeToString(stateBytes)
 
 	// Store state + credentials for the callback
-	h.stateMu.Lock()
-	now := time.Now()
-	for k, s := range h.stateStore {
-		if now.After(s.ExpiresAt) {
-			delete(h.stateStore, k)
-		}
-	}
-	h.stateStore[state] = &allegroOAuthState{
-		ExpiresAt:    now.Add(10 * time.Minute),
+	stateData := &allegroOAuthState{
+		ExpiresAt:    time.Now().Add(10 * time.Minute),
 		ClientID:     creds.ClientID,
 		ClientSecret: creds.ClientSecret,
 		Sandbox:      creds.Sandbox,
 	}
-	h.stateMu.Unlock()
+	if err := h.stateStore.Save(r.Context(), state, stateData, 10*time.Minute); err != nil {
+		slog.Error("allegro OAuth: failed to store state", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to store OAuth state")
+		return
+	}
 
 	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.redirectURI())}
 	if creds.Sandbox {
@@ -137,15 +134,14 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Validate state and retrieve stored credentials
-	h.stateMu.Lock()
-	oauthState, exists := h.stateStore[body.State]
-	if exists {
-		delete(h.stateStore, body.State)
+	// Validate state and retrieve stored credentials (atomic load + delete)
+	oauthState, err := h.stateStore.Load(r.Context(), body.State)
+	if err != nil {
+		slog.Error("allegro OAuth: failed to load state", "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to validate OAuth state")
+		return
 	}
-	h.stateMu.Unlock()
-
-	if !exists || time.Now().After(oauthState.ExpiresAt) {
+	if oauthState == nil {
 		writeError(w, http.StatusBadRequest, "invalid or expired state parameter")
 		return
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 
@@ -31,6 +32,7 @@ type SupplierService struct {
 	auditRepo        repository.AuditRepo
 	pool             *pgxpool.Pool
 	webhookDispatch  *WebhookDispatchService
+	integrationSvc   *IntegrationService
 	logger           *slog.Logger
 }
 
@@ -40,6 +42,7 @@ func NewSupplierService(
 	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
+	integrationSvc *IntegrationService,
 	logger *slog.Logger,
 ) *SupplierService {
 	return &SupplierService{
@@ -48,6 +51,7 @@ func NewSupplierService(
 		auditRepo:        auditRepo,
 		pool:             pool,
 		webhookDispatch:  webhookDispatch,
+		integrationSvc:   integrationSvc,
 		logger:           logger,
 	}
 }
@@ -117,6 +121,7 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		Status:              "active",
 		Settings:            settings,
 		SyncIntervalMinutes: syncInterval,
+		IntegrationID:       req.IntegrationID,
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -274,14 +279,66 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 	if supplier == nil {
 		return ErrSupplierNotFound
 	}
+
+	// Use provider-based sync for registered supplier formats (e.g. btp)
+	if integration.HasSupplierProvider(supplier.FeedFormat) {
+		return s.syncViaProvider(ctx, tenantID, supplierID, supplier)
+	}
+
+	// Legacy IOF feed sync
+	return s.syncViaIOF(ctx, tenantID, supplierID, supplier)
+}
+
+// syncViaProvider syncs products using a registered SupplierProvider (e.g. BTP API).
+func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplierID uuid.UUID, supplier *model.Supplier) error {
+	// Decrypt credentials from the linked integration
+	if supplier.IntegrationID == nil {
+		return fmt.Errorf("supplier %s has feed_format %q but no integration_id linked", supplierID, supplier.FeedFormat)
+	}
+	credJSON, err := s.integrationSvc.GetDecryptedCredentialsByID(ctx, tenantID, *supplier.IntegrationID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to decrypt credentials: %s", err)
+		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
+		}); dbErr != nil {
+			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+		}
+		return fmt.Errorf("decrypt supplier credentials: %w", err)
+	}
+
+	provider, err := integration.NewSupplierProvider(supplier.FeedFormat, credJSON, supplier.Settings)
+	if err != nil {
+		errMsg := err.Error()
+		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
+		}); dbErr != nil {
+			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+		}
+		return fmt.Errorf("create supplier provider: %w", err)
+	}
+
+	products, err := provider.FetchInventory(ctx)
+	if err != nil {
+		errMsg := err.Error()
+		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
+		}); dbErr != nil {
+			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+		}
+		return fmt.Errorf("fetch inventory: %w", err)
+	}
+
+	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products)
+}
+
+// syncViaIOF syncs products from an IOF XML feed URL.
+func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID uuid.UUID, supplier *model.Supplier) error {
 	if supplier.FeedURL == nil || *supplier.FeedURL == "" {
 		return ErrNoFeedURL
 	}
 
-	// Parse the IOF feed
-	products, err := iof.ParseURL(ctx, *supplier.FeedURL)
+	iofProducts, err := iof.ParseURL(ctx, *supplier.FeedURL)
 	if err != nil {
-		// Record the error on the supplier
 		errMsg := err.Error()
 		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
@@ -291,9 +348,27 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 		return fmt.Errorf("parse feed: %w", err)
 	}
 
-	// Upsert products and auto-link by EAN
+	// Convert IOF products to normalized format
+	products := make([]integration.SupplierProduct, len(iofProducts))
+	for i, fp := range iofProducts {
+		products[i] = integration.SupplierProduct{
+			ExternalID:    fp.ID,
+			Name:          fp.Name,
+			EAN:           fp.EAN,
+			SKU:           fp.SKU,
+			Price:         fp.Price,
+			StockQuantity: fp.Stock,
+			Attributes:    fp.Attributes,
+		}
+	}
+
+	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products)
+}
+
+// upsertSupplierProducts inserts or updates supplier products and auto-links by EAN.
+func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, supplierID uuid.UUID, products []integration.SupplierProduct) error {
 	syncedAt := time.Now()
-	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for _, fp := range products {
 			attrs, _ := json.Marshal(fp.Attributes)
 
@@ -313,19 +388,19 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 				ID:            uuid.New(),
 				TenantID:      tenantID,
 				SupplierID:    supplierID,
-				ExternalID:    fp.ID,
+				ExternalID:    fp.ExternalID,
 				Name:          fp.Name,
 				EAN:           ean,
 				SKU:           sku,
 				Price:         price,
-				StockQuantity: fp.Stock,
+				StockQuantity: fp.StockQuantity,
 				Metadata:      attrs,
 				LastSyncedAt:  &syncedAt,
 			}
 
 			if err := s.supplierProdRepo.UpsertByExternalID(ctx, tx, sp); err != nil {
 				s.logger.Error("failed to upsert supplier product",
-					"supplier_id", supplierID, "external_id", fp.ID, "error", err)
+					"supplier_id", supplierID, "external_id", fp.ExternalID, "error", err)
 				continue
 			}
 
