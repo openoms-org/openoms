@@ -27,10 +27,47 @@ spec:
       securityContext:
         {{- toYaml .Values.dashboard.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: 15
+      initContainers:
+        - name: env-replace
+          image: {{ include "openoms.dashboard.image" . }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              cp -a /app/.next/static/. /static-out/
+              if [ -n "$NEXT_PUBLIC_API_URL" ] && [ "$NEXT_PUBLIC_API_URL" != "NEXT_PUBLIC_API_URL_PLACEHOLDER" ]; then
+                find /static-out -type f -name '*.js' | while read -r file; do
+                  if grep -q 'NEXT_PUBLIC_API_URL_PLACEHOLDER' "$file" 2>/dev/null; then
+                    sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g" "$file"
+                  fi
+                done
+              fi
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.apiServer.baseUrl | quote }}
+          volumeMounts:
+            - name: static-assets
+              mountPath: /static-out
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
       containers:
         - name: dashboard
           image: {{ include "openoms.dashboard.image" . }}
           imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
+          command: ["node", "server.js"]
           ports:
             - name: http
               containerPort: {{ .Values.dashboard.port }}
@@ -40,8 +77,6 @@ spec:
               value: production
             - name: HOSTNAME
               value: "0.0.0.0"
-            - name: NEXT_PUBLIC_API_URL
-              value: {{ .Values.apiServer.baseUrl | quote }}
           lifecycle:
             preStop:
               exec:
@@ -55,9 +90,14 @@ spec:
           securityContext:
             {{- toYaml .Values.dashboard.securityContext | nindent 12 }}
           volumeMounts:
+            - name: static-assets
+              mountPath: /app/.next/static
             - name: tmp
               mountPath: /tmp
       volumes:
+        - name: static-assets
+          emptyDir:
+            sizeLimit: 200Mi
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
