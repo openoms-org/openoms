@@ -4,15 +4,15 @@ import { gotoWithAuth } from './helpers/actions';
 test.describe('Company Settings', () => {
   test('loads company settings page with form', async ({ page }) => {
     await gotoWithAuth(page, '/settings/company');
-    await expect(page.getByRole('heading', { name: /Firma|Dane firmy/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Dane firmy' })).toBeVisible({ timeout: 10000 });
 
     // Form fields should be visible
-    await expect(page.getByLabel(/Nazwa firmy|nazwa/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Nazwa firmy')).toBeVisible({ timeout: 5000 });
   });
 
   test('NIP field is present', async ({ page }) => {
     await gotoWithAuth(page, '/settings/company');
-    await expect(page.getByLabel(/NIP/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('NIP')).toBeVisible({ timeout: 10000 });
   });
 
   test('save button is present', async ({ page }) => {

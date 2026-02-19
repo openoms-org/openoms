@@ -9,7 +9,8 @@ setup('authenticate', async ({ page }) => {
   await page.getByLabel('Email').fill(TEST_CREDENTIALS.email);
   await page.locator('#password').fill(TEST_CREDENTIALS.password);
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL('/', { timeout: 15000 });
-  await expect(page.getByText('Panel główny')).toBeVisible({ timeout: 10000 });
+  // After login, app redirects to /orders (default landing page)
+  await expect(page).toHaveURL(/\/(orders)?$/, { timeout: 15000 });
+  await page.waitForLoadState('domcontentloaded');
   await page.context().storageState({ path: authFile });
 });

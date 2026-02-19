@@ -4,7 +4,7 @@ import { gotoWithAuth } from './helpers/actions';
 test.describe('Products', () => {
   test.beforeEach(async ({ page }) => {
     await gotoWithAuth(page, '/products');
-    await expect(page.getByRole('heading', { name: 'Produkty' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Produkty' })).toBeVisible({ timeout: 10000 });
   });
 
   test('displays products table with data', async ({ page }) => {
@@ -15,7 +15,7 @@ test.describe('Products', () => {
   });
 
   test('search input works', async ({ page }) => {
-    const searchInput = page.getByPlaceholder('Szukaj po nazwie...');
+    const searchInput = page.getByPlaceholder('Szukaj po nazwie, SKU lub EAN...');
     await expect(searchInput).toBeVisible();
     await searchInput.fill('Test');
     await page.waitForTimeout(500);
@@ -28,9 +28,9 @@ test.describe('Products', () => {
   });
 
   test('clicking a product link navigates to detail', async ({ page }) => {
-    const firstRow = page.locator('table tbody tr').first();
-    await expect(firstRow).toBeVisible({ timeout: 10000 });
-    await firstRow.getByRole('link').first().click();
+    const firstLink = page.locator('table tbody tr').first().getByRole('link').first();
+    await expect(firstLink).toBeVisible({ timeout: 10000 });
+    await firstLink.click();
     await expect(page).toHaveURL(/\/products\/[a-f0-9-]+/, { timeout: 10000 });
   });
 
@@ -40,7 +40,7 @@ test.describe('Products', () => {
   });
 
   test('product form page loads with required fields', async ({ page }) => {
-    await page.goto('/products/new');
+    await gotoWithAuth(page, '/products/new');
     await expect(page.getByRole('heading', { name: /Nowy produkt|Dodaj produkt/ })).toBeVisible({ timeout: 5000 });
     // Name and Price fields should be present
     await expect(page.getByLabel(/Nazwa/i)).toBeVisible();
@@ -50,9 +50,11 @@ test.describe('Products', () => {
   test('product detail page loads correctly', async ({ page }) => {
     await gotoWithAuth(page, '/products');
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
-    await page.locator('table tbody tr').first().getByRole('link').first().click();
+    const link = page.locator('table tbody tr').first().getByRole('link').first();
+    await expect(link).toBeVisible({ timeout: 10000 });
+    await link.click();
     await expect(page).toHaveURL(/\/products\/[a-f0-9-]+/, { timeout: 10000 });
     // Should show product details
-    await expect(page.getByText(/Szczegóły|SKU|Cena/)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Szczegóły|SKU|Cena/).first()).toBeVisible({ timeout: 5000 });
   });
 });

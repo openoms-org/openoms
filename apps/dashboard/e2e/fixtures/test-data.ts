@@ -22,26 +22,29 @@ export const LABELS = {
   exportCSV: 'Eksportuj CSV',
 };
 
+// Unique suffix per test run to avoid duplicate key conflicts
+const runId = Date.now().toString(36);
+
 export const NEW_ORDER = {
-  customerName: 'Test E2E Klient',
-  customerEmail: 'e2e-order@example.com',
+  customerName: `Test E2E Klient ${runId}`,
+  customerEmail: `e2e-order-${runId}@example.com`,
   customerPhone: '+48 500 100 200',
   itemName: 'Produkt testowy E2E',
-  itemSku: 'E2E-SKU-001',
+  itemSku: `E2E-SKU-${runId}`,
   itemQuantity: '2',
   itemPrice: '99.99',
 };
 
 export const NEW_PRODUCT = {
-  name: 'Produkt E2E Testowy',
-  sku: 'E2E-PROD-001',
+  name: `Produkt E2E ${runId}`,
+  sku: `E2E-PROD-${runId}`,
   price: '149.99',
   stock: '50',
 };
 
 export const NEW_CUSTOMER = {
-  name: 'Anna Testowa E2E',
-  email: 'anna.testowa.e2e@example.com',
+  name: `Anna Testowa ${runId}`,
+  email: `anna.testowa.${runId}@example.com`,
   phone: '+48 600 200 300',
   company: 'Firma Testowa E2E',
   nip: '1234567890',

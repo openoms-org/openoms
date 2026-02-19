@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithAuth } from './helpers/actions';
 
 test.describe('Shipments', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/shipments');
-    await expect(page.getByRole('heading', { name: 'Przesyłki' })).toBeVisible();
+    await gotoWithAuth(page, '/shipments');
+    await expect(page.getByRole('heading', { name: 'Przesyłki' })).toBeVisible({ timeout: 10000 });
   });
 
   test('displays shipments page with table', async ({ page }) => {
@@ -22,13 +23,13 @@ test.describe('Shipments', () => {
   });
 
   test('new shipment form page loads', async ({ page }) => {
-    await page.goto('/shipments/new');
+    await gotoWithAuth(page, '/shipments/new');
     await expect(page.getByRole('heading', { name: /Nowa przesyłka/ })).toBeVisible({ timeout: 5000 });
   });
 
   test('shipment table has provider column', async ({ page }) => {
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
     const headers = page.locator('table thead th');
-    await expect(headers.filter({ hasText: /Kurier|Przewoźnik|Provider/ })).toBeVisible();
+    await expect(headers.filter({ hasText: /Kurier|Przewoźnik|Provider|Dostawca/ })).toBeVisible();
   });
 });

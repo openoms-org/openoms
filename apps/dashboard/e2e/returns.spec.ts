@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithAuth } from './helpers/actions';
 
 test.describe('Returns', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/returns');
-    await expect(page.getByRole('heading', { name: 'Zwroty' })).toBeVisible();
+    await gotoWithAuth(page, '/returns');
+    await expect(page.getByRole('heading', { name: 'Zwroty' })).toBeVisible({ timeout: 10000 });
   });
 
   test('displays returns page', async ({ page }) => {

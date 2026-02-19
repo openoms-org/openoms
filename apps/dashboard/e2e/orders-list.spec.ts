@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithAuth } from './helpers/actions';
 
 test.describe('Orders List', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/orders');
-    await expect(page.getByRole('heading', { name: 'Zamówienia' })).toBeVisible();
+    await gotoWithAuth(page, '/orders');
+    await expect(page.getByRole('heading', { name: 'Zamówienia' })).toBeVisible({ timeout: 10000 });
   });
 
   test('displays orders table with correct columns', async ({ page }) => {

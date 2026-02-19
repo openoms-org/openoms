@@ -40,6 +40,9 @@ const PRODUCT_SOURCE_LABELS: Record<string, string> = {
   woocommerce: "WooCommerce",
 };
 
+// Empty number inputs with valueAsNumber produce NaN — catch converts to undefined
+const optionalDimension = z.number().min(0).optional().catch(undefined);
+
 const productSchema = z.object({
   name: z.string().min(1, "Nazwa produktu jest wymagana"),
   sku: z.string().optional(),
@@ -52,10 +55,10 @@ const productSchema = z.object({
   source: z.enum(["manual", "allegro", "woocommerce"]),
   description_short: z.string().optional(),
   description_long: z.string().optional(),
-  weight: z.number().min(0).optional(),
-  width: z.number().min(0).optional(),
-  height: z.number().min(0).optional(),
-  depth: z.number().min(0).optional(),
+  weight: optionalDimension,
+  width: optionalDimension,
+  height: optionalDimension,
+  depth: optionalDimension,
   image_url: z.string(),
 });
 

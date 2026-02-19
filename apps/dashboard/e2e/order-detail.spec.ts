@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { gotoWithAuth } from './helpers/actions';
 
 test.describe('Order Detail', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to orders list and click first order
-    await page.goto('/orders');
+    await gotoWithAuth(page, '/orders');
     await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
     await page.locator('table tbody tr').first().click();
     await expect(page).toHaveURL(/\/orders\/[a-f0-9-]+/, { timeout: 10000 });

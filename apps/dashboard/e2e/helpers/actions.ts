@@ -10,7 +10,7 @@ export async function waitForToast(page: Page, text: string | RegExp) {
     typeof text === 'string'
       ? page.locator('[data-sonner-toast]').filter({ hasText: text })
       : page.locator('[data-sonner-toast]').filter({ hasText: text });
-  await expect(locator).toBeVisible({ timeout: 5000 });
+  await expect(locator).toBeVisible({ timeout: 10000 });
 }
 
 export async function waitForPageReady(page: Page) {

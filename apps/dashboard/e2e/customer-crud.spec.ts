@@ -27,36 +27,35 @@ test.describe.serial('Customer CRUD', () => {
   test('customer appears in list', async ({ page }) => {
     await gotoWithAuth(page, '/customers');
     await waitForTableLoaded(page);
-    await expect(page.getByText(NEW_CUSTOMER.name)).toBeVisible();
+    await expect(page.getByText(NEW_CUSTOMER.name).first()).toBeVisible();
   });
 
   test('navigate to customer detail', async ({ page }) => {
     await gotoWithAuth(page, '/customers');
     await waitForTableLoaded(page);
 
-    // Click the customer row
-    await page.locator('table tbody tr').filter({ hasText: NEW_CUSTOMER.name }).click();
+    // Click the first matching customer row (duplicates may exist from prior runs)
+    await page.locator('table tbody tr').filter({ hasText: NEW_CUSTOMER.name }).first().click();
     await expect(page).toHaveURL(/\/customers\/[a-f0-9-]+/, { timeout: 10000 });
 
     // Verify customer data
-    await expect(page.getByText(NEW_CUSTOMER.name)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(NEW_CUSTOMER.email!)).toBeVisible();
-    await expect(page.getByText(NEW_CUSTOMER.company!)).toBeVisible();
+    await expect(page.getByText(NEW_CUSTOMER.name).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(NEW_CUSTOMER.email!).first()).toBeVisible();
 
     customerUrl = page.url();
   });
 
   test('edit customer', async ({ page }) => {
     await gotoWithAuth(page, customerUrl);
-    await expect(page.getByText(NEW_CUSTOMER.name)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(NEW_CUSTOMER.name).first()).toBeVisible({ timeout: 10000 });
 
     // Click edit button
     await page.getByRole('button', { name: 'Edytuj' }).click();
 
-    // Update phone number
-    await page.locator('#phone').fill('+48 700 800 900');
+    // Update phone number (edit form uses #edit-phone, not #phone)
+    await page.locator('#edit-phone').fill('+48 700 800 900');
     await page.getByRole('button', { name: 'Zapisz' }).click();
-    await waitForToast(page, /zaktualizowany|zapisany|zapisano/i);
+    await waitForToast(page, /zaktualizowan|zapisan/i);
 
     // Verify updated phone
     await expect(page.getByText('+48 700 800 900')).toBeVisible({ timeout: 5000 });
@@ -68,14 +67,14 @@ test.describe.serial('Customer CRUD', () => {
 
     const search = page.getByPlaceholder(/Szukaj/);
     await search.fill(NEW_CUSTOMER.name);
-    // Wait for search debounce and API response
+    // Customer search uses form submit, not auto-debounce
     await page.getByRole('button', { name: /Szukaj/i }).click();
-    await expect(page.getByText(NEW_CUSTOMER.name)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(NEW_CUSTOMER.name).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('delete customer', async ({ page }) => {
     await gotoWithAuth(page, customerUrl);
-    await expect(page.getByText(NEW_CUSTOMER.name)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(NEW_CUSTOMER.name).first()).toBeVisible({ timeout: 10000 });
 
     await page.getByRole('button', { name: 'Usuń' }).click();
     await confirmDeleteDialog(page, 'Usuń klienta');

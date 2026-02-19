@@ -35,8 +35,8 @@ test.describe('Authentication', () => {
     await page.getByLabel('Email').fill('rafal@mercpart.pl');
     await page.locator('#password').fill('password123');
     await page.getByRole('button', { name: 'Zaloguj się' }).click();
-    await expect(page).toHaveURL('/', { timeout: 15000 });
-    await expect(page.getByText('Panel główny')).toBeVisible({ timeout: 10000 });
+    // After login, app redirects to /orders (default landing page)
+    await expect(page).toHaveURL(/\/(orders)?$/, { timeout: 15000 });
   });
 
   test('can toggle password visibility', async ({ page }) => {

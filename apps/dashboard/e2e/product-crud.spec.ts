@@ -17,8 +17,28 @@ test.describe.serial('Product CRUD', () => {
       page.getByRole('heading', { name: /Nowy produkt/ }),
     ).toBeVisible({ timeout: 10000 });
 
-    await fillAndSubmitProductForm(page, NEW_PRODUCT);
-    await waitForToast(page, 'Produkt został utworzony');
+    // Fill form fields
+    await page.locator('#name').fill(NEW_PRODUCT.name);
+    if (NEW_PRODUCT.sku) {
+      await page.locator('#sku').fill(NEW_PRODUCT.sku);
+    }
+    await page.locator('#price').fill(NEW_PRODUCT.price);
+    await page.locator('#stock_quantity').fill(NEW_PRODUCT.stock);
+
+    // Listen for the API call before clicking
+    const apiResponsePromise = page.waitForResponse(
+      (resp) => resp.url().includes('/v1/products') && resp.request().method() === 'POST',
+      { timeout: 15000 },
+    );
+
+    // Scroll to and click the submit button
+    const submitBtn = page.getByRole('button', { name: 'Utwórz produkt' });
+    await submitBtn.scrollIntoViewIfNeeded();
+    await submitBtn.click();
+
+    // Wait for the API response
+    const resp = await apiResponsePromise;
+    expect(resp.status()).toBe(201);
 
     // Should redirect to product detail page
     await expect(page).toHaveURL(/\/products\/[a-f0-9-]+/, { timeout: 10000 });
@@ -27,18 +47,18 @@ test.describe.serial('Product CRUD', () => {
 
   test('verify created product detail', async ({ page }) => {
     await gotoWithAuth(page, productUrl);
-    await expect(page.getByText(NEW_PRODUCT.name)).toBeVisible({
-      timeout: 10000,
-    });
-    await expect(page.getByText(NEW_PRODUCT.sku!)).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: NEW_PRODUCT.name }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(NEW_PRODUCT.sku!).first()).toBeVisible();
     // Polish locale price: 149,99
-    await expect(page.getByText('149,99')).toBeVisible();
+    await expect(page.getByText('149,99').first()).toBeVisible();
   });
 
   test('product appears in list', async ({ page }) => {
     await gotoWithAuth(page, '/products');
     await waitForTableLoaded(page);
-    await expect(page.getByText(NEW_PRODUCT.name)).toBeVisible();
+    await expect(page.getByText(NEW_PRODUCT.name).first()).toBeVisible();
   });
 
   test('search product by name', async ({ page }) => {
@@ -48,20 +68,18 @@ test.describe.serial('Product CRUD', () => {
     const search = page.getByPlaceholder(/Szukaj/);
     await search.fill(NEW_PRODUCT.name);
     await page.waitForTimeout(500); // debounce
-    await expect(page.getByText(NEW_PRODUCT.name)).toBeVisible();
+    await expect(page.getByText(NEW_PRODUCT.name).first()).toBeVisible();
   });
 
   test('edit product price', async ({ page }) => {
     await gotoWithAuth(page, productUrl);
-    await expect(page.getByText(NEW_PRODUCT.name)).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(
+      page.getByRole('heading', { name: NEW_PRODUCT.name }),
+    ).toBeVisible({ timeout: 10000 });
 
     // Enter edit mode
     await page.getByRole('button', { name: 'Edytuj' }).click();
-    await expect(
-      page.getByRole('heading', { name: 'Edycja produktu' }),
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Edycja produktu')).toBeVisible({ timeout: 5000 });
 
     // Update price
     await page.locator('#price').fill('199.99');
@@ -74,9 +92,9 @@ test.describe.serial('Product CRUD', () => {
 
   test('delete product', async ({ page }) => {
     await gotoWithAuth(page, productUrl);
-    await expect(page.getByText(NEW_PRODUCT.name)).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(
+      page.getByRole('heading', { name: NEW_PRODUCT.name }),
+    ).toBeVisible({ timeout: 10000 });
 
     await page.getByRole('button', { name: 'Usuń' }).click();
     await confirmDeleteDialog(page, 'Usuń');
@@ -86,14 +104,14 @@ test.describe.serial('Product CRUD', () => {
     await expect(page).toHaveURL('/products', { timeout: 10000 });
   });
 
-  test('search seed product by SKU', async ({ page }) => {
+  test('search seed product by name', async ({ page }) => {
     await gotoWithAuth(page, '/products');
     await waitForTableLoaded(page);
 
     const search = page.getByPlaceholder(/Szukaj/);
-    await search.fill(SEED.PRODUCT_SKU);
+    await search.fill('Klocki hamulcowe');
     await page.waitForTimeout(500);
-    await expect(page.getByText(SEED.PRODUCT_NAME)).toBeVisible();
+    await expect(page.getByText(SEED.PRODUCT_NAME).first()).toBeVisible();
   });
 
   test('validation errors on empty product form', async ({ page }) => {

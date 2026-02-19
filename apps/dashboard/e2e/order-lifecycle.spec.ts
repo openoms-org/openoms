@@ -137,8 +137,10 @@ test.describe.serial('Order Lifecycle', () => {
     await gotoWithAuth(page, '/orders');
     await waitForTableLoaded(page);
 
-    // Click the customer name link in the first row
-    await page.locator('table tbody tr').first().click();
+    // Click a non-checkbox cell in the first row to trigger onRowClick
+    const firstRow = page.locator('table tbody tr').first();
+    await expect(firstRow.locator('td').nth(1)).toBeVisible({ timeout: 10000 });
+    await firstRow.locator('td').nth(1).click();
     await expect(page).toHaveURL(/\/orders\/[a-f0-9-]+/, { timeout: 10000 });
   });
 

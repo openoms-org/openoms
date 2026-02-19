@@ -4,12 +4,12 @@ import { gotoWithAuth } from './helpers/actions';
 test.describe('Allegro Integration', () => {
   test('integrations page loads', async ({ page }) => {
     await gotoWithAuth(page, '/integrations');
-    await expect(page.getByRole('heading', { name: /Integracje/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Integracje|Kanały sprzedaży|Połączenia/ })).toBeVisible({ timeout: 10000 });
   });
 
   test('allegro integration page loads', async ({ page }) => {
     await gotoWithAuth(page, '/integrations/allegro');
-    await expect(page.getByText(/Allegro/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Integracja Allegro/ })).toBeVisible({ timeout: 10000 });
   });
 
   test('allegro offers subpage loads', async ({ page }) => {

@@ -52,26 +52,36 @@ test.describe('Settings Persistence', () => {
       page.getByRole('heading', { name: /Statusy zamówień|Status/ }),
     ).toBeVisible({ timeout: 10000 });
 
+    // Wait for existing statuses to load from API before counting
+    await expect(page.getByPlaceholder('Klucz (np. new)').first()).toBeVisible({ timeout: 10000 });
+
+    // Remove any leftover e2e_test entries from prior runs to avoid duplicate key errors
+    const keyInputs = page.getByPlaceholder('Klucz (np. new)');
+    const count = await keyInputs.count();
+    for (let i = count - 1; i >= 0; i--) {
+      const val = await keyInputs.nth(i).inputValue();
+      if (val === 'e2e_test') {
+        // Click the trash button (last button in the row — first is the color Select)
+        const row = keyInputs.nth(i).locator('..');
+        await row.locator('button').last().click();
+      }
+    }
+
+    const keysBefore = await keyInputs.count();
+
     // Add new status
     await page.getByRole('button', { name: 'Dodaj status' }).click();
 
-    // The new row appears at the end — fill key and label
-    const keyInputs = page.locator('input[placeholder*="klucz"], input[placeholder*="Klucz"]');
-    // Fill the last (newly added) key input
-    const lastKeyInput = keyInputs.last();
-    if (await lastKeyInput.isVisible()) {
-      await lastKeyInput.fill('e2e_test');
-    }
+    // Wait for new row to appear
+    await expect(keyInputs).toHaveCount(keysBefore + 1, { timeout: 3000 });
 
-    const labelInputs = page.locator('input[placeholder*="Etykieta"], input[placeholder*="etykieta"]');
-    const lastLabelInput = labelInputs.last();
-    if (await lastLabelInput.isVisible()) {
-      await lastLabelInput.fill('Test E2E');
-    }
+    // Fill the last (newly added) key and label
+    await page.getByPlaceholder('Klucz (np. new)').last().fill('e2e_test');
+    await page.getByPlaceholder('Etykieta (np. Nowe)').last().fill('Test E2E');
 
     // Save
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await waitForToast(page, /zapisano|zapisane/i);
+    await waitForToast(page, /zapisane|zapisano/i);
   });
 
   test('custom fields page loads', async ({ page }) => {
