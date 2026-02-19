@@ -168,17 +168,20 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Get("/v1/config/public", deps.PublicConfig.PublicConfig)
 	}
 
-	// Public webhook routes — no JWT, signature-verified
-	r.Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
+	// Public webhook routes — no JWT, signature-verified, rate-limited (120 req/min per IP)
+	r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+		Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
 
-	// Public Allegro webhook endpoint — no JWT, HMAC-verified
+	// Public Allegro webhook endpoint — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
 	if deps.AllegroWebhook != nil {
-		r.Post("/v1/webhooks/allegro", deps.AllegroWebhook.HandleWebhook)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+			Post("/v1/webhooks/allegro", deps.AllegroWebhook.HandleWebhook)
 	}
 
-	// Public InPost webhook endpoint — no JWT, HMAC-verified
+	// Public InPost webhook endpoint — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
 	if deps.InPostWebhook != nil {
-		r.Post("/v1/webhooks/inpost", deps.InPostWebhook.HandleWebhook)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+			Post("/v1/webhooks/inpost", deps.InPostWebhook.HandleWebhook)
 	}
 
 	// Public return self-service routes — no JWT, rate-limited
