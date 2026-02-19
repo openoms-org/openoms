@@ -39,6 +39,7 @@ COPY packages/infakt-go-sdk/go.mod        ./packages/infakt-go-sdk/
 COPY packages/shoper-go-sdk/go.mod        ./packages/shoper-go-sdk/
 COPY packages/prestashop-go-sdk/go.mod    ./packages/prestashop-go-sdk/
 COPY packages/shopify-go-sdk/go.mod       ./packages/shopify-go-sdk/
+COPY packages/btp-go-sdk/go.mod           ./packages/btp-go-sdk/
 
 RUN cd apps/api-server && go mod download
 
