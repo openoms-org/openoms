@@ -71,3 +71,20 @@ func TestSecurity_RateLimit_DifferentIPsIndependent(t *testing.T) {
 	handler.ServeHTTP(rr2, req2)
 	assert.Equal(t, http.StatusOK, rr2.Code)
 }
+
+func TestSecurity_Blacklist_RevokedTokenIsBlocked(t *testing.T) {
+	bl := middleware.NewMemoryTokenBlacklist()
+	bl.Revoke("hash123", time.Now().Add(1*time.Hour))
+	assert.True(t, bl.IsRevoked("hash123"))
+}
+
+func TestSecurity_Blacklist_NonRevokedTokenPasses(t *testing.T) {
+	bl := middleware.NewMemoryTokenBlacklist()
+	assert.False(t, bl.IsRevoked("hash999"))
+}
+
+func TestSecurity_Blacklist_ExpiredEntryNotRevoked(t *testing.T) {
+	bl := middleware.NewMemoryTokenBlacklist()
+	bl.Revoke("hashexpired", time.Now().Add(-1*time.Second))
+	assert.False(t, bl.IsRevoked("hashexpired"))
+}
