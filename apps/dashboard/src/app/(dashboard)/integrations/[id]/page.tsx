@@ -83,6 +83,15 @@ export default function IntegrationDetailPage() {
 
   const isMarketplace = PROVIDER_CATEGORIES.marketplace.providers.includes(integration.provider);
 
+  // Dynamic back-link based on provider category
+  const getBackLink = (provider: string): string => {
+    if (PROVIDER_CATEGORIES.carrier.providers.includes(provider)) return "/carriers";
+    if (PROVIDER_CATEGORIES.marketplace.providers.includes(provider)) return "/marketplaces";
+    if (PROVIDER_CATEGORIES.invoicing.providers.includes(provider)) return "/invoicing";
+    return "/integrations";
+  };
+  const backLink = getBackLink(integration.provider);
+
   const handleStatusChange = (newStatus: string) => {
     updateIntegration.mutate(
       { status: newStatus as "active" | "inactive" | "error" },
@@ -138,7 +147,7 @@ export default function IntegrationDetailPage() {
     deleteIntegration.mutate(params.id, {
       onSuccess: () => {
         toast.success("Integracja została usunięta");
-        router.push("/integrations");
+        router.push(backLink);
       },
       onError: (error) => {
         toast.error(
@@ -156,7 +165,7 @@ export default function IntegrationDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/integrations">
+            <Link href={backLink}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>

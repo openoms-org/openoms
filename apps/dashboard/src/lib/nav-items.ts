@@ -7,7 +7,6 @@ import {
   Receipt,
   CreditCard,
   Package,
-  Plug,
   Users,
   Building2,
   Bell,
@@ -152,7 +151,6 @@ export const navItems: NavItem[] = [
   { href: "/recurring-orders", label: "Subskrypcje", icon: Repeat, group: "Narzędzia" },
   { href: "/loyalty", label: "Program lojalnościowy", icon: Award, group: "Narzędzia" },
   { href: "/customers/segments", label: "Segmenty klientów", icon: Users, group: "Narzędzia" },
-  { href: "/integrations", label: "Połączenia", icon: Plug, adminOnly: true, group: "Narzędzia" },
 
   // ── Ustawienia ──
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Ustawienia" },

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Plug, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Info, KeyRound, Plug, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useIntegrations, useDeleteIntegration } from "@/hooks/use-integrations";
@@ -18,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { DevelopmentBadge } from "@/components/shared/development-banner";
 import { isInDevelopment } from "@/lib/integration-status";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -58,6 +60,20 @@ export default function IntegrationsPage() {
         description="Zarządzaj połączeniami z zewnętrznymi serwisami"
         action={{ label: "Nowa integracja", href: "/integrations/new" }}
       />
+
+      <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+        <CardContent className="flex items-center gap-3 py-3">
+          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            Szukasz integracji?{" "}
+            <Link href="/carriers" className="font-medium underline">Kurierzy</Link>,{" "}
+            <Link href="/marketplaces" className="font-medium underline">Marketplace</Link>{" "}
+            i{" "}
+            <Link href="/invoicing" className="font-medium underline">Fakturowanie</Link>{" "}
+            mają teraz własne sekcje w menu.
+          </p>
+        </CardContent>
+      </Card>
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
