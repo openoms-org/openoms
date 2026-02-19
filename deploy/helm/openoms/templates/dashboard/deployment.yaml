@@ -35,12 +35,14 @@ spec:
             - -c
             - |
               cp -a /app/.next/static/. /static-out/
+              cp /app/server.js /server-out/server.js
               if [ -n "$NEXT_PUBLIC_API_URL" ] && [ "$NEXT_PUBLIC_API_URL" != "NEXT_PUBLIC_API_URL_PLACEHOLDER" ]; then
                 find /static-out -type f -name '*.js' | while read -r file; do
                   if grep -q 'NEXT_PUBLIC_API_URL_PLACEHOLDER' "$file" 2>/dev/null; then
                     sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g" "$file"
                   fi
                 done
+                sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g" /server-out/server.js
               fi
           env:
             - name: NEXT_PUBLIC_API_URL
@@ -48,6 +50,8 @@ spec:
           volumeMounts:
             - name: static-assets
               mountPath: /static-out
+            - name: server-js
+              mountPath: /server-out
             - name: tmp
               mountPath: /tmp
           securityContext:
@@ -92,12 +96,18 @@ spec:
           volumeMounts:
             - name: static-assets
               mountPath: /app/.next/static
+            - name: server-js
+              mountPath: /app/server.js
+              subPath: server.js
             - name: tmp
               mountPath: /tmp
       volumes:
         - name: static-assets
           emptyDir:
             sizeLimit: 200Mi
+        - name: server-js
+          emptyDir:
+            sizeLimit: 10Mi
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
