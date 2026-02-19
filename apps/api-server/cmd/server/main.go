@@ -31,6 +31,7 @@ import (
 	// Register invoicing providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/accounting"
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/fakturownia"
+
 	// Register supplier providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/btp"
 

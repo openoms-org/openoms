@@ -52,7 +52,7 @@ func NewFreshdeskService(tenantRepo repository.TenantRepo, orderRepo repository.
 		orderRepo:  orderRepo,
 		pool:       pool,
 		httpClient: netutil.SafeHTTPClient(30 * time.Second),
-		logger: logger,
+		logger:     logger,
 	}
 }
 

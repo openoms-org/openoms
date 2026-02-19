@@ -53,9 +53,9 @@ type chatResponse struct {
 // return ErrAINotConfigured on every call.
 func NewAIService(apiKey, model string, productRepo repository.ProductRepo, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *AIService {
 	return &AIService{
-		apiKey: apiKey,
-		model:  model,
-		httpClient: netutil.SafeHTTPClient(60 * time.Second),
+		apiKey:      apiKey,
+		model:       model,
+		httpClient:  netutil.SafeHTTPClient(60 * time.Second),
 		productRepo: productRepo,
 		tenantRepo:  tenantRepo,
 		pool:        pool,
