@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
         {
           key: "Content-Security-Policy",
-          value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl wss: ws:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
+          value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://geowidget.inpost.pl https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl https://cloudflareinsights.com wss: ws:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
         },
       ],
     },
