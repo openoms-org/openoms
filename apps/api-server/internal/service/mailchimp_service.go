@@ -42,8 +42,8 @@ func NewMailchimpService(tenantRepo repository.TenantRepo, customerRepo reposito
 		tenantRepo:   tenantRepo,
 		customerRepo: customerRepo,
 		pool:         pool,
-		httpClient: netutil.SafeHTTPClient(30 * time.Second),
-		logger: logger,
+		httpClient:   netutil.SafeHTTPClient(30 * time.Second),
+		logger:       logger,
 	}
 }
 
