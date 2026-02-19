@@ -88,3 +88,35 @@ func TestSecurity_Blacklist_ExpiredEntryNotRevoked(t *testing.T) {
 	bl.Revoke("hashexpired", time.Now().Add(-1*time.Second))
 	assert.False(t, bl.IsRevoked("hashexpired"))
 }
+
+func TestSecurity_Headers_AllPresent(t *testing.T) {
+	handler := middleware.SecurityHeaders(okHandler())
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, "nosniff", rr.Header().Get("X-Content-Type-Options"))
+	assert.Equal(t, "DENY", rr.Header().Get("X-Frame-Options"))
+	assert.Equal(t, "strict-origin-when-cross-origin", rr.Header().Get("Referrer-Policy"))
+	assert.Contains(t, rr.Header().Get("Permissions-Policy"), "camera=()")
+	assert.Equal(t, "frame-ancestors 'none'", rr.Header().Get("Content-Security-Policy"))
+	assert.Contains(t, rr.Header().Get("Strict-Transport-Security"), "max-age=")
+}
+
+func TestSecurity_Headers_HSTSOnlyOnHTTPS(t *testing.T) {
+	handler := middleware.SecurityHeaders(okHandler())
+	req := httptest.NewRequest("GET", "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Empty(t, rr.Header().Get("Strict-Transport-Security"))
+}
+
+func TestSecurity_Headers_NoServerHeader(t *testing.T) {
+	handler := middleware.SecurityHeaders(okHandler())
+	req := httptest.NewRequest("GET", "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Empty(t, rr.Header().Get("Server"))
+	assert.Empty(t, rr.Header().Get("X-Powered-By"))
+}
