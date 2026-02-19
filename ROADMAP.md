@@ -19,6 +19,10 @@
 - [x] Prometheus metrics
 - [x] Docker Compose (dev + prod) and Helm chart (k3s/k8s)
 - [x] CI/CD with GitHub Actions (lint, test, security scan, Trivy)
+- [x] E2E test suite (21 Playwright specs, 119 tests covering CRUD, lifecycle, auth)
+- [x] CodeQL code quality (zero findings)
+- [x] Database backup CronJob (S3, daily, 30-day retention)
+- [x] Security hardening (Go 1.25, dependency audits, Helm NetworkPolicies)
 
 ## In Progress (code written, needs production testing)
 

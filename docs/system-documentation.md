@@ -33,8 +33,8 @@
 - **Powiadomienia** -- Email (SMTP) + SMS (Twilio/SMSAPI)
 - **RBAC** -- role z granularnymi uprawnieniami
 - **2FA/TOTP** -- dwuskladnikowe uwierzytelnianie (Google Authenticator)
-- **API REST** -- ~296 endpointow z OpenAPI 3.1
-- **Dashboard** -- Next.js 16 + React 19, 81 stron, dark mode, PWA
+- **API REST** -- 430 endpointow z OpenAPI 3.1
+- **Dashboard** -- Next.js 16 + React 19, 124 strony, dark mode, PWA
 - **AI** -- auto-kategoryzacja, opis, ulepszanie i tlumaczenie produktow (OpenAI)
 - **Inwentaryzacja** -- pelny cykl zycia stocktake z liczeniem pozycji
 - **Rate shopping** -- porownywanie stawek przewoznikow
@@ -210,11 +210,11 @@ OpenOMS/
 |   |   +-- internal/        <- logika aplikacji (386 plikow Go, 71 testow)
 |   |   +-- migrations/      <- 94 migracji SQL (000001-000094)
 |   +-- dashboard/           <- Next.js frontend (AGPLv3)
-|       +-- src/app/         <- 81 stron (App Router)
+|       +-- src/app/         <- 124 strony (App Router)
 |       +-- src/components/  <- 81 komponentow React
 |       +-- src/hooks/       <- 45 custom hooks
 |       +-- src/lib/         <- utils, API client, auth
-|       +-- e2e/             <- 12 specow E2E Playwright
+|       +-- e2e/             <- 21 specow E2E Playwright (119 testow)
 +-- packages/                <- SDK-i (MIT)
 |   +-- order-engine/        <- maszyna stanow zamowien
 |   +-- allegro-go-sdk/      <- Allegro REST API
@@ -359,7 +359,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Rec
     -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
 
-### Wszystkie endpointy (~296)
+### Wszystkie endpointy (430)
 
 #### Autentykacja (publiczne, rate limit 10/min login, 60/min refresh)
 
@@ -805,7 +805,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Rec
 
 ## 6. Frontend Dashboard
 
-### Mapa stron (82 stron)
+### Mapa stron (124 strony)
 
 #### Publiczne (bez logowania)
 
@@ -1691,21 +1691,22 @@ Haslo testowe: `password123`
 
 | Metryka | Wartosc |
 |---------|--------|
-| **Pliki Go** | 429 (w tym 78 testow) |
-| **Pliki TypeScript/TSX** | 231 |
-| **Tabele DB** | 32 |
-| **Migracje SQL** | 94 (000001-000094) |
-| **Endpointy API** | ~291 |
-| **Strony frontend** | 82 |
-| **Komponenty React** | 82 |
-| **Custom hooks** | 45 |
-| **Handlery Go** | 58 |
-| **Serwisy Go** | 39 |
-| **Repozytoria Go** | 28 |
-| **Background workers** | 15 (11 zarejestrowanych + 4 infra) |
+| **Pliki Go** | 536 (w tym 81 testow) |
+| **Pliki TypeScript/TSX** | 308 |
+| **Tabele DB** | 32+ |
+| **Migracje SQL** | 64 (000001-000064, 128 plikow up/down) |
+| **Endpointy API** | 430 |
+| **Strony frontend** | 124 |
+| **Komponenty React** | 91 |
+| **Custom hooks** | 69 |
+| **Handlery Go** | 80 plikow |
+| **Serwisy Go** | 57 plikow |
+| **Repozytoria Go** | 40 plikow |
+| **Background workers** | 19 |
 | **Middleware** | 12 |
-| **Pakiety SDK** | 21 |
-| **Testy E2E** | 12 specow Playwright |
+| **Pakiety SDK** | 26 |
+| **Testy E2E** | 21 specow Playwright (119 testow) |
+| **Testy jednostkowe** | 14 vitest (frontend) |
 | **Jezyki** | Go, TypeScript, SQL |
 | **Licencja** | AGPLv3 (apps) + MIT (packages) |
 
@@ -1713,7 +1714,7 @@ Haslo testowe: `password123`
 
 | Typ testu | Status |
 |-----------|--------|
-| E2E Playwright (12 specow) | PASS |
+| E2E Playwright (21 specow, 119 testow) | PASS |
 | Backend integration | PASS |
 | API contract (TS <-> Go) | PASS |
 | Load testing | 0 bledow, 1000-1800 req/s |
@@ -1722,5 +1723,5 @@ Haslo testowe: `password123`
 
 ---
 
-*Dokument wygenerowany: 2026-02-16*
-*Wersja: OpenOMS v3.2*
+*Dokument zaktualizowany: 2026-02-19*
+*Wersja: OpenOMS v3.3*

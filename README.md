@@ -7,7 +7,7 @@
 
 **Open-source Order Management System for e-commerce.**
 
-OpenOMS is a self-hostable, multi-tenant OMS with 291 API endpoints, 82 dashboard pages, and integrations with 8 marketplaces and 8 carriers. Built with Go and Next.js, designed for teams that need full control over their order operations.
+OpenOMS is a self-hostable, multi-tenant OMS with 430 API endpoints, 124 dashboard pages, and integrations with 8 marketplaces and 8 carriers. Built with Go and Next.js, designed for teams that need full control over their order operations.
 
 > **Status: Active Development** — Looking for beta testers! [Join our Discord](https://discord.gg/3Z5hzeH5)
 
@@ -78,8 +78,8 @@ Carrier rate shopping across all providers.
 
 ### Platform
 - Multi-tenant SaaS with PostgreSQL Row-Level Security
-- 291 REST API endpoints with OpenAPI 3.1 spec (Swagger UI)
-- 82 dashboard pages with dark mode, PWA support, keyboard shortcuts
+- 430 REST API endpoints with OpenAPI 3.1 spec (Swagger UI)
+- 124 dashboard pages with dark mode, PWA support, keyboard shortcuts
 - RBAC with custom roles
 - 2FA / TOTP authentication
 - WebSocket real-time updates
@@ -98,7 +98,7 @@ Carrier rate shopping across all providers.
 
 | Layer | Technology |
 |---|---|
-| Backend | Go 1.24, chi/v5 router, pgx/v5 |
+| Backend | Go 1.25, chi/v5 router, pgx/v5 |
 | Frontend | Next.js 16, React 19, TypeScript |
 | Styling | Tailwind CSS v4, shadcn/ui |
 | State / Data | Zustand, React Query, Zod v4 |
@@ -107,7 +107,7 @@ Carrier rate shopping across all providers.
 | Cache / Queue | Redis 7, asynq |
 | Auth | Ed25519 JWT, bcrypt, TOTP |
 | API Spec | OpenAPI 3.1, Swagger UI |
-| E2E Tests | Playwright (12 specs) |
+| E2E Tests | Playwright (21 specs, 119 tests) |
 | CI/CD | GitHub Actions (lint, test, security scan, auto-format, Trivy) |
 | Deployment | Docker Compose (dev + prod), Helm chart (k3s/k8s) |
 | Monitoring | Prometheus metrics (token-protected) |
@@ -116,23 +116,23 @@ Carrier rate shopping across all providers.
 
 | Metric | Count |
 |---|---|
-| Go source files | 429 (78 test files) |
-| TypeScript / TSX files | 231 |
-| SQL migrations | 94 |
-| API endpoints | 291 |
-| Dashboard pages | 82 |
-| React components | 82 |
-| Custom hooks | 45 |
-| Handlers / Services / Repos | 58 / 39 / 28 |
-| Background workers | 15 |
+| Go source files | 536 (81 test files) |
+| TypeScript / TSX files | 308 |
+| SQL migrations | 64 (128 up/down files) |
+| API endpoints | 430 |
+| Dashboard pages | 124 |
+| React components | 91 |
+| Custom hooks | 69 |
+| Handlers / Services / Repos | 80 / 57 / 40 |
+| Background workers | 19 |
 | Middleware | 12 |
-| SDK packages | 21 |
+| SDK packages | 26 |
 
 ---
 
 ## Quick Start (Development)
 
-**Prerequisites:** Go 1.24+, Node.js 22+, Docker, [Task](https://taskfile.dev)
+**Prerequisites:** Go 1.25+, Node.js 22+, Docker, [Task](https://taskfile.dev)
 
 ```bash
 # 1. Clone
@@ -185,10 +185,10 @@ openoms/
 │   ├── api-server/              # Go backend (AGPLv3)
 │   │   ├── cmd/server/          # Entrypoint
 │   │   ├── internal/            # Handlers, services, repositories, workers
-│   │   └── migrations/          # 94 SQL migrations
+│   │   └── migrations/          # 64 migrations (128 SQL files)
 │   └── dashboard/               # Next.js frontend (AGPLv3)
 │       └── src/
-├── packages/                    # 21 standalone SDK libraries (MIT)
+├── packages/                    # 26 standalone SDK libraries (MIT)
 ├── deploy/
 │   └── helm/openoms/          # Helm chart for k3s/k8s
 ├── docs/
