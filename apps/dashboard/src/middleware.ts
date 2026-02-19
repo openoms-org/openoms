@@ -11,14 +11,14 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = request.cookies.has("has_session");
 
-  // Root "/" -> redirect to orders (logged in) or login (not logged in)
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL(hasSession ? "/orders" : "/login", request.url));
+  // Root "/" -> redirect to login if not logged in (Pulpit page handles logged-in users)
+  if (pathname === "/" && !hasSession) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // Authenticated user trying to access auth pages -> redirect to dashboard
   if (hasSession && ["/login", "/register"].some((p) => pathname.startsWith(p))) {
-    return NextResponse.redirect(new URL("/orders", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Unauthenticated user trying to access protected pages -> redirect to login
