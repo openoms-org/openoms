@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -54,9 +55,7 @@ func NewAIService(apiKey, model string, productRepo repository.ProductRepo, tena
 	return &AIService{
 		apiKey: apiKey,
 		model:  model,
-		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
-		},
+		httpClient: netutil.SafeHTTPClient(60 * time.Second),
 		productRepo: productRepo,
 		tenantRepo:  tenantRepo,
 		pool:        pool,

@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -50,9 +51,7 @@ func NewFreshdeskService(tenantRepo repository.TenantRepo, orderRepo repository.
 		tenantRepo: tenantRepo,
 		orderRepo:  orderRepo,
 		pool:       pool,
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		httpClient: netutil.SafeHTTPClient(30 * time.Second),
 		logger: logger,
 	}
 }
