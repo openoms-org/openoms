@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { PROVIDER_CATEGORIES } from "@/lib/constants";
 import type {
   Integration,
   CreateIntegrationRequest,
@@ -61,4 +63,26 @@ export function useDeleteIntegration() {
       queryClient.invalidateQueries({ queryKey: ["integrations"] });
     },
   });
+}
+
+export function useIntegrationsByCategory() {
+  const query = useIntegrations();
+  const categorized = useMemo(() => {
+    const all = query.data ?? [];
+    return {
+      carriers: all.filter((i) =>
+        PROVIDER_CATEGORIES.carrier.providers.includes(i.provider)
+      ),
+      marketplaces: all.filter((i) =>
+        PROVIDER_CATEGORIES.marketplace.providers.includes(i.provider)
+      ),
+      invoicing: all.filter((i) =>
+        PROVIDER_CATEGORIES.invoicing.providers.includes(i.provider)
+      ),
+      suppliers: all.filter((i) =>
+        PROVIDER_CATEGORIES.supplier.providers.includes(i.provider)
+      ),
+    };
+  }, [query.data]);
+  return { ...query, ...categorized };
 }
