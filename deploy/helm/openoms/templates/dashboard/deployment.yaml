@@ -34,22 +34,21 @@ spec:
             - /bin/sh
             - -c
             - |
-              cp -a /app/.next/static/. /static-out/
+              cp -a /app/.next/. /next-out/
               cp /app/server.js /server-out/server.js
               if [ -n "$NEXT_PUBLIC_API_URL" ] && [ "$NEXT_PUBLIC_API_URL" != "NEXT_PUBLIC_API_URL_PLACEHOLDER" ]; then
-                find /static-out -type f -name '*.js' | while read -r file; do
+                find /next-out /server-out -type f \( -name '*.js' -o -name '*.json' \) | while read -r file; do
                   if grep -q 'NEXT_PUBLIC_API_URL_PLACEHOLDER' "$file" 2>/dev/null; then
                     sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g" "$file"
                   fi
                 done
-                sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g" /server-out/server.js
               fi
           env:
             - name: NEXT_PUBLIC_API_URL
               value: {{ .Values.apiServer.baseUrl | quote }}
           volumeMounts:
-            - name: static-assets
-              mountPath: /static-out
+            - name: next-build
+              mountPath: /next-out
             - name: server-js
               mountPath: /server-out
             - name: tmp
@@ -94,17 +93,17 @@ spec:
           securityContext:
             {{- toYaml .Values.dashboard.securityContext | nindent 12 }}
           volumeMounts:
-            - name: static-assets
-              mountPath: /app/.next/static
+            - name: next-build
+              mountPath: /app/.next
             - name: server-js
               mountPath: /app/server.js
               subPath: server.js
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: static-assets
+        - name: next-build
           emptyDir:
-            sizeLimit: 200Mi
+            sizeLimit: 300Mi
         - name: server-js
           emptyDir:
             sizeLimit: 10Mi
