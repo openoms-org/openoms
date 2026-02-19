@@ -20,6 +20,7 @@ type RouterDeps struct {
 	Config            *config.Config
 	TokenSvc          *service.TokenService
 	TokenBlacklist    *middleware.TokenBlacklist
+	RateLimiter       middleware.RateLimiter
 	Auth              *handler.AuthHandler
 	User              *handler.UserHandler
 	Order             *handler.OrderHandler
@@ -143,13 +144,13 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Use(middleware.MaxBodySize(1 << 20)) // 1MB
 
 		// Login/register — strict rate limit (10 req/min per IP)
-		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/register", deps.Auth.Register)
-		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/login", deps.Auth.Login)
-		r.With(middleware.RateLimit(10, 1*time.Minute)).Post("/2fa/login", deps.Auth.TwoFALogin)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/register", deps.Auth.Register)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/login", deps.Auth.Login)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/2fa/login", deps.Auth.TwoFALogin)
 
 		// Token refresh/logout — lighter rate limit (60 req/min per IP)
-		r.With(middleware.RateLimit(60, 1*time.Minute)).Post("/refresh", deps.Auth.Refresh)
-		r.With(middleware.RateLimit(60, 1*time.Minute)).Post("/logout", deps.Auth.Logout)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).Post("/refresh", deps.Auth.Refresh)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).Post("/logout", deps.Auth.Logout)
 
 		// 2FA management — JWT required (inside /v1/auth to avoid chi prefix conflict)
 		r.Route("/2fa", func(r chi.Router) {
@@ -181,7 +182,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 	// Public return self-service routes — no JWT, rate-limited
 	r.Route("/v1/public/returns", func(r chi.Router) {
-		r.Use(middleware.RateLimit(30, 1*time.Minute))
+		r.Use(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute))
 		r.Use(middleware.MaxBodySize(1 << 20))
 		r.Post("/", deps.PublicReturn.CreatePublicReturn)
 		r.Get("/{token}", deps.PublicReturn.GetByToken)
@@ -189,13 +190,13 @@ func New(deps RouterDeps) *chi.Mux {
 	})
 
 	// Public order tracking — no JWT, rate-limited (10 req/min per IP)
-	r.With(middleware.RateLimit(10, 1*time.Minute)).
+	r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).
 		Get("/v1/tracking/{tenant_slug}/{order_id}", deps.Tracking.TrackOrder)
 
 	// Public supplier portal routes — no JWT, token-authenticated, rate-limited (30 req/min per IP)
 	if deps.SupplierPortal != nil {
 		r.Route("/v1/supplier-portal", func(r chi.Router) {
-			r.Use(middleware.RateLimit(30, 1*time.Minute))
+			r.Use(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute))
 			r.Use(middleware.MaxBodySize(1 << 20))
 			r.Get("/orders", deps.SupplierPortal.ListOrders)
 			r.Get("/orders/{id}", deps.SupplierPortal.GetOrder)
@@ -209,7 +210,7 @@ func New(deps RouterDeps) *chi.Mux {
 	// Public product feed routes — no JWT, token-authenticated, rate-limited (60 req/hour per IP)
 	if deps.Feed != nil {
 		r.Route("/v1/feeds", func(r chi.Router) {
-			r.Use(middleware.RateLimit(60, 1*time.Hour))
+			r.Use(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Hour))
 			r.Get("/ceneo/{tenant_id}/{token}", deps.Feed.ServeCeneoFeed)
 			r.Get("/google/{tenant_id}/{token}", deps.Feed.ServeGoogleFeed)
 		})

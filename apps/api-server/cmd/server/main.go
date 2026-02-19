@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 
 	// Register marketplace providers via init().
 	_ "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
@@ -52,6 +53,27 @@ func main() {
 		slog.Error("failed to load config", "error", err)
 		os.Exit(1)
 	}
+
+	// Connect to Redis (for rate limiting and token blacklist)
+	var redisClient *redis.Client
+	redisOpts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		slog.Warn("invalid REDIS_URL, falling back to in-memory stores", "error", err)
+	} else {
+		redisClient = redis.NewClient(redisOpts)
+		if err := redisClient.Ping(context.Background()).Err(); err != nil {
+			slog.Warn("Redis not available, falling back to in-memory stores", "error", err)
+			redisClient.Close()
+			redisClient = nil
+		} else {
+			slog.Info("connected to Redis", "url", cfg.RedisURL)
+		}
+	}
+	defer func() {
+		if redisClient != nil {
+			redisClient.Close()
+		}
+	}()
 
 	// Setup logger
 	logLevel := slog.LevelInfo
@@ -260,7 +282,24 @@ func main() {
 	invitationService := service.NewInvitationService(invitationRepo, auditRepo, pool)
 
 	// Initialize token blacklist for server-side token revocation
-	tokenBlacklist := middleware.NewTokenBlacklist()
+	var tokenBlacklist *middleware.TokenBlacklist
+	if redisClient != nil {
+		tokenBlacklist = middleware.NewTokenBlacklistWithStore(middleware.NewRedisTokenBlacklist(redisClient))
+		slog.Info("using Redis token blacklist")
+	} else {
+		tokenBlacklist = middleware.NewTokenBlacklist()
+		slog.Info("using in-memory token blacklist")
+	}
+
+	// Initialize rate limiter
+	var rateLimiter middleware.RateLimiter
+	if redisClient != nil {
+		rateLimiter = middleware.NewRedisRateLimiter(redisClient)
+		slog.Info("using Redis rate limiter")
+	} else {
+		rateLimiter = middleware.NewMemoryRateLimiter()
+		slog.Info("using in-memory rate limiter")
+	}
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment(), tokenBlacklist)
@@ -518,6 +557,7 @@ func main() {
 		Config:            cfg,
 		TokenSvc:          tokenSvc,
 		TokenBlacklist:    tokenBlacklist,
+		RateLimiter:       rateLimiter,
 		Auth:              authHandler,
 		User:              userHandler,
 		Order:             orderHandler,
