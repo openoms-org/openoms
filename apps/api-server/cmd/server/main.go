@@ -426,7 +426,7 @@ func main() {
 	wsHub := ws.NewHub()
 	wsCtx, wsCancel := context.WithCancel(context.Background())
 	go wsHub.Run(wsCtx)
-	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, cfg.FrontendURL)
+	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, tokenBlacklist, cfg.FrontendURL)
 
 	// Wire hub into webhook dispatch service for real-time events
 	webhookDispatchService.SetWSBroadcast(func(tenantID uuid.UUID, eventType string, payload any) {

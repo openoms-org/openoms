@@ -16,13 +16,14 @@ import (
 type WSHandler struct {
 	hub           *ws.Hub
 	validator     middleware.TokenValidator
+	blacklist     *middleware.TokenBlacklist
 	upgrader      websocket.Upgrader
 	allowedOrigin string
 }
 
 // NewWSHandler creates a new WSHandler.
-func NewWSHandler(hub *ws.Hub, validator middleware.TokenValidator, frontendURL string) *WSHandler {
-	h := &WSHandler{hub: hub, validator: validator, allowedOrigin: frontendURL}
+func NewWSHandler(hub *ws.Hub, validator middleware.TokenValidator, blacklist *middleware.TokenBlacklist, frontendURL string) *WSHandler {
+	h := &WSHandler{hub: hub, validator: validator, blacklist: blacklist, allowedOrigin: frontendURL}
 	h.upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -59,6 +60,15 @@ func (h *WSHandler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid or expired token")
 		return
+	}
+
+	// Check token blacklist (revoked after logout)
+	if h.blacklist != nil {
+		tokenHash := middleware.HashToken(tokenStr)
+		if h.blacklist.IsRevoked(tokenHash) {
+			writeError(w, http.StatusUnauthorized, "token has been revoked")
+			return
+		}
 	}
 
 	// Reject non-access tokens (refresh, 2fa_pending, etc.)
