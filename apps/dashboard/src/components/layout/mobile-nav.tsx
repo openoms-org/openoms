@@ -7,6 +7,7 @@ import { ChevronRight, Menu, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth";
 import { navItems, navGroups, type NavItem } from "@/lib/nav-items";
+import { isNavItemActive } from "@/lib/nav-utils";
 import { useGroupExpansion } from "@/hooks/use-group-expansion";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -40,11 +41,7 @@ export function MobileNav() {
   };
 
   const renderNavLink = (item: NavItem, isChild = false) => {
-    const isActive = isChild
-      ? pathname === item.href || pathname.startsWith(item.href + "/")
-      : item.href === "/"
-        ? pathname === "/"
-        : pathname === item.href || (pathname.startsWith(item.href + "/") && !filteredItems.some((other) => other.href !== item.href && other.href.startsWith(item.href + "/") && pathname.startsWith(other.href)));
+    const isActive = isNavItemActive(pathname, item, isChild, filteredItems);
 
     const hasChildren = !isChild && item.children && item.children.length > 0;
     const isExpanded = hasChildren && (expandedItems.has(item.href) || pathname.startsWith(item.href));
@@ -54,6 +51,7 @@ export function MobileNav() {
         <div key={item.href}>
           <button
             onClick={() => toggleExpand(item.href)}
+            aria-expanded={isExpanded}
             className={cn(
               "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               isActive
@@ -85,12 +83,12 @@ export function MobileNav() {
             "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
             isChild && "pl-9 py-1.5 text-[13px]",
             isActive
-              ? "bg-accent text-accent-foreground"
-              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              ? "border-l-2 border-primary bg-accent text-accent-foreground"
+              : "border-l-2 border-transparent text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
           )}
         >
-          <item.icon className={cn("h-4 w-4", isChild && "h-3.5 w-3.5")} />
-          {item.label}
+          <item.icon className={cn("h-4 w-4 shrink-0", isChild && "h-3.5 w-3.5")} />
+          <span className="truncate">{item.label}</span>
         </Link>
       </div>
     );
@@ -111,7 +109,7 @@ export function MobileNav() {
             OpenOMS
           </SheetTitle>
         </SheetHeader>
-        <nav className="space-y-1 overflow-y-auto p-3">
+        <nav aria-label="Menu główne" className="space-y-1 overflow-y-auto p-3">
           {ungroupedItems.map((item) => renderNavLink(item))}
 
           {navGroups.map((group) => {
@@ -120,10 +118,11 @@ export function MobileNav() {
             const expanded = isGroupExpanded(group.key);
 
             return (
-              <div key={group.key} className="mt-1">
+              <div key={group.key} className="mt-3 first:mt-0">
                 <button
                   onClick={() => toggleGroup(group.key)}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold uppercase text-muted-foreground hover:bg-accent/30 hover:text-accent-foreground transition-colors mt-2"
+                  aria-expanded={expanded}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent/30 hover:text-accent-foreground transition-colors"
                 >
                   <ChevronRight
                     className={cn(
