@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -28,7 +31,10 @@ var (
 	Err2FAAlreadyEnabled  = errors.New("2FA is already enabled")
 	Err2FANotSetup        = errors.New("2FA has not been set up yet")
 	ErrAccountLocked      = errors.New("account temporarily locked due to too many failed attempts")
+	ErrRefreshTokenReuse  = errors.New("refresh token reuse detected")
 )
+
+const refreshTokenTTL = 30 * 24 * time.Hour
 
 type AuthService struct {
 	userRepo      repository.UserRepo
@@ -39,11 +45,17 @@ type AuthService struct {
 	pool          *pgxpool.Pool
 	encryptionKey []byte
 	lockout       *LoginLockout
+	refreshStore  RefreshTokenStore
 }
 
 // SetLoginLockout configures per-account login lockout tracking.
 func (s *AuthService) SetLoginLockout(l *LoginLockout) {
 	s.lockout = l
+}
+
+// SetRefreshTokenStore configures refresh token rotation with reuse detection.
+func (s *AuthService) SetRefreshTokenStore(store RefreshTokenStore) {
+	s.refreshStore = store
 }
 
 func NewAuthService(
@@ -67,6 +79,42 @@ func NewAuthService(
 		s.encryptionKey = encryptionKey[0]
 	}
 	return s
+}
+
+// hashRefreshToken returns the SHA-256 hex digest of a refresh token string.
+func hashRefreshToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
+}
+
+// storeRefreshTokenFamily creates a new token family and stores the first token entry.
+// Called after generating a refresh token during Login, Register, and Verify2FALogin.
+func (s *AuthService) storeRefreshTokenFamily(ctx context.Context, refreshToken, userID, tenantID string) {
+	if s.refreshStore == nil {
+		return
+	}
+	familyID := uuid.New().String()
+	tokenHash := hashRefreshToken(refreshToken)
+
+	family := &RefreshTokenFamily{
+		FamilyID:         familyID,
+		UserID:           userID,
+		TenantID:         tenantID,
+		CurrentTokenHash: tokenHash,
+		CreatedAt:        time.Now(),
+	}
+	if err := s.refreshStore.StoreFamily(ctx, family, refreshTokenTTL); err != nil {
+		slog.Warn("failed to store refresh token family", "error", err)
+		return
+	}
+
+	entry := &RefreshTokenEntry{
+		FamilyID: familyID,
+		Used:     false,
+	}
+	if err := s.refreshStore.StoreToken(ctx, tokenHash, entry, refreshTokenTTL); err != nil {
+		slog.Warn("failed to store refresh token entry", "error", err)
+	}
 }
 
 // Register creates a new tenant and owner user, returns tokens.
@@ -156,6 +204,8 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 	if err != nil {
 		return nil, "", fmt.Errorf("generate refresh token: %w", err)
 	}
+
+	s.storeRefreshTokenFamily(ctx, refreshToken, userID.String(), tenantID.String())
 
 	slog.Info("new tenant registered", "tenant_id", tenantID, "slug", req.TenantSlug, "user_email", req.Email)
 
@@ -262,6 +312,8 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		return nil, fmt.Errorf("generate refresh token: %w", err)
 	}
 
+	s.storeRefreshTokenFamily(ctx, refreshToken, userWithPwd.ID.String(), tenant.ID.String())
+
 	return &LoginResult{
 		TokenResponse: &model.TokenResponse{
 			AccessToken: accessToken,
@@ -332,6 +384,8 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 	if err != nil {
 		return nil, "", fmt.Errorf("generate refresh token: %w", err)
 	}
+
+	s.storeRefreshTokenFamily(ctx, refreshToken, user.ID.String(), claims.TenantID.String())
 
 	return &model.TokenResponse{
 		AccessToken: accessToken,
@@ -511,7 +565,23 @@ func (s *AuthService) Logout(ctx context.Context, userID, tenantID uuid.UUID) er
 	})
 }
 
+// LogoutWithRefreshToken performs logout and cleans up the refresh token family
+// associated with the given refresh token, if rotation tracking is enabled.
+func (s *AuthService) LogoutWithRefreshToken(ctx context.Context, userID, tenantID uuid.UUID, refreshToken string) error {
+	if s.refreshStore != nil && refreshToken != "" {
+		tokenHash := hashRefreshToken(refreshToken)
+		entry, err := s.refreshStore.GetToken(ctx, tokenHash)
+		if err == nil && entry != nil {
+			_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
+			_ = s.refreshStore.DeleteToken(ctx, tokenHash)
+		}
+	}
+	return s.Logout(ctx, userID, tenantID)
+}
+
 // Refresh validates a refresh token and issues new tokens.
+// When a refresh token store is configured, it enforces token rotation with reuse detection:
+// each token can only be used once, and reuse of a consumed token invalidates the entire family.
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.TokenResponse, string, error) {
 	claims, err := s.tokenService.ValidateToken(refreshToken)
 	if err != nil {
@@ -525,6 +595,36 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid user ID in token: %w", err)
+	}
+
+	// Refresh token rotation: check for reuse before proceeding
+	var familyID string
+	if s.refreshStore != nil {
+		tokenHash := hashRefreshToken(refreshToken)
+		entry, err := s.refreshStore.GetToken(ctx, tokenHash)
+		if err != nil {
+			slog.Warn("refresh token store lookup failed, proceeding without rotation", "error", err)
+			// fail open — continue without rotation check
+		} else if entry == nil {
+			// Token not found in store — unknown token
+			return nil, "", fmt.Errorf("invalid refresh token: not found in store")
+		} else if entry.Used {
+			// REUSE DETECTED — token theft scenario; invalidate entire family
+			slog.Warn("refresh token reuse detected, invalidating token family",
+				"family_id", entry.FamilyID,
+				"user_id", claims.Subject,
+				"tenant_id", claims.TenantID,
+			)
+			_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
+			_ = s.refreshStore.DeleteToken(ctx, tokenHash)
+			return nil, "", ErrRefreshTokenReuse
+		} else {
+			// Mark old token as used
+			familyID = entry.FamilyID
+			if err := s.refreshStore.MarkTokenUsed(ctx, tokenHash); err != nil {
+				slog.Warn("failed to mark refresh token as used", "error", err)
+			}
+		}
 	}
 
 	var user *model.User
@@ -557,6 +657,29 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 	newRefreshToken, err := s.tokenService.GenerateRefreshToken(*user)
 	if err != nil {
 		return nil, "", fmt.Errorf("generate refresh token: %w", err)
+	}
+
+	// Store new token in the same family
+	if s.refreshStore != nil && familyID != "" {
+		newTokenHash := hashRefreshToken(newRefreshToken)
+		newEntry := &RefreshTokenEntry{
+			FamilyID: familyID,
+			Used:     false,
+		}
+		if err := s.refreshStore.StoreToken(ctx, newTokenHash, newEntry, refreshTokenTTL); err != nil {
+			slog.Warn("failed to store rotated refresh token", "error", err)
+		}
+
+		// Update family's current token hash
+		family, err := s.refreshStore.GetFamily(ctx, familyID)
+		if err != nil {
+			slog.Warn("failed to get token family for update", "error", err)
+		} else if family != nil {
+			family.CurrentTokenHash = newTokenHash
+			if err := s.refreshStore.UpdateFamily(ctx, family, refreshTokenTTL); err != nil {
+				slog.Warn("failed to update token family", "error", err)
+			}
+		}
 	}
 
 	resp := &model.TokenResponse{

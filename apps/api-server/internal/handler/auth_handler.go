@@ -284,7 +284,13 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	resp, newRefreshToken, err := h.authService.Refresh(r.Context(), cookie.Value)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid or expired refresh token")
+		switch err {
+		case service.ErrRefreshTokenReuse:
+			h.clearRefreshCookie(w)
+			writeError(w, http.StatusUnauthorized, "session invalidated due to token reuse")
+		default:
+			writeError(w, http.StatusUnauthorized, "invalid or expired refresh token")
+		}
 		return
 	}
 
@@ -306,7 +312,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	if cookie, err := r.Cookie("refresh_token"); err == nil && cookie.Value != "" {
 		if claims, err := h.authService.ValidateRefreshToken(cookie.Value); err == nil {
-			_ = h.authService.Logout(r.Context(), claims.UserID, claims.TenantID)
+			_ = h.authService.LogoutWithRefreshToken(r.Context(), claims.UserID, claims.TenantID, cookie.Value)
 		}
 	}
 
