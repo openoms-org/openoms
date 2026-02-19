@@ -1,0 +1,185 @@
+package btp
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"strings"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	btpsdk "github.com/openoms-org/openoms/packages/btp-go-sdk"
+)
+
+func init() {
+	integration.RegisterSupplierProvider("btp", func(credentials, settings json.RawMessage) (integration.SupplierProvider, error) {
+		return NewProvider(credentials, settings)
+	})
+}
+
+// BTPCredentials holds the authentication credentials for the BTP API.
+type BTPCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	BaseURL  string `json:"base_url,omitempty"`
+}
+
+// Provider implements integration.SupplierProvider for BTP.pro wholesaler platform.
+type Provider struct {
+	client *btpsdk.Client
+	logger *slog.Logger
+}
+
+// NewProvider creates a new BTP supplier provider from encrypted credentials and settings.
+func NewProvider(credentials, settings json.RawMessage) (*Provider, error) {
+	var creds BTPCredentials
+	if err := json.Unmarshal(credentials, &creds); err != nil {
+		return nil, fmt.Errorf("btp: unmarshal credentials: %w", err)
+	}
+	if creds.Username == "" || creds.Password == "" {
+		return nil, fmt.Errorf("btp: username and password are required")
+	}
+
+	var opts []btpsdk.Option
+	if creds.BaseURL != "" {
+		opts = append(opts, btpsdk.WithBaseURL(creds.BaseURL))
+	}
+
+	client := btpsdk.NewClient(creds.Username, creds.Password, opts...)
+
+	return &Provider{
+		client: client,
+		logger: slog.Default().With("provider", "btp"),
+	}, nil
+}
+
+// ProviderName returns the provider identifier.
+func (p *Provider) ProviderName() string { return "btp" }
+
+// FetchProducts retrieves the full product catalogue from BTP.
+// Recommended refresh: 1-2 times per day.
+func (p *Provider) FetchProducts(ctx context.Context) ([]integration.SupplierProduct, error) {
+	catalogue, err := p.client.Catalogue.GetCatalogue(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("btp: fetch catalogue: %w", err)
+	}
+
+	products := make([]integration.SupplierProduct, 0, len(catalogue.Lines))
+	for _, line := range catalogue.Lines {
+		sp := integration.SupplierProduct{
+			ExternalID:  line.ItemID,
+			Name:        line.ItemName,
+			Description: line.ItemDescription,
+			EAN:         normalizeEAN(line.EAN),
+			SKU:         line.ManufacturerItemCode,
+			Price:       line.UnitNetPrice,
+			RetailPrice: line.UnitRetailPrice,
+			Attributes:  map[string]string{},
+		}
+
+		if len(line.CategoryNodes) > 0 {
+			names := make([]string, len(line.CategoryNodes))
+			for i, cn := range line.CategoryNodes {
+				names[i] = cn.CategoryNodeName
+			}
+			sp.Category = strings.Join(names, " > ")
+		}
+
+		if len(line.BrandNodes) > 0 {
+			sp.Brand = line.BrandNodes[0].BrandNodeName
+		}
+
+		if line.UnitOfMeasure != "" {
+			sp.Attributes["unit_of_measure"] = line.UnitOfMeasure
+		}
+
+		// Derive stock from availability if present
+		if line.Availability != nil {
+			totalStock := 0
+			for _, s := range line.Availability.StockSchedules {
+				totalStock += int(s.Quantity)
+			}
+			sp.StockQuantity = totalStock
+		}
+
+		products = append(products, sp)
+	}
+
+	p.logger.Info("fetched product catalogue", "count", len(products))
+	return products, nil
+}
+
+// FetchInventory retrieves current inventory levels and prices from BTP.
+// Recommended refresh: 4-24 times per day.
+func (p *Provider) FetchInventory(ctx context.Context) ([]integration.SupplierProduct, error) {
+	report, err := p.client.Inventory.GetReport(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("btp: fetch inventory: %w", err)
+	}
+
+	products := make([]integration.SupplierProduct, 0, len(report.Lines))
+	for _, line := range report.Lines {
+		stock := 0
+		if line.QuantityOnHand != nil {
+			stock = int(*line.QuantityOnHand)
+		} else if line.ActualStock != nil {
+			stock = int(*line.ActualStock)
+		}
+
+		sp := integration.SupplierProduct{
+			ExternalID:    line.ItemID,
+			Name:          line.ItemName,
+			EAN:           normalizeEAN(line.EAN),
+			SKU:           line.ManufacturerItemCode,
+			Price:         line.UnitNetPrice,
+			RetailPrice:   line.UnitRetailPrice,
+			StockQuantity: stock,
+		}
+
+		products = append(products, sp)
+	}
+
+	p.logger.Info("fetched inventory report", "count", len(products))
+	return products, nil
+}
+
+// CreateOrder places an order with the BTP wholesaler.
+func (p *Provider) CreateOrder(ctx context.Context, req integration.SupplierOrderRequest) (*integration.SupplierOrderResult, error) {
+	btpReq := &btpsdk.OrderRequest{
+		ClientOrderNumber: req.ClientOrderNumber,
+		DeliveryPointID:   req.DeliveryPointID,
+		CarrierID:         req.CarrierID,
+		Note:              req.Note,
+		IsTesting:         req.IsTesting,
+	}
+
+	for _, line := range req.Lines {
+		btpLine := btpsdk.OrderRequestLine{
+			BarCode:  line.EAN,
+			ItemID:   line.ItemID,
+			Quantity: line.Quantity,
+		}
+		btpReq.Lines = append(btpReq.Lines, btpLine)
+	}
+
+	resp, err := p.client.Orders.Create(ctx, btpReq)
+	if err != nil {
+		return nil, fmt.Errorf("btp: create order: %w", err)
+	}
+
+	p.logger.Info("order created", "order_id", resp.OrderID, "order_number", resp.OrderNumber)
+
+	return &integration.SupplierOrderResult{
+		ExternalOrderID: resp.OrderID,
+		OrderNumber:     resp.OrderNumber,
+		OrderDate:       resp.OrderDate,
+	}, nil
+}
+
+// normalizeEAN returns empty string for placeholder EANs.
+func normalizeEAN(ean string) string {
+	if ean == "1111111111111" {
+		return ""
+	}
+	return ean
+}

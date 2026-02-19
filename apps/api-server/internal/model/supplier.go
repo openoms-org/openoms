@@ -60,10 +60,10 @@ func (r *CreateSupplierRequest) Validate() error {
 		r.FeedFormat = "iof"
 	}
 	switch r.FeedFormat {
-	case "iof", "csv", "custom":
+	case "iof", "csv", "custom", "btp":
 		// valid
 	default:
-		return errors.New("feed_format must be one of: iof, csv, custom")
+		return errors.New("feed_format must be one of: iof, csv, custom, btp")
 	}
 	if r.SyncIntervalMinutes != nil && (*r.SyncIntervalMinutes < 5 || *r.SyncIntervalMinutes > 1440) {
 		return errors.New("sync_interval_minutes must be between 5 and 1440")
@@ -94,10 +94,10 @@ func (r *UpdateSupplierRequest) Validate() error {
 	}
 	if r.FeedFormat != nil {
 		switch *r.FeedFormat {
-		case "iof", "csv", "custom":
+		case "iof", "csv", "custom", "btp":
 			// valid
 		default:
-			return errors.New("feed_format must be one of: iof, csv, custom")
+			return errors.New("feed_format must be one of: iof, csv, custom, btp")
 		}
 	}
 	if r.Status != nil {
