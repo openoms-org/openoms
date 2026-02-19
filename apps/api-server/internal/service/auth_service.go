@@ -607,8 +607,12 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 			slog.Warn("refresh token store lookup failed, proceeding without rotation", "error", err)
 			// fail open — continue without rotation check
 		case entry == nil:
-			// Token not found in store — unknown token
-			return nil, "", fmt.Errorf("invalid refresh token: not found in store")
+			// Token not found in store — may happen after server restart with in-memory store.
+			// JWT signature already validates authenticity, so fail open and start a new family.
+			slog.Warn("refresh token not found in store, proceeding without rotation check",
+				"user_id", claims.Subject,
+				"tenant_id", claims.TenantID,
+			)
 		case entry.Used:
 			// REUSE DETECTED — token theft scenario; invalidate entire family
 			slog.Warn("refresh token reuse detected, invalidating token family",
@@ -660,26 +664,42 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 		return nil, "", fmt.Errorf("generate refresh token: %w", err)
 	}
 
-	// Store new token in the same family
-	if s.refreshStore != nil && familyID != "" {
+	// Store new token in the rotation store
+	if s.refreshStore != nil {
 		newTokenHash := hashRefreshToken(newRefreshToken)
+
+		// If no family exists (e.g., token was missing from store after restart), create a new one
+		if familyID == "" {
+			familyID = uuid.New().String()
+			family := &RefreshTokenFamily{
+				FamilyID:         familyID,
+				UserID:           userID.String(),
+				TenantID:         claims.TenantID.String(),
+				CurrentTokenHash: newTokenHash,
+				CreatedAt:        time.Now(),
+			}
+			if err := s.refreshStore.StoreFamily(ctx, family, refreshTokenTTL); err != nil {
+				slog.Warn("failed to store new refresh token family", "error", err)
+			}
+		} else {
+			// Update existing family's current token hash
+			family, err := s.refreshStore.GetFamily(ctx, familyID)
+			if err != nil {
+				slog.Warn("failed to get token family for update", "error", err)
+			} else if family != nil {
+				family.CurrentTokenHash = newTokenHash
+				if err := s.refreshStore.UpdateFamily(ctx, family, refreshTokenTTL); err != nil {
+					slog.Warn("failed to update token family", "error", err)
+				}
+			}
+		}
+
 		newEntry := &RefreshTokenEntry{
 			FamilyID: familyID,
 			Used:     false,
 		}
 		if err := s.refreshStore.StoreToken(ctx, newTokenHash, newEntry, refreshTokenTTL); err != nil {
 			slog.Warn("failed to store rotated refresh token", "error", err)
-		}
-
-		// Update family's current token hash
-		family, err := s.refreshStore.GetFamily(ctx, familyID)
-		if err != nil {
-			slog.Warn("failed to get token family for update", "error", err)
-		} else if family != nil {
-			family.CurrentTokenHash = newTokenHash
-			if err := s.refreshStore.UpdateFamily(ctx, family, refreshTokenTTL); err != nil {
-				slog.Warn("failed to update token family", "error", err)
-			}
 		}
 	}
 
