@@ -199,6 +199,18 @@ func main() {
 	recurringOrderRepo := repository.NewRecurringOrderRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
+
+	// Login lockout (per-account brute-force protection)
+	if redisClient != nil {
+		lockoutStore := service.NewRedisLoginLockoutStore(redisClient)
+		authService.SetLoginLockout(service.NewLoginLockout(lockoutStore))
+		slog.Info("using Redis login lockout")
+	} else {
+		lockoutStore := service.NewMemoryLoginLockoutStore()
+		authService.SetLoginLockout(service.NewLoginLockout(lockoutStore))
+		slog.Info("using in-memory login lockout")
+	}
+
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	roleService := service.NewRoleService(roleRepo, auditRepo, pool)
 	emailService := service.NewEmailService(tenantRepo, pool)

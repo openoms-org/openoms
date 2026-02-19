@@ -27,6 +27,7 @@ var (
 	Err2FANotEnabled      = errors.New("2FA is not enabled")
 	Err2FAAlreadyEnabled  = errors.New("2FA is already enabled")
 	Err2FANotSetup        = errors.New("2FA has not been set up yet")
+	ErrAccountLocked      = errors.New("account temporarily locked due to too many failed attempts")
 )
 
 type AuthService struct {
@@ -37,6 +38,12 @@ type AuthService struct {
 	passwordSvc   *PasswordService
 	pool          *pgxpool.Pool
 	encryptionKey []byte
+	lockout       *LoginLockout
+}
+
+// SetLoginLockout configures per-account login lockout tracking.
+func (s *AuthService) SetLoginLockout(l *LoginLockout) {
+	s.lockout = l
 }
 
 func NewAuthService(
@@ -175,6 +182,14 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		return nil, NewValidationError(err)
 	}
 
+	// Check account lockout
+	if s.lockout != nil {
+		remaining, err := s.lockout.CheckLocked(ctx, req.TenantSlug, req.Email)
+		if err == nil && remaining > 0 {
+			return nil, ErrAccountLocked
+		}
+	}
+
 	// Find tenant by slug (SECURITY DEFINER, bypasses RLS)
 	tenant, err := s.tenantRepo.FindBySlug(ctx, req.TenantSlug)
 	if err != nil {
@@ -194,7 +209,15 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 	}
 
 	if err := s.passwordSvc.Compare(userWithPwd.PasswordHash, req.Password); err != nil {
+		if s.lockout != nil {
+			_ = s.lockout.RecordFailure(ctx, req.TenantSlug, req.Email)
+		}
 		return nil, ErrInvalidCredentials
+	}
+
+	// Reset lockout on successful login
+	if s.lockout != nil {
+		s.lockout.ResetOnSuccess(ctx, req.TenantSlug, req.Email)
 	}
 
 	// Update last_login_at and create audit entry
@@ -320,6 +343,20 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 
 // Setup2FA generates a TOTP secret for the user and stores it encrypted.
 func (s *AuthService) Setup2FA(ctx context.Context, userID, tenantID uuid.UUID, email string) (*model.TwoFASetupResponse, error) {
+	// Prevent overwriting active 2FA without going through disable flow
+	var totpEnabled bool
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var statusErr error
+		totpEnabled, _, statusErr = s.userRepo.GetTOTPStatus(ctx, tx, userID)
+		return statusErr
+	})
+	if err != nil {
+		return nil, fmt.Errorf("check 2fa status: %w", err)
+	}
+	if totpEnabled {
+		return nil, Err2FAAlreadyEnabled
+	}
+
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      "OpenOMS",
 		AccountName: email,

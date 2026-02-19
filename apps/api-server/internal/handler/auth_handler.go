@@ -122,6 +122,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	result, err := h.authService.Login(r.Context(), req, clientIP(r))
 	if err != nil {
 		switch err {
+		case service.ErrAccountLocked:
+			writeError(w, http.StatusTooManyRequests, "account temporarily locked due to too many failed attempts")
 		case service.ErrInvalidCredentials:
 			writeError(w, http.StatusUnauthorized, "invalid email or password")
 		default:
