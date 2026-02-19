@@ -37,8 +37,9 @@ redisdata/
 .DS_Store
 Thumbs.db
 
-# Test coverage
+# Test coverage & results
 coverage/
+**/test-results/
 
 # Logs
 *.log
@@ -49,7 +50,11 @@ uploads/
 # Binary output
 /bin/
 tmp/
+server
 apps/api-server/server
+
+# Script artifacts
+scripts/**/package-lock.json
 
 # Legacy code (reference only, not part of new build)
 /mvp/

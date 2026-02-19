@@ -4,7 +4,7 @@ import { http, HttpResponse } from "msw";
 import { apiClient, ApiClientError, getErrorMessage, isAuthError } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
 
-const API_URL = "http://localhost:8080";
+const API_URL = process.env.TEST_API_URL ?? "http://localhost:8080";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 afterEach(() => {

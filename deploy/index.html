@@ -2118,7 +2118,6 @@
                             i = 1; // skip '$ '
                         }
                         div.innerHTML = div.innerHTML.replace('<span class="terminal-cursor"></span>', '');
-                        const char = text[i] === ' ' ? '&nbsp;' : text[i].replace('<', '&lt;').replace('>', '&gt;').replace('&', '&amp;');
                         if (line.type === 'prompt' && i <= 1) {
                             // already added prompt
                         } else if (line.type === 'cont') {
