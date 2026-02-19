@@ -7,10 +7,10 @@ import (
 
 // RefreshTokenFamily tracks a chain of rotated refresh tokens for one login session.
 type RefreshTokenFamily struct {
-	FamilyID         string `json:"family_id"`
-	UserID           string `json:"user_id"`    // uuid as string
-	TenantID         string `json:"tenant_id"`  // uuid as string
-	CurrentTokenHash string `json:"current_token_hash"`
+	FamilyID         string    `json:"family_id"`
+	UserID           string    `json:"user_id"`
+	TenantID         string    `json:"tenant_id"`
+	CurrentTokenHash string    `json:"current_token_hash"`
 	CreatedAt        time.Time `json:"created_at"`
 }
 

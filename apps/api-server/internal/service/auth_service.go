@@ -602,13 +602,14 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 	if s.refreshStore != nil {
 		tokenHash := hashRefreshToken(refreshToken)
 		entry, err := s.refreshStore.GetToken(ctx, tokenHash)
-		if err != nil {
+		switch {
+		case err != nil:
 			slog.Warn("refresh token store lookup failed, proceeding without rotation", "error", err)
 			// fail open — continue without rotation check
-		} else if entry == nil {
+		case entry == nil:
 			// Token not found in store — unknown token
 			return nil, "", fmt.Errorf("invalid refresh token: not found in store")
-		} else if entry.Used {
+		case entry.Used:
 			// REUSE DETECTED — token theft scenario; invalidate entire family
 			slog.Warn("refresh token reuse detected, invalidating token family",
 				"family_id", entry.FamilyID,
@@ -618,7 +619,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 			_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
 			_ = s.refreshStore.DeleteToken(ctx, tokenHash)
 			return nil, "", ErrRefreshTokenReuse
-		} else {
+		default:
 			// Mark old token as used
 			familyID = entry.FamilyID
 			if err := s.refreshStore.MarkTokenUsed(ctx, tokenHash); err != nil {
