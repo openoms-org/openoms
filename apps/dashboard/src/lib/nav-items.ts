@@ -78,6 +78,7 @@ export const navGroups: NavGroup[] = [
   { key: "Katalog", label: "Katalog", icon: Package },
   { key: "Logistyka", label: "Logistyka", icon: Truck },
   { key: "Kanały sprzedaży", label: "Kanały sprzedaży", icon: Store },
+  { key: "Kurierzy", label: "Kurierzy", icon: Truck },
   { key: "Raporty", label: "Raporty", icon: BarChart3 },
   { key: "Zaopatrzenie", label: "Zaopatrzenie", icon: Factory },
   { key: "Narzędzia", label: "Narzędzia", icon: Wrench },
@@ -146,6 +147,9 @@ export const navItems: NavItem[] = [
   { href: "/integrations/shopify", label: "Shopify", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
   { href: "/settings/feeds", label: "Feedy produktowe", icon: Rss, adminOnly: true, group: "Kanały sprzedaży" },
   { href: "/listing-sync", label: "Synchronizacja ofert", icon: ArrowUpDown, adminOnly: true, group: "Kanały sprzedaży" },
+
+  // ── Kurierzy ──
+  { href: "/carriers", label: "Kurierzy", icon: Truck, adminOnly: true, group: "Kurierzy" },
 
   // ── Raporty ──
   { href: "/reports", label: "Raporty", icon: BarChart3, adminOnly: true, group: "Raporty" },
