@@ -1,3 +1,4 @@
+// Package btp implements the SupplierProvider interface for BTP.pro wholesaler platform.
 package btp
 
 import (
@@ -17,8 +18,8 @@ func init() {
 	})
 }
 
-// BTPCredentials holds the authentication credentials for the BTP API.
-type BTPCredentials struct {
+// Credentials holds the authentication credentials for the BTP API.
+type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	BaseURL  string `json:"base_url,omitempty"`
@@ -31,8 +32,8 @@ type Provider struct {
 }
 
 // NewProvider creates a new BTP supplier provider from encrypted credentials and settings.
-func NewProvider(credentials, settings json.RawMessage) (*Provider, error) {
-	var creds BTPCredentials
+func NewProvider(credentials, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("btp: unmarshal credentials: %w", err)
 	}

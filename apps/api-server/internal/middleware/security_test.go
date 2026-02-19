@@ -11,7 +11,7 @@ import (
 )
 
 func okHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 }
@@ -20,7 +20,7 @@ func TestSecurity_RateLimit_ExceedLimitReturns429(t *testing.T) {
 	limiter := middleware.NewMemoryRateLimiter()
 	handler := middleware.RateLimitWith(limiter, 3, 1*time.Minute)(okHandler())
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		req := httptest.NewRequest("POST", "/v1/auth/login", nil)
 		req.RemoteAddr = "1.2.3.4:1234"
 		rr := httptest.NewRecorder()

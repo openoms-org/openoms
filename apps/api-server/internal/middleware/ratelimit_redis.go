@@ -18,6 +18,7 @@ func NewRedisRateLimiter(client *redis.Client) *RedisRateLimiter {
 	return &RedisRateLimiter{client: client}
 }
 
+// Allow checks if a request is within the rate limit using Redis-backed counters.
 func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, window time.Duration) (bool, error) {
 	redisKey := fmt.Sprintf("ratelimit:%s", key)
 

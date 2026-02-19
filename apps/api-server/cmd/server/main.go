@@ -65,7 +65,7 @@ func main() {
 		redisClient = redis.NewClient(redisOpts)
 		if err := redisClient.Ping(context.Background()).Err(); err != nil {
 			slog.Warn("Redis not available, falling back to in-memory stores", "error", err)
-			redisClient.Close()
+			_ = redisClient.Close()
 			redisClient = nil
 		} else {
 			slog.Info("connected to Redis", "url", cfg.RedisURL)
@@ -73,7 +73,7 @@ func main() {
 	}
 	defer func() {
 		if redisClient != nil {
-			redisClient.Close()
+			_ = redisClient.Close()
 		}
 	}()
 

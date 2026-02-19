@@ -17,6 +17,7 @@ func NewRedisTokenBlacklist(client *redis.Client) *RedisTokenBlacklist {
 	return &RedisTokenBlacklist{client: client}
 }
 
+// Revoke adds a token hash to the Redis blacklist with a TTL.
 func (r *RedisTokenBlacklist) Revoke(tokenHash string, expiresAt time.Time) {
 	ttl := time.Until(expiresAt)
 	if ttl <= 0 {
@@ -25,6 +26,7 @@ func (r *RedisTokenBlacklist) Revoke(tokenHash string, expiresAt time.Time) {
 	r.client.Set(context.Background(), "blacklist:"+tokenHash, "1", ttl)
 }
 
+// IsRevoked checks if a token hash exists in the Redis blacklist.
 func (r *RedisTokenBlacklist) IsRevoked(tokenHash string) bool {
 	result, err := r.client.Exists(context.Background(), "blacklist:"+tokenHash).Result()
 	if err != nil {

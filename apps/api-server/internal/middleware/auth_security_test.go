@@ -19,15 +19,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestTokenService(t *testing.T, secret string) *service.TokenService {
+const testSecret = "test-secret-32-chars-long-enough" //nolint:gosec // test credential
+
+func newTestTokenService(t *testing.T) *service.TokenService {
 	t.Helper()
-	svc, err := service.NewTokenService(secret)
+	svc, err := service.NewTokenService(testSecret)
 	require.NoError(t, err)
 	return svc
 }
 
 func TestSecurity_Auth_RejectsEmptyBearer(t *testing.T) {
-	svc := newTestTokenService(t, "test-secret-32-chars-long-enough")
+	svc := newTestTokenService(t)
 	handler := middleware.JWTAuth(svc)(okHandler())
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Authorization", "Bearer ")
@@ -37,7 +39,7 @@ func TestSecurity_Auth_RejectsEmptyBearer(t *testing.T) {
 }
 
 func TestSecurity_Auth_RejectsMalformedToken(t *testing.T) {
-	svc := newTestTokenService(t, "test-secret-32-chars-long-enough")
+	svc := newTestTokenService(t)
 	handler := middleware.JWTAuth(svc)(okHandler())
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Authorization", "Bearer not.a.jwt")
@@ -47,9 +49,8 @@ func TestSecurity_Auth_RejectsMalformedToken(t *testing.T) {
 }
 
 func TestSecurity_Auth_RejectsExpiredToken(t *testing.T) {
-	secret := "test-secret-32-chars-long-enough"
-	svc := newTestTokenService(t, secret)
-	hash := sha512.Sum512([]byte(secret))
+	svc := newTestTokenService(t)
+	hash := sha512.Sum512([]byte(testSecret))
 	privKey := ed25519.NewKeyFromSeed(hash[:32])
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &model.AuthClaims{
@@ -71,9 +72,8 @@ func TestSecurity_Auth_RejectsExpiredToken(t *testing.T) {
 }
 
 func TestSecurity_Auth_RejectsRefreshTokenAsAccess(t *testing.T) {
-	secret := "test-secret-32-chars-long-enough"
-	svc := newTestTokenService(t, secret)
-	hash := sha512.Sum512([]byte(secret))
+	svc := newTestTokenService(t)
+	hash := sha512.Sum512([]byte(testSecret))
 	privKey := ed25519.NewKeyFromSeed(hash[:32])
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &model.AuthClaims{
@@ -95,12 +95,12 @@ func TestSecurity_Auth_RejectsRefreshTokenAsAccess(t *testing.T) {
 }
 
 func TestSecurity_Auth_RejectsAlgNoneToken(t *testing.T) {
-	svc := newTestTokenService(t, "test-secret-32-chars-long-enough")
+	svc := newTestTokenService(t)
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none","typ":"JWT"}`))
-	payload := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(
+	payload := base64.RawURLEncoding.EncodeToString(fmt.Appendf(nil,
 		`{"sub":"550e8400-e29b-41d4-a716-446655440000","exp":%d,"tid":"550e8400-e29b-41d4-a716-446655440001","type":"access"}`,
 		time.Now().Add(1*time.Hour).Unix(),
-	)))
+	))
 	tokenStr := header + "." + payload + "."
 
 	handler := middleware.JWTAuth(svc)(okHandler())
@@ -112,9 +112,8 @@ func TestSecurity_Auth_RejectsAlgNoneToken(t *testing.T) {
 }
 
 func TestSecurity_Auth_BlacklistedTokenRejected(t *testing.T) {
-	secret := "test-secret-32-chars-long-enough"
-	svc := newTestTokenService(t, secret)
-	hash := sha512.Sum512([]byte(secret))
+	svc := newTestTokenService(t)
+	hash := sha512.Sum512([]byte(testSecret))
 	privKey := ed25519.NewKeyFromSeed(hash[:32])
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, &model.AuthClaims{

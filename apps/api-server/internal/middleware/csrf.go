@@ -33,7 +33,7 @@ func CSRF(secure bool) func(http.Handler) http.Handler {
 			if err != nil || cookie.Value == "" {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusForbidden)
-				json.NewEncoder(w).Encode(map[string]string{"error": "missing CSRF token"})
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "missing CSRF token"})
 				return
 			}
 
@@ -41,7 +41,7 @@ func CSRF(secure bool) func(http.Handler) http.Handler {
 			if subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(headerToken)) != 1 {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusForbidden)
-				json.NewEncoder(w).Encode(map[string]string{"error": "invalid CSRF token"})
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid CSRF token"})
 				return
 			}
 
@@ -86,6 +86,6 @@ func setCSRFCookieIfMissing(w http.ResponseWriter, r *http.Request, secure bool)
 
 func generateCSRFToken() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
 }

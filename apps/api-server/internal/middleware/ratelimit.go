@@ -68,6 +68,7 @@ func NewMemoryRateLimiter() *MemoryRateLimiter {
 	return m
 }
 
+// Allow checks if a request is within the rate limit for the given key.
 func (m *MemoryRateLimiter) Allow(_ context.Context, key string, limit int, window time.Duration) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

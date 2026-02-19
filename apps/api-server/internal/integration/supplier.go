@@ -24,12 +24,12 @@ type SupplierProduct struct {
 
 // SupplierOrderRequest contains data needed to place an order with a supplier.
 type SupplierOrderRequest struct {
-	Lines              []SupplierOrderLine `json:"lines"`
-	ClientOrderNumber  string              `json:"client_order_number,omitempty"`
-	DeliveryPointID    string              `json:"delivery_point_id,omitempty"`
-	CarrierID          string              `json:"carrier_id,omitempty"`
-	Note               string              `json:"note,omitempty"`
-	IsTesting          bool                `json:"is_testing,omitempty"`
+	Lines             []SupplierOrderLine `json:"lines"`
+	ClientOrderNumber string              `json:"client_order_number,omitempty"`
+	DeliveryPointID   string              `json:"delivery_point_id,omitempty"`
+	CarrierID         string              `json:"carrier_id,omitempty"`
+	Note              string              `json:"note,omitempty"`
+	IsTesting         bool                `json:"is_testing,omitempty"`
 }
 
 // SupplierOrderLine represents a single item in a supplier order.

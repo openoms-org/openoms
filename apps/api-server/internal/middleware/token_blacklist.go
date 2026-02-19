@@ -27,10 +27,12 @@ func NewTokenBlacklistWithStore(store TokenBlacklistStore) *TokenBlacklist {
 	return &TokenBlacklist{store: store}
 }
 
+// Revoke delegates to the underlying store.
 func (bl *TokenBlacklist) Revoke(tokenHash string, expiresAt time.Time) {
 	bl.store.Revoke(tokenHash, expiresAt)
 }
 
+// IsRevoked delegates to the underlying store.
 func (bl *TokenBlacklist) IsRevoked(tokenHash string) bool {
 	return bl.store.IsRevoked(tokenHash)
 }
@@ -50,12 +52,14 @@ func NewMemoryTokenBlacklist() *MemoryTokenBlacklist {
 	return bl
 }
 
+// Revoke adds a token hash to the in-memory blacklist.
 func (bl *MemoryTokenBlacklist) Revoke(tokenHash string, expiresAt time.Time) {
 	bl.mu.Lock()
 	bl.tokens[tokenHash] = expiresAt
 	bl.mu.Unlock()
 }
 
+// IsRevoked checks if a token hash is in the in-memory blacklist.
 func (bl *MemoryTokenBlacklist) IsRevoked(tokenHash string) bool {
 	bl.mu.RLock()
 	defer bl.mu.RUnlock()
