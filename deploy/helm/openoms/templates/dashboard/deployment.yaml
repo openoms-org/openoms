@@ -40,6 +40,8 @@ spec:
               value: production
             - name: HOSTNAME
               value: "0.0.0.0"
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.apiServer.baseUrl | quote }}
           lifecycle:
             preStop:
               exec:
