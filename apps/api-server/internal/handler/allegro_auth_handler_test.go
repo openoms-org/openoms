@@ -12,7 +12,7 @@ import (
 )
 
 func TestAllegroAuthHandler_HandleCallback_InvalidJSON(t *testing.T) {
-	h := NewAllegroAuthHandler(nil, nil, nil)
+	h := NewAllegroAuthHandler(nil, nil, nil, NewMemoryOAuthStateStore())
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/callback", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestAllegroAuthHandler_HandleCallback_InvalidJSON(t *testing.T) {
 }
 
 func TestAllegroAuthHandler_HandleCallback_MissingCode(t *testing.T) {
-	h := NewAllegroAuthHandler(nil, nil, nil)
+	h := NewAllegroAuthHandler(nil, nil, nil, NewMemoryOAuthStateStore())
 
 	body := `{"code":"","state":"abc"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/callback", strings.NewReader(body))
