@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
     { source: "/integrations/shoper", destination: "/marketplaces/shoper", permanent: true },
     { source: "/integrations/prestashop", destination: "/marketplaces/prestashop", permanent: true },
     { source: "/integrations/shopify", destination: "/marketplaces/shopify", permanent: true },
+    // Invoicing settings moved to dedicated section
+    { source: "/settings/invoicing", destination: "/invoicing", permanent: true },
   ],
   headers: async () => [
     {

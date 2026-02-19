@@ -73,6 +73,7 @@ export const navGroups: NavGroup[] = [
   { key: "Logistyka", label: "Logistyka", icon: Truck },
   { key: "Kanały sprzedaży", label: "Kanały sprzedaży", icon: Store },
   { key: "Kurierzy", label: "Kurierzy", icon: Truck },
+  { key: "Fakturowanie", label: "Fakturowanie", icon: Receipt },
   { key: "Raporty", label: "Raporty", icon: BarChart3 },
   { key: "Zaopatrzenie", label: "Zaopatrzenie", icon: Factory },
   { key: "Narzędzia", label: "Narzędzia", icon: Wrench },
@@ -123,6 +124,9 @@ export const navItems: NavItem[] = [
   // ── Kurierzy ──
   { href: "/carriers", label: "Kurierzy", icon: Truck, adminOnly: true, group: "Kurierzy" },
 
+  // ── Fakturowanie ──
+  { href: "/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Fakturowanie" },
+
   // ── Raporty ──
   { href: "/reports", label: "Raporty", icon: BarChart3, adminOnly: true, group: "Raporty" },
   { href: "/reports/forecast", label: "Prognoza popytu", icon: TrendingUp, adminOnly: true, group: "Raporty" },
@@ -158,7 +162,6 @@ export const navItems: NavItem[] = [
   { href: "/settings/order-statuses", label: "Statusy zamówień", icon: ListChecks, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/custom-fields", label: "Pola niestandardowe", icon: TextCursorInput, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/price-lists", label: "Cenniki", icon: BadgePercent, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/accounting", label: "Księgowość", icon: Calculator, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/ksef", label: "KSeF", icon: FileText, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/vat-oss", label: "VAT OSS", icon: Globe, adminOnly: true, group: "Ustawienia" },
