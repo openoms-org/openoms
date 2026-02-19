@@ -399,9 +399,9 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
     { key: "subdomain", label: "Subdomena", placeholder: "twoja-firma", helpText: "Nazwa Twojego konta, np. 'twoja-firma' z twoja-firma.fakturownia.pl", type: "text", required: true },
   ],
   btp: [
-    { key: "username", label: "Nazwa użytkownika", placeholder: "Login do BTP.pro API", helpText: "Dane logowania do Client API na ext.btp.pro", type: "text", required: true },
-    { key: "password", label: "Hasło", placeholder: "Hasło do BTP.pro API", type: "password", required: true },
-    { key: "base_url", label: "Adres API", placeholder: "https://ext.btp.pro", helpText: "Domyślnie https://ext.btp.pro — zmień tylko jeśli masz dedykowaną instancję", type: "url", required: false },
+    { key: "username", label: "Klucz publiczny (login)", placeholder: "Twój klucz publiczny z panelu BTP", helpText: "Znajdziesz go w panelu B2B → Profil użytkownika → zakładka Klucze", type: "text", required: true },
+    { key: "password", label: "Klucz prywatny (hasło)", placeholder: "Twój klucz prywatny z panelu BTP", helpText: "Para kluczy służy do uwierzytelnienia Basic Auth w API BTP", type: "password", required: true },
+    { key: "base_url", label: "Adres API hurtowni", placeholder: "https://twoja-hurtownia.btp.pro", helpText: "Adres Swagger API Twojej hurtowni, np. https://nazwa.btp.pro", type: "url", required: false },
   ],
 };
 

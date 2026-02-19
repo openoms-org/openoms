@@ -6,12 +6,21 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import Image from "next/image";
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  FileText,
+  Info,
+  KeyRound,
+  Loader2,
+} from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
-import { IntegrationMethodSelector } from "@/components/suppliers/integration-method-selector";
 import { useCreateSupplier } from "@/hooks/use-suppliers";
 import { useCreateIntegration } from "@/hooks/use-integrations";
 import { getErrorMessage } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +43,7 @@ import {
 // Schemas
 // ---------------------------------------------------------------------------
 
-const supplierSchema = z.object({
+const fileSupplierSchema = z.object({
   name: z.string().min(1, "Nazwa jest wymagana"),
   code: z.string().optional(),
   feed_url: z.string().optional(),
@@ -42,9 +51,28 @@ const supplierSchema = z.object({
   sync_interval_minutes: z.number().min(5).max(1440).optional(),
 });
 
-type SupplierForm = z.infer<typeof supplierSchema>;
+type FileSupplierForm = z.infer<typeof fileSupplierSchema>;
 
-type Step = "method" | "file" | "api";
+type Step = "pick" | "file" | "btp";
+
+// ---------------------------------------------------------------------------
+// Provider cards for the picker
+// ---------------------------------------------------------------------------
+
+const providers = [
+  {
+    key: "btp" as const,
+    logo: "/logos/btp.svg",
+    name: "BTP.pro",
+    description: "Integracja API z hurtownią B2B na platformie BTP",
+  },
+  {
+    key: "file" as const,
+    icon: FileText,
+    name: "Plik / URL",
+    description: "Import produktów z pliku IOF, CSV lub zewnętrznego URL",
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Page
@@ -52,8 +80,7 @@ type Step = "method" | "file" | "api";
 
 export default function NewSupplierPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("method");
-  const [method, setMethod] = useState<"file" | "api" | null>(null);
+  const [step, setStep] = useState<Step>("pick");
 
   // --- File/URL form ---
   const createSupplier = useCreateSupplier();
@@ -62,39 +89,43 @@ export default function NewSupplierPage() {
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<SupplierForm>({
-    resolver: zodResolver(supplierSchema),
+  } = useForm<FileSupplierForm>({
+    resolver: zodResolver(fileSupplierSchema),
     defaultValues: { feed_format: "iof", sync_interval_minutes: 60 },
   });
 
-  const onFileSubmit = (data: SupplierForm) => {
+  const onFileSubmit = (data: FileSupplierForm) => {
     createSupplier.mutate(data, {
       onSuccess: () => {
-        toast.success("Dostawca zostal utworzony");
+        toast.success("Dostawca został utworzony");
         router.push("/suppliers");
       },
-      onError: (error) => {
-        toast.error(getErrorMessage(error));
-      },
+      onError: (error) => toast.error(getErrorMessage(error)),
     });
   };
 
-  // --- API (BTP) form ---
+  // --- BTP form ---
   const createIntegration = useCreateIntegration();
   const createSupplierApi = useCreateSupplier();
   const [btpName, setBtpName] = useState("");
-  const [btpApiKey, setBtpApiKey] = useState("");
-  const [btpApiUrl, setBtpApiUrl] = useState("https://api.btp.pro");
+  const [btpPublicKey, setBtpPublicKey] = useState("");
+  const [btpPrivateKey, setBtpPrivateKey] = useState("");
+  const [btpBaseUrl, setBtpBaseUrl] = useState("");
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [btpSubmitting, setBtpSubmitting] = useState(false);
 
-  const onApiSubmit = async (e: React.FormEvent) => {
+  const onBtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!btpName.trim()) {
       toast.error("Nazwa dostawcy jest wymagana");
       return;
     }
-    if (!btpApiKey.trim()) {
-      toast.error("Klucz API jest wymagany");
+    if (!btpPublicKey.trim()) {
+      toast.error("Klucz publiczny jest wymagany");
+      return;
+    }
+    if (!btpPrivateKey.trim()) {
+      toast.error("Klucz prywatny jest wymagany");
       return;
     }
 
@@ -104,8 +135,9 @@ export default function NewSupplierPage() {
         provider: "btp",
         label: btpName,
         credentials: {
-          api_key: btpApiKey,
-          api_url: btpApiUrl || "https://api.btp.pro",
+          username: btpPublicKey,
+          password: btpPrivateKey,
+          base_url: btpBaseUrl || undefined,
         },
       });
 
@@ -115,7 +147,7 @@ export default function NewSupplierPage() {
         integration_id: integration.id,
       });
 
-      toast.success("Dostawca BTP zostal utworzony");
+      toast.success("Dostawca BTP został utworzony");
       router.push("/suppliers");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -126,28 +158,22 @@ export default function NewSupplierPage() {
 
   // --- Navigation ---
   const handleBack = () => {
-    if (step === "method") {
+    if (step === "pick") {
       router.push("/suppliers");
     } else {
-      setStep("method");
+      setStep("pick");
     }
   };
 
-  const handleMethodSelect = (m: "file" | "api") => {
-    setMethod(m);
-    setStep(m);
-  };
-
-  // --- Titles ---
   const titles: Record<Step, string> = {
-    method: "Nowy dostawca",
+    pick: "Nowy dostawca",
     file: "Nowy dostawca — Plik / URL",
-    api: "Nowy dostawca — API (BTP.pro)",
+    btp: "Nowy dostawca — BTP.pro",
   };
 
   return (
     <AdminGuard>
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-3xl">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-4 w-4" />
@@ -157,22 +183,40 @@ export default function NewSupplierPage() {
           </h1>
         </div>
 
-        {/* ── Step 0: Method selection ── */}
-        {step === "method" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Wybierz metode integracji</CardTitle>
-              <CardDescription>
-                W jaki sposob chcesz pobierac produkty od dostawcy?
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <IntegrationMethodSelector
-                selected={method}
-                onSelect={handleMethodSelect}
-              />
-            </CardContent>
-          </Card>
+        {/* ── Step 0: Provider picker ── */}
+        {step === "pick" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {providers.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setStep(p.key === "btp" ? "btp" : "file")}
+                className="flex items-start gap-4 rounded-xl border p-4 text-left transition-colors hover:bg-muted/50"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  {"logo" in p && p.logo ? (
+                    <Image
+                      src={p.logo}
+                      alt={p.name}
+                      width={24}
+                      height={24}
+                      className="h-6 w-6 object-contain"
+                    />
+                  ) : (
+                    "icon" in p && p.icon && (
+                      <p.icon className="h-5 w-5 text-muted-foreground" />
+                    )
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium">{p.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {p.description}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
         )}
 
         {/* ── Step 1a: File / URL form ── */}
@@ -181,7 +225,7 @@ export default function NewSupplierPage() {
             <CardHeader>
               <CardTitle>Dane dostawcy</CardTitle>
               <CardDescription>
-                Dodaj dostawce importujacego produkty z pliku lub URL
+                Dodaj dostawcę importującego produkty z pliku lub URL
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -211,7 +255,7 @@ export default function NewSupplierPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="feed_url">URL feeda produktow</Label>
+                  <Label htmlFor="feed_url">URL feeda produktów</Label>
                   <Input
                     id="feed_url"
                     {...register("feed_url")}
@@ -239,7 +283,7 @@ export default function NewSupplierPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="sync_interval_minutes">
-                      Interwal synchronizacji (min)
+                      Interwał synchronizacji
                     </Label>
                     <Select
                       defaultValue="60"
@@ -251,10 +295,9 @@ export default function NewSupplierPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="5">Co 5 minut</SelectItem>
                         <SelectItem value="15">Co 15 minut</SelectItem>
                         <SelectItem value="30">Co 30 minut</SelectItem>
-                        <SelectItem value="60">Co 1 godzine</SelectItem>
+                        <SelectItem value="60">Co 1 godzinę</SelectItem>
                         <SelectItem value="120">Co 2 godziny</SelectItem>
                         <SelectItem value="360">Co 6 godzin</SelectItem>
                         <SelectItem value="720">Co 12 godzin</SelectItem>
@@ -263,14 +306,14 @@ export default function NewSupplierPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="flex gap-2 pt-4">
+                <div className="flex gap-2 pt-2">
                   <Button type="submit" disabled={createSupplier.isPending}>
-                    {createSupplier.isPending ? "Tworzenie..." : "Utworz dostawce"}
+                    {createSupplier.isPending ? "Tworzenie..." : "Utwórz dostawcę"}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setStep("method")}
+                    onClick={() => setStep("pick")}
                   >
                     Wstecz
                   </Button>
@@ -280,71 +323,161 @@ export default function NewSupplierPage() {
           </Card>
         )}
 
-        {/* ── Step 1b: API (BTP) form ── */}
-        {step === "api" && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Konfiguracja BTP.pro</CardTitle>
-              <CardDescription>
-                Podaj dane dostepowe do API hurtowni BTP
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={onApiSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="btp-name">Nazwa dostawcy *</Label>
-                  <Input
-                    id="btp-name"
-                    value={btpName}
-                    onChange={(e) => setBtpName(e.target.value)}
-                    placeholder="np. BTP Hurtownia XYZ"
-                  />
+        {/* ── Step 1b: BTP.pro ── */}
+        {step === "btp" && (
+          <div className="space-y-4">
+            {/* Connection instructions */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-base">Jak się połączyć</CardTitle>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  BTP.pro udostępnia API oparte o uwierzytelnianie{" "}
+                  <span className="font-medium text-foreground">Basic Auth</span>{" "}
+                  z parą kluczy: publicznym (login) i prywatnym (hasło).
+                </p>
                 <div className="space-y-2">
-                  <Label htmlFor="btp-api-key">Klucz API *</Label>
-                  <Input
-                    id="btp-api-key"
-                    type="password"
-                    value={btpApiKey}
-                    onChange={(e) => setBtpApiKey(e.target.value)}
-                    placeholder="Wklej klucz API z panelu BTP"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="btp-api-url">URL API</Label>
-                  <Input
-                    id="btp-api-url"
-                    value={btpApiUrl}
-                    onChange={(e) => setBtpApiUrl(e.target.value)}
-                    placeholder="https://api.btp.pro"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Domyslnie: https://api.btp.pro
+                  <p className="font-medium text-foreground">
+                    Aby uzyskać klucze:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 pl-1">
+                    <li>Zaloguj się do panelu B2B swojej hurtowni</li>
+                    <li>
+                      Przejdź do{" "}
+                      <span className="font-medium text-foreground">
+                        Profil użytkownika → zakładka Klucze
+                      </span>
+                    </li>
+                    <li>Skopiuj klucz publiczny i prywatny</li>
+                  </ol>
+                  <p className="text-xs">
+                    Jeśli zakładka Klucze nie jest widoczna, skontaktuj się z
+                    opiekunem handlowym — wymagane jest uprawnienie ClientApi.
                   </p>
                 </div>
-                <div className="flex gap-2 pt-4">
-                  <Button type="submit" disabled={btpSubmitting}>
-                    {btpSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Konfiguracja...
-                      </>
-                    ) : (
-                      "Utworz dostawce"
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep("method")}
-                    disabled={btpSubmitting}
-                  >
-                    Wstecz
-                  </Button>
+                <div className="rounded-lg border bg-muted/30 p-3 text-xs">
+                  <div className="flex items-center gap-1.5 font-medium text-foreground mb-1">
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Zalecane częstotliwości synchronizacji
+                  </div>
+                  <ul className="space-y-0.5 pl-5 list-disc">
+                    <li>Katalog produktów: 1–2 razy dziennie</li>
+                    <li>Stany magazynowe: 4–24 razy dziennie</li>
+                  </ul>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Credential form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Dane połączenia</CardTitle>
+                <CardDescription>
+                  Podaj klucze API z panelu B2B hurtowni
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={onBtpSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="btp-name">Nazwa dostawcy *</Label>
+                    <Input
+                      id="btp-name"
+                      value={btpName}
+                      onChange={(e) => setBtpName(e.target.value)}
+                      placeholder="np. Hurtownia XYZ (BTP)"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="btp-public-key">
+                      Klucz publiczny (login) *
+                    </Label>
+                    <Input
+                      id="btp-public-key"
+                      value={btpPublicKey}
+                      onChange={(e) => setBtpPublicKey(e.target.value)}
+                      placeholder="Twój klucz publiczny z panelu BTP"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Profil użytkownika → zakładka Klucze
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="btp-private-key">
+                      Klucz prywatny (hasło) *
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="btp-private-key"
+                        type={showPrivateKey ? "text" : "password"}
+                        className="pr-10"
+                        value={btpPrivateKey}
+                        onChange={(e) => setBtpPrivateKey(e.target.value)}
+                        placeholder="Twój klucz prywatny z panelu BTP"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => setShowPrivateKey((prev) => !prev)}
+                        tabIndex={-1}
+                        aria-label={
+                          showPrivateKey ? "Ukryj klucz" : "Pokaż klucz"
+                        }
+                      >
+                        {showPrivateKey ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="btp-base-url">
+                      Adres API hurtowni{" "}
+                      <span className="text-muted-foreground font-normal">
+                        (opcjonalnie)
+                      </span>
+                    </Label>
+                    <Input
+                      id="btp-base-url"
+                      type="url"
+                      value={btpBaseUrl}
+                      onChange={(e) => setBtpBaseUrl(e.target.value)}
+                      placeholder="https://twoja-hurtownia.btp.pro"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Adres Swagger API hurtowni. Pozostaw puste jeśli nie
+                      znasz — skonfigurujemy automatycznie.
+                    </p>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button type="submit" disabled={btpSubmitting}>
+                      {btpSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Łączenie...
+                        </>
+                      ) : (
+                        "Połącz i utwórz dostawcę"
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setStep("pick")}
+                      disabled={btpSubmitting}
+                    >
+                      Wstecz
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </AdminGuard>
