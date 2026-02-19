@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -131,14 +132,30 @@ func New(deps RouterDeps) *chi.Mux {
 		r.Get("/v1/docs", deps.Docs.ServeSwaggerUI)
 	}
 
-	// Serve uploaded files (public, cached)
+	// Serve uploaded files (authenticated, tenant-scoped)
 	fileServer := http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadDir)))
-	uploadFileHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=31536000")
-		fileServer.ServeHTTP(w, req)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+		uploadFileHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			// Extract tenant from the file path and verify it matches the authenticated tenant
+			pathParam := chi.URLParam(req, "*")
+			parts := strings.SplitN(pathParam, "/", 2)
+			if len(parts) < 2 {
+				http.NotFound(w, req)
+				return
+			}
+			fileTenantID := parts[0]
+			authTenantID := middleware.TenantIDFromContext(req.Context())
+			if fileTenantID != authTenantID.String() {
+				http.NotFound(w, req)
+				return
+			}
+			w.Header().Set("Cache-Control", "private, max-age=3600")
+			fileServer.ServeHTTP(w, req)
+		})
+		r.Get("/uploads/*", uploadFileHandler)
+		r.Head("/uploads/*", uploadFileHandler)
 	})
-	r.Get("/uploads/*", uploadFileHandler)
-	r.Head("/uploads/*", uploadFileHandler)
 
 	// Public auth routes — no JWT required, rate-limited
 	r.Route("/v1/auth", func(r chi.Router) {
@@ -161,6 +178,10 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Post("/disable", deps.Auth.TwoFADisable)
 			r.Get("/status", deps.Auth.TwoFAStatus)
 		})
+
+		// WebSocket ticket — JWT required, issues short-lived single-use ticket for WS connections
+		r.With(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist)).
+			Post("/ws-ticket", deps.Auth.WSTicket)
 	})
 
 	// Public config endpoint — no auth required

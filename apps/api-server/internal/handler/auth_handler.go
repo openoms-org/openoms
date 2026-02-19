@@ -15,6 +15,7 @@ import (
 type AuthHandler struct {
 	authService      *service.AuthService
 	invitationSvc    *service.InvitationService
+	wsTicketSvc      *service.WSTicketService
 	isDev            bool
 	registrationMode string // "open", "invite", "disabled"
 	tokenBlacklist   *middleware.TokenBlacklist
@@ -34,6 +35,10 @@ func (h *AuthHandler) SetRegistrationMode(mode string) {
 
 func (h *AuthHandler) SetInvitationService(svc *service.InvitationService) {
 	h.invitationSvc = svc
+}
+
+func (h *AuthHandler) SetWSTicketService(svc *service.WSTicketService) {
+	h.wsTicketSvc = svc
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -330,4 +335,23 @@ func (h *AuthHandler) clearRefreshCookie(w http.ResponseWriter) {
 		Secure:   !h.isDev,
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+// WSTicket issues a short-lived, single-use ticket for WebSocket connections.
+// This keeps the JWT access token out of URL query parameters and server/proxy logs.
+func (h *AuthHandler) WSTicket(w http.ResponseWriter, r *http.Request) {
+	// Get the access token from the Authorization header (already validated by JWTAuth middleware)
+	tokenStr := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if tokenStr == "" || h.wsTicketSvc == nil {
+		writeError(w, http.StatusInternalServerError, "ws tickets not configured")
+		return
+	}
+
+	ticket, err := h.wsTicketSvc.Issue(r.Context(), tokenStr)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create ws ticket")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"ticket": ticket})
 }

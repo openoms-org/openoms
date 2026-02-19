@@ -305,6 +305,16 @@ func main() {
 		slog.Info("using in-memory token blacklist")
 	}
 
+	// WebSocket ticket service (short-lived single-use tickets for WS connections)
+	var wsTicketSvc *service.WSTicketService
+	if redisClient != nil {
+		wsTicketSvc = service.NewWSTicketService(service.NewRedisWSTicketStore(redisClient))
+		slog.Info("using Redis WS ticket store")
+	} else {
+		wsTicketSvc = service.NewWSTicketService(service.NewMemoryWSTicketStore())
+		slog.Info("using in-memory WS ticket store")
+	}
+
 	// Initialize rate limiter
 	var rateLimiter middleware.RateLimiter
 	if redisClient != nil {
@@ -319,6 +329,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService, cfg.IsDevelopment(), tokenBlacklist)
 	authHandler.SetRegistrationMode(cfg.RegistrationMode)
 	authHandler.SetInvitationService(invitationService)
+	authHandler.SetWSTicketService(wsTicketSvc)
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
@@ -338,7 +349,15 @@ func main() {
 	inpostPointHandler := handler.NewInPostPointHandler(inpostClient)
 
 	// Allegro OAuth handler
-	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey)
+	var oauthStateStore handler.OAuthStateStore
+	if redisClient != nil {
+		oauthStateStore = handler.NewRedisOAuthStateStore(redisClient)
+		slog.Info("using Redis OAuth state store")
+	} else {
+		oauthStateStore = handler.NewMemoryOAuthStateStore()
+		slog.Info("using in-memory OAuth state store")
+	}
+	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
 
 	// Allegro fulfillment + tracking handler (Batch 1)
 	allegroHandler := handler.NewAllegroHandler(integrationService, orderService, encryptionKey)
@@ -438,7 +457,7 @@ func main() {
 	wsHub := ws.NewHub()
 	wsCtx, wsCancel := context.WithCancel(context.Background())
 	go wsHub.Run(wsCtx)
-	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, tokenBlacklist, cfg.FrontendURL)
+	wsHandler := handler.NewWSHandler(wsHub, tokenSvc, tokenBlacklist, wsTicketSvc, cfg.FrontendURL)
 
 	// Wire hub into webhook dispatch service for real-time events
 	webhookDispatchService.SetWSBroadcast(func(tenantID uuid.UUID, eventType string, payload any) {

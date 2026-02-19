@@ -6,10 +6,11 @@ import { useAuthStore } from "@/lib/auth";
 import { API_URL } from "@/lib/api-client";
 import type { WSEvent } from "@/types/api";
 
-// Convert http(s) to ws(s)
-function getWSUrl(token: string): string {
+// Convert http(s) to ws(s) with ticket-based or token-based auth
+function getWSUrl(param: string, isTicket: boolean): string {
   const base = API_URL.replace(/^http/, "ws");
-  return `${base}/v1/ws?token=${encodeURIComponent(token)}`;
+  const key = isTicket ? "ticket" : "token";
+  return `${base}/v1/ws?${key}=${encodeURIComponent(param)}`;
 }
 
 // Map event types to React Query cache keys to invalidate
@@ -52,7 +53,7 @@ export function useWebSocket(): UseWebSocketReturn {
   const token = useAuthStore((s) => s.token);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     // Re-read token from store to avoid stale closure value
     const freshToken = useAuthStore.getState().token;
     if (!freshToken || !isAuthenticated) return;
@@ -64,7 +65,24 @@ export function useWebSocket(): UseWebSocketReturn {
     }
 
     try {
-      const ws = new WebSocket(getWSUrl(freshToken));
+      // Try ticket-based auth first (keeps JWT out of URLs/logs)
+      let wsUrl: string;
+      try {
+        const resp = await fetch(`${API_URL}/v1/auth/ws-ticket`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${freshToken}` },
+        });
+        if (resp.ok) {
+          const { ticket } = await resp.json();
+          wsUrl = getWSUrl(ticket, true);
+        } else {
+          wsUrl = getWSUrl(freshToken, false);
+        }
+      } catch {
+        wsUrl = getWSUrl(freshToken, false);
+      }
+
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
