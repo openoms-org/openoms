@@ -114,6 +114,7 @@ func New(deps RouterDeps) *chi.Mux {
 	r.Use(middleware.Logging)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS([]string{deps.Config.FrontendURL}))
+	r.Use(middleware.CSRF(!deps.Config.IsDevelopment()))
 
 	// Health check — no auth, no tenant required
 	healthHandler := &handler.HealthHandler{DB: deps.Pool}
