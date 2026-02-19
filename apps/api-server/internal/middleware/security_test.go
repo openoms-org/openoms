@@ -185,3 +185,40 @@ func TestSecurity_CSRF_ExemptEndpointPassesWithoutToken(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rr.Code, "exempt endpoint %s should pass", ep)
 	}
 }
+
+func TestSecurity_CORS_AllowedOriginReflected(t *testing.T) {
+	handler := middleware.CORS([]string{"https://app.openoms.org"})(okHandler())
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Origin", "https://app.openoms.org")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, "https://app.openoms.org", rr.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestSecurity_CORS_DisallowedOriginBlocked(t *testing.T) {
+	handler := middleware.CORS([]string{"https://app.openoms.org"})(okHandler())
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Origin", "https://evil.com")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Empty(t, rr.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestSecurity_CORS_NullOriginBlocked(t *testing.T) {
+	handler := middleware.CORS([]string{"https://app.openoms.org"})(okHandler())
+	req := httptest.NewRequest("GET", "/", nil)
+	req.Header.Set("Origin", "null")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Empty(t, rr.Header().Get("Access-Control-Allow-Origin"))
+}
+
+func TestSecurity_CORS_PreflightReturns204(t *testing.T) {
+	handler := middleware.CORS([]string{"https://app.openoms.org"})(okHandler())
+	req := httptest.NewRequest("OPTIONS", "/v1/orders", nil)
+	req.Header.Set("Origin", "https://app.openoms.org")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusNoContent, rr.Code)
+	assert.Contains(t, rr.Header().Get("Access-Control-Allow-Headers"), "X-CSRF-Token")
+}
