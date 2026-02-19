@@ -198,6 +198,31 @@ jobs:
         working-directory: packages/order-engine
         run: go test ./...
 
+  security-tests:
+    name: Security Tests
+    needs: [test]
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Run security tests
+        working-directory: apps/api-server
+        env:
+          REDIS_URL: redis://localhost:6379
+        run: go test -race -run 'TestSecurity_' -v ./internal/middleware/ ./internal/handler/
+
   vet:
     name: Vet
     runs-on: ubuntu-latest
@@ -255,7 +280,7 @@ jobs:
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [lint, test, vet, frontend]
+    needs: [lint, test, security-tests, vet, frontend]
     steps:
       - uses: actions/checkout@v4
 
