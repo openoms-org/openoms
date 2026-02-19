@@ -34,20 +34,25 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 	}
 	defer r.Body.Close()
 
-	// Verify signature if webhook secret is configured
-	if h.webhookSecret != "" {
-		signature := r.Header.Get("X-InPost-Signature")
-		if signature == "" {
-			slog.Warn("inpost webhook: missing signature header")
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	// Reject requests if webhook secret is not configured
+	if h.webhookSecret == "" {
+		slog.Warn("inpost webhook: webhook secret not configured, rejecting request")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
 
-		if err := inpostsdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
-			slog.Warn("inpost webhook: invalid signature", "error", err)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	// Verify HMAC-SHA256 signature
+	signature := r.Header.Get("X-InPost-Signature")
+	if signature == "" {
+		slog.Warn("inpost webhook: missing signature header")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if err := inpostsdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
+		slog.Warn("inpost webhook: invalid signature", "error", err)
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 
 	// Parse the webhook event
