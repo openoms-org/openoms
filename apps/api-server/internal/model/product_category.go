@@ -16,18 +16,18 @@ import (
 const MaxCategoryDepth = 5
 
 type ProductCategory struct {
-	ID        uuid.UUID          `json:"id"`
-	TenantID  uuid.UUID          `json:"tenant_id"`
-	ParentID  *uuid.UUID         `json:"parent_id,omitempty"`
-	Name      string             `json:"name"`
-	Slug      string             `json:"slug"`
-	Color     string             `json:"color"`
-	Icon      *string            `json:"icon,omitempty"`
-	Position  int                `json:"position"`
-	Depth     int                `json:"depth"`
-	Children  []ProductCategory  `json:"children,omitempty"`
-	CreatedAt time.Time          `json:"created_at"`
-	UpdatedAt time.Time          `json:"updated_at"`
+	ID        uuid.UUID         `json:"id"`
+	TenantID  uuid.UUID         `json:"tenant_id"`
+	ParentID  *uuid.UUID        `json:"parent_id,omitempty"`
+	Name      string            `json:"name"`
+	Slug      string            `json:"slug"`
+	Color     string            `json:"color"`
+	Icon      *string           `json:"icon,omitempty"`
+	Position  int               `json:"position"`
+	Depth     int               `json:"depth"`
+	Children  []ProductCategory `json:"children,omitempty"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 type CreateCategoryRequest struct {

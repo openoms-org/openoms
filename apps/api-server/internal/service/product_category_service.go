@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -180,10 +181,8 @@ func (s *ProductCategoryService) Update(ctx context.Context, tenantID, actorID, 
 				if err != nil {
 					return err
 				}
-				for _, did := range descendantIDs {
-					if did == newParentID {
-						return ErrCircularReference
-					}
+				if slices.Contains(descendantIDs, newParentID) {
+					return ErrCircularReference
 				}
 
 				parent, err := s.categoryRepo.FindByID(ctx, tx, newParentID)
