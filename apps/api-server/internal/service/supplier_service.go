@@ -27,18 +27,22 @@ var (
 )
 
 type SupplierService struct {
-	supplierRepo     repository.SupplierRepo
-	supplierProdRepo repository.SupplierProductRepo
-	auditRepo        repository.AuditRepo
-	pool             *pgxpool.Pool
-	webhookDispatch  *WebhookDispatchService
-	integrationSvc   *IntegrationService
-	logger           *slog.Logger
+	supplierRepo        repository.SupplierRepo
+	supplierProdRepo    repository.SupplierProductRepo
+	categoryMappingRepo repository.SupplierCategoryMappingRepo
+	categoryRepo        repository.ProductCategoryRepo
+	auditRepo           repository.AuditRepo
+	pool                *pgxpool.Pool
+	webhookDispatch     *WebhookDispatchService
+	integrationSvc      *IntegrationService
+	logger              *slog.Logger
 }
 
 func NewSupplierService(
 	supplierRepo repository.SupplierRepo,
 	supplierProdRepo repository.SupplierProductRepo,
+	categoryMappingRepo repository.SupplierCategoryMappingRepo,
+	categoryRepo repository.ProductCategoryRepo,
 	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
@@ -46,13 +50,15 @@ func NewSupplierService(
 	logger *slog.Logger,
 ) *SupplierService {
 	return &SupplierService{
-		supplierRepo:     supplierRepo,
-		supplierProdRepo: supplierProdRepo,
-		auditRepo:        auditRepo,
-		pool:             pool,
-		webhookDispatch:  webhookDispatch,
-		integrationSvc:   integrationSvc,
-		logger:           logger,
+		supplierRepo:        supplierRepo,
+		supplierProdRepo:    supplierProdRepo,
+		categoryMappingRepo: categoryMappingRepo,
+		categoryRepo:        categoryRepo,
+		auditRepo:           auditRepo,
+		pool:                pool,
+		webhookDispatch:     webhookDispatch,
+		integrationSvc:      integrationSvc,
+		logger:              logger,
 	}
 }
 
@@ -358,6 +364,7 @@ func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID u
 			SKU:           fp.SKU,
 			Price:         fp.Price,
 			StockQuantity: fp.Stock,
+			Category:      fp.Category,
 			Attributes:    fp.Attributes,
 		}
 	}
@@ -365,9 +372,26 @@ func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID u
 	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products)
 }
 
-// upsertSupplierProducts inserts or updates supplier products and auto-links by EAN.
+// upsertSupplierProducts inserts or updates supplier products, auto-links by EAN,
+// and resolves category mappings.
 func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, supplierID uuid.UUID, products []integration.SupplierProduct) error {
 	syncedAt := time.Now()
+
+	// Fetch supplier's default category for fallback
+	var defaultCategoryID *uuid.UUID
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier != nil {
+			defaultCategoryID = supplier.DefaultCategoryID
+		}
+		return nil
+	}); err != nil {
+		s.logger.Error("failed to fetch supplier default category", "supplier_id", supplierID, "error", err)
+	}
+
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for _, fp := range products {
 			attrs, _ := json.Marshal(fp.Attributes)
@@ -384,18 +408,24 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 				price = &fp.Price
 			}
 
+			var sourceCategory *string
+			if fp.Category != "" {
+				sourceCategory = &fp.Category
+			}
+
 			sp := &model.SupplierProduct{
-				ID:            uuid.New(),
-				TenantID:      tenantID,
-				SupplierID:    supplierID,
-				ExternalID:    fp.ExternalID,
-				Name:          fp.Name,
-				EAN:           ean,
-				SKU:           sku,
-				Price:         price,
-				StockQuantity: fp.StockQuantity,
-				Metadata:      attrs,
-				LastSyncedAt:  &syncedAt,
+				ID:             uuid.New(),
+				TenantID:       tenantID,
+				SupplierID:     supplierID,
+				ExternalID:     fp.ExternalID,
+				Name:           fp.Name,
+				EAN:            ean,
+				SKU:            sku,
+				Price:          price,
+				StockQuantity:  fp.StockQuantity,
+				SourceCategory: sourceCategory,
+				Metadata:       attrs,
+				LastSyncedAt:   &syncedAt,
 			}
 
 			if err := s.supplierProdRepo.UpsertByExternalID(ctx, tx, sp); err != nil {
@@ -417,6 +447,19 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 					}
 				}
 			}
+
+			// Resolve category and update linked product if available
+			if sp.ProductID != nil && fp.Category != "" {
+				categoryID := s.resolveCategoryForProduct(ctx, tx, supplierID, fp.Category, defaultCategoryID)
+				if categoryID != nil {
+					if _, err := tx.Exec(ctx,
+						"UPDATE products SET category_id = $1 WHERE id = $2 AND category_id IS NULL",
+						*categoryID, *sp.ProductID); err != nil {
+						s.logger.Error("failed to set product category",
+							"product_id", sp.ProductID, "category_id", categoryID, "error", err)
+					}
+				}
+			}
 		}
 
 		return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, syncedAt, nil)
@@ -429,4 +472,123 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 	s.logger.Info("supplier feed synced",
 		"supplier_id", supplierID, "products_count", len(products))
 	return nil
+}
+
+// ListCategoryMappings returns all category mappings for a supplier.
+func (s *SupplierService) ListCategoryMappings(ctx context.Context, tenantID, supplierID uuid.UUID) ([]model.SupplierCategoryMapping, error) {
+	var mappings []model.SupplierCategoryMapping
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+		mappings, err = s.categoryMappingRepo.ListBySupplier(ctx, tx, supplierID)
+		return err
+	})
+	if mappings == nil {
+		mappings = []model.SupplierCategoryMapping{}
+	}
+	return mappings, err
+}
+
+// UpsertCategoryMapping creates or updates a category mapping for a supplier.
+func (s *SupplierService) UpsertCategoryMapping(ctx context.Context, tenantID, supplierID uuid.UUID, req model.UpsertCategoryMappingRequest) (*model.SupplierCategoryMapping, error) {
+	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	m := &model.SupplierCategoryMapping{
+		ID:             uuid.New(),
+		TenantID:       tenantID,
+		SupplierID:     supplierID,
+		SourceCategory: req.SourceCategory,
+		CategoryID:     req.CategoryID,
+		AutoMatched:    false,
+		Confirmed:      req.Confirmed,
+	}
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+		return s.categoryMappingRepo.Upsert(ctx, tx, m)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// DeleteCategoryMapping removes a category mapping.
+func (s *SupplierService) DeleteCategoryMapping(ctx context.Context, tenantID, supplierID, mappingID uuid.UUID) error {
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+		return s.categoryMappingRepo.Delete(ctx, tx, mappingID)
+	})
+}
+
+// resolveCategoryForProduct resolves a category_id for a supplier product based on:
+// 1. Confirmed mapping for the source_category
+// 2. Auto-matched mapping (fuzzy match against existing categories)
+// 3. Supplier's default_category_id
+func (s *SupplierService) resolveCategoryForProduct(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, sourceCategory string, defaultCategoryID *uuid.UUID) *uuid.UUID {
+	if sourceCategory == "" {
+		return defaultCategoryID
+	}
+
+	// Check existing mapping
+	mapping, err := s.categoryMappingRepo.FindBySourceCategory(ctx, tx, supplierID, sourceCategory)
+	if err != nil {
+		s.logger.Error("failed to find category mapping", "supplier_id", supplierID, "source_category", sourceCategory, "error", err)
+		return defaultCategoryID
+	}
+
+	if mapping != nil && mapping.CategoryID != nil {
+		return mapping.CategoryID
+	}
+
+	// No mapping yet — try fuzzy match
+	if mapping == nil {
+		matches, err := s.categoryRepo.FuzzyMatch(ctx, tx, sourceCategory)
+		if err != nil {
+			s.logger.Error("failed to fuzzy match category", "source_category", sourceCategory, "error", err)
+			return defaultCategoryID
+		}
+
+		// Create auto-matched mapping
+		autoMapping := &model.SupplierCategoryMapping{
+			ID:             uuid.New(),
+			TenantID:       uuid.UUID{}, // Set by RLS context
+			SupplierID:     supplierID,
+			SourceCategory: sourceCategory,
+			AutoMatched:    true,
+			Confirmed:      false,
+		}
+		if len(matches) > 0 {
+			autoMapping.CategoryID = &matches[0].ID
+		}
+		// Best-effort: don't fail sync if mapping creation fails
+		if err := s.categoryMappingRepo.Upsert(ctx, tx, autoMapping); err != nil {
+			s.logger.Error("failed to create auto-matched mapping", "source_category", sourceCategory, "error", err)
+		}
+
+		if len(matches) > 0 {
+			return &matches[0].ID
+		}
+	}
+
+	return defaultCategoryID
 }

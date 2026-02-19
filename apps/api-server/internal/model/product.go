@@ -169,10 +169,13 @@ func (r *UpdateProductRequest) Validate() error {
 }
 
 type ProductListFilter struct {
-	Name     *string
-	SKU      *string
-	Tag      *string
-	Category *string
-	Search   *string
+	Name        *string
+	SKU         *string
+	Tag         *string
+	Category    *string
+	CategoryIDs []uuid.UUID // includes target category + all descendants
+	SupplierID  *uuid.UUID
+	Source      *string
+	Search      *string
 	PaginationParams
 }

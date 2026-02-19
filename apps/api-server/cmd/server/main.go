@@ -179,6 +179,8 @@ func main() {
 	returnRepo := repository.NewReturnRepository()
 	invoiceRepo := repository.NewInvoiceRepository()
 	supplierRepo := repository.NewSupplierRepository()
+	productCategoryRepo := repository.NewProductCategoryRepository()
+	supplierCategoryMappingRepo := repository.NewSupplierCategoryMappingRepository()
 	supplierProductRepo := repository.NewSupplierProductRepository()
 	variantRepo := repository.NewVariantRepository()
 	syncJobRepo := repository.NewSyncJobRepository()
@@ -247,7 +249,8 @@ func main() {
 	allegroSyncService := service.NewAllegroSyncService(integrationService)
 	orderService.SetAllegroSyncService(allegroSyncService)
 	shipmentService.SetAllegroSyncService(allegroSyncService)
-	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
+	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, productCategoryRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
+	productCategoryService := service.NewProductCategoryService(productCategoryRepo, auditRepo, pool)
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
 	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, tenantRepo, pool)
 	orderGroupService := service.NewOrderGroupService(orderGroupRepo, orderRepo, auditRepo, pool)
@@ -346,13 +349,13 @@ func main() {
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
 	productImportService := service.NewProductImportService(productRepo, auditRepo, pool)
-	productHandler := handler.NewProductHandler(productService, productImportService)
+	productHandler := handler.NewProductHandler(productService, productImportService, productCategoryService)
 	integrationHandler := handler.NewIntegrationHandler(integrationService, integrationRepo, pool)
 	returnHandler := handler.NewReturnHandler(returnService)
 	webhookHandler := handler.NewWebhookHandler(webhookService)
 	statsHandler := handler.NewStatsHandler(statsService)
 	uploadHandler := handler.NewUploadHandler(objectStorage, cfg.MaxUploadSize)
-	settingsHandler := handler.NewSettingsHandler(tenantRepo, auditRepo, emailService, smsService, pool)
+	settingsHandler := handler.NewSettingsHandler(tenantRepo, auditRepo, productCategoryRepo, emailService, smsService, pool)
 	auditHandler := handler.NewAuditHandler(auditRepo, pool)
 	webhookDeliveryHandler := handler.NewWebhookDeliveryHandler(webhookDeliveryRepo, pool)
 
@@ -430,6 +433,7 @@ func main() {
 
 	// Supplier handler
 	supplierHandler := handler.NewSupplierHandler(supplierService)
+	productCategoryHandler := handler.NewProductCategoryHandler(productCategoryService)
 
 	// Import service & handler
 	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool)
@@ -477,7 +481,7 @@ func main() {
 	})
 
 	// AI service & handler (Phase 33)
-	aiService := service.NewAIService(cfg.OpenAIAPIKey, cfg.OpenAIModel, productRepo, tenantRepo, pool)
+	aiService := service.NewAIService(cfg.OpenAIAPIKey, cfg.OpenAIModel, productRepo, tenantRepo, productCategoryRepo, pool)
 	aiHandler := handler.NewAIHandler(aiService)
 	if cfg.OpenAIAPIKey != "" {
 		slog.Info("AI auto-categorization enabled", "model", cfg.OpenAIModel)
@@ -623,6 +627,7 @@ func main() {
 		AmazonAuth:        amazonAuthHandler,
 		StoreAuth:         storeAuthHandler,
 		Supplier:          supplierHandler,
+		Category:          productCategoryHandler,
 		Invoice:           invoiceHandler,
 		Automation:        automationHandler,
 		Workflow:          workflowHandler,

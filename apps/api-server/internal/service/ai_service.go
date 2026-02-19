@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -25,9 +26,10 @@ type AIService struct {
 	model      string
 	httpClient *http.Client
 
-	productRepo repository.ProductRepo
-	tenantRepo  repository.TenantRepo
-	pool        *pgxpool.Pool
+	productRepo  repository.ProductRepo
+	tenantRepo   repository.TenantRepo
+	categoryRepo repository.ProductCategoryRepo
+	pool         *pgxpool.Pool
 }
 
 type chatMessage struct {
@@ -51,14 +53,15 @@ type chatResponse struct {
 
 // NewAIService creates a new AI service. If apiKey is empty the service will
 // return ErrAINotConfigured on every call.
-func NewAIService(apiKey, model string, productRepo repository.ProductRepo, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *AIService {
+func NewAIService(apiKey, model string, productRepo repository.ProductRepo, tenantRepo repository.TenantRepo, categoryRepo repository.ProductCategoryRepo, pool *pgxpool.Pool) *AIService {
 	return &AIService{
-		apiKey:      apiKey,
-		model:       model,
-		httpClient:  netutil.SafeHTTPClient(60 * time.Second),
-		productRepo: productRepo,
-		tenantRepo:  tenantRepo,
-		pool:        pool,
+		apiKey:       apiKey,
+		model:        model,
+		httpClient:   netutil.SafeHTTPClient(60 * time.Second),
+		productRepo:  productRepo,
+		tenantRepo:   tenantRepo,
+		categoryRepo: categoryRepo,
+		pool:         pool,
 	}
 }
 
@@ -122,38 +125,20 @@ func (s *AIService) callOpenAI(ctx context.Context, systemPrompt, userPrompt str
 
 // SuggestCategories returns a list of suggested category keys for a product.
 func (s *AIService) SuggestCategories(ctx context.Context, tenantID uuid.UUID, productName, productDescription string) ([]string, error) {
-	// Fetch existing tenant categories to constrain the suggestion
-	var categoriesJSON []byte
+	// Fetch existing tenant categories from product_categories table
+	var existingCats []string
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
+		categories, err := s.categoryRepo.List(ctx, tx, model.CategoryListFilter{})
 		if err != nil {
 			return err
 		}
-		categoriesJSON = settings
+		for _, c := range categories {
+			existingCats = append(existingCats, c.Slug+":"+c.Name)
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-
-	var existingCats []string
-	if categoriesJSON != nil {
-		var allSettings map[string]json.RawMessage
-		if err := json.Unmarshal(categoriesJSON, &allSettings); err == nil {
-			if raw, ok := allSettings["product_categories"]; ok {
-				var cfg struct {
-					Categories []struct {
-						Key   string `json:"key"`
-						Label string `json:"label"`
-					} `json:"categories"`
-				}
-				if err := json.Unmarshal(raw, &cfg); err == nil {
-					for _, c := range cfg.Categories {
-						existingCats = append(existingCats, c.Key+":"+c.Label)
-					}
-				}
-			}
-		}
 	}
 
 	catList := "brak zdefiniowanych kategorii"

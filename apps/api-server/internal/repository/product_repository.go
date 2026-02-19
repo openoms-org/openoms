@@ -41,6 +41,21 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		args = append(args, *filter.Category)
 		argIdx++
 	}
+	if len(filter.CategoryIDs) > 0 {
+		conditions = append(conditions, fmt.Sprintf("category_id = ANY($%d)", argIdx))
+		args = append(args, filter.CategoryIDs)
+		argIdx++
+	}
+	if filter.SupplierID != nil {
+		conditions = append(conditions, fmt.Sprintf("dropship_supplier_id = $%d", argIdx))
+		args = append(args, *filter.SupplierID)
+		argIdx++
+	}
+	if filter.Source != nil {
+		conditions = append(conditions, fmt.Sprintf("source = $%d", argIdx))
+		args = append(args, *filter.Source)
+		argIdx++
+	}
 	if filter.Search != nil {
 		conditions = append(conditions, fmt.Sprintf("(name ILIKE '%%' || $%d || '%%' OR sku ILIKE '%%' || $%d || '%%' OR ean ILIKE '%%' || $%d || '%%')", argIdx, argIdx, argIdx))
 		args = append(args, *filter.Search)

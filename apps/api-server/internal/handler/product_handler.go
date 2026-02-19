@@ -20,12 +20,14 @@ import (
 type ProductHandler struct {
 	productService       *service.ProductService
 	productImportService *service.ProductImportService
+	categorySvc          *service.ProductCategoryService
 }
 
-func NewProductHandler(productService *service.ProductService, productImportService *service.ProductImportService) *ProductHandler {
+func NewProductHandler(productService *service.ProductService, productImportService *service.ProductImportService, categorySvc *service.ProductCategoryService) *ProductHandler {
 	return &ProductHandler{
 		productService:       productService,
 		productImportService: productImportService,
+		categorySvc:          categorySvc,
 	}
 }
 
@@ -50,6 +52,36 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	if s := r.URL.Query().Get("search"); s != "" {
 		filter.Search = &s
+	}
+	if cid := r.URL.Query().Get("category_id"); cid != "" {
+		id, err := uuid.Parse(cid)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid category_id")
+			return
+		}
+		// Resolve category + all descendants for hierarchical filtering
+		if h.categorySvc != nil {
+			ids, err := h.categorySvc.GetDescendantIDs(r.Context(), tenantID, id)
+			if err != nil {
+				slog.Error("failed to resolve category descendants", "error", err)
+				filter.CategoryIDs = []uuid.UUID{id}
+			} else {
+				filter.CategoryIDs = ids
+			}
+		} else {
+			filter.CategoryIDs = []uuid.UUID{id}
+		}
+	}
+	if sid := r.URL.Query().Get("supplier_id"); sid != "" {
+		id, err := uuid.Parse(sid)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid supplier_id")
+			return
+		}
+		filter.SupplierID = &id
+	}
+	if src := r.URL.Query().Get("source"); src != "" {
+		filter.Source = &src
 	}
 
 	products, total, err := h.productService.List(r.Context(), tenantID, filter)

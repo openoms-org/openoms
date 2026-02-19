@@ -225,3 +225,84 @@ func (h *SupplierHandler) LinkProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "product linked"})
 }
+
+func (h *SupplierHandler) ListCategoryMappings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	mappings, err := h.supplierService.ListCategoryMappings(r.Context(), tenantID, supplierID)
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to list category mappings")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, mappings)
+}
+
+func (h *SupplierHandler) UpsertCategoryMapping(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.UpsertCategoryMappingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	mapping, err := h.supplierService.UpsertCategoryMapping(r.Context(), tenantID, supplierID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to upsert category mapping")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, mapping)
+}
+
+func (h *SupplierHandler) DeleteCategoryMapping(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	mappingID, err := uuid.Parse(chi.URLParam(r, "mid"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid mapping ID")
+		return
+	}
+
+	err = h.supplierService.DeleteCategoryMapping(r.Context(), tenantID, supplierID, mappingID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to delete category mapping")
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

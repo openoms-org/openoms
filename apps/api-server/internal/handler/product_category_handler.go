@@ -1,0 +1,172 @@
+package handler
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+)
+
+type ProductCategoryHandler struct {
+	categorySvc *service.ProductCategoryService
+}
+
+func NewProductCategoryHandler(categorySvc *service.ProductCategoryService) *ProductCategoryHandler {
+	return &ProductCategoryHandler{categorySvc: categorySvc}
+}
+
+func (h *ProductCategoryHandler) List(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	filter := model.CategoryListFilter{}
+	if r.URL.Query().Get("tree") == "true" {
+		filter.IncludeTree = true
+	}
+	if parentIDStr := r.URL.Query().Get("parent_id"); parentIDStr != "" {
+		parentID, err := uuid.Parse(parentIDStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid parent_id")
+			return
+		}
+		filter.ParentID = &parentID
+	}
+
+	categories, err := h.categorySvc.List(r.Context(), tenantID, filter)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list categories")
+		return
+	}
+
+	if categories == nil {
+		categories = []model.ProductCategory{}
+	}
+	writeJSON(w, http.StatusOK, categories)
+}
+
+func (h *ProductCategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid category ID")
+		return
+	}
+
+	category, err := h.categorySvc.Get(r.Context(), tenantID, id)
+	if err != nil {
+		if errors.Is(err, service.ErrCategoryNotFound) {
+			writeError(w, http.StatusNotFound, "category not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to get category")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, category)
+}
+
+func (h *ProductCategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var req model.CreateCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	category, err := h.categorySvc.Create(r.Context(), tenantID, actorID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrCategoryNotFound):
+			writeError(w, http.StatusBadRequest, "parent category not found")
+		case errors.Is(err, service.ErrCategoryDepthLimit):
+			writeError(w, http.StatusBadRequest, "maximum category depth exceeded")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to create category")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, category)
+}
+
+func (h *ProductCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid category ID")
+		return
+	}
+
+	var req model.UpdateCategoryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	category, err := h.categorySvc.Update(r.Context(), tenantID, actorID, id, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrCategoryNotFound):
+			writeError(w, http.StatusNotFound, "category not found")
+		case errors.Is(err, service.ErrCategoryDepthLimit):
+			writeError(w, http.StatusBadRequest, "maximum category depth exceeded")
+		case errors.Is(err, service.ErrCircularReference):
+			writeError(w, http.StatusBadRequest, "circular parent reference detected")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to update category")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, category)
+}
+
+func (h *ProductCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid category ID")
+		return
+	}
+
+	err = h.categorySvc.Delete(r.Context(), tenantID, actorID, id)
+	if err != nil {
+		if errors.Is(err, service.ErrCategoryNotFound) {
+			writeError(w, http.StatusNotFound, "category not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to delete category")
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *ProductCategoryHandler) ListDescendants(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid category ID")
+		return
+	}
+
+	ids, err := h.categorySvc.GetDescendantIDs(r.Context(), tenantID, id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get descendants")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ids": ids})
+}

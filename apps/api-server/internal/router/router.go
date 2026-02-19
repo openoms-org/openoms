@@ -100,6 +100,7 @@ type RouterDeps struct {
 	StoreAuth         *handler.StoreAuthHandler
 	PublicConfig      *handler.ConfigHandler
 	Invitation        *handler.InvitationHandler
+	Category          *handler.ProductCategoryHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -618,6 +619,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/sync", deps.Supplier.Sync)
 				r.Get("/{id}/products", deps.Supplier.ListProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
+				r.Get("/{id}/category-mappings", deps.Supplier.ListCategoryMappings)
+				r.Put("/{id}/category-mappings", deps.Supplier.UpsertCategoryMapping)
+				r.Delete("/{id}/category-mappings/{mid}", deps.Supplier.DeleteCategoryMapping)
 
 				// Supplier portal management
 				if deps.SupplierPortal != nil {
@@ -626,6 +630,19 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Get("/{id}/portal/status", deps.SupplierPortal.GetPortalStatus)
 				}
 			})
+
+			// Product Categories — admin only
+			if deps.Category != nil {
+				r.Route("/categories", func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Get("/", deps.Category.List)
+					r.Post("/", deps.Category.Create)
+					r.Get("/{id}", deps.Category.Get)
+					r.Patch("/{id}", deps.Category.Update)
+					r.Delete("/{id}", deps.Category.Delete)
+					r.Get("/{id}/descendants", deps.Category.ListDescendants)
+				})
+			}
 
 			// Purchase Orders — any authenticated user can view, admin/manager can create/edit
 			r.Route("/purchase-orders", func(r chi.Router) {

@@ -329,6 +329,7 @@ export interface Product {
   metadata?: Record<string, unknown>;
   tags: string[];
   category?: string;
+  category_id?: string;
   description_short: string;
   description_long: string;
   weight?: number;
@@ -395,6 +396,9 @@ export interface ProductListParams extends PaginationParams {
   sku?: string;
   tag?: string;
   category?: string;
+  category_id?: string;
+  supplier_id?: string;
+  source?: string;
   search?: string;
 }
 
@@ -668,7 +672,7 @@ export interface CustomFieldsConfig {
   fields: CustomFieldDef[];
 }
 
-// === Product Categories Config ===
+// === Product Categories Config (legacy flat) ===
 export interface CategoryDef {
   key: string;
   label: string;
@@ -678,6 +682,54 @@ export interface CategoryDef {
 
 export interface ProductCategoriesConfig {
   categories: CategoryDef[];
+}
+
+// === Product Categories (hierarchical) ===
+export interface ProductCategory {
+  id: string;
+  tenant_id: string;
+  parent_id?: string;
+  name: string;
+  slug: string;
+  color: string;
+  icon?: string;
+  position: number;
+  depth: number;
+  children?: ProductCategory[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCategoryRequest {
+  name: string;
+  parent_id?: string;
+  color?: string;
+  icon?: string;
+}
+
+export interface UpdateCategoryRequest {
+  name?: string;
+  parent_id?: string;
+  color?: string;
+  icon?: string;
+  position?: number;
+}
+
+export interface SupplierCategoryMapping {
+  id: string;
+  tenant_id: string;
+  supplier_id: string;
+  source_category: string;
+  category_id?: string;
+  auto_matched: boolean;
+  confirmed: boolean;
+  created_at: string;
+}
+
+export interface UpsertCategoryMappingRequest {
+  source_category: string;
+  category_id?: string;
+  confirmed: boolean;
 }
 
 // === InPost Points ===
@@ -769,6 +821,7 @@ export interface Supplier {
   error_message?: string;
   portal_enabled: boolean;
   integration_id?: string;
+  default_category_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -824,6 +877,7 @@ export interface SupplierProduct {
   sku?: string;
   price?: number;
   stock_quantity: number;
+  source_category?: string;
   metadata: Record<string, unknown>;
   last_synced_at?: string;
   created_at: string;
@@ -849,6 +903,7 @@ export interface UpdateSupplierRequest {
   status?: string;
   settings?: Record<string, unknown>;
   error_message?: string;
+  default_category_id?: string;
 }
 
 export interface SupplierListParams extends PaginationParams {

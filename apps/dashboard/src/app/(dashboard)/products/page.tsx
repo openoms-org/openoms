@@ -20,14 +20,27 @@ import {
 } from "@/components/ui/select";
 import { DensityToggle } from "@/components/shared/density-toggle";
 import { useProducts } from "@/hooks/use-products";
-import { useProductCategories } from "@/hooks/use-product-categories";
+import { useSuppliers } from "@/hooks/use-suppliers";
+import { useCategoryTree } from "@/hooks/use-categories";
+import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { apiClient } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Product } from "@/types/api";
+import type { Product, ProductCategory } from "@/types/api";
 
 const DEFAULT_LIMIT = 20;
+
+function findCategoryById(categories: ProductCategory[], id: string): ProductCategory | undefined {
+  for (const cat of categories) {
+    if (cat.id === id) return cat;
+    if (cat.children?.length) {
+      const found = findCategoryById(cat.children, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
 
 export default function ProductsPage() {
   const queryClient = useQueryClient();
@@ -35,7 +48,9 @@ export default function ProductsPage() {
   const [localTagFilter, setLocalTagFilter] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const tagDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryIdFilter, setCategoryIdFilter] = useState<string | undefined>(undefined);
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -72,14 +87,17 @@ export default function ProductsPage() {
     };
   }, []);
 
-  const { data: categoriesConfig } = useProductCategories();
+  const { data: categoryTree } = useCategoryTree();
+  const { data: suppliersData } = useSuppliers({ limit: 100 });
 
   const { data, isLoading, isError, refetch } = useProducts({
     ...pagination,
     search: search || undefined,
     name: search || undefined,
     tag: tagFilter || undefined,
-    category: categoryFilter || undefined,
+    category_id: categoryIdFilter || undefined,
+    supplier_id: supplierFilter || undefined,
+    source: sourceFilter || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
   });
@@ -191,19 +209,28 @@ export default function ProductsPage() {
       header: "Kategoria",
       accessorKey: "category" as const,
       cell: (product: Product) => {
-        if (!product.category) return null;
-        const cat = categoriesConfig?.categories?.find((c) => c.key === product.category);
-        return (
-          <span
-            className="rounded-full px-2 py-0.5 text-xs font-medium"
-            style={{
-              backgroundColor: cat?.color ? `${cat.color}20` : undefined,
-              color: cat?.color,
-            }}
-          >
-            {cat?.label || product.category}
-          </span>
-        );
+        const cat = product.category_id ? findCategoryById(categoryTree ?? [], product.category_id) : null;
+        if (cat) {
+          return (
+            <span
+              className="rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{
+                backgroundColor: `${cat.color}20`,
+                color: cat.color,
+              }}
+            >
+              {cat.name}
+            </span>
+          );
+        }
+        if (product.category) {
+          return (
+            <span className="rounded-full px-2 py-0.5 text-xs font-medium text-muted-foreground bg-muted">
+              {product.category}
+            </span>
+          );
+        }
+        return null;
       },
     },
     {
@@ -306,8 +333,8 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative max-w-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-[280px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Szukaj po nazwie, SKU lub EAN..."
@@ -323,27 +350,53 @@ export default function ProductsPage() {
           placeholder="Filtruj po tagu..."
           value={localTagFilter}
           onChange={(e) => handleTagFilterChange(e.target.value)}
-          className="w-[180px]"
+          className="w-[160px]"
+        />
+        <CategoryTreePicker
+          value={categoryIdFilter}
+          onChange={(value) => {
+            setCategoryIdFilter(value);
+            setPagination((prev) => ({ ...prev, offset: 0 }));
+          }}
+          placeholder="Kategoria..."
+          className="w-[200px]"
         />
         <Select
-          value={categoryFilter}
+          value={supplierFilter}
           onValueChange={(value) => {
-            setCategoryFilter(value === "__all__" ? "" : value);
+            setSupplierFilter(value === "__all__" ? "" : value);
             setPagination((prev) => ({ ...prev, offset: 0 }));
           }}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Kategoria..." />
+            <SelectValue placeholder="Dostawca..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">Wszystkie kategorie</SelectItem>
-            {categoriesConfig?.categories
-              ?.sort((a, b) => a.position - b.position)
-              .map((cat) => (
-                <SelectItem key={cat.key} value={cat.key}>
-                  {cat.label}
-                </SelectItem>
-              ))}
+            <SelectItem value="__all__">Wszyscy dostawcy</SelectItem>
+            {suppliersData?.items?.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={sourceFilter}
+          onValueChange={(value) => {
+            setSourceFilter(value === "__all__" ? "" : value);
+            setPagination((prev) => ({ ...prev, offset: 0 }));
+          }}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Źródło..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Wszystkie źródła</SelectItem>
+            {Object.entries(ORDER_SOURCE_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

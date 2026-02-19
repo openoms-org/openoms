@@ -13,7 +13,7 @@ import (
 )
 
 func TestSupplierService_Create_ValidationError_MissingName(t *testing.T) {
-	svc := NewSupplierService(nil, nil, nil, nil, nil, nil, nil)
+	svc := NewSupplierService(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateSupplierRequest{
 		FeedFormat: "iof",
@@ -26,7 +26,7 @@ func TestSupplierService_Create_ValidationError_MissingName(t *testing.T) {
 }
 
 func TestSupplierService_Create_ValidationError_InvalidFeedFormat(t *testing.T) {
-	svc := NewSupplierService(nil, nil, nil, nil, nil, nil, nil)
+	svc := NewSupplierService(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateSupplierRequest{
 		Name:       "Test Supplier",
@@ -40,7 +40,7 @@ func TestSupplierService_Create_ValidationError_InvalidFeedFormat(t *testing.T) 
 }
 
 func TestSupplierService_Update_ValidationError_NoFields(t *testing.T) {
-	svc := NewSupplierService(nil, nil, nil, nil, nil, nil, nil)
+	svc := NewSupplierService(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Update(context.Background(), uuid.New(), uuid.New(), model.UpdateSupplierRequest{}, uuid.New(), "127.0.0.1")
 

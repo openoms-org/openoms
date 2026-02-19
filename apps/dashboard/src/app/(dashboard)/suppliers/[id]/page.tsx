@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, Link2, Search, Copy, ShieldOff, ExternalLink } from "lucide-react";
+import { RefreshCw, ArrowLeft, Link2, Search, Copy, ShieldOff, ExternalLink, Trash2, Check, AlertCircle } from "lucide-react";
+import type { ProductCategory, SupplierCategoryMapping } from "@/types/api";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useSupplier,
@@ -14,7 +15,12 @@ import {
   useSupplierPortalStatus,
   useGeneratePortalLink,
   useRevokePortalAccess,
+  useSupplierCategoryMappings,
+  useUpsertCategoryMapping,
+  useDeleteCategoryMapping,
 } from "@/hooks/use-suppliers";
+import { useCategoryTree } from "@/hooks/use-categories";
+import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
 import { useProducts } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -54,6 +60,17 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
+function findCategoryById(categories: ProductCategory[], id: string): ProductCategory | undefined {
+  for (const cat of categories) {
+    if (cat.id === id) return cat;
+    if (cat.children?.length) {
+      const found = findCategoryById(cat.children, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 export default function SupplierDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -69,6 +86,11 @@ export default function SupplierDetailPage() {
   const revokeAccess = useRevokePortalAccess(id);
   const [portalLink, setPortalLink] = useState<string | null>(null);
 
+  const { data: categoryMappings } = useSupplierCategoryMappings(id);
+  const upsertMapping = useUpsertCategoryMapping(id);
+  const deleteMapping = useDeleteCategoryMapping(id);
+  const { data: categoryTree } = useCategoryTree();
+
   const [name, setName] = useState("");
   const [linkingProductId, setLinkingProductId] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
@@ -78,6 +100,7 @@ export default function SupplierDetailPage() {
   const [feedFormat, setFeedFormat] = useState("iof");
   const [syncInterval, setSyncInterval] = useState("60");
   const [status, setStatus] = useState("active");
+  const [defaultCategoryId, setDefaultCategoryId] = useState<string | undefined>(undefined);
 
   const { data: localProducts } = useProducts({
     name: productSearch || undefined,
@@ -92,6 +115,7 @@ export default function SupplierDetailPage() {
       setFeedFormat(supplier.feed_format);
       setSyncInterval(String(supplier.sync_interval_minutes ?? 60));
       setStatus(supplier.status);
+      setDefaultCategoryId(supplier.default_category_id || undefined);
     }
   }, [supplier]);
 
@@ -105,7 +129,7 @@ export default function SupplierDetailPage() {
 
   const handleUpdate = () => {
     updateSupplier.mutate(
-      { name, code: code || undefined, feed_url: feedUrl || undefined, feed_format: feedFormat, sync_interval_minutes: parseInt(syncInterval, 10), status },
+      { name, code: code || undefined, feed_url: feedUrl || undefined, feed_format: feedFormat, sync_interval_minutes: parseInt(syncInterval, 10), status, default_category_id: defaultCategoryId },
       {
         onSuccess: () => toast.success("Dostawca zaktualizowany"),
         onError: (error) =>
@@ -223,6 +247,18 @@ export default function SupplierDetailPage() {
                   <SelectItem value="1440">Raz dziennie</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Domyślna kategoria</Label>
+              <CategoryTreePicker
+                value={defaultCategoryId}
+                onChange={setDefaultCategoryId}
+                placeholder="Wybierz domyślną kategorię..."
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Produkty bez mapowania kategorii trafią do tej kategorii
+              </p>
             </div>
             <Button onClick={handleUpdate} disabled={updateSupplier.isPending} className="w-full">
               {updateSupplier.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
@@ -343,6 +379,124 @@ export default function SupplierDetailPage() {
                 </Button>
               </div>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Category Mappings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Mapowanie kategorii</CardTitle>
+          <CardDescription>
+            Powiązania między kategoriami z feeda dostawcy a kategoriami OMS
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!categoryMappings || categoryMappings.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Brak mapowań kategorii. Uruchom synchronizację — mapowania zostaną utworzone automatycznie.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kategoria źródłowa</TableHead>
+                  <TableHead>Kategoria OMS</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[100px]">Akcje</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categoryMappings.map((mapping) => {
+                  const targetCat = mapping.category_id
+                    ? findCategoryById(categoryTree ?? [], mapping.category_id)
+                    : null;
+                  return (
+                    <TableRow key={mapping.id}>
+                      <TableCell className="font-medium">
+                        {mapping.source_category}
+                      </TableCell>
+                      <TableCell>
+                        <CategoryTreePicker
+                          value={mapping.category_id}
+                          onChange={(value) => {
+                            upsertMapping.mutate(
+                              {
+                                source_category: mapping.source_category,
+                                category_id: value,
+                                confirmed: true,
+                              },
+                              {
+                                onSuccess: () => toast.success("Mapowanie zaktualizowane"),
+                                onError: (error) => toast.error(getErrorMessage(error)),
+                              }
+                            );
+                          }}
+                          placeholder="Przypisz kategorię..."
+                          className="w-[220px]"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {mapping.confirmed ? (
+                          <Badge variant="default" className="gap-1">
+                            <Check className="h-3 w-3" />
+                            Potwierdzone
+                          </Badge>
+                        ) : mapping.auto_matched ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Auto-dopasowanie
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">Nieprzypisane</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {!mapping.confirmed && mapping.category_id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0"
+                              title="Potwierdź"
+                              onClick={() => {
+                                upsertMapping.mutate(
+                                  {
+                                    source_category: mapping.source_category,
+                                    category_id: mapping.category_id,
+                                    confirmed: true,
+                                  },
+                                  {
+                                    onSuccess: () => toast.success("Mapowanie potwierdzone"),
+                                    onError: (error) => toast.error(getErrorMessage(error)),
+                                  }
+                                );
+                              }}
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            title="Usuń"
+                            onClick={() => {
+                              deleteMapping.mutate(mapping.id, {
+                                onSuccess: () => toast.success("Mapowanie usunięte"),
+                                onError: (error) => toast.error(getErrorMessage(error)),
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

@@ -48,7 +48,7 @@ func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, name, code, feed_url, feed_format, status, settings,
-		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, integration_id, created_at, updated_at
+		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, integration_id, default_category_id, created_at, updated_at
 		 FROM suppliers %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
@@ -66,7 +66,7 @@ func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 		if err := rows.Scan(
 			&s.ID, &s.TenantID, &s.Name, &s.Code, &s.FeedURL, &s.FeedFormat,
 			&s.Status, &s.Settings, &s.SyncIntervalMinutes, &s.LastSyncAt, &s.ErrorMessage,
-			&s.PortalEnabled, &s.IntegrationID, &s.CreatedAt, &s.UpdatedAt,
+			&s.PortalEnabled, &s.IntegrationID, &s.DefaultCategoryID, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan supplier: %w", err)
 		}
@@ -79,12 +79,12 @@ func (r *SupplierRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 	var s model.Supplier
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, name, code, feed_url, feed_format, status, settings,
-		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, integration_id, created_at, updated_at
+		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, integration_id, default_category_id, created_at, updated_at
 		 FROM suppliers WHERE id = $1`, id,
 	).Scan(
 		&s.ID, &s.TenantID, &s.Name, &s.Code, &s.FeedURL, &s.FeedFormat,
 		&s.Status, &s.Settings, &s.SyncIntervalMinutes, &s.LastSyncAt, &s.ErrorMessage,
-		&s.PortalEnabled, &s.IntegrationID, &s.CreatedAt, &s.UpdatedAt,
+		&s.PortalEnabled, &s.IntegrationID, &s.DefaultCategoryID, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -161,6 +161,11 @@ func (r *SupplierRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID
 		args = append(args, *req.IntegrationID)
 		argIdx++
 	}
+	if req.DefaultCategoryID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("default_category_id = $%d", argIdx))
+		args = append(args, *req.DefaultCategoryID)
+		argIdx++
+	}
 
 	if len(setClauses) == 0 {
 		return nil
@@ -212,14 +217,14 @@ func NewSupplierProductRepository() *SupplierProductRepository {
 }
 
 var supplierProductColumns = `id, tenant_id, supplier_id, product_id, external_id, name, ean, sku,
-	price, stock_quantity, metadata, last_synced_at, created_at, updated_at`
+	price, stock_quantity, source_category, metadata, last_synced_at, created_at, updated_at`
 
 func scanSupplierProduct(row interface{ Scan(dest ...any) error }) (*model.SupplierProduct, error) {
 	var sp model.SupplierProduct
 	err := row.Scan(
 		&sp.ID, &sp.TenantID, &sp.SupplierID, &sp.ProductID, &sp.ExternalID,
 		&sp.Name, &sp.EAN, &sp.SKU, &sp.Price, &sp.StockQuantity,
-		&sp.Metadata, &sp.LastSyncedAt, &sp.CreatedAt, &sp.UpdatedAt,
+		&sp.SourceCategory, &sp.Metadata, &sp.LastSyncedAt, &sp.CreatedAt, &sp.UpdatedAt,
 	)
 	return &sp, err
 }
@@ -304,11 +309,11 @@ func (r *SupplierProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id 
 
 func (r *SupplierProductRepository) Create(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error {
 	return tx.QueryRow(ctx,
-		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, metadata, last_synced_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, source_category, metadata, last_synced_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		 RETURNING created_at, updated_at`,
 		sp.ID, sp.TenantID, sp.SupplierID, sp.ProductID, sp.ExternalID,
-		sp.Name, sp.EAN, sp.SKU, sp.Price, sp.StockQuantity, sp.Metadata, sp.LastSyncedAt,
+		sp.Name, sp.EAN, sp.SKU, sp.Price, sp.StockQuantity, sp.SourceCategory, sp.Metadata, sp.LastSyncedAt,
 	).Scan(&sp.CreatedAt, &sp.UpdatedAt)
 }
 
@@ -368,16 +373,17 @@ func (r *SupplierProductRepository) FindBySupplierAndExternalID(ctx context.Cont
 
 func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error {
 	return tx.QueryRow(ctx,
-		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, metadata, last_synced_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, source_category, metadata, last_synced_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		 ON CONFLICT (tenant_id, supplier_id, external_id)
 		 DO UPDATE SET name = EXCLUDED.name, ean = EXCLUDED.ean, sku = EXCLUDED.sku,
 		              price = EXCLUDED.price, stock_quantity = EXCLUDED.stock_quantity,
+		              source_category = EXCLUDED.source_category,
 		              metadata = EXCLUDED.metadata, last_synced_at = EXCLUDED.last_synced_at,
 		              updated_at = NOW()
 		 RETURNING id, created_at, updated_at`,
 		sp.ID, sp.TenantID, sp.SupplierID, sp.ProductID, sp.ExternalID,
-		sp.Name, sp.EAN, sp.SKU, sp.Price, sp.StockQuantity, sp.Metadata, sp.LastSyncedAt,
+		sp.Name, sp.EAN, sp.SKU, sp.Price, sp.StockQuantity, sp.SourceCategory, sp.Metadata, sp.LastSyncedAt,
 	).Scan(&sp.ID, &sp.CreatedAt, &sp.UpdatedAt)
 }
 

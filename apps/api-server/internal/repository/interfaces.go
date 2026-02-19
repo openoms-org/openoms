@@ -197,6 +197,27 @@ type SupplierRepo interface {
 	UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastSyncAt time.Time, errorMessage *string) error
 }
 
+// SupplierCategoryMappingRepo defines the interface for supplier category mapping persistence.
+type SupplierCategoryMappingRepo interface {
+	ListBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]model.SupplierCategoryMapping, error)
+	FindBySourceCategory(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, sourceCategory string) (*model.SupplierCategoryMapping, error)
+	Upsert(ctx context.Context, tx pgx.Tx, m *model.SupplierCategoryMapping) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+}
+
+// ProductCategoryRepo defines the interface for product category persistence operations.
+type ProductCategoryRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.CategoryListFilter) ([]model.ProductCategory, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ProductCategory, error)
+	FindBySlug(ctx context.Context, tx pgx.Tx, slug string) (*model.ProductCategory, error)
+	Create(ctx context.Context, tx pgx.Tx, c *model.ProductCategory) error
+	Update(ctx context.Context, tx pgx.Tx, c *model.ProductCategory) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	GetDescendantIDs(ctx context.Context, tx pgx.Tx, id uuid.UUID) ([]uuid.UUID, error)
+	FuzzyMatch(ctx context.Context, tx pgx.Tx, name string) ([]model.ProductCategory, error)
+	CountBySlug(ctx context.Context, tx pgx.Tx, slug string) (int, error)
+}
+
 // InvoiceRepo defines the interface for invoice persistence operations.
 type InvoiceRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.InvoiceListFilter) ([]model.Invoice, int, error)

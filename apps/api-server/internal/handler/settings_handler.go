@@ -24,13 +24,14 @@ import (
 type SettingsHandler struct {
 	tenantRepo   repository.TenantRepo
 	auditRepo    repository.AuditRepo
+	categoryRepo repository.ProductCategoryRepo
 	emailService *service.EmailService
 	smsService   *service.SMSService
 	pool         *pgxpool.Pool
 }
 
-func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.AuditRepo, emailService *service.EmailService, smsService *service.SMSService, pool *pgxpool.Pool) *SettingsHandler {
-	return &SettingsHandler{tenantRepo: tenantRepo, auditRepo: auditRepo, emailService: emailService, smsService: smsService, pool: pool}
+func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.AuditRepo, categoryRepo repository.ProductCategoryRepo, emailService *service.EmailService, smsService *service.SMSService, pool *pgxpool.Pool) *SettingsHandler {
+	return &SettingsHandler{tenantRepo: tenantRepo, auditRepo: auditRepo, categoryRepo: categoryRepo, emailService: emailService, smsService: smsService, pool: pool}
 }
 
 // getSettingsSection reads a specific section from the tenant's JSON settings blob.
@@ -398,12 +399,21 @@ func (h *SettingsHandler) GetProductCategories(w http.ResponseWriter, r *http.Re
 
 	config := model.DefaultProductCategoriesConfig()
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		var loaded model.ProductCategoriesConfig
-		if err := h.getSettingsSection(r.Context(), tx, tenantID, "product_categories", &loaded); err != nil {
+		categories, err := h.categoryRepo.List(r.Context(), tx, model.CategoryListFilter{})
+		if err != nil {
 			return err
 		}
-		if len(loaded.Categories) > 0 {
-			config = loaded
+		defs := make([]model.CategoryDef, 0, len(categories))
+		for _, cat := range categories {
+			defs = append(defs, model.CategoryDef{
+				Key:      cat.Slug,
+				Label:    cat.Name,
+				Color:    cat.Color,
+				Position: cat.Position,
+			})
+		}
+		if len(defs) > 0 {
+			config.Categories = defs
 		}
 		return nil
 	})

@@ -10,6 +10,8 @@ import type {
   SupplierProductListParams,
   SupplierPortalLinkResponse,
   SupplierPortalStatus,
+  SupplierCategoryMapping,
+  UpsertCategoryMappingRequest,
 } from "@/types/api";
 
 export function useSuppliers(params: SupplierListParams = {}) {
@@ -180,6 +182,54 @@ export function useRevokePortalAccess(supplierId: string) {
         queryKey: ["supplier-portal-status", supplierId],
       });
       queryClient.invalidateQueries({ queryKey: ["suppliers", supplierId] });
+    },
+  });
+}
+
+// === Supplier Category Mappings ===
+
+export function useSupplierCategoryMappings(supplierId: string) {
+  return useQuery({
+    queryKey: ["supplier-category-mappings", supplierId],
+    queryFn: () =>
+      apiClient<SupplierCategoryMapping[]>(
+        `/v1/suppliers/${supplierId}/category-mappings`
+      ),
+    enabled: !!supplierId,
+  });
+}
+
+export function useUpsertCategoryMapping(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: UpsertCategoryMappingRequest) =>
+      apiClient<SupplierCategoryMapping>(
+        `/v1/suppliers/${supplierId}/category-mappings`,
+        {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-category-mappings", supplierId],
+      });
+    },
+  });
+}
+
+export function useDeleteCategoryMapping(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mappingId: string) =>
+      apiClient<void>(
+        `/v1/suppliers/${supplierId}/category-mappings/${mappingId}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-category-mappings", supplierId],
+      });
     },
   });
 }
