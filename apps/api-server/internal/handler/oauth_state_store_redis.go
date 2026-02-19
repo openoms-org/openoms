@@ -37,8 +37,8 @@ var getAndDeleteScript = redis.NewScript(`
 	return val
 `)
 
-// Load retrieves and atomically deletes the OAuth state data for the given state key. //nolint:revive // returns interface-defined type using unexported struct
-func (r *RedisOAuthStateStore) Load(ctx context.Context, state string) (*allegroOAuthState, error) {
+// Load retrieves and atomically deletes the OAuth state data for the given state key.
+func (r *RedisOAuthStateStore) Load(ctx context.Context, state string) (*allegroOAuthState, error) { //nolint:revive // returns interface-defined type using unexported struct
 	key := oauthStateKeyPrefix + state
 
 	result, err := getAndDeleteScript.Run(ctx, r.client, []string{key}).Result()

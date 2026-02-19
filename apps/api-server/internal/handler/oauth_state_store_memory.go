@@ -35,8 +35,8 @@ func (m *MemoryOAuthStateStore) Save(_ context.Context, state string, data *alle
 	return nil
 }
 
-// Load retrieves and deletes the OAuth state data for the given state key. //nolint:revive // returns interface-defined type using unexported struct
-func (m *MemoryOAuthStateStore) Load(_ context.Context, state string) (*allegroOAuthState, error) {
+// Load retrieves and deletes the OAuth state data for the given state key.
+func (m *MemoryOAuthStateStore) Load(_ context.Context, state string) (*allegroOAuthState, error) { //nolint:revive // returns interface-defined type using unexported struct
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

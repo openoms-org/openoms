@@ -37,12 +37,12 @@ func (r *RedisLoginLockoutStore) ResetFailures(ctx context.Context, key string) 
 // GetLockoutRemaining checks whether a lockout key exists in Redis and returns its remaining TTL.
 func (r *RedisLoginLockoutStore) GetLockoutRemaining(ctx context.Context, key string) (time.Duration, error) {
 	exists, err := r.client.Exists(ctx, key).Result()
-	if err != nil || exists == 0 { //nolint:nilerr // fail open on Redis error — lockout is best-effort
-		return 0, nil // not locked
+	if err != nil || exists == 0 {
+		return 0, nil //nolint:nilerr // fail open on Redis error — lockout is best-effort
 	}
 	ttl, err := r.client.TTL(ctx, key).Result()
-	if err != nil || ttl <= 0 { //nolint:nilerr // fail open on Redis error — lockout is best-effort
-		return 0, nil
+	if err != nil || ttl <= 0 {
+		return 0, nil //nolint:nilerr // fail open on Redis error — lockout is best-effort
 	}
 	return ttl, nil
 }
