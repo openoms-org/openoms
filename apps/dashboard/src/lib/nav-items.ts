@@ -7,7 +7,6 @@ import {
   Receipt,
   CreditCard,
   Package,
-  Plug,
   Users,
   Building2,
   Bell,
@@ -34,13 +33,7 @@ import {
   Headphones,
   ShieldCheck,
   Store,
-  Tag,
   MessageSquare,
-  Megaphone,
-  Layers,
-  Star,
-  AlertTriangle,
-  Scale,
   Calculator,
   Rss,
   PackageCheck,
@@ -78,6 +71,8 @@ export const navGroups: NavGroup[] = [
   { key: "Katalog", label: "Katalog", icon: Package },
   { key: "Logistyka", label: "Logistyka", icon: Truck },
   { key: "Kanały sprzedaży", label: "Kanały sprzedaży", icon: Store },
+  { key: "Kurierzy", label: "Kurierzy", icon: Truck },
+  { key: "Fakturowanie", label: "Fakturowanie", icon: Receipt },
   { key: "Raporty", label: "Raporty", icon: BarChart3 },
   { key: "Zaopatrzenie", label: "Zaopatrzenie", icon: Factory },
   { key: "Narzędzia", label: "Narzędzia", icon: Wrench },
@@ -121,31 +116,15 @@ export const navItems: NavItem[] = [
   { href: "/stock-sync", label: "Sync magazynu", icon: RefreshCw, adminOnly: true, group: "Logistyka" },
 
   // ── Kanały sprzedaży ──
-  {
-    href: "/integrations/allegro",
-    label: "Allegro",
-    icon: Store,
-    adminOnly: true,
-    group: "Kanały sprzedaży",
-    children: [
-      { href: "/integrations/allegro/offers", label: "Oferty", icon: Tag },
-      { href: "/integrations/allegro/catalog", label: "Katalog", icon: Layers },
-      { href: "/integrations/allegro/promotions", label: "Promocje", icon: Megaphone },
-      { href: "/integrations/allegro/messages", label: "Wiadomości", icon: MessageSquare },
-      { href: "/integrations/allegro/returns", label: "Zwroty", icon: RotateCcw },
-      { href: "/integrations/allegro/disputes", label: "Spory", icon: AlertTriangle },
-      { href: "/integrations/allegro/delivery", label: "Dostawa", icon: Truck },
-      { href: "/integrations/allegro/policies", label: "Polityki", icon: Scale },
-      { href: "/integrations/allegro/finance", label: "Finanse", icon: Calculator },
-      { href: "/integrations/allegro/ratings", label: "Oceny", icon: Star },
-    ],
-  },
-  { href: "/integrations/amazon", label: "Amazon", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
-  { href: "/integrations/shoper", label: "Shoper", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
-  { href: "/integrations/prestashop", label: "PrestaShop", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
-  { href: "/integrations/shopify", label: "Shopify", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
+  { href: "/marketplaces", label: "Marketplace", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
   { href: "/settings/feeds", label: "Feedy produktowe", icon: Rss, adminOnly: true, group: "Kanały sprzedaży" },
   { href: "/listing-sync", label: "Synchronizacja ofert", icon: ArrowUpDown, adminOnly: true, group: "Kanały sprzedaży" },
+
+  // ── Kurierzy ──
+  { href: "/carriers", label: "Kurierzy", icon: Truck, adminOnly: true, group: "Kurierzy" },
+
+  // ── Fakturowanie ──
+  { href: "/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Fakturowanie" },
 
   // ── Raporty ──
   { href: "/reports", label: "Raporty", icon: BarChart3, adminOnly: true, group: "Raporty" },
@@ -172,7 +151,6 @@ export const navItems: NavItem[] = [
   { href: "/recurring-orders", label: "Subskrypcje", icon: Repeat, group: "Narzędzia" },
   { href: "/loyalty", label: "Program lojalnościowy", icon: Award, group: "Narzędzia" },
   { href: "/customers/segments", label: "Segmenty klientów", icon: Users, group: "Narzędzia" },
-  { href: "/integrations", label: "Połączenia", icon: Plug, adminOnly: true, group: "Narzędzia" },
 
   // ── Ustawienia ──
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Ustawienia" },
@@ -182,7 +160,6 @@ export const navItems: NavItem[] = [
   { href: "/settings/order-statuses", label: "Statusy zamówień", icon: ListChecks, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/custom-fields", label: "Pola niestandardowe", icon: TextCursorInput, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/price-lists", label: "Cenniki", icon: BadgePercent, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/accounting", label: "Księgowość", icon: Calculator, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/ksef", label: "KSeF", icon: FileText, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/vat-oss", label: "VAT OSS", icon: Globe, adminOnly: true, group: "Ustawienia" },

@@ -6,6 +6,17 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
+  redirects: async () => [
+    // Marketplace provider pages moved from /integrations/ to /marketplaces/
+    { source: "/integrations/allegro", destination: "/marketplaces/allegro", permanent: true },
+    { source: "/integrations/allegro/:path*", destination: "/marketplaces/allegro/:path*", permanent: true },
+    { source: "/integrations/amazon", destination: "/marketplaces/amazon", permanent: true },
+    { source: "/integrations/shoper", destination: "/marketplaces/shoper", permanent: true },
+    { source: "/integrations/prestashop", destination: "/marketplaces/prestashop", permanent: true },
+    { source: "/integrations/shopify", destination: "/marketplaces/shopify", permanent: true },
+    // Invoicing settings moved to dedicated section
+    { source: "/settings/invoicing", destination: "/invoicing", permanent: true },
+  ],
   headers: async () => [
     {
       source: "/(.*)",
