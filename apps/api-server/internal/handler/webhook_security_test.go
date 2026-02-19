@@ -36,7 +36,7 @@ func TestSecurity_Webhook_AllegroRejectsWhenNoSecret(t *testing.T) {
 }
 
 func TestSecurity_Webhook_InPostValidSignaturePasses(t *testing.T) {
-	secret := "test-webhook-secret"
+	secret := "test-webhook-secret" //nolint:gosec // test credential
 	h := NewInPostWebhookHandler(secret)
 
 	body := []byte(`{"type":"shipment_status_changed","payload":{"shipment_id":123,"tracking_number":"ABC123","status":"delivered"}}`)
