@@ -204,6 +204,7 @@ func (r *ProductListingRepository) ListByIntegration(ctx context.Context, tx pgx
 	return listings, rows.Err()
 }
 
+// ListAutoSyncByProduct returns all active listings with auto stock sync for a given product.
 func (r *ProductListingRepository) ListAutoSyncByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,

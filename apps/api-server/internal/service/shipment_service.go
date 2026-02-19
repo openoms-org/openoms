@@ -495,7 +495,7 @@ func readLabelFile(labelURL string) ([]byte, error) {
 	// Try common upload directories
 	for _, base := range []string{"uploads", "./uploads", "/tmp/uploads"} {
 		fullPath := filepath.Join(base, relPath)
-		data, err := os.ReadFile(fullPath)
+		data, err := os.ReadFile(fullPath) //nolint:gosec // path validated: Clean + traversal check above
 		if err == nil {
 			return data, nil
 		}
