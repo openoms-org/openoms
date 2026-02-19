@@ -1388,7 +1388,7 @@
         <div class="nav-inner">
             <a href="#" class="nav-logo">Open<span>OMS</span></a>
 
-            <button class="nav-toggle" aria-label="Menu" aria-expanded="false" id="nav-toggle-btn">
+            <button class="nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" id="nav-toggle-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
 
@@ -1911,7 +1911,7 @@
                     <p>Zapisz się, a powiadomimy Cię, gdy OpenOMS będzie gotowy do testów. Bez spamu — tylko ważne aktualizacje.</p>
 
                     <div id="waitlist-form-container">
-                        <form class="waitlist-form" id="waitlist-form" action="https://formspree.io/f/xkovgrgb" method="POST" novalidate>
+                        <form class="waitlist-form" id="waitlist-form" action="https://formspree.io/f/xkovgrgb" method="POST" novalidate aria-label="Formularz zapisu na listę oczekujących">
                             <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
                             <input type="email" placeholder="twoj@email.pl" required name="email" autocomplete="email" aria-label="Adres e-mail" id="waitlist-email">
                             <button type="submit" class="btn btn-primary" id="waitlist-submit-btn">Zapisz się</button>
@@ -2097,7 +2097,7 @@
         let demoIdx = 0;
         let demoRunning = false;
 
-        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
         async function typeDemo() {
             if (demoRunning) return;
@@ -2112,15 +2112,13 @@
                     const div = document.createElement('div');
                     demoTerminal.appendChild(div);
                     const text = line.text;
-                    for (let i = 0; i < text.length; i++) {
-                        if (line.type === 'prompt' && i === 0) {
-                            div.innerHTML = '<span class="terminal-prompt">$</span> ';
-                            i = 1; // skip '$ '
-                        }
+                    const startIndex = line.type === 'prompt' ? 1 : 0;
+                    if (line.type === 'prompt') {
+                        div.innerHTML = '<span class="terminal-prompt">$</span> ';
+                    }
+                    for (let i = startIndex; i < text.length; i++) {
                         div.innerHTML = div.innerHTML.replace('<span class="terminal-cursor"></span>', '');
-                        if (line.type === 'prompt' && i <= 1) {
-                            // already added prompt
-                        } else if (line.type === 'cont') {
+                        if (line.type === 'cont') {
                             div.textContent += text[i];
                         } else {
                             div.innerHTML += text[i] === ' ' ? ' ' : text[i];
