@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"net/http"
 	"sync"
@@ -24,7 +25,7 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 
 			allowed, err := limiter.Allow(r.Context(), ip, maxRequests, window)
 			if err != nil {
-				// Fail open on error
+				slog.Warn("rate limiter error, failing open", "error", err, "ip", ip)
 				next.ServeHTTP(w, r)
 				return
 			}
