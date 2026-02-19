@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -87,7 +87,6 @@ const DIRECTION_LABELS: Record<string, string> = {
 
 export default function ListingSyncDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const configId = params.id as string;
 
   const { data: config, isLoading, isError } = useListingSyncConfig(configId);

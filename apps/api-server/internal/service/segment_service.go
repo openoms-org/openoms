@@ -524,7 +524,6 @@ func (s *SegmentService) RefreshRuleBasedSegments(ctx context.Context, tenantID 
 			if rules.LastOrderWithinDay != nil {
 				query += " AND o.last_order_at >= NOW() - INTERVAL '1 day' * $" + itoa(argIdx)
 				args = append(args, *rules.LastOrderWithinDay)
-				argIdx++
 			}
 
 			rows, err := tx.Query(ctx, query, args...)

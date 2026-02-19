@@ -202,7 +202,6 @@ export default function StocktakeDetailPage() {
   const totalItems = itemsData?.total ?? 0;
   const isInProgress = stocktake.status === "in_progress";
   const isDraft = stocktake.status === "draft";
-  const isCompleted = stocktake.status === "completed";
 
   return (
     <AdminGuard>

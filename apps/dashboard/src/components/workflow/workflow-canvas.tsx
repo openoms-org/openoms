@@ -44,7 +44,6 @@ export function WorkflowCanvas({
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [connectMousePos, setConnectMousePos] = useState({ x: 0, y: 0 });
 
@@ -92,8 +91,6 @@ export function WorkflowCanvas({
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-
       if (isPanning) {
         setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
         return;

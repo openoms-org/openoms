@@ -33,12 +33,6 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  PZ: "PZ - Przyjęcie zewnętrzne",
-  WZ: "WZ - Wydanie zewnętrzne",
-  MM: "MM - Przesunięcie międzymagazynowe",
-};
-
 const STATUS_LABELS: Record<string, string> = {
   draft: "Szkic",
   confirmed: "Zatwierdzony",

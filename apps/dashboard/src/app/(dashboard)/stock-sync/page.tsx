@@ -281,7 +281,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
 
 export default function StockSyncPage() {
   const { data: dashboard, isLoading: dashLoading } = useStockSyncDashboard();
-  const { data: channelsData, isLoading: channelsLoading } =
+  const { isLoading: channelsLoading } =
     useStockSyncChannels({ limit: 100 });
   const pushAll = usePushAllStock();
 

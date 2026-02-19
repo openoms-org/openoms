@@ -12,7 +12,7 @@ import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DensityToggle } from "@/components/shared/density-toggle";
 import { getErrorMessage } from "@/lib/api-client";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

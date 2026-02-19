@@ -4,9 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
   AlertTriangle,
   ShoppingCart,
   Package,
@@ -61,14 +58,6 @@ import {
   useUpdateForecastConfig,
 } from "@/hooks/use-forecast";
 import type { ForecastConfig, ReorderRecommendation } from "@/types/api";
-
-const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
 
 const ABC_COLORS: Record<string, string> = {
   A: "#22c55e",

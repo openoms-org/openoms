@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   ChevronRight,
   ExternalLink,
-  Folder,
   FolderOpen,
   Info,
   Loader2,

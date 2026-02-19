@@ -19,7 +19,7 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, getErrorMessage } from "@/lib/api-client";
-import { useOrderStatuses, statusesToMap, COLOR_PRESETS } from "@/hooks/use-order-statuses";
+import { useOrderStatuses, COLOR_PRESETS } from "@/hooks/use-order-statuses";
 import { ORDER_STATUSES } from "@/lib/constants";
 import { KanbanCard } from "./kanban-card";
 import { Skeleton } from "@/components/ui/skeleton";

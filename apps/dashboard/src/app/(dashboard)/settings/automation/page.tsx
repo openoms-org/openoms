@@ -28,7 +28,7 @@ import {
   AUTOMATION_TRIGGER_EVENTS,
   AUTOMATION_TRIGGER_LABELS,
 } from "@/lib/constants";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { AutomationRule } from "@/types/api";
 
 export default function AutomationRulesPage() {

@@ -65,8 +65,6 @@ import {
 import {
   useSuggestCategories,
   useGenerateDescription,
-  useImproveDescription,
-  useTranslateDescription,
 } from "@/hooks/use-ai";
 import type { CreateProductRequest, AISuggestion, AIDescribeRequest } from "@/types/api";
 import { useBGRemovalStatus, useRemoveProductImageBackground } from "@/hooks/use-bg-removal";
@@ -91,8 +89,6 @@ export default function ProductDetailPage() {
 
   const suggestCategories = useSuggestCategories();
   const generateDescription = useGenerateDescription();
-  const improveDescription = useImproveDescription();
-  const translateDescription = useTranslateDescription();
 
   const { data: product, isLoading } = useProduct(params.id);
   const { data: categoriesConfig } = useProductCategories();

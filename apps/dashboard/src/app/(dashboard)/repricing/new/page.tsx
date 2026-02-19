@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, TrendingUp, Package, Clock, BarChart3 } from "lucide-react";
-import { useCreateRepricingRule, useSimulateRepricingRule } from "@/hooks/use-repricing";
+import { useCreateRepricingRule } from "@/hooks/use-repricing";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

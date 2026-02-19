@@ -59,7 +59,7 @@ export default function AllegroDisputesPage() {
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const { data, isLoading, isError, error, refetch } = useAllegroDisputes({
+  const { data, isLoading, error, refetch } = useAllegroDisputes({
     limit,
     offset,
     status: statusFilter || undefined,

@@ -9,7 +9,6 @@ import {
   useCreateLoyaltyProgram,
   useDeleteLoyaltyProgram,
 } from "@/hooks/use-loyalty";
-import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -110,7 +109,7 @@ export default function LoyaltyPage() {
 
   const handleCreate = async () => {
     try {
-      let config = formData.config;
+      let config;
       try {
         config = JSON.parse(configText);
       } catch {

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown, Weight, Ruler, FileBarChart, Factory } from "lucide-react";
+import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown, Factory } from "lucide-react";
 import { RateShopping } from "@/components/shipping/rate-shopping";
 import { AllegroShipmentDialog } from "@/components/integrations/allegro-shipment-dialog";
 import { useAllegroCarriers, useAllegroFulfillment, useAllegroTracking } from "@/hooks/use-allegro";
@@ -303,7 +303,7 @@ export default function OrderDetailPage() {
             )}
             Link do zwrotu
           </Button>
-          {order && order.status !== "merged" && order.status !== "split" && order.items && order.items.length >= 2 && (
+          {order.status !== "merged" && order.status !== "split" && order.items && order.items.length >= 2 && (
             <Button variant="outline" onClick={() => setShowSplitDialog(true)}>
               <Scissors className="mr-2 h-4 w-4" />
               Podziel zamówienie
@@ -1098,7 +1098,7 @@ export default function OrderDetailPage() {
       />
 
       {/* Split Order Dialog */}
-      {order && order.items && (
+      {order.items && (
         <SplitOrderDialog
           open={showSplitDialog}
           onOpenChange={setShowSplitDialog}
@@ -1117,7 +1117,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* Allegro Shipment Dialog */}
-      {order && order.source === "allegro" && order.external_id && (
+      {order.source === "allegro" && order.external_id && (
         <AllegroShipmentDialog
           open={showAllegroShipmentDialog}
           onOpenChange={setShowAllegroShipmentDialog}
@@ -1126,7 +1126,7 @@ export default function OrderDetailPage() {
       )}
 
       {/* Allegro Fulfillment Dialog */}
-      {order && order.source === "allegro" && order.external_id && (
+      {order.source === "allegro" && order.external_id && (
         <AllegroFulfillmentDialog
           open={showAllegroFulfillmentDialog}
           onOpenChange={setShowAllegroFulfillmentDialog}

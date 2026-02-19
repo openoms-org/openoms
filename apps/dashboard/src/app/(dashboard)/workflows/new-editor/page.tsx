@@ -10,7 +10,7 @@ import { WorkflowCanvas, zoomIn, zoomOut } from "@/components/workflow/workflow-
 import { WorkflowSidebar } from "@/components/workflow/workflow-sidebar";
 import { WorkflowToolbar } from "@/components/workflow/workflow-toolbar";
 import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
-import { createEmptyWorkflow, generateId, type PaletteItem } from "@/lib/workflow-types";
+import { createEmptyWorkflow, type PaletteItem } from "@/lib/workflow-types";
 import type { WorkflowDefinition, WorkflowNode } from "@/types/api";
 
 const MAX_HISTORY = 50;

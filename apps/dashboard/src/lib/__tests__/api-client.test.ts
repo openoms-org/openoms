@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
 import { apiClient, ApiClientError, getErrorMessage, isAuthError } from "@/lib/api-client";

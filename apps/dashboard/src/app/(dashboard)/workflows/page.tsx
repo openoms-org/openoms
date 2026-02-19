@@ -19,7 +19,7 @@ import {
 import {
   AUTOMATION_TRIGGER_LABELS,
 } from "@/lib/constants";
-import { Plus, Trash2, Zap, GitBranch, Pencil, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Zap, GitBranch, Pencil } from "lucide-react";
 import type { AutomationRule } from "@/types/api";
 
 export default function WorkflowsPage() {

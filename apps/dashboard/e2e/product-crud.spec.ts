@@ -3,7 +3,6 @@ import {
   gotoWithAuth,
   waitForToast,
   waitForTableLoaded,
-  fillAndSubmitProductForm,
   confirmDeleteDialog,
 } from './helpers/actions';
 import { NEW_PRODUCT, SEED } from './fixtures/test-data';

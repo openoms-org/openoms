@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pause, Play, XCircle, Pencil } from "lucide-react";
+import { ArrowLeft, Pause, Play, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   useRecurringOrder,

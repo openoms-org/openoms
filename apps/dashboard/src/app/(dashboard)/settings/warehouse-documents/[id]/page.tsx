@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
@@ -54,7 +54,6 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function WarehouseDocumentDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const { data: doc, isLoading, isError, refetch } = useWarehouseDocument(id);

@@ -39,7 +39,6 @@ import {
   Link2,
   Unlink,
   ExternalLink,
-  CreditCard,
 } from "lucide-react";
 import type { PaymentTransaction } from "@/types/api";
 

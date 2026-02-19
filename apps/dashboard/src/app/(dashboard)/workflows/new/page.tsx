@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useWorkflowTemplates } from "@/hooks/use-workflows";
-import { useCreateAutomationRule } from "@/hooks/use-automation";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +12,13 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { ArrowLeft, Plus, Zap, FileText, Loader2 } from "lucide-react";
-import type { WorkflowTemplate, WorkflowDefinition } from "@/types/api";
+import { ArrowLeft, Plus, FileText } from "lucide-react";
+import type { WorkflowTemplate } from "@/types/api";
 import { createEmptyWorkflow } from "@/lib/workflow-types";
 
 export default function NewWorkflowPage() {
   const router = useRouter();
   const { data: templates, isLoading } = useWorkflowTemplates();
-  const createRule = useCreateAutomationRule();
-  const [creating, setCreating] = useState(false);
 
   const handleBlankWorkflow = () => {
     // Navigate to editor with no ID (create mode)

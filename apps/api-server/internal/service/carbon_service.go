@@ -216,7 +216,6 @@ func (s *CarbonService) GetCarbonStats(ctx context.Context, tenantID uuid.UUID, 
 		if dateTo != "" {
 			whereClause += fmt.Sprintf(" AND created_at <= $%d", argIdx)
 			args = append(args, dateTo+"T23:59:59Z")
-			argIdx++
 		}
 
 		totalQuery := fmt.Sprintf(`
@@ -330,7 +329,6 @@ func (s *CarbonService) GetCarbonCSVData(ctx context.Context, tenantID uuid.UUID
 		if dateTo != "" {
 			whereClause += fmt.Sprintf(" AND created_at <= $%d", argIdx)
 			args = append(args, dateTo+"T23:59:59Z")
-			argIdx++
 		}
 
 		query := fmt.Sprintf(`

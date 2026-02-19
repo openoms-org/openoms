@@ -10,7 +10,6 @@ import {
   useDeletePriceList,
   useCreatePriceList,
 } from "@/hooks/use-price-lists";
-import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Trash2, Zap, BarChart3 } from "lucide-react";
+import { Users, Trash2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSegments,
@@ -10,7 +10,6 @@ import {
   useDeleteSegment,
   useRunRFMAnalysis,
 } from "@/hooks/use-segments";
-import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";

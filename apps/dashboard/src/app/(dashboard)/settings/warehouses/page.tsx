@@ -6,7 +6,6 @@ import { Warehouse, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useWarehouses, useDeleteWarehouse, useCreateWarehouse } from "@/hooks/use-warehouses";
-import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";

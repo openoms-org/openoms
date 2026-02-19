@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Trash2, Plus, ExternalLink } from "lucide-react";
 import type { WebhookEndpoint, WebhookConfig } from "@/types/api";
 

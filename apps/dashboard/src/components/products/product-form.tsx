@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, ImageIcon, Upload, Loader2, Sparkles, Languages, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Upload, Loader2, Sparkles, Languages, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

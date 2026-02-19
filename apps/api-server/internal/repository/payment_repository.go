@@ -343,7 +343,6 @@ func (r *PaymentRepository) GetReconciliationSummary(ctx context.Context, tx pgx
 	if dateTo != nil {
 		where += fmt.Sprintf(" AND transaction_date <= $%d", argIdx)
 		args = append(args, *dateTo)
-		argIdx++ //nolint:ineffassign
 	}
 
 	query := fmt.Sprintf(`

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useProductCategories, useUpdateProductCategories } from "@/hooks/use-product-categories";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

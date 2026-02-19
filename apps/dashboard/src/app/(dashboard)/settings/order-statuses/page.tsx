@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useOrderStatuses, COLOR_PRESETS } from "@/hooks/use-order-statuses";
 import { useUpdateOrderStatuses } from "@/hooks/use-settings";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

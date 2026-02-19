@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useUpdateCustomFields } from "@/hooks/use-settings";
-import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

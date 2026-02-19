@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useProductImportPreview, useProductImport } from "@/hooks/use-product-import";

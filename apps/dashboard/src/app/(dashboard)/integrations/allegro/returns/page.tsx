@@ -18,7 +18,6 @@ import {
   useAllegroReturns,
   useRejectAllegroReturn,
   useCreateAllegroRefund,
-  useAllegroRefunds,
 } from "@/hooks/use-allegro";
 import type {
   AllegroCustomerReturn,
@@ -32,8 +31,6 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -74,7 +71,7 @@ export default function AllegroReturnsPage() {
   const [rejectDialogReturn, setRejectDialogReturn] = useState<AllegroCustomerReturn | null>(null);
   const [refundDialogReturn, setRefundDialogReturn] = useState<AllegroCustomerReturn | null>(null);
 
-  const { data, isLoading, isError, error, refetch } = useAllegroReturns({
+  const { data, isLoading, error, refetch } = useAllegroReturns({
     limit,
     offset,
     status: statusFilter || undefined,

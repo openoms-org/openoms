@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Repeat, Trash2, Search, Pause, Play, XCircle } from "lucide-react";
+import { Repeat, Trash2, Pause, Play, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   useRecurringOrders,
@@ -18,9 +18,8 @@ import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DensityToggle } from "@/components/shared/density-toggle";
 import { getErrorMessage } from "@/lib/api-client";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,

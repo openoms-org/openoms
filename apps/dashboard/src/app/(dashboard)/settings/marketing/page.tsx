@@ -19,7 +19,7 @@ import {
   useSyncCustomers,
   useCreateCampaign,
 } from "@/hooks/use-marketing";
-import { useCompanySettings, useUpdateCompanySettings } from "@/hooks/use-settings";
+import { useCompanySettings } from "@/hooks/use-settings";
 import { Loader2, Save, RefreshCw, Send } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { apiClient } from "@/lib/api-client";

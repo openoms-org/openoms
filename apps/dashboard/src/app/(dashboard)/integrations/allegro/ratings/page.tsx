@@ -90,7 +90,7 @@ export default function AllegroRatingsPage() {
     string | null
   >(null);
 
-  const { data, isLoading, isError, error, refetch } = useAllegroRatings({
+  const { data, isLoading, error, refetch } = useAllegroRatings({
     limit,
     offset,
   });
