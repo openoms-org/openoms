@@ -212,6 +212,17 @@ func main() {
 		slog.Info("using in-memory login lockout")
 	}
 
+	// Refresh token rotation with reuse detection
+	if redisClient != nil {
+		refreshStore := service.NewRedisRefreshTokenStore(redisClient)
+		authService.SetRefreshTokenStore(refreshStore)
+		slog.Info("using Redis refresh token rotation")
+	} else {
+		refreshStore := service.NewMemoryRefreshTokenStore()
+		authService.SetRefreshTokenStore(refreshStore)
+		slog.Info("using in-memory refresh token rotation")
+	}
+
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	roleService := service.NewRoleService(roleRepo, auditRepo, pool)
 	emailService := service.NewEmailService(tenantRepo, pool)
