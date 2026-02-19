@@ -16,14 +16,17 @@ type WSTicketStore interface {
 	Consume(ctx context.Context, ticket string) (*WSTicketData, error)
 }
 
+// WSTicketData holds the payload associated with a single-use WebSocket ticket.
 type WSTicketData struct {
 	Token string // the original JWT access token
 }
 
+// WSTicketService issues and redeems single-use tickets for WebSocket authentication.
 type WSTicketService struct {
 	store WSTicketStore
 }
 
+// NewWSTicketService creates a new WSTicketService backed by the given store.
 func NewWSTicketService(store WSTicketStore) *WSTicketService {
 	return &WSTicketService{store: store}
 }

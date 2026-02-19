@@ -21,6 +21,7 @@ func NewRedisOAuthStateStore(client *redis.Client) *RedisOAuthStateStore {
 	return &RedisOAuthStateStore{client: client}
 }
 
+// Save stores the OAuth state data in Redis with the given TTL.
 func (r *RedisOAuthStateStore) Save(ctx context.Context, state string, data *allegroOAuthState, ttl time.Duration) error {
 	val, err := json.Marshal(data)
 	if err != nil {
@@ -36,6 +37,7 @@ var getAndDeleteScript = redis.NewScript(`
 	return val
 `)
 
+// Load retrieves and atomically deletes the OAuth state data for the given state key. //nolint:revive // returns interface-defined type using unexported struct
 func (r *RedisOAuthStateStore) Load(ctx context.Context, state string) (*allegroOAuthState, error) {
 	key := oauthStateKeyPrefix + state
 

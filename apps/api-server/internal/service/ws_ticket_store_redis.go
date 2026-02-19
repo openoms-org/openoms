@@ -8,14 +8,18 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// RedisWSTicketStore implements WSTicketStore using Redis with automatic TTL expiration.
+// Safe for multi-pod deployments.
 type RedisWSTicketStore struct {
 	client *redis.Client
 }
 
+// NewRedisWSTicketStore creates a new Redis-backed WebSocket ticket store.
 func NewRedisWSTicketStore(client *redis.Client) *RedisWSTicketStore {
 	return &RedisWSTicketStore{client: client}
 }
 
+// Store saves a ticket with associated data and TTL in Redis.
 func (r *RedisWSTicketStore) Store(ctx context.Context, key string, data WSTicketData, ttl time.Duration) error {
 	val, err := json.Marshal(data)
 	if err != nil {
@@ -24,6 +28,7 @@ func (r *RedisWSTicketStore) Store(ctx context.Context, key string, data WSTicke
 	return r.client.Set(ctx, key, val, ttl).Err()
 }
 
+// Consume retrieves and atomically deletes a ticket from Redis. Returns nil if not found.
 func (r *RedisWSTicketStore) Consume(ctx context.Context, key string) (*WSTicketData, error) {
 	// GET + DEL atomically via Lua script
 	script := redis.NewScript(`

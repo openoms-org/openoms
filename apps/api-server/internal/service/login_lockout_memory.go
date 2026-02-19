@@ -23,6 +23,7 @@ func NewMemoryLoginLockoutStore() *MemoryLoginLockoutStore {
 	return &MemoryLoginLockoutStore{entries: make(map[string]*memEntry)}
 }
 
+// IncrFailures increments the failure counter for the given key, resetting if the window has expired.
 func (m *MemoryLoginLockoutStore) IncrFailures(_ context.Context, key string, window time.Duration) (int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -35,6 +36,7 @@ func (m *MemoryLoginLockoutStore) IncrFailures(_ context.Context, key string, wi
 	return e.count, nil
 }
 
+// ResetFailures deletes the failure counter for the given key.
 func (m *MemoryLoginLockoutStore) ResetFailures(_ context.Context, key string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -42,6 +44,7 @@ func (m *MemoryLoginLockoutStore) ResetFailures(_ context.Context, key string) e
 	return nil
 }
 
+// GetLockoutRemaining returns the remaining lockout duration, or 0 if the key is absent or expired.
 func (m *MemoryLoginLockoutStore) GetLockoutRemaining(_ context.Context, key string) (time.Duration, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -57,6 +60,7 @@ func (m *MemoryLoginLockoutStore) GetLockoutRemaining(_ context.Context, key str
 	return remaining, nil
 }
 
+// SetLockout creates a lockout entry that expires after the given duration.
 func (m *MemoryLoginLockoutStore) SetLockout(_ context.Context, key string, duration time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

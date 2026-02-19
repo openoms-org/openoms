@@ -490,7 +490,7 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		offset += batchSize
 
 		if offset >= maxExportRows {
-			writer.Write([]string{"--- Export limited to " + fmt.Sprint(maxExportRows) + " rows ---"})
+			_ = writer.Write([]string{"--- Export limited to " + fmt.Sprint(maxExportRows) + " rows ---"})
 			break
 		}
 	}

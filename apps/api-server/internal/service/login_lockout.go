@@ -66,7 +66,7 @@ func (l *LoginLockout) RecordFailure(ctx context.Context, tenantSlug, email stri
 	failKey := failurePrefix + tenantSlug + ":" + email
 	count, err := l.store.IncrFailures(ctx, failKey, 30*time.Minute)
 	if err != nil {
-		return nil // fail open
+		return nil //nolint:nilerr // fail open on Redis error — lockout is best-effort
 	}
 	if count >= maxLoginAttempts {
 		lockKey := lockoutPrefix + tenantSlug + ":" + email

@@ -37,6 +37,7 @@ func (h *AuthHandler) SetInvitationService(svc *service.InvitationService) {
 	h.invitationSvc = svc
 }
 
+// SetWSTicketService sets the WebSocket ticket service used for single-use WS authentication.
 func (h *AuthHandler) SetWSTicketService(svc *service.WSTicketService) {
 	h.wsTicketSvc = svc
 }

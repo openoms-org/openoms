@@ -18,6 +18,7 @@ func NewMemoryOAuthStateStore() *MemoryOAuthStateStore {
 	return &MemoryOAuthStateStore{entries: make(map[string]*allegroOAuthState)}
 }
 
+// Save stores the OAuth state data in memory with expiration based on data.ExpiresAt.
 func (m *MemoryOAuthStateStore) Save(_ context.Context, state string, data *allegroOAuthState, _ time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -34,6 +35,7 @@ func (m *MemoryOAuthStateStore) Save(_ context.Context, state string, data *alle
 	return nil
 }
 
+// Load retrieves and deletes the OAuth state data for the given state key. //nolint:revive // returns interface-defined type using unexported struct
 func (m *MemoryOAuthStateStore) Load(_ context.Context, state string) (*allegroOAuthState, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

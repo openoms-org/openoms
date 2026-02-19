@@ -25,6 +25,7 @@ type allegroOAuthState struct {
 	Sandbox      bool
 }
 
+// AllegroAuthHandler handles the Allegro OAuth2 authorization flow.
 type AllegroAuthHandler struct {
 	cfg                *config.Config
 	integrationService *service.IntegrationService
@@ -32,6 +33,7 @@ type AllegroAuthHandler struct {
 	stateStore         OAuthStateStore
 }
 
+// NewAllegroAuthHandler creates a new AllegroAuthHandler with the given dependencies.
 func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte, stateStore OAuthStateStore) *AllegroAuthHandler {
 	return &AllegroAuthHandler{
 		cfg:                cfg,
