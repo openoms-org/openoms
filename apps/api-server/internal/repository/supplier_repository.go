@@ -48,7 +48,7 @@ func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, name, code, feed_url, feed_format, status, settings,
-		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, created_at, updated_at
+		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, integration_id, created_at, updated_at
 		 FROM suppliers %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
@@ -66,7 +66,7 @@ func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 		if err := rows.Scan(
 			&s.ID, &s.TenantID, &s.Name, &s.Code, &s.FeedURL, &s.FeedFormat,
 			&s.Status, &s.Settings, &s.SyncIntervalMinutes, &s.LastSyncAt, &s.ErrorMessage,
-			&s.PortalEnabled, &s.CreatedAt, &s.UpdatedAt,
+			&s.PortalEnabled, &s.IntegrationID, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan supplier: %w", err)
 		}
@@ -79,12 +79,12 @@ func (r *SupplierRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 	var s model.Supplier
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, name, code, feed_url, feed_format, status, settings,
-		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, created_at, updated_at
+		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, integration_id, created_at, updated_at
 		 FROM suppliers WHERE id = $1`, id,
 	).Scan(
 		&s.ID, &s.TenantID, &s.Name, &s.Code, &s.FeedURL, &s.FeedFormat,
 		&s.Status, &s.Settings, &s.SyncIntervalMinutes, &s.LastSyncAt, &s.ErrorMessage,
-		&s.PortalEnabled, &s.CreatedAt, &s.UpdatedAt,
+		&s.PortalEnabled, &s.IntegrationID, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -97,12 +97,12 @@ func (r *SupplierRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 
 func (r *SupplierRepository) Create(ctx context.Context, tx pgx.Tx, supplier *model.Supplier) error {
 	return tx.QueryRow(ctx,
-		`INSERT INTO suppliers (id, tenant_id, name, code, feed_url, feed_format, status, settings, sync_interval_minutes)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`INSERT INTO suppliers (id, tenant_id, name, code, feed_url, feed_format, status, settings, sync_interval_minutes, integration_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		 RETURNING created_at, updated_at`,
 		supplier.ID, supplier.TenantID, supplier.Name, supplier.Code,
 		supplier.FeedURL, supplier.FeedFormat, supplier.Status, supplier.Settings,
-		supplier.SyncIntervalMinutes,
+		supplier.SyncIntervalMinutes, supplier.IntegrationID,
 	).Scan(&supplier.CreatedAt, &supplier.UpdatedAt)
 }
 
@@ -154,6 +154,11 @@ func (r *SupplierRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	if req.PortalEnabled != nil {
 		setClauses = append(setClauses, fmt.Sprintf("portal_enabled = $%d", argIdx))
 		args = append(args, *req.PortalEnabled)
+		argIdx++
+	}
+	if req.IntegrationID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("integration_id = $%d", argIdx))
+		args = append(args, *req.IntegrationID)
 		argIdx++
 	}
 

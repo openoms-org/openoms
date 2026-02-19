@@ -22,6 +22,7 @@ type Supplier struct {
 	LastSyncAt          *time.Time      `json:"last_sync_at,omitempty"`
 	ErrorMessage        *string         `json:"error_message,omitempty"`
 	PortalEnabled       bool            `json:"portal_enabled"`
+	IntegrationID       *uuid.UUID      `json:"integration_id,omitempty"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
 }
@@ -50,6 +51,7 @@ type CreateSupplierRequest struct {
 	FeedFormat          string          `json:"feed_format"`
 	SyncIntervalMinutes *int            `json:"sync_interval_minutes,omitempty"`
 	Settings            json.RawMessage `json:"settings,omitempty"`
+	IntegrationID       *uuid.UUID      `json:"integration_id,omitempty"`
 }
 
 func (r *CreateSupplierRequest) Validate() error {
@@ -84,12 +86,14 @@ type UpdateSupplierRequest struct {
 	SyncIntervalMinutes *int             `json:"sync_interval_minutes,omitempty"`
 	ErrorMessage        *string          `json:"error_message,omitempty"`
 	PortalEnabled       *bool            `json:"portal_enabled,omitempty"`
+	IntegrationID       *uuid.UUID       `json:"integration_id,omitempty"`
 }
 
 func (r *UpdateSupplierRequest) Validate() error {
 	if r.Name == nil && r.Code == nil && r.FeedURL == nil &&
 		r.FeedFormat == nil && r.Status == nil && r.Settings == nil &&
-		r.SyncIntervalMinutes == nil && r.ErrorMessage == nil && r.PortalEnabled == nil {
+		r.SyncIntervalMinutes == nil && r.ErrorMessage == nil && r.PortalEnabled == nil &&
+		r.IntegrationID == nil {
 		return errors.New("at least one field must be provided")
 	}
 	if r.FeedFormat != nil {

@@ -32,6 +32,7 @@ type SupplierService struct {
 	auditRepo        repository.AuditRepo
 	pool             *pgxpool.Pool
 	webhookDispatch  *WebhookDispatchService
+	integrationSvc   *IntegrationService
 	logger           *slog.Logger
 }
 
@@ -41,6 +42,7 @@ func NewSupplierService(
 	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
+	integrationSvc *IntegrationService,
 	logger *slog.Logger,
 ) *SupplierService {
 	return &SupplierService{
@@ -49,6 +51,7 @@ func NewSupplierService(
 		auditRepo:        auditRepo,
 		pool:             pool,
 		webhookDispatch:  webhookDispatch,
+		integrationSvc:   integrationSvc,
 		logger:           logger,
 	}
 }
@@ -118,6 +121,7 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		Status:              "active",
 		Settings:            settings,
 		SyncIntervalMinutes: syncInterval,
+		IntegrationID:       req.IntegrationID,
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -287,7 +291,22 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 
 // syncViaProvider syncs products using a registered SupplierProvider (e.g. BTP API).
 func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplierID uuid.UUID, supplier *model.Supplier) error {
-	provider, err := integration.NewSupplierProvider(supplier.FeedFormat, supplier.Settings, supplier.Settings)
+	// Decrypt credentials from the linked integration
+	if supplier.IntegrationID == nil {
+		return fmt.Errorf("supplier %s has feed_format %q but no integration_id linked", supplierID, supplier.FeedFormat)
+	}
+	credJSON, err := s.integrationSvc.GetDecryptedCredentialsByID(ctx, tenantID, *supplier.IntegrationID)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to decrypt credentials: %s", err)
+		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
+		}); dbErr != nil {
+			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+		}
+		return fmt.Errorf("decrypt supplier credentials: %w", err)
+	}
+
+	provider, err := integration.NewSupplierProvider(supplier.FeedFormat, credJSON, supplier.Settings)
 	if err != nil {
 		errMsg := err.Error()
 		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
