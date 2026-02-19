@@ -27,8 +27,9 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      automountServiceAccountToken: false
       securityContext:
-        fsGroup: 65534
+        {{- toYaml .Values.apiServer.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: 30
       containers:
         - name: worker

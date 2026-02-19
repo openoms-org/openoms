@@ -23,6 +23,9 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.dashboard.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: 15
       containers:
         - name: dashboard
@@ -49,3 +52,10 @@ spec:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}
           securityContext:
             {{- toYaml .Values.dashboard.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi

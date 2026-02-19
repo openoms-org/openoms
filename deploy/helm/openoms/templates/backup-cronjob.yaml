@@ -26,6 +26,7 @@ spec:
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          automountServiceAccountToken: false
           restartPolicy: OnFailure
           containers:
             - name: backup
@@ -55,22 +56,25 @@ spec:
 
                   echo "Uploading to S3: s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
                   apk add --no-cache aws-cli >/dev/null 2>&1
-                  aws s3 cp "/tmp/${FILENAME}" "s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}" \
-                    --endpoint-url "${S3_ENDPOINT}"
+                  S3_ARGS="--endpoint-url ${S3_ENDPOINT}"
+                  if [ -n "${AWS_DEFAULT_REGION}" ]; then
+                    S3_ARGS="${S3_ARGS} --region ${AWS_DEFAULT_REGION}"
+                  fi
+                  aws s3 cp "/tmp/${FILENAME}" "s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}" ${S3_ARGS}
 
                   echo "Backup completed: ${FILENAME} (${SIZE} bytes)"
 
                   {{- if .Values.backup.retentionDays }}
                   echo "Cleaning backups older than {{ .Values.backup.retentionDays }} days..."
                   CUTOFF=$(date -d "-{{ .Values.backup.retentionDays }} days" +%Y%m%d 2>/dev/null || date -v-{{ .Values.backup.retentionDays }}d +%Y%m%d)
-                  aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}" --endpoint-url "${S3_ENDPOINT}" \
+                  aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}" ${S3_ARGS} \
                     | awk '{print $4}' \
                     | grep '^openoms-' \
                     | while read -r file; do
                         FILE_DATE=$(echo "$file" | sed 's/openoms-\([0-9]*\)-.*/\1/')
                         if [ "${FILE_DATE}" \< "${CUTOFF}" ]; then
                           echo "Deleting old backup: ${file}"
-                          aws s3 rm "s3://${S3_BUCKET}/${S3_PREFIX}${file}" --endpoint-url "${S3_ENDPOINT}"
+                          aws s3 rm "s3://${S3_BUCKET}/${S3_PREFIX}${file}" ${S3_ARGS}
                         fi
                       done
                   echo "Cleanup done"
@@ -87,6 +91,10 @@ spec:
                   value: {{ .Values.backup.s3.prefix | default "backups/" | quote }}
                 - name: S3_ENDPOINT
                   value: {{ .Values.backup.s3.endpoint | quote }}
+                {{- if .Values.backup.s3.region }}
+                - name: AWS_DEFAULT_REGION
+                  value: {{ .Values.backup.s3.region | quote }}
+                {{- end }}
                 - name: AWS_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:

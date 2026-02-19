@@ -1,0 +1,75 @@
+{{- if .Values.networkPolicy.enabled }}
+# Allow ingress to API and Dashboard only from ingress-nginx and cloudflared namespaces
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openoms.fullname" . }}-allow-ingress
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow traffic from ingress-nginx namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.ingressNamespace | default "ingress-nginx" }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.apiServer.port }}
+        - protocol: TCP
+          port: {{ .Values.dashboard.port }}
+    # Allow traffic from cloudflared namespace (Cloudflare Tunnel)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.cloudflaredNamespace | default "cloudflared" }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.apiServer.port }}
+        - protocol: TCP
+          port: {{ .Values.dashboard.port }}
+    # Allow intra-namespace traffic (pod-to-pod within openoms)
+    - from:
+        - podSelector: {}
+---
+# Restrict egress: allow DNS, HTTPS, and database access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openoms.fullname" . }}-egress
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS (external APIs: Allegro, InPost, S3, etc.)
+    - ports:
+        - protocol: TCP
+          port: 443
+    # PostgreSQL (cross-namespace)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Redis (if in same namespace)
+    - ports:
+        - protocol: TCP
+          port: 6379
+    # Intra-namespace (pod-to-pod)
+    - to:
+        - podSelector: {}
+{{- end }}

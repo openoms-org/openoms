@@ -12,6 +12,7 @@ metadata:
   {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
   tls:
     - hosts:
         - {{ .Values.ingress.api.host }}
@@ -19,6 +20,7 @@ spec:
     - hosts:
         - {{ .Values.ingress.dashboard.host }}
       secretName: {{ .Values.ingress.dashboard.tlsSecret }}
+  {{- end }}
   rules:
     - host: {{ .Values.ingress.api.host }}
       http:

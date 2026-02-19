@@ -7,6 +7,8 @@ apiServer:
     tag: ""  # defaults to Chart.appVersion
     pullPolicy: IfNotPresent
   port: 8080
+  service:
+    port: 8080  # K8s Service port (match containerPort for Cloudflare Tunnel)
   env: production
   baseUrl: https://api.openoms.example.com
   frontendUrl: https://app.openoms.example.com
@@ -21,6 +23,7 @@ apiServer:
     region: eu-central-1
     endpoint: ""
     publicUrl: ""
+    forcePathStyle: false  # set true for Hetzner, MinIO, DigitalOcean Spaces
   openai:
     model: gpt-4o-mini
   resources:
@@ -46,11 +49,13 @@ apiServer:
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 3
-  securityContext:
+  podSecurityContext:
     runAsNonRoot: true
     runAsUser: 65534
-    readOnlyRootFilesystem: true
+    fsGroup: 65534
+  securityContext:
     allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
     capabilities:
       drop: ['ALL']
     seccompProfile:
@@ -80,6 +85,8 @@ dashboard:
     tag: ""
     pullPolicy: IfNotPresent
   port: 3000
+  service:
+    port: 3000  # K8s Service port (match containerPort for Cloudflare Tunnel)
   resources:
     requests:
       cpu: 30m
@@ -103,12 +110,14 @@ dashboard:
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 3
-  securityContext:
+  podSecurityContext:
     runAsNonRoot: true
     runAsUser: 1001
     runAsGroup: 1001
-    readOnlyRootFilesystem: false
+    fsGroup: 1001
+  securityContext:
     allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
     capabilities:
       drop: ['ALL']
     seccompProfile:
@@ -128,8 +137,9 @@ ingress:
   enabled: false
   className: nginx
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  tls:
+    enabled: false  # set true + add cert-manager annotation for non-tunnel setups
   api:
     host: api.openoms.example.com
     tlsSecret: openoms-api-tls
@@ -144,6 +154,11 @@ secrets:
 imagePullSecrets:
   - name: ghcr-pull-secret
 
+networkPolicy:
+  enabled: false  # set true in production for namespace-level isolation
+  ingressNamespace: ingress-nginx
+  cloudflaredNamespace: cloudflared
+
 backup:
   enabled: false
   schedule: "0 3 * * *"  # daily at 3 AM
@@ -152,6 +167,8 @@ backup:
     bucket: openoms-backups
     prefix: "backups/"
     endpoint: ""
+    region: ""
+    forcePathStyle: false
 
 database:
   host: postgres

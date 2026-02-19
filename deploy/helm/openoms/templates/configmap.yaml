@@ -17,6 +17,7 @@ data:
   S3_REGION: {{ .Values.apiServer.s3.region | quote }}
   S3_ENDPOINT: {{ .Values.apiServer.s3.endpoint | quote }}
   S3_PUBLIC_URL: {{ .Values.apiServer.s3.publicUrl | quote }}
+  S3_FORCE_PATH_STYLE: {{ .Values.apiServer.s3.forcePathStyle | quote }}
   FEATURE_ALLEGRO: {{ .Values.apiServer.features.allegro | quote }}
   FEATURE_INPOST: {{ .Values.apiServer.features.inpost | quote }}
   OPENAI_MODEL: {{ .Values.apiServer.openai.model | quote }}
