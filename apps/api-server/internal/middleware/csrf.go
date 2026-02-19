@@ -54,6 +54,7 @@ func isCSRFExempt(path string) bool {
 	exemptPrefixes := []string{
 		"/v1/auth/login",
 		"/v1/auth/register",
+		"/v1/auth/refresh",
 		"/v1/public/",
 		"/v1/webhooks/",
 		"/health",

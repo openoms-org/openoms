@@ -177,7 +177,7 @@ func TestSecurity_CSRF_POSTWithInvalidTokenReturns403(t *testing.T) {
 func TestSecurity_CSRF_ExemptEndpointPassesWithoutToken(t *testing.T) {
 	handler := middleware.CSRF(false)(okHandler())
 
-	endpoints := []string{"/v1/auth/login", "/v1/auth/register", "/v1/public/returns/submit", "/v1/webhooks/allegro", "/health", "/metrics"}
+	endpoints := []string{"/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh", "/v1/public/returns/submit", "/v1/webhooks/allegro", "/health", "/metrics"}
 	for _, ep := range endpoints {
 		req := httptest.NewRequest("POST", ep, nil)
 		rr := httptest.NewRecorder()
