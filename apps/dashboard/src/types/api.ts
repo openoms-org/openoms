@@ -768,6 +768,7 @@ export interface Supplier {
   last_sync_at?: string;
   error_message?: string;
   portal_enabled: boolean;
+  integration_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -836,6 +837,7 @@ export interface CreateSupplierRequest {
   feed_format?: string;
   sync_interval_minutes?: number;
   settings?: Record<string, unknown>;
+  integration_id?: string;
 }
 
 export interface UpdateSupplierRequest {
