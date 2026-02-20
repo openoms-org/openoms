@@ -431,6 +431,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)
 				r.Get("/{id}/stock", deps.Warehouse.ListProductStock)
+				r.Get("/{id}/supplier-link", deps.Supplier.SupplierLink)
 
 				// Background removal for product images
 				if deps.BGRemoval != nil {
@@ -628,6 +629,11 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/category-mappings", deps.Supplier.ListCategoryMappings)
 				r.Put("/{id}/category-mappings", deps.Supplier.UpsertCategoryMapping)
 				r.Delete("/{id}/category-mappings/{mid}", deps.Supplier.DeleteCategoryMapping)
+				r.Get("/{id}/allegro-mappings", deps.Supplier.ListAllegroMappings)
+				r.Put("/{id}/allegro-mappings", deps.Supplier.BulkUpsertAllegroMappings)
+				r.Delete("/{id}/allegro-mappings/{mid}", deps.Supplier.DeleteAllegroMapping)
+				r.Get("/{id}/allegro-mappings/categories", deps.Supplier.ListAllegroMappingCategories)
+				r.Get("/{id}/attributes", deps.Supplier.ListSupplierAttributes)
 
 				// Supplier portal management
 				if deps.SupplierPortal != nil {

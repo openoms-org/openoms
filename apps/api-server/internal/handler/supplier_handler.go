@@ -450,3 +450,159 @@ func (h *SupplierHandler) DeleteCategoryMapping(w http.ResponseWriter, r *http.R
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// ListAllegroMappings handles GET /v1/suppliers/{id}/allegro-mappings?category_id=xxx
+func (h *SupplierHandler) ListAllegroMappings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	categoryID := r.URL.Query().Get("category_id")
+	if categoryID == "" {
+		writeError(w, http.StatusBadRequest, "category_id query parameter is required")
+		return
+	}
+
+	mappings, err := h.supplierService.ListAllegroMappings(r.Context(), tenantID, supplierID, categoryID)
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to list allegro mappings")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, mappings)
+}
+
+// BulkUpsertAllegroMappings handles PUT /v1/suppliers/{id}/allegro-mappings
+func (h *SupplierHandler) BulkUpsertAllegroMappings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.BulkUpsertAllegroMappingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	mappings, err := h.supplierService.BulkUpsertAllegroMappings(r.Context(), tenantID, supplierID, req)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to upsert allegro mappings")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, mappings)
+}
+
+// DeleteAllegroMapping handles DELETE /v1/suppliers/{id}/allegro-mappings/{mid}
+func (h *SupplierHandler) DeleteAllegroMapping(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	mappingID, err := uuid.Parse(chi.URLParam(r, "mid"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid mapping ID")
+		return
+	}
+
+	err = h.supplierService.DeleteAllegroMapping(r.Context(), tenantID, supplierID, mappingID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to delete allegro mapping")
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListSupplierAttributes handles GET /v1/suppliers/{id}/attributes
+func (h *SupplierHandler) ListSupplierAttributes(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	attrs, err := h.supplierService.ListSupplierAttributes(r.Context(), tenantID, supplierID)
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to list supplier attributes")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, attrs)
+}
+
+// ListAllegroMappingCategories handles GET /v1/suppliers/{id}/allegro-mappings/categories
+func (h *SupplierHandler) ListAllegroMappingCategories(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	categories, err := h.supplierService.ListAllegroMappingCategories(r.Context(), tenantID, supplierID)
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to list allegro mapping categories")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, categories)
+}
+
+// SupplierLink handles GET /v1/products/{id}/supplier-link
+func (h *SupplierHandler) SupplierLink(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	productID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid product ID")
+		return
+	}
+
+	supplierID, err := h.supplierService.FindSupplierForProduct(r.Context(), tenantID, productID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to find supplier for product")
+		return
+	}
+	if supplierID == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"supplier_id": nil})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"supplier_id": supplierID.String()})
+}

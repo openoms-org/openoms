@@ -510,3 +510,43 @@ func (r *SupplierProductRepository) ListSourceCategories(ctx context.Context, tx
 	}
 	return categories, rows.Err()
 }
+
+// ListAttributes returns distinct attribute names from supplier_products.metadata.attributes for a supplier.
+func (r *SupplierProductRepository) ListAttributes(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT DISTINCT key
+		 FROM supplier_products, jsonb_object_keys(metadata->'attributes') AS key
+		 WHERE supplier_id = $1
+		 ORDER BY key`,
+		supplierID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list supplier attributes: %w", err)
+	}
+	defer rows.Close()
+	var attrs []string
+	for rows.Next() {
+		var attr string
+		if err := rows.Scan(&attr); err != nil {
+			return nil, fmt.Errorf("scan supplier attribute: %w", err)
+		}
+		attrs = append(attrs, attr)
+	}
+	return attrs, rows.Err()
+}
+
+// FindSupplierIDByProductID returns the supplier_id for a given linked product_id.
+func (r *SupplierProductRepository) FindSupplierIDByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (*uuid.UUID, error) {
+	var supplierID uuid.UUID
+	err := tx.QueryRow(ctx,
+		`SELECT supplier_id FROM supplier_products WHERE product_id = $1 LIMIT 1`,
+		productID,
+	).Scan(&supplierID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find supplier by product: %w", err)
+	}
+	return &supplierID, nil
+}

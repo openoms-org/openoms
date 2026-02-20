@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, Copy, ShieldOff, ExternalLink, Trash2, Check, AlertCircle } from "lucide-react";
-import type { ProductCategory, SupplierCategoryMapping } from "@/types/api";
+import { RefreshCw, ArrowLeft, Copy, ShieldOff, ExternalLink, Trash2, Check, AlertCircle, Search, Save, ChevronDown } from "lucide-react";
+import type { ProductCategory, SupplierCategoryMapping, AllegroParameterMapping } from "@/types/api";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useSupplier,
@@ -17,8 +17,14 @@ import {
   useSupplierCategoryMappings,
   useUpsertCategoryMapping,
   useDeleteCategoryMapping,
+  useAllegroParameterMappings,
+  useBulkUpsertAllegroMappings,
+  useSupplierAttributes,
+  useAllegroMappingCategories,
 } from "@/hooks/use-suppliers";
 import { useCategoryTree } from "@/hooks/use-categories";
+import { useAllegroCategorySearch, useAllegroCategoryParams } from "@/hooks/use-allegro";
+import type { AllegroCategoryParameter } from "@/hooks/use-allegro";
 import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -468,6 +474,9 @@ export default function SupplierDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Allegro Parameter Mappings */}
+      <AllegroParameterMappingSection supplierId={id} />
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -500,5 +509,290 @@ export default function SupplierDetailPage() {
       </Card>
     </div>
     </AdminGuard>
+  );
+}
+
+const FIELD_SOURCES = [
+  { value: "ean", label: "EAN" },
+  { value: "sku", label: "SKU" },
+  { value: "name", label: "Nazwa" },
+  { value: "brand", label: "Marka" },
+  { value: "weight", label: "Waga" },
+  { value: "price", label: "Cena" },
+];
+
+interface MappingRow {
+  allegro_param_id: string;
+  allegro_param_name: string;
+  type: string;
+  required: boolean;
+  source_type: "attribute" | "field" | "static" | "";
+  source_key: string;
+}
+
+function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) {
+  const [categorySearch, setCategorySearch] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryName, setSelectedCategoryName] = useState("");
+  const [mappingRows, setMappingRows] = useState<MappingRow[]>([]);
+  const [expanded, setExpanded] = useState(false);
+
+  const { data: searchResults } = useAllegroCategorySearch(categorySearch);
+  const { data: paramsData } = useAllegroCategoryParams(selectedCategoryId);
+  const { data: existingMappings } = useAllegroParameterMappings(supplierId, selectedCategoryId);
+  const { data: supplierAttributes } = useSupplierAttributes(supplierId);
+  const { data: configuredCategories } = useAllegroMappingCategories(supplierId);
+  const bulkUpsert = useBulkUpsertAllegroMappings(supplierId);
+
+  // Build mapping rows when params or existing mappings load
+  useEffect(() => {
+    if (!paramsData?.parameters?.length) return;
+
+    const existingMap = new Map<string, AllegroParameterMapping>();
+    if (existingMappings) {
+      for (const m of existingMappings) {
+        existingMap.set(m.allegro_param_id, m);
+      }
+    }
+
+    const rows: MappingRow[] = paramsData.parameters.map((p) => {
+      const existing = existingMap.get(p.id);
+      return {
+        allegro_param_id: p.id,
+        allegro_param_name: p.name,
+        type: p.type,
+        required: p.required,
+        source_type: existing?.source_type ?? "",
+        source_key: existing?.source_key ?? "",
+      };
+    });
+    setMappingRows(rows);
+  }, [paramsData, existingMappings]);
+
+  const updateRow = useCallback((paramId: string, field: "source_type" | "source_key", value: string) => {
+    setMappingRows((prev) =>
+      prev.map((row) => {
+        if (row.allegro_param_id !== paramId) return row;
+        if (field === "source_type") {
+          return { ...row, source_type: value as MappingRow["source_type"], source_key: "" };
+        }
+        return { ...row, [field]: value };
+      })
+    );
+  }, []);
+
+  const handleSave = () => {
+    if (!selectedCategoryId) return;
+    const configured = mappingRows.filter((r) => r.source_type && r.source_key);
+    if (configured.length === 0) {
+      toast.error("Skonfiguruj co najmniej jedno mapowanie");
+      return;
+    }
+    bulkUpsert.mutate(
+      {
+        allegro_category_id: selectedCategoryId,
+        mappings: configured.map((r) => ({
+          allegro_param_id: r.allegro_param_id,
+          allegro_param_name: r.allegro_param_name,
+          source_type: r.source_type as "attribute" | "field" | "static",
+          source_key: r.source_key,
+        })),
+      },
+      {
+        onSuccess: () => toast.success("Mapowania zapisane"),
+        onError: (error) => toast.error(getErrorMessage(error)),
+      }
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        className="cursor-pointer"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Mapowanie parametrow Allegro</CardTitle>
+            <CardDescription>
+              Powiaz parametry kategorii Allegro z danymi dostawcy
+            </CardDescription>
+          </div>
+          <ChevronDown
+            className={`h-5 w-5 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+          />
+        </div>
+      </CardHeader>
+      {expanded && (
+        <CardContent className="space-y-4">
+          {/* Configured categories badges */}
+          {configuredCategories && configuredCategories.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              <span className="text-xs text-muted-foreground mr-1 self-center">Skonfigurowane:</span>
+              {configuredCategories.map((catId) => (
+                <Badge
+                  key={catId}
+                  variant={catId === selectedCategoryId ? "default" : "secondary"}
+                  className="cursor-pointer text-xs"
+                  onClick={() => {
+                    setSelectedCategoryId(catId);
+                    setSelectedCategoryName(catId);
+                  }}
+                >
+                  {catId}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Category search */}
+          <div className="space-y-2">
+            <Label>Kategoria Allegro</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Szukaj kategorii Allegro..."
+                value={categorySearch}
+                onChange={(e) => setCategorySearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {searchResults?.matchingCategories && searchResults.matchingCategories.length > 0 && categorySearch.length >= 2 && (
+              <div className="border rounded-md max-h-48 overflow-y-auto">
+                {searchResults.matchingCategories.map((cat) => {
+                  const parts: string[] = [];
+                  let current: typeof cat | null = cat;
+                  while (current) {
+                    parts.unshift(current.name);
+                    current = current.parent ?? null;
+                  }
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent border-b last:border-b-0"
+                      onClick={() => {
+                        setSelectedCategoryId(cat.id);
+                        setSelectedCategoryName(parts.join(" > "));
+                        setCategorySearch("");
+                      }}
+                    >
+                      <span className="text-muted-foreground text-xs">{parts.slice(0, -1).join(" > ")}</span>
+                      {parts.length > 1 && <span className="text-muted-foreground text-xs"> &gt; </span>}
+                      <span className="font-medium">{parts[parts.length - 1]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {selectedCategoryId && (
+              <p className="text-xs text-muted-foreground">
+                Wybrana: <span className="font-medium">{selectedCategoryName}</span> ({selectedCategoryId})
+              </p>
+            )}
+          </div>
+
+          {/* Parameter mapping table */}
+          {selectedCategoryId && paramsData?.parameters && (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Parametr Allegro</TableHead>
+                    <TableHead className="w-[80px]">Typ</TableHead>
+                    <TableHead className="w-[140px]">Zrodlo</TableHead>
+                    <TableHead className="w-[200px]">Wartosc</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mappingRows.map((row) => (
+                    <TableRow key={row.allegro_param_id}>
+                      <TableCell>
+                        <span className={row.required ? "font-medium" : ""}>
+                          {row.allegro_param_name}
+                        </span>
+                        {row.required && (
+                          <span className="text-destructive ml-1">*</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {row.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={row.source_type || undefined}
+                          onValueChange={(v) => updateRow(row.allegro_param_id, "source_type", v)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="—" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="attribute">Atrybut</SelectItem>
+                            <SelectItem value="field">Pole</SelectItem>
+                            <SelectItem value="static">Stala</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {row.source_type === "attribute" && (
+                          <Select
+                            value={row.source_key || undefined}
+                            onValueChange={(v) => updateRow(row.allegro_param_id, "source_key", v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Wybierz atrybut..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(supplierAttributes ?? []).map((attr) => (
+                                <SelectItem key={attr} value={attr}>
+                                  {attr}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {row.source_type === "field" && (
+                          <Select
+                            value={row.source_key || undefined}
+                            onValueChange={(v) => updateRow(row.allegro_param_id, "source_key", v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Wybierz pole..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {FIELD_SOURCES.map((f) => (
+                                <SelectItem key={f.value} value={f.value}>
+                                  {f.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {row.source_type === "static" && (
+                          <Input
+                            value={row.source_key}
+                            onChange={(e) => updateRow(row.allegro_param_id, "source_key", e.target.value)}
+                            placeholder="Wpisz wartosc..."
+                            className="h-8 text-xs"
+                          />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex justify-end">
+                <Button onClick={handleSave} disabled={bulkUpsert.isPending}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {bulkUpsert.isPending ? "Zapisywanie..." : "Zapisz mapowania"}
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }

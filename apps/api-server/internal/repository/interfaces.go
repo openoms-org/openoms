@@ -246,6 +246,16 @@ type SupplierProductRepo interface {
 	UnlinkProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	BulkDelete(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (int, error)
 	ListSourceCategories(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
+	ListAttributes(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
+	FindSupplierIDByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (*uuid.UUID, error)
+}
+
+// AllegroParameterMappingRepo defines the interface for Allegro parameter mapping persistence.
+type AllegroParameterMappingRepo interface {
+	ListBySupplierAndCategory(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, allegroCategoryID string) ([]model.AllegroParameterMapping, error)
+	BulkUpsert(ctx context.Context, tx pgx.Tx, mappings []*model.AllegroParameterMapping) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	ListCategoriesForSupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
 }
 
 // WarehouseRepo defines the interface for warehouse persistence operations.

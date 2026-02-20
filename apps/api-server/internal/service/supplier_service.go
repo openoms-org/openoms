@@ -32,6 +32,7 @@ type SupplierService struct {
 	supplierRepo        repository.SupplierRepo
 	supplierProdRepo    repository.SupplierProductRepo
 	categoryMappingRepo repository.SupplierCategoryMappingRepo
+	allegroMappingRepo  repository.AllegroParameterMappingRepo
 	categoryRepo        repository.ProductCategoryRepo
 	productRepo         repository.ProductRepo
 	auditRepo           repository.AuditRepo
@@ -45,6 +46,7 @@ func NewSupplierService(
 	supplierRepo repository.SupplierRepo,
 	supplierProdRepo repository.SupplierProductRepo,
 	categoryMappingRepo repository.SupplierCategoryMappingRepo,
+	allegroMappingRepo repository.AllegroParameterMappingRepo,
 	categoryRepo repository.ProductCategoryRepo,
 	productRepo repository.ProductRepo,
 	auditRepo repository.AuditRepo,
@@ -57,6 +59,7 @@ func NewSupplierService(
 		supplierRepo:        supplierRepo,
 		supplierProdRepo:    supplierProdRepo,
 		categoryMappingRepo: categoryMappingRepo,
+		allegroMappingRepo:  allegroMappingRepo,
 		categoryRepo:        categoryRepo,
 		productRepo:         productRepo,
 		auditRepo:           auditRepo,
@@ -1106,4 +1109,136 @@ func (s *SupplierService) ListSourceCategories(ctx context.Context, tenantID, su
 		categories = []string{}
 	}
 	return categories, err
+}
+
+// ListAllegroMappings returns Allegro parameter mappings for a supplier and category.
+func (s *SupplierService) ListAllegroMappings(ctx context.Context, tenantID, supplierID uuid.UUID, allegroCategoryID string) ([]model.AllegroParameterMapping, error) {
+	var mappings []model.AllegroParameterMapping
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+		mappings, err = s.allegroMappingRepo.ListBySupplierAndCategory(ctx, tx, supplierID, allegroCategoryID)
+		return err
+	})
+	if mappings == nil {
+		mappings = []model.AllegroParameterMapping{}
+	}
+	return mappings, err
+}
+
+// BulkUpsertAllegroMappings creates or updates Allegro parameter mappings for a supplier.
+func (s *SupplierService) BulkUpsertAllegroMappings(ctx context.Context, tenantID, supplierID uuid.UUID, req model.BulkUpsertAllegroMappingsRequest) ([]model.AllegroParameterMapping, error) {
+	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	var result []model.AllegroParameterMapping
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+
+		models := make([]*model.AllegroParameterMapping, len(req.Mappings))
+		for i, m := range req.Mappings {
+			vm := m.ValueMapping
+			if vm == nil {
+				vm = json.RawMessage("{}")
+			}
+			models[i] = &model.AllegroParameterMapping{
+				ID:                uuid.New(),
+				TenantID:          tenantID,
+				SupplierID:        supplierID,
+				AllegroCategoryID: req.AllegroCategoryID,
+				AllegroParamID:    m.AllegroParamID,
+				AllegroParamName:  m.AllegroParamName,
+				SourceType:        m.SourceType,
+				SourceKey:         m.SourceKey,
+				ValueMapping:      vm,
+			}
+		}
+
+		if err := s.allegroMappingRepo.BulkUpsert(ctx, tx, models); err != nil {
+			return err
+		}
+		result = make([]model.AllegroParameterMapping, len(models))
+		for i, m := range models {
+			result[i] = *m
+		}
+		return nil
+	})
+	return result, err
+}
+
+// DeleteAllegroMapping removes a single Allegro parameter mapping.
+func (s *SupplierService) DeleteAllegroMapping(ctx context.Context, tenantID, supplierID, mappingID uuid.UUID) error {
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+		return s.allegroMappingRepo.Delete(ctx, tx, mappingID)
+	})
+}
+
+// ListSupplierAttributes returns unique attribute names from supplier products' metadata.
+func (s *SupplierService) ListSupplierAttributes(ctx context.Context, tenantID, supplierID uuid.UUID) ([]string, error) {
+	var attrs []string
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+		attrs, err = s.supplierProdRepo.ListAttributes(ctx, tx, supplierID)
+		return err
+	})
+	if attrs == nil {
+		attrs = []string{}
+	}
+	return attrs, err
+}
+
+// ListAllegroMappingCategories returns distinct Allegro category IDs with saved mappings.
+func (s *SupplierService) ListAllegroMappingCategories(ctx context.Context, tenantID, supplierID uuid.UUID) ([]string, error) {
+	var categories []string
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+		categories, err = s.allegroMappingRepo.ListCategoriesForSupplier(ctx, tx, supplierID)
+		return err
+	})
+	if categories == nil {
+		categories = []string{}
+	}
+	return categories, err
+}
+
+// FindSupplierForProduct returns the supplier_id linked to a product via supplier_products.
+func (s *SupplierService) FindSupplierForProduct(ctx context.Context, tenantID, productID uuid.UUID) (*uuid.UUID, error) {
+	var supplierID *uuid.UUID
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		supplierID, err = s.supplierProdRepo.FindSupplierIDByProductID(ctx, tx, productID)
+		return err
+	})
+	return supplierID, err
 }
