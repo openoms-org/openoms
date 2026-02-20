@@ -141,6 +141,25 @@ func TestSecurity_CSRF_GETSetsCookie(t *testing.T) {
 	assert.False(t, csrfCookie.HttpOnly, "JS must be able to read csrf_token")
 }
 
+func TestSecurity_CSRF_GETSetsCookieWithDomain(t *testing.T) {
+	handler := middleware.CSRF(false, ".openoms.org")(okHandler())
+	req := httptest.NewRequest("GET", "/v1/orders", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	cookies := rr.Result().Cookies()
+	var csrfCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == "csrf_token" {
+			csrfCookie = c
+		}
+	}
+	assert.NotNil(t, csrfCookie, "csrf_token cookie should be set")
+	// Go's http.Cookie parser strips the leading dot per RFC 6265
+	assert.Equal(t, "openoms.org", csrfCookie.Domain)
+}
+
 func TestSecurity_CSRF_POSTWithoutTokenReturns403(t *testing.T) {
 	handler := middleware.CSRF(false, "")(okHandler())
 	req := httptest.NewRequest("POST", "/v1/orders", nil)

@@ -992,6 +992,11 @@ func New(deps RouterDeps) *chi.Mux {
 // extractCookieDomain derives a cookie Domain attribute from the frontend URL.
 // "https://app.openoms.org" → ".openoms.org" (cross-subdomain access).
 // "http://localhost:3000" → "" (no domain restriction for local dev).
+//
+// NOTE: This uses a simple heuristic (last 2 hostname parts) which works for
+// single-part TLDs (.org, .com, .pl) but NOT for multi-part ccTLDs like .co.uk
+// or .com.pl. This is intentional — openoms.org uses a single-part TLD and we
+// avoid pulling in golang.org/x/net/publicsuffix for this one call site.
 func extractCookieDomain(frontendURL string) string {
 	u, err := url.Parse(frontendURL)
 	if err != nil {
