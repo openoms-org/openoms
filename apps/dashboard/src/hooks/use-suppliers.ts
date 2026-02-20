@@ -12,6 +12,8 @@ import type {
   SupplierPortalStatus,
   SupplierCategoryMapping,
   UpsertCategoryMappingRequest,
+  ImportSupplierProductsRequest,
+  ImportSupplierProductsResponse,
 } from "@/types/api";
 
 export function useSuppliers(params: SupplierListParams = {}) {
@@ -117,6 +119,26 @@ export function useLinkSupplierProduct(supplierId: string) {
   });
 }
 
+export function useImportSupplierProducts(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ImportSupplierProductsRequest) =>
+      apiClient<ImportSupplierProductsResponse>(
+        `/v1/suppliers/${supplierId}/products/import`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-products", supplierId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
 export function useSupplierProducts(
   supplierId: string,
   params: SupplierProductListParams = {}
@@ -126,6 +148,7 @@ export function useSupplierProducts(
   if (params.offset != null) query.set("offset", String(params.offset));
   if (params.ean) query.set("ean", params.ean);
   if (params.linked !== undefined) query.set("linked", String(params.linked));
+  if (params.search) query.set("search", params.search);
 
   const qs = query.toString();
 

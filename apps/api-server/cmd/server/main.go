@@ -249,7 +249,7 @@ func main() {
 	allegroSyncService := service.NewAllegroSyncService(integrationService)
 	orderService.SetAllegroSyncService(allegroSyncService)
 	shipmentService.SetAllegroSyncService(allegroSyncService)
-	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, productCategoryRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
+	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, productCategoryRepo, productRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
 	productCategoryService := service.NewProductCategoryService(productCategoryRepo, auditRepo, pool)
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
 	warehouseService := service.NewWarehouseService(warehouseRepo, warehouseStockRepo, auditRepo, tenantRepo, pool)

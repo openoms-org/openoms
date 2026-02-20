@@ -183,6 +183,9 @@ func (h *SupplierHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		val := linked == "true"
 		filter.Linked = &val
 	}
+	if search := r.URL.Query().Get("search"); search != "" {
+		filter.Search = &search
+	}
 
 	resp, err := h.supplierService.ListProducts(r.Context(), tenantID, filter)
 	if err != nil {
@@ -277,6 +280,40 @@ func (h *SupplierHandler) UpsertCategoryMapping(w http.ResponseWriter, r *http.R
 		return
 	}
 	writeJSON(w, http.StatusOK, mapping)
+}
+
+// ImportProducts handles POST /v1/suppliers/{id}/products/import — bulk creates OMS products from supplier products.
+func (h *SupplierHandler) ImportProducts(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.ImportSupplierProductsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.supplierService.ImportProducts(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to import products")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *SupplierHandler) DeleteCategoryMapping(w http.ResponseWriter, r *http.Request) {

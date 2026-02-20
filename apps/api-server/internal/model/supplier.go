@@ -130,7 +130,37 @@ type SupplierProductListFilter struct {
 	SupplierID *uuid.UUID
 	EAN        *string
 	Linked     *bool
+	Search     *string
 	PaginationParams
+}
+
+// ImportSupplierProductsRequest is the request body for bulk importing supplier products into the OMS catalog.
+type ImportSupplierProductsRequest struct {
+	SupplierProductIDs []uuid.UUID `json:"supplier_product_ids"`
+}
+
+// Validate checks that the request contains between 1 and 500 supplier product IDs.
+func (r *ImportSupplierProductsRequest) Validate() error {
+	if len(r.SupplierProductIDs) == 0 {
+		return errors.New("supplier_product_ids is required")
+	}
+	if len(r.SupplierProductIDs) > 500 {
+		return errors.New("max 500 products per import")
+	}
+	return nil
+}
+
+// ImportSupplierProductsResponse is the response body for a bulk import operation.
+type ImportSupplierProductsResponse struct {
+	Imported int                          `json:"imported"`
+	Skipped  int                          `json:"skipped"`
+	Errors   []ImportSupplierProductError `json:"errors,omitempty"`
+}
+
+// ImportSupplierProductError describes a single product that failed to import.
+type ImportSupplierProductError struct {
+	SupplierProductID string `json:"supplier_product_id"`
+	Reason            string `json:"reason"`
 }
 
 type SupplierCategoryMapping struct {

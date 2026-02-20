@@ -913,6 +913,17 @@ export interface SupplierListParams extends PaginationParams {
 export interface SupplierProductListParams extends PaginationParams {
   ean?: string;
   linked?: boolean;
+  search?: string;
+}
+
+export interface ImportSupplierProductsRequest {
+  supplier_product_ids: string[];
+}
+
+export interface ImportSupplierProductsResponse {
+  imported: number;
+  skipped: number;
+  errors?: { supplier_product_id: string; reason: string }[];
 }
 
 // === Invoices ===

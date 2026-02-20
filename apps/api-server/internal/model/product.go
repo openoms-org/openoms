@@ -68,10 +68,10 @@ func (r *CreateProductRequest) Validate() error {
 	switch r.Source {
 	case "":
 		r.Source = "manual"
-	case "allegro", "woocommerce", "manual":
+	case "allegro", "woocommerce", "manual", "supplier":
 		// valid
 	default:
-		return errors.New("source must be one of: allegro, woocommerce, manual")
+		return errors.New("source must be one of: allegro, woocommerce, manual, supplier")
 	}
 	if r.Price < 0 {
 		return errors.New("price must not be negative")
