@@ -30,7 +30,7 @@ func TestSupplierService_Create_ValidationError_InvalidFeedFormat(t *testing.T) 
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateSupplierRequest{
 		Name:       "Test Supplier",
-		FeedFormat: "xml",
+		FeedFormat: "yaml",
 	}, uuid.New(), "127.0.0.1")
 
 	require.Error(t, err)
