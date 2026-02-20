@@ -95,10 +95,10 @@ func (r *IntegrationRepository) Create(ctx context.Context, tx pgx.Tx, integrati
 	credsJSON, _ := json.Marshal(encryptedCreds)
 	return tx.QueryRow(ctx,
 		`INSERT INTO integrations (id, tenant_id, provider, label, status, credentials, settings)
-		 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
+		 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)
 		 RETURNING created_at, updated_at`,
 		integration.ID, integration.TenantID, integration.Provider, integration.Label, integration.Status,
-		credsJSON, integration.Settings,
+		string(credsJSON), string(integration.Settings),
 	).Scan(&integration.CreatedAt, &integration.UpdatedAt)
 }
 
@@ -120,12 +120,12 @@ func (r *IntegrationRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.U
 	if encryptedCreds != nil {
 		credsJSON, _ := json.Marshal(*encryptedCreds)
 		setClauses = append(setClauses, fmt.Sprintf("credentials = $%d::jsonb", argIdx))
-		args = append(args, credsJSON)
+		args = append(args, string(credsJSON))
 		argIdx++
 	}
 	if req.Settings != nil {
-		setClauses = append(setClauses, fmt.Sprintf("settings = $%d", argIdx))
-		args = append(args, *req.Settings)
+		setClauses = append(setClauses, fmt.Sprintf("settings = $%d::jsonb", argIdx))
+		args = append(args, string(*req.Settings))
 		argIdx++
 	}
 	if req.SyncCursor != nil {
