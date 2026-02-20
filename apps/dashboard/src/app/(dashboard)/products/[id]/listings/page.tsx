@@ -501,6 +501,16 @@ function CreateAllegroListingDialog({
       (meta?.manufacturer as string | undefined) ??
       product.tags?.[0];
 
+    // Supplier XML Specification/Attributes stored in metadata.attributes
+    const supplierAttrs = (meta?.attributes ?? {}) as Record<string, string>;
+    // Build lowercase lookup: "kolor" → "Czerwony"
+    const supplierAttrsLower: Record<string, string> = {};
+    for (const [key, val] of Object.entries(supplierAttrs)) {
+      if (typeof val === "string" && val) {
+        supplierAttrsLower[key.toLowerCase()] = val;
+      }
+    }
+
     const autoValues: Record<string, { valuesIds?: string[]; values?: string[] }> = {};
 
     const tryDictMatch = (
@@ -597,6 +607,19 @@ function CreateAllegroListingDialog({
           }
         } else {
           autoValues[param.id] = { values: [String(product.weight)] };
+        }
+        continue;
+      }
+
+      // Fallback: match supplier XML attributes (Specification/Attributes)
+      // e.g. XML has <Attribute><Name>Kolor</Name><Values><Value>Czerwony</Value></Values></Attribute>
+      // Allegro parameter "Kolor" (dictionary) → try to match "Czerwony"
+      const attrValue = supplierAttrsLower[nameLower];
+      if (attrValue) {
+        if (param.type === "dictionary" && param.dictionary?.length) {
+          tryDictMatch(param, attrValue);
+        } else {
+          autoValues[param.id] = { values: [attrValue] };
         }
         continue;
       }
