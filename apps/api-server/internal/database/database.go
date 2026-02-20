@@ -25,7 +25,7 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 
 	// Register json.RawMessage as JSONB so pgx sends it as text (valid JSON)
 	// instead of bytea hex encoding. Required for simple_protocol mode (Supabase pooler).
-	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+	config.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		tm := conn.TypeMap()
 		tm.RegisterType(&pgtype.Type{
 			Name:  "jsonb",
