@@ -311,15 +311,25 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 			return err
 		}
 
-		// Build category ID lookup and resolve names
-		categoryNameMap := make(map[string]string, len(mappings))
+		// Build category lookup: source_category → (name, categoryID)
+		type categoryInfo struct {
+			Name string
+			ID   *uuid.UUID
+		}
+		categoryMap := make(map[string]categoryInfo, len(mappings))
 		for _, m := range mappings {
 			if m.CategoryID != nil {
 				cat, catErr := s.categoryRepo.FindByID(ctx, tx, *m.CategoryID)
 				if catErr == nil && cat != nil {
-					categoryNameMap[m.SourceCategory] = cat.Name
+					categoryMap[m.SourceCategory] = categoryInfo{Name: cat.Name, ID: m.CategoryID}
 				}
 			}
+		}
+
+		// Fetch supplier's default category for fallback
+		var defaultCategoryID *uuid.UUID
+		if supplier.DefaultCategoryID != nil {
+			defaultCategoryID = supplier.DefaultCategoryID
 		}
 
 		for _, spID := range req.SupplierProductIDs {
@@ -349,13 +359,18 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 
 			// Resolve category from mappings
 			var category *string
+			var categoryID *uuid.UUID
 			if sp.SourceCategory != nil {
-				if name, ok := categoryNameMap[*sp.SourceCategory]; ok {
-					category = &name
+				if info, ok := categoryMap[*sp.SourceCategory]; ok {
+					category = &info.Name
+					categoryID = info.ID
 				}
 			}
 			if category == nil {
 				category = sp.SourceCategory
+			}
+			if categoryID == nil {
+				categoryID = defaultCategoryID
 			}
 
 			price := 0.0
@@ -368,19 +383,57 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 				metadata = json.RawMessage("{}")
 			}
 
+			// Extract enrichment data from metadata
+			var metaMap map[string]any
+			_ = json.Unmarshal(metadata, &metaMap)
+
+			var descLong string
+			if v, ok := metaMap["description"].(string); ok {
+				descLong = v
+			}
+
+			var imageURL *string
+			if v, ok := metaMap["image_url"].(string); ok && v != "" {
+				imageURL = &v
+			}
+
+			var images json.RawMessage
+			if imageURL != nil {
+				imagesArr, _ := json.Marshal([]string{*imageURL})
+				images = imagesArr
+			} else {
+				images = json.RawMessage("[]")
+			}
+
+			var weight *float64
+			if v, ok := metaMap["weight"].(float64); ok && v > 0 {
+				weight = &v
+			}
+
+			var tags []string
+			if v, ok := metaMap["brand"].(string); ok && v != "" {
+				tags = append(tags, v)
+			}
+			if tags == nil {
+				tags = []string{}
+			}
+
 			product := &model.Product{
-				ID:            uuid.New(),
-				TenantID:      tenantID,
-				Name:          sp.Name,
-				SKU:           sp.SKU,
-				EAN:           sp.EAN,
-				Price:         price,
-				StockQuantity: sp.StockQuantity,
-				Source:        "supplier",
-				Category:      category,
-				Metadata:      metadata,
-				Tags:          []string{},
-				Images:        json.RawMessage("[]"),
+				ID:              uuid.New(),
+				TenantID:        tenantID,
+				Name:            sp.Name,
+				SKU:             sp.SKU,
+				EAN:             sp.EAN,
+				Price:           price,
+				StockQuantity:   sp.StockQuantity,
+				Source:          "supplier",
+				Category:        category,
+				DescriptionLong: descLong,
+				ImageURL:        imageURL,
+				Images:          images,
+				Weight:          weight,
+				Tags:            tags,
+				Metadata:        metadata,
 			}
 
 			if err := s.productRepo.Create(ctx, tx, product); err != nil {
@@ -389,6 +442,16 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 					Reason:            fmt.Sprintf("failed to create product: %s", err),
 				})
 				continue
+			}
+
+			// Set category_id if resolved
+			if categoryID != nil {
+				if _, err := tx.Exec(ctx,
+					"UPDATE products SET category_id = $1 WHERE id = $2",
+					*categoryID, product.ID); err != nil {
+					s.logger.Error("failed to set product category_id",
+						"product_id", product.ID, "category_id", categoryID, "error", err)
+				}
 			}
 
 			if err := s.supplierProdRepo.LinkToProduct(ctx, tx, spID, product.ID); err != nil {
@@ -504,14 +567,19 @@ func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID u
 	// Convert IOF products to normalized format
 	products := make([]integration.SupplierProduct, len(iofProducts))
 	for i, fp := range iofProducts {
+		brand := fp.Attributes["producer"]
 		products[i] = integration.SupplierProduct{
 			ExternalID:    fp.ID,
 			Name:          fp.Name,
+			Description:   fp.Description,
 			EAN:           fp.EAN,
 			SKU:           fp.SKU,
 			Price:         fp.Price,
 			StockQuantity: fp.Stock,
 			Category:      fp.Category,
+			Brand:         brand,
+			ImageURL:      fp.ImageURL,
+			Weight:        fp.Weight,
 			Attributes:    fp.Attributes,
 		}
 	}
@@ -541,7 +609,27 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for _, fp := range products {
-			attrs, _ := json.Marshal(fp.Attributes)
+			// Build rich metadata including description, images, weight, brand
+			meta := map[string]any{}
+			if fp.Description != "" {
+				meta["description"] = fp.Description
+			}
+			if fp.Brand != "" {
+				meta["brand"] = fp.Brand
+			}
+			if fp.ImageURL != "" {
+				meta["image_url"] = fp.ImageURL
+			}
+			if fp.Weight > 0 {
+				meta["weight"] = fp.Weight
+			}
+			if fp.RetailPrice > 0 {
+				meta["retail_price"] = fp.RetailPrice
+			}
+			if len(fp.Attributes) > 0 {
+				meta["attributes"] = fp.Attributes
+			}
+			metaJSON, _ := json.Marshal(meta)
 
 			var ean, sku *string
 			if fp.EAN != "" {
@@ -571,7 +659,7 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 				Price:          price,
 				StockQuantity:  fp.StockQuantity,
 				SourceCategory: sourceCategory,
-				Metadata:       attrs,
+				Metadata:       metaJSON,
 				LastSyncedAt:   &syncedAt,
 			}
 
@@ -591,7 +679,20 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 					if linkErr := s.supplierProdRepo.LinkToProduct(ctx, tx, sp.ID, productID); linkErr != nil {
 						s.logger.Error("failed to auto-link supplier product by EAN",
 							"supplier_product_id", sp.ID, "product_id", productID, "error", linkErr)
+					} else {
+						sp.ProductID = &productID
 					}
+				}
+			}
+
+			// Sync stock and price to linked OMS product
+			if sp.ProductID != nil {
+				if _, err := tx.Exec(ctx,
+					`UPDATE products SET stock_quantity = $1, price = COALESCE($2, price), updated_at = NOW()
+					 WHERE id = $3`,
+					fp.StockQuantity, price, *sp.ProductID); err != nil {
+					s.logger.Error("failed to sync stock/price to linked product",
+						"product_id", sp.ProductID, "error", err)
 				}
 			}
 
@@ -738,4 +839,110 @@ func (s *SupplierService) resolveCategoryForProduct(ctx context.Context, tx pgx.
 	}
 
 	return defaultCategoryID
+}
+
+// UnlinkProduct removes the link between a supplier product and an OMS product.
+func (s *SupplierService) UnlinkProduct(ctx context.Context, tenantID, supplierProductID uuid.UUID, actorID uuid.UUID, ip string) error {
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		sp, err := s.supplierProdRepo.FindByID(ctx, tx, supplierProductID)
+		if err != nil {
+			return err
+		}
+		if sp == nil {
+			return ErrSupplierProductNotFound
+		}
+
+		if err := s.supplierProdRepo.UnlinkProduct(ctx, tx, supplierProductID); err != nil {
+			return err
+		}
+
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier_product.unlinked",
+			EntityType: "supplier_product",
+			EntityID:   supplierProductID,
+			IPAddress:  ip,
+		})
+	})
+}
+
+// DeleteSupplierProduct deletes a single supplier product.
+func (s *SupplierService) DeleteSupplierProduct(ctx context.Context, tenantID, supplierID, supplierProductID uuid.UUID, actorID uuid.UUID, ip string) error {
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		sp, err := s.supplierProdRepo.FindByID(ctx, tx, supplierProductID)
+		if err != nil {
+			return err
+		}
+		if sp == nil {
+			return ErrSupplierProductNotFound
+		}
+		if sp.SupplierID != supplierID {
+			return ErrSupplierProductNotFound
+		}
+
+		if err := s.supplierProdRepo.Delete(ctx, tx, supplierProductID); err != nil {
+			return err
+		}
+
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier_product.deleted",
+			EntityType: "supplier_product",
+			EntityID:   supplierProductID,
+			IPAddress:  ip,
+		})
+	})
+}
+
+// BulkDeleteSupplierProducts deletes multiple supplier products.
+func (s *SupplierService) BulkDeleteSupplierProducts(ctx context.Context, tenantID, supplierID uuid.UUID, req model.BulkDeleteSupplierProductsRequest, actorID uuid.UUID, ip string) (int, error) {
+	if err := req.Validate(); err != nil {
+		return 0, NewValidationError(err)
+	}
+
+	var deleted int
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		// Verify supplier exists
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+
+		var count int
+		count, err = s.supplierProdRepo.BulkDelete(ctx, tx, req.SupplierProductIDs)
+		if err != nil {
+			return err
+		}
+		deleted = count
+
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier_products.bulk_deleted",
+			EntityType: "supplier",
+			EntityID:   supplierID,
+			Changes:    map[string]string{"deleted": fmt.Sprintf("%d", deleted)},
+			IPAddress:  ip,
+		})
+	})
+	return deleted, err
+}
+
+// ListSourceCategories returns distinct source categories for a supplier's products.
+func (s *SupplierService) ListSourceCategories(ctx context.Context, tenantID, supplierID uuid.UUID) ([]string, error) {
+	var categories []string
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		categories, err = s.supplierProdRepo.ListSourceCategories(ctx, tx, supplierID)
+		return err
+	})
+	if categories == nil {
+		categories = []string{}
+	}
+	return categories, err
 }

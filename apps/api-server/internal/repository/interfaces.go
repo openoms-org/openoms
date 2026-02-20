@@ -242,6 +242,9 @@ type SupplierProductRepo interface {
 	UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error
 	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.SupplierProduct, error)
 	LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error
+	UnlinkProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	BulkDelete(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (int, error)
+	ListSourceCategories(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
 }
 
 // WarehouseRepo defines the interface for warehouse persistence operations.

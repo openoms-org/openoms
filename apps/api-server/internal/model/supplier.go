@@ -127,10 +127,11 @@ type SupplierListFilter struct {
 }
 
 type SupplierProductListFilter struct {
-	SupplierID *uuid.UUID
-	EAN        *string
-	Linked     *bool
-	Search     *string
+	SupplierID     *uuid.UUID
+	EAN            *string
+	Linked         *bool
+	Search         *string
+	SourceCategory *string
 	PaginationParams
 }
 
@@ -183,6 +184,22 @@ type UpsertCategoryMappingRequest struct {
 func (r *UpsertCategoryMappingRequest) Validate() error {
 	if strings.TrimSpace(r.SourceCategory) == "" {
 		return errors.New("source_category is required")
+	}
+	return nil
+}
+
+// BulkDeleteSupplierProductsRequest is the request body for bulk deleting supplier products.
+type BulkDeleteSupplierProductsRequest struct {
+	SupplierProductIDs []uuid.UUID `json:"supplier_product_ids"`
+}
+
+// Validate checks that the request contains between 1 and 500 supplier product IDs.
+func (r *BulkDeleteSupplierProductsRequest) Validate() error {
+	if len(r.SupplierProductIDs) == 0 {
+		return errors.New("supplier_product_ids is required")
+	}
+	if len(r.SupplierProductIDs) > 500 {
+		return errors.New("max 500 products per bulk delete")
 	}
 	return nil
 }

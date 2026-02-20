@@ -186,6 +186,9 @@ func (h *SupplierHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	if search := r.URL.Query().Get("search"); search != "" {
 		filter.Search = &search
 	}
+	if category := r.URL.Query().Get("category"); category != "" {
+		filter.SourceCategory = &category
+	}
 
 	resp, err := h.supplierService.ListProducts(r.Context(), tenantID, filter)
 	if err != nil {
@@ -193,6 +196,110 @@ func (h *SupplierHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// ListSourceCategories handles GET /v1/suppliers/{id}/products/categories — returns distinct source categories.
+func (h *SupplierHandler) ListSourceCategories(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	categories, err := h.supplierService.ListSourceCategories(r.Context(), tenantID, supplierID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list source categories")
+		return
+	}
+	writeJSON(w, http.StatusOK, categories)
+}
+
+// DeleteProduct handles DELETE /v1/suppliers/{id}/products/{spid} — deletes a single supplier product.
+func (h *SupplierHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	spID, err := uuid.Parse(chi.URLParam(r, "spid"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier product ID")
+		return
+	}
+
+	err = h.supplierService.DeleteSupplierProduct(r.Context(), tenantID, supplierID, spID, actorID, clientIP(r))
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierProductNotFound) {
+			writeError(w, http.StatusNotFound, "supplier product not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to delete supplier product")
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// BulkDeleteProducts handles POST /v1/suppliers/{id}/products/bulk-delete — deletes multiple supplier products.
+func (h *SupplierHandler) BulkDeleteProducts(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.BulkDeleteSupplierProductsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	deleted, err := h.supplierService.BulkDeleteSupplierProducts(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to delete supplier products")
+			}
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"deleted": deleted})
+}
+
+// UnlinkProduct handles POST /v1/suppliers/{id}/products/{spid}/unlink — removes link to OMS product.
+func (h *SupplierHandler) UnlinkProduct(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	spID, err := uuid.Parse(chi.URLParam(r, "spid"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier product ID")
+		return
+	}
+
+	err = h.supplierService.UnlinkProduct(r.Context(), tenantID, spID, actorID, clientIP(r))
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierProductNotFound) {
+			writeError(w, http.StatusNotFound, "supplier product not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to unlink product")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"message": "product unlinked"})
 }
 
 func (h *SupplierHandler) LinkProduct(w http.ResponseWriter, r *http.Request) {
