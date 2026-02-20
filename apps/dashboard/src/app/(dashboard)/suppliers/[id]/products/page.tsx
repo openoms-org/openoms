@@ -69,6 +69,7 @@ export default function SupplierProductsPage() {
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailProduct, setDetailProduct] = useState<SupplierProduct | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleSearchChange = (value: string) => {
@@ -398,7 +399,7 @@ export default function SupplierProductsPage() {
         )}
 
         {/* Detail Modal */}
-        <Dialog open={!!detailProduct} onOpenChange={(open) => !open && setDetailProduct(null)}>
+        <Dialog open={!!detailProduct} onOpenChange={(open) => { if (!open) { setDetailProduct(null); setSelectedImageIndex(0); } }}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             {detailProduct && (
               <>
@@ -406,16 +407,48 @@ export default function SupplierProductsPage() {
                   <DialogTitle className="pr-8">{detailProduct.name}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  {/* Image */}
-                  {getMetaString(detailProduct.metadata, "image_url") && (
-                    <div className="rounded-lg border overflow-hidden bg-muted/30">
-                      <img
-                        src={getMetaString(detailProduct.metadata, "image_url")}
-                        alt={detailProduct.name}
-                        className="w-full max-h-[300px] object-contain"
-                      />
-                    </div>
-                  )}
+                  {/* Images */}
+                  {(() => {
+                    const images = Array.isArray(detailProduct.metadata?.images)
+                      ? (detailProduct.metadata.images as string[])
+                      : getMetaString(detailProduct.metadata, "image_url")
+                        ? [getMetaString(detailProduct.metadata, "image_url")!]
+                        : [];
+                    if (images.length === 0) return null;
+                    return (
+                      <div className="space-y-2">
+                        <div className="rounded-lg border overflow-hidden bg-muted/30">
+                          <img
+                            src={images[selectedImageIndex] || images[0]}
+                            alt={detailProduct.name}
+                            className="w-full max-h-[300px] object-contain"
+                          />
+                        </div>
+                        {images.length > 1 && (
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {images.map((url, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setSelectedImageIndex(i)}
+                                className={`flex-shrink-0 w-16 h-16 rounded-md border overflow-hidden bg-muted/30 ${
+                                  (selectedImageIndex ?? 0) === i
+                                    ? "ring-2 ring-primary"
+                                    : "opacity-70 hover:opacity-100"
+                                }`}
+                              >
+                                <img
+                                  src={url}
+                                  alt={`${detailProduct.name} ${i + 1}`}
+                                  className="w-full h-full object-contain"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Basic Info */}
                   <div className="grid grid-cols-2 gap-3 text-sm">
