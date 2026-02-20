@@ -11,7 +11,7 @@ import (
 )
 
 func TestFileAdd(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/Gateway/ClientApi/FileAdd" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -61,7 +61,7 @@ func TestFileAdd(t *testing.T) {
 }
 
 func TestFilesDelete(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/Gateway/ClientApi/FilesDelete" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -91,7 +91,7 @@ func TestFilesDelete(t *testing.T) {
 }
 
 func TestFilesClear(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/Gateway/ClientApi/FilesClear" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
