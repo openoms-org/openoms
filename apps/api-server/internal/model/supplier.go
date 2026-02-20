@@ -230,6 +230,7 @@ type AllegroParameterMapping struct {
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
+// UpsertAllegroParameterMappingRequest represents a single mapping entry in a bulk upsert.
 type UpsertAllegroParameterMappingRequest struct {
 	AllegroParamID   string          `json:"allegro_param_id"`
 	AllegroParamName string          `json:"allegro_param_name"`
@@ -238,11 +239,13 @@ type UpsertAllegroParameterMappingRequest struct {
 	ValueMapping     json.RawMessage `json:"value_mapping,omitempty"`
 }
 
+// BulkUpsertAllegroMappingsRequest is the payload for creating/updating Allegro parameter mappings.
 type BulkUpsertAllegroMappingsRequest struct {
 	AllegroCategoryID string                                 `json:"allegro_category_id"`
 	Mappings          []UpsertAllegroParameterMappingRequest `json:"mappings"`
 }
 
+// Validate checks required fields and limits.
 func (r *BulkUpsertAllegroMappingsRequest) Validate() error {
 	if strings.TrimSpace(r.AllegroCategoryID) == "" {
 		return errors.New("allegro_category_id is required")

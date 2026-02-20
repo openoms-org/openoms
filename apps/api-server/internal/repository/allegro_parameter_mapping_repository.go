@@ -1,3 +1,4 @@
+// Package repository implements data access for the OpenOMS API server.
 package repository
 
 import (
@@ -9,12 +10,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// AllegroParameterMappingRepository handles CRUD for allegro_parameter_mappings.
 type AllegroParameterMappingRepository struct{}
 
+// NewAllegroParameterMappingRepository creates a new repository instance.
 func NewAllegroParameterMappingRepository() *AllegroParameterMappingRepository {
 	return &AllegroParameterMappingRepository{}
 }
 
+// ListBySupplierAndCategory returns all mappings for a given supplier and Allegro category.
 func (r *AllegroParameterMappingRepository) ListBySupplierAndCategory(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, allegroCategoryID string) ([]model.AllegroParameterMapping, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, supplier_id, allegro_category_id, allegro_param_id, allegro_param_name,
@@ -41,6 +45,7 @@ func (r *AllegroParameterMappingRepository) ListBySupplierAndCategory(ctx contex
 	return mappings, rows.Err()
 }
 
+// BulkUpsert inserts or updates mappings using ON CONFLICT.
 func (r *AllegroParameterMappingRepository) BulkUpsert(ctx context.Context, tx pgx.Tx, mappings []*model.AllegroParameterMapping) error {
 	for _, m := range mappings {
 		if err := tx.QueryRow(ctx,
@@ -62,6 +67,7 @@ func (r *AllegroParameterMappingRepository) BulkUpsert(ctx context.Context, tx p
 	return nil
 }
 
+// Delete removes a single mapping by ID.
 func (r *AllegroParameterMappingRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM allegro_parameter_mappings WHERE id = $1", id)
 	if err != nil {
@@ -73,6 +79,7 @@ func (r *AllegroParameterMappingRepository) Delete(ctx context.Context, tx pgx.T
 	return nil
 }
 
+// ListCategoriesForSupplier returns distinct Allegro category IDs that have mappings.
 func (r *AllegroParameterMappingRepository) ListCategoriesForSupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT DISTINCT allegro_category_id FROM allegro_parameter_mappings
