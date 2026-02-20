@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import {
   ArrowLeft,
+  ChevronDown,
   Eye,
   EyeOff,
   FileText,
@@ -82,30 +83,77 @@ export default function NewSupplierPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("pick");
 
+  // --- Shared mutations ---
+  const createIntegration = useCreateIntegration();
+
   // --- File/URL form ---
   const createSupplier = useCreateSupplier();
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<FileSupplierForm>({
     resolver: zodResolver(fileSupplierSchema),
     defaultValues: { feed_format: "iof", sync_interval_minutes: 60 },
   });
 
-  const onFileSubmit = (data: FileSupplierForm) => {
-    createSupplier.mutate(data, {
-      onSuccess: () => {
-        toast.success("Dostawca został utworzony");
-        router.push("/suppliers");
-      },
-      onError: (error) => toast.error(getErrorMessage(error)),
-    });
+  const selectedFormat = watch("feed_format");
+
+  // BTP API credentials for XML hybrid mode
+  const [xmlApiExpanded, setXmlApiExpanded] = useState(false);
+  const [xmlPublicKey, setXmlPublicKey] = useState("");
+  const [xmlPrivateKey, setXmlPrivateKey] = useState("");
+  const [xmlApiBaseUrl, setXmlApiBaseUrl] = useState("");
+  const [showXmlPrivateKey, setShowXmlPrivateKey] = useState(false);
+  const [fileSubmitting, setFileSubmitting] = useState(false);
+
+  const onFileSubmit = async (data: FileSupplierForm) => {
+    const hasBtpCreds =
+      selectedFormat === "xml" &&
+      xmlPublicKey.trim() &&
+      xmlPrivateKey.trim();
+
+    if (!hasBtpCreds) {
+      createSupplier.mutate(data, {
+        onSuccess: () => {
+          toast.success("Dostawca został utworzony");
+          router.push("/suppliers");
+        },
+        onError: (error) => toast.error(getErrorMessage(error)),
+      });
+      return;
+    }
+
+    // Hybrid mode: create integration first, then supplier with integration_id
+    setFileSubmitting(true);
+    try {
+      const integration = await createIntegration.mutateAsync({
+        provider: "btp",
+        label: data.name,
+        credentials: {
+          username: xmlPublicKey,
+          password: xmlPrivateKey,
+          base_url: xmlApiBaseUrl || undefined,
+        },
+      });
+
+      await createSupplier.mutateAsync({
+        ...data,
+        integration_id: integration.id,
+      });
+
+      toast.success("Dostawca został utworzony (tryb hybrydowy XML + API)");
+      router.push("/suppliers");
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setFileSubmitting(false);
+    }
   };
 
   // --- BTP form ---
-  const createIntegration = useCreateIntegration();
   const createSupplierApi = useCreateSupplier();
   const [btpName, setBtpName] = useState("");
   const [btpPublicKey, setBtpPublicKey] = useState("");
@@ -306,9 +354,109 @@ export default function NewSupplierPage() {
                     </Select>
                   </div>
                 </div>
+                {/* BTP API credentials for XML hybrid mode */}
+                {selectedFormat === "xml" && (
+                  <div className="rounded-lg border">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between p-3 text-sm font-medium hover:bg-muted/50 transition-colors"
+                      onClick={() => setXmlApiExpanded((prev) => !prev)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="h-4 w-4 text-muted-foreground" />
+                        Klucze API BTP (opcjonalnie)
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground transition-transform",
+                          xmlApiExpanded && "rotate-180"
+                        )}
+                      />
+                    </button>
+                    {xmlApiExpanded && (
+                      <div className="border-t px-3 pb-3 pt-3 space-y-3">
+                        <p className="text-xs text-muted-foreground">
+                          Podaj klucze API z panelu BTP, aby włączyć tryb
+                          hybrydowy — pełny katalog z XML + aktualizacje stanów
+                          przez API między synchronizacjami.
+                        </p>
+                        <div className="space-y-2">
+                          <Label htmlFor="xml-public-key">
+                            Klucz publiczny (login)
+                          </Label>
+                          <Input
+                            id="xml-public-key"
+                            value={xmlPublicKey}
+                            onChange={(e) => setXmlPublicKey(e.target.value)}
+                            placeholder="Klucz publiczny z panelu BTP"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="xml-private-key">
+                            Klucz prywatny (hasło)
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="xml-private-key"
+                              type={showXmlPrivateKey ? "text" : "password"}
+                              className="pr-10"
+                              value={xmlPrivateKey}
+                              onChange={(e) => setXmlPrivateKey(e.target.value)}
+                              placeholder="Klucz prywatny z panelu BTP"
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() =>
+                                setShowXmlPrivateKey((prev) => !prev)
+                              }
+                              tabIndex={-1}
+                              aria-label={
+                                showXmlPrivateKey
+                                  ? "Ukryj klucz"
+                                  : "Pokaż klucz"
+                              }
+                            >
+                              {showXmlPrivateKey ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="xml-base-url">
+                            Adres API hurtowni{" "}
+                            <span className="text-muted-foreground font-normal">
+                              (opcjonalnie)
+                            </span>
+                          </Label>
+                          <Input
+                            id="xml-base-url"
+                            type="url"
+                            value={xmlApiBaseUrl}
+                            onChange={(e) => setXmlApiBaseUrl(e.target.value)}
+                            placeholder="https://twoja-hurtownia.btp.pro"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex gap-2 pt-2">
-                  <Button type="submit" disabled={createSupplier.isPending}>
-                    {createSupplier.isPending ? "Tworzenie..." : "Utwórz dostawcę"}
+                  <Button
+                    type="submit"
+                    disabled={createSupplier.isPending || fileSubmitting}
+                  >
+                    {createSupplier.isPending || fileSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Tworzenie...
+                      </>
+                    ) : (
+                      "Utwórz dostawcę"
+                    )}
                   </Button>
                   <Button
                     type="button"
