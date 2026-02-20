@@ -777,7 +777,7 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 			// Sync stock, price, weight, and enrichment data to linked OMS product.
 			// Enrichment fields (description_long, image_url, images, weight) only fill empty values.
 			if sp.ProductID != nil {
-				var imagesJSON json.RawMessage
+				imagesJSON := json.RawMessage("[]")
 				if len(fp.Images) > 0 {
 					imagesJSON, _ = json.Marshal(fp.Images)
 				}
