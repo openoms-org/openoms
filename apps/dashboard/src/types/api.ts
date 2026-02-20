@@ -914,6 +914,7 @@ export interface SupplierProductListParams extends PaginationParams {
   ean?: string;
   linked?: boolean;
   search?: string;
+  category?: string;
 }
 
 export interface ImportSupplierProductsRequest {
@@ -924,6 +925,10 @@ export interface ImportSupplierProductsResponse {
   imported: number;
   skipped: number;
   errors?: { supplier_product_id: string; reason: string }[];
+}
+
+export interface BulkDeleteSupplierProductsRequest {
+  supplier_product_ids: string[];
 }
 
 // === Invoices ===

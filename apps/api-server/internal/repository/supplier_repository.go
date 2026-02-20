@@ -256,6 +256,11 @@ func (r *SupplierProductRepository) List(ctx context.Context, tx pgx.Tx, filter 
 		args = append(args, "%"+*filter.Search+"%")
 		argIdx++
 	}
+	if filter.SourceCategory != nil && *filter.SourceCategory != "" {
+		conditions = append(conditions, fmt.Sprintf("source_category = $%d", argIdx))
+		args = append(args, *filter.SourceCategory)
+		argIdx++
+	}
 
 	where := ""
 	if len(conditions) > 0 {
@@ -433,4 +438,63 @@ func (r *SupplierProductRepository) LinkToProduct(ctx context.Context, tx pgx.Tx
 		return fmt.Errorf("supplier product not found")
 	}
 	return nil
+}
+
+// UnlinkProduct removes the link between a supplier product and an OMS product.
+func (r *SupplierProductRepository) UnlinkProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	ct, err := tx.Exec(ctx,
+		`UPDATE supplier_products SET product_id = NULL, updated_at = NOW() WHERE id = $1`,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("unlink supplier product: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("supplier product not found")
+	}
+	return nil
+}
+
+// BulkDelete deletes multiple supplier products by their IDs and returns the count deleted.
+func (r *SupplierProductRepository) BulkDelete(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (int, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	ct, err := tx.Exec(ctx,
+		fmt.Sprintf("DELETE FROM supplier_products WHERE id IN (%s)", strings.Join(placeholders, ", ")),
+		args...,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("bulk delete supplier products: %w", err)
+	}
+	return int(ct.RowsAffected()), nil
+}
+
+// ListSourceCategories returns distinct source_category values for a supplier.
+func (r *SupplierProductRepository) ListSourceCategories(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT DISTINCT source_category FROM supplier_products
+		 WHERE supplier_id = $1 AND source_category IS NOT NULL AND source_category != ''
+		 ORDER BY source_category`,
+		supplierID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list source categories: %w", err)
+	}
+	defer rows.Close()
+	var categories []string
+	for rows.Next() {
+		var cat string
+		if err := rows.Scan(&cat); err != nil {
+			return nil, fmt.Errorf("scan source category: %w", err)
+		}
+		categories = append(categories, cat)
+	}
+	return categories, rows.Err()
 }

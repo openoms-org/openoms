@@ -14,6 +14,7 @@ import type {
   UpsertCategoryMappingRequest,
   ImportSupplierProductsRequest,
   ImportSupplierProductsResponse,
+  BulkDeleteSupplierProductsRequest,
 } from "@/types/api";
 
 export function useSuppliers(params: SupplierListParams = {}) {
@@ -149,6 +150,7 @@ export function useSupplierProducts(
   if (params.ean) query.set("ean", params.ean);
   if (params.linked !== undefined) query.set("linked", String(params.linked));
   if (params.search) query.set("search", params.search);
+  if (params.category) query.set("category", params.category);
 
   const qs = query.toString();
 
@@ -159,6 +161,68 @@ export function useSupplierProducts(
         `/v1/suppliers/${supplierId}/products${qs ? `?${qs}` : ""}`
       ),
     enabled: !!supplierId,
+  });
+}
+
+export function useSupplierSourceCategories(supplierId: string) {
+  return useQuery({
+    queryKey: ["supplier-source-categories", supplierId],
+    queryFn: () =>
+      apiClient<string[]>(
+        `/v1/suppliers/${supplierId}/products/categories`
+      ),
+    enabled: !!supplierId,
+  });
+}
+
+export function useUnlinkSupplierProduct(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (supplierProductId: string) =>
+      apiClient<{ message: string }>(
+        `/v1/suppliers/${supplierId}/products/${supplierProductId}/unlink`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-products", supplierId],
+      });
+    },
+  });
+}
+
+export function useDeleteSupplierProduct(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (supplierProductId: string) =>
+      apiClient<void>(
+        `/v1/suppliers/${supplierId}/products/${supplierProductId}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-products", supplierId],
+      });
+    },
+  });
+}
+
+export function useBulkDeleteSupplierProducts(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BulkDeleteSupplierProductsRequest) =>
+      apiClient<{ deleted: number }>(
+        `/v1/suppliers/${supplierId}/products/bulk-delete`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["supplier-products", supplierId],
+      });
+    },
   });
 }
 

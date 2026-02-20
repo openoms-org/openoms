@@ -3,6 +3,7 @@ go 1.25.7
 use (
 	./apps/api-server
 	./packages/allegro-go-sdk
+	./packages/btp-go-sdk
 	./packages/amazon-sp-sdk
 	./packages/dhl-go-sdk
 	./packages/dpd-go-sdk
