@@ -71,6 +71,7 @@ export function useWebSocket(): UseWebSocketReturn {
         const resp = await fetch(`${API_URL}/v1/auth/ws-ticket`, {
           method: "POST",
           headers: { Authorization: `Bearer ${freshToken}` },
+          credentials: "include",
         });
         if (resp.ok) {
           const { ticket } = await resp.json();

@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -116,7 +117,7 @@ func New(deps RouterDeps) *chi.Mux {
 	r.Use(middleware.Logging)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS([]string{deps.Config.FrontendURL}))
-	r.Use(middleware.CSRF(!deps.Config.IsDevelopment()))
+	r.Use(middleware.CSRF(!deps.Config.IsDevelopment(), extractCookieDomain(deps.Config.FrontendURL)))
 
 	// Health check — no auth, no tenant required
 	healthHandler := &handler.HealthHandler{DB: deps.Pool}
@@ -986,4 +987,24 @@ func New(deps RouterDeps) *chi.Mux {
 	})
 
 	return r
+}
+
+// extractCookieDomain derives a cookie Domain attribute from the frontend URL.
+// "https://app.openoms.org" → ".openoms.org" (cross-subdomain access).
+// "http://localhost:3000" → "" (no domain restriction for local dev).
+func extractCookieDomain(frontendURL string) string {
+	u, err := url.Parse(frontendURL)
+	if err != nil {
+		return ""
+	}
+	host := u.Hostname()
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+		return ""
+	}
+	parts := strings.Split(host, ".")
+	if len(parts) < 3 {
+		return "" // already a root domain (e.g. "openoms.org") — no prefix needed
+	}
+	// "app.openoms.org" → ".openoms.org"
+	return "." + strings.Join(parts[len(parts)-2:], ".")
 }

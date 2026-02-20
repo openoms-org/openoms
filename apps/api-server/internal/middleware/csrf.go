@@ -11,7 +11,9 @@ import (
 
 // CSRF validates CSRF tokens on state-changing requests.
 // The `secure` parameter controls the Secure flag on the cookie.
-func CSRF(secure bool) func(http.Handler) http.Handler {
+// The `cookieDomain` parameter sets the Domain attribute (e.g. ".openoms.org"
+// for cross-subdomain access; empty string for localhost/dev).
+func CSRF(secure bool, cookieDomain string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Exempt paths
@@ -23,7 +25,7 @@ func CSRF(secure bool) func(http.Handler) http.Handler {
 
 			// For safe methods, set the cookie if not present and proceed
 			if r.Method == "GET" || r.Method == "HEAD" || r.Method == "OPTIONS" {
-				setCSRFCookieIfMissing(w, r, secure)
+				setCSRFCookieIfMissing(w, r, secure, cookieDomain)
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -55,6 +57,7 @@ func isCSRFExempt(path string) bool {
 		"/v1/auth/login",
 		"/v1/auth/register",
 		"/v1/auth/refresh",
+		"/v1/auth/ws-ticket",
 		"/v1/public/",
 		"/v1/webhooks/",
 		"/health",
@@ -68,7 +71,7 @@ func isCSRFExempt(path string) bool {
 	return false
 }
 
-func setCSRFCookieIfMissing(w http.ResponseWriter, r *http.Request, secure bool) {
+func setCSRFCookieIfMissing(w http.ResponseWriter, r *http.Request, secure bool, cookieDomain string) {
 	if _, err := r.Cookie("csrf_token"); err == nil {
 		return // already has cookie
 	}
@@ -78,7 +81,8 @@ func setCSRFCookieIfMissing(w http.ResponseWriter, r *http.Request, secure bool)
 		Name:     "csrf_token",
 		Value:    token,
 		Path:     "/",
-		SameSite: http.SameSiteStrictMode,
+		Domain:   cookieDomain, // e.g. ".openoms.org" for cross-subdomain access
+		SameSite: http.SameSiteLaxMode,
 		Secure:   secure,
 		HttpOnly: false, // JS must read this
 	})
