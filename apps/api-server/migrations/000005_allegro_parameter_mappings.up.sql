@@ -21,4 +21,8 @@ ALTER TABLE allegro_parameter_mappings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON allegro_parameter_mappings
     USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 
-GRANT ALL ON allegro_parameter_mappings TO openoms;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms') THEN
+    GRANT ALL ON allegro_parameter_mappings TO openoms;
+  END IF;
+END $$;
