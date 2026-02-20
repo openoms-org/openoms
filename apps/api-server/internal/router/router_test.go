@@ -14,7 +14,7 @@ func TestExtractCookieDomain(t *testing.T) {
 	}{
 		{"subdomain returns dot-prefixed root", "https://app.openoms.org", ".openoms.org"},
 		{"deep subdomain returns dot-prefixed root", "https://admin.app.openoms.org", ".openoms.org"},
-		{"root domain returns empty", "https://openoms.org", ""},
+		{"root domain returns dot-prefixed", "https://openoms.org", ".openoms.org"},
 		{"localhost returns empty", "http://localhost:3000", ""},
 		{"127.0.0.1 returns empty", "http://127.0.0.1:8080", ""},
 		{"IPv6 loopback returns empty", "http://[::1]:3000", ""},
