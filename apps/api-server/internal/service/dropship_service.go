@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -32,6 +33,7 @@ type DropshipService struct {
 	productRepo      repository.ProductRepo
 	supplierRepo     repository.SupplierRepo
 	auditRepo        repository.AuditRepo
+	integrationSvc   *IntegrationService
 	pool             *pgxpool.Pool
 	webhookDispatch  *WebhookDispatchService
 	logger           *slog.Logger
@@ -45,6 +47,7 @@ func NewDropshipService(
 	productRepo repository.ProductRepo,
 	supplierRepo repository.SupplierRepo,
 	auditRepo repository.AuditRepo,
+	integrationSvc *IntegrationService,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
 	logger *slog.Logger,
@@ -56,6 +59,7 @@ func NewDropshipService(
 		productRepo:      productRepo,
 		supplierRepo:     supplierRepo,
 		auditRepo:        auditRepo,
+		integrationSvc:   integrationSvc,
 		pool:             pool,
 		webhookDispatch:  webhookDispatch,
 		logger:           logger,
@@ -386,6 +390,8 @@ func (s *DropshipService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 }
 
 // UpdateStatus updates the status of a dropship order with optional tracking info.
+// When transitioning to "sent" and the supplier has a linked integration,
+// the order is automatically submitted to the supplier's API.
 func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UUID, req model.UpdateDropshipStatusRequest, actorID uuid.UUID, ip string) (*model.DropshipOrder, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -404,6 +410,21 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 		// Validate status transition
 		if !isValidDropshipTransition(existing.Status, req.Status) {
 			return NewValidationError(fmt.Errorf("cannot transition from %s to %s", existing.Status, req.Status))
+		}
+
+		// Auto-submit to supplier API when transitioning to "sent"
+		if req.Status == "sent" && existing.Status == "pending" {
+			if result, err := s.submitToSupplierAPI(ctx, tx, tenantID, existing); err != nil {
+				s.logger.Error("failed to submit dropship order to supplier API",
+					"dropship_order_id", id, "supplier_id", existing.SupplierID, "error", err)
+				return fmt.Errorf("submit to supplier: %w", err)
+			} else if result != nil {
+				ref := result.ExternalOrderID
+				if result.OrderNumber != "" {
+					ref = result.OrderNumber
+				}
+				req.SupplierReference = &ref
+			}
 		}
 
 		if err := s.dropshipRepo.UpdateFields(ctx, tx, id, req); err != nil {
@@ -496,6 +517,96 @@ func (s *DropshipService) Cancel(ctx context.Context, tenantID, id uuid.UUID, ac
 		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.cancelled", d)
 	}
 	return d, nil
+}
+
+// submitToSupplierAPI submits a dropship order to the supplier's API (e.g. BTP).
+// Returns nil result if the supplier has no linked integration (manual process).
+func (s *DropshipService) submitToSupplierAPI(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, order *model.DropshipOrder) (*integration.SupplierOrderResult, error) {
+	// Load supplier to check for integration
+	supplier, err := s.supplierRepo.FindByID(ctx, tx, order.SupplierID)
+	if err != nil {
+		return nil, fmt.Errorf("load supplier: %w", err)
+	}
+	if supplier == nil || supplier.IntegrationID == nil {
+		return nil, nil // No integration — manual process
+	}
+
+	// Determine provider name: xml-format suppliers use "btp" provider
+	providerName := supplier.FeedFormat
+	if providerName == "xml" {
+		providerName = "btp"
+	}
+	if !integration.HasSupplierProvider(providerName) {
+		return nil, nil // No provider registered for this format
+	}
+
+	// Decrypt credentials
+	credJSON, err := s.integrationSvc.GetDecryptedCredentialsByID(ctx, tenantID, *supplier.IntegrationID)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt credentials: %w", err)
+	}
+
+	provider, err := integration.NewSupplierProvider(providerName, credJSON, supplier.Settings)
+	if err != nil {
+		return nil, fmt.Errorf("create provider: %w", err)
+	}
+
+	// Load items
+	items, err := s.dropshipItemRepo.ListByDropshipOrderID(ctx, tx, order.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load items: %w", err)
+	}
+
+	// Build order request
+	req := integration.SupplierOrderRequest{
+		ClientOrderNumber: order.ID.String(),
+	}
+	if order.Notes != nil {
+		req.Note = *order.Notes
+	}
+
+	for _, item := range items {
+		line := integration.SupplierOrderLine{
+			Quantity: float64(item.Quantity),
+		}
+
+		// Look up product EAN for BarCode identification
+		if item.ProductID != nil {
+			product, err := s.productRepo.FindByID(ctx, tx, *item.ProductID)
+			if err == nil && product != nil {
+				if product.EAN != nil && *product.EAN != "" {
+					line.EAN = *product.EAN
+				}
+				if product.SKU != nil && *product.SKU != "" {
+					line.ItemID = *product.SKU
+				}
+			}
+		}
+
+		// Fallback to dropship item SKU
+		if line.EAN == "" && line.ItemID == "" && item.SKU != "" {
+			line.ItemID = item.SKU
+		}
+
+		req.Lines = append(req.Lines, line)
+	}
+
+	if len(req.Lines) == 0 {
+		return nil, fmt.Errorf("no order lines could be built")
+	}
+
+	result, err := provider.CreateOrder(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("API call: %w", err)
+	}
+
+	s.logger.Info("dropship order submitted to supplier API",
+		"dropship_order_id", order.ID,
+		"supplier", supplier.Name,
+		"external_order_id", result.ExternalOrderID,
+		"order_number", result.OrderNumber)
+
+	return result, nil
 }
 
 // isValidDropshipTransition checks if a status transition is valid.

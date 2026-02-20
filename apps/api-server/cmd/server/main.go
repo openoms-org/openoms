@@ -264,7 +264,7 @@ func main() {
 	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
 	purchaseOrderService := service.NewPurchaseOrderService(purchaseOrderRepo, purchaseOrderItemRepo, warehouseStockRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	pickPackService := service.NewPickPackService(pickPackRepo, orderRepo, productRepo, variantRepo, auditRepo, pool)
-	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, integrationService, pool, webhookDispatchService, slog.Default())
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Product listing repo (needed by both stock sync and allegro listings)
