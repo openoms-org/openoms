@@ -115,10 +115,12 @@ export interface PaginationParams {
 
 // === Orders ===
 export interface OrderItem {
+  product_id?: string;
   name: string;
   sku?: string;
   quantity: number;
   price: number;
+  weight?: number;
 }
 
 export interface ReturnItem {

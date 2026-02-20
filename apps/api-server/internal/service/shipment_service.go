@@ -28,6 +28,7 @@ var (
 type ShipmentService struct {
 	shipmentRepo      repository.ShipmentRepo
 	orderRepo         repository.OrderRepo
+	productRepo       repository.ProductRepo
 	auditRepo         repository.AuditRepo
 	tenantRepo        repository.TenantRepo
 	pool              *pgxpool.Pool
@@ -56,6 +57,7 @@ func (s *ShipmentService) SetAllegroSyncService(allegroSync *AllegroSyncService)
 func NewShipmentService(
 	shipmentRepo repository.ShipmentRepo,
 	orderRepo repository.OrderRepo,
+	productRepo repository.ProductRepo,
 	auditRepo repository.AuditRepo,
 	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
@@ -64,6 +66,7 @@ func NewShipmentService(
 	return &ShipmentService{
 		shipmentRepo:    shipmentRepo,
 		orderRepo:       orderRepo,
+		productRepo:     productRepo,
 		auditRepo:       auditRepo,
 		tenantRepo:      tenantRepo,
 		pool:            pool,
@@ -168,6 +171,13 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 			return ErrOrderNotFoundForShipment
 		}
 		associatedOrder = order
+
+		// Auto-fill weight from order products if not provided
+		if shipment.Weight == nil {
+			if w := s.calculateOrderWeight(ctx, tx, order); w > 0 {
+				shipment.Weight = &w
+			}
+		}
 
 		// Auto-assign package_number: count existing shipments for this order + 1
 		count, err := s.shipmentRepo.CountByOrder(ctx, tx, req.OrderID)
@@ -502,6 +512,35 @@ func readLabelFile(labelURL string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("label file not found for URL: %s", labelURL)
+}
+
+// calculateOrderWeight sums product weights for all items in the order.
+// Returns 0 if any product lacks weight data or order has no items with product_id.
+func (s *ShipmentService) calculateOrderWeight(ctx context.Context, tx pgx.Tx, order *model.Order) float64 {
+	if s.productRepo == nil || len(order.Items) == 0 {
+		return 0
+	}
+
+	var items []struct {
+		ProductID *uuid.UUID `json:"product_id"`
+		Quantity  int        `json:"quantity"`
+	}
+	if err := json.Unmarshal(order.Items, &items); err != nil {
+		return 0
+	}
+
+	var totalWeight float64
+	for _, item := range items {
+		if item.ProductID == nil || *item.ProductID == uuid.Nil || item.Quantity <= 0 {
+			continue
+		}
+		product, err := s.productRepo.FindByID(ctx, tx, *item.ProductID)
+		if err != nil || product == nil || product.Weight == nil || *product.Weight <= 0 {
+			continue
+		}
+		totalWeight += *product.Weight * float64(item.Quantity)
+	}
+	return totalWeight
 }
 
 // estimateCarbon auto-calculates carbon footprint estimate for a shipment.
