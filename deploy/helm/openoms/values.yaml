@@ -170,5 +170,8 @@ backup:
     region: ""
     forcePathStyle: false
 
+redis:
+  url: "redis://localhost:6379"
+
 database:
   host: postgres
