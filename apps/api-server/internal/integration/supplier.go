@@ -20,6 +20,7 @@ type SupplierProduct struct {
 	Category      string            `json:"category,omitempty"`
 	Brand         string            `json:"brand,omitempty"`
 	ImageURL      string            `json:"image_url,omitempty"`
+	Images        []string          `json:"images,omitempty"`
 	Weight        float64           `json:"weight,omitempty"`
 	Attributes    map[string]string `json:"attributes,omitempty"`
 }

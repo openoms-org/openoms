@@ -37,6 +37,9 @@ redisdata/
 .DS_Store
 Thumbs.db
 
+# Git worktrees
+.worktrees/
+
 # Test coverage & results
 coverage/
 **/test-results/
