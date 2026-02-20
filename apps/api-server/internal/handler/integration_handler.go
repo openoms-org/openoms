@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -84,6 +85,7 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
+				slog.Error("failed to create integration", "error", err, "provider", req.Provider)
 				writeError(w, http.StatusInternalServerError, "failed to create integration")
 			}
 		}
