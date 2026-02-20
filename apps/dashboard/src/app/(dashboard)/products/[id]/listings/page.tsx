@@ -491,6 +491,70 @@ function CreateAllegroListingDialog({
     useAllegroCategoryParams(selectedCategoryId || null);
   const createListing = useCreateProductListing(product.id);
 
+  // Auto-fill parameters from product data when category params load
+  useEffect(() => {
+    if (!paramsData?.parameters?.length) return;
+
+    const brand =
+      (product.metadata as Record<string, unknown> | undefined)?.brand as string | undefined
+      ?? product.tags?.[0];
+
+    const autoValues: Record<string, { valuesIds?: string[]; values?: string[] }> = {};
+
+    for (const param of paramsData.parameters) {
+      const nameLower = param.name.toLowerCase();
+
+      // EAN / GTIN
+      if ((nameLower.includes("ean") || nameLower.includes("gtin")) && product.ean) {
+        autoValues[param.id] = { values: [product.ean] };
+        continue;
+      }
+
+      // Marka (Brand) — match in dictionary
+      if (nameLower === "marka" && param.type === "dictionary" && param.dictionary && brand) {
+        const brandLower = brand.toLowerCase();
+        const match = param.dictionary.find((d) => d.value.toLowerCase() === brandLower);
+        if (match) {
+          autoValues[param.id] = { valuesIds: [match.id] };
+        }
+        continue;
+      }
+
+      // Stan (Condition) — auto-select "Nowy"
+      if (nameLower === "stan" && param.type === "dictionary" && param.dictionary) {
+        const match = param.dictionary.find((d) => d.value.toLowerCase() === "nowy");
+        if (match) {
+          autoValues[param.id] = { valuesIds: [match.id] };
+        }
+        continue;
+      }
+
+      // Waga (Weight)
+      if (nameLower.includes("waga") && product.weight && product.weight > 0) {
+        if (param.type === "dictionary" && param.dictionary) {
+          const weightStr = String(product.weight);
+          const match = param.dictionary.find((d) => d.value === weightStr);
+          if (match) {
+            autoValues[param.id] = { valuesIds: [match.id] };
+          }
+        } else {
+          autoValues[param.id] = { values: [String(product.weight)] };
+        }
+        continue;
+      }
+    }
+
+    if (Object.keys(autoValues).length > 0) {
+      setParamValues((prev) => {
+        const merged = { ...autoValues };
+        for (const [key, val] of Object.entries(prev)) {
+          merged[key] = val;
+        }
+        return merged;
+      });
+    }
+  }, [paramsData, product.ean, product.weight, product.tags, product.metadata]);
+
   // Category navigation
   const handleCategoryClick = (cat: AllegroCategory) => {
     if (cat.leaf) {
