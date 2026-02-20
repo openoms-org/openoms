@@ -59,13 +59,13 @@ spec:
     - ports:
         - protocol: TCP
           port: 443
-    # PostgreSQL (cross-namespace)
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # PostgreSQL — in-cluster or external (e.g. Supabase managed)
+    - ports:
         - protocol: TCP
           port: 5432
-    # Redis (if in same namespace)
+        - protocol: TCP
+          port: 6543
+    # Redis
     - ports:
         - protocol: TCP
           port: 6379

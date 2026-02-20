@@ -1689,7 +1689,7 @@ CREATE POLICY tenant_isolation ON public.shipments USING ((tenant_id = (current_
 -- Returns
 ALTER TABLE public.returns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.returns FORCE ROW LEVEL SECURITY;
-CREATE POLICY returns_tenant_isolation ON public.returns USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY returns_tenant_isolation ON public.returns USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Invoices
 ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
@@ -1769,118 +1769,118 @@ CREATE POLICY webhook_deliveries_tenant_isolation ON public.webhook_deliveries U
 -- Invitations
 ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.invitations FORCE ROW LEVEL SECURITY;
-CREATE POLICY invitations_tenant_isolation ON public.invitations USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
-CREATE POLICY invitations_tenant_write ON public.invitations FOR INSERT WITH CHECK ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY invitations_tenant_isolation ON public.invitations USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
+CREATE POLICY invitations_tenant_write ON public.invitations FOR INSERT WITH CHECK ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Purchase Orders
 ALTER TABLE public.purchase_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_orders FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.purchase_orders USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.purchase_orders USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Purchase Order Items
 ALTER TABLE public.purchase_order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchase_order_items FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.purchase_order_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.purchase_order_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Payment Settlements
 ALTER TABLE public.payment_settlements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_settlements FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.payment_settlements USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.payment_settlements USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Payment Transactions
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_transactions FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.payment_transactions USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.payment_transactions USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Pick & Pack Sessions
 ALTER TABLE public.pick_pack_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pick_pack_sessions FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.pick_pack_sessions USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.pick_pack_sessions USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Pick & Pack Items
 ALTER TABLE public.pick_pack_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pick_pack_items FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.pick_pack_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.pick_pack_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Dropship Orders
 ALTER TABLE public.dropship_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dropship_orders FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.dropship_orders USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.dropship_orders USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Dropship Order Items
 ALTER TABLE public.dropship_order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dropship_order_items FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.dropship_order_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.dropship_order_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Supplier Portal Tokens
 ALTER TABLE public.supplier_portal_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supplier_portal_tokens FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.supplier_portal_tokens USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.supplier_portal_tokens USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Supplier Messages
 ALTER TABLE public.supplier_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.supplier_messages FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.supplier_messages USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.supplier_messages USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Recurring Orders
 ALTER TABLE public.recurring_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recurring_orders FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.recurring_orders USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.recurring_orders USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Recurring Order Items
 ALTER TABLE public.recurring_order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recurring_order_items FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.recurring_order_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.recurring_order_items USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Repricing Rules
 ALTER TABLE public.repricing_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.repricing_rules FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.repricing_rules USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.repricing_rules USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Repricing Log
 ALTER TABLE public.repricing_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.repricing_log FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.repricing_log USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.repricing_log USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Customer Segments
 ALTER TABLE public.customer_segments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_segments FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.customer_segments USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.customer_segments USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Customer Segment Members
 ALTER TABLE public.customer_segment_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_segment_members FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.customer_segment_members USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.customer_segment_members USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Loyalty Programs
 ALTER TABLE public.loyalty_programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.loyalty_programs FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.loyalty_programs USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.loyalty_programs USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Customer Loyalty
 ALTER TABLE public.customer_loyalty ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_loyalty FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.customer_loyalty USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.customer_loyalty USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Listing Sync Configs
 ALTER TABLE public.listing_sync_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.listing_sync_configs FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.listing_sync_configs USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.listing_sync_configs USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Listing Sync Log
 ALTER TABLE public.listing_sync_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.listing_sync_log FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.listing_sync_log USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.listing_sync_log USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Stock Sync Channels
 ALTER TABLE public.stock_sync_channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.stock_sync_channels FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.stock_sync_channels USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.stock_sync_channels USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- Stock Sync Events
 ALTER TABLE public.stock_sync_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.stock_sync_events FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON public.stock_sync_events USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
+CREATE POLICY tenant_isolation ON public.stock_sync_events USING ((tenant_id = (current_setting('app.current_tenant_id'::text, true))::uuid));
 
 -- ============================================================
 -- Grants (for openoms application role)
