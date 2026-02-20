@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 	"time"
 
@@ -128,9 +129,7 @@ func (p *Provider) fetchProductsFromXML(ctx context.Context) ([]integration.Supp
 		if item.Guarantee > 0 {
 			sp.Attributes["guarantee_months"] = fmt.Sprintf("%d", item.Guarantee)
 		}
-		for k, v := range item.Attributes {
-			sp.Attributes[k] = v
-		}
+		maps.Copy(sp.Attributes, item.Attributes)
 
 		products = append(products, sp)
 	}
