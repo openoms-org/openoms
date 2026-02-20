@@ -282,6 +282,7 @@ func (h *SupplierHandler) UpsertCategoryMapping(w http.ResponseWriter, r *http.R
 	writeJSON(w, http.StatusOK, mapping)
 }
 
+// ImportProducts handles POST /v1/suppliers/{id}/products/import — bulk creates OMS products from supplier products.
 func (h *SupplierHandler) ImportProducts(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())

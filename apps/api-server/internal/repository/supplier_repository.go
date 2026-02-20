@@ -392,6 +392,7 @@ func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx p
 	).Scan(&sp.ID, &sp.CreatedAt, &sp.UpdatedAt)
 }
 
+// FindByIDs returns supplier products matching the given IDs.
 func (r *SupplierProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.SupplierProduct, error) {
 	if len(ids) == 0 {
 		return nil, nil
