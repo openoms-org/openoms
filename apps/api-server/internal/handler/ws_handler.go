@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -41,6 +42,13 @@ func NewWSHandler(hub *ws.Hub, validator middleware.TokenValidator, blacklist *m
 			originParsed, err := url.Parse(origin)
 			if err != nil {
 				return false
+			}
+			// In development, allow localhost origins regardless of port
+			if strings.Contains(parsed.Hostname(), "localhost") || parsed.Hostname() == "127.0.0.1" {
+				oh := originParsed.Hostname()
+				if oh == "localhost" || oh == "127.0.0.1" {
+					return true
+				}
 			}
 			return originParsed.Scheme == parsed.Scheme && originParsed.Host == parsed.Host
 		},

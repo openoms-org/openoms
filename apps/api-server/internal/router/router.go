@@ -1012,9 +1012,10 @@ func extractCookieDomain(frontendURL string) string {
 		return ""
 	}
 	parts := strings.Split(host, ".")
-	if len(parts) < 3 {
-		return "" // already a root domain (e.g. "openoms.org") — no prefix needed
+	if len(parts) < 2 {
+		return "" // single-label hostname
 	}
+	// "openoms.org" → ".openoms.org"
 	// "app.openoms.org" → ".openoms.org"
 	return "." + strings.Join(parts[len(parts)-2:], ".")
 }
