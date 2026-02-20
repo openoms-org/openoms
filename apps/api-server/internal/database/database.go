@@ -30,7 +30,7 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 		tm.RegisterType(&pgtype.Type{
 			Name:  "jsonb",
 			OID:   pgtype.JSONBOID,
-			Codec: &pgtype.JSONBCodec{},
+			Codec: &pgtype.JSONBCodec{Marshal: json.Marshal, Unmarshal: json.Unmarshal},
 		})
 		tm.RegisterDefaultPgType(json.RawMessage{}, "jsonb")
 		return nil
