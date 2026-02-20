@@ -1,2 +1,0 @@
-ALTER TABLE orders DROP COLUMN IF EXISTS internal_notes;
-ALTER TABLE orders DROP COLUMN IF EXISTS priority;
