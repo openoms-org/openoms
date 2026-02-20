@@ -746,8 +746,8 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 				}
 			}
 
-			// Sync stock, price, and enrichment data to linked OMS product.
-			// Enrichment fields (description_long, image_url, images) only fill empty values.
+			// Sync stock, price, weight, and enrichment data to linked OMS product.
+			// Enrichment fields (description_long, image_url, images, weight) only fill empty values.
 			if sp.ProductID != nil {
 				var imagesJSON json.RawMessage
 				if len(fp.Images) > 0 {
@@ -758,12 +758,13 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 					`UPDATE products SET
 						stock_quantity = $1,
 						price = COALESCE($2, price),
-						description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($3, ''), description_long) ELSE description_long END,
-						image_url = COALESCE(image_url, NULLIF($4, '')),
-						images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($5::jsonb, '[]'::jsonb), images) ELSE images END,
+						weight = COALESCE(weight, NULLIF($3::float8, 0)),
+						description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($4, ''), description_long) ELSE description_long END,
+						image_url = COALESCE(image_url, NULLIF($5, '')),
+						images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($6::jsonb, '[]'::jsonb), images) ELSE images END,
 						updated_at = NOW()
-					 WHERE id = $6`,
-					fp.StockQuantity, price, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
+					 WHERE id = $7`,
+					fp.StockQuantity, price, fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
 					s.logger.Error("failed to sync to linked product",
 						"product_id", sp.ProductID, "error", err)
 				}

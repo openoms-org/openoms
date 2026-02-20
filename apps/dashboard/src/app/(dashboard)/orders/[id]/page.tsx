@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -136,6 +136,19 @@ export default function OrderDetailPage() {
   const duplicateOrder = useDuplicateOrder();
   const { data: dropshipOrders, isLoading: isLoadingDropship } = useOrderDropshipOrders(params.id);
   const autoRouteDropship = useAutoRouteDropship();
+
+  // Calculate total order weight from items for rate shopping
+  const items = order?.items;
+  const orderWeight = useMemo(() => {
+    if (!items?.length) return undefined;
+    let total = 0;
+    for (const item of items) {
+      if (item.weight && item.weight > 0 && item.quantity > 0) {
+        total += item.weight * item.quantity;
+      }
+    }
+    return total > 0 ? Math.round(total * 1000) / 1000 : undefined;
+  }, [items]);
 
   useEffect(() => {
     if (order && !internalNotesDirty) {
@@ -701,6 +714,7 @@ export default function OrderDetailPage() {
 
           <RateShopping
             defaultToPostalCode={order.shipping_address?.postal_code}
+            defaultWeight={orderWeight}
             onSelectRate={(rate) => {
               router.push(
                 `/shipments/new?order_id=${params.id}&carrier=${rate.carrier_code}`
