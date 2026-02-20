@@ -9,7 +9,7 @@ import (
 )
 
 func TestInvoicesGet(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/Gateway/ClientApi/InvoicesGet" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -103,7 +103,7 @@ func TestInvoiceGetImage(t *testing.T) {
 }
 
 func TestInvoiceConfigureNotify(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/Gateway/ClientApi/InvoiceNotifyConfigure" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}

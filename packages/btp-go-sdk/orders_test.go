@@ -10,7 +10,7 @@ import (
 )
 
 func TestOrderCreate(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/Gateway/ClientApi/OrderCreate" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
@@ -66,7 +66,7 @@ func TestOrderCreate(t *testing.T) {
 }
 
 func TestOrderCreateValidationError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(APIResult{
@@ -93,7 +93,7 @@ func TestOrderCreateValidationError(t *testing.T) {
 }
 
 func TestOrderSetAttachments(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/Gateway/ClientApi/OrderAttachmentsSet" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
