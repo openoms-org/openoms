@@ -800,7 +800,7 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 
 			// Resolve category and update linked product if available
 			if sp.ProductID != nil && fp.Category != "" {
-				categoryID := s.resolveCategoryForProduct(ctx, tx, supplierID, fp.Category, defaultCategoryID)
+				categoryID := s.resolveCategoryForProduct(ctx, tx, tenantID, supplierID, fp.Category, defaultCategoryID)
 				if categoryID != nil {
 					if _, err := tx.Exec(ctx,
 						"UPDATE products SET category_id = $1 WHERE id = $2 AND category_id IS NULL",
@@ -894,7 +894,7 @@ func (s *SupplierService) DeleteCategoryMapping(ctx context.Context, tenantID, s
 // 1. Confirmed mapping for the source_category
 // 2. Auto-matched mapping (fuzzy match against existing categories)
 // 3. Supplier's default_category_id
-func (s *SupplierService) resolveCategoryForProduct(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, sourceCategory string, defaultCategoryID *uuid.UUID) *uuid.UUID {
+func (s *SupplierService) resolveCategoryForProduct(ctx context.Context, tx pgx.Tx, tenantID, supplierID uuid.UUID, sourceCategory string, defaultCategoryID *uuid.UUID) *uuid.UUID {
 	if sourceCategory == "" {
 		return defaultCategoryID
 	}
@@ -921,7 +921,7 @@ func (s *SupplierService) resolveCategoryForProduct(ctx context.Context, tx pgx.
 		// Create auto-matched mapping
 		autoMapping := &model.SupplierCategoryMapping{
 			ID:             uuid.New(),
-			TenantID:       uuid.UUID{}, // Set by RLS context
+			TenantID:       tenantID,
 			SupplierID:     supplierID,
 			SourceCategory: sourceCategory,
 			AutoMatched:    true,
