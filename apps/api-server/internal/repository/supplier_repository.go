@@ -208,6 +208,18 @@ func (r *SupplierRepository) UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id
 	return nil
 }
 
+// UpdateLastFullSync records the last full product sync timestamp in the supplier's JSONB settings.
+func (r *SupplierRepository) UpdateLastFullSync(ctx context.Context, tx pgx.Tx, id uuid.UUID, t time.Time) error {
+	_, err := tx.Exec(ctx,
+		`UPDATE suppliers SET settings = COALESCE(settings, '{}'::jsonb) || jsonb_build_object('last_full_sync_at', $1::text), updated_at = NOW() WHERE id = $2`,
+		t.Format(time.RFC3339), id,
+	)
+	if err != nil {
+		return fmt.Errorf("update supplier last full sync: %w", err)
+	}
+	return nil
+}
+
 // SupplierProductRepository
 
 type SupplierProductRepository struct{}

@@ -398,10 +398,17 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 			}
 
 			var images json.RawMessage
-			if imageURL != nil {
+			if rawImages, ok := metaMap["images"]; ok {
+				if arr, ok := rawImages.([]any); ok && len(arr) > 0 {
+					imagesArr, _ := json.Marshal(arr)
+					images = imagesArr
+				}
+			}
+			if images == nil && imageURL != nil {
 				imagesArr, _ := json.Marshal([]string{*imageURL})
 				images = imagesArr
-			} else {
+			}
+			if images == nil {
 				images = json.RawMessage("[]")
 			}
 
@@ -506,6 +513,8 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 }
 
 // syncViaProvider syncs products using a registered SupplierProvider (e.g. BTP API).
+// Uses full sync (FetchProducts with descriptions/images) when last full sync is >24h old,
+// otherwise uses inventory-only sync (FetchInventory for stock/prices).
 func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplierID uuid.UUID, supplier *model.Supplier) error {
 	// Decrypt credentials from the linked integration
 	if supplier.IntegrationID == nil {
@@ -533,7 +542,14 @@ func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplie
 		return fmt.Errorf("create supplier provider: %w", err)
 	}
 
-	products, err := provider.FetchInventory(ctx)
+	fullSync := s.shouldFullSync(supplier)
+
+	var products []integration.SupplierProduct
+	if fullSync {
+		products, err = provider.FetchProducts(ctx)
+	} else {
+		products, err = provider.FetchInventory(ctx)
+	}
 	if err != nil {
 		errMsg := err.Error()
 		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -541,10 +557,52 @@ func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplie
 		}); dbErr != nil {
 			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
 		}
-		return fmt.Errorf("fetch inventory: %w", err)
+		kind := "inventory"
+		if fullSync {
+			kind = "products"
+		}
+		return fmt.Errorf("fetch %s: %w", kind, err)
 	}
 
-	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products)
+	if err := s.upsertSupplierProducts(ctx, tenantID, supplierID, products); err != nil {
+		return err
+	}
+
+	// Record last full sync timestamp
+	if fullSync {
+		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateLastFullSync(ctx, tx, supplierID, time.Now())
+		}); dbErr != nil {
+			s.logger.Error("failed to update last full sync", "supplier_id", supplierID, "error", dbErr)
+		}
+	}
+
+	return nil
+}
+
+// shouldFullSync checks if a full product sync (with descriptions/images) is needed.
+// Returns true if last_full_sync_at is missing or older than 24 hours.
+func (s *SupplierService) shouldFullSync(supplier *model.Supplier) bool {
+	if supplier.Settings == nil {
+		return true
+	}
+
+	var settings map[string]any
+	if err := json.Unmarshal(supplier.Settings, &settings); err != nil {
+		return true
+	}
+
+	lastFullSyncStr, ok := settings["last_full_sync_at"].(string)
+	if !ok || lastFullSyncStr == "" {
+		return true
+	}
+
+	lastFullSync, err := time.Parse(time.RFC3339, lastFullSyncStr)
+	if err != nil {
+		return true
+	}
+
+	return time.Since(lastFullSync) > 24*time.Hour
 }
 
 // syncViaIOF syncs products from an IOF XML feed URL.
@@ -626,6 +684,9 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 			if fp.RetailPrice > 0 {
 				meta["retail_price"] = fp.RetailPrice
 			}
+			if len(fp.Images) > 0 {
+				meta["images"] = fp.Images
+			}
 			if len(fp.Attributes) > 0 {
 				meta["attributes"] = fp.Attributes
 			}
@@ -685,13 +746,25 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 				}
 			}
 
-			// Sync stock and price to linked OMS product
+			// Sync stock, price, and enrichment data to linked OMS product.
+			// Enrichment fields (description_long, image_url, images) only fill empty values.
 			if sp.ProductID != nil {
+				var imagesJSON json.RawMessage
+				if len(fp.Images) > 0 {
+					imagesJSON, _ = json.Marshal(fp.Images)
+				}
+
 				if _, err := tx.Exec(ctx,
-					`UPDATE products SET stock_quantity = $1, price = COALESCE($2, price), updated_at = NOW()
-					 WHERE id = $3`,
-					fp.StockQuantity, price, *sp.ProductID); err != nil {
-					s.logger.Error("failed to sync stock/price to linked product",
+					`UPDATE products SET
+						stock_quantity = $1,
+						price = COALESCE($2, price),
+						description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($3, ''), description_long) ELSE description_long END,
+						image_url = COALESCE(image_url, NULLIF($4, '')),
+						images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($5::jsonb, '[]'::jsonb), images) ELSE images END,
+						updated_at = NOW()
+					 WHERE id = $6`,
+					fp.StockQuantity, price, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
+					s.logger.Error("failed to sync to linked product",
 						"product_id", sp.ProductID, "error", err)
 				}
 			}

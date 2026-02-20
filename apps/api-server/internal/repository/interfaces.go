@@ -195,6 +195,7 @@ type SupplierRepo interface {
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateSupplierRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastSyncAt time.Time, errorMessage *string) error
+	UpdateLastFullSync(ctx context.Context, tx pgx.Tx, id uuid.UUID, t time.Time) error
 }
 
 // SupplierCategoryMappingRepo defines the interface for supplier category mapping persistence.

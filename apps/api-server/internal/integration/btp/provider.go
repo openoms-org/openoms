@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	btpsdk "github.com/openoms-org/openoms/packages/btp-go-sdk"
 )
 
@@ -20,15 +22,17 @@ func init() {
 
 // Credentials holds the authentication credentials for the BTP API.
 type Credentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	BaseURL  string `json:"base_url,omitempty"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	BaseURL      string `json:"base_url,omitempty"`
+	CatalogueURL string `json:"catalogue_url,omitempty"`
 }
 
 // Provider implements integration.SupplierProvider for BTP.pro wholesaler platform.
 type Provider struct {
-	client *btpsdk.Client
-	logger *slog.Logger
+	client       *btpsdk.Client
+	catalogueURL string
+	logger       *slog.Logger
 }
 
 // NewProvider creates a new BTP supplier provider from encrypted credentials and settings.
@@ -49,8 +53,9 @@ func NewProvider(credentials, _ json.RawMessage) (*Provider, error) {
 	client := btpsdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &Provider{
-		client: client,
-		logger: slog.Default().With("provider", "btp"),
+		client:       client,
+		catalogueURL: creds.CatalogueURL,
+		logger:       slog.Default().With("provider", "btp"),
 	}, nil
 }
 
@@ -58,8 +63,84 @@ func NewProvider(credentials, _ json.RawMessage) (*Provider, error) {
 func (p *Provider) ProviderName() string { return "btp" }
 
 // FetchProducts retrieves the full product catalogue from BTP.
-// Recommended refresh: 1-2 times per day.
+// If a catalogue_url is configured, it parses the XML feed (with images, descriptions, etc.).
+// Otherwise it falls back to the REST API.
 func (p *Provider) FetchProducts(ctx context.Context) ([]integration.SupplierProduct, error) {
+	if p.catalogueURL != "" {
+		return p.fetchProductsFromXML(ctx)
+	}
+	return p.fetchProductsFromAPI(ctx)
+}
+
+// fetchProductsFromXML parses the BTP XML catalogue feed for full product data.
+func (p *Provider) fetchProductsFromXML(ctx context.Context) ([]integration.SupplierProduct, error) {
+	httpClient := netutil.SafeHTTPClient(60 * time.Second)
+
+	items, err := btpsdk.ParseCatalogueURL(ctx, p.catalogueURL, httpClient)
+	if err != nil {
+		return nil, fmt.Errorf("btp: fetch XML catalogue: %w", err)
+	}
+
+	products := make([]integration.SupplierProduct, 0, len(items))
+	for _, item := range items {
+		sp := integration.SupplierProduct{
+			ExternalID:  item.SupplierItemCode,
+			Name:        item.ItemDescription,
+			EAN:         normalizeEAN(item.EAN),
+			SKU:         item.ManufacturerItemCode,
+			Price:       item.UnitNetPrice,
+			RetailPrice: item.UnitRetailPrice,
+			Brand:       item.BrandName,
+			Weight:      item.Weight,
+			Attributes:  map[string]string{},
+		}
+
+		// Description: prefer long description, fall back to short
+		if item.LongItemDescription != "" {
+			sp.Description = item.LongItemDescription
+		} else if item.ItemDescription != "" {
+			sp.Description = item.ItemDescription
+		}
+
+		// Category: "PrimaryProductGroup > ProductGroup"
+		switch {
+		case item.PrimaryProductGroup != "" && item.ProductGroup != "":
+			sp.Category = item.PrimaryProductGroup + " > " + item.ProductGroup
+		case item.PrimaryProductGroup != "":
+			sp.Category = item.PrimaryProductGroup
+		case item.ProductGroup != "":
+			sp.Category = item.ProductGroup
+		}
+
+		// Images
+		if len(item.Pictures) > 0 {
+			sp.ImageURL = item.Pictures[0]
+			sp.Images = item.Pictures
+		}
+
+		// Extra attributes
+		if item.TaxRate > 0 {
+			sp.Attributes["tax_rate"] = fmt.Sprintf("%.1f", item.TaxRate)
+		}
+		if item.CustomsTariffNumber != "" {
+			sp.Attributes["cn_code"] = item.CustomsTariffNumber
+		}
+		if item.Guarantee > 0 {
+			sp.Attributes["guarantee_months"] = fmt.Sprintf("%d", item.Guarantee)
+		}
+		for k, v := range item.Attributes {
+			sp.Attributes[k] = v
+		}
+
+		products = append(products, sp)
+	}
+
+	p.logger.Info("fetched product catalogue from XML", "count", len(products))
+	return products, nil
+}
+
+// fetchProductsFromAPI retrieves products from the BTP REST API (no images/descriptions).
+func (p *Provider) fetchProductsFromAPI(ctx context.Context) ([]integration.SupplierProduct, error) {
 	catalogue, err := p.client.Catalogue.GetCatalogue(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("btp: fetch catalogue: %w", err)
