@@ -73,7 +73,21 @@ func isCSRFExempt(path string) bool {
 
 func setCSRFCookieIfMissing(w http.ResponseWriter, r *http.Request, secure bool, cookieDomain string) {
 	if _, err := r.Cookie("csrf_token"); err == nil {
-		return // already has cookie
+		if cookieDomain == "" {
+			return // dev mode, no domain migration needed
+		}
+		// Expire any old host-only cookie (no Domain) left from before the
+		// cross-subdomain fix. Without this, the browser sends the old cookie,
+		// this function sees it and skips setting the new Domain-scoped one,
+		// and JS on the dashboard subdomain can never read the token.
+		http.SetCookie(w, &http.Cookie{
+			Name:     "csrf_token",
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			Secure:   secure,
+			HttpOnly: false,
+		})
 	}
 
 	token := generateCSRFToken()
