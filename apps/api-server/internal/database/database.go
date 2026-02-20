@@ -2,9 +2,12 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,6 +22,19 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	config.MaxConnLifetime = 30 * time.Minute
 	config.MaxConnIdleTime = 5 * time.Minute
 	config.HealthCheckPeriod = 1 * time.Minute
+
+	// Register json.RawMessage as JSONB so pgx sends it as text (valid JSON)
+	// instead of bytea hex encoding. Required for simple_protocol mode (Supabase pooler).
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		tm := conn.TypeMap()
+		tm.RegisterType(&pgtype.Type{
+			Name:  "jsonb",
+			OID:   pgtype.JSONBOID,
+			Codec: &pgtype.JSONBCodec{},
+		})
+		tm.RegisterDefaultPgType(json.RawMessage{}, "jsonb")
+		return nil
+	}
 
 	connectCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

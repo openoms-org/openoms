@@ -27,9 +27,9 @@ func (r *AuditRepository) Log(ctx context.Context, tx pgx.Tx, entry model.AuditE
 
 	_, err = tx.Exec(ctx,
 		`INSERT INTO audit_log (tenant_id, user_id, action, entity_type, entity_id, changes, ip_address)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7::inet)`,
+		 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::inet)`,
 		entry.TenantID, entry.UserID, entry.Action, entry.EntityType, entry.EntityID,
-		changesJSON, nilIfEmpty(entry.IPAddress),
+		string(changesJSON), nilIfEmpty(entry.IPAddress),
 	)
 	if err != nil {
 		return fmt.Errorf("audit log: %w", err)
