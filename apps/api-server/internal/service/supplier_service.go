@@ -18,9 +18,8 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
-
-	iof "github.com/openoms-org/openoms/packages/iof-parser"
 	btpsdk "github.com/openoms-org/openoms/packages/btp-go-sdk"
+	iof "github.com/openoms-org/openoms/packages/iof-parser"
 )
 
 var (
