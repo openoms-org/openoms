@@ -495,43 +495,101 @@ function CreateAllegroListingDialog({
   useEffect(() => {
     if (!paramsData?.parameters?.length) return;
 
+    const meta = product.metadata as Record<string, unknown> | undefined;
     const brand =
-      (product.metadata as Record<string, unknown> | undefined)?.brand as string | undefined
-      ?? product.tags?.[0];
+      (meta?.brand as string | undefined) ??
+      (meta?.manufacturer as string | undefined) ??
+      product.tags?.[0];
 
     const autoValues: Record<string, { valuesIds?: string[]; values?: string[] }> = {};
+
+    const tryDictMatch = (
+      param: AllegroCategoryParameter,
+      text: string
+    ): boolean => {
+      if (param.type !== "dictionary" || !param.dictionary?.length) return false;
+      const lower = text.toLowerCase();
+      const match = param.dictionary.find(
+        (d) => d.value.toLowerCase() === lower
+      );
+      if (match) {
+        autoValues[param.id] = { valuesIds: [match.id] };
+        return true;
+      }
+      return false;
+    };
 
     for (const param of paramsData.parameters) {
       const nameLower = param.name.toLowerCase();
 
       // EAN / GTIN
-      if ((nameLower.includes("ean") || nameLower.includes("gtin")) && product.ean) {
-        autoValues[param.id] = { values: [product.ean] };
+      if (
+        (nameLower.includes("ean") || nameLower.includes("gtin")) &&
+        product.ean
+      ) {
+        if (param.type === "dictionary" && param.dictionary?.length) {
+          // Some categories have EAN as dictionary with custom values
+          if (!tryDictMatch(param, product.ean)) {
+            autoValues[param.id] = { values: [product.ean] };
+          }
+        } else {
+          autoValues[param.id] = { values: [product.ean] };
+        }
         continue;
       }
 
-      // Marka (Brand) — match in dictionary
-      if (nameLower === "marka" && param.type === "dictionary" && param.dictionary && brand) {
-        const brandLower = brand.toLowerCase();
-        const match = param.dictionary.find((d) => d.value.toLowerCase() === brandLower);
+      // Marka / Producent (Brand/Manufacturer) — match in dictionary
+      if (
+        (nameLower === "marka" ||
+          nameLower.includes("producent") ||
+          nameLower === "brand") &&
+        param.type === "dictionary" &&
+        param.dictionary?.length &&
+        brand
+      ) {
+        tryDictMatch(param, brand);
+        continue;
+      }
+
+      // Stan (Condition) — auto-select "Nowy"
+      if (
+        nameLower === "stan" &&
+        param.type === "dictionary" &&
+        param.dictionary?.length
+      ) {
+        const match = param.dictionary.find(
+          (d) => d.value.toLowerCase() === "nowy"
+        );
         if (match) {
           autoValues[param.id] = { valuesIds: [match.id] };
         }
         continue;
       }
 
-      // Stan (Condition) — auto-select "Nowy"
-      if (nameLower === "stan" && param.type === "dictionary" && param.dictionary) {
-        const match = param.dictionary.find((d) => d.value.toLowerCase() === "nowy");
-        if (match) {
-          autoValues[param.id] = { valuesIds: [match.id] };
+      // Numer katalogowy (Catalog/part number) — fill from SKU
+      if (
+        (nameLower.includes("numer katalogowy") ||
+          nameLower.includes("numer producenta") ||
+          nameLower.includes("mpn")) &&
+        product.sku
+      ) {
+        if (param.type === "dictionary" && param.dictionary?.length) {
+          if (!tryDictMatch(param, product.sku)) {
+            autoValues[param.id] = { values: [product.sku] };
+          }
+        } else {
+          autoValues[param.id] = { values: [product.sku] };
         }
         continue;
       }
 
       // Waga (Weight)
-      if (nameLower.includes("waga") && product.weight && product.weight > 0) {
-        if (param.type === "dictionary" && param.dictionary) {
+      if (
+        nameLower.includes("waga") &&
+        product.weight &&
+        product.weight > 0
+      ) {
+        if (param.type === "dictionary" && param.dictionary?.length) {
           const weightStr = String(product.weight);
           const match = param.dictionary.find((d) => d.value === weightStr);
           if (match) {
@@ -553,7 +611,7 @@ function CreateAllegroListingDialog({
         return merged;
       });
     }
-  }, [paramsData, product.ean, product.weight, product.tags, product.metadata]);
+  }, [paramsData, product.ean, product.sku, product.weight, product.tags, product.metadata]);
 
   // Category navigation
   const handleCategoryClick = (cat: AllegroCategory) => {
