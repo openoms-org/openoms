@@ -214,3 +214,64 @@ func (r *LinkProductRequest) Validate() error {
 	}
 	return nil
 }
+
+// AllegroParameterMapping maps a supplier's data field to an Allegro category parameter.
+type AllegroParameterMapping struct {
+	ID                uuid.UUID       `json:"id"`
+	TenantID          uuid.UUID       `json:"tenant_id"`
+	SupplierID        uuid.UUID       `json:"supplier_id"`
+	AllegroCategoryID string          `json:"allegro_category_id"`
+	AllegroParamID    string          `json:"allegro_param_id"`
+	AllegroParamName  string          `json:"allegro_param_name"`
+	SourceType        string          `json:"source_type"`
+	SourceKey         string          `json:"source_key"`
+	ValueMapping      json.RawMessage `json:"value_mapping"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
+// UpsertAllegroParameterMappingRequest represents a single mapping entry in a bulk upsert.
+type UpsertAllegroParameterMappingRequest struct {
+	AllegroParamID   string          `json:"allegro_param_id"`
+	AllegroParamName string          `json:"allegro_param_name"`
+	SourceType       string          `json:"source_type"`
+	SourceKey        string          `json:"source_key"`
+	ValueMapping     json.RawMessage `json:"value_mapping,omitempty"`
+}
+
+// BulkUpsertAllegroMappingsRequest is the payload for creating/updating Allegro parameter mappings.
+type BulkUpsertAllegroMappingsRequest struct {
+	AllegroCategoryID string                                 `json:"allegro_category_id"`
+	Mappings          []UpsertAllegroParameterMappingRequest `json:"mappings"`
+}
+
+// Validate checks required fields and limits.
+func (r *BulkUpsertAllegroMappingsRequest) Validate() error {
+	if strings.TrimSpace(r.AllegroCategoryID) == "" {
+		return errors.New("allegro_category_id is required")
+	}
+	if len(r.Mappings) == 0 {
+		return errors.New("at least one mapping is required")
+	}
+	if len(r.Mappings) > 200 {
+		return errors.New("max 200 mappings per request")
+	}
+	for _, m := range r.Mappings {
+		if strings.TrimSpace(m.AllegroParamID) == "" {
+			return errors.New("allegro_param_id is required for each mapping")
+		}
+		if strings.TrimSpace(m.SourceType) == "" {
+			return errors.New("source_type is required")
+		}
+		switch m.SourceType {
+		case "attribute", "field", "static":
+			// valid
+		default:
+			return errors.New("source_type must be one of: attribute, field, static")
+		}
+		if strings.TrimSpace(m.SourceKey) == "" {
+			return errors.New("source_key is required")
+		}
+	}
+	return nil
+}

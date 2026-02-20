@@ -12,6 +12,8 @@ import type {
   SupplierPortalStatus,
   SupplierCategoryMapping,
   UpsertCategoryMappingRequest,
+  AllegroParameterMapping,
+  BulkUpsertAllegroMappingsRequest,
   ImportSupplierProductsRequest,
   ImportSupplierProductsResponse,
   BulkDeleteSupplierProductsRequest,
@@ -318,5 +320,84 @@ export function useDeleteCategoryMapping(supplierId: string) {
         queryKey: ["supplier-category-mappings", supplierId],
       });
     },
+  });
+}
+
+// === Allegro Parameter Mappings ===
+
+export function useAllegroParameterMappings(
+  supplierId: string,
+  allegroCategoryId: string | null
+) {
+  return useQuery({
+    queryKey: ["allegro-parameter-mappings", supplierId, allegroCategoryId],
+    queryFn: () =>
+      apiClient<AllegroParameterMapping[]>(
+        `/v1/suppliers/${supplierId}/allegro-mappings?category_id=${allegroCategoryId}`
+      ),
+    enabled: !!supplierId && !!allegroCategoryId,
+  });
+}
+
+export function useBulkUpsertAllegroMappings(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BulkUpsertAllegroMappingsRequest) =>
+      apiClient<AllegroParameterMapping[]>(
+        `/v1/suppliers/${supplierId}/allegro-mappings`,
+        { method: "PUT", body: JSON.stringify(data) }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["allegro-parameter-mappings", supplierId],
+      });
+    },
+  });
+}
+
+export function useDeleteAllegroParameterMapping(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mappingId: string) =>
+      apiClient<void>(
+        `/v1/suppliers/${supplierId}/allegro-mappings/${mappingId}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["allegro-parameter-mappings", supplierId],
+      });
+    },
+  });
+}
+
+export function useSupplierAttributes(supplierId: string) {
+  return useQuery({
+    queryKey: ["supplier-attributes", supplierId],
+    queryFn: () =>
+      apiClient<string[]>(`/v1/suppliers/${supplierId}/attributes`),
+    enabled: !!supplierId,
+  });
+}
+
+export function useAllegroMappingCategories(supplierId: string) {
+  return useQuery({
+    queryKey: ["allegro-mapping-categories", supplierId],
+    queryFn: () =>
+      apiClient<string[]>(
+        `/v1/suppliers/${supplierId}/allegro-mappings/categories`
+      ),
+    enabled: !!supplierId,
+  });
+}
+
+export function useProductSupplierLink(productId: string) {
+  return useQuery({
+    queryKey: ["product-supplier-link", productId],
+    queryFn: () =>
+      apiClient<{ supplier_id: string | null }>(
+        `/v1/products/${productId}/supplier-link`
+      ),
+    enabled: !!productId,
   });
 }

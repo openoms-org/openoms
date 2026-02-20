@@ -174,7 +174,7 @@ func TestSupplierHandler_LinkProduct_ValidationError(t *testing.T) {
 }
 
 func TestSupplierHandler_Create_ValidationError(t *testing.T) {
-	svc := service.NewSupplierService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewSupplierService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	h := NewSupplierHandler(svc)
 
 	tenantID := uuid.New()
@@ -196,7 +196,7 @@ func TestSupplierHandler_Create_ValidationError(t *testing.T) {
 }
 
 func TestSupplierHandler_Update_ValidationError(t *testing.T) {
-	svc := service.NewSupplierService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewSupplierService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	h := NewSupplierHandler(svc)
 
 	tenantID := uuid.New()

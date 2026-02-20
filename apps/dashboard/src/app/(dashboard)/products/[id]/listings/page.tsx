@@ -22,6 +22,7 @@ import {
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useProduct } from "@/hooks/use-products";
+import { useProductSupplierLink, useAllegroParameterMappings } from "@/hooks/use-suppliers";
 import { useIntegrations } from "@/hooks/use-integrations";
 import {
   useProductListings,
@@ -491,6 +492,13 @@ function CreateAllegroListingDialog({
     useAllegroCategoryParams(selectedCategoryId || null);
   const createListing = useCreateProductListing(product.id);
 
+  // Supplier link & saved Allegro parameter mappings
+  const { data: supplierLink } = useProductSupplierLink(product.id);
+  const { data: savedMappings } = useAllegroParameterMappings(
+    supplierLink?.supplier_id ?? "",
+    selectedCategoryId
+  );
+
   // Auto-fill parameters from product data when category params load
   useEffect(() => {
     if (!paramsData?.parameters?.length) return;
@@ -529,8 +537,62 @@ function CreateAllegroListingDialog({
       return false;
     };
 
+    // Helper to resolve a product field value by name
+    const getProductField = (fieldName: string): string | undefined => {
+      switch (fieldName) {
+        case "ean": return product.ean || undefined;
+        case "sku": return product.sku || undefined;
+        case "name": return product.name || undefined;
+        case "brand": return brand || undefined;
+        case "weight": return product.weight && product.weight > 0 ? String(product.weight) : undefined;
+        case "price": return product.price ? String(product.price) : undefined;
+        default: return undefined;
+      }
+    };
+
+    // Build saved mappings lookup by param ID
+    const savedMappingMap = new Map<string, (typeof savedMappings extends (infer T)[] | undefined ? T : never)>();
+    if (savedMappings) {
+      for (const m of savedMappings) {
+        savedMappingMap.set(m.allegro_param_id, m);
+      }
+    }
+
     for (const param of paramsData.parameters) {
       const nameLower = param.name.toLowerCase();
+
+      // Priority 1: Apply saved supplier mappings
+      const mapping = savedMappingMap.get(param.id);
+      if (mapping) {
+        let value: string | undefined;
+        switch (mapping.source_type) {
+          case "attribute":
+            value = supplierAttrsLower[mapping.source_key.toLowerCase()];
+            break;
+          case "field":
+            value = getProductField(mapping.source_key);
+            break;
+          case "static":
+            value = mapping.source_key;
+            break;
+        }
+        if (value) {
+          // Check value_mapping for dictionary translation
+          const mappedDictId = mapping.value_mapping?.[value.toLowerCase()];
+          if (mappedDictId) {
+            autoValues[param.id] = { valuesIds: [mappedDictId] };
+          } else if (param.type === "dictionary" && param.dictionary?.length) {
+            if (!tryDictMatch(param, value)) {
+              autoValues[param.id] = { values: [value] };
+            }
+          } else {
+            autoValues[param.id] = { values: [value] };
+          }
+          continue;
+        }
+      }
+
+      // Priority 2: Name-based auto-fill (existing logic)
 
       // EAN / GTIN
       if (
@@ -634,7 +696,7 @@ function CreateAllegroListingDialog({
         return merged;
       });
     }
-  }, [paramsData, product.ean, product.sku, product.weight, product.tags, product.metadata]);
+  }, [paramsData, product.ean, product.sku, product.weight, product.tags, product.metadata, savedMappings]);
 
   // Category navigation
   const handleCategoryClick = (cat: AllegroCategory) => {

@@ -734,6 +734,29 @@ export interface UpsertCategoryMappingRequest {
   confirmed: boolean;
 }
 
+export interface AllegroParameterMapping {
+  id: string;
+  supplier_id: string;
+  allegro_category_id: string;
+  allegro_param_id: string;
+  allegro_param_name: string;
+  source_type: "attribute" | "field" | "static";
+  source_key: string;
+  value_mapping: Record<string, string>;
+  created_at: string;
+}
+
+export interface BulkUpsertAllegroMappingsRequest {
+  allegro_category_id: string;
+  mappings: {
+    allegro_param_id: string;
+    allegro_param_name: string;
+    source_type: "attribute" | "field" | "static";
+    source_key: string;
+    value_mapping?: Record<string, string>;
+  }[];
+}
+
 // === InPost Points ===
 export interface InPostPointAddress {
   line1: string;
