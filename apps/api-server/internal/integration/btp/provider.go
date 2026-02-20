@@ -73,15 +73,9 @@ func (p *Provider) FetchProducts(ctx context.Context) ([]integration.SupplierPro
 	return p.fetchProductsFromAPI(ctx)
 }
 
-// fetchProductsFromXML parses the BTP XML catalogue feed for full product data.
-func (p *Provider) fetchProductsFromXML(ctx context.Context) ([]integration.SupplierProduct, error) {
-	httpClient := netutil.SafeHTTPClient(60 * time.Second)
-
-	items, err := btpsdk.ParseCatalogueURL(ctx, p.catalogueURL, httpClient)
-	if err != nil {
-		return nil, fmt.Errorf("btp: fetch XML catalogue: %w", err)
-	}
-
+// MapCatalogueProducts converts BTP SDK catalogue products to normalized SupplierProducts.
+// Exported for reuse by the XML feed format sync path.
+func MapCatalogueProducts(items []btpsdk.CatalogueProduct) []integration.SupplierProduct {
 	products := make([]integration.SupplierProduct, 0, len(items))
 	for _, item := range items {
 		sp := integration.SupplierProduct{
@@ -133,7 +127,19 @@ func (p *Provider) fetchProductsFromXML(ctx context.Context) ([]integration.Supp
 
 		products = append(products, sp)
 	}
+	return products
+}
 
+// fetchProductsFromXML parses the BTP XML catalogue feed for full product data.
+func (p *Provider) fetchProductsFromXML(ctx context.Context) ([]integration.SupplierProduct, error) {
+	httpClient := netutil.SafeHTTPClient(60 * time.Second)
+
+	items, err := btpsdk.ParseCatalogueURL(ctx, p.catalogueURL, httpClient)
+	if err != nil {
+		return nil, fmt.Errorf("btp: fetch XML catalogue: %w", err)
+	}
+
+	products := MapCatalogueProducts(items)
 	p.logger.Info("fetched product catalogue from XML", "count", len(products))
 	return products, nil
 }

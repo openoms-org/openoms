@@ -14,10 +14,13 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration/btp"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 
 	iof "github.com/openoms-org/openoms/packages/iof-parser"
+	btpsdk "github.com/openoms-org/openoms/packages/btp-go-sdk"
 )
 
 var (
@@ -508,6 +511,11 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 		return s.syncViaProvider(ctx, tenantID, supplierID, supplier)
 	}
 
+	// BTP XML catalogue feed (no integration/credentials needed — direct URL)
+	if supplier.FeedFormat == "xml" {
+		return s.syncViaXML(ctx, tenantID, supplierID, supplier)
+	}
+
 	// Legacy IOF feed sync
 	return s.syncViaIOF(ctx, tenantID, supplierID, supplier)
 }
@@ -603,6 +611,27 @@ func (s *SupplierService) shouldFullSync(supplier *model.Supplier) bool {
 	}
 
 	return time.Since(lastFullSync) > 24*time.Hour
+}
+
+// syncViaXML syncs products from a BTP-format XML catalogue URL (no API credentials needed).
+func (s *SupplierService) syncViaXML(ctx context.Context, tenantID, supplierID uuid.UUID, supplier *model.Supplier) error {
+	if supplier.FeedURL == nil || *supplier.FeedURL == "" {
+		return ErrNoFeedURL
+	}
+
+	items, err := btpsdk.ParseCatalogueURL(ctx, *supplier.FeedURL, netutil.SafeHTTPClient(60*time.Second))
+	if err != nil {
+		errMsg := err.Error()
+		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
+		}); dbErr != nil {
+			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+		}
+		return fmt.Errorf("parse XML catalogue: %w", err)
+	}
+
+	products := btp.MapCatalogueProducts(items)
+	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products)
 }
 
 // syncViaIOF syncs products from an IOF XML feed URL.

@@ -470,12 +470,12 @@ func TestCreateSupplierRequest_Validate_MissingName(t *testing.T) {
 }
 
 func TestCreateSupplierRequest_Validate_InvalidFormat(t *testing.T) {
-	req := CreateSupplierRequest{Name: "S", FeedFormat: "xml"}
+	req := CreateSupplierRequest{Name: "S", FeedFormat: "yaml"}
 	assert.Error(t, req.Validate())
 }
 
 func TestCreateSupplierRequest_Validate_ValidFormats(t *testing.T) {
-	for _, fmt := range []string{"iof", "csv", "custom"} {
+	for _, fmt := range []string{"iof", "csv", "custom", "btp", "xml"} {
 		req := CreateSupplierRequest{Name: "S", FeedFormat: fmt}
 		assert.NoError(t, req.Validate(), "format %s should be valid", fmt)
 	}
@@ -489,7 +489,7 @@ func TestUpdateSupplierRequest_Validate_NoFields(t *testing.T) {
 }
 
 func TestUpdateSupplierRequest_Validate_InvalidFormat(t *testing.T) {
-	ff := "xml"
+	ff := "yaml"
 	req := UpdateSupplierRequest{FeedFormat: &ff}
 	assert.Error(t, req.Validate())
 }
