@@ -160,6 +160,33 @@ func TestSecurity_CSRF_GETSetsCookieWithDomain(t *testing.T) {
 	assert.Equal(t, "openoms.org", csrfCookie.Domain)
 }
 
+func TestSecurity_CSRF_MigratesOldHostOnlyCookie(t *testing.T) {
+	handler := middleware.CSRF(false, ".openoms.org")(okHandler())
+	req := httptest.NewRequest("GET", "/v1/orders", nil)
+	// Simulate old host-only cookie (no Domain, from before cross-subdomain fix)
+	req.AddCookie(&http.Cookie{Name: "csrf_token", Value: "old-token"})
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	cookies := rr.Result().Cookies()
+	// Should have 2 Set-Cookie headers: one expiring old, one setting new with Domain
+	var expireCookie, newCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == "csrf_token" && c.MaxAge < 0 {
+			expireCookie = c
+		} else if c.Name == "csrf_token" && c.Value != "" {
+			newCookie = c
+		}
+	}
+	assert.NotNil(t, expireCookie, "should expire old host-only cookie")
+	assert.Empty(t, expireCookie.Domain, "expire cookie should have no Domain (targets host-only)")
+	assert.NotNil(t, newCookie, "should set new Domain-scoped cookie")
+	assert.Equal(t, "openoms.org", newCookie.Domain)
+	assert.NotEqual(t, "old-token", newCookie.Value, "new token should differ from old")
+}
+
 func TestSecurity_CSRF_POSTWithoutTokenReturns403(t *testing.T) {
 	handler := middleware.CSRF(false, "")(okHandler())
 	req := httptest.NewRequest("POST", "/v1/orders", nil)
