@@ -122,7 +122,7 @@ func TestSecurity_Headers_NoServerHeader(t *testing.T) {
 }
 
 func TestSecurity_CSRF_GETSetsCookie(t *testing.T) {
-	handler := middleware.CSRF(false)(okHandler())
+	handler := middleware.CSRF(false, "")(okHandler())
 	req := httptest.NewRequest("GET", "/v1/orders", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
@@ -136,13 +136,13 @@ func TestSecurity_CSRF_GETSetsCookie(t *testing.T) {
 		}
 	}
 	assert.NotNil(t, csrfCookie, "csrf_token cookie should be set")
-	assert.Equal(t, http.SameSiteStrictMode, csrfCookie.SameSite)
+	assert.Equal(t, http.SameSiteLaxMode, csrfCookie.SameSite)
 	assert.Equal(t, "/", csrfCookie.Path)
 	assert.False(t, csrfCookie.HttpOnly, "JS must be able to read csrf_token")
 }
 
 func TestSecurity_CSRF_POSTWithoutTokenReturns403(t *testing.T) {
-	handler := middleware.CSRF(false)(okHandler())
+	handler := middleware.CSRF(false, "")(okHandler())
 	req := httptest.NewRequest("POST", "/v1/orders", nil)
 	req.AddCookie(&http.Cookie{Name: "csrf_token", Value: "test-token"})
 	// No X-CSRF-Token header
@@ -153,7 +153,7 @@ func TestSecurity_CSRF_POSTWithoutTokenReturns403(t *testing.T) {
 }
 
 func TestSecurity_CSRF_POSTWithValidTokenPasses(t *testing.T) {
-	handler := middleware.CSRF(false)(okHandler())
+	handler := middleware.CSRF(false, "")(okHandler())
 	req := httptest.NewRequest("POST", "/v1/orders", nil)
 	req.AddCookie(&http.Cookie{Name: "csrf_token", Value: "test-token"})
 	req.Header.Set("X-CSRF-Token", "test-token")
@@ -164,7 +164,7 @@ func TestSecurity_CSRF_POSTWithValidTokenPasses(t *testing.T) {
 }
 
 func TestSecurity_CSRF_POSTWithInvalidTokenReturns403(t *testing.T) {
-	handler := middleware.CSRF(false)(okHandler())
+	handler := middleware.CSRF(false, "")(okHandler())
 	req := httptest.NewRequest("POST", "/v1/orders", nil)
 	req.AddCookie(&http.Cookie{Name: "csrf_token", Value: "correct-token"})
 	req.Header.Set("X-CSRF-Token", "wrong-token")
@@ -175,9 +175,9 @@ func TestSecurity_CSRF_POSTWithInvalidTokenReturns403(t *testing.T) {
 }
 
 func TestSecurity_CSRF_ExemptEndpointPassesWithoutToken(t *testing.T) {
-	handler := middleware.CSRF(false)(okHandler())
+	handler := middleware.CSRF(false, "")(okHandler())
 
-	endpoints := []string{"/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh", "/v1/public/returns/submit", "/v1/webhooks/allegro", "/health", "/metrics"}
+	endpoints := []string{"/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh", "/v1/auth/ws-ticket", "/v1/public/returns/submit", "/v1/webhooks/allegro", "/health", "/metrics"}
 	for _, ep := range endpoints {
 		req := httptest.NewRequest("POST", ep, nil)
 		rr := httptest.NewRecorder()
