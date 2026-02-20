@@ -98,7 +98,7 @@ func (r *TenantRepository) ListAllTenantIDs(ctx context.Context, pool *pgxpool.P
 }
 
 func (r *TenantRepository) UpdateSettings(ctx context.Context, tx pgx.Tx, id uuid.UUID, settings json.RawMessage) error {
-	ct, err := tx.Exec(ctx, "UPDATE tenants SET settings = $1, updated_at = NOW() WHERE id = $2", settings, id)
+	ct, err := tx.Exec(ctx, "UPDATE tenants SET settings = $1::jsonb, updated_at = NOW() WHERE id = $2", settings, id)
 	if err != nil {
 		return fmt.Errorf("update tenant settings: %w", err)
 	}
