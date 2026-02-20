@@ -31,6 +31,7 @@ type SupplierService struct {
 	supplierProdRepo    repository.SupplierProductRepo
 	categoryMappingRepo repository.SupplierCategoryMappingRepo
 	categoryRepo        repository.ProductCategoryRepo
+	productRepo         repository.ProductRepo
 	auditRepo           repository.AuditRepo
 	pool                *pgxpool.Pool
 	webhookDispatch     *WebhookDispatchService
@@ -43,6 +44,7 @@ func NewSupplierService(
 	supplierProdRepo repository.SupplierProductRepo,
 	categoryMappingRepo repository.SupplierCategoryMappingRepo,
 	categoryRepo repository.ProductCategoryRepo,
+	productRepo repository.ProductRepo,
 	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
@@ -54,6 +56,7 @@ func NewSupplierService(
 		supplierProdRepo:    supplierProdRepo,
 		categoryMappingRepo: categoryMappingRepo,
 		categoryRepo:        categoryRepo,
+		productRepo:         productRepo,
 		auditRepo:           auditRepo,
 		pool:                pool,
 		webhookDispatch:     webhookDispatch,
@@ -270,6 +273,150 @@ func (s *SupplierService) LinkProduct(ctx context.Context, tenantID, supplierPro
 			IPAddress:  ip,
 		})
 	})
+}
+
+// ImportProducts creates OMS products from selected supplier products and links them.
+func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplierID uuid.UUID, req model.ImportSupplierProductsRequest, actorID uuid.UUID, ip string) (*model.ImportSupplierProductsResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	resp := &model.ImportSupplierProductsResponse{}
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		// Verify supplier exists
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+
+		// Fetch all requested supplier products
+		spProducts, err := s.supplierProdRepo.FindByIDs(ctx, tx, req.SupplierProductIDs)
+		if err != nil {
+			return err
+		}
+
+		// Build lookup map
+		spMap := make(map[uuid.UUID]*model.SupplierProduct, len(spProducts))
+		for i := range spProducts {
+			spMap[spProducts[i].ID] = &spProducts[i]
+		}
+
+		// Load category mappings for this supplier to resolve source_category → OMS category name
+		mappings, err := s.categoryMappingRepo.ListBySupplier(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+
+		// Build category ID lookup and resolve names
+		categoryNameMap := make(map[string]string, len(mappings))
+		for _, m := range mappings {
+			if m.CategoryID != nil {
+				cat, catErr := s.categoryRepo.FindByID(ctx, tx, *m.CategoryID)
+				if catErr == nil && cat != nil {
+					categoryNameMap[m.SourceCategory] = cat.Name
+				}
+			}
+		}
+
+		for _, spID := range req.SupplierProductIDs {
+			sp, ok := spMap[spID]
+			if !ok {
+				resp.Errors = append(resp.Errors, model.ImportSupplierProductError{
+					SupplierProductID: spID.String(),
+					Reason:            "supplier product not found",
+				})
+				continue
+			}
+
+			// Skip if already linked
+			if sp.ProductID != nil {
+				resp.Skipped++
+				continue
+			}
+
+			// Verify it belongs to this supplier
+			if sp.SupplierID != supplierID {
+				resp.Errors = append(resp.Errors, model.ImportSupplierProductError{
+					SupplierProductID: spID.String(),
+					Reason:            "supplier product does not belong to this supplier",
+				})
+				continue
+			}
+
+			// Resolve category from mappings
+			var category *string
+			if sp.SourceCategory != nil {
+				if name, ok := categoryNameMap[*sp.SourceCategory]; ok {
+					category = &name
+				}
+			}
+			if category == nil {
+				category = sp.SourceCategory
+			}
+
+			price := 0.0
+			if sp.Price != nil {
+				price = *sp.Price
+			}
+
+			metadata := sp.Metadata
+			if metadata == nil {
+				metadata = json.RawMessage("{}")
+			}
+
+			product := &model.Product{
+				ID:            uuid.New(),
+				TenantID:      tenantID,
+				Name:          sp.Name,
+				SKU:           sp.SKU,
+				EAN:           sp.EAN,
+				Price:         price,
+				StockQuantity: sp.StockQuantity,
+				Source:        "supplier",
+				Category:      category,
+				Metadata:      metadata,
+				Tags:          []string{},
+				Images:        json.RawMessage("[]"),
+			}
+
+			if err := s.productRepo.Create(ctx, tx, product); err != nil {
+				resp.Errors = append(resp.Errors, model.ImportSupplierProductError{
+					SupplierProductID: spID.String(),
+					Reason:            fmt.Sprintf("failed to create product: %s", err),
+				})
+				continue
+			}
+
+			if err := s.supplierProdRepo.LinkToProduct(ctx, tx, spID, product.ID); err != nil {
+				resp.Errors = append(resp.Errors, model.ImportSupplierProductError{
+					SupplierProductID: spID.String(),
+					Reason:            fmt.Sprintf("failed to link: %s", err),
+				})
+				continue
+			}
+
+			resp.Imported++
+		}
+
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier_products.imported",
+			EntityType: "supplier",
+			EntityID:   supplierID,
+			Changes:    map[string]string{"imported": fmt.Sprintf("%d", resp.Imported)},
+			IPAddress:  ip,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uuid.UUID) error {

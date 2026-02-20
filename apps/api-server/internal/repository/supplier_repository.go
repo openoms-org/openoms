@@ -251,6 +251,11 @@ func (r *SupplierProductRepository) List(ctx context.Context, tx pgx.Tx, filter 
 			conditions = append(conditions, "product_id IS NULL")
 		}
 	}
+	if filter.Search != nil && *filter.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(name ILIKE $%d OR ean ILIKE $%d OR sku ILIKE $%d)", argIdx, argIdx, argIdx))
+		args = append(args, "%"+*filter.Search+"%")
+		argIdx++
+	}
 
 	where := ""
 	if len(conditions) > 0 {
@@ -385,6 +390,34 @@ func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx p
 		sp.ID, sp.TenantID, sp.SupplierID, sp.ProductID, sp.ExternalID,
 		sp.Name, sp.EAN, sp.SKU, sp.Price, sp.StockQuantity, sp.SourceCategory, sp.Metadata, sp.LastSyncedAt,
 	).Scan(&sp.ID, &sp.CreatedAt, &sp.UpdatedAt)
+}
+
+func (r *SupplierProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.SupplierProduct, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	query := fmt.Sprintf("SELECT %s FROM supplier_products WHERE id IN (%s)",
+		supplierProductColumns, strings.Join(placeholders, ", "))
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("find supplier products by ids: %w", err)
+	}
+	defer rows.Close()
+	var products []model.SupplierProduct
+	for rows.Next() {
+		sp, err := scanSupplierProduct(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan supplier product: %w", err)
+		}
+		products = append(products, *sp)
+	}
+	return products, rows.Err()
 }
 
 func (r *SupplierProductRepository) LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error {

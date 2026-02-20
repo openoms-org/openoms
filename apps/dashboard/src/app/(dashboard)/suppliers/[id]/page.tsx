@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { RefreshCw, ArrowLeft, Link2, Search, Copy, ShieldOff, ExternalLink, Trash2, Check, AlertCircle } from "lucide-react";
+import { RefreshCw, ArrowLeft, Copy, ShieldOff, ExternalLink, Trash2, Check, AlertCircle } from "lucide-react";
 import type { ProductCategory, SupplierCategoryMapping } from "@/types/api";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
@@ -11,7 +11,6 @@ import {
   useUpdateSupplier,
   useSyncSupplier,
   useSupplierProducts,
-  useLinkSupplierProduct,
   useSupplierPortalStatus,
   useGeneratePortalLink,
   useRevokePortalAccess,
@@ -21,11 +20,10 @@ import {
 } from "@/hooks/use-suppliers";
 import { useCategoryTree } from "@/hooks/use-categories";
 import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
-import { useProducts } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { getErrorMessage } from "@/lib/api-client";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { SUPPLIER_STATUSES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,12 +50,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
 function findCategoryById(categories: ProductCategory[], id: string): ProductCategory | undefined {
@@ -79,7 +71,6 @@ export default function SupplierDetailPage() {
   const updateSupplier = useUpdateSupplier(id);
   const syncSupplier = useSyncSupplier();
   const { data: productsData } = useSupplierProducts(id);
-  const linkProduct = useLinkSupplierProduct(id);
 
   const { data: portalStatus } = useSupplierPortalStatus(id);
   const generateLink = useGeneratePortalLink(id);
@@ -92,20 +83,12 @@ export default function SupplierDetailPage() {
   const { data: categoryTree } = useCategoryTree();
 
   const [name, setName] = useState("");
-  const [linkingProductId, setLinkingProductId] = useState<string | null>(null);
-  const [productSearch, setProductSearch] = useState("");
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [code, setCode] = useState("");
   const [feedUrl, setFeedUrl] = useState("");
   const [feedFormat, setFeedFormat] = useState("iof");
   const [syncInterval, setSyncInterval] = useState("60");
   const [status, setStatus] = useState("active");
   const [defaultCategoryId, setDefaultCategoryId] = useState<string | undefined>(undefined);
-
-  const { data: localProducts } = useProducts({
-    name: productSearch || undefined,
-    limit: 20,
-  });
 
   useEffect(() => {
     if (supplier) {
@@ -144,22 +127,6 @@ export default function SupplierDetailPage() {
       onError: (error) =>
         toast.error(getErrorMessage(error)),
     });
-  };
-
-  const handleLink = () => {
-    if (!linkingProductId || !selectedProductId) return;
-    linkProduct.mutate(
-      { supplierProductId: linkingProductId, productId: selectedProductId },
-      {
-        onSuccess: () => {
-          toast.success("Produkt powiązany");
-          setLinkingProductId(null);
-          setSelectedProductId("");
-          setProductSearch("");
-        },
-        onError: (error) => toast.error(getErrorMessage(error)),
-      }
-    );
   };
 
   const products = productsData?.items ?? [];
@@ -502,142 +469,35 @@ export default function SupplierDetailPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Produkty dostawcy ({productsData?.total ?? 0})</CardTitle>
-          <CardDescription>Produkty zaimportowane z feeda dostawcy</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Produkty dostawcy ({productsData?.total ?? 0})</CardTitle>
+            <CardDescription>Produkty zaimportowane z feeda dostawcy</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/suppliers/${id}/products`)}
+          >
+            Zarządzaj produktami
+          </Button>
         </CardHeader>
         <CardContent>
-          {products.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Brak produktów. Uruchom synchronizację, aby zaimportować produkty z feeda.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nazwa</TableHead>
-                  <TableHead>EAN</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead className="text-right">Cena</TableHead>
-                  <TableHead className="text-right">Stan</TableHead>
-                  <TableHead>Powiązanie</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((sp) => (
-                  <TableRow key={sp.id}>
-                    <TableCell className="font-medium max-w-[250px] truncate">
-                      {sp.name}
-                    </TableCell>
-                    <TableCell>{sp.ean || "---"}</TableCell>
-                    <TableCell>{sp.sku || "---"}</TableCell>
-                    <TableCell className="text-right">
-                      {sp.price != null ? formatCurrency(sp.price) : "---"}
-                    </TableCell>
-                    <TableCell className="text-right">{sp.stock_quantity}</TableCell>
-                    <TableCell>
-                      {sp.product_id ? (
-                        <Badge variant="outline" className="gap-1">
-                          <Link2 className="h-3 w-3" />
-                          Powiązany
-                        </Badge>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setLinkingProductId(sp.id);
-                            setSelectedProductId("");
-                            setProductSearch("");
-                          }}
-                        >
-                          <Link2 className="h-3 w-3 mr-1" />
-                          Powiąż
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog
-        open={!!linkingProductId}
-        onOpenChange={(open) => {
-          if (!open) {
-            setLinkingProductId(null);
-            setSelectedProductId("");
-            setProductSearch("");
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Powiąż z produktem OMS</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Szukaj produktu</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="Wpisz nazwę produktu..."
-                  className="pl-9"
-                />
-              </div>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold">{productsData?.total ?? 0}</p>
+              <p className="text-xs text-muted-foreground">Łącznie</p>
             </div>
-            <div className="max-h-64 overflow-auto border rounded-md">
-              {localProducts?.items && localProducts.items.length > 0 ? (
-                localProducts.items.map((product) => (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => setSelectedProductId(product.id)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between ${
-                      selectedProductId === product.id
-                        ? "bg-primary/10 border-l-2 border-primary"
-                        : ""
-                    }`}
-                  >
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        SKU: {product.sku || "---"}
-                      </div>
-                    </div>
-                    {selectedProductId === product.id && (
-                      <Badge variant="default" className="ml-2">Wybrany</Badge>
-                    )}
-                  </button>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {productSearch ? "Brak wyników" : "Wpisz nazwę, aby wyszukać"}
-                </p>
-              )}
+            <div>
+              <p className="text-2xl font-bold">{products.filter((p) => p.product_id).length}</p>
+              <p className="text-xs text-muted-foreground">Powiązane</p>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setLinkingProductId(null)}
-              >
-                Anuluj
-              </Button>
-              <Button
-                onClick={handleLink}
-                disabled={!selectedProductId || linkProduct.isPending}
-              >
-                {linkProduct.isPending ? "Łączenie..." : "Powiąż"}
-              </Button>
+            <div>
+              <p className="text-2xl font-bold">{products.filter((p) => !p.product_id).length}</p>
+              <p className="text-xs text-muted-foreground">Niepowiązane</p>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
     </AdminGuard>
   );

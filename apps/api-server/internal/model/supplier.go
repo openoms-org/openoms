@@ -130,7 +130,33 @@ type SupplierProductListFilter struct {
 	SupplierID *uuid.UUID
 	EAN        *string
 	Linked     *bool
+	Search     *string
 	PaginationParams
+}
+
+type ImportSupplierProductsRequest struct {
+	SupplierProductIDs []uuid.UUID `json:"supplier_product_ids"`
+}
+
+func (r *ImportSupplierProductsRequest) Validate() error {
+	if len(r.SupplierProductIDs) == 0 {
+		return errors.New("supplier_product_ids is required")
+	}
+	if len(r.SupplierProductIDs) > 500 {
+		return errors.New("max 500 products per import")
+	}
+	return nil
+}
+
+type ImportSupplierProductsResponse struct {
+	Imported int                          `json:"imported"`
+	Skipped  int                          `json:"skipped"`
+	Errors   []ImportSupplierProductError `json:"errors,omitempty"`
+}
+
+type ImportSupplierProductError struct {
+	SupplierProductID string `json:"supplier_product_id"`
+	Reason            string `json:"reason"`
 }
 
 type SupplierCategoryMapping struct {

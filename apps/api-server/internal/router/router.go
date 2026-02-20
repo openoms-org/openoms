@@ -619,6 +619,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}", deps.Supplier.Delete)
 				r.Post("/{id}/sync", deps.Supplier.Sync)
 				r.Get("/{id}/products", deps.Supplier.ListProducts)
+				r.Post("/{id}/products/import", deps.Supplier.ImportProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
 				r.Get("/{id}/category-mappings", deps.Supplier.ListCategoryMappings)
 				r.Put("/{id}/category-mappings", deps.Supplier.UpsertCategoryMapping)
