@@ -1,6 +1,8 @@
 # OpenOMS — Task runner (https://taskfile.dev)
 version: "3"
 
+dotenv: ['.env']
+
 vars:
   COMPOSE_FILE: docker-compose.dev.yml
   POSTGRES_CONTAINER: openoms-postgres
@@ -74,6 +76,8 @@ tasks:
   dashboard:
     desc: Start the dashboard dev server
     dir: apps/dashboard
+    env:
+      PORT: "3000"
     cmds:
       - npm run dev
 

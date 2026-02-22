@@ -31,75 +31,6 @@ CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
     LANGUAGE plpgsql
     AS $$BEGIN NEW.updated_at = NOW(); RETURN NEW; END;$$;
 
--- SECURITY DEFINER: find tenant by slug (login flow, bypasses RLS)
-CREATE FUNCTION public.find_tenant_by_slug(p_slug text) RETURNS TABLE(id uuid, name character varying, slug character varying, plan text, settings jsonb, created_at timestamp with time zone, updated_at timestamp with time zone)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-    SELECT t.id, t.name, t.slug, t.plan, t.settings, t.created_at, t.updated_at
-    FROM tenants t
-    WHERE t.slug = p_slug;
-$$;
-ALTER FUNCTION public.find_tenant_by_slug(text) OWNER TO postgres;
-
--- SECURITY DEFINER: find user for auth (login flow, bypasses RLS)
-CREATE FUNCTION public.find_user_for_auth(p_email text, p_tenant_id uuid) RETURNS TABLE(id uuid, tenant_id uuid, email text, name text, password_hash text, role text, role_id uuid, created_at timestamp with time zone, updated_at timestamp with time zone, totp_secret text, totp_enabled boolean)
-    LANGUAGE sql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-    SELECT u.id, u.tenant_id, u.email, u.name, u.password_hash,
-           u.role, u.role_id, u.created_at, u.updated_at,
-           u.totp_secret, u.totp_enabled
-    FROM users u
-    WHERE u.email = p_email AND u.tenant_id = p_tenant_id;
-$$;
-ALTER FUNCTION public.find_user_for_auth(text, uuid) OWNER TO postgres;
-
--- SECURITY DEFINER: find order tenant_id (public return form, bypasses RLS)
-CREATE FUNCTION public.find_order_tenant_id(p_order_id uuid) RETURNS TABLE(tenant_id uuid, customer_email text)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-    SELECT o.tenant_id, o.customer_email
-    FROM orders o
-    WHERE o.id = p_order_id;
-$$;
-ALTER FUNCTION public.find_order_tenant_id(uuid) OWNER TO postgres;
-
--- SECURITY DEFINER: find return by token (public return status, bypasses RLS)
-CREATE FUNCTION public.find_return_by_token(p_token text) RETURNS TABLE(id uuid, tenant_id uuid, order_id uuid, status character varying, reason text, items jsonb, refund_amount numeric, notes text, return_token text, customer_email text, customer_notes text, created_at timestamp with time zone, updated_at timestamp with time zone)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-    SELECT r.id, r.tenant_id, r.order_id, r.status,
-           r.reason, r.items, r.refund_amount,
-           r.notes, r.return_token, r.customer_email,
-           r.customer_notes, r.created_at, r.updated_at
-    FROM returns r
-    WHERE r.return_token = p_token;
-$$;
-ALTER FUNCTION public.find_return_by_token(text) OWNER TO postgres;
-
--- SECURITY DEFINER: find invitation by token (invite flow, bypasses RLS)
-CREATE FUNCTION public.find_invitation_by_token(p_token text) RETURNS TABLE(id uuid, tenant_id uuid, email text, role text, expires_at timestamp with time zone, used_at timestamp with time zone)
-    LANGUAGE sql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-    SELECT i.id, i.tenant_id, i.email, i.role, i.expires_at, i.used_at
-    FROM invitations i
-    WHERE i.token = p_token
-    LIMIT 1;
-$$;
-ALTER FUNCTION public.find_invitation_by_token(text) OWNER TO postgres;
-
--- SECURITY DEFINER: mark invitation as used (invite flow, bypasses RLS)
-CREATE FUNCTION public.use_invitation(p_token text) RETURNS void
-    LANGUAGE sql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-    UPDATE invitations SET used_at = now() WHERE token = p_token AND used_at IS NULL;
-$$;
-ALTER FUNCTION public.use_invitation(text) OWNER TO postgres;
 
 -- ============================================================
 -- Tables (in dependency order)
@@ -185,6 +116,8 @@ CREATE TABLE public.integrations (
 
 ALTER TABLE ONLY public.integrations
     ADD CONSTRAINT integrations_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.integrations
+    ADD CONSTRAINT integrations_tenant_id_provider_key UNIQUE (tenant_id, provider);
 ALTER TABLE ONLY public.integrations
     ADD CONSTRAINT integrations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
@@ -1422,6 +1355,80 @@ CREATE TABLE public.stock_sync_events (
 ALTER TABLE ONLY public.stock_sync_events ADD CONSTRAINT stock_sync_events_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.stock_sync_events ADD CONSTRAINT stock_sync_events_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.stock_sync_events ADD CONSTRAINT stock_sync_events_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE SET NULL;
+
+-- ============================================================
+-- SECURITY DEFINER Functions (created after tables)
+-- ============================================================
+
+-- SECURITY DEFINER: find tenant by slug (login flow, bypasses RLS)
+CREATE FUNCTION public.find_tenant_by_slug(p_slug text) RETURNS TABLE(id uuid, name character varying, slug character varying, plan text, settings jsonb, created_at timestamp with time zone, updated_at timestamp with time zone)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+    SELECT t.id, t.name, t.slug, t.plan, t.settings, t.created_at, t.updated_at
+    FROM tenants t
+    WHERE t.slug = p_slug;
+$$;
+ALTER FUNCTION public.find_tenant_by_slug(text) OWNER TO openoms;
+
+-- SECURITY DEFINER: find user for auth (login flow, bypasses RLS)
+CREATE FUNCTION public.find_user_for_auth(p_email text, p_tenant_id uuid) RETURNS TABLE(id uuid, tenant_id uuid, email text, name text, password_hash text, role text, role_id uuid, created_at timestamp with time zone, updated_at timestamp with time zone, totp_secret text, totp_enabled boolean)
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+    SELECT u.id, u.tenant_id, u.email, u.name, u.password_hash,
+           u.role, u.role_id, u.created_at, u.updated_at,
+           u.totp_secret, u.totp_enabled
+    FROM users u
+    WHERE u.email = p_email AND u.tenant_id = p_tenant_id;
+$$;
+ALTER FUNCTION public.find_user_for_auth(text, uuid) OWNER TO openoms;
+
+-- SECURITY DEFINER: find order tenant_id (public return form, bypasses RLS)
+CREATE FUNCTION public.find_order_tenant_id(p_order_id uuid) RETURNS TABLE(tenant_id uuid, customer_email text)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+    SELECT o.tenant_id, o.customer_email
+    FROM orders o
+    WHERE o.id = p_order_id;
+$$;
+ALTER FUNCTION public.find_order_tenant_id(uuid) OWNER TO openoms;
+
+-- SECURITY DEFINER: find return by token (public return status, bypasses RLS)
+CREATE FUNCTION public.find_return_by_token(p_token text) RETURNS TABLE(id uuid, tenant_id uuid, order_id uuid, status character varying, reason text, items jsonb, refund_amount numeric, notes text, return_token text, customer_email text, customer_notes text, created_at timestamp with time zone, updated_at timestamp with time zone)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+    SELECT r.id, r.tenant_id, r.order_id, r.status,
+           r.reason, r.items, r.refund_amount,
+           r.notes, r.return_token, r.customer_email,
+           r.customer_notes, r.created_at, r.updated_at
+    FROM returns r
+    WHERE r.return_token = p_token;
+$$;
+ALTER FUNCTION public.find_return_by_token(text) OWNER TO openoms;
+
+-- SECURITY DEFINER: find invitation by token (invite flow, bypasses RLS)
+CREATE FUNCTION public.find_invitation_by_token(p_token text) RETURNS TABLE(id uuid, tenant_id uuid, email text, role text, expires_at timestamp with time zone, used_at timestamp with time zone)
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+    SELECT i.id, i.tenant_id, i.email, i.role, i.expires_at, i.used_at
+    FROM invitations i
+    WHERE i.token = p_token
+    LIMIT 1;
+$$;
+ALTER FUNCTION public.find_invitation_by_token(text) OWNER TO openoms;
+
+-- SECURITY DEFINER: mark invitation as used (invite flow, bypasses RLS)
+CREATE FUNCTION public.use_invitation(p_token text) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+    UPDATE invitations SET used_at = now() WHERE token = p_token AND used_at IS NULL;
+$$;
+ALTER FUNCTION public.use_invitation(text) OWNER TO openoms;
 
 -- ============================================================
 -- Indexes
