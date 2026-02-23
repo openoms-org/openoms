@@ -189,39 +189,33 @@ export default function SupplierProductsPage() {
         },
       },
       {
-        header: "Nazwa",
+        header: "Produkt",
         accessorKey: "name",
         cell: (row) => (
-          <div className="max-w-[260px]">
+          <div className="min-w-0">
             <button
-              className="font-medium truncate block text-left hover:underline cursor-pointer"
+              className="font-medium truncate block text-left hover:underline cursor-pointer max-w-full"
               onClick={() => setDetailProduct(row)}
             >
               {row.name}
             </button>
-            {getMetaString(row.metadata, "brand") && (
-              <span className="text-xs text-muted-foreground">
-                {getMetaString(row.metadata, "brand")}
-              </span>
-            )}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {getMetaString(row.metadata, "brand") && (
+                <span>{getMetaString(row.metadata, "brand")}</span>
+              )}
+              {row.ean && (
+                <span className="font-mono">{row.ean}</span>
+              )}
+            </div>
           </div>
         ),
       },
       {
-        header: "EAN",
-        accessorKey: "ean",
-        cell: (row) => <span className="text-muted-foreground">{row.ean || "---"}</span>,
-      },
-      {
-        header: "SKU",
-        accessorKey: "sku",
-        cell: (row) => <span className="text-muted-foreground">{row.sku || "---"}</span>,
-      },
-      {
         header: "Kategoria",
         accessorKey: "source_category",
+        className: "max-w-[160px]",
         cell: (row) => (
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground text-xs truncate block">
             {row.source_category || "---"}
           </span>
         ),
