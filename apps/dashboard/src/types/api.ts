@@ -344,6 +344,7 @@ export interface Product {
   is_bundle: boolean;
   is_dropship: boolean;
   dropship_supplier_id?: string;
+  marketplace_providers: string[];
   created_at: string;
   updated_at: string;
 }
@@ -402,6 +403,7 @@ export interface ProductListParams extends PaginationParams {
   supplier_id?: string;
   source?: string;
   search?: string;
+  marketplace?: string;
 }
 
 // === Returns/RMA ===

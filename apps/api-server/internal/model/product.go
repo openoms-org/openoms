@@ -32,10 +32,11 @@ type Product struct {
 	Images             json.RawMessage `json:"images"`
 	HasVariants        bool            `json:"has_variants"`
 	IsBundle           bool            `json:"is_bundle"`
-	IsDropship         bool            `json:"is_dropship"`
-	DropshipSupplierID *uuid.UUID      `json:"dropship_supplier_id,omitempty"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	IsDropship             bool            `json:"is_dropship"`
+	DropshipSupplierID     *uuid.UUID      `json:"dropship_supplier_id,omitempty"`
+	MarketplaceProviders   []string        `json:"marketplace_providers"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
 }
 
 type CreateProductRequest struct {
@@ -177,5 +178,6 @@ type ProductListFilter struct {
 	SupplierID  *uuid.UUID
 	Source      *string
 	Search      *string
+	Marketplace *string // "allegro", "woocommerce", etc. or "none" for unlisted
 	PaginationParams
 }

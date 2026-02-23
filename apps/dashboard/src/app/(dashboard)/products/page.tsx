@@ -42,6 +42,13 @@ import type { Product, ProductCategory, SupplierProductWithSupplier } from "@/ty
 
 const DEFAULT_LIMIT = 20;
 
+const MARKETPLACE_LABELS: Record<string, string> = {
+  allegro: "Allegro",
+  woocommerce: "WooCommerce",
+  amazon: "Amazon",
+  ebay: "eBay",
+};
+
 function findCategoryById(categories: ProductCategory[], id: string): ProductCategory | undefined {
   for (const cat of categories) {
     if (cat.id === id) return cat;
@@ -99,6 +106,7 @@ function MyProductsTab() {
   const [categoryIdFilter, setCategoryIdFilter] = useState<string | undefined>(undefined);
   const [supplierFilter, setSupplierFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [marketplaceFilter, setMarketplaceFilter] = useState("");
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -147,6 +155,7 @@ function MyProductsTab() {
     category_id: categoryIdFilter || undefined,
     supplier_id: supplierFilter || undefined,
     source: sourceFilter || undefined,
+    marketplace: marketplaceFilter || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
   });
@@ -253,6 +262,23 @@ function MyProductsTab() {
           {ORDER_SOURCE_LABELS[product.source] ?? product.source}
         </span>
       ),
+    },
+    {
+      header: "Marketplace",
+      accessorKey: "marketplace_providers" as const,
+      cell: (product: Product) => {
+        const providers = product.marketplace_providers;
+        if (!providers?.length) return <span className="text-xs text-muted-foreground">—</span>;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {providers.map((p) => (
+              <Badge key={p} variant="outline" className="text-xs">
+                {MARKETPLACE_LABELS[p] ?? p}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
     },
     {
       header: "Kategoria",
@@ -387,6 +413,26 @@ function MyProductsTab() {
           <SelectContent>
             <SelectItem value="__all__">Wszystkie źródła</SelectItem>
             {Object.entries(ORDER_SOURCE_LABELS).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={marketplaceFilter}
+          onValueChange={(value) => {
+            setMarketplaceFilter(value === "__all__" ? "" : value);
+            setPagination((prev) => ({ ...prev, offset: 0 }));
+          }}
+        >
+          <SelectTrigger className="w-[170px]">
+            <SelectValue placeholder="Marketplace..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Wszystkie</SelectItem>
+            <SelectItem value="none">Niewystawione</SelectItem>
+            {Object.entries(MARKETPLACE_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label}
               </SelectItem>
