@@ -77,7 +77,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		where = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	fromClause := "FROM products p LEFT JOIN suppliers s ON p.dropship_supplier_id = s.id"
+	fromClause := "FROM products p"
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) %s %s", fromClause, where)
 	var total int
@@ -98,7 +98,8 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		`SELECT p.id, p.tenant_id, p.external_id, p.source, p.name, p.sku, p.ean, p.price, p.stock_quantity,
 		        p.metadata, p.tags, p.description_short, p.description_long, p.weight, p.width, p.height, p.depth,
 		        p.category, p.image_url, p.images, p.has_variants, p.is_bundle, p.is_dropship, p.dropship_supplier_id,
-		        s.name AS supplier_name,
+		        (SELECT s.name FROM supplier_products sp JOIN suppliers s ON sp.supplier_id = s.id
+		                  WHERE sp.product_id = p.id LIMIT 1) AS supplier_name,
 		        COALESCE((SELECT array_agg(DISTINCT i.provider ORDER BY i.provider)
 		                  FROM product_listings pl
 		                  JOIN integrations i ON pl.integration_id = i.id
