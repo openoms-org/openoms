@@ -15,7 +15,13 @@ $$;
 
 -- 2. Grant role membership so postgres can SET ROLE (needed for Supabase where
 --    postgres is not a true superuser and ALTER FUNCTION OWNER is restricted)
-GRANT openoms_auth TO postgres;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'postgres') THEN
+    EXECUTE 'GRANT openoms_auth TO postgres';
+  END IF;
+END;
+$$;
 
 -- 3. Grant schema usage + CREATE (needed to create functions as openoms_auth)
 DO $$
@@ -127,23 +133,26 @@ $$;
 RESET ROLE;
 
 -- 7. Lock down execution: only openoms_app can call these functions
+--    (openoms_app may not exist in local dev — guarded with IF EXISTS)
 REVOKE EXECUTE ON FUNCTION public.find_tenant_by_slug(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.find_tenant_by_slug(text) TO openoms_app;
-
 REVOKE EXECUTE ON FUNCTION public.find_user_for_auth(text, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.find_user_for_auth(text, uuid) TO openoms_app;
-
 REVOKE EXECUTE ON FUNCTION public.find_invitation_by_token(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.find_invitation_by_token(text) TO openoms_app;
-
 REVOKE EXECUTE ON FUNCTION public.find_return_by_token(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.find_return_by_token(text) TO openoms_app;
-
 REVOKE EXECUTE ON FUNCTION public.find_order_tenant_id(uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.find_order_tenant_id(uuid) TO openoms_app;
-
 REVOKE EXECUTE ON FUNCTION public.use_invitation(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.use_invitation(text) TO openoms_app;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms_app') THEN
+    GRANT EXECUTE ON FUNCTION public.find_tenant_by_slug(text) TO openoms_app;
+    GRANT EXECUTE ON FUNCTION public.find_user_for_auth(text, uuid) TO openoms_app;
+    GRANT EXECUTE ON FUNCTION public.find_invitation_by_token(text) TO openoms_app;
+    GRANT EXECUTE ON FUNCTION public.find_return_by_token(text) TO openoms_app;
+    GRANT EXECUTE ON FUNCTION public.find_order_tenant_id(uuid) TO openoms_app;
+    GRANT EXECUTE ON FUNCTION public.use_invitation(text) TO openoms_app;
+  END IF;
+END;
+$$;
 
 -- 8. Revoke CREATE on schema from openoms_auth (was only needed for function creation)
 DO $$
