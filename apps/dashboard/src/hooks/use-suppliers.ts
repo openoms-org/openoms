@@ -17,6 +17,10 @@ import type {
   ImportSupplierProductsRequest,
   ImportSupplierProductsResponse,
   BulkDeleteSupplierProductsRequest,
+  BTPImportProgressResponse,
+  SupplierProductWithSupplier,
+  SupplierProductListAllParams,
+  Product,
 } from "@/types/api";
 
 export function useSuppliers(params: SupplierListParams = {}) {
@@ -399,5 +403,119 @@ export function useProductSupplierLink(productId: string) {
         `/v1/products/${productId}/supplier-link`
       ),
     enabled: !!productId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// BTP Wizard
+// ---------------------------------------------------------------------------
+
+export function useBTPWizardStartImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; feed_url: string }) =>
+      apiClient<Supplier>("/v1/suppliers/btp-wizard/start", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+  });
+}
+
+export function useBTPWizardImportProgress(
+  supplierId: string,
+  enabled: boolean
+) {
+  return useQuery({
+    queryKey: ["btp-wizard-progress", supplierId],
+    queryFn: () =>
+      apiClient<BTPImportProgressResponse>(
+        `/v1/suppliers/btp-wizard/${supplierId}/progress`
+      ),
+    enabled: !!supplierId && enabled,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.status === "running" || data?.status === "pending") return 2000;
+      return false;
+    },
+  });
+}
+
+export function useBTPWizardSetAPIKeys(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      public_key: string;
+      private_key: string;
+      base_url?: string;
+    }) =>
+      apiClient<Supplier>(
+        `/v1/suppliers/btp-wizard/${supplierId}/api-keys`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+  });
+}
+
+export function useBTPWizardCompleteSyncSettings(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      xml_sync_interval_hours: number;
+      api_sync_interval_minutes: number;
+    }) =>
+      apiClient<Supplier>(
+        `/v1/suppliers/btp-wizard/${supplierId}/sync-settings`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+  });
+}
+
+export function useImportSingleProduct(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (supplierProductId: string) =>
+      apiClient<Product>(
+        `/v1/suppliers/${supplierId}/products/${supplierProductId}/import-single`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supplier-products"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers", supplierId, "products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useAllSupplierProducts(params: SupplierProductListAllParams) {
+  const searchParams = new URLSearchParams();
+  if (params.search) searchParams.set("search", params.search);
+  if (params.supplier_id) searchParams.set("supplier_id", params.supplier_id);
+  if (params.category) searchParams.set("category", params.category);
+  if (params.linked) searchParams.set("linked", params.linked);
+  if (params.sort_by) searchParams.set("sort_by", params.sort_by);
+  if (params.sort_order) searchParams.set("sort_order", params.sort_order);
+  searchParams.set("limit", String(params.limit ?? 50));
+  searchParams.set("offset", String(params.offset ?? 0));
+
+  return useQuery({
+    queryKey: ["supplier-products", params],
+    queryFn: () =>
+      apiClient<ListResponse<SupplierProductWithSupplier>>(
+        `/v1/supplier-products?${searchParams.toString()}`
+      ),
   });
 }

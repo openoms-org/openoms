@@ -13,7 +13,6 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Info,
   KeyRound,
   Loader2,
 } from "lucide-react";
@@ -54,7 +53,7 @@ const fileSupplierSchema = z.object({
 
 type FileSupplierForm = z.infer<typeof fileSupplierSchema>;
 
-type Step = "pick" | "file" | "btp";
+type Step = "pick" | "file";
 
 // ---------------------------------------------------------------------------
 // Provider cards for the picker
@@ -83,7 +82,6 @@ export default function NewSupplierPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("pick");
 
-  // --- Shared mutations ---
   const createIntegration = useCreateIntegration();
 
   // --- File/URL form ---
@@ -153,57 +151,6 @@ export default function NewSupplierPage() {
     }
   };
 
-  // --- BTP form ---
-  const createSupplierApi = useCreateSupplier();
-  const [btpName, setBtpName] = useState("");
-  const [btpPublicKey, setBtpPublicKey] = useState("");
-  const [btpPrivateKey, setBtpPrivateKey] = useState("");
-  const [btpBaseUrl, setBtpBaseUrl] = useState("");
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const [btpSubmitting, setBtpSubmitting] = useState(false);
-
-  const onBtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!btpName.trim()) {
-      toast.error("Nazwa dostawcy jest wymagana");
-      return;
-    }
-    if (!btpPublicKey.trim()) {
-      toast.error("Klucz publiczny jest wymagany");
-      return;
-    }
-    if (!btpPrivateKey.trim()) {
-      toast.error("Klucz prywatny jest wymagany");
-      return;
-    }
-
-    setBtpSubmitting(true);
-    try {
-      const integration = await createIntegration.mutateAsync({
-        provider: "btp",
-        label: btpName,
-        credentials: {
-          username: btpPublicKey,
-          password: btpPrivateKey,
-          base_url: btpBaseUrl || undefined,
-        },
-      });
-
-      await createSupplierApi.mutateAsync({
-        name: btpName,
-        feed_format: "btp",
-        integration_id: integration.id,
-      });
-
-      toast.success("Dostawca BTP został utworzony");
-      router.push("/suppliers");
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-    } finally {
-      setBtpSubmitting(false);
-    }
-  };
-
   // --- Navigation ---
   const handleBack = () => {
     if (step === "pick") {
@@ -216,7 +163,6 @@ export default function NewSupplierPage() {
   const titles: Record<Step, string> = {
     pick: "Nowy dostawca",
     file: "Nowy dostawca — Plik / URL",
-    btp: "Nowy dostawca — BTP.pro",
   };
 
   return (
@@ -238,7 +184,13 @@ export default function NewSupplierPage() {
               <button
                 key={p.key}
                 type="button"
-                onClick={() => setStep(p.key === "btp" ? "btp" : "file")}
+                onClick={() => {
+                  if (p.key === "btp") {
+                    router.push("/suppliers/new/btp");
+                  } else {
+                    setStep("file");
+                  }
+                }}
                 className="flex items-start gap-4 rounded-xl border p-4 text-left transition-colors hover:bg-muted/50"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -471,162 +423,6 @@ export default function NewSupplierPage() {
           </Card>
         )}
 
-        {/* ── Step 1b: BTP.pro ── */}
-        {step === "btp" && (
-          <div className="space-y-4">
-            {/* Connection instructions */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">Jak się połączyć</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  BTP.pro udostępnia API oparte o uwierzytelnianie{" "}
-                  <span className="font-medium text-foreground">Basic Auth</span>{" "}
-                  z parą kluczy: publicznym (login) i prywatnym (hasło).
-                </p>
-                <div className="space-y-2">
-                  <p className="font-medium text-foreground">
-                    Aby uzyskać klucze:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-1 pl-1">
-                    <li>Zaloguj się do panelu B2B swojej hurtowni</li>
-                    <li>
-                      Przejdź do{" "}
-                      <span className="font-medium text-foreground">
-                        Profil użytkownika → zakładka Klucze
-                      </span>
-                    </li>
-                    <li>Skopiuj klucz publiczny i prywatny</li>
-                  </ol>
-                  <p className="text-xs">
-                    Jeśli zakładka Klucze nie jest widoczna, skontaktuj się z
-                    opiekunem handlowym — wymagane jest uprawnienie ClientApi.
-                  </p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 p-3 text-xs">
-                  <div className="flex items-center gap-1.5 font-medium text-foreground mb-1">
-                    <KeyRound className="h-3.5 w-3.5" />
-                    Zalecane częstotliwości synchronizacji
-                  </div>
-                  <ul className="space-y-0.5 pl-5 list-disc">
-                    <li>Katalog produktów: 1–2 razy dziennie</li>
-                    <li>Stany magazynowe: 4–24 razy dziennie</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Credential form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Dane połączenia</CardTitle>
-                <CardDescription>
-                  Podaj klucze API z panelu B2B hurtowni
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={onBtpSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="btp-name">Nazwa dostawcy *</Label>
-                    <Input
-                      id="btp-name"
-                      value={btpName}
-                      onChange={(e) => setBtpName(e.target.value)}
-                      placeholder="np. Hurtownia XYZ (BTP)"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="btp-public-key">
-                      Klucz publiczny (login) *
-                    </Label>
-                    <Input
-                      id="btp-public-key"
-                      value={btpPublicKey}
-                      onChange={(e) => setBtpPublicKey(e.target.value)}
-                      placeholder="Twój klucz publiczny z panelu BTP"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Profil użytkownika → zakładka Klucze
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="btp-private-key">
-                      Klucz prywatny (hasło) *
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="btp-private-key"
-                        type={showPrivateKey ? "text" : "password"}
-                        className="pr-10"
-                        value={btpPrivateKey}
-                        onChange={(e) => setBtpPrivateKey(e.target.value)}
-                        placeholder="Twój klucz prywatny z panelu BTP"
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                        onClick={() => setShowPrivateKey((prev) => !prev)}
-                        tabIndex={-1}
-                        aria-label={
-                          showPrivateKey ? "Ukryj klucz" : "Pokaż klucz"
-                        }
-                      >
-                        {showPrivateKey ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="btp-base-url">
-                      Adres API hurtowni{" "}
-                      <span className="text-muted-foreground font-normal">
-                        (opcjonalnie)
-                      </span>
-                    </Label>
-                    <Input
-                      id="btp-base-url"
-                      type="url"
-                      value={btpBaseUrl}
-                      onChange={(e) => setBtpBaseUrl(e.target.value)}
-                      placeholder="https://twoja-hurtownia.btp.pro"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Adres Swagger API hurtowni. Pozostaw puste jeśli nie
-                      znasz — skonfigurujemy automatycznie.
-                    </p>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button type="submit" disabled={btpSubmitting}>
-                      {btpSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Łączenie...
-                        </>
-                      ) : (
-                        "Połącz i utwórz dostawcę"
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setStep("pick")}
-                      disabled={btpSubmitting}
-                    >
-                      Wstecz
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
     </AdminGuard>
   );

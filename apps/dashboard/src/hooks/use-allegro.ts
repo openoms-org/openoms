@@ -755,12 +755,14 @@ export function useAllegroCategoryParams(categoryId: string | null) {
 
 export function useAllegroProductSearch(params?: {
   phrase?: string;
+  mode?: string; // "GTIN" for EAN search, "MPN" for manufacturer part number
   category_id?: string;
   limit?: number;
   offset?: number;
 }) {
   const searchParams = new URLSearchParams();
   if (params?.phrase) searchParams.set("phrase", params.phrase);
+  if (params?.mode) searchParams.set("mode", params.mode);
   if (params?.category_id) searchParams.set("category_id", params.category_id);
   if (params?.limit) searchParams.set("limit", String(params.limit));
   if (params?.offset) searchParams.set("offset", String(params.offset));
@@ -772,6 +774,39 @@ export function useAllegroProductSearch(params?: {
         `/v1/integrations/allegro/products/catalog${qs ? `?${qs}` : ""}`
       ),
     enabled: !!params?.phrase,
+  });
+}
+
+// --- Listing Search (marketplace offers) ---
+
+export interface AllegroListingSearchItem {
+  id: string;
+  name: string;
+  category?: { id: string };
+  parameters?: {
+    id: string;
+    name: string;
+    values?: string[];
+    valuesIds?: string[];
+  }[];
+}
+
+export interface AllegroListingSearchResult {
+  items: {
+    promoted: AllegroListingSearchItem[];
+    regular: AllegroListingSearchItem[];
+  };
+}
+
+export function useAllegroListingSearch(phrase: string | undefined) {
+  return useQuery({
+    queryKey: ["allegro", "listing-search", phrase],
+    queryFn: () =>
+      apiClient<AllegroListingSearchResult>(
+        `/v1/integrations/allegro/offers/listing?phrase=${encodeURIComponent(phrase!)}&limit=1`
+      ),
+    enabled: !!phrase,
+    staleTime: 1000 * 60 * 30, // 30min cache
   });
 }
 

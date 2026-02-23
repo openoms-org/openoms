@@ -75,3 +75,25 @@ func buildAllegroClient(r *http.Request, integrationService *service.Integration
 	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
 	return client, nil
 }
+
+// isAllegroSandbox checks if the Allegro integration uses the sandbox environment.
+func isAllegroSandbox(r *http.Request, integrationService *service.IntegrationService, _ []byte) bool {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	credJSON, _, err := integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
+	if err != nil {
+		return false
+	}
+	var creds allegroCredentials
+	if err := json.Unmarshal(credJSON, &creds); err != nil {
+		return false
+	}
+	return creds.Sandbox
+}
+
+// allegroOfferURL returns the public URL for an Allegro offer.
+func allegroOfferURL(offerID string, sandbox bool) string {
+	if sandbox {
+		return "https://allegro.pl.allegrosandbox.pl/i" + offerID
+	}
+	return "https://allegro.pl/i" + offerID
+}

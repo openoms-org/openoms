@@ -38,8 +38,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DEDICATED_PAGES: Record<string, string> = {
-  allegro: "/integrations/allegro",
-  amazon: "/integrations/amazon",
+  allegro: "/marketplaces/allegro",
+  amazon: "/marketplaces/amazon",
 };
 
 export default function IntegrationDetailPage() {

@@ -172,6 +172,9 @@ func (h *AllegroCatalogHandler) SearchProducts(w http.ResponseWriter, r *http.Re
 	if v := r.URL.Query().Get("phrase"); v != "" {
 		params.Phrase = v
 	}
+	if v := r.URL.Query().Get("mode"); v != "" {
+		params.Mode = v // "GTIN" for EAN search, "MPN" for manufacturer part number
+	}
 	if v := r.URL.Query().Get("category_id"); v != "" {
 		params.CategoryID = v
 	}
@@ -190,6 +193,42 @@ func (h *AllegroCatalogHandler) SearchProducts(w http.ResponseWriter, r *http.Re
 	}
 
 	writeJSON(w, http.StatusOK, products)
+}
+
+// SearchListing searches the public Allegro marketplace for existing offers.
+// Used to extract parameter values from offers posted by other sellers.
+// GET /v1/integrations/allegro/offers/listing
+func (h *AllegroCatalogHandler) SearchListing(w http.ResponseWriter, r *http.Request) {
+	phrase := r.URL.Query().Get("phrase")
+	if phrase == "" {
+		writeError(w, http.StatusBadRequest, "Parametr 'phrase' jest wymagany")
+		return
+	}
+
+	client, err := h.newAllegroClient(r)
+	if err != nil {
+		slog.Error("allegro listing: failed to create client", "error", err)
+		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		return
+	}
+	defer client.Close()
+
+	params := &allegrosdk.ListingSearchParams{Phrase: phrase}
+	if v := r.URL.Query().Get("category_id"); v != "" {
+		params.CategoryID = v
+	}
+	if v := r.URL.Query().Get("limit"); v != "" {
+		params.Limit, _ = strconv.Atoi(v)
+	}
+
+	result, err := client.ProductCatalog.SearchListing(r.Context(), params)
+	if err != nil {
+		slog.Error("allegro listing: failed to search offers", "error", err)
+		writeAllegroError(w, "Nie udalo sie wyszukac ofert na Allegro", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 // GetProduct retrieves a single product from the Allegro catalog.

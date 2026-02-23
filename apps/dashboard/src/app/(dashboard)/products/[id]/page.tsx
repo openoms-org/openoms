@@ -98,7 +98,7 @@ export default function ProductDetailPage() {
   const deleteProduct = useDeleteProduct();
 
   const { data: bundleComponents, isLoading: isLoadingBundle } = useBundleComponents(params.id);
-  const { data: bundleStockData } = useBundleStock(params.id);
+  const { data: bundleStockData } = useBundleStock(params.id, (bundleComponents?.length ?? 0) > 0);
   const addComponent = useAddBundleComponent(params.id);
   const removeComponent = useRemoveBundleComponent(params.id);
   const { data: priceHistory } = useRepricingLog({ product_id: params.id, limit: 10 });

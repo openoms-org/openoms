@@ -215,6 +215,93 @@ func (r *LinkProductRequest) Validate() error {
 	return nil
 }
 
+// BTPWizardStartImportRequest is the payload for step 1 of the BTP wizard (XML import).
+type BTPWizardStartImportRequest struct {
+	Name    string `json:"name"`
+	FeedURL string `json:"feed_url"`
+}
+
+// Validate checks required fields for starting BTP XML import.
+func (r *BTPWizardStartImportRequest) Validate() error {
+	if strings.TrimSpace(r.Name) == "" {
+		return errors.New("name is required")
+	}
+	if err := validateMaxLength("name", r.Name, 500); err != nil {
+		return err
+	}
+	if strings.TrimSpace(r.FeedURL) == "" {
+		return errors.New("feed_url is required")
+	}
+	return nil
+}
+
+// BTPWizardSetAPIKeysRequest is the payload for step 2 of the BTP wizard (API credentials).
+type BTPWizardSetAPIKeysRequest struct {
+	PublicKey  string `json:"public_key"`
+	PrivateKey string `json:"private_key"`
+	BaseURL    string `json:"base_url,omitempty"`
+}
+
+// Validate checks required fields for BTP API key setup.
+func (r *BTPWizardSetAPIKeysRequest) Validate() error {
+	if strings.TrimSpace(r.PublicKey) == "" {
+		return errors.New("public_key is required")
+	}
+	if strings.TrimSpace(r.PrivateKey) == "" {
+		return errors.New("private_key is required")
+	}
+	return nil
+}
+
+// BTPWizardSyncSettingsRequest is the payload for step 3 of the BTP wizard (sync configuration).
+type BTPWizardSyncSettingsRequest struct {
+	XMLSyncIntervalHours int `json:"xml_sync_interval_hours"`
+	APISyncIntervalMin   int `json:"api_sync_interval_minutes"`
+}
+
+// Validate checks required fields for BTP sync settings.
+func (r *BTPWizardSyncSettingsRequest) Validate() error {
+	switch r.XMLSyncIntervalHours {
+	case 12, 24, 48:
+		// valid
+	default:
+		return errors.New("xml_sync_interval_hours must be 12, 24, or 48")
+	}
+	switch r.APISyncIntervalMin {
+	case 15, 30, 60:
+		// valid
+	default:
+		return errors.New("api_sync_interval_minutes must be 15, 30, or 60")
+	}
+	return nil
+}
+
+// BTPImportProgressResponse reports the progress of a BTP XML import.
+type BTPImportProgressResponse struct {
+	Status    string `json:"status"`
+	Total     int    `json:"total"`
+	Processed int    `json:"processed"`
+	Error     string `json:"error,omitempty"`
+}
+
+// SupplierProductWithSupplier is a SupplierProduct with the supplier's name included.
+type SupplierProductWithSupplier struct {
+	SupplierProduct
+	SupplierName string `json:"supplier_name"`
+}
+
+// SupplierProductListAllParams contains filters for cross-supplier product listing.
+type SupplierProductListAllParams struct {
+	Search     string
+	SupplierID *uuid.UUID
+	Category   string
+	Linked     string // "all", "linked", "unlinked"
+	SortBy     string
+	SortOrder  string
+	Limit      int
+	Offset     int
+}
+
 // AllegroParameterMapping maps a supplier's data field to an Allegro category parameter.
 type AllegroParameterMapping struct {
 	ID                uuid.UUID       `json:"id"`

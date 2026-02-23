@@ -25,6 +25,11 @@ const sampleIOF = `<?xml version="1.0" encoding="UTF-8"?>
         <large url="https://example.com/images/phone1.jpg"/>
       </images>
       <code code="5901234567890" code_type="EAN"/>
+      <attrs>
+        <a name="Kolor"><a_value>Czarny</a_value></a>
+        <a name="Pamięć RAM"><a_value>8 GB</a_value></a>
+        <a name="Kompatybilność"><a_value>Android</a_value><a_value>iOS</a_value></a>
+      </attrs>
     </product>
     <product id="P002" code_producer="SKU-CASE-1">
       <producer name="AccessoryPro"/>
@@ -101,6 +106,15 @@ func TestParse(t *testing.T) {
 	}
 	if p.Attributes["producer"] != "TechBrand" {
 		t.Errorf("product[0].Attributes[producer] = %q, want %q", p.Attributes["producer"], "TechBrand")
+	}
+	if p.Attributes["Kolor"] != "Czarny" {
+		t.Errorf("product[0].Attributes[Kolor] = %q, want %q", p.Attributes["Kolor"], "Czarny")
+	}
+	if p.Attributes["Pamięć RAM"] != "8 GB" {
+		t.Errorf("product[0].Attributes[Pamięć RAM] = %q, want %q", p.Attributes["Pamięć RAM"], "8 GB")
+	}
+	if p.Attributes["Kompatybilność"] != "Android, iOS" {
+		t.Errorf("product[0].Attributes[Kompatybilność] = %q, want %q", p.Attributes["Kompatybilność"], "Android, iOS")
 	}
 
 	// Second product

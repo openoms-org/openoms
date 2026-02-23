@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -605,4 +606,193 @@ func (h *SupplierHandler) SupplierLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"supplier_id": supplierID.String()})
+}
+
+// ---------------------------------------------------------------------------
+// BTP Wizard
+// ---------------------------------------------------------------------------
+
+// BTPWizardStartImport starts a BTP supplier import wizard.
+func (h *SupplierHandler) BTPWizardStartImport(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var req model.BTPWizardStartImportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	supplier, err := h.supplierService.BTPWizardStartImport(r.Context(), tenantID, req, actorID, clientIP(r))
+	if err != nil {
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to start import")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, supplier)
+}
+
+// BTPWizardImportProgress returns the current import progress for a BTP supplier.
+func (h *SupplierHandler) BTPWizardImportProgress(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	resp, err := h.supplierService.BTPWizardGetImportProgress(r.Context(), tenantID, supplierID)
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to get import progress")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// BTPWizardSetAPIKeys sets API keys for a BTP supplier integration.
+func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.BTPWizardSetAPIKeysRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	supplier, err := h.supplierService.BTPWizardSetAPIKeys(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case isValidationError(err):
+			writeError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		case errors.Is(err, service.ErrDuplicateProvider):
+			writeError(w, http.StatusConflict, "BTP integration already exists for this tenant")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to set API keys")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, supplier)
+}
+
+// BTPWizardCompleteSyncSettings completes the sync settings step of the BTP wizard.
+func (h *SupplierHandler) BTPWizardCompleteSyncSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.BTPWizardSyncSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	supplier, err := h.supplierService.BTPWizardCompleteSyncSettings(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case isValidationError(err):
+			writeError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to complete sync settings")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, supplier)
+}
+
+// ImportSingleProduct handles POST /v1/suppliers/{id}/products/{productId}/import —
+// imports a single supplier product into the OMS catalog.
+func (h *SupplierHandler) ImportSingleProduct(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	spID, err := uuid.Parse(chi.URLParam(r, "spid"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier product ID")
+		return
+	}
+
+	product, err := h.supplierService.ImportSingleProduct(r.Context(), tenantID, supplierID, spID, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		case errors.Is(err, service.ErrSupplierProductNotFound):
+			writeError(w, http.StatusNotFound, "supplier product not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to import product")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, product)
+}
+
+// ListAllSupplierProducts handles GET /v1/supplier-products — lists supplier products across all suppliers.
+func (h *SupplierHandler) ListAllSupplierProducts(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	q := r.URL.Query()
+
+	limit := 50
+	offset := 0
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 200 {
+			limit = n
+		}
+	}
+	if v := q.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	params := model.SupplierProductListAllParams{
+		Search:    q.Get("search"),
+		Category:  q.Get("category"),
+		Linked:    q.Get("linked"),
+		SortBy:    q.Get("sort_by"),
+		SortOrder: q.Get("sort_order"),
+		Limit:     limit,
+		Offset:    offset,
+	}
+	if sid := q.Get("supplier_id"); sid != "" {
+		if id, err := uuid.Parse(sid); err == nil {
+			params.SupplierID = &id
+		}
+	}
+
+	resp, err := h.supplierService.ListAllProducts(r.Context(), tenantID, params)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list supplier products")
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }

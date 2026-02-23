@@ -737,6 +737,7 @@ type ParameterDictValue struct {
 // SearchProductsParams are the optional parameters for searching the product catalog.
 type SearchProductsParams struct {
 	Phrase     string
+	Mode       string // "GTIN" to search by EAN/GTIN, "MPN" for manufacturer part number
 	CategoryID string
 	Limit      int
 	Offset     int
@@ -814,6 +815,35 @@ type Rate struct {
 	Type    string  `json:"type"`
 	Value   float64 `json:"value"`
 	Percent float64 `json:"percent"`
+}
+
+// --- Listing Search models (public marketplace search) ---
+
+// ListingSearchParams are parameters for searching marketplace offers.
+type ListingSearchParams struct {
+	Phrase     string
+	CategoryID string
+	Limit      int
+	Offset     int
+}
+
+// ListingSearchResult represents the response from the offers/listing endpoint.
+type ListingSearchResult struct {
+	Items ListingSearchItems `json:"items"`
+}
+
+// ListingSearchItems groups promoted and regular listing items.
+type ListingSearchItems struct {
+	Promoted []ListingSearchItem `json:"promoted"`
+	Regular  []ListingSearchItem `json:"regular"`
+}
+
+// ListingSearchItem represents a single offer in listing search results.
+type ListingSearchItem struct {
+	ID         string             `json:"id"`
+	Name       string             `json:"name"`
+	Category   *CategoryRef       `json:"category,omitempty"`
+	Parameters []ProductParameter `json:"parameters,omitempty"`
 }
 
 // --- Dispute models ---

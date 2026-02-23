@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -233,6 +234,8 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 	})
 
 	now := time.Now()
+	sandbox := isAllegroSandbox(r, h.integrationService, h.encryptionKey)
+	offerURL := allegroOfferURL(offer.ID, sandbox)
 	listing := &model.ProductListing{
 		ID:            uuid.New(),
 		TenantID:      tenantID,
@@ -240,6 +243,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		IntegrationID: integrationID,
 		ExternalID:    &offer.ID,
 		Status:        "active",
+		URL:           &offerURL,
 		PriceOverride: req.PriceOverride,
 		StockOverride: req.StockOverride,
 		SyncStatus:    "synced",
@@ -273,9 +277,15 @@ func buildAllegroOfferPayload(product *model.Product, req createListingRequest, 
 		stock = *req.StockOverride
 	}
 
+	// Allegro limits offer name to 75 characters
+	offerName := product.Name
+	if len([]rune(offerName)) > 75 {
+		offerName = string([]rune(offerName)[:75])
+	}
+
 	// Build product definition (goes inside productSet)
 	productDef := map[string]any{
-		"name":     product.Name,
+		"name":     offerName,
 		"category": map[string]any{"id": req.CategoryID},
 	}
 	if len(productParams) > 0 {
@@ -287,7 +297,7 @@ func buildAllegroOfferPayload(product *model.Product, req createListingRequest, 
 
 	// Build top-level offer payload
 	payload := map[string]any{
-		"name": product.Name,
+		"name": offerName,
 		"productSet": []map[string]any{
 			buildProductSetEntry(productDef, producerID),
 		},
@@ -443,10 +453,7 @@ func buildDescription(product *model.Product) map[string]any {
 	} else {
 		content = product.Name
 	}
-	// Wrap in paragraph if not already HTML
-	if !strings.Contains(content, "<") {
-		content = "<p>" + content + "</p>"
-	}
+	content = sanitizeForAllegro(content)
 	return map[string]any{
 		"sections": []map[string]any{
 			{"items": []map[string]any{
@@ -454,6 +461,150 @@ func buildDescription(product *model.Product) map[string]any {
 			}},
 		},
 	}
+}
+
+// sanitizeForAllegro converts HTML to Allegro-compatible format.
+// Allegro only allows: h1, h2, p, ul, ol, li tags (strict XHTML subset).
+// Handles supplier feed HTML (BTP/IOF) which may contain div, img, style,
+// h3-h6, b, strong, em, i, hr, br, table, etc.
+func sanitizeForAllegro(html string) string {
+	allowed := map[string]bool{"h1": true, "h2": true, "p": true, "ul": true, "ol": true, "li": true}
+
+	// 1. Remove <style>...</style> and <script>...</script> blocks entirely
+	styleRe := regexp.MustCompile(`(?is)<style[^>]*>.*?</style>`)
+	html = styleRe.ReplaceAllString(html, "")
+	scriptRe := regexp.MustCompile(`(?is)<script[^>]*>.*?</script>`)
+	html = scriptRe.ReplaceAllString(html, "")
+
+	// 2. Remove HTML comments
+	commentRe := regexp.MustCompile(`<!--[\s\S]*?-->`)
+	html = commentRe.ReplaceAllString(html, "")
+
+	// 3. Remove void/media elements entirely (img, input, source, video, audio, iframe, object, embed)
+	voidRe := regexp.MustCompile(`<(?:img|input|source|video|audio|iframe|object|embed)\b[^>]*/?>`)
+	html = voidRe.ReplaceAllString(html, "")
+
+	// 4. Convert <br> and <hr> to paragraph breaks
+	brRe := regexp.MustCompile(`<br\s*/?>`)
+	html = brRe.ReplaceAllString(html, "\n\n")
+	hrRe := regexp.MustCompile(`<hr\s*/?>`)
+	html = hrRe.ReplaceAllString(html, "\n\n")
+
+	// 5. Convert <h3>-<h6> to <h2> (preserve heading semantics)
+	for _, level := range []string{"h3", "h4", "h5", "h6"} {
+		openRe := regexp.MustCompile(`<` + level + `\b[^>]*>`)
+		html = openRe.ReplaceAllString(html, "<h2>")
+		html = strings.ReplaceAll(html, "</"+level+">", "</h2>")
+	}
+
+	// 6. Strip remaining disallowed tags but keep their content
+	tagRe := regexp.MustCompile(`</?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>`)
+	html = tagRe.ReplaceAllStringFunc(html, func(m string) string {
+		tagNameRe := regexp.MustCompile(`</?([a-zA-Z][a-zA-Z0-9]*)`)
+		parts := tagNameRe.FindStringSubmatch(m)
+		if len(parts) < 2 {
+			return ""
+		}
+		tagName := strings.ToLower(parts[1])
+		if allowed[tagName] {
+			if strings.HasPrefix(m, "</") {
+				return "</" + tagName + ">"
+			}
+			return "<" + tagName + ">"
+		}
+		return ""
+	})
+
+	// 7. Replace &nbsp; with regular space (not valid in strict XHTML without DTD)
+	html = strings.ReplaceAll(html, "&nbsp;", " ")
+
+	// 8. Escape bare & that are not valid XML entity references.
+	// Go's regexp (RE2) lacks negative lookahead, so use a positive match + replace approach.
+	entityRe := regexp.MustCompile(`&(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);`)
+	// First, protect existing valid entities by replacing & with a placeholder
+	html = entityRe.ReplaceAllStringFunc(html, func(m string) string {
+		return "\x00ENTITY" + m[1:] // strip leading &, prefix with placeholder
+	})
+	// Escape all remaining bare &
+	html = strings.ReplaceAll(html, "&", "&amp;")
+	// Restore protected entities
+	html = strings.ReplaceAll(html, "\x00ENTITY", "&")
+
+	// 9. Collapse whitespace: 3+ newlines → 2, multiple spaces → single
+	nlCollapse := regexp.MustCompile(`\n{3,}`)
+	html = nlCollapse.ReplaceAllString(html, "\n\n")
+	html = strings.TrimSpace(html)
+
+	// 10. Wrap bare text in <p> tags
+	var result strings.Builder
+	remaining := html
+
+	blockOpenRe := regexp.MustCompile(`<(h1|h2|p|ul|ol|li)>`)
+	anyTagRe := regexp.MustCompile(`</?(?:h1|h2|p|ul|ol|li)>`)
+
+	for remaining != "" {
+		loc := anyTagRe.FindStringIndex(remaining)
+		if loc == nil {
+			text := strings.TrimSpace(remaining)
+			if text != "" {
+				for _, para := range splitIntoParagraphs(text) {
+					result.WriteString("<p>" + para + "</p>")
+				}
+			}
+			break
+		}
+
+		before := remaining[:loc[0]]
+		before = strings.TrimSpace(before)
+		if before != "" {
+			for _, para := range splitIntoParagraphs(before) {
+				result.WriteString("<p>" + para + "</p>")
+			}
+		}
+
+		tag := remaining[loc[0]:loc[1]]
+		result.WriteString(tag)
+		remaining = remaining[loc[1]:]
+
+		if blockOpenRe.MatchString(tag) {
+			parts := blockOpenRe.FindStringSubmatch(tag)
+			tagName := parts[1]
+			closeTag := "</" + tagName + ">"
+			closeIdx := strings.Index(remaining, closeTag)
+			if closeIdx >= 0 {
+				inner := remaining[:closeIdx]
+				if tagName == "ul" || tagName == "ol" {
+					result.WriteString(inner)
+				} else {
+					inner = strings.TrimSpace(inner)
+					result.WriteString(inner)
+				}
+				result.WriteString(closeTag)
+				remaining = remaining[closeIdx+len(closeTag):]
+			}
+		}
+	}
+
+	out := result.String()
+	if out == "" {
+		return "<p></p>"
+	}
+	return out
+}
+
+// splitIntoParagraphs splits text by double newlines into non-empty trimmed paragraphs.
+func splitIntoParagraphs(text string) []string {
+	parts := strings.Split(text, "\n\n")
+	var result []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		// Also convert single newlines to spaces within a paragraph
+		p = strings.ReplaceAll(p, "\n", " ")
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
 }
 
 // buildImages extracts image URLs from the product for the Allegro offer.

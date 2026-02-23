@@ -529,6 +529,7 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Get("/categories/{categoryId}/parameters", deps.AllegroCatalog.GetCategoryParameters)
 						r.Get("/products/catalog", deps.AllegroCatalog.SearchProducts)
 						r.Get("/products/catalog/{productId}", deps.AllegroCatalog.GetProduct)
+						r.Get("/offers/listing", deps.AllegroCatalog.SearchListing)
 						r.Get("/pricing/fees", deps.AllegroCatalog.GetFeePreview)
 						r.Get("/pricing/commissions", deps.AllegroCatalog.GetCommissions)
 					}
@@ -625,6 +626,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/products/bulk-delete", deps.Supplier.BulkDeleteProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
 				r.Post("/{id}/products/{spid}/unlink", deps.Supplier.UnlinkProduct)
+				r.Post("/{id}/products/{spid}/import-single", deps.Supplier.ImportSingleProduct)
 				r.Delete("/{id}/products/{spid}", deps.Supplier.DeleteProduct)
 				r.Get("/{id}/category-mappings", deps.Supplier.ListCategoryMappings)
 				r.Put("/{id}/category-mappings", deps.Supplier.UpsertCategoryMapping)
@@ -635,6 +637,12 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/allegro-mappings/categories", deps.Supplier.ListAllegroMappingCategories)
 				r.Get("/{id}/attributes", deps.Supplier.ListSupplierAttributes)
 
+				// BTP wizard
+				r.Post("/btp-wizard/start", deps.Supplier.BTPWizardStartImport)
+				r.Get("/btp-wizard/{id}/progress", deps.Supplier.BTPWizardImportProgress)
+				r.Post("/btp-wizard/{id}/api-keys", deps.Supplier.BTPWizardSetAPIKeys)
+				r.Post("/btp-wizard/{id}/sync-settings", deps.Supplier.BTPWizardCompleteSyncSettings)
+
 				// Supplier portal management
 				if deps.SupplierPortal != nil {
 					r.Post("/{id}/portal/generate-link", deps.SupplierPortal.GenerateLink)
@@ -642,6 +650,9 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Get("/{id}/portal/status", deps.SupplierPortal.GetPortalStatus)
 				}
 			})
+
+			// Cross-supplier product listing — admin only
+			r.With(middleware.RequireRole("admin")).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
 
 			// Product Categories — admin only
 			if deps.Category != nil {

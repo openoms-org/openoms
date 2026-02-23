@@ -196,6 +196,7 @@ type SupplierRepo interface {
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastSyncAt time.Time, errorMessage *string) error
 	UpdateLastFullSync(ctx context.Context, tx pgx.Tx, id uuid.UUID, t time.Time) error
+	UpdateSettingsKeys(ctx context.Context, tx pgx.Tx, id uuid.UUID, keys map[string]any) error
 }
 
 // SupplierCategoryMappingRepo defines the interface for supplier category mapping persistence.
@@ -248,6 +249,9 @@ type SupplierProductRepo interface {
 	ListSourceCategories(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
 	ListAttributes(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
 	FindSupplierIDByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (*uuid.UUID, error)
+	ListExternalIDsBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
+	DeleteStaleByExternalIDs(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, keepExternalIDs []string) ([]uuid.UUID, error)
+	ListAll(ctx context.Context, tx pgx.Tx, params model.SupplierProductListAllParams) ([]model.SupplierProductWithSupplier, int, error)
 }
 
 // AllegroParameterMappingRepo defines the interface for Allegro parameter mapping persistence.

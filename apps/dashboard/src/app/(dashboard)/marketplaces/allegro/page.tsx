@@ -222,11 +222,50 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
   const [clientSecret, setClientSecret] = useState("");
   const [sandbox, setSandbox] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
 
   const redirectURI = getRedirectURI();
   const devPortalURL = sandbox
     ? "https://apps.developer.allegro.pl.allegrosandbox.pl/"
     : "https://apps.developer.allegro.pl/";
+
+  const openOAuthPopup = useCallback(async (onDone: () => void) => {
+    setIsAuthorizing(true);
+    try {
+      const resp = await apiClient<{
+        auth_url: string;
+        state: string;
+        redirect_uri: string;
+      }>("/v1/integrations/allegro/auth-url");
+
+      const popup = window.open(
+        resp.auth_url,
+        "allegro-oauth",
+        "width=600,height=700,scrollbars=yes"
+      );
+
+      if (!popup) {
+        toast.error(
+          "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna i spróbuj ponownie."
+        );
+        setIsAuthorizing(false);
+        onDone();
+        return;
+      }
+
+      const poll = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(poll);
+          setIsAuthorizing(false);
+          onDone();
+        }
+      }, 500);
+    } catch {
+      toast.error("Nie udało się pobrać adresu autoryzacji Allegro");
+      setIsAuthorizing(false);
+      onDone();
+    }
+  }, []);
 
   const handleSave = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -246,10 +285,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       },
       {
         onSuccess: () => {
-          toast.success(
-            "Dane Allegro zapisane. Kliknij 'Połącz z Allegro' aby autoryzować."
-          );
-          onCreated();
+          toast.success("Dane Allegro zapisane. Otwieranie autoryzacji...");
+          // Automatically open OAuth popup after saving credentials
+          openOAuthPopup(() => onCreated());
         },
         onError: (error) => {
           toast.error(
@@ -499,7 +537,8 @@ function ConnectedState({
     doAuth();
   }, [onRefetch]);
 
-  const needsOAuth = integration.status !== "active";
+  // Show OAuth prompt if status is not active OR if there's no last_sync_at (never authorized successfully)
+  const needsOAuth = integration.status !== "active" || !integration.last_sync_at;
 
   return (
     <div className="space-y-6">

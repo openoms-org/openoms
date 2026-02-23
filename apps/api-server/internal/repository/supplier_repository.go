@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -220,6 +221,25 @@ func (r *SupplierRepository) UpdateLastFullSync(ctx context.Context, tx pgx.Tx, 
 	return nil
 }
 
+// UpdateSettingsKeys merges specific keys into the supplier's settings JSONB.
+func (r *SupplierRepository) UpdateSettingsKeys(ctx context.Context, tx pgx.Tx, id uuid.UUID, keys map[string]any) error {
+	keysJSON, err := json.Marshal(keys)
+	if err != nil {
+		return fmt.Errorf("marshal settings keys: %w", err)
+	}
+	ct, err := tx.Exec(ctx,
+		`UPDATE suppliers SET settings = COALESCE(settings, '{}'::jsonb) || $1::jsonb, updated_at = NOW() WHERE id = $2`,
+		keysJSON, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update supplier settings keys: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("supplier not found")
+	}
+	return nil
+}
+
 // SupplierProductRepository
 
 type SupplierProductRepository struct{}
@@ -398,10 +418,14 @@ func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx p
 		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, source_category, metadata, last_synced_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		 ON CONFLICT (tenant_id, supplier_id, external_id)
-		 DO UPDATE SET name = EXCLUDED.name, ean = EXCLUDED.ean, sku = EXCLUDED.sku,
-		              price = EXCLUDED.price, stock_quantity = EXCLUDED.stock_quantity,
-		              source_category = EXCLUDED.source_category,
-		              metadata = EXCLUDED.metadata, last_synced_at = EXCLUDED.last_synced_at,
+		 DO UPDATE SET name = COALESCE(NULLIF(EXCLUDED.name, ''), supplier_products.name),
+		              ean = COALESCE(EXCLUDED.ean, supplier_products.ean),
+		              sku = COALESCE(EXCLUDED.sku, supplier_products.sku),
+		              price = COALESCE(EXCLUDED.price, supplier_products.price),
+		              stock_quantity = EXCLUDED.stock_quantity,
+		              source_category = COALESCE(EXCLUDED.source_category, supplier_products.source_category),
+		              metadata = COALESCE(supplier_products.metadata, '{}'::jsonb) || EXCLUDED.metadata,
+		              last_synced_at = EXCLUDED.last_synced_at,
 		              updated_at = NOW()
 		 RETURNING id, created_at, updated_at`,
 		sp.ID, sp.TenantID, sp.SupplierID, sp.ProductID, sp.ExternalID,
@@ -535,6 +559,75 @@ func (r *SupplierProductRepository) ListAttributes(ctx context.Context, tx pgx.T
 	return attrs, rows.Err()
 }
 
+// ListExternalIDsBySupplier returns all external_ids for a supplier's products.
+func (r *SupplierProductRepository) ListExternalIDsBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT external_id FROM supplier_products WHERE supplier_id = $1`,
+		supplierID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list external ids: %w", err)
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan external id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// DeleteStaleByExternalIDs deletes supplier products not present in the given external IDs
+// and returns the linked product_ids (OMS products) that were affected.
+func (r *SupplierProductRepository) DeleteStaleByExternalIDs(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, keepExternalIDs []string) ([]uuid.UUID, error) {
+	if len(keepExternalIDs) == 0 {
+		return nil, nil
+	}
+	// First get linked product IDs that will be affected
+	placeholders := make([]string, len(keepExternalIDs))
+	args := make([]any, len(keepExternalIDs)+1)
+	args[0] = supplierID
+	for i, eid := range keepExternalIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = eid
+	}
+	notInClause := strings.Join(placeholders, ", ")
+
+	rows, err := tx.Query(ctx,
+		fmt.Sprintf(`SELECT product_id FROM supplier_products
+			WHERE supplier_id = $1 AND external_id NOT IN (%s) AND product_id IS NOT NULL`, notInClause),
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list stale linked products: %w", err)
+	}
+	defer rows.Close()
+	var linkedProductIDs []uuid.UUID
+	for rows.Next() {
+		var pid uuid.UUID
+		if err := rows.Scan(&pid); err != nil {
+			return nil, fmt.Errorf("scan linked product id: %w", err)
+		}
+		linkedProductIDs = append(linkedProductIDs, pid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Delete stale supplier products
+	_, err = tx.Exec(ctx,
+		fmt.Sprintf(`DELETE FROM supplier_products WHERE supplier_id = $1 AND external_id NOT IN (%s)`, notInClause),
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("delete stale supplier products: %w", err)
+	}
+	return linkedProductIDs, nil
+}
+
 // FindSupplierIDByProductID returns the supplier_id for a given linked product_id.
 func (r *SupplierProductRepository) FindSupplierIDByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (*uuid.UUID, error) {
 	var supplierID uuid.UUID
@@ -549,4 +642,92 @@ func (r *SupplierProductRepository) FindSupplierIDByProductID(ctx context.Contex
 		return nil, fmt.Errorf("find supplier by product: %w", err)
 	}
 	return &supplierID, nil
+}
+
+// ListAll returns supplier products across all suppliers with the supplier name included.
+func (r *SupplierProductRepository) ListAll(ctx context.Context, tx pgx.Tx, params model.SupplierProductListAllParams) ([]model.SupplierProductWithSupplier, int, error) {
+	var conditions []string
+	var args []any
+	argIdx := 1
+
+	if params.SupplierID != nil {
+		conditions = append(conditions, fmt.Sprintf("sp.supplier_id = $%d", argIdx))
+		args = append(args, *params.SupplierID)
+		argIdx++
+	}
+	if params.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(sp.name ILIKE $%d OR sp.ean ILIKE $%d OR sp.sku ILIKE $%d)", argIdx, argIdx, argIdx))
+		args = append(args, "%"+params.Search+"%")
+		argIdx++
+	}
+	if params.Category != "" {
+		conditions = append(conditions, fmt.Sprintf("sp.source_category = $%d", argIdx))
+		args = append(args, params.Category)
+		argIdx++
+	}
+	switch params.Linked {
+	case "linked":
+		conditions = append(conditions, "sp.product_id IS NOT NULL")
+	case "unlinked":
+		conditions = append(conditions, "sp.product_id IS NULL")
+	}
+
+	where := ""
+	if len(conditions) > 0 {
+		where = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM supplier_products sp %s", where)
+	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count all supplier products: %w", err)
+	}
+
+	allowedSortColumns := map[string]string{
+		"created_at":     "sp.created_at",
+		"name":           "sp.name",
+		"price":          "sp.price",
+		"stock_quantity": "sp.stock_quantity",
+	}
+	orderCol, ok := allowedSortColumns[params.SortBy]
+	if !ok {
+		orderCol = "sp.created_at"
+	}
+	direction := "DESC"
+	if params.SortOrder == "asc" {
+		direction = "ASC"
+	}
+	orderByClause := fmt.Sprintf("ORDER BY %s %s", orderCol, direction)
+
+	query := fmt.Sprintf(
+		`SELECT sp.id, sp.tenant_id, sp.supplier_id, sp.product_id, sp.external_id, sp.name, sp.ean, sp.sku,
+		        sp.price, sp.stock_quantity, sp.source_category, sp.metadata, sp.last_synced_at, sp.created_at, sp.updated_at,
+		        s.name as supplier_name
+		 FROM supplier_products sp
+		 JOIN suppliers s ON s.id = sp.supplier_id
+		 %s %s LIMIT $%d OFFSET $%d`,
+		where, orderByClause, argIdx, argIdx+1,
+	)
+	args = append(args, params.Limit, params.Offset)
+
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list all supplier products: %w", err)
+	}
+	defer rows.Close()
+
+	var products []model.SupplierProductWithSupplier
+	for rows.Next() {
+		var sp model.SupplierProductWithSupplier
+		if err := rows.Scan(
+			&sp.ID, &sp.TenantID, &sp.SupplierID, &sp.ProductID, &sp.ExternalID,
+			&sp.Name, &sp.EAN, &sp.SKU, &sp.Price, &sp.StockQuantity,
+			&sp.SourceCategory, &sp.Metadata, &sp.LastSyncedAt, &sp.CreatedAt, &sp.UpdatedAt,
+			&sp.SupplierName,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan supplier product with supplier: %w", err)
+		}
+		products = append(products, sp)
+	}
+	return products, total, rows.Err()
 }
