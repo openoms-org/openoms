@@ -41,10 +41,17 @@ tasks:
       - golang-migrate -path apps/api-server/migrations -database "{{.MIGRATE_DSN}}" down 1
 
   seed:
-    desc: Load seed data into the database
+    desc: Load seed data (1 tenant + 1 admin)
     cmds:
-      - docker cp apps/api-server/migrations/000002_seed_data.up.sql {{.POSTGRES_CONTAINER}}:/tmp/seed.sql
+      - docker cp scripts/seed.sql {{.POSTGRES_CONTAINER}}:/tmp/seed.sql
       - docker exec {{.POSTGRES_CONTAINER}} psql -U openoms -d openoms -f /tmp/seed.sql
+
+  reset:
+    desc: Drop and re-create database
+    cmds:
+      - golang-migrate -path apps/api-server/migrations -database "{{.MIGRATE_DSN}}" drop -f
+      - task: migrate
+      - task: seed
 
   run:
     desc: Run the API server
