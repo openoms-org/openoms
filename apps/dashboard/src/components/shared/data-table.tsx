@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -40,6 +40,7 @@ interface DataTableProps<T> {
   sortOrder?: "asc" | "desc";
   onSort?: (column: string) => void;
   editableColumns?: EditableColumnConfig<T>[];
+  resizable?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,9 +68,78 @@ export function DataTable<T>({
   sortOrder,
   onSort,
   editableColumns,
+  resizable = false,
 }: DataTableProps<T>) {
   const { density } = useTableDensity();
   const cellPx = densityConfig[density].cellPadding;
+
+  // Column resize state
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const resizeRef = useRef<{
+    key: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  // Initialize column widths from rendered table on first load
+  const headersRef = useRef<HTMLTableRowElement>(null);
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (!resizable || initialized.current || !headersRef.current || isLoading) return;
+    const cells = headersRef.current.querySelectorAll("th");
+    const widths: Record<string, number> = {};
+    let colIdx = selectable ? 1 : 0; // skip checkbox column
+    for (const col of columns) {
+      const cell = cells[colIdx];
+      if (cell) {
+        widths[String(col.accessorKey)] = cell.getBoundingClientRect().width;
+      }
+      colIdx++;
+    }
+    if (Object.keys(widths).length > 0) {
+      setColWidths(widths);
+      initialized.current = true;
+    }
+  }, [resizable, columns, isLoading, selectable]);
+
+  // Reset initialized flag when columns change
+  useEffect(() => {
+    initialized.current = false;
+  }, [columns.length]);
+
+  useEffect(() => {
+    if (!resizable) return;
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const delta = e.clientX - resizeRef.current.startX;
+      const newWidth = Math.max(40, resizeRef.current.startWidth + delta);
+      setColWidths((prev) => ({
+        ...prev,
+        [resizeRef.current!.key]: newWidth,
+      }));
+    };
+    const onMouseUp = () => {
+      resizeRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [resizable]);
+
+  const onResizeStart = (key: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentWidth = colWidths[key] || 100;
+    resizeRef.current = { key, startX: e.clientX, startWidth: currentWidth };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
 
   const getRowId = useCallback(
     (row: T) => (rowId ? rowId(row) : (row as Record<string, unknown>).id as string),
@@ -170,12 +240,17 @@ export function DataTable<T>({
     );
   }
 
+  const hasWidths = resizable && Object.keys(colWidths).length > 0;
+
   return (
-    <Table>
+    <Table
+      ref={tableRef}
+      style={hasWidths ? { tableLayout: "fixed" } : undefined}
+    >
       <TableHeader>
-        <TableRow>
+        <TableRow ref={headersRef}>
           {selectable && (
-            <TableHead className={cn("w-10", cellPx)}>
+            <TableHead className={cn("w-10", cellPx)} style={hasWidths ? { width: 40 } : undefined}>
               <input
                 type="checkbox"
                 className="cursor-pointer"
@@ -187,29 +262,43 @@ export function DataTable<T>({
               />
             </TableHead>
           )}
-          {columns.map((column) => (
-            <TableHead key={String(column.accessorKey)} className={cn(cellPx, column.className)}>
-              {column.sortable && onSort ? (
-                <button
-                  className="flex items-center gap-1 hover:text-foreground"
-                  onClick={() => onSort(String(column.accessorKey))}
-                >
-                  {column.header}
-                  {sortBy === String(column.accessorKey) ? (
-                    sortOrder === "asc" ? (
-                      <ArrowUp className="h-4 w-4" />
+          {columns.map((column) => {
+            const key = String(column.accessorKey);
+            const width = colWidths[key];
+            return (
+              <TableHead
+                key={key}
+                className={cn("relative", cellPx, column.className)}
+                style={hasWidths && width ? { width } : undefined}
+              >
+                {column.sortable && onSort ? (
+                  <button
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => onSort(key)}
+                  >
+                    {column.header}
+                    {sortBy === key ? (
+                      sortOrder === "asc" ? (
+                        <ArrowUp className="h-4 w-4" />
+                      ) : (
+                        <ArrowDown className="h-4 w-4" />
+                      )
                     ) : (
-                      <ArrowDown className="h-4 w-4" />
-                    )
-                  ) : (
-                    <ArrowUpDown className="h-4 w-4 opacity-50" />
-                  )}
-                </button>
-              ) : (
-                column.header
-              )}
-            </TableHead>
-          ))}
+                      <ArrowUpDown className="h-4 w-4 opacity-50" />
+                    )}
+                  </button>
+                ) : (
+                  column.header
+                )}
+                {resizable && (
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50"
+                    onMouseDown={(e) => onResizeStart(key, e)}
+                  />
+                )}
+              </TableHead>
+            );
+          })}
         </TableRow>
       </TableHeader>
       <TableBody>

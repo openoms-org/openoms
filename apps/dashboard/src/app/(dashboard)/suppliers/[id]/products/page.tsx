@@ -409,6 +409,7 @@ export default function SupplierProductsPage() {
           data={items}
           isLoading={isLoading}
           selectable
+          resizable
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
           rowId={(row) => row.id}
