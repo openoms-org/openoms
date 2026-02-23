@@ -840,10 +840,10 @@ type ListingSearchItems struct {
 
 // ListingSearchItem represents a single offer in listing search results.
 type ListingSearchItem struct {
-	ID         string              `json:"id"`
-	Name       string              `json:"name"`
-	Category   *CategoryRef        `json:"category,omitempty"`
-	Parameters []ProductParameter  `json:"parameters,omitempty"`
+	ID         string             `json:"id"`
+	Name       string             `json:"name"`
+	Category   *CategoryRef       `json:"category,omitempty"`
+	Parameters []ProductParameter `json:"parameters,omitempty"`
 }
 
 // --- Dispute models ---
