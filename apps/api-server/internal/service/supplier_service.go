@@ -1475,10 +1475,7 @@ func (s *SupplierService) runBTPXMLImport(tenantID, supplierID uuid.UUID, feedUR
 	// Upsert in batches of 100, updating progress
 	batchSize := 100
 	for i := 0; i < total; i += batchSize {
-		end := i + batchSize
-		if end > total {
-			end = total
-		}
+		end := min(i+batchSize, total)
 		batch := products[i:end]
 
 		if err := s.upsertSupplierProducts(ctx, tenantID, supplierID, batch, "xml"); err != nil {

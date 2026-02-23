@@ -77,7 +77,7 @@ func buildAllegroClient(r *http.Request, integrationService *service.Integration
 }
 
 // isAllegroSandbox checks if the Allegro integration uses the sandbox environment.
-func isAllegroSandbox(r *http.Request, integrationService *service.IntegrationService, encryptionKey []byte) bool {
+func isAllegroSandbox(r *http.Request, integrationService *service.IntegrationService, _ []byte) bool {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	credJSON, _, err := integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
 	if err != nil {

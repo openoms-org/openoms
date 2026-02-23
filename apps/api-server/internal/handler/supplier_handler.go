@@ -612,6 +612,7 @@ func (h *SupplierHandler) SupplierLink(w http.ResponseWriter, r *http.Request) {
 // BTP Wizard
 // ---------------------------------------------------------------------------
 
+// BTPWizardStartImport starts a BTP supplier import wizard.
 func (h *SupplierHandler) BTPWizardStartImport(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -634,6 +635,7 @@ func (h *SupplierHandler) BTPWizardStartImport(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusCreated, supplier)
 }
 
+// BTPWizardImportProgress returns the current import progress for a BTP supplier.
 func (h *SupplierHandler) BTPWizardImportProgress(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -655,6 +657,7 @@ func (h *SupplierHandler) BTPWizardImportProgress(w http.ResponseWriter, r *http
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// BTPWizardSetAPIKeys sets API keys for a BTP supplier integration.
 func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -673,13 +676,14 @@ func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Req
 
 	supplier, err := h.supplierService.BTPWizardSetAPIKeys(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
 	if err != nil {
-		if isValidationError(err) {
+		switch {
+		case isValidationError(err):
 			writeError(w, http.StatusBadRequest, err.Error())
-		} else if errors.Is(err, service.ErrSupplierNotFound) {
+		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
-		} else if errors.Is(err, service.ErrDuplicateProvider) {
+		case errors.Is(err, service.ErrDuplicateProvider):
 			writeError(w, http.StatusConflict, "BTP integration already exists for this tenant")
-		} else {
+		default:
 			writeError(w, http.StatusInternalServerError, "failed to set API keys")
 		}
 		return
@@ -687,6 +691,7 @@ func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, supplier)
 }
 
+// BTPWizardCompleteSyncSettings completes the sync settings step of the BTP wizard.
 func (h *SupplierHandler) BTPWizardCompleteSyncSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -705,11 +710,12 @@ func (h *SupplierHandler) BTPWizardCompleteSyncSettings(w http.ResponseWriter, r
 
 	supplier, err := h.supplierService.BTPWizardCompleteSyncSettings(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
 	if err != nil {
-		if isValidationError(err) {
+		switch {
+		case isValidationError(err):
 			writeError(w, http.StatusBadRequest, err.Error())
-		} else if errors.Is(err, service.ErrSupplierNotFound) {
+		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
-		} else {
+		default:
 			writeError(w, http.StatusInternalServerError, "failed to complete sync settings")
 		}
 		return
