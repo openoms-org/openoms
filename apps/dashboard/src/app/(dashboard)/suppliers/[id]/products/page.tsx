@@ -169,15 +169,42 @@ export default function SupplierProductsPage() {
   const columns: ColumnDef<SupplierProduct>[] = useMemo(
     () => [
       {
+        header: "",
+        accessorKey: "metadata",
+        className: "w-[40px] px-0",
+        cell: (row) => {
+          const img = getMetaString(row.metadata, "image_url");
+          return img ? (
+            <button
+              className="w-8 h-8 rounded border overflow-hidden bg-muted/30 flex-shrink-0 cursor-pointer"
+              onClick={() => setDetailProduct(row)}
+            >
+              <img src={img} alt="" className="w-full h-full object-contain" />
+            </button>
+          ) : (
+            <div className="w-8 h-8 rounded border bg-muted/30 flex items-center justify-center">
+              <ImageIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
+            </div>
+          );
+        },
+      },
+      {
         header: "Nazwa",
         accessorKey: "name",
         cell: (row) => (
-          <button
-            className="font-medium max-w-[300px] truncate block text-left hover:underline cursor-pointer"
-            onClick={() => setDetailProduct(row)}
-          >
-            {row.name}
-          </button>
+          <div className="max-w-[260px]">
+            <button
+              className="font-medium truncate block text-left hover:underline cursor-pointer"
+              onClick={() => setDetailProduct(row)}
+            >
+              {row.name}
+            </button>
+            {getMetaString(row.metadata, "brand") && (
+              <span className="text-xs text-muted-foreground">
+                {getMetaString(row.metadata, "brand")}
+              </span>
+            )}
+          </div>
         ),
       },
       {
@@ -200,13 +227,20 @@ export default function SupplierProductsPage() {
         ),
       },
       {
-        header: "Cena",
+        header: "Cena netto",
         accessorKey: "price",
         className: "text-right",
         cell: (row) => (
-          <span className="text-right block">
-            {row.price != null ? formatCurrency(row.price) : "---"}
-          </span>
+          <div className="text-right">
+            <span className="block">
+              {row.price != null ? formatCurrency(row.price) : "---"}
+            </span>
+            {row.metadata?.retail_price != null && (
+              <span className="text-xs text-muted-foreground">
+                det. {formatCurrency(Number(row.metadata.retail_price))}
+              </span>
+            )}
+          </div>
         ),
       },
       {
@@ -495,6 +529,22 @@ export default function SupplierProductsPage() {
                         <span className="text-muted-foreground">Cena detaliczna:</span>{" "}
                         <span className="font-medium">
                           {formatCurrency(Number(detailProduct.metadata.retail_price))}
+                        </span>
+                      </div>
+                    )}
+                    {(detailProduct.metadata?.attributes as Record<string, string>)?.guarantee_months && (
+                      <div>
+                        <span className="text-muted-foreground">Gwarancja:</span>{" "}
+                        <span className="font-medium">
+                          {(detailProduct.metadata.attributes as Record<string, string>).guarantee_months} mies.
+                        </span>
+                      </div>
+                    )}
+                    {(detailProduct.metadata?.attributes as Record<string, string>)?.tax_rate && (
+                      <div>
+                        <span className="text-muted-foreground">VAT:</span>{" "}
+                        <span className="font-medium">
+                          {(detailProduct.metadata.attributes as Record<string, string>).tax_rate}%
                         </span>
                       </div>
                     )}

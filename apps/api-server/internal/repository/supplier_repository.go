@@ -418,10 +418,14 @@ func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx p
 		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, source_category, metadata, last_synced_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		 ON CONFLICT (tenant_id, supplier_id, external_id)
-		 DO UPDATE SET name = EXCLUDED.name, ean = EXCLUDED.ean, sku = EXCLUDED.sku,
-		              price = EXCLUDED.price, stock_quantity = EXCLUDED.stock_quantity,
-		              source_category = EXCLUDED.source_category,
-		              metadata = EXCLUDED.metadata, last_synced_at = EXCLUDED.last_synced_at,
+		 DO UPDATE SET name = COALESCE(NULLIF(EXCLUDED.name, ''), supplier_products.name),
+		              ean = COALESCE(EXCLUDED.ean, supplier_products.ean),
+		              sku = COALESCE(EXCLUDED.sku, supplier_products.sku),
+		              price = COALESCE(EXCLUDED.price, supplier_products.price),
+		              stock_quantity = EXCLUDED.stock_quantity,
+		              source_category = COALESCE(EXCLUDED.source_category, supplier_products.source_category),
+		              metadata = COALESCE(supplier_products.metadata, '{}'::jsonb) || EXCLUDED.metadata,
+		              last_synced_at = EXCLUDED.last_synced_at,
 		              updated_at = NOW()
 		 RETURNING id, created_at, updated_at`,
 		sp.ID, sp.TenantID, sp.SupplierID, sp.ProductID, sp.ExternalID,
