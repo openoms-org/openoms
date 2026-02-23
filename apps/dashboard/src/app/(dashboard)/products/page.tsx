@@ -112,6 +112,8 @@ function MyProductsTab() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const bulkCategorize = useBulkCategorize();
   const deleteProduct = useDeleteProduct();
 
@@ -443,30 +445,39 @@ function MyProductsTab() {
         </Select>
         <div className="ml-auto flex items-center gap-2">
           {selectedProducts.size > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                bulkCategorize.mutate(Array.from(selectedProducts), {
-                  onSuccess: (data) => {
-                    const succeeded = data.results.filter((r) => !r.error).length;
-                    const failed = data.results.filter((r) => r.error).length;
-                    toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} błędów`);
-                    setSelectedProducts(new Set());
-                  },
-                  onError: (error) => {
-                    toast.error(error instanceof Error ? error.message : "Błąd auto-kategoryzacji");
-                  },
-                });
-              }}
-              disabled={bulkCategorize.isPending}
-            >
-              {bulkCategorize.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              Auto-kategoryzacja ({selectedProducts.size})
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  bulkCategorize.mutate(Array.from(selectedProducts), {
+                    onSuccess: (data) => {
+                      const succeeded = data.results.filter((r) => !r.error).length;
+                      const failed = data.results.filter((r) => r.error).length;
+                      toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} błędów`);
+                      setSelectedProducts(new Set());
+                    },
+                    onError: (error) => {
+                      toast.error(error instanceof Error ? error.message : "Błąd auto-kategoryzacji");
+                    },
+                  });
+                }}
+                disabled={bulkCategorize.isPending}
+              >
+                {bulkCategorize.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Auto-kategoryzacja ({selectedProducts.size})
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setShowBulkDelete(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Usuń ({selectedProducts.size})
+              </Button>
+            </>
           )}
           <Button
             variant="outline"
@@ -578,6 +589,38 @@ function MyProductsTab() {
           });
         }}
         isLoading={deleteProduct.isPending}
+      />
+
+      <ConfirmDialog
+        open={showBulkDelete}
+        onOpenChange={(open) => !open && setShowBulkDelete(false)}
+        title={`Usuń ${selectedProducts.size} produktów`}
+        description="Czy na pewno chcesz usunąć zaznaczone produkty? Ta operacja jest nieodwracalna. Powiązane listingi marketplace również zostaną usunięte."
+        confirmLabel={bulkDeleting ? "Usuwanie..." : "Usuń wszystkie"}
+        variant="destructive"
+        onConfirm={async () => {
+          setBulkDeleting(true);
+          const ids = Array.from(selectedProducts);
+          let succeeded = 0;
+          let failed = 0;
+          for (const id of ids) {
+            try {
+              await apiFetch(`/v1/products/${id}`, { method: "DELETE" });
+              succeeded++;
+            } catch {
+              failed++;
+            }
+          }
+          setBulkDeleting(false);
+          setShowBulkDelete(false);
+          setSelectedProducts(new Set());
+          if (failed === 0) {
+            toast.success(`Usunięto ${succeeded} produktów`);
+          } else {
+            toast.warning(`Usunięto ${succeeded}, błędów: ${failed}`);
+          }
+        }}
+        isLoading={bulkDeleting}
       />
     </>
   );
