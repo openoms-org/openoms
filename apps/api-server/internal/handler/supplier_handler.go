@@ -606,3 +606,110 @@ func (h *SupplierHandler) SupplierLink(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"supplier_id": supplierID.String()})
 }
+
+// ---------------------------------------------------------------------------
+// BTP Wizard
+// ---------------------------------------------------------------------------
+
+func (h *SupplierHandler) BTPWizardStartImport(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	var req model.BTPWizardStartImportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	supplier, err := h.supplierService.BTPWizardStartImport(r.Context(), tenantID, req, actorID, clientIP(r))
+	if err != nil {
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to start import")
+		}
+		return
+	}
+	writeJSON(w, http.StatusCreated, supplier)
+}
+
+func (h *SupplierHandler) BTPWizardImportProgress(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	resp, err := h.supplierService.BTPWizardGetImportProgress(r.Context(), tenantID, supplierID)
+	if err != nil {
+		if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to get import progress")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.BTPWizardSetAPIKeysRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	supplier, err := h.supplierService.BTPWizardSetAPIKeys(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
+	if err != nil {
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
+		} else if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to set API keys")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, supplier)
+}
+
+func (h *SupplierHandler) BTPWizardCompleteSyncSettings(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	var req model.BTPWizardSyncSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	supplier, err := h.supplierService.BTPWizardCompleteSyncSettings(r.Context(), tenantID, supplierID, req, actorID, clientIP(r))
+	if err != nil {
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
+		} else if errors.Is(err, service.ErrSupplierNotFound) {
+			writeError(w, http.StatusNotFound, "supplier not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, "failed to complete sync settings")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, supplier)
+}

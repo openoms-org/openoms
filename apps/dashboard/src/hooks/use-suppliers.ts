@@ -17,6 +17,7 @@ import type {
   ImportSupplierProductsRequest,
   ImportSupplierProductsResponse,
   BulkDeleteSupplierProductsRequest,
+  BTPImportProgressResponse,
 } from "@/types/api";
 
 export function useSuppliers(params: SupplierListParams = {}) {
@@ -399,5 +400,83 @@ export function useProductSupplierLink(productId: string) {
         `/v1/products/${productId}/supplier-link`
       ),
     enabled: !!productId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// BTP Wizard
+// ---------------------------------------------------------------------------
+
+export function useBTPWizardStartImport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { name: string; feed_url: string }) =>
+      apiClient<Supplier>("/v1/suppliers/btp-wizard/start", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+  });
+}
+
+export function useBTPWizardImportProgress(
+  supplierId: string,
+  enabled: boolean
+) {
+  return useQuery({
+    queryKey: ["btp-wizard-progress", supplierId],
+    queryFn: () =>
+      apiClient<BTPImportProgressResponse>(
+        `/v1/suppliers/btp-wizard/${supplierId}/progress`
+      ),
+    enabled: !!supplierId && enabled,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.status === "running" || data?.status === "pending") return 2000;
+      return false;
+    },
+  });
+}
+
+export function useBTPWizardSetAPIKeys(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      public_key: string;
+      private_key: string;
+      base_url?: string;
+    }) =>
+      apiClient<Supplier>(
+        `/v1/suppliers/btp-wizard/${supplierId}/api-keys`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
+  });
+}
+
+export function useBTPWizardCompleteSyncSettings(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      xml_sync_interval_hours: number;
+      api_sync_interval_minutes: number;
+    }) =>
+      apiClient<Supplier>(
+        `/v1/suppliers/btp-wizard/${supplierId}/sync-settings`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+    },
   });
 }

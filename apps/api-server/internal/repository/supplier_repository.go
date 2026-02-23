@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -216,6 +217,25 @@ func (r *SupplierRepository) UpdateLastFullSync(ctx context.Context, tx pgx.Tx, 
 	)
 	if err != nil {
 		return fmt.Errorf("update supplier last full sync: %w", err)
+	}
+	return nil
+}
+
+// UpdateSettingsKeys merges specific keys into the supplier's settings JSONB.
+func (r *SupplierRepository) UpdateSettingsKeys(ctx context.Context, tx pgx.Tx, id uuid.UUID, keys map[string]any) error {
+	keysJSON, err := json.Marshal(keys)
+	if err != nil {
+		return fmt.Errorf("marshal settings keys: %w", err)
+	}
+	ct, err := tx.Exec(ctx,
+		`UPDATE suppliers SET settings = COALESCE(settings, '{}'::jsonb) || $1::jsonb, updated_at = NOW() WHERE id = $2`,
+		keysJSON, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update supplier settings keys: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("supplier not found")
 	}
 	return nil
 }
@@ -533,6 +553,75 @@ func (r *SupplierProductRepository) ListAttributes(ctx context.Context, tx pgx.T
 		attrs = append(attrs, attr)
 	}
 	return attrs, rows.Err()
+}
+
+// ListExternalIDsBySupplier returns all external_ids for a supplier's products.
+func (r *SupplierProductRepository) ListExternalIDsBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT external_id FROM supplier_products WHERE supplier_id = $1`,
+		supplierID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list external ids: %w", err)
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan external id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// DeleteStaleByExternalIDs deletes supplier products not present in the given external IDs
+// and returns the linked product_ids (OMS products) that were affected.
+func (r *SupplierProductRepository) DeleteStaleByExternalIDs(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, keepExternalIDs []string) ([]uuid.UUID, error) {
+	if len(keepExternalIDs) == 0 {
+		return nil, nil
+	}
+	// First get linked product IDs that will be affected
+	placeholders := make([]string, len(keepExternalIDs))
+	args := make([]any, len(keepExternalIDs)+1)
+	args[0] = supplierID
+	for i, eid := range keepExternalIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = eid
+	}
+	notInClause := strings.Join(placeholders, ", ")
+
+	rows, err := tx.Query(ctx,
+		fmt.Sprintf(`SELECT product_id FROM supplier_products
+			WHERE supplier_id = $1 AND external_id NOT IN (%s) AND product_id IS NOT NULL`, notInClause),
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list stale linked products: %w", err)
+	}
+	defer rows.Close()
+	var linkedProductIDs []uuid.UUID
+	for rows.Next() {
+		var pid uuid.UUID
+		if err := rows.Scan(&pid); err != nil {
+			return nil, fmt.Errorf("scan linked product id: %w", err)
+		}
+		linkedProductIDs = append(linkedProductIDs, pid)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Delete stale supplier products
+	_, err = tx.Exec(ctx,
+		fmt.Sprintf(`DELETE FROM supplier_products WHERE supplier_id = $1 AND external_id NOT IN (%s)`, notInClause),
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("delete stale supplier products: %w", err)
+	}
+	return linkedProductIDs, nil
 }
 
 // FindSupplierIDByProductID returns the supplier_id for a given linked product_id.

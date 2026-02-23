@@ -635,6 +635,12 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/allegro-mappings/categories", deps.Supplier.ListAllegroMappingCategories)
 				r.Get("/{id}/attributes", deps.Supplier.ListSupplierAttributes)
 
+				// BTP wizard
+				r.Post("/btp-wizard/start", deps.Supplier.BTPWizardStartImport)
+				r.Get("/btp-wizard/{id}/progress", deps.Supplier.BTPWizardImportProgress)
+				r.Post("/btp-wizard/{id}/api-keys", deps.Supplier.BTPWizardSetAPIKeys)
+				r.Post("/btp-wizard/{id}/sync-settings", deps.Supplier.BTPWizardCompleteSyncSettings)
+
 				// Supplier portal management
 				if deps.SupplierPortal != nil {
 					r.Post("/{id}/portal/generate-link", deps.SupplierPortal.GenerateLink)

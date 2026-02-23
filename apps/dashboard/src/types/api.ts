@@ -956,6 +956,14 @@ export interface BulkDeleteSupplierProductsRequest {
   supplier_product_ids: string[];
 }
 
+// === BTP Wizard ===
+export interface BTPImportProgressResponse {
+  status: "pending" | "running" | "completed" | "failed";
+  total: number;
+  processed: number;
+  error?: string;
+}
+
 // === Invoices ===
 export interface Invoice {
   id: string;

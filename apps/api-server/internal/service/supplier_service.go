@@ -574,7 +574,7 @@ func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplie
 		return fmt.Errorf("fetch %s: %w", kind, err)
 	}
 
-	if err := s.upsertSupplierProducts(ctx, tenantID, supplierID, products); err != nil {
+	if err := s.upsertSupplierProducts(ctx, tenantID, supplierID, products, "api"); err != nil {
 		return err
 	}
 
@@ -612,7 +612,13 @@ func (s *SupplierService) shouldFullSync(supplier *model.Supplier) bool {
 		return true
 	}
 
-	return time.Since(lastFullSync) > 24*time.Hour
+	// Read configurable interval from settings (default 24h)
+	intervalHours := 24.0
+	if v, ok := settings["xml_sync_interval_hours"].(float64); ok && v > 0 {
+		intervalHours = v
+	}
+
+	return time.Since(lastFullSync) > time.Duration(intervalHours*float64(time.Hour))
 }
 
 // syncViaXML syncs products from a BTP-format XML catalogue URL.
@@ -643,8 +649,24 @@ func (s *SupplierService) syncViaXML(ctx context.Context, tenantID, supplierID u
 	}
 
 	products := btp.MapCatalogueProducts(items)
-	if err := s.upsertSupplierProducts(ctx, tenantID, supplierID, products); err != nil {
+
+	// XML source: skip stock/price on linked products when API integration exists
+	source := "full"
+	if supplier.IntegrationID != nil {
+		source = "xml"
+	}
+
+	if err := s.upsertSupplierProducts(ctx, tenantID, supplierID, products, source); err != nil {
 		return err
+	}
+
+	// Remove products that disappeared from XML feed
+	if supplier.IntegrationID != nil {
+		currentIDs := make([]string, len(products))
+		for i, p := range products {
+			currentIDs[i] = p.ExternalID
+		}
+		s.removeStaleProducts(ctx, tenantID, supplierID, currentIDs)
 	}
 
 	// Record last full sync timestamp
@@ -692,7 +714,7 @@ func (s *SupplierService) syncXMLInventory(ctx context.Context, tenantID, suppli
 		return fmt.Errorf("fetch inventory: %w", err)
 	}
 
-	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products)
+	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products, "api")
 }
 
 // syncViaIOF syncs products from an IOF XML feed URL.
@@ -732,12 +754,16 @@ func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID u
 		}
 	}
 
-	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products)
+	return s.upsertSupplierProducts(ctx, tenantID, supplierID, products, "full")
 }
 
 // upsertSupplierProducts inserts or updates supplier products, auto-links by EAN,
 // and resolves category mappings.
-func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, supplierID uuid.UUID, products []integration.SupplierProduct) error {
+// syncSource controls stock/price updates on linked OMS products:
+//   - "xml": skip stock/price (XML stock is always 0 for BTP suppliers with API)
+//   - "api": full sync including stock/price
+//   - "full": full sync (default, for IOF/CSV)
+func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, supplierID uuid.UUID, products []integration.SupplierProduct, syncSource string) error {
 	syncedAt := time.Now()
 
 	// Fetch supplier's default category for fallback
@@ -836,27 +862,44 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 				}
 			}
 
-			// Sync stock, price, weight, and enrichment data to linked OMS product.
-			// Enrichment fields (description_long, image_url, images, weight) only fill empty values.
+			// Sync data to linked OMS product.
 			if sp.ProductID != nil {
 				imagesJSON := json.RawMessage("[]")
 				if len(fp.Images) > 0 {
 					imagesJSON, _ = json.Marshal(fp.Images)
 				}
 
-				if _, err := tx.Exec(ctx,
-					`UPDATE products SET
-						stock_quantity = $1,
-						price = COALESCE($2, price),
-						weight = COALESCE(weight, NULLIF($3::float8, 0)),
-						description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($4, ''), description_long) ELSE description_long END,
-						image_url = COALESCE(image_url, NULLIF($5, '')),
-						images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($6::jsonb, '[]'::jsonb), images) ELSE images END,
-						updated_at = NOW()
-					 WHERE id = $7`,
-					fp.StockQuantity, price, fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
-					s.logger.Error("failed to sync to linked product",
-						"product_id", sp.ProductID, "error", err)
+				if syncSource == "xml" {
+					// XML source: only update enrichment data (catalog), skip stock/price.
+					// BTP XML always reports stock=0, so we must not overwrite API stock.
+					if _, err := tx.Exec(ctx,
+						`UPDATE products SET
+							weight = COALESCE(weight, NULLIF($1::float8, 0)),
+							description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($2, ''), description_long) ELSE description_long END,
+							image_url = COALESCE(image_url, NULLIF($3, '')),
+							images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($4::jsonb, '[]'::jsonb), images) ELSE images END,
+							updated_at = NOW()
+						 WHERE id = $5`,
+						fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
+						s.logger.Error("failed to sync enrichment to linked product",
+							"product_id", sp.ProductID, "error", err)
+					}
+				} else {
+					// API/full source: sync everything including stock and price.
+					if _, err := tx.Exec(ctx,
+						`UPDATE products SET
+							stock_quantity = $1,
+							price = COALESCE($2, price),
+							weight = COALESCE(weight, NULLIF($3::float8, 0)),
+							description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($4, ''), description_long) ELSE description_long END,
+							image_url = COALESCE(image_url, NULLIF($5, '')),
+							images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($6::jsonb, '[]'::jsonb), images) ELSE images END,
+							updated_at = NOW()
+						 WHERE id = $7`,
+						fp.StockQuantity, price, fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
+						s.logger.Error("failed to sync to linked product",
+							"product_id", sp.ProductID, "error", err)
+					}
 				}
 			}
 
@@ -1241,4 +1284,357 @@ func (s *SupplierService) FindSupplierForProduct(ctx context.Context, tenantID, 
 		return err
 	})
 	return supplierID, err
+}
+
+// ---------------------------------------------------------------------------
+// BTP Wizard
+// ---------------------------------------------------------------------------
+
+// BTPWizardStartImport creates a new BTP supplier and starts an async XML import (step 1).
+func (s *SupplierService) BTPWizardStartImport(ctx context.Context, tenantID uuid.UUID, req model.BTPWizardStartImportRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
+	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	name := model.StripHTMLTags(req.Name)
+	feedURL := req.FeedURL
+
+	settings, _ := json.Marshal(map[string]any{
+		"setup_step":       "xml_import",
+		"import_status":    "pending",
+		"import_total":     0,
+		"import_processed": 0,
+	})
+
+	supplier := &model.Supplier{
+		ID:                  uuid.New(),
+		TenantID:            tenantID,
+		Name:                name,
+		FeedURL:             &feedURL,
+		FeedFormat:          "xml",
+		Status:              "inactive",
+		Settings:            settings,
+		SyncIntervalMinutes: 60,
+	}
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if err := s.supplierRepo.Create(ctx, tx, supplier); err != nil {
+			return err
+		}
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier.created",
+			EntityType: "supplier",
+			EntityID:   supplier.ID,
+			IPAddress:  ip,
+		})
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create btp supplier: %w", err)
+	}
+
+	// Start async XML import
+	go s.runBTPXMLImport(tenantID, supplier.ID, feedURL)
+
+	return supplier, nil
+}
+
+// runBTPXMLImport runs the BTP XML catalogue import in a background goroutine.
+func (s *SupplierService) runBTPXMLImport(tenantID, supplierID uuid.UUID, feedURL string) {
+	ctx := context.Background()
+
+	// Update status to running
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+			"import_status": "running",
+		})
+	}); err != nil {
+		s.logger.Error("btp wizard: failed to set import running", "error", err)
+		return
+	}
+
+	// Parse XML catalogue
+	items, err := btpsdk.ParseCatalogueURL(ctx, feedURL, netutil.SafeHTTPClient(120*time.Second))
+	if err != nil {
+		s.logger.Error("btp wizard: XML parse failed", "supplier_id", supplierID, "error", err)
+		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+				"import_status": "failed",
+				"import_error":  err.Error(),
+			})
+		})
+		return
+	}
+
+	products := btp.MapCatalogueProducts(items)
+	total := len(products)
+
+	// Update total
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+			"import_total": total,
+		})
+	})
+
+	// Upsert in batches of 100, updating progress
+	batchSize := 100
+	for i := 0; i < total; i += batchSize {
+		end := i + batchSize
+		if end > total {
+			end = total
+		}
+		batch := products[i:end]
+
+		if err := s.upsertSupplierProducts(ctx, tenantID, supplierID, batch, "xml"); err != nil {
+			s.logger.Error("btp wizard: batch upsert failed", "supplier_id", supplierID, "batch", i, "error", err)
+			_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+				return s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+					"import_status": "failed",
+					"import_error":  err.Error(),
+				})
+			})
+			return
+		}
+
+		// Update progress
+		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+				"import_processed": end,
+			})
+		})
+	}
+
+	// Mark complete
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+			"import_status":    "completed",
+			"import_processed": total,
+			"setup_step":       "api_keys",
+		})
+	})
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.supplierRepo.UpdateLastFullSync(ctx, tx, supplierID, time.Now())
+	})
+
+	s.logger.Info("btp wizard: XML import completed", "supplier_id", supplierID, "products", total)
+}
+
+// BTPWizardGetImportProgress returns the current progress of a BTP XML import (step 1 polling).
+func (s *SupplierService) BTPWizardGetImportProgress(ctx context.Context, tenantID, supplierID uuid.UUID) (*model.BTPImportProgressResponse, error) {
+	var resp model.BTPImportProgressResponse
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+
+		var settings map[string]any
+		if supplier.Settings != nil {
+			_ = json.Unmarshal(supplier.Settings, &settings)
+		}
+
+		if status, ok := settings["import_status"].(string); ok {
+			resp.Status = status
+		} else {
+			resp.Status = "pending"
+		}
+		if total, ok := settings["import_total"].(float64); ok {
+			resp.Total = int(total)
+		}
+		if processed, ok := settings["import_processed"].(float64); ok {
+			resp.Processed = int(processed)
+		}
+		if errStr, ok := settings["import_error"].(string); ok {
+			resp.Error = errStr
+		}
+		return nil
+	})
+	return &resp, err
+}
+
+// BTPWizardSetAPIKeys validates and saves BTP API credentials (step 2).
+func (s *SupplierService) BTPWizardSetAPIKeys(ctx context.Context, tenantID, supplierID uuid.UUID, req model.BTPWizardSetAPIKeysRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
+	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	// Verify supplier is on the right step
+	var supplier *model.Supplier
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		supplier, err = s.supplierRepo.FindByID(ctx, tx, supplierID)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	if supplier == nil {
+		return nil, ErrSupplierNotFound
+	}
+
+	var settings map[string]any
+	if supplier.Settings != nil {
+		_ = json.Unmarshal(supplier.Settings, &settings)
+	}
+	if step, _ := settings["setup_step"].(string); step != "api_keys" {
+		return nil, NewValidationError(fmt.Errorf("cannot set API keys: current step is %q, expected api_keys", step))
+	}
+
+	// Validate credentials via BTP health check
+	opts := []btpsdk.Option{}
+	if req.BaseURL != "" {
+		opts = append(opts, btpsdk.WithBaseURL(req.BaseURL))
+	}
+	client := btpsdk.NewClient(req.PublicKey, req.PrivateKey, opts...)
+	if err := client.HealthCheck(ctx); err != nil {
+		return nil, NewValidationError(fmt.Errorf("BTP API authentication failed: %w", err))
+	}
+
+	// Create integration with encrypted credentials
+	credJSON, _ := json.Marshal(map[string]string{
+		"username": req.PublicKey,
+		"password": req.PrivateKey,
+		"base_url": req.BaseURL,
+	})
+	integrationReq := model.CreateIntegrationRequest{
+		Provider:    "btp",
+		Credentials: credJSON,
+	}
+	integ, err := s.integrationSvc.Create(ctx, tenantID, integrationReq, actorID, ip)
+	if err != nil {
+		return nil, fmt.Errorf("create btp integration: %w", err)
+	}
+
+	// Link integration to supplier and advance step
+	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if err := s.supplierRepo.Update(ctx, tx, supplierID, model.UpdateSupplierRequest{
+			IntegrationID: &integ.ID,
+		}); err != nil {
+			return err
+		}
+		if err := s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+			"setup_step": "sync_settings",
+		}); err != nil {
+			return err
+		}
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier.api_keys_set",
+			EntityType: "supplier",
+			EntityID:   supplierID,
+			IPAddress:  ip,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Return updated supplier
+	return s.Get(ctx, tenantID, supplierID)
+}
+
+// BTPWizardCompleteSyncSettings finalizes the BTP wizard by setting sync intervals (step 3).
+func (s *SupplierService) BTPWizardCompleteSyncSettings(ctx context.Context, tenantID, supplierID uuid.UUID, req model.BTPWizardSyncSettingsRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
+	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	// Verify supplier is on the right step
+	var supplier *model.Supplier
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		supplier, err = s.supplierRepo.FindByID(ctx, tx, supplierID)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	if supplier == nil {
+		return nil, ErrSupplierNotFound
+	}
+
+	var settings map[string]any
+	if supplier.Settings != nil {
+		_ = json.Unmarshal(supplier.Settings, &settings)
+	}
+	if step, _ := settings["setup_step"].(string); step != "sync_settings" {
+		return nil, NewValidationError(fmt.Errorf("cannot set sync settings: current step is %q, expected sync_settings", step))
+	}
+
+	// Activate supplier with configured intervals
+	active := "active"
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if err := s.supplierRepo.Update(ctx, tx, supplierID, model.UpdateSupplierRequest{
+			Status:              &active,
+			SyncIntervalMinutes: &req.APISyncIntervalMin,
+		}); err != nil {
+			return err
+		}
+		if err := s.supplierRepo.UpdateSettingsKeys(ctx, tx, supplierID, map[string]any{
+			"setup_step":              "complete",
+			"xml_sync_interval_hours": req.XMLSyncIntervalHours,
+		}); err != nil {
+			return err
+		}
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier.setup_completed",
+			EntityType: "supplier",
+			EntityID:   supplierID,
+			IPAddress:  ip,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Trigger immediate API inventory sync to get real stock data
+	go func() {
+		updated, _ := s.Get(context.Background(), tenantID, supplierID)
+		if updated != nil {
+			_ = s.syncXMLInventory(context.Background(), tenantID, supplierID, updated)
+		}
+	}()
+
+	return s.Get(ctx, tenantID, supplierID)
+}
+
+// removeStaleProducts deletes supplier products not present in the current XML feed
+// and sets stock to 0 on their linked OMS products.
+func (s *SupplierService) removeStaleProducts(ctx context.Context, tenantID, supplierID uuid.UUID, currentExternalIDs []string) {
+	if len(currentExternalIDs) == 0 {
+		return
+	}
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		linkedProductIDs, err := s.supplierProdRepo.DeleteStaleByExternalIDs(ctx, tx, supplierID, currentExternalIDs)
+		if err != nil {
+			return err
+		}
+
+		// Set stock to 0 on linked OMS products that lost their supplier product
+		for _, pid := range linkedProductIDs {
+			if _, err := tx.Exec(ctx,
+				"UPDATE products SET stock_quantity = 0, updated_at = NOW() WHERE id = $1",
+				pid,
+			); err != nil {
+				s.logger.Error("failed to zero stock on delinked product",
+					"product_id", pid, "error", err)
+			}
+		}
+
+		if len(linkedProductIDs) > 0 {
+			s.logger.Info("removed stale supplier products",
+				"supplier_id", supplierID, "removed_linked", len(linkedProductIDs))
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.Error("failed to remove stale products",
+			"supplier_id", supplierID, "error", err)
+	}
 }
