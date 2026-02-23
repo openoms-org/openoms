@@ -259,7 +259,9 @@ function MyProductsTab() {
       accessorKey: "source" as const,
       cell: (product: Product) => (
         <span className="text-sm">
-          {ORDER_SOURCE_LABELS[product.source] ?? product.source}
+          {product.source === "supplier" && product.supplier_name
+            ? product.supplier_name
+            : (ORDER_SOURCE_LABELS[product.source] ?? product.source)}
         </span>
       ),
     },

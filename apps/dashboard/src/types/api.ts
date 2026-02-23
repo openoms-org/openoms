@@ -344,6 +344,7 @@ export interface Product {
   is_bundle: boolean;
   is_dropship: boolean;
   dropship_supplier_id?: string;
+  supplier_name?: string;
   marketplace_providers: string[];
   created_at: string;
   updated_at: string;

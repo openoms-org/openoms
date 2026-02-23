@@ -34,6 +34,7 @@ type Product struct {
 	IsBundle           bool            `json:"is_bundle"`
 	IsDropship             bool            `json:"is_dropship"`
 	DropshipSupplierID     *uuid.UUID      `json:"dropship_supplier_id,omitempty"`
+	SupplierName           *string         `json:"supplier_name,omitempty"`
 	MarketplaceProviders   []string        `json:"marketplace_providers"`
 	CreatedAt              time.Time       `json:"created_at"`
 	UpdatedAt              time.Time       `json:"updated_at"`
