@@ -72,6 +72,16 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -99,9 +109,20 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { AlertTriangle, Check, ChevronsUpDown } from "lucide-react";
 
 // ===================== Constants =====================
+
+const PROVIDER_LABELS: Record<string, string> = {
+  allegro: "Allegro",
+  woocommerce: "WooCommerce",
+  amazon: "Amazon",
+  ebay: "eBay",
+};
+
+function providerLabel(provider: string): string {
+  return PROVIDER_LABELS[provider] ?? provider;
+}
 
 const PROVINCES = [
   "DOLNOSLASKIE",
@@ -168,6 +189,18 @@ export default function ProductListingsPage() {
   const syncListing = useSyncProductListing(params.id);
   const updateSyncMode = useUpdateListingSyncMode(params.id);
   const forcePush = useForcePushListing();
+  const [deleteTarget, setDeleteTarget] = useState<ProductListing | null>(null);
+  const [showDeleteAll, setShowDeleteAll] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
+  const { data: integrations } = useIntegrations();
+
+  const providerByIntegration = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const intg of integrations ?? []) {
+      map[intg.id] = intg.provider;
+    }
+    return map;
+  }, [integrations]);
 
   return (
     <AdminGuard>
@@ -236,8 +269,19 @@ export default function ProductListingsPage() {
           />
         ) : (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Aktywne oferty ({listings.length})</CardTitle>
+              {listings.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive"
+                  onClick={() => setShowDeleteAll(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Usun ze wszystkich
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
@@ -257,6 +301,7 @@ export default function ProductListingsPage() {
                     <ListingRow
                       key={listing.id}
                       listing={listing}
+                      providerName={providerLabel(providerByIntegration[listing.integration_id] ?? "allegro")}
                       onSync={(id) =>
                         syncListing.mutate(id, {
                           onSuccess: () =>
@@ -284,16 +329,7 @@ export default function ProductListingsPage() {
                             toast.error("Blad wysylania stanu"),
                         })
                       }
-                      onDelete={(id) => {
-                        if (confirm("Usunac oferte?")) {
-                          deleteListing.mutate(id, {
-                            onSuccess: () =>
-                              toast.success("Oferta usunieta"),
-                            onError: () =>
-                              toast.error("Blad usuwania"),
-                          });
-                        }
-                      }}
+                      onDelete={() => setDeleteTarget(listing)}
                     />
                   ))}
                 </TableBody>
@@ -309,6 +345,139 @@ export default function ProductListingsPage() {
             onClose={() => setShowCreate(false)}
           />
         )}
+
+        {/* Delete single listing dialog */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Usunac oferte z {deleteTarget ? providerLabel(providerByIntegration[deleteTarget.integration_id] ?? "marketplace") : "marketplace"}?
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  {deleteTarget?.external_id && (
+                    <p>
+                      ID oferty:{" "}
+                      <span className="font-mono font-medium text-foreground">
+                        {deleteTarget.external_id}
+                      </span>
+                    </p>
+                  )}
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>
+                      <span className="font-medium text-foreground">
+                        Dezaktywowana na {providerLabel(providerByIntegration[deleteTarget?.integration_id ?? ""] ?? "marketplace")}
+                      </span>{" "}
+                      — oferta nie bedzie juz widoczna dla kupujacych
+                    </li>
+                    <li>
+                      <span className="font-medium text-foreground">Usunieta z OMS</span>{" "}
+                      — powiazanie z produktem zostanie trwale skasowane
+                    </li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    Mozesz pozniej ponownie wystawic ten produkt na ta platforme.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Anuluj</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  if (!deleteTarget) return;
+                  deleteListing.mutate(deleteTarget.id, {
+                    onSuccess: () => {
+                      toast.success("Oferta dezaktywowana i usunieta");
+                      setDeleteTarget(null);
+                    },
+                    onError: () =>
+                      toast.error("Blad usuwania oferty"),
+                  });
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Usun i dezaktywuj
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete all listings dialog */}
+        <AlertDialog open={showDeleteAll} onOpenChange={setShowDeleteAll}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Usunac oferty ze wszystkich platform?
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>
+                    Produkt zostanie usuniety z{" "}
+                    <span className="font-medium text-foreground">
+                      {listings?.length ?? 0} {(listings?.length ?? 0) === 1 ? "platformy" : "platform"}
+                    </span>:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {listings?.map((l) => (
+                      <li key={l.id}>
+                        <span className="font-medium text-foreground">
+                          {providerLabel(providerByIntegration[l.integration_id] ?? "marketplace")}
+                        </span>
+                        {l.external_id && (
+                          <span className="text-muted-foreground"> (ID: {l.external_id})</span>
+                        )}
+                        {" "}— oferta zostanie dezaktywowana
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    Wszystkie oferty zostana dezaktywowane na platformach i usuniete z OMS.
+                    Mozesz je ponownie wystawic pozniej.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deletingAll}>Anuluj</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={deletingAll}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!listings?.length) return;
+                  setDeletingAll(true);
+                  let failed = 0;
+                  for (const l of listings) {
+                    try {
+                      await new Promise<void>((resolve, reject) =>
+                        deleteListing.mutate(l.id, { onSuccess: () => resolve(), onError: () => reject() })
+                      );
+                    } catch {
+                      failed++;
+                    }
+                  }
+                  setDeletingAll(false);
+                  setShowDeleteAll(false);
+                  if (failed === 0) {
+                    toast.success("Wszystkie oferty usuniete");
+                  } else {
+                    toast.error(`Nie udalo sie usunac ${failed} z ${listings.length} ofert`);
+                  }
+                }}
+              >
+                {deletingAll ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                {deletingAll ? "Usuwanie..." : "Usun wszystkie"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminGuard>
   );
@@ -318,23 +487,25 @@ export default function ProductListingsPage() {
 
 function ListingRow({
   listing,
+  providerName,
   onSync,
   onToggleSyncMode,
   onForcePush,
   onDelete,
 }: {
   listing: ProductListing;
+  providerName: string;
   onSync: (id: string) => void;
   onToggleSyncMode: (id: string, mode: 'auto' | 'manual') => void;
   onForcePush: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete: () => void;
 }) {
   const isAuto = listing.stock_sync_mode === "auto";
 
   return (
     <TableRow>
       <TableCell>
-        <Badge variant="outline">Allegro</Badge>
+        <Badge variant="outline">{providerName}</Badge>
       </TableCell>
       <TableCell>
         <Badge
@@ -430,7 +601,7 @@ function ListingRow({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onDelete(listing.id)}
+            onClick={() => onDelete()}
           >
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
