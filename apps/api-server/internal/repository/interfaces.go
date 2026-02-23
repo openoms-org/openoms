@@ -251,6 +251,7 @@ type SupplierProductRepo interface {
 	FindSupplierIDByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (*uuid.UUID, error)
 	ListExternalIDsBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]string, error)
 	DeleteStaleByExternalIDs(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, keepExternalIDs []string) ([]uuid.UUID, error)
+	ListAll(ctx context.Context, tx pgx.Tx, params model.SupplierProductListAllParams) ([]model.SupplierProductWithSupplier, int, error)
 }
 
 // AllegroParameterMappingRepo defines the interface for Allegro parameter mapping persistence.

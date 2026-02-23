@@ -115,8 +115,8 @@ export default function IntegrationsPage() {
               {integrations.map((integration) => {
                 // Providers with dedicated pages get routed there
                 const dedicatedPages: Record<string, string> = {
-                  allegro: "/integrations/allegro",
-                  amazon: "/integrations/amazon",
+                  allegro: "/marketplaces/allegro",
+                  amazon: "/marketplaces/amazon",
                   shoper: "/integrations/shoper",
                   prestashop: "/integrations/prestashop",
                   shopify: "/integrations/shopify",

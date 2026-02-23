@@ -529,6 +529,7 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Get("/categories/{categoryId}/parameters", deps.AllegroCatalog.GetCategoryParameters)
 						r.Get("/products/catalog", deps.AllegroCatalog.SearchProducts)
 						r.Get("/products/catalog/{productId}", deps.AllegroCatalog.GetProduct)
+						r.Get("/offers/listing", deps.AllegroCatalog.SearchListing)
 						r.Get("/pricing/fees", deps.AllegroCatalog.GetFeePreview)
 						r.Get("/pricing/commissions", deps.AllegroCatalog.GetCommissions)
 					}
@@ -625,6 +626,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/products/bulk-delete", deps.Supplier.BulkDeleteProducts)
 				r.Post("/{id}/products/{spid}/link", deps.Supplier.LinkProduct)
 				r.Post("/{id}/products/{spid}/unlink", deps.Supplier.UnlinkProduct)
+				r.Post("/{id}/products/{spid}/import-single", deps.Supplier.ImportSingleProduct)
 				r.Delete("/{id}/products/{spid}", deps.Supplier.DeleteProduct)
 				r.Get("/{id}/category-mappings", deps.Supplier.ListCategoryMappings)
 				r.Put("/{id}/category-mappings", deps.Supplier.UpsertCategoryMapping)
@@ -648,6 +650,9 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Get("/{id}/portal/status", deps.SupplierPortal.GetPortalStatus)
 				}
 			})
+
+			// Cross-supplier product listing — admin only
+			r.With(middleware.RequireRole("admin")).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
 
 			// Product Categories — admin only
 			if deps.Category != nil {

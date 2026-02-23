@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -676,6 +677,8 @@ func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Req
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else if errors.Is(err, service.ErrSupplierNotFound) {
 			writeError(w, http.StatusNotFound, "supplier not found")
+		} else if errors.Is(err, service.ErrDuplicateProvider) {
+			writeError(w, http.StatusConflict, "BTP integration already exists for this tenant")
 		} else {
 			writeError(w, http.StatusInternalServerError, "failed to set API keys")
 		}
@@ -712,4 +715,78 @@ func (h *SupplierHandler) BTPWizardCompleteSyncSettings(w http.ResponseWriter, r
 		return
 	}
 	writeJSON(w, http.StatusOK, supplier)
+}
+
+// ImportSingleProduct handles POST /v1/suppliers/{id}/products/{productId}/import —
+// imports a single supplier product into the OMS catalog.
+func (h *SupplierHandler) ImportSingleProduct(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	supplierID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier ID")
+		return
+	}
+
+	spID, err := uuid.Parse(chi.URLParam(r, "spid"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid supplier product ID")
+		return
+	}
+
+	product, err := h.supplierService.ImportSingleProduct(r.Context(), tenantID, supplierID, spID, actorID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSupplierNotFound):
+			writeError(w, http.StatusNotFound, "supplier not found")
+		case errors.Is(err, service.ErrSupplierProductNotFound):
+			writeError(w, http.StatusNotFound, "supplier product not found")
+		default:
+			writeError(w, http.StatusInternalServerError, "failed to import product")
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, product)
+}
+
+// ListAllSupplierProducts handles GET /v1/supplier-products — lists supplier products across all suppliers.
+func (h *SupplierHandler) ListAllSupplierProducts(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	q := r.URL.Query()
+
+	limit := 50
+	offset := 0
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 200 {
+			limit = n
+		}
+	}
+	if v := q.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	params := model.SupplierProductListAllParams{
+		Search:    q.Get("search"),
+		Category:  q.Get("category"),
+		Linked:    q.Get("linked"),
+		SortBy:    q.Get("sort_by"),
+		SortOrder: q.Get("sort_order"),
+		Limit:     limit,
+		Offset:    offset,
+	}
+	if sid := q.Get("supplier_id"); sid != "" {
+		if id, err := uuid.Parse(sid); err == nil {
+			params.SupplierID = &id
+		}
+	}
+
+	resp, err := h.supplierService.ListAllProducts(r.Context(), tenantID, params)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list supplier products")
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }

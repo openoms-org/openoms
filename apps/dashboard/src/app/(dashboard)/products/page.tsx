@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Package, Plus, Search, Sparkles, Loader2, Download, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Package, Plus, Search, Sparkles, Loader2, Download, Upload, ShoppingBag, Eye, Image as ImageIcon, Link2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useBulkCategorize } from "@/hooks/use-ai";
 import { apiFetch } from "@/lib/api-client";
@@ -18,16 +19,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DensityToggle } from "@/components/shared/density-toggle";
-import { useProducts } from "@/hooks/use-products";
-import { useSuppliers } from "@/hooks/use-suppliers";
+import { useProducts, useDeleteProduct } from "@/hooks/use-products";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useSuppliers, useAllSupplierProducts } from "@/hooks/use-suppliers";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { getErrorMessage } from "@/lib/api-client";
 import { useCategoryTree } from "@/hooks/use-categories";
 import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { apiClient } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Product, ProductCategory } from "@/types/api";
+import type { Product, ProductCategory, SupplierProductWithSupplier } from "@/types/api";
 
 const DEFAULT_LIMIT = 20;
 
@@ -43,6 +54,43 @@ function findCategoryById(categories: ProductCategory[], id: string): ProductCat
 }
 
 export default function ProductsPage() {
+  const [activeTab, setActiveTab] = useState("my-products");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Produkty</h1>
+          <p className="text-muted-foreground">
+            Zarządzaj katalogiem produktów
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <DensityToggle />
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="my-products">Moje produkty</TabsTrigger>
+          <TabsTrigger value="supplier-catalog">Katalog dostawców</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="my-products" className="space-y-4 mt-4">
+          <MyProductsTab />
+        </TabsContent>
+
+        <TabsContent value="supplier-catalog" className="space-y-4 mt-4">
+          <SupplierCatalogTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+// ─── My Products Tab (existing functionality) ───
+
+function MyProductsTab() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [localTagFilter, setLocalTagFilter] = useState("");
@@ -55,7 +103,9 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState<string>("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const bulkCategorize = useBulkCategorize();
+  const deleteProduct = useDeleteProduct();
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -78,7 +128,6 @@ export default function ProductsPage() {
     }, 300);
   };
 
-  // Cleanup tag debounce timeout on unmount
   useEffect(() => {
     return () => {
       if (tagDebounceRef.current) {
@@ -256,83 +305,28 @@ export default function ProductsPage() {
         </span>
       ),
     },
+    {
+      header: "",
+      accessorKey: "id" as const,
+      className: "w-[50px]",
+      cell: (product: Product) => (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            setDeleteId(product.id);
+          }}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      ),
+    },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Produkty</h1>
-          <p className="text-muted-foreground">
-            Zarządzaj katalogiem produktów
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <DensityToggle />
-          {selectedProducts.size > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                bulkCategorize.mutate(Array.from(selectedProducts), {
-                  onSuccess: (data) => {
-                    const succeeded = data.results.filter((r) => !r.error).length;
-                    const failed = data.results.filter((r) => r.error).length;
-                    toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} błędów`);
-                    setSelectedProducts(new Set());
-                  },
-                  onError: (error) => {
-                    toast.error(error instanceof Error ? error.message : "Błąd auto-kategoryzacji");
-                  },
-                });
-              }}
-              disabled={bulkCategorize.isPending}
-            >
-              {bulkCategorize.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-              Auto-kategoryzacja ({selectedProducts.size})
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            onClick={async () => {
-              try {
-                const res = await apiFetch("/v1/products/export");
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                toast.success("Eksport CSV rozpoczęty");
-              } catch {
-                toast.error("Błąd eksportu CSV");
-              }
-            }}
-          >
-            <Download className="h-4 w-4" />
-            Eksportuj CSV
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/products/import">
-              <Upload className="h-4 w-4" />
-              Import CSV
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/products/new">
-              <Plus className="h-4 w-4" />
-              Nowy produkt
-            </Link>
-          </Button>
-        </div>
-      </div>
-
+    <>
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-[280px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -399,6 +393,69 @@ export default function ProductsPage() {
             ))}
           </SelectContent>
         </Select>
+        <div className="ml-auto flex items-center gap-2">
+          {selectedProducts.size > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                bulkCategorize.mutate(Array.from(selectedProducts), {
+                  onSuccess: (data) => {
+                    const succeeded = data.results.filter((r) => !r.error).length;
+                    const failed = data.results.filter((r) => r.error).length;
+                    toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} błędów`);
+                    setSelectedProducts(new Set());
+                  },
+                  onError: (error) => {
+                    toast.error(error instanceof Error ? error.message : "Błąd auto-kategoryzacji");
+                  },
+                });
+              }}
+              disabled={bulkCategorize.isPending}
+            >
+              {bulkCategorize.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Auto-kategoryzacja ({selectedProducts.size})
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={async () => {
+              try {
+                const res = await apiFetch("/v1/products/export");
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                toast.success("Eksport CSV rozpoczęty");
+              } catch {
+                toast.error("Błąd eksportu CSV");
+              }
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Eksportuj CSV
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/products/import">
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/products/new">
+              <Plus className="h-4 w-4" />
+              Nowy produkt
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {isError && (
@@ -452,6 +509,566 @@ export default function ProductsPage() {
           }
         />
       )}
-    </div>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title="Usuń produkt"
+        description="Czy na pewno chcesz usunąć ten produkt? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń"
+        variant="destructive"
+        onConfirm={() => {
+          if (!deleteId) return;
+          deleteProduct.mutate(deleteId, {
+            onSuccess: () => {
+              toast.success("Produkt został usunięty");
+              setDeleteId(null);
+            },
+            onError: (error) => {
+              toast.error(getErrorMessage(error));
+            },
+          });
+        }}
+        isLoading={deleteProduct.isPending}
+      />
+    </>
+  );
+}
+
+// ─── Supplier Catalog Tab ───
+
+function SupplierCatalogTab() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [supplierFilter, setSupplierFilter] = useState("");
+  const [pagination, setPagination] = useState({ limit: 50, offset: 0 });
+  const [sortBy, setSortBy] = useState<string>("created_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [importingId, setImportingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [detailProduct, setDetailProduct] = useState<SupplierProductWithSupplier | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [bulkImporting, setBulkImporting] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPagination((prev) => ({ ...prev, offset: 0 }));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: suppliersData } = useSuppliers({ limit: 100 });
+
+  const { data, isLoading } = useAllSupplierProducts({
+    search: debouncedSearch || undefined,
+    supplier_id: supplierFilter || undefined,
+    sort_by: sortBy,
+    sort_order: sortOrder,
+    limit: pagination.limit,
+    offset: pagination.offset,
+  });
+
+  const items = data?.items ?? [];
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+    setPagination((prev) => ({ ...prev, offset: 0 }));
+  };
+
+  const handleListOnMarketplace = useCallback(async (sp: SupplierProductWithSupplier) => {
+    if (sp.product_id) {
+      router.push(`/products/${sp.product_id}/listings?listing=new`);
+      return;
+    }
+    setImportingId(sp.id);
+    try {
+      const product = await apiClient<Product>(
+        `/v1/suppliers/${sp.supplier_id}/products/${sp.id}/import-single`,
+        { method: "POST" }
+      );
+      toast.success("Produkt zaimportowany do katalogu");
+      router.push(`/products/${product.id}/listings?listing=new`);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setImportingId(null);
+    }
+  }, [router]);
+
+  const handleImportOnly = useCallback(async (sp: SupplierProductWithSupplier) => {
+    if (sp.product_id) {
+      toast.info("Produkt jest już w katalogu");
+      return;
+    }
+    setImportingId(sp.id);
+    try {
+      await apiClient<Product>(
+        `/v1/suppliers/${sp.supplier_id}/products/${sp.id}/import-single`,
+        { method: "POST" }
+      );
+      toast.success("Produkt zaimportowany do katalogu");
+      queryClient.invalidateQueries({ queryKey: ["supplier-products"] });
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setImportingId(null);
+    }
+  }, [queryClient]);
+
+  const handleBulkImport = useCallback(async () => {
+    const selected = items.filter((sp) => selectedIds.has(sp.id) && !sp.product_id);
+    if (selected.length === 0) {
+      toast.info("Brak niezaimportowanych produktów w zaznaczeniu");
+      return;
+    }
+    setBulkImporting(true);
+    let imported = 0;
+    let errors = 0;
+    for (const sp of selected) {
+      try {
+        await apiClient<Product>(
+          `/v1/suppliers/${sp.supplier_id}/products/${sp.id}/import-single`,
+          { method: "POST" }
+        );
+        imported++;
+      } catch {
+        errors++;
+      }
+    }
+    setBulkImporting(false);
+    setSelectedIds(new Set());
+    queryClient.invalidateQueries({ queryKey: ["supplier-products"] });
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+    const parts: string[] = [];
+    if (imported > 0) parts.push(`Zaimportowano: ${imported}`);
+    if (errors > 0) parts.push(`Błędy: ${errors}`);
+    toast.success(parts.join(", "));
+  }, [selectedIds, items, queryClient]);
+
+  const selectedUnimported = useMemo(() => {
+    return items.filter((sp) => selectedIds.has(sp.id) && !sp.product_id).length;
+  }, [selectedIds, items]);
+
+  const getMetaString = (meta: Record<string, unknown>, key: string): string | undefined => {
+    const v = meta?.[key];
+    return typeof v === "string" && v ? v : undefined;
+  };
+
+  const columns = [
+    {
+      header: "",
+      accessorKey: "metadata" as const,
+      className: "w-[50px] px-0",
+      cell: (sp: SupplierProductWithSupplier) => {
+        const imgUrl = getMetaString(sp.metadata, "image_url");
+        return imgUrl ? (
+          <button
+            className="w-8 h-8 rounded border overflow-hidden bg-muted/30 flex-shrink-0 cursor-pointer"
+            onClick={() => { setDetailProduct(sp); setSelectedImageIndex(0); }}
+          >
+            <img src={imgUrl} alt="" className="w-full h-full object-contain" />
+          </button>
+        ) : (
+          <div className="w-8 h-8 rounded border bg-muted/30 flex items-center justify-center">
+            <ImageIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
+          </div>
+        );
+      },
+    },
+    {
+      header: "Produkt",
+      accessorKey: "name" as const,
+      sortable: true,
+      cell: (sp: SupplierProductWithSupplier) => {
+        const brand = getMetaString(sp.metadata, "brand");
+        return (
+          <div className="min-w-0">
+            <button
+              className="font-medium truncate block text-left hover:underline cursor-pointer max-w-full"
+              onClick={() => { setDetailProduct(sp); setSelectedImageIndex(0); }}
+            >
+              {sp.name}
+            </button>
+            <p className="text-xs text-muted-foreground truncate">
+              {[brand, sp.ean].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+        );
+      },
+    },
+    {
+      header: "Kategoria",
+      accessorKey: "source_category" as const,
+      cell: (sp: SupplierProductWithSupplier) => (
+        <span className="text-sm text-muted-foreground truncate max-w-[160px] block">
+          {sp.source_category || "-"}
+        </span>
+      ),
+    },
+    {
+      header: "Cena",
+      accessorKey: "price" as const,
+      sortable: true,
+      className: "text-right",
+      cell: (sp: SupplierProductWithSupplier) => (
+        <div className="text-right">
+          <span className="block text-sm">{sp.price ? formatCurrency(sp.price) : "-"}</span>
+          {sp.metadata?.retail_price != null && (
+            <span className="text-xs text-muted-foreground">
+              det. {formatCurrency(Number(sp.metadata.retail_price))}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "Stan",
+      accessorKey: "stock_quantity" as const,
+      sortable: true,
+      className: "text-right",
+      cell: (sp: SupplierProductWithSupplier) => (
+        <span
+          className={`text-sm font-medium ${
+            sp.stock_quantity === 0 ? "text-destructive" : ""
+          }`}
+        >
+          {sp.stock_quantity}
+        </span>
+      ),
+    },
+    {
+      header: "Dostawca",
+      accessorKey: "supplier_name" as const,
+      cell: (sp: SupplierProductWithSupplier) => (
+        <span className="text-sm">{sp.supplier_name}</span>
+      ),
+    },
+    {
+      header: "Status",
+      accessorKey: "product_id" as const,
+      cell: (sp: SupplierProductWithSupplier) => (
+        sp.product_id ? (
+          <Badge variant="outline" className="gap-1">
+            <Link2 className="h-3 w-3" />
+            W katalogu
+          </Badge>
+        ) : (
+          <Badge variant="secondary">Niezaimportowany</Badge>
+        )
+      ),
+    },
+    {
+      header: "",
+      accessorKey: "id" as const,
+      className: "w-[120px]",
+      cell: (sp: SupplierProductWithSupplier) => (
+        <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title="Podgląd"
+            onClick={() => { setDetailProduct(sp); setSelectedImageIndex(0); }}
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            title="Wystaw na marketplace"
+            disabled={importingId === sp.id}
+            onClick={() => handleListOnMarketplace(sp)}
+          >
+            {importingId === sp.id ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ShoppingBag className="h-3.5 w-3.5" />
+            )}
+          </Button>
+          {!sp.product_id && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Importuj do katalogu"
+              disabled={importingId === sp.id}
+              onClick={() => handleImportOnly(sp)}
+            >
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-[280px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Szukaj po nazwie, EAN lub SKU..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select
+          value={supplierFilter}
+          onValueChange={(value) => {
+            setSupplierFilter(value === "__all__" ? "" : value);
+            setPagination((prev) => ({ ...prev, offset: 0 }));
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Dostawca..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Wszyscy dostawcy</SelectItem>
+            {suppliersData?.items?.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              onClick={handleBulkImport}
+              disabled={bulkImporting || selectedUnimported === 0}
+            >
+              {bulkImporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {bulkImporting
+                ? "Importowanie..."
+                : `Importuj (${selectedUnimported})`}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={items}
+        isLoading={isLoading}
+        emptyState={
+          <EmptyState
+            icon={Package}
+            title="Brak produktów dostawców"
+            description="Dodaj dostawcę i zaimportuj produkty z XML lub API."
+            action={{ label: "Dodaj dostawcę", href: "/suppliers/new" }}
+          />
+        }
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        resizable
+        selectable
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        rowId={(row) => row.id}
+      />
+
+      {data && (
+        <DataTablePagination
+          total={data.total}
+          limit={data.limit}
+          offset={data.offset}
+          onPageChange={(offset) =>
+            setPagination((prev) => ({ ...prev, offset }))
+          }
+          onPageSizeChange={(limit) =>
+            setPagination({ limit, offset: 0 })
+          }
+        />
+      )}
+
+      {/* Detail Modal */}
+      <Dialog open={!!detailProduct} onOpenChange={(open) => { if (!open) { setDetailProduct(null); setSelectedImageIndex(0); } }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {detailProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="pr-8">{detailProduct.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {/* Images */}
+                {(() => {
+                  const images = Array.isArray(detailProduct.metadata?.images)
+                    ? (detailProduct.metadata.images as string[])
+                    : getMetaString(detailProduct.metadata, "image_url")
+                      ? [getMetaString(detailProduct.metadata, "image_url")!]
+                      : [];
+                  if (images.length === 0) return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="rounded-lg border overflow-hidden bg-muted/30">
+                        <img
+                          src={images[selectedImageIndex] || images[0]}
+                          alt={detailProduct.name}
+                          className="w-full max-h-[300px] object-contain"
+                        />
+                      </div>
+                      {images.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {images.map((url, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => setSelectedImageIndex(i)}
+                              className={`flex-shrink-0 w-16 h-16 rounded-md border overflow-hidden bg-muted/30 ${
+                                selectedImageIndex === i
+                                  ? "ring-2 ring-primary"
+                                  : "opacity-70 hover:opacity-100"
+                              }`}
+                            >
+                              <img
+                                src={url}
+                                alt={`${detailProduct.name} ${i + 1}`}
+                                className="w-full h-full object-contain"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">EAN:</span>{" "}
+                    <span className="font-medium">{detailProduct.ean || "---"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">SKU:</span>{" "}
+                    <span className="font-medium">{detailProduct.sku || "---"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Cena:</span>{" "}
+                    <span className="font-medium">
+                      {detailProduct.price != null ? formatCurrency(detailProduct.price) : "---"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Stan:</span>{" "}
+                    <span className="font-medium">{detailProduct.stock_quantity}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Kategoria:</span>{" "}
+                    <span className="font-medium">{detailProduct.source_category || "---"}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Dostawca:</span>{" "}
+                    <span className="font-medium">{detailProduct.supplier_name}</span>
+                  </div>
+                  {getMetaString(detailProduct.metadata, "brand") && (
+                    <div>
+                      <span className="text-muted-foreground">Marka:</span>{" "}
+                      <span className="font-medium">
+                        {getMetaString(detailProduct.metadata, "brand")}
+                      </span>
+                    </div>
+                  )}
+                  {detailProduct.metadata?.weight != null && (
+                    <div>
+                      <span className="text-muted-foreground">Waga:</span>{" "}
+                      <span className="font-medium">
+                        {String(detailProduct.metadata.weight)} kg
+                      </span>
+                    </div>
+                  )}
+                  {detailProduct.metadata?.retail_price != null && (
+                    <div>
+                      <span className="text-muted-foreground">Cena detaliczna:</span>{" "}
+                      <span className="font-medium">
+                        {formatCurrency(Number(detailProduct.metadata.retail_price))}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>{" "}
+                    {detailProduct.product_id ? (
+                      <Badge variant="outline" className="gap-1">
+                        <Link2 className="h-3 w-3" />
+                        W katalogu
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Niezaimportowany</Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                {getMetaString(detailProduct.metadata, "description") && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Opis</h4>
+                    <div
+                      className="text-sm text-muted-foreground prose prose-sm max-w-none max-h-[200px] overflow-y-auto rounded border p-3 bg-muted/20"
+                      dangerouslySetInnerHTML={{
+                        __html: getMetaString(detailProduct.metadata, "description") || "",
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-2 border-t">
+                  <Button
+                    size="sm"
+                    onClick={() => handleListOnMarketplace(detailProduct)}
+                    disabled={importingId === detailProduct.id}
+                  >
+                    {importingId === detailProduct.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ShoppingBag className="h-4 w-4 mr-2" />
+                    )}
+                    Wystaw na marketplace
+                  </Button>
+                  {!detailProduct.product_id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        handleImportOnly(detailProduct);
+                        setDetailProduct(null);
+                      }}
+                      disabled={importingId === detailProduct.id}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Importuj do katalogu
+                    </Button>
+                  )}
+                  {detailProduct.product_id && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/products/${detailProduct.product_id}`}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Zobacz produkt
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

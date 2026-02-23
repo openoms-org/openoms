@@ -284,6 +284,24 @@ type BTPImportProgressResponse struct {
 	Error     string `json:"error,omitempty"`
 }
 
+// SupplierProductWithSupplier is a SupplierProduct with the supplier's name included.
+type SupplierProductWithSupplier struct {
+	SupplierProduct
+	SupplierName string `json:"supplier_name"`
+}
+
+// SupplierProductListAllParams contains filters for cross-supplier product listing.
+type SupplierProductListAllParams struct {
+	Search     string
+	SupplierID *uuid.UUID
+	Category   string
+	Linked     string // "all", "linked", "unlinked"
+	SortBy     string
+	SortOrder  string
+	Limit      int
+	Offset     int
+}
+
 // AllegroParameterMapping maps a supplier's data field to an Allegro category parameter.
 type AllegroParameterMapping struct {
 	ID                uuid.UUID       `json:"id"`

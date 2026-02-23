@@ -18,6 +18,9 @@ import type {
   ImportSupplierProductsResponse,
   BulkDeleteSupplierProductsRequest,
   BTPImportProgressResponse,
+  SupplierProductWithSupplier,
+  SupplierProductListAllParams,
+  Product,
 } from "@/types/api";
 
 export function useSuppliers(params: SupplierListParams = {}) {
@@ -478,5 +481,41 @@ export function useBTPWizardCompleteSyncSettings(supplierId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
     },
+  });
+}
+
+export function useImportSingleProduct(supplierId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (supplierProductId: string) =>
+      apiClient<Product>(
+        `/v1/suppliers/${supplierId}/products/${supplierProductId}/import-single`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supplier-products"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers", supplierId, "products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useAllSupplierProducts(params: SupplierProductListAllParams) {
+  const searchParams = new URLSearchParams();
+  if (params.search) searchParams.set("search", params.search);
+  if (params.supplier_id) searchParams.set("supplier_id", params.supplier_id);
+  if (params.category) searchParams.set("category", params.category);
+  if (params.linked) searchParams.set("linked", params.linked);
+  if (params.sort_by) searchParams.set("sort_by", params.sort_by);
+  if (params.sort_order) searchParams.set("sort_order", params.sort_order);
+  searchParams.set("limit", String(params.limit ?? 50));
+  searchParams.set("offset", String(params.offset ?? 0));
+
+  return useQuery({
+    queryKey: ["supplier-products", params],
+    queryFn: () =>
+      apiClient<ListResponse<SupplierProductWithSupplier>>(
+        `/v1/supplier-products?${searchParams.toString()}`
+      ),
   });
 }

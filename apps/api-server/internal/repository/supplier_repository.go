@@ -643,3 +643,91 @@ func (r *SupplierProductRepository) FindSupplierIDByProductID(ctx context.Contex
 	}
 	return &supplierID, nil
 }
+
+// ListAll returns supplier products across all suppliers with the supplier name included.
+func (r *SupplierProductRepository) ListAll(ctx context.Context, tx pgx.Tx, params model.SupplierProductListAllParams) ([]model.SupplierProductWithSupplier, int, error) {
+	var conditions []string
+	var args []any
+	argIdx := 1
+
+	if params.SupplierID != nil {
+		conditions = append(conditions, fmt.Sprintf("sp.supplier_id = $%d", argIdx))
+		args = append(args, *params.SupplierID)
+		argIdx++
+	}
+	if params.Search != "" {
+		conditions = append(conditions, fmt.Sprintf("(sp.name ILIKE $%d OR sp.ean ILIKE $%d OR sp.sku ILIKE $%d)", argIdx, argIdx, argIdx))
+		args = append(args, "%"+params.Search+"%")
+		argIdx++
+	}
+	if params.Category != "" {
+		conditions = append(conditions, fmt.Sprintf("sp.source_category = $%d", argIdx))
+		args = append(args, params.Category)
+		argIdx++
+	}
+	switch params.Linked {
+	case "linked":
+		conditions = append(conditions, "sp.product_id IS NOT NULL")
+	case "unlinked":
+		conditions = append(conditions, "sp.product_id IS NULL")
+	}
+
+	where := ""
+	if len(conditions) > 0 {
+		where = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM supplier_products sp %s", where)
+	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count all supplier products: %w", err)
+	}
+
+	allowedSortColumns := map[string]string{
+		"created_at":     "sp.created_at",
+		"name":           "sp.name",
+		"price":          "sp.price",
+		"stock_quantity": "sp.stock_quantity",
+	}
+	orderCol, ok := allowedSortColumns[params.SortBy]
+	if !ok {
+		orderCol = "sp.created_at"
+	}
+	direction := "DESC"
+	if params.SortOrder == "asc" {
+		direction = "ASC"
+	}
+	orderByClause := fmt.Sprintf("ORDER BY %s %s", orderCol, direction)
+
+	query := fmt.Sprintf(
+		`SELECT sp.id, sp.tenant_id, sp.supplier_id, sp.product_id, sp.external_id, sp.name, sp.ean, sp.sku,
+		        sp.price, sp.stock_quantity, sp.source_category, sp.metadata, sp.last_synced_at, sp.created_at, sp.updated_at,
+		        s.name as supplier_name
+		 FROM supplier_products sp
+		 JOIN suppliers s ON s.id = sp.supplier_id
+		 %s %s LIMIT $%d OFFSET $%d`,
+		where, orderByClause, argIdx, argIdx+1,
+	)
+	args = append(args, params.Limit, params.Offset)
+
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list all supplier products: %w", err)
+	}
+	defer rows.Close()
+
+	var products []model.SupplierProductWithSupplier
+	for rows.Next() {
+		var sp model.SupplierProductWithSupplier
+		if err := rows.Scan(
+			&sp.ID, &sp.TenantID, &sp.SupplierID, &sp.ProductID, &sp.ExternalID,
+			&sp.Name, &sp.EAN, &sp.SKU, &sp.Price, &sp.StockQuantity,
+			&sp.SourceCategory, &sp.Metadata, &sp.LastSyncedAt, &sp.CreatedAt, &sp.UpdatedAt,
+			&sp.SupplierName,
+		); err != nil {
+			return nil, 0, fmt.Errorf("scan supplier product with supplier: %w", err)
+		}
+		products = append(products, sp)
+	}
+	return products, total, rows.Err()
+}

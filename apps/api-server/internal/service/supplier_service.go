@@ -254,6 +254,28 @@ func (s *SupplierService) ListProducts(ctx context.Context, tenantID uuid.UUID, 
 	return resp, err
 }
 
+// ListAllProducts returns supplier products across all suppliers with supplier names included.
+func (s *SupplierService) ListAllProducts(ctx context.Context, tenantID uuid.UUID, params model.SupplierProductListAllParams) (model.ListResponse[model.SupplierProductWithSupplier], error) {
+	var resp model.ListResponse[model.SupplierProductWithSupplier]
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		products, total, err := s.supplierProdRepo.ListAll(ctx, tx, params)
+		if err != nil {
+			return err
+		}
+		if products == nil {
+			products = []model.SupplierProductWithSupplier{}
+		}
+		resp = model.ListResponse[model.SupplierProductWithSupplier]{
+			Items:  products,
+			Total:  total,
+			Limit:  params.Limit,
+			Offset: params.Offset,
+		}
+		return nil
+	})
+	return resp, err
+}
+
 func (s *SupplierService) LinkProduct(ctx context.Context, tenantID, supplierProductID, productID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		sp, err := s.supplierProdRepo.FindByID(ctx, tx, supplierProductID)
@@ -280,16 +302,123 @@ func (s *SupplierService) LinkProduct(ctx context.Context, tenantID, supplierPro
 	})
 }
 
-// ImportProducts creates OMS products from selected supplier products and links them.
-func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplierID uuid.UUID, req model.ImportSupplierProductsRequest, actorID uuid.UUID, ip string) (*model.ImportSupplierProductsResponse, error) {
-	if err := req.Validate(); err != nil {
-		return nil, NewValidationError(err)
+// categoryInfo holds resolved OMS category name and ID.
+type categoryInfo struct {
+	Name string
+	ID   *uuid.UUID
+}
+
+// buildCategoryMap loads category mappings for a supplier and resolves them to OMS category names.
+func (s *SupplierService) buildCategoryMap(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) (map[string]categoryInfo, error) {
+	mappings, err := s.categoryMappingRepo.ListBySupplier(ctx, tx, supplierID)
+	if err != nil {
+		return nil, err
+	}
+	catMap := make(map[string]categoryInfo, len(mappings))
+	for _, m := range mappings {
+		if m.CategoryID != nil {
+			cat, catErr := s.categoryRepo.FindByID(ctx, tx, *m.CategoryID)
+			if catErr == nil && cat != nil {
+				catMap[m.SourceCategory] = categoryInfo{Name: cat.Name, ID: m.CategoryID}
+			}
+		}
+	}
+	return catMap, nil
+}
+
+// mapSupplierToProduct converts a SupplierProduct to an OMS Product using category mappings.
+func (s *SupplierService) mapSupplierToProduct(tenantID uuid.UUID, sp *model.SupplierProduct, catMap map[string]categoryInfo, defaultCategoryID *uuid.UUID) (product *model.Product, categoryID *uuid.UUID) {
+	var category *string
+	if sp.SourceCategory != nil {
+		if info, ok := catMap[*sp.SourceCategory]; ok {
+			category = &info.Name
+			categoryID = info.ID
+		}
+	}
+	if category == nil {
+		category = sp.SourceCategory
+	}
+	if categoryID == nil {
+		categoryID = defaultCategoryID
 	}
 
-	resp := &model.ImportSupplierProductsResponse{}
+	price := 0.0
+	if sp.Price != nil {
+		price = *sp.Price
+	}
+
+	metadata := sp.Metadata
+	if metadata == nil {
+		metadata = json.RawMessage("{}")
+	}
+
+	var metaMap map[string]any
+	_ = json.Unmarshal(metadata, &metaMap)
+
+	var descLong string
+	if v, ok := metaMap["description"].(string); ok {
+		descLong = v
+	}
+
+	var imageURL *string
+	if v, ok := metaMap["image_url"].(string); ok && v != "" {
+		imageURL = &v
+	}
+
+	var images json.RawMessage
+	if rawImages, ok := metaMap["images"]; ok {
+		if arr, ok := rawImages.([]any); ok && len(arr) > 0 {
+			imagesArr, _ := json.Marshal(arr)
+			images = imagesArr
+		}
+	}
+	if images == nil && imageURL != nil {
+		imagesArr, _ := json.Marshal([]string{*imageURL})
+		images = imagesArr
+	}
+	if images == nil {
+		images = json.RawMessage("[]")
+	}
+
+	var weight *float64
+	if v, ok := metaMap["weight"].(float64); ok && v > 0 {
+		weight = &v
+	}
+
+	var tags []string
+	if v, ok := metaMap["brand"].(string); ok && v != "" {
+		tags = append(tags, v)
+	}
+	if tags == nil {
+		tags = []string{}
+	}
+
+	product = &model.Product{
+		ID:              uuid.New(),
+		TenantID:        tenantID,
+		Name:            sp.Name,
+		SKU:             sp.SKU,
+		EAN:             sp.EAN,
+		Price:           price,
+		StockQuantity:   sp.StockQuantity,
+		Source:          "supplier",
+		Category:        category,
+		DescriptionLong: descLong,
+		ImageURL:        imageURL,
+		Images:          images,
+		Weight:          weight,
+		Tags:            tags,
+		Metadata:        metadata,
+	}
+	return product, categoryID
+}
+
+// ImportSingleProduct imports a single supplier product into the OMS catalog and returns the created product.
+// If the supplier product is already linked, it returns the existing product.
+func (s *SupplierService) ImportSingleProduct(ctx context.Context, tenantID, supplierID, supplierProductID uuid.UUID, actorID uuid.UUID, ip string) (*model.Product, error) {
+	var result *model.Product
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		// Verify supplier exists
 		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
 		if err != nil {
 			return err
@@ -298,43 +427,94 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 			return ErrSupplierNotFound
 		}
 
-		// Fetch all requested supplier products
+		sp, err := s.supplierProdRepo.FindByID(ctx, tx, supplierProductID)
+		if err != nil {
+			return err
+		}
+		if sp == nil {
+			return ErrSupplierProductNotFound
+		}
+		if sp.SupplierID != supplierID {
+			return ErrSupplierProductNotFound
+		}
+
+		// Already linked — return existing product
+		if sp.ProductID != nil {
+			result, err = s.productRepo.FindByID(ctx, tx, *sp.ProductID)
+			return err
+		}
+
+		catMap, err := s.buildCategoryMap(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+
+		product, catID := s.mapSupplierToProduct(tenantID, sp, catMap, supplier.DefaultCategoryID)
+
+		if err := s.productRepo.Create(ctx, tx, product); err != nil {
+			return fmt.Errorf("create product: %w", err)
+		}
+
+		if catID != nil {
+			if _, err := tx.Exec(ctx,
+				"UPDATE products SET category_id = $1 WHERE id = $2",
+				*catID, product.ID); err != nil {
+				s.logger.Error("failed to set product category_id",
+					"product_id", product.ID, "category_id", catID, "error", err)
+			}
+		}
+
+		if err := s.supplierProdRepo.LinkToProduct(ctx, tx, supplierProductID, product.ID); err != nil {
+			return fmt.Errorf("link product: %w", err)
+		}
+
+		result = product
+
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "supplier_product.imported",
+			EntityType: "supplier_product",
+			EntityID:   supplierProductID,
+			Changes:    map[string]string{"product_id": product.ID.String()},
+			IPAddress:  ip,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplierID uuid.UUID, req model.ImportSupplierProductsRequest, actorID uuid.UUID, ip string) (*model.ImportSupplierProductsResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	resp := &model.ImportSupplierProductsResponse{}
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err
+		}
+		if supplier == nil {
+			return ErrSupplierNotFound
+		}
+
 		spProducts, err := s.supplierProdRepo.FindByIDs(ctx, tx, req.SupplierProductIDs)
 		if err != nil {
 			return err
 		}
 
-		// Build lookup map
 		spMap := make(map[uuid.UUID]*model.SupplierProduct, len(spProducts))
 		for i := range spProducts {
 			spMap[spProducts[i].ID] = &spProducts[i]
 		}
 
-		// Load category mappings for this supplier to resolve source_category → OMS category name
-		mappings, err := s.categoryMappingRepo.ListBySupplier(ctx, tx, supplierID)
+		catMap, err := s.buildCategoryMap(ctx, tx, supplierID)
 		if err != nil {
 			return err
-		}
-
-		// Build category lookup: source_category → (name, categoryID)
-		type categoryInfo struct {
-			Name string
-			ID   *uuid.UUID
-		}
-		categoryMap := make(map[string]categoryInfo, len(mappings))
-		for _, m := range mappings {
-			if m.CategoryID != nil {
-				cat, catErr := s.categoryRepo.FindByID(ctx, tx, *m.CategoryID)
-				if catErr == nil && cat != nil {
-					categoryMap[m.SourceCategory] = categoryInfo{Name: cat.Name, ID: m.CategoryID}
-				}
-			}
-		}
-
-		// Fetch supplier's default category for fallback
-		var defaultCategoryID *uuid.UUID
-		if supplier.DefaultCategoryID != nil {
-			defaultCategoryID = supplier.DefaultCategoryID
 		}
 
 		for _, spID := range req.SupplierProductIDs {
@@ -347,13 +527,11 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 				continue
 			}
 
-			// Skip if already linked
 			if sp.ProductID != nil {
 				resp.Skipped++
 				continue
 			}
 
-			// Verify it belongs to this supplier
 			if sp.SupplierID != supplierID {
 				resp.Errors = append(resp.Errors, model.ImportSupplierProductError{
 					SupplierProductID: spID.String(),
@@ -362,91 +540,7 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 				continue
 			}
 
-			// Resolve category from mappings
-			var category *string
-			var categoryID *uuid.UUID
-			if sp.SourceCategory != nil {
-				if info, ok := categoryMap[*sp.SourceCategory]; ok {
-					category = &info.Name
-					categoryID = info.ID
-				}
-			}
-			if category == nil {
-				category = sp.SourceCategory
-			}
-			if categoryID == nil {
-				categoryID = defaultCategoryID
-			}
-
-			price := 0.0
-			if sp.Price != nil {
-				price = *sp.Price
-			}
-
-			metadata := sp.Metadata
-			if metadata == nil {
-				metadata = json.RawMessage("{}")
-			}
-
-			// Extract enrichment data from metadata
-			var metaMap map[string]any
-			_ = json.Unmarshal(metadata, &metaMap)
-
-			var descLong string
-			if v, ok := metaMap["description"].(string); ok {
-				descLong = v
-			}
-
-			var imageURL *string
-			if v, ok := metaMap["image_url"].(string); ok && v != "" {
-				imageURL = &v
-			}
-
-			var images json.RawMessage
-			if rawImages, ok := metaMap["images"]; ok {
-				if arr, ok := rawImages.([]any); ok && len(arr) > 0 {
-					imagesArr, _ := json.Marshal(arr)
-					images = imagesArr
-				}
-			}
-			if images == nil && imageURL != nil {
-				imagesArr, _ := json.Marshal([]string{*imageURL})
-				images = imagesArr
-			}
-			if images == nil {
-				images = json.RawMessage("[]")
-			}
-
-			var weight *float64
-			if v, ok := metaMap["weight"].(float64); ok && v > 0 {
-				weight = &v
-			}
-
-			var tags []string
-			if v, ok := metaMap["brand"].(string); ok && v != "" {
-				tags = append(tags, v)
-			}
-			if tags == nil {
-				tags = []string{}
-			}
-
-			product := &model.Product{
-				ID:              uuid.New(),
-				TenantID:        tenantID,
-				Name:            sp.Name,
-				SKU:             sp.SKU,
-				EAN:             sp.EAN,
-				Price:           price,
-				StockQuantity:   sp.StockQuantity,
-				Source:          "supplier",
-				Category:        category,
-				DescriptionLong: descLong,
-				ImageURL:        imageURL,
-				Images:          images,
-				Weight:          weight,
-				Tags:            tags,
-				Metadata:        metadata,
-			}
+			product, catID := s.mapSupplierToProduct(tenantID, sp, catMap, supplier.DefaultCategoryID)
 
 			if err := s.productRepo.Create(ctx, tx, product); err != nil {
 				resp.Errors = append(resp.Errors, model.ImportSupplierProductError{
@@ -456,13 +550,12 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 				continue
 			}
 
-			// Set category_id if resolved
-			if categoryID != nil {
+			if catID != nil {
 				if _, err := tx.Exec(ctx,
 					"UPDATE products SET category_id = $1 WHERE id = $2",
-					*categoryID, product.ID); err != nil {
+					*catID, product.ID); err != nil {
 					s.logger.Error("failed to set product category_id",
-						"product_id", product.ID, "category_id", categoryID, "error", err)
+						"product_id", product.ID, "category_id", catID, "error", err)
 				}
 			}
 
@@ -878,9 +971,10 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 							description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($2, ''), description_long) ELSE description_long END,
 							image_url = COALESCE(image_url, NULLIF($3, '')),
 							images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($4::jsonb, '[]'::jsonb), images) ELSE images END,
+							metadata = COALESCE(metadata, '{}'::jsonb) || $5::jsonb,
 							updated_at = NOW()
-						 WHERE id = $5`,
-						fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
+						 WHERE id = $6`,
+						fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), string(metaJSON), *sp.ProductID); err != nil {
 						s.logger.Error("failed to sync enrichment to linked product",
 							"product_id", sp.ProductID, "error", err)
 					}
@@ -894,9 +988,10 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 							description_long = CASE WHEN COALESCE(description_long, '') = '' THEN COALESCE(NULLIF($4, ''), description_long) ELSE description_long END,
 							image_url = COALESCE(image_url, NULLIF($5, '')),
 							images = CASE WHEN images IS NULL OR images = '[]'::jsonb THEN COALESCE(NULLIF($6::jsonb, '[]'::jsonb), images) ELSE images END,
+							metadata = COALESCE(metadata, '{}'::jsonb) || $7::jsonb,
 							updated_at = NOW()
-						 WHERE id = $7`,
-						fp.StockQuantity, price, fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), *sp.ProductID); err != nil {
+						 WHERE id = $8`,
+						fp.StockQuantity, price, fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), string(metaJSON), *sp.ProductID); err != nil {
 						s.logger.Error("failed to sync to linked product",
 							"product_id", sp.ProductID, "error", err)
 					}
@@ -1493,23 +1588,52 @@ func (s *SupplierService) BTPWizardSetAPIKeys(ctx context.Context, tenantID, sup
 		return nil, NewValidationError(fmt.Errorf("BTP API authentication failed: %w", err))
 	}
 
-	// Create integration with encrypted credentials
+	// Create or update BTP integration with encrypted credentials
 	credJSON, _ := json.Marshal(map[string]string{
 		"username": req.PublicKey,
 		"password": req.PrivateKey,
 		"base_url": req.BaseURL,
 	})
-	integrationReq := model.CreateIntegrationRequest{
-		Provider:    "btp",
-		Credentials: credJSON,
-	}
-	integ, err := s.integrationSvc.Create(ctx, tenantID, integrationReq, actorID, ip)
-	if err != nil {
-		return nil, fmt.Errorf("create btp integration: %w", err)
+
+	var integ *model.Integration
+	credRaw := json.RawMessage(credJSON)
+
+	if supplier.IntegrationID != nil {
+		// Supplier already linked to integration — update credentials
+		var integErr error
+		integ, integErr = s.integrationSvc.Update(ctx, tenantID, *supplier.IntegrationID, model.UpdateIntegrationRequest{
+			Credentials: &credRaw,
+		}, actorID, ip)
+		if integErr != nil {
+			return nil, fmt.Errorf("update btp integration: %w", integErr)
+		}
+	} else {
+		// Try to find existing orphaned BTP integration (e.g. from a previously deleted supplier)
+		_, existing, _ := s.integrationSvc.GetDecryptedCredentialsByProvider(ctx, tenantID, "btp")
+		if existing != nil {
+			// Reuse existing BTP integration — update its credentials
+			var integErr error
+			integ, integErr = s.integrationSvc.Update(ctx, tenantID, existing.ID, model.UpdateIntegrationRequest{
+				Credentials: &credRaw,
+			}, actorID, ip)
+			if integErr != nil {
+				return nil, fmt.Errorf("update orphaned btp integration: %w", integErr)
+			}
+		} else {
+			// No existing BTP integration — create new
+			var integErr error
+			integ, integErr = s.integrationSvc.Create(ctx, tenantID, model.CreateIntegrationRequest{
+				Provider:    "btp",
+				Credentials: credJSON,
+			}, actorID, ip)
+			if integErr != nil {
+				return nil, fmt.Errorf("create btp integration: %w", integErr)
+			}
+		}
 	}
 
 	// Link integration to supplier and advance step
-	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := s.supplierRepo.Update(ctx, tx, supplierID, model.UpdateSupplierRequest{
 			IntegrationID: &integ.ID,
 		}); err != nil {
@@ -1528,8 +1652,7 @@ func (s *SupplierService) BTPWizardSetAPIKeys(ctx context.Context, tenantID, sup
 			EntityID:   supplierID,
 			IPAddress:  ip,
 		})
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 

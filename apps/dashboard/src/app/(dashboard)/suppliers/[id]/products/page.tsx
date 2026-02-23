@@ -11,14 +11,16 @@ import {
   Trash2,
   Unlink,
   Image as ImageIcon,
-  X,
   Eye,
+  ShoppingBag,
+  Loader2,
 } from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useSupplier,
   useSupplierProducts,
   useImportSupplierProducts,
+  useImportSingleProduct,
   useSupplierSourceCategories,
   useBulkDeleteSupplierProducts,
   useUnlinkSupplierProduct,
@@ -57,6 +59,7 @@ export default function SupplierProductsPage() {
 
   const { data: supplier, isLoading: supplierLoading } = useSupplier(id);
   const importProducts = useImportSupplierProducts(id);
+  const importSingle = useImportSingleProduct(id);
   const bulkDelete = useBulkDeleteSupplierProducts(id);
   const unlinkProduct = useUnlinkSupplierProduct(id);
   const deleteProduct = useDeleteSupplierProduct(id);
@@ -70,6 +73,7 @@ export default function SupplierProductsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailProduct, setDetailProduct] = useState<SupplierProduct | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [listingLoadingId, setListingLoadingId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleSearchChange = (value: string) => {
@@ -153,6 +157,28 @@ export default function SupplierProductsPage() {
       });
     },
     [deleteProduct]
+  );
+
+  const handleListOnMarketplace = useCallback(
+    (sp: SupplierProduct) => {
+      if (sp.product_id) {
+        router.push(`/products/${sp.product_id}/listings?listing=new`);
+        return;
+      }
+      setListingLoadingId(sp.id);
+      importSingle.mutate(sp.id, {
+        onSuccess: (product) => {
+          setListingLoadingId(null);
+          setDetailProduct(null);
+          router.push(`/products/${product.id}/listings?listing=new`);
+        },
+        onError: (error) => {
+          setListingLoadingId(null);
+          toast.error(getErrorMessage(error));
+        },
+      });
+    },
+    [importSingle, router]
   );
 
   // Extract metadata helpers
@@ -259,7 +285,7 @@ export default function SupplierProductsPage() {
       {
         header: "",
         accessorKey: "id",
-        className: "w-[100px]",
+        className: "w-[130px]",
         cell: (row) => (
           <div className="flex items-center gap-1 justify-end">
             <Button
@@ -270,6 +296,20 @@ export default function SupplierProductsPage() {
               title="Podgląd"
             >
               <Eye className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => handleListOnMarketplace(row)}
+              disabled={listingLoadingId === row.id}
+              title="Wystaw na marketplace"
+            >
+              {listingLoadingId === row.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ShoppingBag className="h-3.5 w-3.5" />
+              )}
             </Button>
             {row.product_id && (
               <Button
@@ -295,7 +335,7 @@ export default function SupplierProductsPage() {
         ),
       },
     ],
-    [handleUnlink, handleDeleteSingle]
+    [handleUnlink, handleDeleteSingle, handleListOnMarketplace, listingLoadingId]
   );
 
   if (supplierLoading) return <LoadingSkeleton />;
@@ -575,6 +615,18 @@ export default function SupplierProductsPage() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2 border-t">
+                    <Button
+                      size="sm"
+                      onClick={() => handleListOnMarketplace(detailProduct)}
+                      disabled={listingLoadingId === detailProduct.id}
+                    >
+                      {listingLoadingId === detailProduct.id ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                      )}
+                      Wystaw na marketplace
+                    </Button>
                     {detailProduct.product_id ? (
                       <Button
                         variant="outline"
@@ -589,6 +641,7 @@ export default function SupplierProductsPage() {
                       </Button>
                     ) : (
                       <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => {
                           importProducts.mutate(

@@ -293,8 +293,8 @@ export const PROVIDER_CATEGORIES: Record<string, { label: string; providers: str
 
 /** Providers with dedicated setup pages — excluded from the generic "New Integration" form */
 export const PROVIDERS_WITH_DEDICATED_PAGES: Record<string, string> = {
-  allegro: "/integrations/allegro",
-  amazon: "/integrations/amazon",
+  allegro: "/marketplaces/allegro",
+  amazon: "/marketplaces/amazon",
 };
 
 export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {

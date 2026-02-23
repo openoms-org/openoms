@@ -46,6 +46,16 @@ type xmlProduct struct {
 	Sizes        xmlSizes        `xml:"sizes"`
 	Images       xmlImages       `xml:"images"`
 	Codes        []xmlCode       `xml:"code"`
+	Attrs        xmlAttrs        `xml:"attrs"`
+}
+
+type xmlAttrs struct {
+	Attrs []xmlAttr `xml:"a"`
+}
+
+type xmlAttr struct {
+	Name   string   `xml:"name,attr"`
+	Values []string `xml:"a_value"`
 }
 
 type xmlProducer struct {
@@ -161,6 +171,23 @@ func convertProduct(xp xmlProduct) Product {
 	// Producer as attribute
 	if xp.Producer.Name != "" {
 		p.Attributes["producer"] = xp.Producer.Name
+	}
+
+	// Product attributes from <attrs><a name="..."><a_value>...</a_value></a></attrs>
+	for _, attr := range xp.Attrs.Attrs {
+		name := strings.TrimSpace(attr.Name)
+		if name == "" {
+			continue
+		}
+		values := make([]string, 0, len(attr.Values))
+		for _, v := range attr.Values {
+			if v = strings.TrimSpace(v); v != "" {
+				values = append(values, v)
+			}
+		}
+		if len(values) > 0 {
+			p.Attributes[name] = strings.Join(values, ", ")
+		}
 	}
 
 	// Size data (stock, weight, price override)

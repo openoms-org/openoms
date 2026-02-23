@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -40,6 +40,8 @@ import {
   useCreateAllegroReturnPolicy,
   useCreateAllegroWarranty,
   useAutoGenerateShippingRate,
+  useAllegroProductSearch,
+  useAllegroListingSearch,
 } from "@/hooks/use-allegro";
 import type {
   AllegroCategory,
@@ -47,7 +49,8 @@ import type {
   AllegroMatchingCategory,
   CreateProductListingRequest,
 } from "@/hooks/use-allegro";
-import type { Product, ProductListing } from "@/types/api";
+import Image from "next/image";
+import type { Product, ProductListing, Integration } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -152,7 +155,15 @@ export default function ProductListingsPage() {
   const params = useParams<{ id: string }>();
   const { data: product } = useProduct(params.id);
   const { data: listings, isLoading } = useProductListings(params.id);
+
+  // Auto-open wizard when redirected with ?listing=new
+  const searchParams = useSearchParams();
   const [showCreate, setShowCreate] = useState(false);
+  useEffect(() => {
+    if (searchParams.get("listing") === "new") {
+      setShowCreate(true);
+    }
+  }, [searchParams]);
   const deleteListing = useDeleteProductListing(params.id);
   const syncListing = useSyncProductListing(params.id);
   const updateSyncMode = useUpdateListingSyncMode(params.id);
@@ -176,7 +187,7 @@ export default function ProductListingsPage() {
           </div>
           <Button onClick={() => setShowCreate(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Wystaw na Allegro
+            Wystaw na marketplace
           </Button>
         </div>
 
@@ -293,7 +304,7 @@ export default function ProductListingsPage() {
 
         {/* Create dialog */}
         {showCreate && product && (
-          <CreateAllegroListingDialog
+          <CreateListingWizard
             product={product}
             onClose={() => setShowCreate(false)}
           />
@@ -405,10 +416,10 @@ function ListingRow({
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
-          {listing.external_id && (
+          {(listing.url || listing.external_id) && (
             <Button variant="ghost" size="sm" asChild>
               <a
-                href={`https://allegro.pl/oferta/${listing.external_id}`}
+                href={listing.url || `https://allegro.pl/i${listing.external_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -429,7 +440,90 @@ function ListingRow({
   );
 }
 
-// ===================== Create Dialog =====================
+// ===================== Marketplace Picker =====================
+
+const MARKETPLACE_PROVIDERS = [
+  { key: "allegro", name: "Allegro", logo: "/logos/allegro.svg", description: "Wystawianie ofert na Allegro.pl" },
+  { key: "woocommerce", name: "WooCommerce", logo: "/logos/woocommerce.svg", description: "Publikacja produktu w sklepie WooCommerce" },
+] as const;
+
+function CreateListingWizard({
+  product,
+  onClose,
+}: {
+  product: Product;
+  onClose: () => void;
+}) {
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const { data: integrations } = useIntegrations();
+
+  // Filter to only providers that have active integrations
+  const availableProviders = useMemo(() => {
+    if (!integrations) return [];
+    const providerSet = new Set(integrations.map((i) => i.provider));
+    return MARKETPLACE_PROVIDERS.filter((mp) => providerSet.has(mp.key));
+  }, [integrations]);
+
+  // Show picker always — user should explicitly choose the marketplace
+
+  if (selectedProvider === "allegro") {
+    return <CreateAllegroListingDialog product={product} onClose={onClose} />;
+  }
+
+  // Marketplace picker step
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Wystaw na marketplace</DialogTitle>
+          <DialogDescription>
+            Wybierz marketplace, na którym chcesz wystawić produkt &quot;{product.name}&quot;
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-4">
+          {availableProviders.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Brak skonfigurowanych integracji marketplace. Przejdź do{" "}
+              <Link href="/integrations" className="text-primary hover:underline">
+                Integracji
+              </Link>
+              , aby dodać marketplace.
+            </p>
+          )}
+          {availableProviders.map((mp) => (
+            <button
+              key={mp.key}
+              type="button"
+              className="flex items-start gap-4 rounded-xl border p-4 text-left transition-colors hover:bg-muted/50"
+              onClick={() => setSelectedProvider(mp.key)}
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Image
+                  src={mp.logo}
+                  alt={mp.name}
+                  width={24}
+                  height={24}
+                  className="h-6 w-6 object-contain"
+                />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium">{mp.name}</p>
+                <p className="text-sm text-muted-foreground">{mp.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Anuluj
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ===================== Allegro Create Dialog =====================
 
 function CreateAllegroListingDialog({
   product,
@@ -499,6 +593,99 @@ function CreateAllegroListingDialog({
     selectedCategoryId
   );
 
+  // --- Auto-lookup: catalog → listing search → matching-categories ---
+  const [catalogFallbackToName, setCatalogFallbackToName] = useState(false);
+  const [catalogDone, setCatalogDone] = useState(false);
+  const catalogSearchPhrase = useMemo(() => {
+    if (!product.name) return "";
+    const words = product.name.split(/[\s\-–—]+/).filter(Boolean);
+    return words.slice(0, 5).join(" ");
+  }, [product.name]);
+  const catalogSearchParams = useMemo(() => {
+    if (catalogDone) return undefined; // stop fetching once resolved
+    if (product.ean && !catalogFallbackToName) return { phrase: product.ean, mode: "GTIN", limit: 1 };
+    if (catalogSearchPhrase) return { phrase: catalogSearchPhrase, limit: 5 };
+    return undefined;
+  }, [product.ean, catalogSearchPhrase, catalogFallbackToName, catalogDone]);
+  const { data: catalogResult, isError: catalogError, isLoading: catalogLoading } = useAllegroProductSearch(catalogSearchParams);
+  const catalogProduct = catalogResult?.products?.[0];
+
+  // Search marketplace offers by EAN (fires in parallel, used as parameter fallback)
+  const { data: listingResult } = useAllegroListingSearch(product.ean || undefined);
+  const listingOffer = useMemo(() => {
+    if (!listingResult?.items) return undefined;
+    return listingResult.items.regular?.[0] ?? listingResult.items.promoted?.[0];
+  }, [listingResult]);
+
+  // Fallback: EAN empty → try by name
+  useEffect(() => {
+    if (catalogFallbackToName || catalogDone || !product.ean) return;
+    if (catalogError || (catalogResult && catalogResult.products.length === 0)) {
+      setCatalogFallbackToName(true);
+    }
+  }, [catalogResult, catalogError, catalogFallbackToName, catalogDone, product.ean]);
+
+  // Mark catalog done when name search also finishes
+  useEffect(() => {
+    if (catalogDone) return;
+    if (catalogLoading) return;
+    if (!catalogFallbackToName && product.ean) return; // still on EAN phase
+    // Name search (or no-EAN search) finished
+    if (catalogResult !== undefined || catalogError) {
+      setCatalogDone(true);
+    }
+  }, [catalogResult, catalogError, catalogLoading, catalogFallbackToName, catalogDone, product.ean]);
+
+  // Matching-categories fallback: fires when catalog AND listing found nothing
+  const matchingQuery = useMemo(() => {
+    if (!catalogDone || catalogProduct) return ""; // catalog found something, or not done yet
+    if (listingOffer?.category?.id) return ""; // listing search found something
+    return catalogSearchPhrase;
+  }, [catalogDone, catalogProduct, listingOffer, catalogSearchPhrase]);
+  const { data: matchingResult } = useAllegroCategorySearch(matchingQuery);
+  const [autoApplied, setAutoApplied] = useState(false);
+
+  // Auto-select category from catalog product → listing offer → matching-categories
+  useEffect(() => {
+    if (autoApplied || selectedCategoryId) return;
+
+    // Option A: catalog product found — use its category + params
+    if (catalogProduct?.category?.id) {
+      setSelectedCategoryId(catalogProduct.category.id);
+      setSelectedCategoryName(catalogProduct.name);
+      setAutoApplied(true);
+      setStep(2);
+      toast.success("Znaleziono produkt w katalogu Allegro — kategoria i parametry uzupelnione automatycznie");
+      return;
+    }
+
+    // Option B: listing search found an existing offer — use its category + params
+    if (catalogDone && listingOffer?.category?.id) {
+      setSelectedCategoryId(listingOffer.category.id);
+      setSelectedCategoryName(listingOffer.name);
+      setAutoApplied(true);
+      setStep(2);
+      toast.success("Znaleziono oferte na Allegro — kategoria i parametry pobrane automatycznie");
+      return;
+    }
+
+    // Option C: matching-categories returned a suggestion
+    if (catalogDone && matchingResult?.matchingCategories?.length) {
+      const best = matchingResult.matchingCategories[0];
+      setSelectedCategoryId(best.id);
+      setSelectedCategoryName(best.name);
+      setAutoApplied(true);
+      setStep(2);
+      toast.success(`Zasugerowano kategorie: ${best.name}`);
+      return;
+    }
+
+    // Option D: everything tried, nothing found
+    if (catalogDone && matchingResult !== undefined && !matchingResult?.matchingCategories?.length) {
+      setAutoApplied(true); // give up, user picks manually
+    }
+  }, [catalogProduct, catalogDone, listingOffer, matchingResult, autoApplied, selectedCategoryId]);
+
   // Auto-fill parameters from product data when category params load
   useEffect(() => {
     if (!paramsData?.parameters?.length) return;
@@ -521,17 +708,79 @@ function CreateAllegroListingDialog({
 
     const autoValues: Record<string, { valuesIds?: string[]; values?: string[] }> = {};
 
+    // Alias map: supplier attribute names → Allegro parameter names
+    const PARAM_ALIASES: Record<string, string[]> = {
+      "marka": ["producent", "brand", "manufacturer", "firma"],
+      "producent": ["marka", "brand", "manufacturer"],
+      "kolor": ["kolor podstawowy", "color", "colour", "barwa"],
+      "materiał": ["materiał wykonania", "tworzywo", "material"],
+      "rozmiar": ["wymiar", "size", "wielkość"],
+      "waga": ["masa", "weight", "gramatura"],
+      "wzór": ["wzór dominujący", "deseń", "pattern"],
+      "typ": ["rodzaj", "type", "kind"],
+      "model": ["numer modelu", "model name"],
+      "pojemność": ["pojemność [mah]", "capacity"],
+      "szerokość": ["width"],
+      "wysokość": ["height"],
+      "długość": ["length", "głębokość"],
+      "średnica": ["diameter"],
+    };
+
+    // Build reverse alias map: alias → canonical name
+    const aliasToCanonical = new Map<string, string>();
+    for (const [canonical, aliases] of Object.entries(PARAM_ALIASES)) {
+      aliasToCanonical.set(canonical, canonical);
+      for (const alias of aliases) {
+        aliasToCanonical.set(alias, canonical);
+      }
+    }
+
+    // Find supplier attribute value for a given Allegro parameter name
+    const findSupplierAttrValue = (paramName: string): string | undefined => {
+      const paramLower = paramName.toLowerCase();
+      // Exact match
+      if (supplierAttrsLower[paramLower]) return supplierAttrsLower[paramLower];
+      // Alias match: check if param name or its aliases match any supplier attr
+      const canonical = aliasToCanonical.get(paramLower);
+      if (canonical) {
+        // Check canonical name and all its aliases against supplier attrs
+        if (supplierAttrsLower[canonical]) return supplierAttrsLower[canonical];
+        for (const alias of PARAM_ALIASES[canonical] ?? []) {
+          if (supplierAttrsLower[alias]) return supplierAttrsLower[alias];
+        }
+      }
+      // Partial match: supplier attr key contains param name or vice versa
+      for (const [attrKey, attrVal] of Object.entries(supplierAttrsLower)) {
+        if (attrKey.includes(paramLower) || paramLower.includes(attrKey)) {
+          return attrVal;
+        }
+      }
+      return undefined;
+    };
+
     const tryDictMatch = (
       param: AllegroCategoryParameter,
       text: string
     ): boolean => {
       if (param.type !== "dictionary" || !param.dictionary?.length) return false;
-      const lower = text.toLowerCase();
-      const match = param.dictionary.find(
+      const lower = text.toLowerCase().trim();
+      // Exact match
+      const exact = param.dictionary.find(
         (d) => d.value.toLowerCase() === lower
       );
-      if (match) {
-        autoValues[param.id] = { valuesIds: [match.id] };
+      if (exact) {
+        autoValues[param.id] = { valuesIds: [exact.id] };
+        return true;
+      }
+      // Partial match: dict value contains our text or vice versa
+      const partial = param.dictionary.find(
+        (d) => {
+          const dLower = d.value.toLowerCase();
+          return dLower.includes(lower) || lower.includes(dLower);
+        }
+      );
+      if (partial) {
+        autoValues[param.id] = { valuesIds: [partial.id] };
         return true;
       }
       return false;
@@ -558,8 +807,28 @@ function CreateAllegroListingDialog({
       }
     }
 
+    // Build catalog parameter lookup by ID (product catalog OR listing offer)
+    const catalogParamMap = new Map<string, { values?: string[]; valuesIds?: string[] }>();
+    const paramSource = catalogProduct?.parameters ?? listingOffer?.parameters;
+    if (paramSource) {
+      for (const cp of paramSource) {
+        if (cp.valuesIds?.length) {
+          catalogParamMap.set(cp.id, { valuesIds: cp.valuesIds });
+        } else if (cp.values?.length) {
+          catalogParamMap.set(cp.id, { values: cp.values });
+        }
+      }
+    }
+
     for (const param of paramsData.parameters) {
       const nameLower = param.name.toLowerCase();
+
+      // Priority 0: Apply parameters from Allegro catalog (most reliable)
+      const catalogParam = catalogParamMap.get(param.id);
+      if (catalogParam) {
+        autoValues[param.id] = catalogParam;
+        continue;
+      }
 
       // Priority 1: Apply saved supplier mappings
       const mapping = savedMappingMap.get(param.id);
@@ -614,12 +883,16 @@ function CreateAllegroListingDialog({
       if (
         (nameLower === "marka" ||
           nameLower.includes("producent") ||
-          nameLower === "brand") &&
+          nameLower === "brand" ||
+          nameLower === "manufacturer") &&
         param.type === "dictionary" &&
         param.dictionary?.length &&
         brand
       ) {
-        tryDictMatch(param, brand);
+        if (!tryDictMatch(param, brand)) {
+          // Brand not in dictionary — set as free text if param allows it
+          autoValues[param.id] = { values: [brand] };
+        }
         continue;
       }
 
@@ -638,10 +911,11 @@ function CreateAllegroListingDialog({
         continue;
       }
 
-      // Numer katalogowy (Catalog/part number) — fill from SKU
+      // Numer katalogowy / Kod producenta (Catalog/part number) — fill from SKU
       if (
         (nameLower.includes("numer katalogowy") ||
           nameLower.includes("numer producenta") ||
+          nameLower.includes("kod producenta") ||
           nameLower.includes("mpn")) &&
         product.sku
       ) {
@@ -673,10 +947,17 @@ function CreateAllegroListingDialog({
         continue;
       }
 
-      // Fallback: match supplier XML attributes (Specification/Attributes)
-      // e.g. XML has <Attribute><Name>Kolor</Name><Values><Value>Czerwony</Value></Values></Attribute>
-      // Allegro parameter "Kolor" (dictionary) → try to match "Czerwony"
-      const attrValue = supplierAttrsLower[nameLower];
+      // Kod taryfy celnej (CN code) — fill from supplier cn_code attribute
+      if (
+        (nameLower.includes("taryf") || nameLower.includes("cn code")) &&
+        supplierAttrsLower["cn_code"]
+      ) {
+        autoValues[param.id] = { values: [supplierAttrsLower["cn_code"]] };
+        continue;
+      }
+
+      // Fallback: match supplier XML attributes with alias + partial matching
+      const attrValue = findSupplierAttrValue(param.name);
       if (attrValue) {
         if (param.type === "dictionary" && param.dictionary?.length) {
           tryDictMatch(param, attrValue);
@@ -685,6 +966,7 @@ function CreateAllegroListingDialog({
         }
         continue;
       }
+
     }
 
     if (Object.keys(autoValues).length > 0) {
@@ -696,7 +978,7 @@ function CreateAllegroListingDialog({
         return merged;
       });
     }
-  }, [paramsData, product.ean, product.sku, product.weight, product.tags, product.metadata, savedMappings]);
+  }, [paramsData, product.ean, product.sku, product.weight, product.tags, product.metadata, savedMappings, catalogProduct, listingOffer]);
 
   // Category navigation
   const handleCategoryClick = (cat: AllegroCategory) => {
@@ -781,7 +1063,20 @@ function CreateAllegroListingDialog({
   };
 
   const canProceedStep1 = !!selectedCategoryId;
-  const canProceedStep2 = true;
+
+  // Validate all required parameters have values
+  const missingRequiredParams = useMemo(() => {
+    if (!paramsData?.parameters?.length) return [];
+    return paramsData.parameters.filter((p) => {
+      if (!p.required) return false;
+      const val = paramValues[p.id];
+      if (!val) return true;
+      const hasValues = val.values?.some((v) => v.trim() !== "");
+      const hasIds = val.valuesIds?.some((v) => v.trim() !== "");
+      return !hasValues && !hasIds;
+    });
+  }, [paramsData, paramValues]);
+  const canProceedStep2 = missingRequiredParams.length === 0;
   const canProceedStep3 =
     !!shippingRateId && !!returnPolicyId && !!warrantyId;
 
@@ -908,7 +1203,7 @@ function CreateAllegroListingDialog({
                       size="sm"
                       asChild
                     >
-                      <Link href="/integrations/allegro">
+                      <Link href="/marketplaces/allegro">
                         Przejdz do ustawien Allegro
                       </Link>
                     </Button>
@@ -995,6 +1290,18 @@ function CreateAllegroListingDialog({
                     }
                   />
                 ))}
+                {missingRequiredParams.length > 0 && (
+                  <div className="rounded-md border border-destructive/50 bg-destructive/5 p-3 text-sm">
+                    <p className="font-medium text-destructive mb-1">
+                      Brakuje wymaganych parametrow ({missingRequiredParams.length}):
+                    </p>
+                    <ul className="list-disc list-inside text-muted-foreground">
+                      {missingRequiredParams.map((p) => (
+                        <li key={p.id}>{p.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1315,7 +1622,7 @@ function Step3DeliveryPolicies({
             </Button>
           ) : null}
           <Link
-            href="/integrations/allegro/delivery"
+            href="/marketplaces/allegro/delivery"
             className="text-primary hover:underline"
             target="_blank"
           >
@@ -1365,7 +1672,7 @@ function Step3DeliveryPolicies({
         <p className="text-xs text-muted-foreground">
           Nie masz polityki?{" "}
           <Link
-            href="/integrations/allegro/policies"
+            href="/marketplaces/allegro/policies"
             className="text-primary hover:underline"
             target="_blank"
           >
@@ -1415,7 +1722,7 @@ function Step3DeliveryPolicies({
         <p className="text-xs text-muted-foreground">
           Nie masz rekojmi?{" "}
           <Link
-            href="/integrations/allegro/policies"
+            href="/marketplaces/allegro/policies"
             className="text-primary hover:underline"
             target="_blank"
           >

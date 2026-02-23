@@ -18,12 +18,12 @@ export function useBundleComponents(productId: string) {
   });
 }
 
-export function useBundleStock(productId: string) {
+export function useBundleStock(productId: string, hasComponents?: boolean) {
   return useQuery({
     queryKey: ["bundles", productId, "stock"],
     queryFn: () =>
       apiClient<BundleStockResponse>(`/v1/products/${productId}/bundle/stock`),
-    enabled: !!productId,
+    enabled: !!productId && hasComponents === true,
   });
 }
 

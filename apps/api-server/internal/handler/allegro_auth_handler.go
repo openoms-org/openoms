@@ -45,7 +45,7 @@ func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.Integ
 
 // redirectURI computes the OAuth redirect URI from the frontend URL.
 func (h *AllegroAuthHandler) redirectURI() string {
-	return h.cfg.FrontendURL + "/integrations/allegro"
+	return h.cfg.FrontendURL + "/marketplaces/allegro"
 }
 
 // GetAuthURL generates an Allegro OAuth2 authorization URL.

@@ -28,7 +28,7 @@ export function AllegroErrorCard({ error, onRetry }: AllegroErrorCardProps) {
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link href="/integrations/allegro">Ustawienia Allegro</Link>
+              <Link href="/marketplaces/allegro">Ustawienia Allegro</Link>
             </Button>
             {onRetry && (
               <Button variant="ghost" size="sm" onClick={onRetry}>
