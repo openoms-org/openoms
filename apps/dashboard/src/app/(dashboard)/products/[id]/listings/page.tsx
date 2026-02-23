@@ -419,7 +419,7 @@ function ListingRow({
           {(listing.url || listing.external_id) && (
             <Button variant="ghost" size="sm" asChild>
               <a
-                href={listing.url || `https://allegro.pl/i${listing.external_id}`}
+                href={listing.url || `https://allegro.pl/moje-allegro/sprzedaz/oferty/${listing.external_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

@@ -90,10 +90,11 @@ func isAllegroSandbox(r *http.Request, integrationService *service.IntegrationSe
 	return creds.Sandbox
 }
 
-// allegroOfferURL returns the public URL for an Allegro offer.
+// allegroOfferURL returns the seller panel URL for an Allegro offer.
+// Public offer URLs require a slug we don't have, so we link to the seller's offer page.
 func allegroOfferURL(offerID string, sandbox bool) string {
 	if sandbox {
-		return "https://allegro.pl.allegrosandbox.pl/i" + offerID
+		return "https://allegro.pl.allegrosandbox.pl/moje-allegro/sprzedaz/oferty/" + offerID
 	}
-	return "https://allegro.pl/i" + offerID
+	return "https://allegro.pl/moje-allegro/sprzedaz/oferty/" + offerID
 }
