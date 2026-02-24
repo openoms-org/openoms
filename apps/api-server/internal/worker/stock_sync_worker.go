@@ -13,6 +13,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 )
 
+const stockBulkBatchSize = 100
+
+// listingStock holds the data needed to sync stock for a single product listing.
+type listingStock struct {
+	ListingID  string
+	ExternalID string
+	StockQty   int
+}
+
 type StockSyncWorker struct {
 	pool          *pgxpool.Pool
 	encryptionKey []byte
@@ -74,6 +83,8 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			}
 			defer rows.Close()
 
+			// Collect all listings into a slice
+			var listings []listingStock
 			for rows.Next() {
 				var listingID, externalID string
 				var stockOverride *int
@@ -89,37 +100,25 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 					stockQty = *stockOverride
 				}
 
-				if err := provider.UpdateStock(ctx, externalID, stockQty); err != nil {
-					w.logger.Error("stock sync: update stock failed",
-						"operation", "listing.stock_update",
-						"tenant_id", ti.TenantID,
-						"entity_id", listingID,
-						"external_id", externalID,
-						"error", err,
-					)
-					// Update listing sync status to error
-					_, _ = tx.Exec(ctx,
-						`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-						listingID, err.Error(),
-					)
-					continue
-				}
-
-				// Update listing sync status
-				_, _ = tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-					listingID,
-				)
-				w.logger.Info("worker: stock synced",
-					"operation", "listing.stock_update",
-					"tenant_id", ti.TenantID,
-					"entity_id", listingID,
-					"external_id", externalID,
-					"stock_quantity", stockQty,
-				)
-				totalSynced++
+				listings = append(listings, listingStock{
+					ListingID:  listingID,
+					ExternalID: externalID,
+					StockQty:   stockQty,
+				})
 			}
-			return rows.Err()
+			if err := rows.Err(); err != nil {
+				return err
+			}
+
+			// Try bulk path if provider supports it
+			bulkProvider, hasBulk := provider.(integration.BulkStockUpdater)
+			if hasBulk {
+				totalSynced += w.syncBulk(ctx, tx, ti, bulkProvider, listings)
+			} else {
+				totalSynced += w.syncOneByOne(ctx, tx, ti, provider, listings)
+			}
+
+			return nil
 		}); err != nil {
 			w.logger.Error("stock sync: tenant error", "tenant_id", ti.TenantID, "error", err)
 			continue
@@ -128,4 +127,127 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 
 	w.logger.Info("stock sync completed", "tenants", len(tis), "synced", totalSynced)
 	return nil
+}
+
+// syncBulk sends stock updates in batches of stockBulkBatchSize.
+func (w *StockSyncWorker) syncBulk(
+	ctx context.Context,
+	tx pgx.Tx,
+	ti TenantIntegration,
+	provider integration.BulkStockUpdater,
+	listings []listingStock,
+) int {
+	synced := 0
+
+	// Build StockUpdate slice for chunking
+	updates := make([]integration.StockUpdate, len(listings))
+	for i, l := range listings {
+		updates[i] = integration.StockUpdate{
+			ExternalOfferID: l.ExternalID,
+			Quantity:        l.StockQty,
+		}
+	}
+
+	chunks := chunkStockUpdates(updates, stockBulkBatchSize)
+
+	// Process each chunk; the listing slice is indexed in parallel with the update slice
+	offset := 0
+	for _, chunk := range chunks {
+		batchListings := listings[offset : offset+len(chunk)]
+		offset += len(chunk)
+
+		if err := provider.BulkUpdateStock(ctx, chunk); err != nil {
+			w.logger.Error("stock sync: bulk update failed",
+				"operation", "listing.stock_bulk_update",
+				"tenant_id", ti.TenantID,
+				"batch_size", len(chunk),
+				"error", err,
+			)
+			// Mark all listings in this batch as error
+			for _, l := range batchListings {
+				_, _ = tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+					l.ListingID, err.Error(),
+				)
+			}
+			continue
+		}
+
+		// Mark all listings in this batch as synced
+		for _, l := range batchListings {
+			_, _ = tx.Exec(ctx,
+				`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+				l.ListingID,
+			)
+			w.logger.Info("worker: stock synced",
+				"operation", "listing.stock_update",
+				"tenant_id", ti.TenantID,
+				"entity_id", l.ListingID,
+				"external_id", l.ExternalID,
+				"stock_quantity", l.StockQty,
+			)
+		}
+		synced += len(chunk)
+	}
+
+	return synced
+}
+
+// syncOneByOne updates stock one listing at a time (fallback for providers without bulk support).
+func (w *StockSyncWorker) syncOneByOne(
+	ctx context.Context,
+	tx pgx.Tx,
+	ti TenantIntegration,
+	provider integration.MarketplaceProvider,
+	listings []listingStock,
+) int {
+	synced := 0
+
+	for _, l := range listings {
+		if err := provider.UpdateStock(ctx, l.ExternalID, l.StockQty); err != nil {
+			w.logger.Error("stock sync: update stock failed",
+				"operation", "listing.stock_update",
+				"tenant_id", ti.TenantID,
+				"entity_id", l.ListingID,
+				"external_id", l.ExternalID,
+				"error", err,
+			)
+			_, _ = tx.Exec(ctx,
+				`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+				l.ListingID, err.Error(),
+			)
+			continue
+		}
+
+		_, _ = tx.Exec(ctx,
+			`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+			l.ListingID,
+		)
+		w.logger.Info("worker: stock synced",
+			"operation", "listing.stock_update",
+			"tenant_id", ti.TenantID,
+			"entity_id", l.ListingID,
+			"external_id", l.ExternalID,
+			"stock_quantity", l.StockQty,
+		)
+		synced++
+	}
+
+	return synced
+}
+
+// chunkStockUpdates splits a slice of StockUpdate into chunks of the given size.
+func chunkStockUpdates(items []integration.StockUpdate, size int) [][]integration.StockUpdate {
+	if len(items) == 0 {
+		return nil
+	}
+	var chunks [][]integration.StockUpdate
+	for i := 0; i < len(items); i += size {
+		end := i + size
+		if end > len(items) {
+			end = len(items)
+		}
+		chunks = append(chunks, items[i:end])
+	}
+	return chunks
 }
