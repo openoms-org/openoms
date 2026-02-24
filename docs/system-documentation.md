@@ -33,15 +33,18 @@
 - **Powiadomienia** -- Email (SMTP) + SMS (Twilio/SMSAPI)
 - **RBAC** -- role z granularnymi uprawnieniami
 - **2FA/TOTP** -- dwuskladnikowe uwierzytelnianie (Google Authenticator)
-- **API REST** -- 430 endpointow z OpenAPI 3.1
-- **Dashboard** -- Next.js 16 + React 19, 124 strony, dark mode, PWA
+- **API REST** -- 453 endpointy z OpenAPI 3.1
+- **Dashboard** -- Next.js 16 + React 19, 131 stron, dark mode, PWA
 - **AI** -- auto-kategoryzacja, opis, ulepszanie i tlumaczenie produktow (OpenAI)
 - **Inwentaryzacja** -- pelny cykl zycia stocktake z liczeniem pozycji
 - **Rate shopping** -- porownywanie stawek przewoznikow
-- **Allegro Listings** -- kreator ofert z 4-krokowym wizardem
+- **Marketplace Listings** -- kreator ofert z wizardem per marketplace (Allegro 4-krokowy, WooCommerce)
 - **Kanban board** -- widok zamowien w formie tablicy Kanban
 - **Import CSV** -- import produktow i zamowien z podgladem
 - **Command Palette** -- Cmd+K do szybkiej nawigacji i wyszukiwania
+- **Dostawcy (dropship)** -- import katalogow XML/IOF, hybrid sync (XML+API), auto-submit zamowien, wizardy konfiguracji
+- **Hierarchiczne kategorie** -- drzewo kategorii produktow z mapowaniem kategorii dostawcow
+- **Token refresh rotation** -- rotacja refresh tokenow z detekcja ponownego uzycia
 
 ### Licencja
 
@@ -301,7 +304,7 @@ OpenOMS/
         +--------------+   +----------------+
 ```
 
-### Wszystkie tabele (32)
+### Wszystkie tabele (59)
 
 | Tabela | Cel | Kluczowe kolumny |
 |--------|-----|-----------------|
@@ -324,8 +327,8 @@ OpenOMS/
 | `warehouse_document_items` | Pozycje dok. | product_id, quantity, unit_price |
 | `stocktakes` | Inwentaryzacja | warehouse_id, status, started_at, completed_at, created_by |
 | `stocktake_items` | Pozycje inwent. | product_id, expected_quantity, counted_quantity, difference |
-| `suppliers` | Dostawcy | name, feed_url, feed_format, last_sync_at |
-| `supplier_products` | Katalog dostawcy | external_id, price, stock_quantity, ean |
+| `suppliers` | Dostawcy | name, feed_url, feed_format, feed_type (xml/api/hybrid), integration_id, last_sync_at |
+| `supplier_products` | Katalog dostawcy | external_id, price, stock_quantity, ean, weight, images JSONB, metadata JSONB, product_id (link do OMS) |
 | `automation_rules` | Reguly automatyzacji | trigger_event, conditions JSONB, actions JSONB, priority |
 | `automation_rule_logs` | Logi regul | conditions_met, actions_executed, error |
 | `automation_delayed_actions` | Opoznione akcje | rule_id, order_id, execute_at, executed, action_data JSONB |
@@ -337,6 +340,33 @@ OpenOMS/
 | `webhook_events` | Eventy (przychodzace) | provider, event_type, payload JSONB |
 | `webhook_deliveries` | Dostawy (wychodzace) | url, event_type, response_code |
 | `audit_log` | Dziennik audytu | action, entity_type, entity_id, ip_address |
+| `product_categories` | Hierarchiczne kategorie | name, parent_id, path, position |
+| `allegro_parameter_mappings` | Mapowania parametrow Allegro per dostawca | supplier_id, allegro_category_id, parameter_id, source_field |
+| `supplier_category_mappings` | Mapowania kategorii dostawca->OMS | supplier_id, supplier_category, product_category_id |
+| `supplier_messages` | Komunikacja z dostawcami | supplier_id, direction, subject, body |
+| `supplier_portal_tokens` | Tokeny portalu dostawcy | supplier_id, token, expires_at |
+| `dropship_orders` | Zamowienia dropship | order_id, supplier_id, status, external_id |
+| `dropship_order_items` | Pozycje zamowien dropship | dropship_order_id, supplier_product_id, quantity |
+| `listing_sync_configs` | Konfiguracja sync listingow | integration_id, product_id, sync_price, sync_stock |
+| `listing_sync_log` | Log synchronizacji listingow | listing_id, event_type, status |
+| `customer_segments` | Segmenty klientow | name, conditions JSONB |
+| `customer_segment_members` | Czlonkowie segmentow | segment_id, customer_id |
+| `customer_loyalty` | Lojalnosc klienta | customer_id, points, tier |
+| `loyalty_programs` | Programy lojalnosciowe | name, rules JSONB |
+| `payment_transactions` | Transakcje platnosci | order_id, amount, provider, status |
+| `payment_settlements` | Rozliczenia platnosci | provider, period, total_amount |
+| `pick_pack_sessions` | Sesje pick & pack | warehouse_id, status, started_by |
+| `pick_pack_items` | Pozycje pick & pack | session_id, order_id, product_id, quantity |
+| `purchase_orders` | Zamowienia zakupu | supplier_id, status, total_amount |
+| `purchase_order_items` | Pozycje zamowien zakupu | product_id, quantity, unit_price |
+| `recurring_orders` | Zamowienia cykliczne | customer_id, schedule, next_execution |
+| `recurring_order_items` | Pozycje zamowien cyklicznych | product_id, quantity, price |
+| `repricing_rules` | Reguly automatycznego pricingu | product_id, strategy, min_price, max_price |
+| `repricing_log` | Log zmian cen | rule_id, old_price, new_price |
+| `stock_sync_channels` | Kanaly synchronizacji stanow | integration_id, warehouse_id, direction |
+| `stock_sync_events` | Eventy sync stanow | channel_id, product_id, quantity_change |
+| `invitations` | Zaproszenia uzytkownikow | email, role_id, token, expires_at |
+| `schema_migrations` | Wersja migracji DB | version, dirty |
 
 ### Funkcje SECURITY DEFINER (bypass RLS)
 
@@ -629,9 +659,41 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Rec
 | GET | `/v1/suppliers/{id}` | Szczegoly |
 | PATCH | `/v1/suppliers/{id}` | Aktualizacja |
 | DELETE | `/v1/suppliers/{id}` | Usuniecie |
-| POST | `/v1/suppliers/{id}/sync` | Synchronizacja |
+| POST | `/v1/suppliers/{id}/sync` | Synchronizacja (XML/IOF/CSV/API) |
 | GET | `/v1/suppliers/{id}/products` | Produkty dostawcy |
+| GET | `/v1/suppliers/{id}/products/categories` | Kategorie zrodlowe dostawcy |
+| POST | `/v1/suppliers/{id}/products/import` | Import produktow do katalogu OMS |
+| POST | `/v1/suppliers/{id}/products/bulk-delete` | Masowe usuwanie produktow dostawcy |
 | POST | `/v1/suppliers/{id}/products/{spid}/link` | Powiazanie z katalogiem |
+| POST | `/v1/suppliers/{id}/products/{spid}/unlink` | Odlaczenie od katalogu |
+| POST | `/v1/suppliers/{id}/products/{spid}/import-single` | Import pojedynczego produktu |
+| DELETE | `/v1/suppliers/{id}/products/{spid}` | Usuniecie produktu dostawcy |
+| GET | `/v1/suppliers/{id}/category-mappings` | Mapowania kategorii |
+| PUT | `/v1/suppliers/{id}/category-mappings` | Upsert mapowania kategorii |
+| DELETE | `/v1/suppliers/{id}/category-mappings/{mid}` | Usuniecie mapowania |
+| GET | `/v1/suppliers/{id}/allegro-mappings` | Mapowania parametrow Allegro |
+| PUT | `/v1/suppliers/{id}/allegro-mappings` | Bulk upsert mapowania Allegro |
+| DELETE | `/v1/suppliers/{id}/allegro-mappings/{mid}` | Usuniecie mapowania Allegro |
+| GET | `/v1/suppliers/{id}/allegro-mappings/categories` | Kategorie z mapowaniami Allegro |
+| GET | `/v1/suppliers/{id}/attributes` | Atrybuty dostawcy (z XML) |
+| POST | `/v1/suppliers/btp-wizard/start` | BTP wizard -- start importu |
+| GET | `/v1/suppliers/btp-wizard/{id}/progress` | BTP wizard -- postep importu |
+| POST | `/v1/suppliers/btp-wizard/{id}/api-keys` | BTP wizard -- klucze API |
+| POST | `/v1/suppliers/btp-wizard/{id}/sync-settings` | BTP wizard -- ustawienia sync |
+| POST | `/v1/suppliers/{id}/portal/generate-link` | Wygenerowanie linku portalu dostawcy |
+| POST | `/v1/suppliers/{id}/portal/revoke` | Cofniecie dostepu do portalu |
+| GET | `/v1/suppliers/{id}/portal/status` | Status portalu dostawcy |
+
+#### Portal dostawcy (publiczny, token)
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/supplier-portal/orders` | Lista zamowien dla dostawcy |
+| GET | `/v1/supplier-portal/orders/{id}` | Szczegoly zamowienia |
+| POST | `/v1/supplier-portal/orders/{id}/confirm` | Potwierdzenie zamowienia |
+| POST | `/v1/supplier-portal/orders/{id}/ship` | Oznaczenie jako wyslane |
+| POST | `/v1/supplier-portal/orders/{id}/messages` | Dodanie wiadomosci |
+| GET | `/v1/supplier-portal/orders/{id}/messages` | Lista wiadomosci |
 
 #### Magazyny (admin)
 
@@ -883,8 +945,12 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Rec
 | `/integrations/allegro/delivery` | Ustawienia dostawy Allegro |
 | `/integrations/amazon` | Setup Amazon |
 | `/suppliers` | Dostawcy |
-| `/suppliers/new` | Nowy dostawca |
+| `/suppliers/new` | Nowy dostawca (wizard) |
 | `/suppliers/[id]` | Szczegoly dostawcy |
+| `/suppliers/[id]/products` | Katalog produktow dostawcy |
+| `/suppliers/[id]/categories` | Mapowania kategorii dostawcy |
+| `/suppliers/[id]/allegro-mappings` | Mapowania parametrow Allegro |
+| `/suppliers/[id]/settings` | Ustawienia synchronizacji dostawcy |
 
 #### Ustawienia (admin)
 
@@ -1029,7 +1095,7 @@ Pulpit (Dashboard)
 
 ---
 
-## 7. Pakiety SDK (21)
+## 7. Pakiety SDK (27)
 
 ### Order Engine (packages/order-engine/)
 
@@ -1086,6 +1152,10 @@ Standalone maszyna stanow zamowien i przesylek:
 | olx-go-sdk | OLX | REST | Ogloszenia |
 | mirakl-go-sdk | Mirakl/Empik | REST | Seller network |
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
+| shoper-go-sdk | Shoper | REST | Zamowienia, produkty |
+| prestashop-go-sdk | PrestaShop | REST | Zamowienia, produkty |
+| shopify-go-sdk | Shopify | REST | Zamowienia, produkty |
+| btp-go-sdk | BTP.pro | Basic Auth | Katalog dostawcy, zamowienia dropship |
 
 ### Carrier SDK-i
 
@@ -1105,9 +1175,11 @@ Standalone maszyna stanow zamowien i przesylek:
 | SDK | Provider | Cel |
 |-----|----------|-----|
 | fakturownia-go-sdk | Fakturownia | Faktury |
+| infakt-go-sdk | InFakt | Faktury |
+| wfirma-go-sdk | wFirma | Faktury |
 | ksef-go-sdk | KSeF | Krajowy System e-Faktur |
 | smsapi-go-sdk | SMSAPI | Powiadomienia SMS |
-| iof-parser | IOF/CSV | Parser feedow dostawcow |
+| iof-parser | IOF/CSV/XML | Parser feedow dostawcow (IOF 3.0, XML, CSV) |
 
 ---
 
@@ -1513,22 +1585,28 @@ Oferta opublikowana na Allegro
 
 ---
 
-## 11. Background Workers (15 plikow)
+## 11. Background Workers (19 plikow)
 
-### Workery (11 zarejestrowanych)
+### Workery (16 zarejestrowanych)
 
 | Worker | Interwal | Cel |
 |--------|----------|-----|
 | AllegroOrderPoller | 45s | Polling zamowien z Allegro |
 | AmazonOrderPoller | 45s | Polling zamowien z Amazon |
 | WooCommerceOrderPoller | 45s | Polling zamowien z WooCommerce |
+| ShoperOrderPoller | 45s | Polling zamowien z Shoper |
+| PrestaShopOrderPoller | 45s | Polling zamowien z PrestaShop |
+| ShopifyOrderPoller | 45s | Polling zamowien z Shopify |
 | TrackingPoller | 5min | Aktualizacja statusu przesylek |
 | StockSyncWorker | konfigurowalny | Sync stanow magazynowych do marketplace'ow |
-| SupplierSyncWorker | konfigurowalny | Sync katalogow dostawcow (IOF/CSV) |
+| SupplierSyncWorker | konfigurowalny | Sync katalogow dostawcow (XML/IOF/CSV/API) |
 | ExchangeRateWorker | 1/dzien | Pobranie kursow z NBP |
 | OAuthRefresher | 1/dzien | Odswiezenie tokenow OAuth (Allegro, Amazon) |
 | KSeFStatusWorker | 5min | Sprawdzanie statusu faktur wyslanych do KSeF |
 | DelayedActionWorker | 30s | Wykonywanie opoznionych akcji automatyzacji |
+| RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
+| RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
+| ListingSyncWorker | konfigurowalny | Synchronizacja listingow marketplace |
 
 ### Infrastruktura workerow
 
@@ -1691,22 +1769,22 @@ Haslo testowe: `password123`
 
 | Metryka | Wartosc |
 |---------|--------|
-| **Pliki Go** | 536 (w tym 81 testow) |
-| **Pliki TypeScript/TSX** | 308 |
-| **Tabele DB** | 32+ |
-| **Migracje SQL** | 64 (000001-000064, 128 plikow up/down) |
-| **Endpointy API** | 430 |
-| **Strony frontend** | 124 |
-| **Komponenty React** | 91 |
-| **Custom hooks** | 69 |
-| **Handlery Go** | 80 plikow |
-| **Serwisy Go** | 57 plikow |
-| **Repozytoria Go** | 40 plikow |
-| **Background workers** | 19 |
-| **Middleware** | 12 |
-| **Pakiety SDK** | 26 |
-| **Testy E2E** | 21 specow Playwright (119 testow) |
-| **Testy jednostkowe** | 14 vitest (frontend) |
+| **Pliki Go** | 384 (w tym 61 testow) |
+| **Pliki TypeScript/TSX** | 322 |
+| **Tabele DB** | 59 |
+| **Migracje SQL** | 5 (skonsolidowane, 10 plikow up/down) |
+| **Endpointy API** | 453 |
+| **Strony frontend** | 131 |
+| **Komponenty React** | 95 |
+| **Custom hooks** | 63 |
+| **Handlery Go** | 84 plikow |
+| **Serwisy Go** | 67 plikow |
+| **Repozytoria Go** | 43 plikow |
+| **Background workers** | 16 zarejestrowanych (19 plikow) |
+| **Middleware** | 15 |
+| **Pakiety SDK** | 27 |
+| **Testy Go** | 751 (go test ./...) |
+| **Testy E2E** | 22 specow Playwright (124 testow) |
 | **Jezyki** | Go, TypeScript, SQL |
 | **Licencja** | AGPLv3 (apps) + MIT (packages) |
 
@@ -1714,8 +1792,8 @@ Haslo testowe: `password123`
 
 | Typ testu | Status |
 |-----------|--------|
-| E2E Playwright (21 specow, 119 testow) | PASS |
-| Backend integration | PASS |
+| Backend Go tests (751 testow) | PASS |
+| E2E Playwright (22 specow, 124 testow) | PASS |
 | API contract (TS <-> Go) | PASS |
 | Load testing | 0 bledow, 1000-1800 req/s |
 | RLS isolation | PASS |
@@ -1723,5 +1801,5 @@ Haslo testowe: `password123`
 
 ---
 
-*Dokument zaktualizowany: 2026-02-19*
-*Wersja: OpenOMS v3.3*
+*Dokument zaktualizowany: 2026-02-24*
+*Wersja: OpenOMS v3.4*
