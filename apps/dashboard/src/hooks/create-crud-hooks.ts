@@ -22,7 +22,7 @@ interface CrudHooksOptions {
  * >({ resourceKey: "customers", basePath: "/v1/customers" });
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+ 
 export function createCrudHooks<
   TEntity,
   TCreate = Partial<TEntity>,

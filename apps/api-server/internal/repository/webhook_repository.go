@@ -21,4 +21,3 @@ func (r *WebhookRepository) Create(ctx context.Context, tx pgx.Tx, event *model.
 		event.ID, event.TenantID, event.Provider, event.EventType, event.Payload, event.Status,
 	).Scan(&event.CreatedAt)
 }
-
