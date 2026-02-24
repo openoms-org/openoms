@@ -154,6 +154,7 @@ func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return &p, nil
 }
 
+// FindByIDs returns products matching the given IDs in a single query.
 func (r *ProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.Product, error) {
 	if len(ids) == 0 {
 		return nil, nil
