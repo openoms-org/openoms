@@ -87,10 +87,11 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 		return err
 	}
 
-	seenOrders := make(map[string]struct{})
 	totalOrders := 0
 
 	for _, ti := range tis {
+		seenOrders := make(map[string]struct{}) // per-tenant dedup within a single poll page
+
 		credJSON, err := crypto.Decrypt(ti.Credentials, p.encryptionKey)
 		if err != nil {
 			p.logger.Error("failed to decrypt credentials", "integration_id", ti.IntegrationID, "error", err)
@@ -102,8 +103,6 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 			p.logger.Error("failed to create provider", "integration_id", ti.IntegrationID, "error", err)
 			continue
 		}
-		defer closeProvider(provider)
-
 		cursor := ""
 		if ti.SyncCursor != nil {
 			cursor = *ti.SyncCursor
@@ -231,6 +230,8 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 				)
 			}
 		}
+
+		closeProvider(provider)
 	}
 
 	p.logger.Info(p.providerName+" order poller completed", "tenants", len(tis), "orders", totalOrders)

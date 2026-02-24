@@ -34,6 +34,17 @@ func NewMarketplaceProvider(provider string, credentials json.RawMessage, settin
 	return nil, fmt.Errorf("unknown marketplace provider: %q", provider)
 }
 
+// RegisteredMarketplaceProviders returns the names of all registered marketplace providers.
+func RegisteredMarketplaceProviders() []string {
+	marketplaceFactoriesMu.RLock()
+	defer marketplaceFactoriesMu.RUnlock()
+	names := make([]string, 0, len(marketplaceFactories))
+	for name := range marketplaceFactories {
+		names = append(names, name)
+	}
+	return names
+}
+
 // CarrierProviderFactory is a constructor function for carrier providers.
 type CarrierProviderFactory func(credentials json.RawMessage, settings json.RawMessage) (CarrierProvider, error)
 
