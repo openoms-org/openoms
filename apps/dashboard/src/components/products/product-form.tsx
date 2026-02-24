@@ -25,6 +25,7 @@ import {
 import { TagInput } from "@/components/shared/tag-input";
 import { Separator } from "@/components/ui/separator";
 import type { Product, CreateProductRequest, UpdateProductRequest } from "@/types/api";
+import { normalizeProductImages } from "@/types/api";
 import { uploadFile, getErrorMessage } from "@/lib/api-client";
 import { toast } from "sonner";
 import { useProductCategories } from "@/hooks/use-product-categories";
@@ -72,7 +73,7 @@ interface ProductFormProps {
 
 export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) {
   const [imageList, setImageList] = useState<{ url: string; alt: string }[]>(
-    product?.images?.map((img) => ({ url: img.url, alt: img.alt || "" })) ?? []
+    normalizeProductImages(product?.images).map((img) => ({ url: img.url, alt: img.alt || "" }))
   );
   const [tags, setTags] = useState<string[]>(product?.tags || []);
   const [selectedCategory, setSelectedCategory] = useState<string>(product?.category || "");

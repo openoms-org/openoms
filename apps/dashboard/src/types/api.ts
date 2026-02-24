@@ -318,6 +318,19 @@ export interface ProductImage {
   position: number;
 }
 
+/** Normalize images array — backend may return strings or objects */
+export function normalizeProductImages(
+  images: (ProductImage | string)[] | null | undefined
+): ProductImage[] {
+  if (!images || !Array.isArray(images)) return [];
+  return images.map((img, i) => {
+    if (typeof img === "string") {
+      return { url: img, position: i };
+    }
+    return img;
+  });
+}
+
 export interface Product {
   id: string;
   tenant_id: string;
@@ -339,7 +352,7 @@ export interface Product {
   height?: number;
   depth?: number;
   image_url?: string;
-  images: ProductImage[];
+  images: (ProductImage | string)[];
   has_variants: boolean;
   is_bundle: boolean;
   is_dropship: boolean;

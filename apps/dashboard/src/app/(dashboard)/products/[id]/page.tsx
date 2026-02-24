@@ -67,6 +67,7 @@ import {
   useGenerateDescription,
 } from "@/hooks/use-ai";
 import type { CreateProductRequest, AISuggestion, AIDescribeRequest } from "@/types/api";
+import { normalizeProductImages } from "@/types/api";
 import { useBGRemovalStatus, useRemoveProductImageBackground } from "@/hooks/use-bg-removal";
 import { useRepricingLog } from "@/hooks/use-repricing";
 
@@ -361,7 +362,7 @@ export default function ProductDetailPage() {
                 </div>
                 {product.images && product.images.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {product.images.map((img, i) => (
+                    {normalizeProductImages(product.images).map((img, i) => (
                       <div key={i} className="relative group">
                         <img
                           src={img.url}

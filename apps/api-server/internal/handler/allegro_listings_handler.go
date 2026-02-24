@@ -614,15 +614,21 @@ func buildImages(product *model.Product) []string {
 	if product.ImageURL != nil && *product.ImageURL != "" {
 		images = append(images, *product.ImageURL)
 	}
-	// Parse Images JSON array if present
+	// Parse Images JSON array — supports both ["url", ...] and [{"url": "..."}, ...]
 	if len(product.Images) > 0 {
-		var imgList []struct {
-			URL string `json:"url"`
-		}
-		if json.Unmarshal(product.Images, &imgList) == nil {
-			for _, img := range imgList {
-				if img.URL != "" {
-					images = append(images, img.URL)
+		var raw []json.RawMessage
+		if json.Unmarshal(product.Images, &raw) == nil {
+			for _, item := range raw {
+				var s string
+				if json.Unmarshal(item, &s) == nil && s != "" {
+					images = append(images, s)
+					continue
+				}
+				var obj struct {
+					URL string `json:"url"`
+				}
+				if json.Unmarshal(item, &obj) == nil && obj.URL != "" {
+					images = append(images, obj.URL)
 				}
 			}
 		}
