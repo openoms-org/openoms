@@ -2,12 +2,17 @@ package allegro
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+// noDelay is a retryDelay function that returns 0 for use in tests.
+func noDelay(_ int) time.Duration { return 0 }
 
 func TestNewClientDefaults(t *testing.T) {
 	c := NewClient("id", "secret")
@@ -146,6 +151,7 @@ func TestDoNonDecodableErrorResponse(t *testing.T) {
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
+	c.retryDelay = noDelay
 	defer c.Close()
 
 	err := c.do(context.Background(), "GET", "/bad", nil, nil)
@@ -333,5 +339,233 @@ func TestAPIErrorUnwrap(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("Unwrap() for status %d = %v, want %v", tc.status, got, tc.want)
 		}
+	}
+}
+
+func TestRetryableStatusCode(t *testing.T) {
+	retryable := []int{429, 502, 503, 504}
+	for _, code := range retryable {
+		if !retryableStatusCode(code) {
+			t.Errorf("retryableStatusCode(%d) = false, want true", code)
+		}
+	}
+
+	nonRetryable := []int{200, 400, 401, 403, 404, 500}
+	for _, code := range nonRetryable {
+		if retryableStatusCode(code) {
+			t.Errorf("retryableStatusCode(%d) = true, want false", code)
+		}
+	}
+}
+
+func TestDefaultRetryDelay(t *testing.T) {
+	tests := []struct {
+		attempt int
+		want    time.Duration
+	}{
+		{0, 500 * time.Millisecond},
+		{1, 1000 * time.Millisecond},
+		{2, 2000 * time.Millisecond},
+	}
+	for _, tc := range tests {
+		got := defaultRetryDelay(tc.attempt)
+		if got != tc.want {
+			t.Errorf("defaultRetryDelay(%d) = %v, want %v", tc.attempt, got, tc.want)
+		}
+	}
+}
+
+func TestClient_RetryOn429(t *testing.T) {
+	var attempts atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempts.Add(1)
+		if n <= 2 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"id":"success"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithRateLimit(9999),
+	)
+	c.retryDelay = noDelay
+	defer c.Close()
+
+	var result map[string]string
+	err := c.do(context.Background(), "GET", "/test", nil, &result)
+	if err != nil {
+		t.Fatalf("do() returned error: %v", err)
+	}
+	if result["id"] != "success" {
+		t.Errorf("result[id] = %q, want %q", result["id"], "success")
+	}
+	if got := attempts.Load(); got != 3 {
+		t.Errorf("attempts = %d, want 3", got)
+	}
+}
+
+func TestClient_RetryOn5xx(t *testing.T) {
+	var attempts atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempts.Add(1)
+		if n <= 1 {
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"code":"BAD_GATEWAY","message":"Bad gateway"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"id":"ok"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithRateLimit(9999),
+	)
+	c.retryDelay = noDelay
+	defer c.Close()
+
+	var result map[string]string
+	err := c.do(context.Background(), "GET", "/test", nil, &result)
+	if err != nil {
+		t.Fatalf("do() returned error: %v", err)
+	}
+	if result["id"] != "ok" {
+		t.Errorf("result[id] = %q, want %q", result["id"], "ok")
+	}
+	if got := attempts.Load(); got != 2 {
+		t.Errorf("attempts = %d, want 2", got)
+	}
+}
+
+func TestClient_MaxRetriesExceeded(t *testing.T) {
+	var attempts atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts.Add(1)
+		w.WriteHeader(http.StatusTooManyRequests)
+		w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithRateLimit(9999),
+	)
+	c.retryDelay = noDelay
+	defer c.Close()
+
+	err := c.do(context.Background(), "GET", "/test", nil, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, ErrRateLimited) {
+		t.Errorf("expected errors.Is(err, ErrRateLimited), got %v", err)
+	}
+	// Initial attempt + maxRetries = 4 total attempts
+	if got := attempts.Load(); got != 4 {
+		t.Errorf("attempts = %d, want 4", got)
+	}
+}
+
+func TestClient_RetryOn429_DoRaw(t *testing.T) {
+	var attempts atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := attempts.Add(1)
+		if n <= 2 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`pdf-data`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithRateLimit(9999),
+	)
+	c.retryDelay = noDelay
+	defer c.Close()
+
+	data, err := c.doRaw(context.Background(), "GET", "/label", nil)
+	if err != nil {
+		t.Fatalf("doRaw() returned error: %v", err)
+	}
+	if string(data) != "pdf-data" {
+		t.Errorf("data = %q, want %q", string(data), "pdf-data")
+	}
+	if got := attempts.Load(); got != 3 {
+		t.Errorf("attempts = %d, want 3", got)
+	}
+}
+
+func TestClient_RetryRespectsContextCancellation(t *testing.T) {
+	var attempts atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts.Add(1)
+		w.WriteHeader(http.StatusTooManyRequests)
+		w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithRateLimit(9999),
+	)
+	// Use a real (tiny) delay so context cancellation can be tested
+	c.retryDelay = func(_ int) time.Duration { return 100 * time.Millisecond }
+	defer c.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	// Cancel after first attempt starts its sleep
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	err := c.do(ctx, "GET", "/test", nil, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestClient_NoRetryOnNonRetryableError(t *testing.T) {
+	var attempts atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts.Add(1)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"code":"BAD_REQUEST","message":"Invalid input"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithRateLimit(9999),
+	)
+	c.retryDelay = noDelay
+	defer c.Close()
+
+	err := c.do(context.Background(), "GET", "/test", nil, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	// 400 is not retryable, so only 1 attempt
+	if got := attempts.Load(); got != 1 {
+		t.Errorf("attempts = %d, want 1", got)
 	}
 }

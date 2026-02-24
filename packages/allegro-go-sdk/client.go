@@ -19,6 +19,7 @@ const (
 	sandboxAuthURL     = "https://allegro.pl.allegrosandbox.pl/auth/oauth"
 	defaultRateLimit   = 150
 	defaultRedirectURI = "https://localhost/callback"
+	maxRetries         = 3
 )
 
 // Client is the Allegro API client.
@@ -35,6 +36,7 @@ type Client struct {
 	tokenExpiry    time.Time
 	onTokenRefresh func(accessToken, refreshToken string, expiry time.Time)
 	rateLimiter    *rateLimiter
+	retryDelay     func(attempt int) time.Duration
 
 	Orders             *OrderService
 	Events             *EventService
@@ -78,6 +80,9 @@ func NewClient(clientID, clientSecret string, opts ...Option) *Client {
 	if c.rateLimiter == nil {
 		c.rateLimiter = newRateLimiter(defaultRateLimit)
 	}
+	if c.retryDelay == nil {
+		c.retryDelay = defaultRetryDelay
+	}
 
 	c.Orders = &OrderService{client: c}
 	c.Events = &EventService{client: c}
@@ -106,6 +111,17 @@ func (c *Client) Close() {
 	if c.rateLimiter != nil {
 		c.rateLimiter.Close()
 	}
+}
+
+// retryableStatusCode returns true for status codes that should be retried.
+func retryableStatusCode(code int) bool {
+	return code == 429 || code == 502 || code == 503 || code == 504
+}
+
+// defaultRetryDelay returns the backoff delay for a given retry attempt.
+// Delays: 500ms, 1s, 2s (exponential: 500ms << attempt).
+func defaultRetryDelay(attempt int) time.Duration {
+	return time.Duration(500<<uint(attempt)) * time.Millisecond
 }
 
 // WithHTTPClient sets a custom HTTP client.
@@ -163,6 +179,7 @@ func WithRateLimit(requestsPerMinute int) Option {
 
 // doRaw executes an authenticated API request and returns the raw response body bytes.
 // This is used for endpoints that return binary data such as PDF labels or protocols.
+// Retries automatically on 401 (token refresh) and 429/5xx (exponential backoff).
 func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]byte, error) {
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return nil, err
@@ -170,19 +187,43 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 
 	c.ensureValidToken(ctx)
 
-	data, err := c.doRawOnce(ctx, method, path, body)
-	if err == nil {
-		return data, nil
-	}
-
-	// On 401, try to refresh the token and retry once
-	if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == 401 && c.refreshToken != "" {
-		if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
-			return c.doRawOnce(ctx, method, path, body)
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		data, err := c.doRawOnce(ctx, method, path, body)
+		if err == nil {
+			return data, nil
 		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			return nil, err
+		}
+
+		// On 401, try to refresh the token and retry once (only on first attempt)
+		if apiErr.StatusCode == 401 && attempt == 0 && c.refreshToken != "" {
+			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
+				lastErr = err
+				continue
+			}
+			return nil, err
+		}
+
+		// On retryable status codes (429, 502, 503, 504), backoff and retry
+		if retryableStatusCode(apiErr.StatusCode) && attempt < maxRetries {
+			delay := c.retryDelay(attempt)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+			}
+			lastErr = err
+			continue
+		}
+
+		return nil, err
 	}
 
-	return nil, err
+	return nil, lastErr
 }
 
 // doRawOnce executes a single raw API request without retry.
@@ -241,7 +282,8 @@ func (c *Client) ensureValidToken(ctx context.Context) {
 	}
 }
 
-// do executes an authenticated API request with automatic token refresh on 401.
+// do executes an authenticated API request with automatic token refresh on 401
+// and retry with exponential backoff on 429/5xx.
 func (c *Client) do(ctx context.Context, method, path string, body any, result any) error {
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return err
@@ -249,19 +291,43 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 	c.ensureValidToken(ctx)
 
-	err := c.doOnce(ctx, method, path, body, result)
-	if err == nil {
-		return nil
-	}
-
-	// On 401, try to refresh the token and retry once
-	if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == 401 && c.refreshToken != "" {
-		if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
-			return c.doOnce(ctx, method, path, body, result)
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		err := c.doOnce(ctx, method, path, body, result)
+		if err == nil {
+			return nil
 		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			return err
+		}
+
+		// On 401, try to refresh the token and retry once (only on first attempt)
+		if apiErr.StatusCode == 401 && attempt == 0 && c.refreshToken != "" {
+			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
+				lastErr = err
+				continue
+			}
+			return err
+		}
+
+		// On retryable status codes (429, 502, 503, 504), backoff and retry
+		if retryableStatusCode(apiErr.StatusCode) && attempt < maxRetries {
+			delay := c.retryDelay(attempt)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(delay):
+			}
+			lastErr = err
+			continue
+		}
+
+		return err
 	}
 
-	return err
+	return lastErr
 }
 
 // doUpload executes an authenticated request against the upload host (upload.allegro.pl).
