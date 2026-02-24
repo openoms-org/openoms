@@ -84,8 +84,7 @@ func (h *AllegroHandler) UpdateFulfillment(w http.ResponseWriter, r *http.Reques
 
 	provider, err := h.getProvider(ctx, tenantID)
 	if err != nil {
-		slog.Error("allegro fulfillment: get provider failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to connect to Allegro")
+		writeServerError(w, "failed to connect to Allegro", err)
 		return
 	}
 	defer provider.Close()
@@ -139,8 +138,7 @@ func (h *AllegroHandler) AddTracking(w http.ResponseWriter, r *http.Request) {
 
 	provider, err := h.getProvider(ctx, tenantID)
 	if err != nil {
-		slog.Error("allegro tracking: get provider failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to connect to Allegro")
+		writeServerError(w, "failed to connect to Allegro", err)
 		return
 	}
 	defer provider.Close()
@@ -162,8 +160,7 @@ func (h *AllegroHandler) ListCarriers(w http.ResponseWriter, r *http.Request) {
 
 	provider, err := h.getProvider(ctx, tenantID)
 	if err != nil {
-		slog.Error("allegro carriers: get provider failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to connect to Allegro")
+		writeServerError(w, "failed to connect to Allegro", err)
 		return
 	}
 	defer provider.Close()
@@ -186,8 +183,7 @@ func (h *AllegroHandler) SyncOrders(w http.ResponseWriter, r *http.Request) {
 
 	provider, err := h.getProvider(ctx, tenantID)
 	if err != nil {
-		slog.Error("allegro sync: get provider failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to connect to Allegro")
+		writeServerError(w, "failed to connect to Allegro", err)
 		return
 	}
 	defer provider.Close()

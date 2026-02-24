@@ -35,7 +35,7 @@ func (h *OrderGroupHandler) MergeOrders(w http.ResponseWriter, r *http.Request) 
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to merge orders")
+			writeServerError(w, "failed to merge orders", err)
 		}
 		return
 	}
@@ -63,7 +63,7 @@ func (h *OrderGroupHandler) SplitOrder(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to split order")
+			writeServerError(w, "failed to split order", err)
 		}
 		return
 	}
@@ -81,7 +81,7 @@ func (h *OrderGroupHandler) ListByOrder(w http.ResponseWriter, r *http.Request) 
 
 	groups, err := h.orderGroupService.ListByOrderID(r.Context(), tenantID, orderID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list order groups")
+		writeServerError(w, "failed to list order groups", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, groups)

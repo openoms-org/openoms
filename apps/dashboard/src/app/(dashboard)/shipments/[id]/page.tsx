@@ -37,7 +37,7 @@ import {
 } from "@/hooks/use-shipments";
 import { useOrder } from "@/hooks/use-orders";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
-import { formatDate, shortId } from "@/lib/utils";
+import { formatDate, shortId, sanitizeUrl } from "@/lib/utils";
 
 const SENDING_METHOD_LABELS: Record<string, string> = {
   dispatch_order: "Kurier odbierze",
@@ -159,7 +159,7 @@ export default function ShipmentDetailPage() {
           )}
           {shipment.label_url && (
             <Button variant="outline" size="sm" asChild>
-              <a href={shipment.label_url} target="_blank" rel="noopener noreferrer">
+              <a href={sanitizeUrl(shipment.label_url)} target="_blank" rel="noopener noreferrer">
                 <FileDown className="h-4 w-4" />
                 Pobierz etykietę
               </a>
@@ -255,7 +255,7 @@ export default function ShipmentDetailPage() {
                 <p className="text-sm text-muted-foreground">URL etykiety</p>
                 {shipment.label_url ? (
                   <a
-                    href={shipment.label_url}
+                    href={sanitizeUrl(shipment.label_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-sm text-primary hover:underline"

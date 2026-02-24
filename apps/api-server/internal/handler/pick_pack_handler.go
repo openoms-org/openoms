@@ -43,7 +43,7 @@ func (h *PickPackHandler) CreateSession(w http.ResponseWriter, r *http.Request) 
 		case service.IsForeignKeyError(err):
 			writeError(w, http.StatusBadRequest, "referenced order does not exist")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to create pick-pack session")
+			writeServerError(w, "failed to create pick-pack session", err)
 		}
 		return
 	}
@@ -70,7 +70,7 @@ func (h *PickPackHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.svc.ListSessions(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list pick-pack sessions")
+		writeServerError(w, "failed to list pick-pack sessions", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -91,7 +91,7 @@ func (h *PickPackHandler) GetSession(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrPickPackSessionNotFound) {
 			writeError(w, http.StatusNotFound, "session not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get session")
+			writeServerError(w, "failed to get session", err)
 		}
 		return
 	}
@@ -129,7 +129,7 @@ func (h *PickPackHandler) ScanItem(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrPickPackQuantityExceeded):
 			writeError(w, http.StatusConflict, "all items with this SKU have already been picked")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to process scan")
+			writeServerError(w, "failed to process scan", err)
 		}
 		return
 	}
@@ -157,7 +157,7 @@ func (h *PickPackHandler) MoveToPacking(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, service.ErrPickPackNotAllPicked):
 			writeError(w, http.StatusConflict, "not all items have been picked")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to move to packing")
+			writeServerError(w, "failed to move to packing", err)
 		}
 		return
 	}
@@ -201,7 +201,7 @@ func (h *PickPackHandler) MarkItemPacked(w http.ResponseWriter, r *http.Request)
 		case errors.Is(err, service.ErrPickPackQuantityExceeded):
 			writeError(w, http.StatusConflict, "quantity would exceed required amount")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to mark item packed")
+			writeServerError(w, "failed to mark item packed", err)
 		}
 		return
 	}
@@ -229,7 +229,7 @@ func (h *PickPackHandler) CompleteSession(w http.ResponseWriter, r *http.Request
 		case errors.Is(err, service.ErrPickPackNotAllPacked):
 			writeError(w, http.StatusConflict, "not all items have been packed")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to complete session")
+			writeServerError(w, "failed to complete session", err)
 		}
 		return
 	}
@@ -255,7 +255,7 @@ func (h *PickPackHandler) CancelSession(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, service.ErrPickPackNotActive):
 			writeError(w, http.StatusConflict, "session is already completed or cancelled")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to cancel session")
+			writeServerError(w, "failed to cancel session", err)
 		}
 		return
 	}

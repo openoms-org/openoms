@@ -442,7 +442,7 @@ func (h *PrintHandler) GetPackingSlip(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "order not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to render packing slip")
+		writeServerError(w, "failed to render packing slip", err)
 		return
 	}
 
@@ -515,7 +515,7 @@ func (h *PrintHandler) GetOrderSummary(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "order not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to render order summary")
+		writeServerError(w, "failed to render order summary", err)
 		return
 	}
 
@@ -581,7 +581,7 @@ func (h *PrintHandler) GetReturnSlip(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "return not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to render return slip")
+		writeServerError(w, "failed to render return slip", err)
 		return
 	}
 
@@ -598,7 +598,7 @@ func (h *PrintHandler) GetPrintTemplates(w http.ResponseWriter, r *http.Request)
 		return nil
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load print templates")
+		writeServerError(w, "failed to load print templates", err)
 		return
 	}
 
@@ -639,7 +639,7 @@ func (h *PrintHandler) UpdatePrintTemplates(w http.ResponseWriter, r *http.Reque
 		return h.updateSettingsSection(r.Context(), tx, tenantID, "print_templates", cfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save print templates")
+		writeServerError(w, "failed to save print templates", err)
 		return
 	}
 

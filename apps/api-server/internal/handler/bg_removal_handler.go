@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -84,7 +83,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 
 	imageData, err := io.ReadAll(file)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to read file")
+		writeServerError(w, "failed to read file", err)
 		return
 	}
 
@@ -99,8 +98,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 	// Call remove.bg API
 	resultBytes, resultContentType, err := h.bgService.RemoveBackground(r.Context(), imageData, header.Filename)
 	if err != nil {
-		slog.Error("background removal failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "background removal failed")
+		writeServerError(w, "background removal failed", err)
 		return
 	}
 
@@ -114,8 +112,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 
 	url, err := h.storage.Upload(r.Context(), key, bytes.NewReader(resultBytes), resultContentType)
 	if err != nil {
-		slog.Error("failed to save processed image", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to save processed image")
+		writeServerError(w, "failed to save processed image", err)
 		return
 	}
 
@@ -186,8 +183,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
-		slog.Error("failed to fetch product", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "failed to fetch product")
+		writeServerError(w, "failed to fetch product", err)
 		return
 	}
 
@@ -215,8 +211,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	// Download the image
 	imageData, contentType, err := h.downloadImage(r.Context(), targetURL)
 	if err != nil {
-		slog.Error("failed to download image", "error", err, "url", targetURL)
-		writeError(w, http.StatusInternalServerError, "failed to download image")
+		writeServerError(w, "failed to download image", err)
 		return
 	}
 
@@ -228,8 +223,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	// Remove background
 	resultBytes, resultContentType, err := h.bgService.RemoveBackground(r.Context(), imageData, "image.png")
 	if err != nil {
-		slog.Error("background removal failed", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "background removal failed")
+		writeServerError(w, "background removal failed", err)
 		return
 	}
 
@@ -243,8 +237,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 
 	newURL, err := h.storage.Upload(r.Context(), key, bytes.NewReader(resultBytes), resultContentType)
 	if err != nil {
-		slog.Error("failed to save processed image", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to save processed image")
+		writeServerError(w, "failed to save processed image", err)
 		return
 	}
 
@@ -270,8 +263,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 		})
 	})
 	if err != nil {
-		slog.Error("failed to update product image", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "failed to update product")
+		writeServerError(w, "failed to update product", err)
 		return
 	}
 

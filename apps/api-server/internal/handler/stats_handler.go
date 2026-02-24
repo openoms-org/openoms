@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -22,8 +21,7 @@ func (h *StatsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.statsService.GetDashboardStats(r.Context(), tenantID)
 	if err != nil {
-		slog.Error("dashboard stats failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to retrieve dashboard stats")
+		writeServerError(w, "failed to retrieve dashboard stats", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, stats)
@@ -41,8 +39,7 @@ func (h *StatsHandler) GetTopProducts(w http.ResponseWriter, r *http.Request) {
 
 	products, err := h.statsService.GetTopProducts(r.Context(), tenantID, limit)
 	if err != nil {
-		slog.Error("top products stats failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to retrieve top products")
+		writeServerError(w, "failed to retrieve top products", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, products)
@@ -60,8 +57,7 @@ func (h *StatsHandler) GetRevenueBySource(w http.ResponseWriter, r *http.Request
 
 	revenue, err := h.statsService.GetRevenueBySource(r.Context(), tenantID, days)
 	if err != nil {
-		slog.Error("revenue by source stats failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to retrieve revenue by source")
+		writeServerError(w, "failed to retrieve revenue by source", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, revenue)
@@ -79,8 +75,7 @@ func (h *StatsHandler) GetOrderTrends(w http.ResponseWriter, r *http.Request) {
 
 	trends, err := h.statsService.GetOrderTrends(r.Context(), tenantID, days)
 	if err != nil {
-		slog.Error("order trends stats failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to retrieve order trends")
+		writeServerError(w, "failed to retrieve order trends", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, trends)
@@ -91,8 +86,7 @@ func (h *StatsHandler) GetPaymentMethodStats(w http.ResponseWriter, r *http.Requ
 
 	stats, err := h.statsService.GetPaymentMethodStats(r.Context(), tenantID)
 	if err != nil {
-		slog.Error("payment method stats failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to retrieve payment method stats")
+		writeServerError(w, "failed to retrieve payment method stats", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, stats)

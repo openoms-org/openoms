@@ -45,7 +45,7 @@ func (h *WarehouseDocumentHandler) List(w http.ResponseWriter, r *http.Request) 
 
 	resp, err := h.svc.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list warehouse documents")
+		writeServerError(w, "failed to list warehouse documents", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -66,7 +66,7 @@ func (h *WarehouseDocumentHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrWarehouseDocumentNotFound) {
 			writeError(w, http.StatusNotFound, "warehouse document not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get warehouse document")
+			writeServerError(w, "failed to get warehouse document", err)
 		}
 		return
 	}
@@ -91,7 +91,7 @@ func (h *WarehouseDocumentHandler) Create(w http.ResponseWriter, r *http.Request
 		} else if service.IsForeignKeyError(err) {
 			writeError(w, http.StatusBadRequest, "referenced product, variant, or warehouse does not exist")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create warehouse document")
+			writeServerError(w, "failed to create warehouse document", err)
 		}
 		return
 	}
@@ -126,7 +126,7 @@ func (h *WarehouseDocumentHandler) Update(w http.ResponseWriter, r *http.Request
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update warehouse document")
+				writeServerError(w, "failed to update warehouse document", err)
 			}
 		}
 		return
@@ -153,7 +153,7 @@ func (h *WarehouseDocumentHandler) Delete(w http.ResponseWriter, r *http.Request
 		case errors.Is(err, service.ErrDocumentNotDraft):
 			writeError(w, http.StatusConflict, "document is not in draft status")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete warehouse document")
+			writeServerError(w, "failed to delete warehouse document", err)
 		}
 		return
 	}
@@ -181,7 +181,7 @@ func (h *WarehouseDocumentHandler) Confirm(w http.ResponseWriter, r *http.Reques
 		case service.IsForeignKeyError(err):
 			writeError(w, http.StatusBadRequest, "referenced product, variant, or warehouse does not exist")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to confirm warehouse document")
+			writeServerError(w, "failed to confirm warehouse document", err)
 		}
 		return
 	}
@@ -207,7 +207,7 @@ func (h *WarehouseDocumentHandler) Cancel(w http.ResponseWriter, r *http.Request
 		case errors.Is(err, service.ErrDocumentNotDraft):
 			writeError(w, http.StatusConflict, "document is not in draft status")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to cancel warehouse document")
+			writeServerError(w, "failed to cancel warehouse document", err)
 		}
 		return
 	}

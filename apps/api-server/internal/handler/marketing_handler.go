@@ -22,7 +22,7 @@ func (h *MarketingHandler) Sync(w http.ResponseWriter, r *http.Request) {
 
 	synced, failed, err := h.mailchimpService.SyncAllCustomers(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeServerError(w, "failed to sync customers", err)
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *MarketingHandler) Status(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := h.mailchimpService.GetSettings(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load mailchimp settings")
+		writeServerError(w, "failed to load mailchimp settings", err)
 		return
 	}
 
@@ -68,7 +68,7 @@ func (h *MarketingHandler) CreateCampaign(w http.ResponseWriter, r *http.Request
 
 	campaignID, err := h.mailchimpService.CreateCampaign(r.Context(), tenantID, req.Name, req.Subject, req.Content)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeServerError(w, "failed to create campaign", err)
 		return
 	}
 

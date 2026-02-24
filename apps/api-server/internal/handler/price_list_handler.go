@@ -37,7 +37,7 @@ func (h *PriceListHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	priceLists, total, err := h.priceListService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list price lists")
+		writeServerError(w, "failed to list price lists", err)
 		return
 	}
 	if priceLists == nil {
@@ -65,7 +65,7 @@ func (h *PriceListHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrPriceListNotFound) {
 			writeError(w, http.StatusNotFound, "price list not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get price list")
+			writeServerError(w, "failed to get price list", err)
 		}
 		return
 	}
@@ -87,7 +87,7 @@ func (h *PriceListHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create price list")
+			writeServerError(w, "failed to create price list", err)
 		}
 		return
 	}
@@ -119,7 +119,7 @@ func (h *PriceListHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update price list")
+				writeServerError(w, "failed to update price list", err)
 			}
 		}
 		return
@@ -143,7 +143,7 @@ func (h *PriceListHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrPriceListNotFound):
 			writeError(w, http.StatusNotFound, "price list not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete price list")
+			writeServerError(w, "failed to delete price list", err)
 		}
 		return
 	}
@@ -167,7 +167,7 @@ func (h *PriceListHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrPriceListNotFound) {
 			writeError(w, http.StatusNotFound, "price list not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list price list items")
+			writeServerError(w, "failed to list price list items", err)
 		}
 		return
 	}
@@ -207,7 +207,7 @@ func (h *PriceListHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to create price list item")
+				writeServerError(w, "failed to create price list item", err)
 			}
 		}
 		return
@@ -227,7 +227,7 @@ func (h *PriceListHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 
 	err = h.priceListService.DeleteItem(r.Context(), tenantID, itemID, actorID, clientIP(r))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to delete price list item")
+		writeServerError(w, "failed to delete price list item", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

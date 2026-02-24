@@ -93,7 +93,7 @@ func (h *WorkflowHandler) GetWorkflowForRule(w http.ResponseWriter, r *http.Requ
 
 	def, err := model.AutomationRuleToWorkflow(*rule)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to convert rule to workflow")
+		writeServerError(w, "failed to convert rule to workflow", err)
 		return
 	}
 

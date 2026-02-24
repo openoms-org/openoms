@@ -66,7 +66,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.orderService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list orders")
+		writeServerError(w, "failed to list orders", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -87,7 +87,7 @@ func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "order not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get order")
+		writeServerError(w, "failed to get order", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, order)
@@ -108,7 +108,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create order")
+			writeServerError(w, "failed to create order", err)
 		}
 		return
 	}
@@ -140,7 +140,7 @@ func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update order")
+				writeServerError(w, "failed to update order", err)
 			}
 		}
 		return
@@ -164,7 +164,7 @@ func (h *OrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrOrderNotFound):
 			writeError(w, http.StatusNotFound, "order not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete order")
+			writeServerError(w, "failed to delete order", err)
 		}
 		return
 	}
@@ -198,7 +198,7 @@ func (h *OrderHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) 
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to transition order status")
+				writeServerError(w, "failed to transition order status", err)
 			}
 		}
 		return
@@ -222,8 +222,7 @@ func (h *OrderHandler) BulkTransitionStatus(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		slog.Error("bulk status transition failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to perform bulk status transition")
+		writeServerError(w, "failed to perform bulk status transition", err)
 		return
 	}
 
@@ -240,7 +239,7 @@ func (h *OrderHandler) GetAudit(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := h.orderService.GetAudit(r.Context(), tenantID, orderID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to retrieve audit log")
+		writeServerError(w, "failed to retrieve audit log", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, entries)
@@ -321,8 +320,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "order not found")
 			return
 		}
-		slog.Error("failed to duplicate order", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to duplicate order")
+		writeServerError(w, "failed to duplicate order", err)
 		return
 	}
 
@@ -370,11 +368,7 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	cfConfig := h.loadCustomFieldsConfig(r.Context(), tenantID)
 
 	filename := fmt.Sprintf("zamowienia-%s.csv", time.Now().Format("2006-01-02"))
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
-
-	// BOM for Excel UTF-8 compatibility
-	w.Write([]byte{0xEF, 0xBB, 0xBF})
+	writeCSVHeaders(w, filename)
 
 	writer := csv.NewWriter(w)
 	defer writer.Flush()

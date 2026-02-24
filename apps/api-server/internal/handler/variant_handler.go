@@ -47,7 +47,7 @@ func (h *VariantHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	variants, total, err := h.variantService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list variants")
+		writeServerError(w, "failed to list variants", err)
 		return
 	}
 	if variants == nil {
@@ -76,7 +76,7 @@ func (h *VariantHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrVariantNotFound) {
 			writeError(w, http.StatusNotFound, "variant not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get variant")
+			writeServerError(w, "failed to get variant", err)
 		}
 		return
 	}
@@ -109,7 +109,7 @@ func (h *VariantHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to create variant")
+				writeServerError(w, "failed to create variant", err)
 			}
 		}
 		return
@@ -143,7 +143,7 @@ func (h *VariantHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update variant")
+				writeServerError(w, "failed to update variant", err)
 			}
 		}
 		return
@@ -168,7 +168,7 @@ func (h *VariantHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrVariantNotFound):
 			writeError(w, http.StatusNotFound, "variant not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete variant")
+			writeServerError(w, "failed to delete variant", err)
 		}
 		return
 	}

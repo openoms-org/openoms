@@ -40,7 +40,7 @@ func (h *StocktakeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		} else if service.IsForeignKeyError(err) {
 			writeError(w, http.StatusBadRequest, "referenced warehouse or product does not exist")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create stocktake")
+			writeServerError(w, "failed to create stocktake", err)
 		}
 		return
 	}
@@ -67,7 +67,7 @@ func (h *StocktakeHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.svc.ListStocktakes(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list stocktakes")
+		writeServerError(w, "failed to list stocktakes", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -88,7 +88,7 @@ func (h *StocktakeHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrStocktakeNotFound) {
 			writeError(w, http.StatusNotFound, "stocktake not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get stocktake")
+			writeServerError(w, "failed to get stocktake", err)
 		}
 		return
 	}
@@ -114,7 +114,7 @@ func (h *StocktakeHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrStocktakeNotDraft):
 			writeError(w, http.StatusConflict, "stocktake is not in draft status")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete stocktake")
+			writeServerError(w, "failed to delete stocktake", err)
 		}
 		return
 	}
@@ -140,7 +140,7 @@ func (h *StocktakeHandler) Start(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrStocktakeNotDraft):
 			writeError(w, http.StatusConflict, "stocktake is not in draft status")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to start stocktake")
+			writeServerError(w, "failed to start stocktake", err)
 		}
 		return
 	}
@@ -182,7 +182,7 @@ func (h *StocktakeHandler) RecordCount(w http.ResponseWriter, r *http.Request) {
 		case isValidationError(err):
 			writeError(w, http.StatusBadRequest, err.Error())
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to record count")
+			writeServerError(w, "failed to record count", err)
 		}
 		return
 	}
@@ -210,7 +210,7 @@ func (h *StocktakeHandler) Complete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrNotAllItemsCounted):
 			writeError(w, http.StatusConflict, "not all items have been counted")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to complete stocktake")
+			writeServerError(w, "failed to complete stocktake", err)
 		}
 		return
 	}
@@ -234,7 +234,7 @@ func (h *StocktakeHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrStocktakeNotFound):
 			writeError(w, http.StatusNotFound, "stocktake not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to cancel stocktake")
+			writeServerError(w, "failed to cancel stocktake", err)
 		}
 		return
 	}
@@ -267,7 +267,7 @@ func (h *StocktakeHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrStocktakeNotFound) {
 			writeError(w, http.StatusNotFound, "stocktake not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list stocktake items")
+			writeServerError(w, "failed to list stocktake items", err)
 		}
 		return
 	}

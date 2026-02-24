@@ -31,7 +31,7 @@ func (h *LoyaltyHandler) ListPrograms(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.loyaltyService.ListPrograms(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list loyalty programs")
+		writeServerError(w, "failed to list loyalty programs", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -51,7 +51,7 @@ func (h *LoyaltyHandler) GetProgram(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrLoyaltyProgramNotFound) {
 			writeError(w, http.StatusNotFound, "loyalty program not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get loyalty program")
+			writeServerError(w, "failed to get loyalty program", err)
 		}
 		return
 	}
@@ -73,7 +73,7 @@ func (h *LoyaltyHandler) CreateProgram(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create loyalty program")
+			writeServerError(w, "failed to create loyalty program", err)
 		}
 		return
 	}
@@ -105,7 +105,7 @@ func (h *LoyaltyHandler) UpdateProgram(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update loyalty program")
+				writeServerError(w, "failed to update loyalty program", err)
 			}
 		}
 		return
@@ -129,7 +129,7 @@ func (h *LoyaltyHandler) DeleteProgram(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrLoyaltyProgramNotFound):
 			writeError(w, http.StatusNotFound, "loyalty program not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete loyalty program")
+			writeServerError(w, "failed to delete loyalty program", err)
 		}
 		return
 	}
@@ -147,7 +147,7 @@ func (h *LoyaltyHandler) GetCustomerLoyaltyStatus(w http.ResponseWriter, r *http
 
 	results, err := h.loyaltyService.GetCustomerLoyaltyStatus(r.Context(), tenantID, customerID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get customer loyalty status")
+		writeServerError(w, "failed to get customer loyalty status", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, results)
@@ -178,7 +178,7 @@ func (h *LoyaltyHandler) AwardPoints(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to award points")
+				writeServerError(w, "failed to award points", err)
 			}
 		}
 		return
@@ -213,7 +213,7 @@ func (h *LoyaltyHandler) RedeemPoints(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to redeem points")
+				writeServerError(w, "failed to redeem points", err)
 			}
 		}
 		return
@@ -240,7 +240,7 @@ func (h *LoyaltyHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) 
 		if errors.Is(err, service.ErrLoyaltyProgramNotFound) {
 			writeError(w, http.StatusNotFound, "loyalty program not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get leaderboard")
+			writeServerError(w, "failed to get leaderboard", err)
 		}
 		return
 	}

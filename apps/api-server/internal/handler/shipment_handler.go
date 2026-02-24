@@ -40,7 +40,7 @@ func (h *ShipmentHandler) ListByOrder(w http.ResponseWriter, r *http.Request) {
 
 	shipments, err := h.shipmentService.ListByOrder(r.Context(), tenantID, orderID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list order shipments")
+		writeServerError(w, "failed to list order shipments", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, shipments)
@@ -74,7 +74,7 @@ func (h *ShipmentHandler) CreateForOrder(w http.ResponseWriter, r *http.Request)
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to create shipment")
+				writeServerError(w, "failed to create shipment", err)
 			}
 		}
 		return
@@ -106,7 +106,7 @@ func (h *ShipmentHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.shipmentService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list shipments")
+		writeServerError(w, "failed to list shipments", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -127,7 +127,7 @@ func (h *ShipmentHandler) Get(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "shipment not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get shipment")
+		writeServerError(w, "failed to get shipment", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, shipment)
@@ -152,7 +152,7 @@ func (h *ShipmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to create shipment")
+				writeServerError(w, "failed to create shipment", err)
 			}
 		}
 		return
@@ -185,7 +185,7 @@ func (h *ShipmentHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update shipment")
+				writeServerError(w, "failed to update shipment", err)
 			}
 		}
 		return
@@ -209,7 +209,7 @@ func (h *ShipmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrShipmentNotFound):
 			writeError(w, http.StatusNotFound, "shipment not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete shipment")
+			writeServerError(w, "failed to delete shipment", err)
 		}
 		return
 	}
@@ -245,7 +245,7 @@ func (h *ShipmentHandler) TransitionStatus(w http.ResponseWriter, r *http.Reques
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to transition shipment status")
+				writeServerError(w, "failed to transition shipment status", err)
 			}
 		}
 		return
@@ -295,7 +295,7 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 					// 4xx from carrier — pass through the carrier message
 					writeError(w, http.StatusUnprocessableEntity, "Carrier API error: "+errMsg)
 				} else {
-					writeError(w, http.StatusInternalServerError, "Failed to generate label — try again or check integration settings")
+					writeServerError(w, "Failed to generate label — try again or check integration settings", err)
 				}
 			}
 		}
@@ -321,8 +321,7 @@ func (h *ShipmentHandler) GetTracking(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrNoCarrierIntegration):
 			writeError(w, http.StatusUnprocessableEntity, err.Error())
 		default:
-			slog.Error("get tracking failed", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to get tracking info")
+			writeServerError(w, "failed to get tracking info", err)
 		}
 		return
 	}
@@ -385,8 +384,7 @@ func (h *ShipmentHandler) BatchLabels(w http.ResponseWriter, r *http.Request) {
 
 	labels, err := h.shipmentService.GetBatchLabelURLs(r.Context(), tenantID, req.ShipmentIDs)
 	if err != nil {
-		slog.Error("batch labels: failed to get label URLs", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to get label URLs")
+		writeServerError(w, "failed to get label URLs", err)
 		return
 	}
 

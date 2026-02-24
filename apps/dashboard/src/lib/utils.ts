@@ -27,3 +27,15 @@ export function shortId(uuid: string): string {
   if (!uuid) return "—";
   return uuid.substring(0, 8);
 }
+
+export function sanitizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      return url;
+    }
+    return "#";
+  } catch {
+    return "#";
+  }
+}

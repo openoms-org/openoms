@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -37,7 +36,7 @@ func (h *ExchangeRateHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	rates, total, err := h.exchangeRateService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list exchange rates")
+		writeServerError(w, "failed to list exchange rates", err)
 		return
 	}
 	if rates == nil {
@@ -65,7 +64,7 @@ func (h *ExchangeRateHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrExchangeRateNotFound) {
 			writeError(w, http.StatusNotFound, "exchange rate not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get exchange rate")
+			writeServerError(w, "failed to get exchange rate", err)
 		}
 		return
 	}
@@ -87,7 +86,7 @@ func (h *ExchangeRateHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create exchange rate")
+			writeServerError(w, "failed to create exchange rate", err)
 		}
 		return
 	}
@@ -119,7 +118,7 @@ func (h *ExchangeRateHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update exchange rate")
+				writeServerError(w, "failed to update exchange rate", err)
 			}
 		}
 		return
@@ -143,7 +142,7 @@ func (h *ExchangeRateHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrExchangeRateNotFound):
 			writeError(w, http.StatusNotFound, "exchange rate not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete exchange rate")
+			writeServerError(w, "failed to delete exchange rate", err)
 		}
 		return
 	}
@@ -156,8 +155,7 @@ func (h *ExchangeRateHandler) FetchNBP(w http.ResponseWriter, r *http.Request) {
 
 	count, err := h.exchangeRateService.FetchNBPRates(r.Context(), tenantID, actorID, clientIP(r))
 	if err != nil {
-		slog.Error("failed to fetch NBP rates", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to fetch NBP rates")
+		writeServerError(w, "failed to fetch NBP rates", err)
 		return
 	}
 
@@ -185,7 +183,7 @@ func (h *ExchangeRateHandler) Convert(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrRateNotAvailable) {
 			writeError(w, http.StatusNotFound, "exchange rate not available for this currency pair")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to convert amount")
+			writeServerError(w, "failed to convert amount", err)
 		}
 		return
 	}

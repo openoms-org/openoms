@@ -816,7 +816,7 @@ func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID u
 		return ErrNoFeedURL
 	}
 
-	iofProducts, err := iof.ParseURL(ctx, *supplier.FeedURL)
+	iofProducts, err := iof.ParseURL(ctx, *supplier.FeedURL, netutil.SafeHTTPClient(60*time.Second))
 	if err != nil {
 		errMsg := err.Error()
 		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

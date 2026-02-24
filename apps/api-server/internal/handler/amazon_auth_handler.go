@@ -71,7 +71,7 @@ func (h *AmazonAuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 	}
 	credJSON, err := json.Marshal(credentials)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to encode credentials")
+		writeServerError(w, "failed to encode credentials", err)
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *AmazonAuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 			// Update existing integration with new credentials
 			integrations, listErr := h.integrationService.List(r.Context(), tenantID)
 			if listErr != nil {
-				writeError(w, http.StatusInternalServerError, "failed to update existing integration")
+				writeServerError(w, "failed to update existing integration", err)
 				return
 			}
 			for _, integ := range integrations {
@@ -105,17 +105,17 @@ func (h *AmazonAuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 					}
 					updated, updateErr := h.integrationService.Update(r.Context(), tenantID, integ.ID, updateReq, actorID, ip)
 					if updateErr != nil {
-						writeError(w, http.StatusInternalServerError, "failed to update existing integration")
+						writeServerError(w, "failed to update existing integration", err)
 						return
 					}
 					writeJSON(w, http.StatusOK, updated)
 					return
 				}
 			}
-			writeError(w, http.StatusInternalServerError, "failed to find existing integration")
+			writeServerError(w, "failed to find existing integration", err)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to create integration")
+		writeServerError(w, "failed to create integration", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, result)

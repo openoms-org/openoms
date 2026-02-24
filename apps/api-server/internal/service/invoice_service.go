@@ -182,7 +182,9 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 			errMsg := provErr.Error()
 			invoice.ErrorMessage = &errMsg
 			invoice.Status = "error"
-			_ = s.invoiceRepo.Update(ctx, tx, invoice)
+			if updateErr := s.invoiceRepo.Update(ctx, tx, invoice); updateErr != nil {
+				slog.Error("failed to update invoice after provider call", "invoice_id", invoice.ID, "error", updateErr)
+			}
 		} else {
 			customerName := req.CustomerName
 			if customerName == "" {
@@ -219,7 +221,9 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 				invoice.PDFURL = &result.PDFURL
 				invoice.Status = "issued"
 			}
-			_ = s.invoiceRepo.Update(ctx, tx, invoice)
+			if updateErr := s.invoiceRepo.Update(ctx, tx, invoice); updateErr != nil {
+				slog.Error("failed to update invoice after provider call", "invoice_id", invoice.ID, "error", updateErr)
+			}
 		}
 
 		inv = invoice

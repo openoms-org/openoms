@@ -39,7 +39,7 @@ func (h *RecurringOrderHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.recurringOrderService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list recurring orders")
+		writeServerError(w, "failed to list recurring orders", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -59,7 +59,7 @@ func (h *RecurringOrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrRecurringOrderNotFound) {
 			writeError(w, http.StatusNotFound, "recurring order not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get recurring order")
+			writeServerError(w, "failed to get recurring order", err)
 		}
 		return
 	}
@@ -81,7 +81,7 @@ func (h *RecurringOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create recurring order")
+			writeServerError(w, "failed to create recurring order", err)
 		}
 		return
 	}
@@ -113,7 +113,7 @@ func (h *RecurringOrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update recurring order")
+				writeServerError(w, "failed to update recurring order", err)
 			}
 		}
 		return
@@ -139,7 +139,7 @@ func (h *RecurringOrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrRecurringOrderHasOrders):
 			writeError(w, http.StatusConflict, "cannot delete recurring order that has created orders")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete recurring order")
+			writeServerError(w, "failed to delete recurring order", err)
 		}
 		return
 	}
@@ -164,7 +164,7 @@ func (h *RecurringOrderHandler) Pause(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrRecurringOrderNotActive):
 			writeError(w, http.StatusConflict, "recurring order is not active")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to pause recurring order")
+			writeServerError(w, "failed to pause recurring order", err)
 		}
 		return
 	}
@@ -190,7 +190,7 @@ func (h *RecurringOrderHandler) Resume(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusConflict, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to resume recurring order")
+				writeServerError(w, "failed to resume recurring order", err)
 			}
 		}
 		return
@@ -217,7 +217,7 @@ func (h *RecurringOrderHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusConflict, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to cancel recurring order")
+				writeServerError(w, "failed to cancel recurring order", err)
 			}
 		}
 		return

@@ -42,7 +42,7 @@ func (h *PurchaseOrderHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.poService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list purchase orders")
+		writeServerError(w, "failed to list purchase orders", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -63,7 +63,7 @@ func (h *PurchaseOrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrPurchaseOrderNotFound) {
 			writeError(w, http.StatusNotFound, "purchase order not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get purchase order")
+			writeServerError(w, "failed to get purchase order", err)
 		}
 		return
 	}
@@ -86,7 +86,7 @@ func (h *PurchaseOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create purchase order")
+			writeServerError(w, "failed to create purchase order", err)
 		}
 		return
 	}
@@ -121,7 +121,7 @@ func (h *PurchaseOrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update purchase order")
+				writeServerError(w, "failed to update purchase order", err)
 			}
 		}
 		return
@@ -148,7 +148,7 @@ func (h *PurchaseOrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrPONotDraft):
 			writeError(w, http.StatusConflict, "can only delete purchase orders in draft status")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete purchase order")
+			writeServerError(w, "failed to delete purchase order", err)
 		}
 		return
 	}
@@ -175,7 +175,7 @@ func (h *PurchaseOrderHandler) Send(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to send purchase order")
+				writeServerError(w, "failed to send purchase order", err)
 			}
 		}
 		return
@@ -211,7 +211,7 @@ func (h *PurchaseOrderHandler) Receive(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to receive items")
+				writeServerError(w, "failed to receive items", err)
 			}
 		}
 		return
@@ -241,7 +241,7 @@ func (h *PurchaseOrderHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to cancel purchase order")
+				writeServerError(w, "failed to cancel purchase order", err)
 			}
 		}
 		return

@@ -89,7 +89,7 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	products, total, err := h.productService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list products")
+		writeServerError(w, "failed to list products", err)
 		return
 	}
 	if products == nil {
@@ -117,7 +117,7 @@ func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrProductNotFound) {
 			writeError(w, http.StatusNotFound, "product not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get product")
+			writeServerError(w, "failed to get product", err)
 		}
 		return
 	}
@@ -143,7 +143,7 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to create product")
+				writeServerError(w, "failed to create product", err)
 			}
 		}
 		return
@@ -178,7 +178,7 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update product")
+				writeServerError(w, "failed to update product", err)
 			}
 		}
 		return
@@ -202,7 +202,7 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrProductNotFound):
 			writeError(w, http.StatusNotFound, "product not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete product")
+			writeServerError(w, "failed to delete product", err)
 		}
 		return
 	}
@@ -225,11 +225,7 @@ func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filename := fmt.Sprintf("products_%s.csv", time.Now().Format("2006-01-02"))
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
-
-	// BOM for Excel UTF-8 compatibility
-	w.Write([]byte{0xEF, 0xBB, 0xBF})
+	writeCSVHeaders(w, filename)
 
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
@@ -374,7 +370,7 @@ func (h *ProductHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.productImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeServerError(w, "failed to export products", err)
 		return
 	}
 

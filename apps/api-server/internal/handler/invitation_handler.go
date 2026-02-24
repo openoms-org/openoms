@@ -39,7 +39,7 @@ func (h *InvitationHandler) Create(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to create invitation")
+		writeServerError(w, "failed to create invitation", err)
 		return
 	}
 
@@ -58,7 +58,7 @@ func (h *InvitationHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	invitations, total, err := h.svc.List(r.Context(), tenantID, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list invitations")
+		writeServerError(w, "failed to list invitations", err)
 		return
 	}
 
@@ -80,7 +80,7 @@ func (h *InvitationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.Delete(r.Context(), tenantID, id, userID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to delete invitation")
+		writeServerError(w, "failed to delete invitation", err)
 		return
 	}
 

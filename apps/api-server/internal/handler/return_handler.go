@@ -42,7 +42,7 @@ func (h *ReturnHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.returnService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list returns")
+		writeServerError(w, "failed to list returns", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -63,7 +63,7 @@ func (h *ReturnHandler) Get(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "return not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get return")
+		writeServerError(w, "failed to get return", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, ret)
@@ -84,7 +84,7 @@ func (h *ReturnHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create return")
+			writeServerError(w, "failed to create return", err)
 		}
 		return
 	}
@@ -116,7 +116,7 @@ func (h *ReturnHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update return")
+				writeServerError(w, "failed to update return", err)
 			}
 		}
 		return
@@ -151,7 +151,7 @@ func (h *ReturnHandler) TransitionStatus(w http.ResponseWriter, r *http.Request)
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to transition return status")
+				writeServerError(w, "failed to transition return status", err)
 			}
 		}
 		return
@@ -175,7 +175,7 @@ func (h *ReturnHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrReturnNotFound):
 			writeError(w, http.StatusNotFound, "return not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete return")
+			writeServerError(w, "failed to delete return", err)
 		}
 		return
 	}

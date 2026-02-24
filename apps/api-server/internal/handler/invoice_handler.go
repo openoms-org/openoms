@@ -45,7 +45,7 @@ func (h *InvoiceHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.invoiceService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list invoices")
+		writeServerError(w, "failed to list invoices", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -66,7 +66,7 @@ func (h *InvoiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "invoice not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get invoice")
+		writeServerError(w, "failed to get invoice", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, inv)
@@ -87,7 +87,7 @@ func (h *InvoiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create invoice")
+			writeServerError(w, "failed to create invoice", err)
 		}
 		return
 	}
@@ -110,7 +110,7 @@ func (h *InvoiceHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "invoice not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to cancel invoice")
+		writeServerError(w, "failed to cancel invoice", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Faktura anulowana"})
@@ -131,7 +131,7 @@ func (h *InvoiceHandler) GetPDF(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "invoice not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get invoice PDF")
+		writeServerError(w, "failed to get invoice PDF", err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *InvoiceHandler) ListByOrder(w http.ResponseWriter, r *http.Request) {
 
 	invoices, err := h.invoiceService.ListByOrderID(r.Context(), tenantID, orderID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list invoices")
+		writeServerError(w, "failed to list invoices", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, invoices)

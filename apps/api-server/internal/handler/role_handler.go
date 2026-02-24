@@ -33,7 +33,7 @@ func (h *RoleHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.roleService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list roles")
+		writeServerError(w, "failed to list roles", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -54,7 +54,7 @@ func (h *RoleHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrRoleNotFound) {
 			writeError(w, http.StatusNotFound, "role not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get role")
+			writeServerError(w, "failed to get role", err)
 		}
 		return
 	}
@@ -81,7 +81,7 @@ func (h *RoleHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to create role")
+				writeServerError(w, "failed to create role", err)
 			}
 		}
 		return
@@ -117,7 +117,7 @@ func (h *RoleHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update role")
+				writeServerError(w, "failed to update role", err)
 			}
 		}
 		return
@@ -144,7 +144,7 @@ func (h *RoleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrRoleIsSystem):
 			writeError(w, http.StatusForbidden, "system roles cannot be deleted")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete role")
+			writeServerError(w, "failed to delete role", err)
 		}
 		return
 	}

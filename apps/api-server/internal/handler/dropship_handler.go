@@ -48,7 +48,7 @@ func (h *DropshipHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.dropshipService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list dropship orders")
+		writeServerError(w, "failed to list dropship orders", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -69,7 +69,7 @@ func (h *DropshipHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrDropshipOrderNotFound) {
 			writeError(w, http.StatusNotFound, "dropship order not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get dropship order")
+			writeServerError(w, "failed to get dropship order", err)
 		}
 		return
 	}
@@ -92,7 +92,7 @@ func (h *DropshipHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create dropship order")
+			writeServerError(w, "failed to create dropship order", err)
 		}
 		return
 	}
@@ -119,7 +119,7 @@ func (h *DropshipHandler) AutoRoute(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to auto-route order")
+				writeServerError(w, "failed to auto-route order", err)
 			}
 		}
 		return
@@ -139,7 +139,7 @@ func (h *DropshipHandler) GetByOrderID(w http.ResponseWriter, r *http.Request) {
 
 	orders, err := h.dropshipService.GetByOrderID(r.Context(), tenantID, orderID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get dropship orders for order")
+		writeServerError(w, "failed to get dropship orders for order", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, orders)
@@ -171,7 +171,7 @@ func (h *DropshipHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update dropship order status")
+				writeServerError(w, "failed to update dropship order status", err)
 			}
 		}
 		return
@@ -201,7 +201,7 @@ func (h *DropshipHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to cancel dropship order")
+				writeServerError(w, "failed to cancel dropship order", err)
 			}
 		}
 		return

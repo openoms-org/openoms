@@ -1,7 +1,9 @@
 package config
 
 import (
+	"encoding/hex"
 	"fmt"
+	"log/slog"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -59,4 +61,36 @@ func Load() (*Config, error) {
 
 func (c *Config) IsDevelopment() bool {
 	return c.Env == "development"
+}
+
+// Validate checks critical config values and returns an error for fatal
+// misconfigurations. Non-fatal issues are logged as warnings.
+func (c *Config) Validate() error {
+	// EncryptionKey must be exactly 64 hex chars (32 bytes).
+	if len(c.EncryptionKey) != 64 {
+		return fmt.Errorf("ENCRYPTION_KEY must be exactly 64 hex characters (got %d)", len(c.EncryptionKey))
+	}
+	if _, err := hex.DecodeString(c.EncryptionKey); err != nil {
+		return fmt.Errorf("ENCRYPTION_KEY is not valid hex: %w", err)
+	}
+
+	// JWTSecret must be at least 32 characters.
+	if len(c.JWTSecret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be at least 32 characters long (got %d)", len(c.JWTSecret))
+	}
+
+	// RegistrationMode must be one of the allowed values.
+	switch c.RegistrationMode {
+	case "open", "invite", "closed":
+		// valid
+	default:
+		return fmt.Errorf("REGISTRATION_MODE must be one of: open, invite, closed (got %q)", c.RegistrationMode)
+	}
+
+	// Warn if registration is open in non-development environments.
+	if c.RegistrationMode == "open" && !c.IsDevelopment() {
+		slog.Warn("REGISTRATION_MODE is 'open' in non-development environment — consider using 'invite' or 'closed'", "env", c.Env)
+	}
+
+	return nil
 }

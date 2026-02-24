@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -41,8 +40,7 @@ func (h *TrackingHandler) TrackOrder(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, "email does not match order")
 			return
 		}
-		slog.Error("tracking lookup failed", "error", err, "tenant_slug", tenantSlug, "order_id", orderID)
-		writeError(w, http.StatusInternalServerError, "failed to look up order")
+		writeServerError(w, "failed to look up order", err)
 		return
 	}
 
