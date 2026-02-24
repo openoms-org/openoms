@@ -40,7 +40,7 @@ func writeServerError(w http.ResponseWriter, message string, err error) {
 func writeCSVHeaders(w http.ResponseWriter, filename string) {
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
-	w.Write([]byte{0xEF, 0xBB, 0xBF})
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 }
 
 func isValidationError(err error) bool {
