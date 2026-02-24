@@ -92,10 +92,13 @@ func (w *ListingSyncWorker) Run(ctx context.Context) error {
 			errStr := syncErr.Error()
 			updateTx, txErr := w.pool.Begin(ctx)
 			if txErr == nil {
-				_, _ = updateTx.Exec(ctx,
+				defer updateTx.Rollback(ctx) //nolint:errcheck
+				if _, execErr := updateTx.Exec(ctx,
 					"SELECT set_config('app.current_tenant_id', $1, true)",
 					cfg.TenantID.String(),
-				)
+				); execErr != nil {
+					w.logger.Error("listing sync worker: failed to set tenant context", "config_id", cfg.ID, "error", execErr)
+				}
 				_ = w.syncRepo.UpdateLastSync(ctx, updateTx, cfg.ID, &errStr)
 				_ = updateTx.Commit(ctx)
 			}

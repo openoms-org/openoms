@@ -19,24 +19,20 @@ func NewAutomationRuleRepository() *AutomationRuleRepository {
 }
 
 func (r *AutomationRuleRepository) List(ctx context.Context, tx pgx.Tx, filter model.AutomationRuleListFilter) ([]model.AutomationRule, int, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.TriggerEvent != nil {
-		where += fmt.Sprintf(" AND trigger_event = $%d", argIdx)
-		args = append(args, *filter.TriggerEvent)
-		argIdx++
+		qb.Add("trigger_event = $%d", *filter.TriggerEvent)
 	}
 	if filter.Enabled != nil {
-		where += fmt.Sprintf(" AND enabled = $%d", argIdx)
-		args = append(args, *filter.Enabled)
-		argIdx++
+		qb.Add("enabled = $%d", *filter.Enabled)
 	}
+
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM automation_rules " + where
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count automation rules: %w", err)
 	}
 
@@ -48,6 +44,7 @@ func (r *AutomationRuleRepository) List(ctx context.Context, tx pgx.Tx, filter m
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, name, description, enabled, priority,
 		        trigger_event, conditions, actions, last_fired_at, fire_count,
@@ -57,9 +54,8 @@ func (r *AutomationRuleRepository) List(ctx context.Context, tx pgx.Tx, filter m
 		 LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list automation rules: %w", err)
 	}

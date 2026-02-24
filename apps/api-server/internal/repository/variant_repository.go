@@ -18,25 +18,18 @@ func NewVariantRepository() *VariantRepository {
 }
 
 func (r *VariantRepository) List(ctx context.Context, tx pgx.Tx, filter model.VariantListFilter) ([]model.ProductVariant, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
-	conditions = append(conditions, fmt.Sprintf("product_id = $%d", argIdx))
-	args = append(args, filter.ProductID)
-	argIdx++
-
+	qb.Add("product_id = $%d", filter.ProductID)
 	if filter.Active != nil {
-		conditions = append(conditions, fmt.Sprintf("active = $%d", argIdx))
-		args = append(args, *filter.Active)
-		argIdx++
+		qb.Add("active = $%d", *filter.Active)
 	}
 
-	where := "WHERE " + strings.Join(conditions, " AND ")
+	where := qb.WhereClause()
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM product_variants %s", where)
 	var total int
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count variants: %w", err)
 	}
 
@@ -52,15 +45,15 @@ func (r *VariantRepository) List(ctx context.Context, tx pgx.Tx, filter model.Va
 		orderByClause = "ORDER BY position ASC, created_at ASC"
 	}
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, product_id, sku, ean, name, attributes, price_override, stock_quantity,
 		        weight, image_url, position, active, created_at, updated_at
 		 FROM product_variants %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list variants: %w", err)
 	}

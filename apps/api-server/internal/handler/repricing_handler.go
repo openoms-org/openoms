@@ -38,7 +38,7 @@ func (h *RepricingHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.repricingService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list repricing rules")
+		writeServerError(w, "failed to list repricing rules", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -59,7 +59,7 @@ func (h *RepricingHandler) GetRule(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "repricing rule not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get repricing rule")
+		writeServerError(w, "failed to get repricing rule", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, rule)
@@ -80,7 +80,7 @@ func (h *RepricingHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create repricing rule")
+			writeServerError(w, "failed to create repricing rule", err)
 		}
 		return
 	}
@@ -112,7 +112,7 @@ func (h *RepricingHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update repricing rule")
+				writeServerError(w, "failed to update repricing rule", err)
 			}
 		}
 		return
@@ -136,7 +136,7 @@ func (h *RepricingHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrRepricingRuleNotFound):
 			writeError(w, http.StatusNotFound, "repricing rule not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete repricing rule")
+			writeServerError(w, "failed to delete repricing rule", err)
 		}
 		return
 	}
@@ -158,7 +158,7 @@ func (h *RepricingHandler) SimulateRule(w http.ResponseWriter, r *http.Request) 
 			writeError(w, http.StatusNotFound, "repricing rule not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to simulate repricing rule")
+		writeServerError(w, "failed to simulate repricing rule", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, results)
@@ -169,7 +169,7 @@ func (h *RepricingHandler) ApplyRules(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.repricingService.ApplyRules(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to apply repricing rules")
+		writeServerError(w, "failed to apply repricing rules", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
@@ -196,7 +196,7 @@ func (h *RepricingHandler) ListLog(w http.ResponseWriter, r *http.Request) {
 		}
 		logs, total, err := h.repricingService.GetLogForRule(r.Context(), tenantID, ruleID, limit, offset)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to list repricing log")
+			writeServerError(w, "failed to list repricing log", err)
 			return
 		}
 		writeJSON(w, http.StatusOK, model.ListResponse[model.RepricingLog]{
@@ -213,7 +213,7 @@ func (h *RepricingHandler) ListLog(w http.ResponseWriter, r *http.Request) {
 		}
 		logs, total, err := h.repricingService.GetLogForProduct(r.Context(), tenantID, productID, limit, offset)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to list repricing log")
+			writeServerError(w, "failed to list repricing log", err)
 			return
 		}
 		writeJSON(w, http.StatusOK, model.ListResponse[model.RepricingLog]{
@@ -224,7 +224,7 @@ func (h *RepricingHandler) ListLog(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.repricingService.ListLog(r.Context(), tenantID, limit, offset)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list repricing log")
+		writeServerError(w, "failed to list repricing log", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -235,7 +235,7 @@ func (h *RepricingHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 
 	summary, err := h.repricingService.GetSummary(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get repricing summary")
+		writeServerError(w, "failed to get repricing summary", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, summary)

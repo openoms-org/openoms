@@ -710,13 +710,15 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 				}
 				deduct := min(remaining, stock.Quantity)
 				// Decrement both quantity and reserved
-				_, _ = tx.Exec(ctx,
+				if _, execErr := tx.Exec(ctx,
 					`UPDATE warehouse_stock
 					 SET quantity = GREATEST(quantity - $1, 0),
 					     reserved = GREATEST(reserved - $1, 0),
 					     updated_at = NOW()
 					 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-					deduct, stock.WarehouseID, productID)
+					deduct, stock.WarehouseID, productID); execErr != nil {
+					slog.Error("failed to adjust warehouse stock", "warehouse_id", stock.WarehouseID, "product_id", productID, "error", execErr)
+				}
 				remaining -= deduct
 			}
 		}
@@ -745,10 +747,12 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 					break
 				}
 				release := min(remaining, stock.Reserved)
-				_, _ = tx.Exec(ctx,
+				if _, execErr := tx.Exec(ctx,
 					`UPDATE warehouse_stock SET reserved = GREATEST(reserved - $1, 0), updated_at = NOW()
 					 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-					release, stock.WarehouseID, productID)
+					release, stock.WarehouseID, productID); execErr != nil {
+					slog.Error("failed to release warehouse stock reservation", "warehouse_id", stock.WarehouseID, "product_id", productID, "error", execErr)
+				}
 				remaining -= release
 			}
 		}

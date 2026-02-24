@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -36,7 +35,7 @@ func (h *IntegrationHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	integrations, err := h.integrationService.List(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list integrations")
+		writeServerError(w, "failed to list integrations", err)
 		return
 	}
 	if integrations == nil {
@@ -59,7 +58,7 @@ func (h *IntegrationHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrIntegrationNotFound) {
 			writeError(w, http.StatusNotFound, "integration not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get integration")
+			writeServerError(w, "failed to get integration", err)
 		}
 		return
 	}
@@ -85,8 +84,7 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				slog.Error("failed to create integration", "error", err, "provider", req.Provider)
-				writeError(w, http.StatusInternalServerError, "failed to create integration")
+				writeServerError(w, "failed to create integration", err)
 			}
 		}
 		return
@@ -121,7 +119,7 @@ func (h *IntegrationHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update integration")
+				writeServerError(w, "failed to update integration", err)
 			}
 		}
 		return
@@ -145,7 +143,7 @@ func (h *IntegrationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrIntegrationNotFound):
 			writeError(w, http.StatusNotFound, "integration not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete integration")
+			writeServerError(w, "failed to delete integration", err)
 		}
 		return
 	}
@@ -177,7 +175,7 @@ func (h *IntegrationHandler) GetGeowidgetToken(w http.ResponseWriter, r *http.Re
 		return nil
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get geowidget token")
+		writeServerError(w, "failed to get geowidget token", err)
 		return
 	}
 

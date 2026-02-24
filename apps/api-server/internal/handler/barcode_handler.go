@@ -35,7 +35,7 @@ func (h *BarcodeHandler) Lookup(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "no product found for this barcode")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to lookup barcode")
+		writeServerError(w, "failed to lookup barcode", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -69,7 +69,7 @@ func (h *BarcodeHandler) PackOrder(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to pack order")
+				writeServerError(w, "failed to pack order", err)
 			}
 		}
 		return

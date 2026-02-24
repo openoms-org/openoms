@@ -27,7 +27,7 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.GetCurrentUser(r.Context(), tenantID, userID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get user")
+		writeServerError(w, "failed to get user", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, user)
@@ -39,7 +39,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	users, err := h.userService.ListUsers(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list users")
+		writeServerError(w, "failed to list users", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, users)
@@ -65,7 +65,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to create user")
+				writeServerError(w, "failed to create user", err)
 			}
 		}
 		return
@@ -107,7 +107,7 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update user")
+				writeServerError(w, "failed to update user", err)
 			}
 		}
 		return
@@ -136,7 +136,7 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrUserNotFound):
 			writeError(w, http.StatusNotFound, "user not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete user")
+			writeServerError(w, "failed to delete user", err)
 		}
 		return
 	}

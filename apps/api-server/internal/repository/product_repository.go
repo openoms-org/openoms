@@ -17,71 +17,47 @@ func NewProductRepository() *ProductRepository {
 }
 
 func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.ProductListFilter) ([]model.Product, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.Name != nil {
-		conditions = append(conditions, fmt.Sprintf("p.name ILIKE '%%' || $%d || '%%'", argIdx))
-		args = append(args, *filter.Name)
-		argIdx++
+		qb.Add("p.name ILIKE '%%' || $%d || '%%'", *filter.Name)
 	}
 	if filter.SKU != nil {
-		conditions = append(conditions, fmt.Sprintf("p.sku ILIKE '%%' || $%d || '%%'", argIdx))
-		args = append(args, *filter.SKU)
-		argIdx++
+		qb.Add("p.sku ILIKE '%%' || $%d || '%%'", *filter.SKU)
 	}
 	if filter.Tag != nil {
-		conditions = append(conditions, fmt.Sprintf("p.tags @> ARRAY[$%d]::text[]", argIdx))
-		args = append(args, *filter.Tag)
-		argIdx++
+		qb.Add("p.tags @> ARRAY[$%d]::text[]", *filter.Tag)
 	}
 	if filter.Category != nil {
-		conditions = append(conditions, fmt.Sprintf("p.category = $%d", argIdx))
-		args = append(args, *filter.Category)
-		argIdx++
+		qb.Add("p.category = $%d", *filter.Category)
 	}
 	if len(filter.CategoryIDs) > 0 {
-		conditions = append(conditions, fmt.Sprintf("p.category_id = ANY($%d)", argIdx))
-		args = append(args, filter.CategoryIDs)
-		argIdx++
+		qb.Add("p.category_id = ANY($%d)", filter.CategoryIDs)
 	}
 	if filter.SupplierID != nil {
-		conditions = append(conditions, fmt.Sprintf("p.dropship_supplier_id = $%d", argIdx))
-		args = append(args, *filter.SupplierID)
-		argIdx++
+		qb.Add("p.dropship_supplier_id = $%d", *filter.SupplierID)
 	}
 	if filter.Source != nil {
-		conditions = append(conditions, fmt.Sprintf("p.source = $%d", argIdx))
-		args = append(args, *filter.Source)
-		argIdx++
+		qb.Add("p.source = $%d", *filter.Source)
 	}
 	if filter.Search != nil {
-		conditions = append(conditions, fmt.Sprintf("(p.name ILIKE '%%' || $%d || '%%' OR p.sku ILIKE '%%' || $%d || '%%' OR p.ean ILIKE '%%' || $%d || '%%')", argIdx, argIdx, argIdx))
-		args = append(args, *filter.Search)
-		argIdx++
+		qb.AddMultiRef("(p.name ILIKE '%%' || $%d || '%%' OR p.sku ILIKE '%%' || $%d || '%%' OR p.ean ILIKE '%%' || $%d || '%%')", 3, *filter.Search)
 	}
 	if filter.Marketplace != nil {
 		if *filter.Marketplace == "none" {
-			conditions = append(conditions, "NOT EXISTS (SELECT 1 FROM product_listings pl WHERE pl.product_id = p.id)")
+			qb.AddRaw("NOT EXISTS (SELECT 1 FROM product_listings pl WHERE pl.product_id = p.id)")
 		} else {
-			conditions = append(conditions, fmt.Sprintf(
-				"EXISTS (SELECT 1 FROM product_listings pl JOIN integrations i ON pl.integration_id = i.id WHERE pl.product_id = p.id AND i.provider = $%d)", argIdx))
-			args = append(args, *filter.Marketplace)
-			argIdx++
+			qb.Add(
+				"EXISTS (SELECT 1 FROM product_listings pl JOIN integrations i ON pl.integration_id = i.id WHERE pl.product_id = p.id AND i.provider = $%d)", *filter.Marketplace)
 		}
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
-
+	where := qb.WhereClause()
 	fromClause := "FROM products p"
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) %s %s", fromClause, where)
 	var total int
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count products: %w", err)
 	}
 
@@ -94,6 +70,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT p.id, p.tenant_id, p.external_id, p.source, p.name, p.sku, p.ean, p.price, p.stock_quantity,
 		        p.metadata, p.tags, p.description_short, p.description_long, p.weight, p.width, p.height, p.depth,
@@ -108,9 +85,8 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		 %s %s %s LIMIT $%d OFFSET $%d`,
 		fromClause, where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list products: %w", err)
 	}

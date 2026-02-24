@@ -45,7 +45,7 @@ func (h *WebhookHandler) Receive(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrInvalidSignature):
 			writeError(w, http.StatusUnauthorized, "invalid signature")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to process webhook")
+			writeServerError(w, "failed to process webhook", err)
 		}
 		return
 	}

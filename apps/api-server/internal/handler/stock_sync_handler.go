@@ -41,7 +41,7 @@ func (h *StockSyncHandler) ListChannels(w http.ResponseWriter, r *http.Request) 
 
 	resp, err := h.stockSyncService.ListChannels(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to retrieve sync channels")
+		writeServerError(w, "failed to retrieve sync channels", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -63,7 +63,7 @@ func (h *StockSyncHandler) CreateChannel(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to create sync channel")
+		writeServerError(w, "failed to create sync channel", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, ch)
@@ -84,7 +84,7 @@ func (h *StockSyncHandler) GetChannel(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "sync channel not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to retrieve channel")
+		writeServerError(w, "failed to retrieve channel", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, ch)
@@ -114,7 +114,7 @@ func (h *StockSyncHandler) UpdateChannel(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to update channel")
+		writeServerError(w, "failed to update channel", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -134,7 +134,7 @@ func (h *StockSyncHandler) DeleteChannel(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusNotFound, "sync channel not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to delete channel")
+		writeServerError(w, "failed to delete channel", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -146,7 +146,7 @@ func (h *StockSyncHandler) PushAll(w http.ResponseWriter, r *http.Request) {
 
 	synced, err := h.stockSyncService.PushAll(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to start sync")
+		writeServerError(w, "failed to start sync", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -165,7 +165,7 @@ func (h *StockSyncHandler) PushProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.stockSyncService.PushStockToAllChannels(r.Context(), tenantID, productID); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to sync stock")
+		writeServerError(w, "failed to sync stock", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
@@ -184,7 +184,7 @@ func (h *StockSyncHandler) ReconcileProduct(w http.ResponseWriter, r *http.Reque
 
 	event, err := h.stockSyncService.ReconcileStock(r.Context(), tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to reconcile stock")
+		writeServerError(w, "failed to reconcile stock", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, event)
@@ -212,7 +212,7 @@ func (h *StockSyncHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.stockSyncService.ListEvents(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to retrieve sync events")
+		writeServerError(w, "failed to retrieve sync events", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -224,7 +224,7 @@ func (h *StockSyncHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 
 	dash, err := h.stockSyncService.GetDashboard(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to retrieve sync status")
+		writeServerError(w, "failed to retrieve sync status", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, dash)
@@ -259,7 +259,7 @@ func (h *StockSyncHandler) GetAllocations(w http.ResponseWriter, r *http.Request
 
 	allocations, err := h.stockSyncService.CalculateAvailableStock(r.Context(), tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to calculate available stock")
+		writeServerError(w, "failed to calculate available stock", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, allocations)

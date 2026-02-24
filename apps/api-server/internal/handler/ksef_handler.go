@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -29,7 +28,7 @@ func (h *KSeFHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := h.ksefService.GetSettings(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load KSeF settings")
+		writeServerError(w, "failed to load KSeF settings", err)
 		return
 	}
 
@@ -73,7 +72,7 @@ func (h *KSeFHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.ksefService.UpdateSettings(r.Context(), tenantID, cfg, actorID, clientIP(r)); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save KSeF settings")
+		writeServerError(w, "failed to save KSeF settings", err)
 		return
 	}
 
@@ -98,7 +97,7 @@ func (h *KSeFHandler) TestConnection(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.ksefService.TestConnection(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to test KSeF connection")
+		writeServerError(w, "failed to test KSeF connection", err)
 		return
 	}
 
@@ -130,7 +129,7 @@ func (h *KSeFHandler) SendToKSeF(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, "invoice has already been sent to KSeF")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to send invoice to KSeF")
+		writeServerError(w, "failed to send invoice to KSeF", err)
 		return
 	}
 
@@ -153,7 +152,7 @@ func (h *KSeFHandler) CheckKSeFStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "invoice not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to check KSeF status")
+		writeServerError(w, "failed to check KSeF status", err)
 		return
 	}
 
@@ -181,8 +180,7 @@ func (h *KSeFHandler) GetUPO(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "invoice not found")
 			return
 		}
-		slog.Error("failed to download UPO", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to download UPO")
+		writeServerError(w, "failed to download UPO", err)
 		return
 	}
 
@@ -222,7 +220,7 @@ func (h *KSeFHandler) BulkSendToKSeF(w http.ResponseWriter, r *http.Request) {
 
 	sent, errs, err := h.ksefService.BulkSendToKSeF(r.Context(), tenantID, ids, actorID, clientIP(r))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to bulk send to KSeF")
+		writeServerError(w, "failed to bulk send to KSeF", err)
 		return
 	}
 

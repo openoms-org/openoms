@@ -168,19 +168,23 @@ func (w *StockSyncWorker) syncBulk(
 			)
 			errMsg := truncateErrorMessage(err.Error())
 			for _, l := range batchListings {
-				_, _ = tx.Exec(ctx,
+				if _, execErr := tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
 					l.ListingID, errMsg,
-				)
+				); execErr != nil {
+					w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+				}
 			}
 			continue
 		}
 
 		for _, l := range batchListings {
-			_, _ = tx.Exec(ctx,
+			if _, execErr := tx.Exec(ctx,
 				`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 				l.ListingID,
-			)
+			); execErr != nil {
+				w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+			}
 		}
 		w.logger.Info("worker: stock batch synced",
 			"operation", "listing.stock_bulk_update",
@@ -212,17 +216,21 @@ func (w *StockSyncWorker) syncOneByOne(
 				"external_id", l.ExternalID,
 				"error", err,
 			)
-			_, _ = tx.Exec(ctx,
+			if _, execErr := tx.Exec(ctx,
 				`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
 				l.ListingID, truncateErrorMessage(err.Error()),
-			)
+			); execErr != nil {
+				w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+			}
 			continue
 		}
 
-		_, _ = tx.Exec(ctx,
+		if _, execErr := tx.Exec(ctx,
 			`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 			l.ListingID,
-		)
+		); execErr != nil {
+			w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+		}
 		w.logger.Info("worker: stock synced",
 			"operation", "listing.stock_update",
 			"tenant_id", ti.TenantID,

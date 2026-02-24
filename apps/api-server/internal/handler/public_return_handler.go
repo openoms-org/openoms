@@ -43,7 +43,7 @@ func (h *PublicReturnHandler) GetByToken(w http.ResponseWriter, r *http.Request)
 
 	ret, err := h.findReturnByToken(r.Context(), token)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to find return")
+		writeServerError(w, "failed to find return", err)
 		return
 	}
 	if ret == nil {
@@ -76,7 +76,7 @@ func (h *PublicReturnHandler) GetStatusByToken(w http.ResponseWriter, r *http.Re
 
 	ret, err := h.findReturnByToken(r.Context(), token)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to find return")
+		writeServerError(w, "failed to find return", err)
 		return
 	}
 	if ret == nil {
@@ -130,7 +130,7 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to validate order")
+		writeServerError(w, "failed to validate order", err)
 		return
 	}
 	if customerEmail == nil || strings.ToLower(*customerEmail) != req.Email {
@@ -141,7 +141,7 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 	// Generate random return token
 	tokenBytes := make([]byte, 16)
 	if _, err := rand.Read(tokenBytes); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate token")
+		writeServerError(w, "failed to generate token", err)
 		return
 	}
 	returnToken := hex.EncodeToString(tokenBytes)
@@ -175,7 +175,7 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 		return h.returnRepo.Create(r.Context(), tx, ret)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create return")
+		writeServerError(w, "failed to create return", err)
 		return
 	}
 

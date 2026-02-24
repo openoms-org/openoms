@@ -19,34 +19,23 @@ func NewWarehouseDocumentRepository() *WarehouseDocumentRepository {
 }
 
 func (r *WarehouseDocumentRepository) List(ctx context.Context, tx pgx.Tx, filter model.WarehouseDocumentListFilter) ([]model.WarehouseDocument, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.DocumentType != nil {
-		conditions = append(conditions, fmt.Sprintf("document_type = $%d", argIdx))
-		args = append(args, *filter.DocumentType)
-		argIdx++
+		qb.Add("document_type = $%d", *filter.DocumentType)
 	}
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.WarehouseID != nil {
-		conditions = append(conditions, fmt.Sprintf("warehouse_id = $%d", argIdx))
-		args = append(args, *filter.WarehouseID)
-		argIdx++
+		qb.Add("warehouse_id = $%d", *filter.WarehouseID)
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM warehouse_documents %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count warehouse_documents: %w", err)
 	}
 
@@ -58,6 +47,7 @@ func (r *WarehouseDocumentRepository) List(ctx context.Context, tx pgx.Tx, filte
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, document_number, document_type, status, warehouse_id,
 		        target_warehouse_id, supplier_id, order_id, notes,
@@ -65,9 +55,8 @@ func (r *WarehouseDocumentRepository) List(ctx context.Context, tx pgx.Tx, filte
 		 FROM warehouse_documents %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list warehouse_documents: %w", err)
 	}

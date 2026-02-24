@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
@@ -85,8 +84,7 @@ func (h *ImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.importService.ImportOrders(r.Context(), tenantID, file, mappings, userID, clientIP(r))
 	if err != nil {
-		slog.Error("import failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to import orders")
+		writeServerError(w, "failed to import orders", err)
 		return
 	}
 

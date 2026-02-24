@@ -74,7 +74,7 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 
 	stateBytes := make([]byte, 16)
 	if _, err := rand.Read(stateBytes); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate state")
+		writeServerError(w, "failed to generate state", err)
 		return
 	}
 	state := hex.EncodeToString(stateBytes)
@@ -87,8 +87,7 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 		Sandbox:      creds.Sandbox,
 	}
 	if err := h.stateStore.Save(r.Context(), state, stateData, 10*time.Minute); err != nil {
-		slog.Error("allegro OAuth: failed to store state", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to store OAuth state")
+		writeServerError(w, "failed to store OAuth state", err)
 		return
 	}
 
@@ -137,8 +136,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	// Validate state and retrieve stored credentials (atomic load + delete)
 	oauthState, err := h.stateStore.Load(r.Context(), body.State)
 	if err != nil {
-		slog.Error("allegro OAuth: failed to load state", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to validate OAuth state")
+		writeServerError(w, "failed to validate OAuth state", err)
 		return
 	}
 	if oauthState == nil {
@@ -171,7 +169,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	}
 	credJSON, err := json.Marshal(credentials)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to encode credentials")
+		writeServerError(w, "failed to encode credentials", err)
 		return
 	}
 
@@ -182,7 +180,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	// Update existing allegro integration with OAuth tokens
 	integrations, listErr := h.integrationService.List(r.Context(), tenantID)
 	if listErr != nil {
-		writeError(w, http.StatusInternalServerError, "failed to find integration")
+		writeServerError(w, "failed to find integration", err)
 		return
 	}
 	for _, integ := range integrations {
@@ -195,7 +193,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 			}
 			updated, updateErr := h.integrationService.Update(r.Context(), tenantID, integ.ID, updateReq, actorID, ip)
 			if updateErr != nil {
-				writeError(w, http.StatusInternalServerError, "failed to update integration")
+				writeServerError(w, "failed to update integration", err)
 				return
 			}
 			writeJSON(w, http.StatusOK, updated)
@@ -216,7 +214,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusConflict, "allegro integration already exists")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to create integration")
+		writeServerError(w, "failed to create integration", err)
 		return
 	}
 	writeJSON(w, http.StatusCreated, result)

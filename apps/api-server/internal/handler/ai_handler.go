@@ -45,7 +45,7 @@ func (h *AIHandler) Categorize(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "AI categorization failed")
+		writeServerError(w, "AI categorization failed", err)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "AI description generation failed")
+		writeServerError(w, "AI description generation failed", err)
 		return
 	}
 
@@ -120,7 +120,7 @@ func (h *AIHandler) Improve(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.aiService.ImproveDescription(r.Context(), req.Description, req.Style, req.Language)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "AI description improvement failed")
+		writeServerError(w, "AI description improvement failed", err)
 		return
 	}
 
@@ -153,7 +153,7 @@ func (h *AIHandler) Translate(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.aiService.TranslateDescription(r.Context(), req.Description, req.TargetLanguage)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "AI translation failed")
+		writeServerError(w, "AI translation failed", err)
 		return
 	}
 

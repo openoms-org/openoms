@@ -53,7 +53,7 @@ import {
 import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, ORDER_PRIORITIES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
-import { formatDate, formatCurrency, shortId, cn } from "@/lib/utils";
+import { formatDate, formatCurrency, shortId, cn, sanitizeUrl } from "@/lib/utils";
 import { getErrorMessage, apiFetch } from "@/lib/api-client";
 import type { CreateOrderRequest, UpdateOrderRequest } from "@/types/api";
 
@@ -657,7 +657,7 @@ export default function OrderDetailPage() {
                         <div>
                           <p className="text-muted-foreground">Etykieta</p>
                           <a
-                            href={shipment.label_url}
+                            href={sanitizeUrl(shipment.label_url)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-medium text-primary hover:underline"

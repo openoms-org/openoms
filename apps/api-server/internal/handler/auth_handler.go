@@ -82,8 +82,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			case service.ErrInvitationUsed:
 				writeError(w, http.StatusBadRequest, "invitation has already been used")
 			default:
-				slog.Error("invitation validation error", "error", err)
-				writeError(w, http.StatusInternalServerError, "failed to validate invitation")
+				writeServerError(w, "failed to validate invitation", err)
 			}
 			return
 		}
@@ -101,7 +100,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "registration failed")
+				writeServerError(w, "registration failed", err)
 			}
 		}
 		return
@@ -136,8 +135,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				slog.Error("login failed", "error", err)
-				writeError(w, http.StatusInternalServerError, "login failed")
+				writeServerError(w, "login failed", err)
 			}
 		}
 		return
@@ -175,7 +173,7 @@ func (h *AuthHandler) TwoFALogin(w http.ResponseWriter, r *http.Request) {
 		case service.ErrInvalid2FACode:
 			writeError(w, http.StatusUnauthorized, "invalid 2FA code")
 		default:
-			writeError(w, http.StatusInternalServerError, "2FA verification failed")
+			writeServerError(w, "2FA verification failed", err)
 		}
 		return
 	}
@@ -191,8 +189,7 @@ func (h *AuthHandler) TwoFASetup(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authService.Setup2FA(r.Context(), userID, tenantID, claims.Email)
 	if err != nil {
-		slog.Error("2fa setup error", "error", err)
-		writeError(w, http.StatusInternalServerError, "2FA setup failed")
+		writeServerError(w, "2FA setup failed", err)
 		return
 	}
 
@@ -221,8 +218,7 @@ func (h *AuthHandler) TwoFAVerify(w http.ResponseWriter, r *http.Request) {
 		case service.Err2FANotSetup:
 			writeError(w, http.StatusBadRequest, "2FA has not been set up yet")
 		default:
-			slog.Error("2fa verify error", "error", err)
-			writeError(w, http.StatusInternalServerError, "2FA verification failed")
+			writeServerError(w, "2FA verification failed", err)
 		}
 		return
 	}
@@ -252,8 +248,7 @@ func (h *AuthHandler) TwoFADisable(w http.ResponseWriter, r *http.Request) {
 		case service.ErrInvalid2FACode:
 			writeError(w, http.StatusBadRequest, "invalid 2FA code")
 		default:
-			slog.Error("2fa disable error", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to disable 2FA")
+			writeServerError(w, "failed to disable 2FA", err)
 		}
 		return
 	}
@@ -267,8 +262,7 @@ func (h *AuthHandler) TwoFAStatus(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.authService.Get2FAStatus(r.Context(), userID, tenantID)
 	if err != nil {
-		slog.Error("2fa status error", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to get 2FA status")
+		writeServerError(w, "failed to get 2FA status", err)
 		return
 	}
 
@@ -356,7 +350,7 @@ func (h *AuthHandler) WSTicket(w http.ResponseWriter, r *http.Request) {
 
 	ticket, err := h.wsTicketSvc.Issue(r.Context(), tokenStr)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create ws ticket")
+		writeServerError(w, "failed to create ws ticket", err)
 		return
 	}
 

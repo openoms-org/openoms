@@ -117,13 +117,17 @@ func Parse(r io.Reader) ([]Product, error) {
 }
 
 // ParseURL fetches and parses an IOF XML feed from a URL.
-func ParseURL(ctx context.Context, url string) ([]Product, error) {
+// If client is nil, http.DefaultClient is used (not recommended — pass an SSRF-safe client).
+func ParseURL(ctx context.Context, url string, client *http.Client) ([]Product, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch IOF feed: %w", err)
 	}

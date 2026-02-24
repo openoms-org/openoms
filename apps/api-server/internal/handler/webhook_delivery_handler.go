@@ -45,7 +45,7 @@ func (h *WebhookDeliveryHandler) List(w http.ResponseWriter, r *http.Request) {
 		return e
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to retrieve webhook deliveries")
+		writeServerError(w, "failed to retrieve webhook deliveries", err)
 		return
 	}
 

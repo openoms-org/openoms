@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -38,8 +37,7 @@ func (h *HelpdeskHandler) ListOrderTickets(w http.ResponseWriter, r *http.Reques
 			})
 			return
 		}
-		slog.Error("helpdesk error", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to communicate with helpdesk")
+		writeServerError(w, "failed to communicate with helpdesk", err)
 		return
 	}
 
@@ -82,8 +80,7 @@ func (h *HelpdeskHandler) CreateOrderTicket(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusBadRequest, "freshdesk is not configured")
 			return
 		}
-		slog.Error("helpdesk error", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to communicate with helpdesk")
+		writeServerError(w, "failed to communicate with helpdesk", err)
 		return
 	}
 
@@ -102,8 +99,7 @@ func (h *HelpdeskHandler) ListAllTickets(w http.ResponseWriter, r *http.Request)
 			})
 			return
 		}
-		slog.Error("helpdesk error", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to communicate with helpdesk")
+		writeServerError(w, "failed to communicate with helpdesk", err)
 		return
 	}
 

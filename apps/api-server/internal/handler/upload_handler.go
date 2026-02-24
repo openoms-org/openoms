@@ -51,7 +51,7 @@ func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	buf := make([]byte, 512)
 	n, err := file.Read(buf)
 	if err != nil && err != io.EOF {
-		writeError(w, http.StatusInternalServerError, "failed to read file")
+		writeServerError(w, "failed to read file", err)
 		return
 	}
 	contentType := http.DetectContentType(buf[:n])
@@ -74,7 +74,7 @@ func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	// Upload via storage backend
 	url, err := h.storage.Upload(r.Context(), key, file, contentType)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to upload file")
+		writeServerError(w, "failed to upload file", err)
 		return
 	}
 

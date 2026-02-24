@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -43,8 +42,7 @@ func (h *SupplierPortalHandler) GenerateLink(w http.ResponseWriter, r *http.Requ
 		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
 		default:
-			slog.Error("failed to generate portal link", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to generate portal link")
+			writeServerError(w, "failed to generate portal link", err)
 		}
 		return
 	}
@@ -63,8 +61,7 @@ func (h *SupplierPortalHandler) RevokeAccess(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := h.portalService.RevokeTokens(r.Context(), tenantID, supplierID, actorID, clientIP(r)); err != nil {
-		slog.Error("failed to revoke portal access", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to revoke portal access")
+		writeServerError(w, "failed to revoke portal access", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"message": "portal access revoked"})
@@ -86,8 +83,7 @@ func (h *SupplierPortalHandler) GetPortalStatus(w http.ResponseWriter, r *http.R
 		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
 		default:
-			slog.Error("failed to get portal status", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to get portal status")
+			writeServerError(w, "failed to get portal status", err)
 		}
 		return
 	}
@@ -129,8 +125,7 @@ func (h *SupplierPortalHandler) ListOrders(w http.ResponseWriter, r *http.Reques
 
 	orders, err := h.portalService.ListPurchaseOrders(r.Context(), tenantID, supplier.ID)
 	if err != nil {
-		slog.Error("failed to list portal orders", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to list orders")
+		writeServerError(w, "failed to list orders", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -168,8 +163,7 @@ func (h *SupplierPortalHandler) GetOrder(w http.ResponseWriter, r *http.Request)
 		case errors.Is(err, service.ErrPortalPONotFound), errors.Is(err, service.ErrPortalPONotOwned):
 			writeError(w, http.StatusNotFound, "purchase order not found")
 		default:
-			slog.Error("failed to get portal order", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to get order")
+			writeServerError(w, "failed to get order", err)
 		}
 		return
 	}
@@ -209,8 +203,7 @@ func (h *SupplierPortalHandler) ConfirmOrder(w http.ResponseWriter, r *http.Requ
 		case errors.Is(err, service.ErrPortalInvalidAction):
 			writeError(w, http.StatusConflict, "cannot confirm this order in its current status")
 		default:
-			slog.Error("failed to confirm portal order", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to confirm order")
+			writeServerError(w, "failed to confirm order", err)
 		}
 		return
 	}
@@ -254,8 +247,7 @@ func (h *SupplierPortalHandler) ShipOrder(w http.ResponseWriter, r *http.Request
 		case errors.Is(err, service.ErrPortalInvalidAction):
 			writeError(w, http.StatusConflict, "cannot ship this order in its current status")
 		default:
-			slog.Error("failed to ship portal order", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to mark order as shipped")
+			writeServerError(w, "failed to mark order as shipped", err)
 		}
 		return
 	}
@@ -298,8 +290,7 @@ func (h *SupplierPortalHandler) AddMessage(w http.ResponseWriter, r *http.Reques
 		case errors.Is(err, service.ErrPortalPONotFound), errors.Is(err, service.ErrPortalPONotOwned):
 			writeError(w, http.StatusNotFound, "purchase order not found")
 		default:
-			slog.Error("failed to add portal message", "error", err)
-			writeError(w, http.StatusInternalServerError, "failed to add message")
+			writeServerError(w, "failed to add message", err)
 		}
 		return
 	}
@@ -328,8 +319,7 @@ func (h *SupplierPortalHandler) ListMessages(w http.ResponseWriter, r *http.Requ
 
 	messages, err := h.portalService.ListMessages(r.Context(), tenantID, poID)
 	if err != nil {
-		slog.Error("failed to list portal messages", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to list messages")
+		writeServerError(w, "failed to list messages", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, messages)
@@ -345,7 +335,6 @@ func (h *SupplierPortalHandler) handlePortalAuthError(w http.ResponseWriter, err
 	case errors.Is(err, service.ErrPortalNotEnabled):
 		writeError(w, http.StatusForbidden, "portal access has been disabled")
 	default:
-		slog.Error("portal auth error", "error", err)
-		writeError(w, http.StatusInternalServerError, "authentication failed")
+		writeServerError(w, "authentication failed", err)
 	}
 }

@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -86,8 +85,7 @@ func (h *VATOSSHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := h.vatOSSSvc.GetOSSConfig(r.Context(), tenantID)
 	if err != nil {
-		slog.Error("failed to get OSS config", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusInternalServerError, "failed to load VAT OSS config")
+		writeServerError(w, "failed to load VAT OSS config", err)
 		return
 	}
 
@@ -127,8 +125,7 @@ func (h *VATOSSHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.vatOSSSvc.UpdateOSSConfig(r.Context(), tenantID, cfg); err != nil {
-		slog.Error("failed to update OSS config", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusInternalServerError, "failed to save VAT OSS config")
+		writeServerError(w, "failed to save VAT OSS config", err)
 		return
 	}
 
@@ -148,8 +145,7 @@ func (h *VATOSSHandler) GetReport(w http.ResponseWriter, r *http.Request) {
 
 	report, err := h.vatOSSSvc.GenerateOSSReport(r.Context(), tenantID, quarter, year)
 	if err != nil {
-		slog.Error("failed to generate OSS report", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusInternalServerError, "failed to generate OSS report")
+		writeServerError(w, "failed to generate OSS report", err)
 		return
 	}
 
@@ -169,17 +165,12 @@ func (h *VATOSSHandler) GetReportCSV(w http.ResponseWriter, r *http.Request) {
 
 	report, err := h.vatOSSSvc.GenerateOSSReport(r.Context(), tenantID, quarter, year)
 	if err != nil {
-		slog.Error("failed to generate OSS report CSV", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusInternalServerError, "failed to generate OSS report")
+		writeServerError(w, "failed to generate OSS report", err)
 		return
 	}
 
 	filename := fmt.Sprintf("vat-oss-report-Q%d-%d.csv", quarter, year)
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
-
-	// BOM for Excel UTF-8
-	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	writeCSVHeaders(w, filename)
 
 	// Header row
 	_, _ = fmt.Fprintln(w, "Kraj;Nazwa kraju;Liczba zamowien;Sprzedaz (EUR);Stawka VAT (%);Kwota VAT (EUR)")
@@ -222,8 +213,7 @@ func (h *VATOSSHandler) GetThreshold(w http.ResponseWriter, r *http.Request) {
 
 	status, err := h.vatOSSSvc.GetOSSThresholdStatus(r.Context(), tenantID, year)
 	if err != nil {
-		slog.Error("failed to get OSS threshold", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusInternalServerError, "failed to check threshold status")
+		writeServerError(w, "failed to check threshold status", err)
 		return
 	}
 

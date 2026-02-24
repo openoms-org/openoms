@@ -57,6 +57,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := cfg.Validate(); err != nil {
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
+
 	// Connect to Redis (for rate limiting and token blacklist)
 	var redisClient *redis.Client
 	redisOpts, err := redis.ParseURL(cfg.RedisURL)

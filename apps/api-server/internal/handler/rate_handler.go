@@ -64,7 +64,7 @@ func (h *RateHandler) GetRates(w http.ResponseWriter, r *http.Request) {
 
 	rates, err := h.rateService.GetRates(r.Context(), tenantID, rateReq)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get shipping rates")
+		writeServerError(w, "failed to get shipping rates", err)
 		return
 	}
 

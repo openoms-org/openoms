@@ -40,7 +40,7 @@ func (h *WarehouseHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.warehouseService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list warehouses")
+		writeServerError(w, "failed to list warehouses", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -61,7 +61,7 @@ func (h *WarehouseHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrWarehouseNotFound) {
 			writeError(w, http.StatusNotFound, "warehouse not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get warehouse")
+			writeServerError(w, "failed to get warehouse", err)
 		}
 		return
 	}
@@ -84,7 +84,7 @@ func (h *WarehouseHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create warehouse")
+			writeServerError(w, "failed to create warehouse", err)
 		}
 		return
 	}
@@ -117,7 +117,7 @@ func (h *WarehouseHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update warehouse")
+				writeServerError(w, "failed to update warehouse", err)
 			}
 		}
 		return
@@ -142,7 +142,7 @@ func (h *WarehouseHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrWarehouseNotFound):
 			writeError(w, http.StatusNotFound, "warehouse not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete warehouse")
+			writeServerError(w, "failed to delete warehouse", err)
 		}
 		return
 	}
@@ -169,7 +169,7 @@ func (h *WarehouseHandler) ListStock(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrWarehouseNotFound) {
 			writeError(w, http.StatusNotFound, "warehouse not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list warehouse stock")
+			writeServerError(w, "failed to list warehouse stock", err)
 		}
 		return
 	}
@@ -206,7 +206,7 @@ func (h *WarehouseHandler) UpsertStock(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to upsert stock")
+				writeServerError(w, "failed to upsert stock", err)
 			}
 		}
 		return
@@ -226,7 +226,7 @@ func (h *WarehouseHandler) ListProductStock(w http.ResponseWriter, r *http.Reque
 
 	stocks, err := h.warehouseService.ListProductStock(r.Context(), tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list product stock")
+		writeServerError(w, "failed to list product stock", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, stocks)

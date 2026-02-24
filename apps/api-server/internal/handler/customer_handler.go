@@ -36,7 +36,7 @@ func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.customerService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list customers")
+		writeServerError(w, "failed to list customers", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -56,7 +56,7 @@ func (h *CustomerHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrCustomerNotFound) {
 			writeError(w, http.StatusNotFound, "customer not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get customer")
+			writeServerError(w, "failed to get customer", err)
 		}
 		return
 	}
@@ -78,7 +78,7 @@ func (h *CustomerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create customer")
+			writeServerError(w, "failed to create customer", err)
 		}
 		return
 	}
@@ -110,7 +110,7 @@ func (h *CustomerHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update customer")
+				writeServerError(w, "failed to update customer", err)
 			}
 		}
 		return
@@ -134,7 +134,7 @@ func (h *CustomerHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrCustomerNotFound):
 			writeError(w, http.StatusNotFound, "customer not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete customer")
+			writeServerError(w, "failed to delete customer", err)
 		}
 		return
 	}
@@ -163,7 +163,7 @@ func (h *CustomerHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrCustomerNotFound) {
 			writeError(w, http.StatusNotFound, "customer not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list customer orders")
+			writeServerError(w, "failed to list customer orders", err)
 		}
 		return
 	}

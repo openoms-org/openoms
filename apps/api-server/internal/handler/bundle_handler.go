@@ -32,7 +32,7 @@ func (h *BundleHandler) ListComponents(w http.ResponseWriter, r *http.Request) {
 
 	components, err := h.bundleService.ListComponents(r.Context(), tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list bundle components")
+		writeServerError(w, "failed to list bundle components", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, components)
@@ -63,7 +63,7 @@ func (h *BundleHandler) AddComponent(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to add bundle component")
+				writeServerError(w, "failed to add bundle component", err)
 			}
 		}
 		return
@@ -96,7 +96,7 @@ func (h *BundleHandler) UpdateComponent(w http.ResponseWriter, r *http.Request) 
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update bundle component")
+				writeServerError(w, "failed to update bundle component", err)
 			}
 		}
 		return
@@ -120,7 +120,7 @@ func (h *BundleHandler) RemoveComponent(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, service.ErrBundleComponentNotFound):
 			writeError(w, http.StatusNotFound, "bundle component not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to remove bundle component")
+			writeServerError(w, "failed to remove bundle component", err)
 		}
 		return
 	}
@@ -142,7 +142,7 @@ func (h *BundleHandler) GetBundleStock(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusBadRequest, "produkt nie jest bundlem")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to calculate bundle stock")
+		writeServerError(w, "failed to calculate bundle stock", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]int{"stock": stock})

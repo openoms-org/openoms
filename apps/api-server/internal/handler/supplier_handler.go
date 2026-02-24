@@ -34,7 +34,7 @@ func (h *SupplierHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.supplierService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list suppliers")
+		writeServerError(w, "failed to list suppliers", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -54,7 +54,7 @@ func (h *SupplierHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrSupplierNotFound) {
 			writeError(w, http.StatusNotFound, "supplier not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get supplier")
+			writeServerError(w, "failed to get supplier", err)
 		}
 		return
 	}
@@ -76,7 +76,7 @@ func (h *SupplierHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create supplier")
+			writeServerError(w, "failed to create supplier", err)
 		}
 		return
 	}
@@ -108,7 +108,7 @@ func (h *SupplierHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update supplier")
+				writeServerError(w, "failed to update supplier", err)
 			}
 		}
 		return
@@ -132,7 +132,7 @@ func (h *SupplierHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete supplier")
+			writeServerError(w, "failed to delete supplier", err)
 		}
 		return
 	}
@@ -156,7 +156,7 @@ func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrNoFeedURL):
 			writeError(w, http.StatusBadRequest, "supplier has no feed URL configured")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to sync feed")
+			writeServerError(w, "failed to sync feed", err)
 		}
 		return
 	}
@@ -193,7 +193,7 @@ func (h *SupplierHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.supplierService.ListProducts(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list supplier products")
+		writeServerError(w, "failed to list supplier products", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -211,7 +211,7 @@ func (h *SupplierHandler) ListSourceCategories(w http.ResponseWriter, r *http.Re
 
 	categories, err := h.supplierService.ListSourceCategories(r.Context(), tenantID, supplierID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list source categories")
+		writeServerError(w, "failed to list source categories", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, categories)
@@ -239,7 +239,7 @@ func (h *SupplierHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) 
 		if errors.Is(err, service.ErrSupplierProductNotFound) {
 			writeError(w, http.StatusNotFound, "supplier product not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to delete supplier product")
+			writeServerError(w, "failed to delete supplier product", err)
 		}
 		return
 	}
@@ -272,7 +272,7 @@ func (h *SupplierHandler) BulkDeleteProducts(w http.ResponseWriter, r *http.Requ
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to delete supplier products")
+				writeServerError(w, "failed to delete supplier products", err)
 			}
 		}
 		return
@@ -296,7 +296,7 @@ func (h *SupplierHandler) UnlinkProduct(w http.ResponseWriter, r *http.Request) 
 		if errors.Is(err, service.ErrSupplierProductNotFound) {
 			writeError(w, http.StatusNotFound, "supplier product not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to unlink product")
+			writeServerError(w, "failed to unlink product", err)
 		}
 		return
 	}
@@ -330,7 +330,7 @@ func (h *SupplierHandler) LinkProduct(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrSupplierProductNotFound):
 			writeError(w, http.StatusNotFound, "supplier product not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to link product")
+			writeServerError(w, "failed to link product", err)
 		}
 		return
 	}
@@ -351,7 +351,7 @@ func (h *SupplierHandler) ListCategoryMappings(w http.ResponseWriter, r *http.Re
 		if errors.Is(err, service.ErrSupplierNotFound) {
 			writeError(w, http.StatusNotFound, "supplier not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list category mappings")
+			writeServerError(w, "failed to list category mappings", err)
 		}
 		return
 	}
@@ -382,7 +382,7 @@ func (h *SupplierHandler) UpsertCategoryMapping(w http.ResponseWriter, r *http.R
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to upsert category mapping")
+				writeServerError(w, "failed to upsert category mapping", err)
 			}
 		}
 		return
@@ -416,7 +416,7 @@ func (h *SupplierHandler) ImportProducts(w http.ResponseWriter, r *http.Request)
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to import products")
+				writeServerError(w, "failed to import products", err)
 			}
 		}
 		return
@@ -445,7 +445,7 @@ func (h *SupplierHandler) DeleteCategoryMapping(w http.ResponseWriter, r *http.R
 		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete category mapping")
+			writeServerError(w, "failed to delete category mapping", err)
 		}
 		return
 	}
@@ -473,7 +473,7 @@ func (h *SupplierHandler) ListAllegroMappings(w http.ResponseWriter, r *http.Req
 		if errors.Is(err, service.ErrSupplierNotFound) {
 			writeError(w, http.StatusNotFound, "supplier not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list allegro mappings")
+			writeServerError(w, "failed to list allegro mappings", err)
 		}
 		return
 	}
@@ -505,7 +505,7 @@ func (h *SupplierHandler) BulkUpsertAllegroMappings(w http.ResponseWriter, r *ht
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to upsert allegro mappings")
+				writeServerError(w, "failed to upsert allegro mappings", err)
 			}
 		}
 		return
@@ -535,7 +535,7 @@ func (h *SupplierHandler) DeleteAllegroMapping(w http.ResponseWriter, r *http.Re
 		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete allegro mapping")
+			writeServerError(w, "failed to delete allegro mapping", err)
 		}
 		return
 	}
@@ -557,7 +557,7 @@ func (h *SupplierHandler) ListSupplierAttributes(w http.ResponseWriter, r *http.
 		if errors.Is(err, service.ErrSupplierNotFound) {
 			writeError(w, http.StatusNotFound, "supplier not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list supplier attributes")
+			writeServerError(w, "failed to list supplier attributes", err)
 		}
 		return
 	}
@@ -579,7 +579,7 @@ func (h *SupplierHandler) ListAllegroMappingCategories(w http.ResponseWriter, r 
 		if errors.Is(err, service.ErrSupplierNotFound) {
 			writeError(w, http.StatusNotFound, "supplier not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list allegro mapping categories")
+			writeServerError(w, "failed to list allegro mapping categories", err)
 		}
 		return
 	}
@@ -598,7 +598,7 @@ func (h *SupplierHandler) SupplierLink(w http.ResponseWriter, r *http.Request) {
 
 	supplierID, err := h.supplierService.FindSupplierForProduct(r.Context(), tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to find supplier for product")
+		writeServerError(w, "failed to find supplier for product", err)
 		return
 	}
 	if supplierID == nil {
@@ -628,7 +628,7 @@ func (h *SupplierHandler) BTPWizardStartImport(w http.ResponseWriter, r *http.Re
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to start import")
+			writeServerError(w, "failed to start import", err)
 		}
 		return
 	}
@@ -650,7 +650,7 @@ func (h *SupplierHandler) BTPWizardImportProgress(w http.ResponseWriter, r *http
 		if errors.Is(err, service.ErrSupplierNotFound) {
 			writeError(w, http.StatusNotFound, "supplier not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get import progress")
+			writeServerError(w, "failed to get import progress", err)
 		}
 		return
 	}
@@ -684,7 +684,7 @@ func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Req
 		case errors.Is(err, service.ErrDuplicateProvider):
 			writeError(w, http.StatusConflict, "BTP integration already exists for this tenant")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to set API keys")
+			writeServerError(w, "failed to set API keys", err)
 		}
 		return
 	}
@@ -716,7 +716,7 @@ func (h *SupplierHandler) BTPWizardCompleteSyncSettings(w http.ResponseWriter, r
 		case errors.Is(err, service.ErrSupplierNotFound):
 			writeError(w, http.StatusNotFound, "supplier not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to complete sync settings")
+			writeServerError(w, "failed to complete sync settings", err)
 		}
 		return
 	}
@@ -749,7 +749,7 @@ func (h *SupplierHandler) ImportSingleProduct(w http.ResponseWriter, r *http.Req
 		case errors.Is(err, service.ErrSupplierProductNotFound):
 			writeError(w, http.StatusNotFound, "supplier product not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to import product")
+			writeServerError(w, "failed to import product", err)
 		}
 		return
 	}
@@ -791,7 +791,7 @@ func (h *SupplierHandler) ListAllSupplierProducts(w http.ResponseWriter, r *http
 
 	resp, err := h.supplierService.ListAllProducts(r.Context(), tenantID, params)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list supplier products")
+		writeServerError(w, "failed to list supplier products", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)

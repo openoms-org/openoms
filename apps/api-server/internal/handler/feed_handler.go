@@ -29,7 +29,7 @@ func (h *FeedHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := h.feedService.GetFeedConfig(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load feed config")
+		writeServerError(w, "failed to load feed config", err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (h *FeedHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.feedService.UpdateFeedConfig(r.Context(), tenantID, &cfg); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save feed config")
+		writeServerError(w, "failed to save feed config", err)
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *FeedHandler) RegenerateToken(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := h.feedService.RegenerateToken(r.Context(), tenantID, req.FeedType)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to regenerate token")
+		writeServerError(w, "failed to regenerate token", err)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *FeedHandler) ServeCeneoFeed(w http.ResponseWriter, r *http.Request) {
 
 	valid, err := h.feedService.ValidateFeedToken(r.Context(), tenantID, "ceneo", token)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeServerError(w, "internal error", err)
 		return
 	}
 	if !valid {
@@ -97,7 +97,7 @@ func (h *FeedHandler) ServeCeneoFeed(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.feedService.GenerateCeneoFeed(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate feed")
+		writeServerError(w, "failed to generate feed", err)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (h *FeedHandler) ServeGoogleFeed(w http.ResponseWriter, r *http.Request) {
 
 	valid, err := h.feedService.ValidateFeedToken(r.Context(), tenantID, "google", token)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal error")
+		writeServerError(w, "internal error", err)
 		return
 	}
 	if !valid {
@@ -127,7 +127,7 @@ func (h *FeedHandler) ServeGoogleFeed(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.feedService.GenerateGoogleFeed(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate feed")
+		writeServerError(w, "failed to generate feed", err)
 		return
 	}
 

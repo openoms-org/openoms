@@ -49,7 +49,7 @@ func (h *AccountingHandler) GetAccountingSettings(w http.ResponseWriter, r *http
 		return h.getSettingsSection(r.Context(), tx, tenantID, "invoicing", &invoicingCfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load accounting settings")
+		writeServerError(w, "failed to load accounting settings", err)
 		return
 	}
 
@@ -159,7 +159,7 @@ func (h *AccountingHandler) UpdateAccountingSettings(w http.ResponseWriter, r *h
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save accounting settings")
+		writeServerError(w, "failed to save accounting settings", err)
 		return
 	}
 
@@ -194,7 +194,7 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 		return nil
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load settings")
+		writeServerError(w, "failed to load settings", err)
 		return
 	}
 

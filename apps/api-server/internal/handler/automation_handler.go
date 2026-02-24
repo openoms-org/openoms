@@ -41,7 +41,7 @@ func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.automationService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list automation rules")
+		writeServerError(w, "failed to list automation rules", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -62,7 +62,7 @@ func (h *AutomationHandler) Get(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "automation rule not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get automation rule")
+		writeServerError(w, "failed to get automation rule", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, rule)
@@ -82,7 +82,7 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create automation rule")
+			writeServerError(w, "failed to create automation rule", err)
 		}
 		return
 	}
@@ -113,7 +113,7 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to update automation rule")
+			writeServerError(w, "failed to update automation rule", err)
 		}
 		return
 	}
@@ -135,7 +135,7 @@ func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "automation rule not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to delete automation rule")
+		writeServerError(w, "failed to delete automation rule", err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -158,7 +158,7 @@ func (h *AutomationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "automation rule not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to list automation rule logs")
+		writeServerError(w, "failed to list automation rule logs", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -169,7 +169,7 @@ func (h *AutomationHandler) ListDelayed(w http.ResponseWriter, r *http.Request) 
 
 	actions, err := h.automationService.ListDelayed(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list delayed actions")
+		writeServerError(w, "failed to list delayed actions", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, actions)
@@ -203,7 +203,7 @@ func (h *AutomationHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to test automation rule")
+			writeServerError(w, "failed to test automation rule", err)
 		}
 		return
 	}

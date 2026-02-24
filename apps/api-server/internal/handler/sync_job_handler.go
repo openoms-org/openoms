@@ -53,7 +53,7 @@ func (h *SyncJobHandler) List(w http.ResponseWriter, r *http.Request) {
 		return e
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to retrieve sync jobs")
+		writeServerError(w, "failed to retrieve sync jobs", err)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *SyncJobHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return e
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to retrieve sync job")
+		writeServerError(w, "failed to retrieve sync job", err)
 		return
 	}
 	if job == nil {

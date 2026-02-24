@@ -38,7 +38,7 @@ func (h *ProductCategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	categories, err := h.categorySvc.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list categories")
+		writeServerError(w, "failed to list categories", err)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *ProductCategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrCategoryNotFound) {
 			writeError(w, http.StatusNotFound, "category not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get category")
+			writeServerError(w, "failed to get category", err)
 		}
 		return
 	}
@@ -90,7 +90,7 @@ func (h *ProductCategoryHandler) Create(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, service.ErrCategoryDepthLimit):
 			writeError(w, http.StatusBadRequest, "maximum category depth exceeded")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to create category")
+			writeServerError(w, "failed to create category", err)
 		}
 		return
 	}
@@ -126,7 +126,7 @@ func (h *ProductCategoryHandler) Update(w http.ResponseWriter, r *http.Request) 
 		case errors.Is(err, service.ErrCircularReference):
 			writeError(w, http.StatusBadRequest, "circular parent reference detected")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to update category")
+			writeServerError(w, "failed to update category", err)
 		}
 		return
 	}
@@ -147,7 +147,7 @@ func (h *ProductCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) 
 		if errors.Is(err, service.ErrCategoryNotFound) {
 			writeError(w, http.StatusNotFound, "category not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to delete category")
+			writeServerError(w, "failed to delete category", err)
 		}
 		return
 	}
@@ -164,7 +164,7 @@ func (h *ProductCategoryHandler) ListDescendants(w http.ResponseWriter, r *http.
 
 	ids, err := h.categorySvc.GetDescendantIDs(r.Context(), tenantID, id)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get descendants")
+		writeServerError(w, "failed to get descendants", err)
 		return
 	}
 

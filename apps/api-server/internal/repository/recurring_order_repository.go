@@ -34,34 +34,23 @@ func scanRecurringOrder(row interface{ Scan(dest ...any) error }) (*model.Recurr
 }
 
 func (r *RecurringOrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.RecurringOrderListFilter) ([]model.RecurringOrder, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.Status != nil && *filter.Status != "" {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.CustomerID != nil && *filter.CustomerID != "" {
-		conditions = append(conditions, fmt.Sprintf("customer_id = $%d", argIdx))
-		args = append(args, *filter.CustomerID)
-		argIdx++
+		qb.Add("customer_id = $%d", *filter.CustomerID)
 	}
 	if filter.NextDateBefore != nil && *filter.NextDateBefore != "" {
-		conditions = append(conditions, fmt.Sprintf("next_order_date <= $%d", argIdx))
-		args = append(args, *filter.NextDateBefore)
-		argIdx++
+		qb.Add("next_order_date <= $%d", *filter.NextDateBefore)
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM recurring_orders %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count recurring orders: %w", err)
 	}
 
@@ -74,13 +63,13 @@ func (r *RecurringOrderRepository) List(ctx context.Context, tx pgx.Tx, filter m
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT %s FROM recurring_orders %s %s LIMIT $%d OFFSET $%d`,
 		recurringOrderColumns, where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list recurring orders: %w", err)
 	}

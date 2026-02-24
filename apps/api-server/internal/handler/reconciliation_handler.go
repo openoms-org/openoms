@@ -42,7 +42,7 @@ func (h *ReconciliationHandler) CreateSettlement(w http.ResponseWriter, r *http.
 
 	settlement, err := h.reconciliationService.ImportSettlement(r.Context(), tenantID, req)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to create settlement")
+		writeServerError(w, "failed to create settlement", err)
 		return
 	}
 
@@ -106,7 +106,7 @@ func (h *ReconciliationHandler) ListSettlements(w http.ResponseWriter, r *http.R
 
 	resp, err := h.reconciliationService.ListSettlements(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list settlements")
+		writeServerError(w, "failed to list settlements", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -128,7 +128,7 @@ func (h *ReconciliationHandler) GetSettlement(w http.ResponseWriter, r *http.Req
 			writeError(w, http.StatusNotFound, "settlement not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to get settlement")
+		writeServerError(w, "failed to get settlement", err)
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *ReconciliationHandler) AutoMatch(w http.ResponseWriter, r *http.Request
 			writeError(w, http.StatusNotFound, "settlement not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to auto-match")
+		writeServerError(w, "failed to auto-match", err)
 		return
 	}
 
@@ -192,7 +192,7 @@ func (h *ReconciliationHandler) ListTransactions(w http.ResponseWriter, r *http.
 
 	resp, err := h.reconciliationService.ListTransactions(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list transactions")
+		writeServerError(w, "failed to list transactions", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -229,7 +229,7 @@ func (h *ReconciliationHandler) ManualMatch(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusNotFound, "order not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to match transaction")
+		writeServerError(w, "failed to match transaction", err)
 		return
 	}
 
@@ -252,7 +252,7 @@ func (h *ReconciliationHandler) Unmatch(w http.ResponseWriter, r *http.Request) 
 			writeError(w, http.StatusNotFound, "transaction not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to unmatch transaction")
+		writeServerError(w, "failed to unmatch transaction", err)
 		return
 	}
 
@@ -273,7 +273,7 @@ func (h *ReconciliationHandler) GetSummary(w http.ResponseWriter, r *http.Reques
 
 	summary, err := h.reconciliationService.GetSummary(r.Context(), tenantID, dateFrom, dateTo)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get reconciliation summary")
+		writeServerError(w, "failed to get reconciliation summary", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, summary)

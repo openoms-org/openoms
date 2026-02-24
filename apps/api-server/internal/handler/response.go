@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -33,6 +34,13 @@ func writeError(w http.ResponseWriter, status int, message string) {
 func writeServerError(w http.ResponseWriter, message string, err error) {
 	slog.Error(message, "error", err)
 	writeError(w, http.StatusInternalServerError, message)
+}
+
+// writeCSVHeaders sets standard headers for CSV file downloads and writes the UTF-8 BOM for Excel compatibility.
+func writeCSVHeaders(w http.ResponseWriter, filename string) {
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 }
 
 func isValidationError(err error) bool {

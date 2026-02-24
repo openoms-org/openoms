@@ -100,7 +100,7 @@ func (h *SettingsHandler) GetEmailSettings(w http.ResponseWriter, r *http.Reques
 		return h.getSettingsSection(r.Context(), tx, tenantID, "email", &emailCfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load settings")
+		writeServerError(w, "failed to load settings", err)
 		return
 	}
 
@@ -150,7 +150,7 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 		})
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save settings")
+		writeServerError(w, "failed to save settings", err)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (h *SettingsHandler) GetCompanySettings(w http.ResponseWriter, r *http.Requ
 		return h.getSettingsSection(r.Context(), tx, tenantID, "company", &companyCfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load settings")
+		writeServerError(w, "failed to load settings", err)
 		return
 	}
 
@@ -231,9 +231,12 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 
 	// Re-read final state to return to the client
 	var finalCfg model.CompanySettings
-	_ = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		return h.getSettingsSection(r.Context(), tx, tenantID, "company", &finalCfg)
-	})
+	}); err != nil {
+		writeServerError(w, "failed to reload settings", err)
+		return
+	}
 
 	writeJSON(w, http.StatusOK, finalCfg)
 }
@@ -254,7 +257,7 @@ func (h *SettingsHandler) GetOrderStatuses(w http.ResponseWriter, r *http.Reques
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load order statuses")
+		writeServerError(w, "failed to load order statuses", err)
 		return
 	}
 
@@ -314,7 +317,7 @@ func (h *SettingsHandler) UpdateOrderStatuses(w http.ResponseWriter, r *http.Req
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save order statuses")
+		writeServerError(w, "failed to save order statuses", err)
 		return
 	}
 
@@ -337,7 +340,7 @@ func (h *SettingsHandler) GetCustomFields(w http.ResponseWriter, r *http.Request
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load custom fields")
+		writeServerError(w, "failed to load custom fields", err)
 		return
 	}
 
@@ -391,7 +394,7 @@ func (h *SettingsHandler) UpdateCustomFields(w http.ResponseWriter, r *http.Requ
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save custom fields")
+		writeServerError(w, "failed to save custom fields", err)
 		return
 	}
 
@@ -423,7 +426,7 @@ func (h *SettingsHandler) GetProductCategories(w http.ResponseWriter, r *http.Re
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load product categories")
+		writeServerError(w, "failed to load product categories", err)
 		return
 	}
 
@@ -469,7 +472,7 @@ func (h *SettingsHandler) UpdateProductCategories(w http.ResponseWriter, r *http
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save product categories")
+		writeServerError(w, "failed to save product categories", err)
 		return
 	}
 
@@ -492,7 +495,7 @@ func (h *SettingsHandler) GetWebhooks(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load webhook settings")
+		writeServerError(w, "failed to load webhook settings", err)
 		return
 	}
 
@@ -554,7 +557,7 @@ func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request)
 	})
 
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save webhook settings")
+		writeServerError(w, "failed to save webhook settings", err)
 		return
 	}
 
@@ -570,7 +573,7 @@ func (h *SettingsHandler) GetOnboardingSettings(w http.ResponseWriter, r *http.R
 		return h.getSettingsSection(r.Context(), tx, tenantID, "onboarding", &cfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load onboarding settings")
+		writeServerError(w, "failed to load onboarding settings", err)
 		return
 	}
 
@@ -602,7 +605,7 @@ func (h *SettingsHandler) UpdateOnboardingSettings(w http.ResponseWriter, r *htt
 		})
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save onboarding settings")
+		writeServerError(w, "failed to save onboarding settings", err)
 		return
 	}
 
@@ -653,7 +656,7 @@ func (h *SettingsHandler) GetInvoicingSettings(w http.ResponseWriter, r *http.Re
 		return h.getSettingsSection(r.Context(), tx, tenantID, "invoicing", &invoicingCfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load invoicing settings")
+		writeServerError(w, "failed to load invoicing settings", err)
 		return
 	}
 
@@ -701,7 +704,7 @@ func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http
 		})
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save invoicing settings")
+		writeServerError(w, "failed to save invoicing settings", err)
 		return
 	}
 
@@ -720,7 +723,7 @@ func (h *SettingsHandler) GetSMSSettings(w http.ResponseWriter, r *http.Request)
 		return h.getSettingsSection(r.Context(), tx, tenantID, "sms", &smsCfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load SMS settings")
+		writeServerError(w, "failed to load SMS settings", err)
 		return
 	}
 
@@ -770,7 +773,7 @@ func (h *SettingsHandler) UpdateSMSSettings(w http.ResponseWriter, r *http.Reque
 		})
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save SMS settings")
+		writeServerError(w, "failed to save SMS settings", err)
 		return
 	}
 
@@ -789,7 +792,7 @@ func (h *SettingsHandler) GetInventorySettings(w http.ResponseWriter, r *http.Re
 		return h.getSettingsSection(r.Context(), tx, tenantID, "inventory", &inventoryCfg)
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load inventory settings")
+		writeServerError(w, "failed to load inventory settings", err)
 		return
 	}
 
@@ -820,7 +823,7 @@ func (h *SettingsHandler) UpdateInventorySettings(w http.ResponseWriter, r *http
 		})
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to save inventory settings")
+		writeServerError(w, "failed to save inventory settings", err)
 		return
 	}
 
@@ -873,7 +876,7 @@ func (h *SettingsHandler) ExportSettings(w http.ResponseWriter, r *http.Request)
 		return err
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load settings")
+		writeServerError(w, "failed to load settings", err)
 		return
 	}
 
@@ -1034,7 +1037,7 @@ func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request)
 		})
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to import settings")
+		writeServerError(w, "failed to import settings", err)
 		return
 	}
 

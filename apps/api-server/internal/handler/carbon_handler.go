@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -30,8 +29,7 @@ func (h *CarbonHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 
 	stats, err := h.carbonService.GetCarbonStats(r.Context(), tenantID, dateFrom, dateTo)
 	if err != nil {
-		slog.Error("carbon stats failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to retrieve carbon stats")
+		writeServerError(w, "failed to retrieve carbon stats", err)
 		return
 	}
 
@@ -48,16 +46,11 @@ func (h *CarbonHandler) GetReport(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.carbonService.GetCarbonCSVData(r.Context(), tenantID, dateFrom, dateTo)
 	if err != nil {
-		slog.Error("carbon report failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to generate carbon report")
+		writeServerError(w, "failed to generate carbon report", err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename=carbon-report.csv")
-
-	// BOM for Excel UTF-8
-	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	writeCSVHeaders(w, "carbon-report.csv")
 
 	// Header
 	_, _ = fmt.Fprintln(w, "ID przesyłki;ID zamówienia;Kurier;Nr śledzenia;Waga (kg);CO2 (kg);Dystans (km);Metoda;Status;Data utworzenia")

@@ -31,7 +31,7 @@ func (h *SegmentHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.segmentService.List(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list segments")
+		writeServerError(w, "failed to list segments", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -51,7 +51,7 @@ func (h *SegmentHandler) Get(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrSegmentNotFound) {
 			writeError(w, http.StatusNotFound, "segment not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to get segment")
+			writeServerError(w, "failed to get segment", err)
 		}
 		return
 	}
@@ -73,7 +73,7 @@ func (h *SegmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to create segment")
+			writeServerError(w, "failed to create segment", err)
 		}
 		return
 	}
@@ -105,7 +105,7 @@ func (h *SegmentHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to update segment")
+				writeServerError(w, "failed to update segment", err)
 			}
 		}
 		return
@@ -129,7 +129,7 @@ func (h *SegmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrSegmentNotFound):
 			writeError(w, http.StatusNotFound, "segment not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete segment")
+			writeServerError(w, "failed to delete segment", err)
 		}
 		return
 	}
@@ -159,7 +159,7 @@ func (h *SegmentHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrSegmentNotFound) {
 			writeError(w, http.StatusNotFound, "segment not found")
 		} else {
-			writeError(w, http.StatusInternalServerError, "failed to list members")
+			writeServerError(w, "failed to list members", err)
 		}
 		return
 	}
@@ -191,7 +191,7 @@ func (h *SegmentHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				writeError(w, http.StatusInternalServerError, "failed to add member")
+				writeServerError(w, "failed to add member", err)
 			}
 		}
 		return
@@ -221,7 +221,7 @@ func (h *SegmentHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrSegmentNotFound):
 			writeError(w, http.StatusNotFound, "segment not found")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to remove member")
+			writeServerError(w, "failed to remove member", err)
 		}
 		return
 	}
@@ -233,7 +233,7 @@ func (h *SegmentHandler) RunRFMAnalysis(w http.ResponseWriter, r *http.Request) 
 
 	results, err := h.segmentService.RunRFMAnalysis(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to run RFM analysis")
+		writeServerError(w, "failed to run RFM analysis", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, results)
@@ -250,7 +250,7 @@ func (h *SegmentHandler) GetCustomerSegments(w http.ResponseWriter, r *http.Requ
 
 	segments, err := h.segmentService.GetCustomerSegments(r.Context(), tenantID, customerID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get customer segments")
+		writeServerError(w, "failed to get customer segments", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, segments)
