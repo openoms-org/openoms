@@ -16,29 +16,23 @@ func NewInvoiceRepository() *InvoiceRepository {
 }
 
 func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.InvoiceListFilter) ([]model.Invoice, int, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.Status != nil {
-		where += fmt.Sprintf(" AND status = $%d", argIdx)
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.Provider != nil {
-		where += fmt.Sprintf(" AND provider = $%d", argIdx)
-		args = append(args, *filter.Provider)
-		argIdx++
+		qb.Add("provider = $%d", *filter.Provider)
 	}
 	if filter.OrderID != nil {
-		where += fmt.Sprintf(" AND order_id = $%d", argIdx)
-		args = append(args, *filter.OrderID)
-		argIdx++
+		qb.Add("order_id = $%d", *filter.OrderID)
 	}
+
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM invoices " + where
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count invoices: %w", err)
 	}
 
@@ -50,6 +44,7 @@ func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.In
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
 		        status, invoice_type, total_net, total_gross, currency,
@@ -61,9 +56,8 @@ func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.In
 		 LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list invoices: %w", err)
 	}

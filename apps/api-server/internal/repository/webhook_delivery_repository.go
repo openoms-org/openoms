@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -29,29 +28,20 @@ func (r *WebhookDeliveryRepository) Create(ctx context.Context, tx pgx.Tx, deliv
 }
 
 func (r *WebhookDeliveryRepository) List(ctx context.Context, tx pgx.Tx, filter model.WebhookDeliveryFilter) ([]model.WebhookDelivery, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.EventType != nil {
-		conditions = append(conditions, fmt.Sprintf("event_type = $%d", argIdx))
-		args = append(args, *filter.EventType)
-		argIdx++
+		qb.Add("event_type = $%d", *filter.EventType)
 	}
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM webhook_deliveries %s", where)
 	var total int
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count webhook deliveries: %w", err)
 	}
 
@@ -60,6 +50,7 @@ func (r *WebhookDeliveryRepository) List(ctx context.Context, tx pgx.Tx, filter 
 		limit = 20
 	}
 
+	argIdx := qb.AddArgs(limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, url, event_type, payload, status, response_code, error, created_at
 		 FROM webhook_deliveries
@@ -68,9 +59,8 @@ func (r *WebhookDeliveryRepository) List(ctx context.Context, tx pgx.Tx, filter 
 		 LIMIT $%d OFFSET $%d`,
 		where, argIdx, argIdx+1,
 	)
-	args = append(args, limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list webhook deliveries: %w", err)
 	}

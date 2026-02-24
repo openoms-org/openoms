@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -73,35 +72,24 @@ func (r *AuditRepository) ListByEntity(ctx context.Context, tx pgx.Tx, entityTyp
 
 // List returns a paginated, filtered list of audit log entries across all entities.
 func (r *AuditRepository) List(ctx context.Context, tx pgx.Tx, filter model.AuditListFilter) ([]model.AuditLogEntry, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.EntityType != nil {
-		conditions = append(conditions, fmt.Sprintf("a.entity_type = $%d", argIdx))
-		args = append(args, *filter.EntityType)
-		argIdx++
+		qb.Add("a.entity_type = $%d", *filter.EntityType)
 	}
 	if filter.Action != nil {
-		conditions = append(conditions, fmt.Sprintf("a.action = $%d", argIdx))
-		args = append(args, *filter.Action)
-		argIdx++
+		qb.Add("a.action = $%d", *filter.Action)
 	}
 	if filter.UserID != nil {
-		conditions = append(conditions, fmt.Sprintf("a.user_id = $%d", argIdx))
-		args = append(args, *filter.UserID)
-		argIdx++
+		qb.Add("a.user_id = $%d", *filter.UserID)
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	countQuery := fmt.Sprintf(
 		"SELECT COUNT(*) FROM audit_log a %s", where)
 	var total int
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count audit log: %w", err)
 	}
 
@@ -110,6 +98,7 @@ func (r *AuditRepository) List(ctx context.Context, tx pgx.Tx, filter model.Audi
 		limit = 20
 	}
 
+	argIdx := qb.AddArgs(limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT a.id, u.name, a.action, a.entity_type, a.entity_id::text, a.changes, a.ip_address::text, a.created_at
 		 FROM audit_log a
@@ -119,9 +108,8 @@ func (r *AuditRepository) List(ctx context.Context, tx pgx.Tx, filter model.Audi
 		 LIMIT $%d OFFSET $%d`,
 		where, argIdx, argIdx+1,
 	)
-	args = append(args, limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list audit log: %w", err)
 	}

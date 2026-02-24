@@ -19,34 +19,23 @@ func NewDropshipOrderRepository() *DropshipOrderRepository {
 }
 
 func (r *DropshipOrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.DropshipOrderListFilter) ([]model.DropshipOrder, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.SupplierID != nil {
-		conditions = append(conditions, fmt.Sprintf("supplier_id = $%d", argIdx))
-		args = append(args, *filter.SupplierID)
-		argIdx++
+		qb.Add("supplier_id = $%d", *filter.SupplierID)
 	}
 	if filter.OrderID != nil {
-		conditions = append(conditions, fmt.Sprintf("order_id = $%d", argIdx))
-		args = append(args, *filter.OrderID)
-		argIdx++
+		qb.Add("order_id = $%d", *filter.OrderID)
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM dropship_orders %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count dropship orders: %w", err)
 	}
 
@@ -58,6 +47,7 @@ func (r *DropshipOrderRepository) List(ctx context.Context, tx pgx.Tx, filter mo
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, order_id, supplier_id, supplier_name, status,
 		        supplier_reference, tracking_number, carrier, notes,
@@ -66,9 +56,8 @@ func (r *DropshipOrderRepository) List(ctx context.Context, tx pgx.Tx, filter mo
 		 FROM dropship_orders %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list dropship orders: %w", err)
 	}

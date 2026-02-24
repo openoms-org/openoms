@@ -31,32 +31,20 @@ func scanCustomer(row interface{ Scan(dest ...any) error }) (*model.Customer, er
 }
 
 func (r *CustomerRepository) List(ctx context.Context, tx pgx.Tx, filter model.CustomerListFilter) ([]model.Customer, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.Search != nil && *filter.Search != "" {
-		conditions = append(conditions, fmt.Sprintf(
-			"(name ILIKE $%d OR email ILIKE $%d OR phone ILIKE $%d)",
-			argIdx, argIdx, argIdx,
-		))
-		args = append(args, "%"+*filter.Search+"%")
-		argIdx++
+		qb.AddMultiRef("(name ILIKE $%d OR email ILIKE $%d OR phone ILIKE $%d)", 3, "%"+*filter.Search+"%")
 	}
 	if filter.Tags != nil && *filter.Tags != "" {
-		conditions = append(conditions, fmt.Sprintf("tags @> ARRAY[$%d]::text[]", argIdx))
-		args = append(args, *filter.Tags)
-		argIdx++
+		qb.Add("tags @> ARRAY[$%d]::text[]", *filter.Tags)
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM customers %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count customers: %w", err)
 	}
 
@@ -69,13 +57,13 @@ func (r *CustomerRepository) List(ctx context.Context, tx pgx.Tx, filter model.C
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT %s FROM customers %s %s LIMIT $%d OFFSET $%d`,
 		customerColumns, where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list customers: %w", err)
 	}

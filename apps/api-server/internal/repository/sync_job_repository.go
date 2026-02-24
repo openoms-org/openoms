@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -95,34 +94,23 @@ func (r *SyncJobRepository) ListByIntegration(ctx context.Context, tx pgx.Tx, in
 }
 
 func (r *SyncJobRepository) List(ctx context.Context, tx pgx.Tx, filter model.SyncJobListFilter) ([]*model.SyncJob, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.IntegrationID != nil {
-		conditions = append(conditions, fmt.Sprintf("integration_id = $%d", argIdx))
-		args = append(args, *filter.IntegrationID)
-		argIdx++
+		qb.Add("integration_id = $%d", *filter.IntegrationID)
 	}
 	if filter.JobType != nil {
-		conditions = append(conditions, fmt.Sprintf("job_type = $%d", argIdx))
-		args = append(args, *filter.JobType)
-		argIdx++
+		qb.Add("job_type = $%d", *filter.JobType)
 	}
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM sync_jobs %s", where)
 	var total int
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count sync jobs: %w", err)
 	}
 
@@ -131,6 +119,7 @@ func (r *SyncJobRepository) List(ctx context.Context, tx pgx.Tx, filter model.Sy
 		limit = 20
 	}
 
+	argIdx := qb.AddArgs(limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, integration_id, job_type, status,
 		        started_at, finished_at, items_processed, items_failed,
@@ -141,9 +130,8 @@ func (r *SyncJobRepository) List(ctx context.Context, tx pgx.Tx, filter model.Sy
 		 LIMIT $%d OFFSET $%d`,
 		where, argIdx, argIdx+1,
 	)
-	args = append(args, limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list sync jobs: %w", err)
 	}

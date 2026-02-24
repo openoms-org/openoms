@@ -44,44 +44,32 @@ func scanOrder(row pgx.Row) (model.Order, error) {
 }
 
 func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.OrderListFilter) ([]model.Order, int, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
+	qb := NewQueryBuilder()
 
 	if filter.Status != nil {
-		where += fmt.Sprintf(" AND status = $%d", argIdx)
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.Source != nil {
-		where += fmt.Sprintf(" AND source = $%d", argIdx)
-		args = append(args, *filter.Source)
-		argIdx++
+		qb.Add("source = $%d", *filter.Source)
 	}
 	if filter.Search != nil {
-		where += fmt.Sprintf(" AND (customer_name ILIKE $%d OR customer_email ILIKE $%d OR customer_phone ILIKE $%d)", argIdx, argIdx, argIdx)
-		args = append(args, "%"+*filter.Search+"%")
-		argIdx++
+		qb.AddMultiRef("(customer_name ILIKE $%d OR customer_email ILIKE $%d OR customer_phone ILIKE $%d)", 3, "%"+*filter.Search+"%")
 	}
 	if filter.PaymentStatus != nil {
-		where += fmt.Sprintf(" AND payment_status = $%d", argIdx)
-		args = append(args, *filter.PaymentStatus)
-		argIdx++
+		qb.Add("payment_status = $%d", *filter.PaymentStatus)
 	}
 	if filter.Tag != nil {
-		where += fmt.Sprintf(" AND tags @> ARRAY[$%d]::text[]", argIdx)
-		args = append(args, *filter.Tag)
-		argIdx++
+		qb.Add("tags @> ARRAY[$%d]::text[]", *filter.Tag)
 	}
 	if filter.Priority != nil {
-		where += fmt.Sprintf(" AND priority = $%d", argIdx)
-		args = append(args, *filter.Priority)
-		argIdx++
+		qb.Add("priority = $%d", *filter.Priority)
 	}
+
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM orders " + where
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count orders: %w", err)
 	}
 
@@ -96,6 +84,7 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT %s
 		 FROM orders %s
@@ -103,9 +92,8 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 		 LIMIT $%d OFFSET $%d`,
 		orderSelectColumns, where, orderByClause, argIdx, argIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list orders: %w", err)
 	}
