@@ -52,7 +52,7 @@ func (h *StoreAuthHandler) SetupShoper(w http.ResponseWriter, r *http.Request) {
 	_, err := client.Orders.List(r.Context(), shopersdk.OrderListParams{Limit: 1})
 	if err != nil {
 		slog.Error("failed to verify Shoper credentials", "error", err)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się zweryfikować danych Shoper")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to verify Shoper credentials")
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *StoreAuthHandler) SetupPrestaShop(w http.ResponseWriter, r *http.Reques
 	_, err := client.Orders.List(r.Context(), prestashopsdk.OrderListParams{Limit: 1})
 	if err != nil {
 		slog.Error("failed to verify PrestaShop credentials", "error", err)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się zweryfikować danych PrestaShop")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to verify PrestaShop credentials")
 		return
 	}
 
@@ -119,7 +119,7 @@ func (h *StoreAuthHandler) SetupShopify(w http.ResponseWriter, r *http.Request) 
 	_, err := client.Orders.List(r.Context(), shopifysdk.OrderListParams{Limit: 1, Status: "any"})
 	if err != nil {
 		slog.Error("failed to verify Shopify credentials", "error", err)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się zweryfikować danych Shopify")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to verify Shopify credentials")
 		return
 	}
 

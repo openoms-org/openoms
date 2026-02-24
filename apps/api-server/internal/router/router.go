@@ -187,9 +187,10 @@ func New(deps RouterDeps) *chi.Mux {
 			Post("/ws-ticket", deps.Auth.WSTicket)
 	})
 
-	// Public config endpoint — no auth required
+	// Public config endpoint — no auth required, rate-limited
 	if deps.PublicConfig != nil {
-		r.Get("/v1/config/public", deps.PublicConfig.PublicConfig)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).
+			Get("/v1/config/public", deps.PublicConfig.PublicConfig)
 	}
 
 	// Public webhook routes — no JWT, signature-verified, rate-limited (120 req/min per IP)
@@ -244,8 +245,9 @@ func New(deps RouterDeps) *chi.Mux {
 		})
 	}
 
-	// WebSocket endpoint — auth via query param, must be before JWT middleware
-	r.Get("/v1/ws", deps.WS.ServeWS)
+	// WebSocket endpoint — auth via query param ticket, must be before JWT middleware
+	r.With(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute)).
+		Get("/v1/ws", deps.WS.ServeWS)
 
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {
@@ -702,9 +704,11 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 			})
 
-			// Order dropship auto-route
-			r.Post("/orders/{order_id}/dropship", deps.Dropship.AutoRoute)
-			r.Get("/orders/{order_id}/dropship-orders", deps.Dropship.GetByOrderID)
+			// Order dropship auto-route — admin only
+			r.With(middleware.RequireRole("admin")).
+				Post("/orders/{order_id}/dropship", deps.Dropship.AutoRoute)
+			r.With(middleware.RequireRole("admin")).
+				Get("/orders/{order_id}/dropship-orders", deps.Dropship.GetByOrderID)
 
 			// Warehouses — admin only
 			r.Route("/warehouses", func(r chi.Router) {
@@ -840,8 +844,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/threshold", deps.VATOSS.GetThreshold)
 			})
 
-			// Barcode lookup — any authenticated user
-			r.Get("/barcode/{code}", deps.Barcode.Lookup)
+			// Barcode lookup — any authenticated user, rate-limited
+			r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+				Get("/barcode/{code}", deps.Barcode.Lookup)
 
 			// Price lists — admin only
 			r.Route("/price-lists", func(r chi.Router) {

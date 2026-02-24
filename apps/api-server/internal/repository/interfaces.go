@@ -143,7 +143,6 @@ type ExchangeRateRepo interface {
 // WebhookRepo defines the interface for webhook event persistence operations.
 type WebhookRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, event *model.WebhookEvent) error
-	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.WebhookEvent, error)
 }
 
 // WebhookDeliveryRepo defines the interface for webhook delivery persistence operations.

@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { buildSearchParams } from "@/lib/search-params";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   Warehouse,
   WarehouseStock,
@@ -11,82 +13,28 @@ import type {
   UpsertWarehouseStockRequest,
 } from "@/types/api";
 
-export function useWarehouses(params: WarehouseListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.active !== undefined) query.set("active", String(params.active));
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
+const warehouseHooks = createCrudHooks<
+  Warehouse,
+  CreateWarehouseRequest,
+  UpdateWarehouseRequest,
+  WarehouseListParams
+>({
+  resourceKey: "warehouses",
+  basePath: "/v1/warehouses",
+});
 
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["warehouses", params],
-    queryFn: () =>
-      apiClient<ListResponse<Warehouse>>(
-        `/v1/warehouses${qs ? `?${qs}` : ""}`
-      ),
-  });
-}
-
-export function useWarehouse(id: string) {
-  return useQuery({
-    queryKey: ["warehouses", id],
-    queryFn: () => apiClient<Warehouse>(`/v1/warehouses/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useCreateWarehouse() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateWarehouseRequest) =>
-      apiClient<Warehouse>("/v1/warehouses", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["warehouses"] });
-    },
-  });
-}
-
-export function useUpdateWarehouse(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateWarehouseRequest) =>
-      apiClient<Warehouse>(`/v1/warehouses/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["warehouses"] });
-      queryClient.invalidateQueries({ queryKey: ["warehouses", id] });
-    },
-  });
-}
-
-export function useDeleteWarehouse() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/warehouses/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["warehouses"] });
-    },
-  });
-}
+export const useWarehouses = warehouseHooks.useList;
+export const useWarehouse = warehouseHooks.useGet;
+export const useCreateWarehouse = warehouseHooks.useCreate;
+export const useUpdateWarehouse = warehouseHooks.useUpdate;
+export const useDeleteWarehouse = warehouseHooks.useDelete;
 
 export function useWarehouseStock(
   warehouseId: string,
   params: WarehouseStockListParams = {}
 ) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-
-  const qs = query.toString();
+  const sp = buildSearchParams(params as Record<string, string | number | boolean | null | undefined>);
+  const qs = sp.toString();
 
   return useQuery({
     queryKey: ["warehouse-stock", warehouseId, params],

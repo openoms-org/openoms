@@ -19,11 +19,20 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
+	if status >= 500 {
+		slog.Error("server error response", "status", status, "message", message)
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(map[string]string{"error": message}); err != nil {
 		slog.Error("failed to encode JSON error response", "error", err)
 	}
+}
+
+// writeServerError logs the underlying error and returns a generic message to the client.
+func writeServerError(w http.ResponseWriter, message string, err error) {
+	slog.Error(message, "error", err)
+	writeError(w, http.StatusInternalServerError, message)
 }
 
 func isValidationError(err error) bool {

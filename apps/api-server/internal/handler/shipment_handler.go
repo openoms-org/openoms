@@ -290,12 +290,12 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 				if strings.Contains(errMsg, "opłacenie przesyłki") || strings.Contains(errMsg, "debt_collection") {
 					writeError(w, http.StatusUnprocessableEntity, errMsg)
 				} else if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Token is missing or invalid") {
-					writeError(w, http.StatusUnprocessableEntity, "Błąd autoryzacji kuriera — sprawdź dane logowania w ustawieniach integracji")
+					writeError(w, http.StatusUnprocessableEntity, "Carrier authorization error — check login credentials in integration settings")
 				} else if strings.Contains(errMsg, "api error 4") {
 					// 4xx from carrier — pass through the carrier message
-					writeError(w, http.StatusUnprocessableEntity, "Błąd API kuriera: "+errMsg)
+					writeError(w, http.StatusUnprocessableEntity, "Carrier API error: "+errMsg)
 				} else {
-					writeError(w, http.StatusInternalServerError, "Nie udało się wygenerować etykiety — spróbuj ponownie lub sprawdź ustawienia integracji")
+					writeError(w, http.StatusInternalServerError, "Failed to generate label — try again or check integration settings")
 				}
 			}
 		}
@@ -356,8 +356,7 @@ func (h *ShipmentHandler) CreateDispatchOrder(w http.ResponseWriter, r *http.Req
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
 			} else {
-				slog.Error("dispatch order creation failed", "error", err)
-				writeError(w, http.StatusInternalServerError, "Nie udało się utworzyć zlecenia odbioru")
+				writeServerError(w, "failed to create pickup order", err)
 			}
 		}
 		return

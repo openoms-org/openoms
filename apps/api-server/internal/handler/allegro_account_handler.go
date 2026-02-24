@@ -38,7 +38,7 @@ func (h *AllegroAccountHandler) GetAccount(w http.ResponseWriter, r *http.Reques
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro account: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
@@ -46,7 +46,7 @@ func (h *AllegroAccountHandler) GetAccount(w http.ResponseWriter, r *http.Reques
 	user, err := client.Account.GetMe(r.Context())
 	if err != nil {
 		slog.Error("allegro account: failed to get user", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać danych konta Allegro", err)
+		writeAllegroError(w, "Failed to fetch Allegro account data", err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *AllegroAccountHandler) GetBilling(w http.ResponseWriter, r *http.Reques
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro billing: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
@@ -88,7 +88,7 @@ func (h *AllegroAccountHandler) GetBilling(w http.ResponseWriter, r *http.Reques
 	billing, err := client.Account.ListBilling(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro billing: failed to list billing", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać danych rozliczeniowych", err)
+		writeAllegroError(w, "Failed to fetch billing data", err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func (h *AllegroAccountHandler) ListOffers(w http.ResponseWriter, r *http.Reques
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro offers: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
@@ -123,7 +123,7 @@ func (h *AllegroAccountHandler) ListOffers(w http.ResponseWriter, r *http.Reques
 	offers, err := client.Offers.List(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro offers: failed to list offers", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać ofert z Allegro", err)
+		writeAllegroError(w, "Failed to fetch offers from Allegro", err)
 		return
 	}
 
@@ -142,14 +142,14 @@ func (h *AllegroAccountHandler) DeactivateOffer(w http.ResponseWriter, r *http.R
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro offers: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
 
 	if err := client.Offers.Deactivate(r.Context(), offerID); err != nil {
 		slog.Error("allegro offers: failed to deactivate", "error", err, "offer_id", offerID)
-		writeAllegroError(w, "Nie udało się dezaktywować oferty", err)
+		writeAllegroError(w, "Failed to deactivate offer", err)
 		return
 	}
 
@@ -168,14 +168,14 @@ func (h *AllegroAccountHandler) ActivateOffer(w http.ResponseWriter, r *http.Req
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro offers: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
 
 	if err := client.Offers.Activate(r.Context(), offerID); err != nil {
 		slog.Error("allegro offers: failed to activate", "error", err, "offer_id", offerID)
-		writeAllegroError(w, "Nie udało się aktywować oferty", err)
+		writeAllegroError(w, "Failed to activate offer", err)
 		return
 	}
 
@@ -202,14 +202,14 @@ func (h *AllegroAccountHandler) UpdateOfferStock(w http.ResponseWriter, r *http.
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro offers: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
 
 	if err := client.Offers.UpdateStock(r.Context(), offerID, body.Quantity); err != nil {
 		slog.Error("allegro offers: failed to update stock", "error", err, "offer_id", offerID)
-		writeAllegroError(w, "Nie udało się zaktualizować stanu magazynowego", err)
+		writeAllegroError(w, "Failed to update stock", err)
 		return
 	}
 
@@ -256,14 +256,14 @@ func (h *AllegroAccountHandler) UpdateOfferPrice(w http.ResponseWriter, r *http.
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro offers: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
 
 	if err := client.Offers.UpdatePrice(r.Context(), offerID, body.Amount, body.Currency); err != nil {
 		slog.Error("allegro offers: failed to update price", "error", err, "offer_id", offerID)
-		writeAllegroError(w, "Nie udało się zaktualizować ceny", err)
+		writeAllegroError(w, "Failed to update price", err)
 		return
 	}
 

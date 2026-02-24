@@ -69,11 +69,8 @@ func (h *WSHandler) ServeWS(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusUnauthorized, "invalid or expired ticket")
 			return
 		}
-	} else if token := r.URL.Query().Get("token"); token != "" {
-		// Backward compatibility — direct token (deprecated)
-		tokenStr = token
 	} else {
-		writeError(w, http.StatusUnauthorized, "missing ticket or token query parameter")
+		writeError(w, http.StatusUnauthorized, "missing ticket query parameter")
 		return
 	}
 

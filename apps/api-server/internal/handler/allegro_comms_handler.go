@@ -39,7 +39,7 @@ func (h *AllegroCommsHandler) ListThreads(w http.ResponseWriter, r *http.Request
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -55,7 +55,7 @@ func (h *AllegroCommsHandler) ListThreads(w http.ResponseWriter, r *http.Request
 	result, err := client.Messages.ListThreads(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list threads", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać wątków z Allegro", err)
+		writeAllegroError(w, "Failed to fetch threads from Allegro", err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *AllegroCommsHandler) GetMessages(w http.ResponseWriter, r *http.Request
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -88,7 +88,7 @@ func (h *AllegroCommsHandler) GetMessages(w http.ResponseWriter, r *http.Request
 	result, err := client.Messages.ListMessages(r.Context(), threadID, params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list messages", "error", err, "threadId", threadID)
-		writeAllegroError(w, "Nie udało się pobrać wiadomości z Allegro", err)
+		writeAllegroError(w, "Failed to fetch messages from Allegro", err)
 		return
 	}
 
@@ -103,18 +103,18 @@ func (h *AllegroCommsHandler) SendMessage(w http.ResponseWriter, r *http.Request
 		Text string `json:"text"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe dane żądania")
+		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	if body.Text == "" {
-		writeError(w, http.StatusBadRequest, "Treść wiadomości jest wymagana")
+		writeError(w, http.StatusBadRequest, "Message text is required")
 		return
 	}
 
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -124,7 +124,7 @@ func (h *AllegroCommsHandler) SendMessage(w http.ResponseWriter, r *http.Request
 	})
 	if err != nil {
 		slog.Error("allegro comms: failed to send message", "error", err, "threadId", threadID)
-		writeAllegroError(w, "Nie udało się wysłać wiadomości", err)
+		writeAllegroError(w, "Failed to send message", err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (h *AllegroCommsHandler) ListAllegroReturns(w http.ResponseWriter, r *http.
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -157,7 +157,7 @@ func (h *AllegroCommsHandler) ListAllegroReturns(w http.ResponseWriter, r *http.
 	result, err := client.Returns.ListReturns(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list returns", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać zwrotów z Allegro", err)
+		writeAllegroError(w, "Failed to fetch returns from Allegro", err)
 		return
 	}
 
@@ -171,7 +171,7 @@ func (h *AllegroCommsHandler) GetAllegroReturn(w http.ResponseWriter, r *http.Re
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -179,7 +179,7 @@ func (h *AllegroCommsHandler) GetAllegroReturn(w http.ResponseWriter, r *http.Re
 	result, err := client.Returns.GetReturn(r.Context(), returnID)
 	if err != nil {
 		slog.Error("allegro comms: failed to get return", "error", err, "returnId", returnID)
-		writeAllegroError(w, "Nie udało się pobrać zwrotu z Allegro", err)
+		writeAllegroError(w, "Failed to fetch return from Allegro", err)
 		return
 	}
 
@@ -194,18 +194,18 @@ func (h *AllegroCommsHandler) RejectAllegroReturn(w http.ResponseWriter, r *http
 		Reason string `json:"reason"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe dane żądania")
+		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	if body.Reason == "" {
-		writeError(w, http.StatusBadRequest, "Powód odrzucenia jest wymagany")
+		writeError(w, http.StatusBadRequest, "Rejection reason is required")
 		return
 	}
 
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -215,7 +215,7 @@ func (h *AllegroCommsHandler) RejectAllegroReturn(w http.ResponseWriter, r *http
 	})
 	if err != nil {
 		slog.Error("allegro comms: failed to reject return", "error", err, "returnId", returnID)
-		writeAllegroError(w, "Nie udało się odrzucić zwrotu", err)
+		writeAllegroError(w, "Failed to reject return", err)
 		return
 	}
 
@@ -228,22 +228,22 @@ func (h *AllegroCommsHandler) RejectAllegroReturn(w http.ResponseWriter, r *http
 func (h *AllegroCommsHandler) CreateRefund(w http.ResponseWriter, r *http.Request) {
 	var body allegrosdk.CreateRefundRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe dane żądania")
+		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	if body.Payment.ID == "" {
-		writeError(w, http.StatusBadRequest, "ID płatności jest wymagane")
+		writeError(w, http.StatusBadRequest, "Payment ID is required")
 		return
 	}
 	if body.Reason == "" {
-		writeError(w, http.StatusBadRequest, "Powód zwrotu jest wymagany")
+		writeError(w, http.StatusBadRequest, "Refund reason is required")
 		return
 	}
 
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -251,7 +251,7 @@ func (h *AllegroCommsHandler) CreateRefund(w http.ResponseWriter, r *http.Reques
 	result, err := client.Payments.CreateRefund(r.Context(), body)
 	if err != nil {
 		slog.Error("allegro comms: failed to create refund", "error", err)
-		writeAllegroError(w, "Nie udało się utworzyć zwrotu pieniędzy", err)
+		writeAllegroError(w, "Failed to create refund", err)
 		return
 	}
 
@@ -263,7 +263,7 @@ func (h *AllegroCommsHandler) ListRefunds(w http.ResponseWriter, r *http.Request
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro comms: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Brak aktywnej integracji Allegro")
+		writeError(w, http.StatusBadRequest, "No active Allegro integration")
 		return
 	}
 	defer client.Close()
@@ -279,7 +279,7 @@ func (h *AllegroCommsHandler) ListRefunds(w http.ResponseWriter, r *http.Request
 	result, err := client.Payments.ListRefunds(r.Context(), params)
 	if err != nil {
 		slog.Error("allegro comms: failed to list refunds", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać listy zwrotów pieniędzy", err)
+		writeAllegroError(w, "Failed to fetch refunds from Allegro", err)
 		return
 	}
 

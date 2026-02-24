@@ -137,10 +137,10 @@ func (r *GenerateLabelRequest) Validate() error {
 		r.LabelFormat = "pdf"
 	}
 	switch r.LabelFormat {
-	case "pdf", "zpl", "epl":
+	case "pdf", "zpl", "epl", "png":
 		// valid
 	default:
-		return errors.New("label_format must be one of: pdf, zpl, epl")
+		return errors.New("label_format must be one of: pdf, zpl, epl, png")
 	}
 
 	return nil

@@ -352,6 +352,7 @@ func parseReturnItems(raw json.RawMessage) []printItem {
 
 func writeHTML(w http.ResponseWriter, html []byte) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Security-Policy", "script-src 'none'; object-src 'none'")
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.WriteHeader(http.StatusOK)
 	w.Write(html) //nolint:errcheck

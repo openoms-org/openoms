@@ -83,7 +83,7 @@ func (h *AllegroShipmentHandler) ListDeliveryServices(w http.ResponseWriter, r *
 	provider, err := h.getProvider(r.Context(), tenantID)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Nie można połączyć z Allegro. Sprawdź konfigurację integracji.")
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
 		return
 	}
 	defer provider.Close()
@@ -91,7 +91,7 @@ func (h *AllegroShipmentHandler) ListDeliveryServices(w http.ResponseWriter, r *
 	services, err := provider.ListDeliveryServices(r.Context())
 	if err != nil {
 		slog.Error("allegro shipment: failed to list delivery services", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać usług dostawy z Allegro", err)
+		writeAllegroError(w, "Failed to fetch delivery services from Allegro", err)
 		return
 	}
 
@@ -109,14 +109,14 @@ func (h *AllegroShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.R
 	// Decode the extended request body (Allegro command + optional order_id).
 	var req allegroCreateShipmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowy format danych")
+		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	provider, integration, err := h.getProviderWithIntegration(r.Context(), tenantID)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Nie można połączyć z Allegro. Sprawdź konfigurację integracji.")
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
 		return
 	}
 	defer provider.Close()
@@ -125,7 +125,7 @@ func (h *AllegroShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.R
 	resp, err := provider.CreateShipment(r.Context(), req.CreateShipmentCommand)
 	if err != nil {
 		slog.Error("allegro shipment: failed to create shipment", "error", err)
-		writeAllegroError(w, "Nie udało się utworzyć przesyłki w Allegro", err)
+		writeAllegroError(w, "Failed to create shipment on Allegro", err)
 		return
 	}
 
@@ -227,14 +227,14 @@ func (h *AllegroShipmentHandler) GetLabel(w http.ResponseWriter, r *http.Request
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	shipmentID := chi.URLParam(r, "shipmentId")
 	if shipmentID == "" {
-		writeError(w, http.StatusBadRequest, "Brak ID przesyłki")
+		writeError(w, http.StatusBadRequest, "Missing shipment ID")
 		return
 	}
 
 	provider, err := h.getProvider(r.Context(), tenantID)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Nie można połączyć z Allegro. Sprawdź konfigurację integracji.")
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
 		return
 	}
 	defer provider.Close()
@@ -242,12 +242,12 @@ func (h *AllegroShipmentHandler) GetLabel(w http.ResponseWriter, r *http.Request
 	pdfBytes, err := provider.GetLabel(r.Context(), []string{shipmentID})
 	if err != nil {
 		slog.Error("allegro shipment: failed to get label", "error", err, "shipment_id", shipmentID)
-		writeAllegroError(w, "Nie udało się pobrać etykiety z Allegro", err)
+		writeAllegroError(w, "Failed to fetch label from Allegro", err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"etykieta-"+shipmentID+".pdf\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"label-"+shipmentID+".pdf\"")
 	w.WriteHeader(http.StatusOK)
 	w.Write(pdfBytes)
 }
@@ -258,21 +258,21 @@ func (h *AllegroShipmentHandler) CancelShipment(w http.ResponseWriter, r *http.R
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	shipmentID := chi.URLParam(r, "shipmentId")
 	if shipmentID == "" {
-		writeError(w, http.StatusBadRequest, "Brak ID przesyłki")
+		writeError(w, http.StatusBadRequest, "Missing shipment ID")
 		return
 	}
 
 	provider, err := h.getProvider(r.Context(), tenantID)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Nie można połączyć z Allegro. Sprawdź konfigurację integracji.")
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
 		return
 	}
 	defer provider.Close()
 
 	if err := provider.CancelShipment(r.Context(), []string{shipmentID}); err != nil {
 		slog.Error("allegro shipment: failed to cancel shipment", "error", err, "shipment_id", shipmentID)
-		writeAllegroError(w, "Nie udało się anulować przesyłki w Allegro", err)
+		writeAllegroError(w, "Failed to cancel shipment on Allegro", err)
 		return
 	}
 
@@ -318,14 +318,14 @@ func (h *AllegroShipmentHandler) GetPickupProposals(w http.ResponseWriter, r *ht
 
 	var req allegrosdk.PickupProposalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowy format danych")
+		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	provider, err := h.getProvider(r.Context(), tenantID)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Nie można połączyć z Allegro. Sprawdź konfigurację integracji.")
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
 		return
 	}
 	defer provider.Close()
@@ -333,7 +333,7 @@ func (h *AllegroShipmentHandler) GetPickupProposals(w http.ResponseWriter, r *ht
 	proposals, err := provider.GetPickupProposals(r.Context(), req)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get pickup proposals", "error", err)
-		writeAllegroError(w, "Nie udało się pobrać propozycji odbioru z Allegro", err)
+		writeAllegroError(w, "Failed to fetch pickup proposals from Allegro", err)
 		return
 	}
 
@@ -349,21 +349,21 @@ func (h *AllegroShipmentHandler) SchedulePickup(w http.ResponseWriter, r *http.R
 
 	var cmd allegrosdk.SchedulePickupCommand
 	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowy format danych")
+		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	provider, err := h.getProvider(r.Context(), tenantID)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Nie można połączyć z Allegro. Sprawdź konfigurację integracji.")
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
 		return
 	}
 	defer provider.Close()
 
 	if err := provider.SchedulePickup(r.Context(), cmd); err != nil {
 		slog.Error("allegro shipment: failed to schedule pickup", "error", err)
-		writeAllegroError(w, "Nie udało się zaplanować odbioru w Allegro", err)
+		writeAllegroError(w, "Failed to schedule pickup on Allegro", err)
 		return
 	}
 
@@ -379,18 +379,18 @@ func (h *AllegroShipmentHandler) GenerateProtocol(w http.ResponseWriter, r *http
 		ShipmentIDs []string `json:"shipment_ids"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowy format danych")
+		writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	if len(body.ShipmentIDs) == 0 {
-		writeError(w, http.StatusBadRequest, "Wymagane jest co najmniej jedno ID przesyłki")
+		writeError(w, http.StatusBadRequest, "At least one shipment ID is required")
 		return
 	}
 
 	provider, err := h.getProvider(r.Context(), tenantID)
 	if err != nil {
 		slog.Error("allegro shipment: failed to get provider", "error", err)
-		writeError(w, http.StatusBadRequest, "Nie można połączyć z Allegro. Sprawdź konfigurację integracji.")
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
 		return
 	}
 	defer provider.Close()
@@ -398,12 +398,12 @@ func (h *AllegroShipmentHandler) GenerateProtocol(w http.ResponseWriter, r *http
 	pdfBytes, err := provider.GenerateProtocol(r.Context(), body.ShipmentIDs)
 	if err != nil {
 		slog.Error("allegro shipment: failed to generate protocol", "error", err)
-		writeAllegroError(w, "Nie udało się wygenerować protokołu z Allegro", err)
+		writeAllegroError(w, "Failed to generate protocol from Allegro", err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"protokol-allegro.pdf\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"protocol-allegro.pdf\"")
 	w.WriteHeader(http.StatusOK)
 	w.Write(pdfBytes)
 }
