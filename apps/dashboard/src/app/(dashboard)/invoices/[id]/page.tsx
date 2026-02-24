@@ -20,6 +20,7 @@ import {
 } from "@/lib/constants";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage, apiFetch } from "@/lib/api-client";
+import { downloadBlob } from "@/lib/download";
 import {
   FileDown,
   XCircle,
@@ -80,12 +81,7 @@ export default function InvoiceDetailPage() {
     try {
       const res = await apiFetch(`/v1/invoices/${params.id}/ksef/upo`);
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `upo-${params.id}.xml`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      downloadBlob(blob, `upo-${params.id}.xml`);
     } catch (error) {
       toast.error(getErrorMessage(error));
     }

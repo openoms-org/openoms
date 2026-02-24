@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiFetch } from "@/lib/api-client";
+import { downloadBlob } from "@/lib/download";
 import type {
   VATRateSet,
   VATCalculation,
@@ -83,13 +84,6 @@ export function useDownloadOSSReportCSV() {
       `/v1/vat-oss/report/csv?quarter=${quarter}&year=${year}`
     );
     const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `vat-oss-report-Q${quarter}-${year}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
+    downloadBlob(blob, `vat-oss-report-Q${quarter}-${year}.csv`);
   };
 }

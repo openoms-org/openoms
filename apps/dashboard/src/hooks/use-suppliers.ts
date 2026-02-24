@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   Supplier,
   ListResponse,
@@ -23,70 +24,21 @@ import type {
   Product,
 } from "@/types/api";
 
-export function useSuppliers(params: SupplierListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.status) query.set("status", params.status);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
+const supplierHooks = createCrudHooks<
+  Supplier,
+  CreateSupplierRequest,
+  UpdateSupplierRequest,
+  SupplierListParams
+>({
+  resourceKey: "suppliers",
+  basePath: "/v1/suppliers",
+});
 
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["suppliers", params],
-    queryFn: () =>
-      apiClient<ListResponse<Supplier>>(`/v1/suppliers${qs ? `?${qs}` : ""}`),
-  });
-}
-
-export function useSupplier(id: string) {
-  return useQuery({
-    queryKey: ["suppliers", id],
-    queryFn: () => apiClient<Supplier>(`/v1/suppliers/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useCreateSupplier() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateSupplierRequest) =>
-      apiClient<Supplier>("/v1/suppliers", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-    },
-  });
-}
-
-export function useUpdateSupplier(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateSupplierRequest) =>
-      apiClient<Supplier>(`/v1/suppliers/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["suppliers", id] });
-    },
-  });
-}
-
-export function useDeleteSupplier() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/suppliers/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-    },
-  });
-}
+export const useSuppliers = supplierHooks.useList;
+export const useSupplier = supplierHooks.useGet;
+export const useCreateSupplier = supplierHooks.useCreate;
+export const useUpdateSupplier = supplierHooks.useUpdate;
+export const useDeleteSupplier = supplierHooks.useDelete;
 
 export function useSyncSupplier() {
   const queryClient = useQueryClient();

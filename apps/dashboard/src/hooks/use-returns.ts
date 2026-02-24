@@ -1,69 +1,29 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   Return,
-  ListResponse,
   ReturnListParams,
   CreateReturnRequest,
   UpdateReturnRequest,
   ReturnStatusRequest,
 } from "@/types/api";
 
-export function useReturns(params: ReturnListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.status) query.set("status", params.status);
-  if (params.order_id) query.set("order_id", params.order_id);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
+const returnHooks = createCrudHooks<
+  Return,
+  CreateReturnRequest,
+  UpdateReturnRequest,
+  ReturnListParams
+>({
+  resourceKey: "returns",
+  basePath: "/v1/returns",
+});
 
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["returns", params],
-    queryFn: () =>
-      apiClient<ListResponse<Return>>(`/v1/returns${qs ? `?${qs}` : ""}`),
-  });
-}
-
-export function useReturn(id: string) {
-  return useQuery({
-    queryKey: ["returns", id],
-    queryFn: () => apiClient<Return>(`/v1/returns/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useCreateReturn() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: CreateReturnRequest) =>
-      apiClient<Return>("/v1/returns", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["returns"] });
-    },
-  });
-}
-
-export function useUpdateReturn(id: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: UpdateReturnRequest) =>
-      apiClient<Return>(`/v1/returns/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["returns"] });
-    },
-  });
-}
+export const useReturns = returnHooks.useList;
+export const useReturn = returnHooks.useGet;
+export const useCreateReturn = returnHooks.useCreate;
+export const useUpdateReturn = returnHooks.useUpdate;
+export const useDeleteReturn = returnHooks.useDelete;
 
 export function useTransitionReturnStatus(id: string) {
   const queryClient = useQueryClient();
@@ -77,20 +37,6 @@ export function useTransitionReturnStatus(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["returns"] });
       queryClient.invalidateQueries({ queryKey: ["returns", id] });
-    },
-  });
-}
-
-export function useDeleteReturn() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/returns/${id}`, {
-        method: "DELETE",
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["returns"] });
     },
   });
 }
