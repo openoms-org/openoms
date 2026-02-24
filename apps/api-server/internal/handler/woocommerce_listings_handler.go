@@ -20,6 +20,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// WooCommerceListingsHandler handles WooCommerce product listing operations.
 type WooCommerceListingsHandler struct {
 	integrationService *service.IntegrationService
 	productService     *service.ProductService
@@ -27,6 +28,7 @@ type WooCommerceListingsHandler struct {
 	pool               *pgxpool.Pool
 }
 
+// NewWooCommerceListingsHandler creates a new WooCommerceListingsHandler.
 func NewWooCommerceListingsHandler(
 	integrationService *service.IntegrationService,
 	productService *service.ProductService,
@@ -49,6 +51,7 @@ type createWooListingRequest struct {
 	Description   string   `json:"description,omitempty"`
 }
 
+// CreateListing publishes a product to WooCommerce and saves the listing record.
 func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID := middleware.TenantIDFromContext(ctx)
