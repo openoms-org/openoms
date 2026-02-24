@@ -132,8 +132,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		return findErr
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to check existing listing", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to check existing listing")
+		writeServerError(w, "failed to check existing listing", err)
 		return
 	}
 	if existingListing != nil {
@@ -145,7 +144,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro listings: failed to create client", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
@@ -153,7 +152,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 	// Upload images to Allegro first
 	imageURLs := buildImages(product)
 	if len(imageURLs) == 0 {
-		writeError(w, http.StatusBadRequest, "Produkt musi miec co najmniej jedno zdjecie aby wystawic na Allegro")
+		writeError(w, http.StatusBadRequest, "Product must have at least one image to list on Allegro")
 		return
 	}
 	var uploadedImages []string
@@ -166,7 +165,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		uploadedImages = append(uploadedImages, hostedURL)
 	}
 	if len(uploadedImages) == 0 {
-		writeError(w, http.StatusBadRequest, "Nie udalo sie przeslac zadnego zdjecia do Allegro. Upewnij sie ze produkt ma prawidlowe URL-e zdjec (nie placeholder)")
+		writeError(w, http.StatusBadRequest, "Failed to upload any images to Allegro. Ensure the product has valid image URLs (not placeholders)")
 		return
 	}
 
@@ -218,7 +217,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 	offer, err := client.Offers.Create(ctx, payload)
 	if err != nil {
 		slog.Error("allegro listings: failed to create offer", "error", err, "product_id", productID)
-		writeError(w, http.StatusUnprocessableEntity, allegroErrorMessage("Nie udało się utworzyć oferty na Allegro", err))
+		writeError(w, http.StatusUnprocessableEntity, allegroErrorMessage("Failed to create offer on Allegro", err))
 		return
 	}
 
@@ -256,8 +255,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		return h.listingRepo.Create(ctx, tx, listing)
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to save listing", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "offer created on Allegro but failed to save listing record")
+		writeServerError(w, "offer created on Allegro but failed to save listing record", err)
 		return
 	}
 
@@ -655,8 +653,7 @@ func (h *AllegroListingsHandler) ListByProduct(w http.ResponseWriter, r *http.Re
 		return listErr
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to list by product", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "failed to list listings")
+		writeServerError(w, "failed to list listings", err)
 		return
 	}
 
@@ -686,8 +683,7 @@ func (h *AllegroListingsHandler) GetListing(w http.ResponseWriter, r *http.Reque
 		return getErr
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to get listing", "error", err, "listing_id", listingID)
-		writeError(w, http.StatusInternalServerError, "failed to get listing")
+		writeServerError(w, "failed to get listing", err)
 		return
 	}
 	if listing == nil {
@@ -730,8 +726,7 @@ func (h *AllegroListingsHandler) UpdateListing(w http.ResponseWriter, r *http.Re
 		return getErr
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to update listing", "error", err, "listing_id", listingID)
-		writeError(w, http.StatusInternalServerError, "failed to update listing")
+		writeServerError(w, "failed to update listing", err)
 		return
 	}
 
@@ -758,8 +753,7 @@ func (h *AllegroListingsHandler) DeleteListing(w http.ResponseWriter, r *http.Re
 		return getErr
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to get listing for delete", "error", err, "listing_id", listingID)
-		writeError(w, http.StatusInternalServerError, "failed to get listing")
+		writeServerError(w, "failed to get listing", err)
 		return
 	}
 	if listing == nil {
@@ -786,8 +780,7 @@ func (h *AllegroListingsHandler) DeleteListing(w http.ResponseWriter, r *http.Re
 		return h.listingRepo.Delete(ctx, tx, listingID)
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to delete listing", "error", err, "listing_id", listingID)
-		writeError(w, http.StatusInternalServerError, "failed to delete listing")
+		writeServerError(w, "failed to delete listing", err)
 		return
 	}
 
@@ -820,8 +813,7 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 		return getErr
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to get listing for sync", "error", err, "listing_id", listingID)
-		writeError(w, http.StatusInternalServerError, "failed to get listing")
+		writeServerError(w, "failed to get listing", err)
 		return
 	}
 	if listing == nil {
@@ -845,7 +837,7 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 	client, err := h.newAllegroClient(r)
 	if err != nil {
 		slog.Error("allegro listings: failed to create client for sync", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "Allegro integration not configured")
 		return
 	}
 	defer client.Close()
@@ -865,14 +857,14 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 	// Update stock on Allegro
 	if err := client.Offers.UpdateStock(ctx, externalID, stock); err != nil {
 		slog.Error("allegro listings: failed to sync stock", "error", err, "external_id", externalID)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się zsynchronizować stanu magazynowego")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to sync stock")
 		return
 	}
 
 	// Update price on Allegro
 	if err := client.Offers.UpdatePrice(ctx, externalID, price, "PLN"); err != nil {
 		slog.Error("allegro listings: failed to sync price", "error", err, "external_id", externalID)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się zsynchronizować ceny")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to sync price")
 		return
 	}
 
@@ -897,8 +889,7 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 		return getErr
 	})
 	if err != nil {
-		slog.Error("allegro listings: failed to update sync status", "error", err, "listing_id", listingID)
-		writeError(w, http.StatusInternalServerError, "synced to Allegro but failed to update listing record")
+		writeServerError(w, "synced to Allegro but failed to update listing record", err)
 		return
 	}
 

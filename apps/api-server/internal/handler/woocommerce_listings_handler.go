@@ -92,8 +92,7 @@ func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *htt
 		return findErr
 	})
 	if err != nil {
-		slog.Error("woocommerce listings: failed to check existing listing", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to check existing listing")
+		writeServerError(w, "failed to check existing listing", err)
 		return
 	}
 	if existingListing != nil {
@@ -105,14 +104,13 @@ func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *htt
 	credJSON, err := h.integrationService.GetDecryptedCredentialsByID(ctx, tenantID, integrationID)
 	if err != nil {
 		slog.Error("woocommerce listings: failed to get credentials", "error", err)
-		writeError(w, http.StatusBadRequest, "Integracja WooCommerce nie jest skonfigurowana")
+		writeError(w, http.StatusBadRequest, "WooCommerce integration not configured")
 		return
 	}
 
 	provider, err := woocommerce.NewProvider(credJSON, nil)
 	if err != nil {
-		slog.Error("woocommerce listings: failed to create provider", "error", err)
-		writeError(w, http.StatusInternalServerError, "failed to initialize WooCommerce client")
+		writeServerError(w, "failed to initialize WooCommerce client", err)
 		return
 	}
 
@@ -166,8 +164,7 @@ func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *htt
 	// Push to WooCommerce
 	externalID, err := provider.PushOffer(ctx, product, listingData)
 	if err != nil {
-		slog.Error("woocommerce listings: push offer failed", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Błąd wystawiania na WooCommerce: %v", err))
+		writeServerError(w, "WooCommerce listing error", err)
 		return
 	}
 
@@ -194,8 +191,7 @@ func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *htt
 		return h.listingRepo.Create(ctx, tx, listing)
 	})
 	if err != nil {
-		slog.Error("woocommerce listings: failed to save listing", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "product published to WooCommerce but failed to save listing record")
+		writeServerError(w, "product published to WooCommerce but failed to save listing record", err)
 		return
 	}
 

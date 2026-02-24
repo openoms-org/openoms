@@ -311,13 +311,18 @@ func main() {
 	invitationRepo := repository.NewInvitationRepository()
 	invitationService := service.NewInvitationService(invitationRepo, auditRepo, pool)
 
-	// Initialize token blacklist for server-side token revocation
+	// Initialize token blacklist for server-side token revocation.
+	// Uses a composite store: writes to both Redis and memory, reads from either.
+	// This ensures revoked tokens stay blocked even when Redis is down.
+	memBlacklist := middleware.NewMemoryTokenBlacklist()
 	var tokenBlacklist *middleware.TokenBlacklist
 	if redisClient != nil {
-		tokenBlacklist = middleware.NewTokenBlacklistWithStore(middleware.NewRedisTokenBlacklist(redisClient))
-		slog.Info("using Redis token blacklist")
+		redisBlacklist := middleware.NewRedisTokenBlacklist(redisClient)
+		composite := middleware.NewCompositeTokenBlacklist(redisBlacklist, memBlacklist)
+		tokenBlacklist = middleware.NewTokenBlacklistWithStore(composite)
+		slog.Info("using composite (Redis + memory) token blacklist")
 	} else {
-		tokenBlacklist = middleware.NewTokenBlacklist()
+		tokenBlacklist = middleware.NewTokenBlacklistWithStore(memBlacklist)
 		slog.Info("using in-memory token blacklist")
 	}
 

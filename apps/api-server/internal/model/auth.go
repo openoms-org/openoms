@@ -50,22 +50,25 @@ type RegisterRequest struct {
 }
 
 func (r *RegisterRequest) Validate() error {
-	if strings.TrimSpace(r.Email) == "" {
-		return errors.New("email is required")
+	if err := ValidateEmail(r.Email); err != nil {
+		return err
 	}
-	if len(r.Password) < 8 {
-		return errors.New("password must be at least 8 characters")
+	if err := ValidatePassword(r.Password); err != nil {
+		return err
 	}
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
 	}
+	if err := validateMaxLength("name", r.Name, MaxNameLength); err != nil {
+		return err
+	}
 	if strings.TrimSpace(r.TenantName) == "" {
 		return errors.New("tenant_name is required")
 	}
-	if strings.TrimSpace(r.TenantSlug) == "" {
-		return errors.New("tenant_slug is required")
+	if err := validateMaxLength("tenant_name", r.TenantName, MaxNameLength); err != nil {
+		return err
 	}
-	return nil
+	return ValidateSlug(r.TenantSlug)
 }
 
 // TokenResponse is returned by login and register endpoints.
@@ -126,8 +129,8 @@ type CreateUserRequest struct {
 }
 
 func (r *CreateUserRequest) Validate() error {
-	if strings.TrimSpace(r.Email) == "" {
-		return errors.New("email is required")
+	if err := ValidateEmail(r.Email); err != nil {
+		return err
 	}
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")

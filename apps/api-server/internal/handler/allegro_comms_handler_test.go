@@ -25,7 +25,7 @@ func TestAllegroCommsHandler_SendMessage_InvalidJSON(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Nieprawidłowe dane żądania", resp["error"])
+	assert.Equal(t, "Invalid request body", resp["error"])
 }
 
 func TestAllegroCommsHandler_SendMessage_EmptyText(t *testing.T) {
@@ -40,7 +40,7 @@ func TestAllegroCommsHandler_SendMessage_EmptyText(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Treść wiadomości jest wymagana", resp["error"])
+	assert.Equal(t, "Message text is required", resp["error"])
 }
 
 func TestAllegroCommsHandler_SendMessage_MissingTextKey(t *testing.T) {
@@ -55,7 +55,7 @@ func TestAllegroCommsHandler_SendMessage_MissingTextKey(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Treść wiadomości jest wymagana", resp["error"])
+	assert.Equal(t, "Message text is required", resp["error"])
 }
 
 // --- RejectAllegroReturn ---
@@ -72,7 +72,7 @@ func TestAllegroCommsHandler_RejectReturn_InvalidJSON(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Nieprawidłowe dane żądania", resp["error"])
+	assert.Equal(t, "Invalid request body", resp["error"])
 }
 
 func TestAllegroCommsHandler_RejectReturn_MissingReason(t *testing.T) {
@@ -87,7 +87,7 @@ func TestAllegroCommsHandler_RejectReturn_MissingReason(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Powód odrzucenia jest wymagany", resp["error"])
+	assert.Equal(t, "Rejection reason is required", resp["error"])
 }
 
 func TestAllegroCommsHandler_RejectReturn_EmptyBody(t *testing.T) {
@@ -102,7 +102,7 @@ func TestAllegroCommsHandler_RejectReturn_EmptyBody(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Powód odrzucenia jest wymagany", resp["error"])
+	assert.Equal(t, "Rejection reason is required", resp["error"])
 }
 
 // --- CreateRefund ---
@@ -119,7 +119,7 @@ func TestAllegroCommsHandler_CreateRefund_InvalidJSON(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Nieprawidłowe dane żądania", resp["error"])
+	assert.Equal(t, "Invalid request body", resp["error"])
 }
 
 func TestAllegroCommsHandler_CreateRefund_MissingPaymentID(t *testing.T) {
@@ -135,7 +135,7 @@ func TestAllegroCommsHandler_CreateRefund_MissingPaymentID(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "ID płatności jest wymagane", resp["error"])
+	assert.Equal(t, "Payment ID is required", resp["error"])
 }
 
 func TestAllegroCommsHandler_CreateRefund_MissingReason(t *testing.T) {
@@ -151,7 +151,7 @@ func TestAllegroCommsHandler_CreateRefund_MissingReason(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Powód zwrotu jest wymagany", resp["error"])
+	assert.Equal(t, "Refund reason is required", resp["error"])
 }
 
 func TestAllegroCommsHandler_CreateRefund_EmptyBody(t *testing.T) {
@@ -167,7 +167,7 @@ func TestAllegroCommsHandler_CreateRefund_EmptyBody(t *testing.T) {
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
 	// payment.id is empty, so this should fail on payment ID validation first
-	assert.Equal(t, "ID płatności jest wymagane", resp["error"])
+	assert.Equal(t, "Payment ID is required", resp["error"])
 }
 
 func TestAllegroCommsHandler_CreateRefund_ValidPaymentButMissingReason(t *testing.T) {
@@ -183,7 +183,7 @@ func TestAllegroCommsHandler_CreateRefund_ValidPaymentButMissingReason(t *testin
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Powód zwrotu jest wymagany", resp["error"])
+	assert.Equal(t, "Refund reason is required", resp["error"])
 }
 
 func TestAllegroCommsHandler_CreateRefund_WithLineItems_MissingPaymentID(t *testing.T) {
@@ -199,5 +199,5 @@ func TestAllegroCommsHandler_CreateRefund_WithLineItems_MissingPaymentID(t *test
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "ID płatności jest wymagane", resp["error"])
+	assert.Equal(t, "Payment ID is required", resp["error"])
 }

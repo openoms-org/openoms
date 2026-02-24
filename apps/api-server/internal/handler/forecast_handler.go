@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -38,8 +37,7 @@ func (h *ForecastHandler) ListForecasts(w http.ResponseWriter, r *http.Request) 
 
 	forecasts, err := h.forecastService.ForecastAll(r.Context(), tenantID, daysAhead)
 	if err != nil {
-		slog.Error("forecast all failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "nie udało się wygenerować prognoz")
+		writeServerError(w, "failed to generate forecasts", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, forecasts)
@@ -51,7 +49,7 @@ func (h *ForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
 
 	productID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowy identyfikator produktu")
+		writeError(w, http.StatusBadRequest, "invalid product ID")
 		return
 	}
 
@@ -65,11 +63,10 @@ func (h *ForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
 	forecast, err := h.forecastService.ForecastDemand(r.Context(), tenantID, productID, daysAhead)
 	if err != nil {
 		if errors.Is(err, service.ErrProductNotFound) {
-			writeError(w, http.StatusNotFound, "produkt nie został znaleziony")
+			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
-		slog.Error("forecast demand failed", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "nie udało się wygenerować prognozy")
+		writeServerError(w, "failed to generate forecast", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, forecast)
@@ -81,8 +78,7 @@ func (h *ForecastHandler) GetReorderRecommendations(w http.ResponseWriter, r *ht
 
 	recs, err := h.forecastService.GetReorderRecommendations(r.Context(), tenantID)
 	if err != nil {
-		slog.Error("reorder recommendations failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "nie udało się wygenerować rekomendacji")
+		writeServerError(w, "failed to generate reorder recommendations", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, recs)
@@ -94,18 +90,17 @@ func (h *ForecastHandler) GetSeasonality(w http.ResponseWriter, r *http.Request)
 
 	productID, err := uuid.Parse(chi.URLParam(r, "product_id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowy identyfikator produktu")
+		writeError(w, http.StatusBadRequest, "invalid product ID")
 		return
 	}
 
 	data, err := h.forecastService.GetSeasonalityAnalysis(r.Context(), tenantID, productID)
 	if err != nil {
 		if errors.Is(err, service.ErrProductNotFound) {
-			writeError(w, http.StatusNotFound, "produkt nie został znaleziony")
+			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
-		slog.Error("seasonality analysis failed", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "nie udało się wygenerować analizy sezonowości")
+		writeServerError(w, "failed to generate seasonality analysis", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, data)
@@ -117,8 +112,7 @@ func (h *ForecastHandler) GetVelocity(w http.ResponseWriter, r *http.Request) {
 
 	velocity, err := h.forecastService.GetProductVelocity(r.Context(), tenantID)
 	if err != nil {
-		slog.Error("product velocity failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "nie udało się wygenerować analizy prędkości")
+		writeServerError(w, "failed to generate velocity analysis", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, velocity)
@@ -130,8 +124,7 @@ func (h *ForecastHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 
 	cfg, err := h.forecastService.GetForecastConfig(r.Context(), tenantID)
 	if err != nil {
-		slog.Error("get forecast config failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "nie udało się pobrać konfiguracji prognoz")
+		writeServerError(w, "failed to retrieve forecast configuration", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, cfg)
@@ -143,27 +136,26 @@ func (h *ForecastHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	var cfg model.ForecastConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe dane wejściowe")
+		writeError(w, http.StatusBadRequest, "invalid input data")
 		return
 	}
 
 	// Validate ranges
 	if cfg.DefaultLeadTimeDays < 1 || cfg.DefaultLeadTimeDays > 365 {
-		writeError(w, http.StatusBadRequest, "lead time musi być od 1 do 365 dni")
+		writeError(w, http.StatusBadRequest, "lead time must be between 1 and 365 days")
 		return
 	}
 	if cfg.SafetyStockDays < 0 || cfg.SafetyStockDays > 365 {
-		writeError(w, http.StatusBadRequest, "safety stock musi być od 0 do 365 dni")
+		writeError(w, http.StatusBadRequest, "safety stock must be between 0 and 365 days")
 		return
 	}
 	if cfg.ForecastDaysAhead < 1 || cfg.ForecastDaysAhead > 365 {
-		writeError(w, http.StatusBadRequest, "horyzont prognozy musi być od 1 do 365 dni")
+		writeError(w, http.StatusBadRequest, "forecast horizon must be between 1 and 365 days")
 		return
 	}
 
 	if err := h.forecastService.UpdateForecastConfig(r.Context(), tenantID, cfg); err != nil {
-		slog.Error("update forecast config failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "nie udało się zaktualizować konfiguracji")
+		writeServerError(w, "failed to update forecast configuration", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, cfg)

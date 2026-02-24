@@ -41,7 +41,7 @@ func (h *StockSyncHandler) ListChannels(w http.ResponseWriter, r *http.Request) 
 
 	resp, err := h.stockSyncService.ListChannels(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się pobrać kanałów synchronizacji")
+		writeError(w, http.StatusInternalServerError, "failed to retrieve sync channels")
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -53,7 +53,7 @@ func (h *StockSyncHandler) CreateChannel(w http.ResponseWriter, r *http.Request)
 
 	var req model.CreateStockSyncChannelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe dane żądania")
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -63,7 +63,7 @@ func (h *StockSyncHandler) CreateChannel(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "nie udało się utworzyć kanału synchronizacji")
+		writeError(w, http.StatusInternalServerError, "failed to create sync channel")
 		return
 	}
 	writeJSON(w, http.StatusCreated, ch)
@@ -74,17 +74,17 @@ func (h *StockSyncHandler) GetChannel(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	channelID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe ID kanału")
+		writeError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 
 	ch, err := h.stockSyncService.GetChannel(r.Context(), tenantID, channelID)
 	if err != nil {
 		if errors.Is(err, service.ErrStockSyncChannelNotFound) {
-			writeError(w, http.StatusNotFound, "kanał synchronizacji nie znaleziony")
+			writeError(w, http.StatusNotFound, "sync channel not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "nie udało się pobrać kanału")
+		writeError(w, http.StatusInternalServerError, "failed to retrieve channel")
 		return
 	}
 	writeJSON(w, http.StatusOK, ch)
@@ -95,26 +95,26 @@ func (h *StockSyncHandler) UpdateChannel(w http.ResponseWriter, r *http.Request)
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	channelID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe ID kanału")
+		writeError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 
 	var req model.UpdateStockSyncChannelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe dane żądania")
+		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.stockSyncService.UpdateChannel(r.Context(), tenantID, channelID, req); err != nil {
 		if errors.Is(err, service.ErrStockSyncChannelNotFound) {
-			writeError(w, http.StatusNotFound, "kanał synchronizacji nie znaleziony")
+			writeError(w, http.StatusNotFound, "sync channel not found")
 			return
 		}
 		if isValidationError(err) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "nie udało się zaktualizować kanału")
+		writeError(w, http.StatusInternalServerError, "failed to update channel")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -125,16 +125,16 @@ func (h *StockSyncHandler) DeleteChannel(w http.ResponseWriter, r *http.Request)
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	channelID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe ID kanału")
+		writeError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 
 	if err := h.stockSyncService.DeleteChannel(r.Context(), tenantID, channelID); err != nil {
 		if errors.Is(err, service.ErrStockSyncChannelNotFound) {
-			writeError(w, http.StatusNotFound, "kanał synchronizacji nie znaleziony")
+			writeError(w, http.StatusNotFound, "sync channel not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "nie udało się usunąć kanału")
+		writeError(w, http.StatusInternalServerError, "failed to delete channel")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -146,12 +146,12 @@ func (h *StockSyncHandler) PushAll(w http.ResponseWriter, r *http.Request) {
 
 	synced, err := h.stockSyncService.PushAll(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się uruchomić synchronizacji")
+		writeError(w, http.StatusInternalServerError, "failed to start sync")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"channels_synced": synced,
-		"message":         "synchronizacja rozpoczęta",
+		"message":         "sync started",
 	})
 }
 
@@ -160,16 +160,16 @@ func (h *StockSyncHandler) PushProduct(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	productID, err := uuid.Parse(chi.URLParam(r, "product_id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe ID produktu")
+		writeError(w, http.StatusBadRequest, "invalid product ID")
 		return
 	}
 
 	if err := h.stockSyncService.PushStockToAllChannels(r.Context(), tenantID, productID); err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się zsynchronizować stanów")
+		writeError(w, http.StatusInternalServerError, "failed to sync stock")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
-		"message": "stany zsynchronizowane",
+		"message": "stock synced",
 	})
 }
 
@@ -178,13 +178,13 @@ func (h *StockSyncHandler) ReconcileProduct(w http.ResponseWriter, r *http.Reque
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	productID, err := uuid.Parse(chi.URLParam(r, "product_id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe ID produktu")
+		writeError(w, http.StatusBadRequest, "invalid product ID")
 		return
 	}
 
 	event, err := h.stockSyncService.ReconcileStock(r.Context(), tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się uzgodnić stanów")
+		writeError(w, http.StatusInternalServerError, "failed to reconcile stock")
 		return
 	}
 	writeJSON(w, http.StatusOK, event)
@@ -201,7 +201,7 @@ func (h *StockSyncHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 	if s := r.URL.Query().Get("product_id"); s != "" {
 		id, err := uuid.Parse(s)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "nieprawidłowe product_id")
+			writeError(w, http.StatusBadRequest, "invalid product_id")
 			return
 		}
 		filter.ProductID = &id
@@ -212,7 +212,7 @@ func (h *StockSyncHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.stockSyncService.ListEvents(r.Context(), tenantID, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się pobrać zdarzeń synchronizacji")
+		writeError(w, http.StatusInternalServerError, "failed to retrieve sync events")
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
@@ -224,7 +224,7 @@ func (h *StockSyncHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 
 	dash, err := h.stockSyncService.GetDashboard(r.Context(), tenantID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się pobrać statusu synchronizacji")
+		writeError(w, http.StatusInternalServerError, "failed to retrieve sync status")
 		return
 	}
 	writeJSON(w, http.StatusOK, dash)
@@ -235,7 +235,7 @@ func (h *StockSyncHandler) PushListing(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	listingID, err := uuid.Parse(chi.URLParam(r, "listing_id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe ID listingu")
+		writeError(w, http.StatusBadRequest, "invalid listing ID")
 		return
 	}
 
@@ -244,7 +244,7 @@ func (h *StockSyncHandler) PushListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
-		"message": "stan zsynchronizowany",
+		"message": "stock synced",
 	})
 }
 
@@ -253,13 +253,13 @@ func (h *StockSyncHandler) GetAllocations(w http.ResponseWriter, r *http.Request
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	productID, err := uuid.Parse(chi.URLParam(r, "product_id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowe ID produktu")
+		writeError(w, http.StatusBadRequest, "invalid product ID")
 		return
 	}
 
 	allocations, err := h.stockSyncService.CalculateAvailableStock(r.Context(), tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się obliczyć dostępnych stanów")
+		writeError(w, http.StatusInternalServerError, "failed to calculate available stock")
 		return
 	}
 	writeJSON(w, http.StatusOK, allocations)

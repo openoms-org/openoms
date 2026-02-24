@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -51,8 +50,7 @@ func (h *ListingSyncHandler) ListConfigs(w http.ResponseWriter, r *http.Request)
 
 	resp, err := h.syncService.List(ctx, tenantID, filter)
 	if err != nil {
-		slog.Error("listing sync: list configs failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Nie udało się pobrać konfiguracji synchronizacji")
+		writeServerError(w, "failed to retrieve sync configurations", err)
 		return
 	}
 
@@ -67,7 +65,7 @@ func (h *ListingSyncHandler) CreateConfig(w http.ResponseWriter, r *http.Request
 
 	var req model.CreateListingSyncConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe dane wejściowe")
+		writeError(w, http.StatusBadRequest, "invalid input data")
 		return
 	}
 	if err := req.Validate(); err != nil {
@@ -77,8 +75,7 @@ func (h *ListingSyncHandler) CreateConfig(w http.ResponseWriter, r *http.Request
 
 	cfg, err := h.syncService.Create(ctx, tenantID, req)
 	if err != nil {
-		slog.Error("listing sync: create config failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Nie udało się utworzyć konfiguracji synchronizacji")
+		writeServerError(w, "failed to create sync configuration", err)
 		return
 	}
 
@@ -93,18 +90,17 @@ func (h *ListingSyncHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe ID")
+		writeError(w, http.StatusBadRequest, "invalid ID")
 		return
 	}
 
 	cfg, err := h.syncService.Get(ctx, tenantID, id)
 	if err != nil {
 		if errors.Is(err, service.ErrListingSyncConfigNotFound) {
-			writeError(w, http.StatusNotFound, "Konfiguracja synchronizacji nie została znaleziona")
+			writeError(w, http.StatusNotFound, "sync configuration not found")
 			return
 		}
-		slog.Error("listing sync: get config failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Nie udało się pobrać konfiguracji")
+		writeServerError(w, "failed to retrieve configuration", err)
 		return
 	}
 
@@ -119,13 +115,13 @@ func (h *ListingSyncHandler) UpdateConfig(w http.ResponseWriter, r *http.Request
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe ID")
+		writeError(w, http.StatusBadRequest, "invalid ID")
 		return
 	}
 
 	var req model.UpdateListingSyncConfigRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe dane wejściowe")
+		writeError(w, http.StatusBadRequest, "invalid input data")
 		return
 	}
 	if err := req.Validate(); err != nil {
@@ -136,11 +132,10 @@ func (h *ListingSyncHandler) UpdateConfig(w http.ResponseWriter, r *http.Request
 	cfg, err := h.syncService.Update(ctx, tenantID, id, req)
 	if err != nil {
 		if errors.Is(err, service.ErrListingSyncConfigNotFound) {
-			writeError(w, http.StatusNotFound, "Konfiguracja synchronizacji nie została znaleziona")
+			writeError(w, http.StatusNotFound, "sync configuration not found")
 			return
 		}
-		slog.Error("listing sync: update config failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Nie udało się zaktualizować konfiguracji")
+		writeServerError(w, "failed to update configuration", err)
 		return
 	}
 
@@ -155,17 +150,16 @@ func (h *ListingSyncHandler) DeleteConfig(w http.ResponseWriter, r *http.Request
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe ID")
+		writeError(w, http.StatusBadRequest, "invalid ID")
 		return
 	}
 
 	if err := h.syncService.Delete(ctx, tenantID, id); err != nil {
 		if errors.Is(err, service.ErrListingSyncConfigNotFound) {
-			writeError(w, http.StatusNotFound, "Konfiguracja synchronizacji nie została znaleziona")
+			writeError(w, http.StatusNotFound, "sync configuration not found")
 			return
 		}
-		slog.Error("listing sync: delete config failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Nie udało się usunąć konfiguracji")
+		writeServerError(w, "failed to delete configuration", err)
 		return
 	}
 
@@ -180,18 +174,17 @@ func (h *ListingSyncHandler) TriggerSync(w http.ResponseWriter, r *http.Request)
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe ID")
+		writeError(w, http.StatusBadRequest, "invalid ID")
 		return
 	}
 
 	result, err := h.syncService.RunFullSync(ctx, tenantID, id)
 	if err != nil {
 		if errors.Is(err, service.ErrListingSyncConfigNotFound) {
-			writeError(w, http.StatusNotFound, "Konfiguracja synchronizacji nie została znaleziona")
+			writeError(w, http.StatusNotFound, "sync configuration not found")
 			return
 		}
-		slog.Error("listing sync: trigger sync failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Synchronizacja nie powiodła się")
+		writeServerError(w, "sync failed", err)
 		return
 	}
 
@@ -206,18 +199,17 @@ func (h *ListingSyncHandler) TriggerSyncPrices(w http.ResponseWriter, r *http.Re
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe ID")
+		writeError(w, http.StatusBadRequest, "invalid ID")
 		return
 	}
 
 	result, err := h.syncService.SyncPrices(ctx, tenantID, id)
 	if err != nil {
 		if errors.Is(err, service.ErrListingSyncConfigNotFound) {
-			writeError(w, http.StatusNotFound, "Konfiguracja synchronizacji nie została znaleziona")
+			writeError(w, http.StatusNotFound, "sync configuration not found")
 			return
 		}
-		slog.Error("listing sync: sync prices failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Synchronizacja cen nie powiodła się")
+		writeServerError(w, "price sync failed", err)
 		return
 	}
 
@@ -232,18 +224,17 @@ func (h *ListingSyncHandler) TriggerSyncStock(w http.ResponseWriter, r *http.Req
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe ID")
+		writeError(w, http.StatusBadRequest, "invalid ID")
 		return
 	}
 
 	result, err := h.syncService.SyncStock(ctx, tenantID, id)
 	if err != nil {
 		if errors.Is(err, service.ErrListingSyncConfigNotFound) {
-			writeError(w, http.StatusNotFound, "Konfiguracja synchronizacji nie została znaleziona")
+			writeError(w, http.StatusNotFound, "sync configuration not found")
 			return
 		}
-		slog.Error("listing sync: sync stock failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Synchronizacja stanów magazynowych nie powiodła się")
+		writeServerError(w, "stock sync failed", err)
 		return
 	}
 
@@ -258,7 +249,7 @@ func (h *ListingSyncHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "Nieprawidłowe ID")
+		writeError(w, http.StatusBadRequest, "invalid ID")
 		return
 	}
 
@@ -287,8 +278,7 @@ func (h *ListingSyncHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.syncService.ListLogs(ctx, tenantID, filter)
 	if err != nil {
-		slog.Error("listing sync: list logs failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "Nie udało się pobrać dziennika synchronizacji")
+		writeServerError(w, "failed to retrieve sync logs", err)
 		return
 	}
 

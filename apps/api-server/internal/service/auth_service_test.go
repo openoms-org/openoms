@@ -59,7 +59,7 @@ func TestAuthService_Register_ValidationError_MissingTenantSlug(t *testing.T) {
 	require.Error(t, err)
 	var ve *ValidationError
 	assert.True(t, errors.As(err, &ve))
-	assert.Contains(t, err.Error(), "tenant_slug")
+	assert.Contains(t, err.Error(), "slug")
 }
 
 func TestAuthService_Register_ValidationError_WeakPassword(t *testing.T) {
@@ -232,7 +232,7 @@ func TestAuthService_Register_ValidationError_PasswordNoLetter(t *testing.T) {
 	require.Error(t, err)
 	var ve *ValidationError
 	assert.True(t, errors.As(err, &ve))
-	assert.Contains(t, err.Error(), "letter")
+	assert.Contains(t, err.Error(), "uppercase")
 }
 
 func TestAuthService_Register_ValidationError_PasswordTooLong(t *testing.T) {

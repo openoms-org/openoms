@@ -107,11 +107,11 @@ func TestOrderService_Create_HTMLStrippedFromCustomerName(t *testing.T) {
 	err := req.Validate()
 	assert.NoError(t, err, "HTML in customer_name should pass validation — it gets stripped, not rejected")
 
-	// Verify the stripping behavior directly
+	// bluemonday StrictPolicy strips script tags AND their content (not just the tags)
 	stripped := model.StripHTMLTags(req.CustomerName)
-	assert.Equal(t, "alert('xss')Jan", stripped)
+	assert.Equal(t, "Jan", stripped)
 	assert.NotContains(t, stripped, "<script>")
-	assert.NotContains(t, stripped, "</script>")
+	assert.NotContains(t, stripped, "alert")
 }
 
 func TestOrderService_TransitionStatus_ValidationError_WhitespaceStatus(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 const (
 	DefaultLimit = 20
 	MaxLimit     = 100
+	MaxOffset    = 100000
 )
 
 type ListResponse[T any] struct {
@@ -34,6 +35,9 @@ func ParsePagination(r *http.Request) PaginationParams {
 	}
 	if offset < 0 {
 		offset = 0
+	}
+	if offset > MaxOffset {
+		offset = MaxOffset
 	}
 
 	sortBy := r.URL.Query().Get("sort_by")

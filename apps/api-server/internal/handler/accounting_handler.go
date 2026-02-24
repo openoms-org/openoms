@@ -164,7 +164,7 @@ func (h *AccountingHandler) UpdateAccountingSettings(w http.ResponseWriter, r *h
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{
-		"message":  "Ustawienia ksi\u0119gowo\u015bci zapisane",
+		"message":  "Accounting settings saved",
 		"provider": req.Provider,
 	})
 }
@@ -201,7 +201,7 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 	if invoicingRaw == nil {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success": false,
-			"message": "Brak skonfigurowanego dostawcy",
+			"message": "No provider configured",
 		})
 		return
 	}
@@ -211,7 +211,7 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 	if err := json.Unmarshal(invoicingRaw, &cfgMap); err != nil {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success": false,
-			"message": "Nieprawid\u0142owa konfiguracja",
+			"message": "Invalid configuration",
 		})
 		return
 	}
@@ -224,7 +224,7 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 	if providerName == "" {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success": false,
-			"message": "Brak wybranego dostawcy",
+			"message": "No provider selected",
 		})
 		return
 	}
@@ -234,7 +234,7 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success": false,
-			"message": "Brak danych dost\u0119powych",
+			"message": "Missing credentials",
 		})
 		return
 	}
@@ -245,14 +245,14 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 		slog.Error("accounting test connection failed", "provider", providerName, "error", provErr)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success": false,
-			"message": "Nie uda\u0142o si\u0119 po\u0142\u0105czy\u0107: " + provErr.Error(),
+			"message": "Failed to connect: " + provErr.Error(),
 		})
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success": true,
-		"message": "Po\u0142\u0105czenie z " + providerName + " poprawne",
+		"message": "Connection to " + providerName + " successful",
 	})
 }
 

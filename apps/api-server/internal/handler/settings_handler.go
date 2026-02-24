@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -201,7 +200,7 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 		// Unmarshal the request onto the existing struct — only provided fields
 		// are overwritten; omitted fields keep their current values.
 		if err := json.Unmarshal(rawBody, &companyCfg); err != nil {
-			return fmt.Errorf("invalid request body: %w", err)
+			return service.NewValidationError(fmt.Errorf("invalid request body: %w", err))
 		}
 
 		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "company", companyCfg); err != nil {
@@ -217,11 +216,11 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 		})
 	})
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid request body") {
-			writeError(w, http.StatusBadRequest, "invalid request body")
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to save settings")
+		writeServerError(w, "failed to save settings", err)
 		return
 	}
 
@@ -634,7 +633,7 @@ func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.emailService.SendTestEmail(r.Context(), emailCfg, req.ToEmail); err != nil {
 		slog.Error("failed to send test email", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wysłać testowego emaila. Sprawdź konfigurację SMTP.")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to send test email. Check SMTP configuration.")
 		return
 	}
 
@@ -840,7 +839,7 @@ func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.smsService.SendTestSMS(r.Context(), smsCfg, req.Phone); err != nil {
 		slog.Error("failed to send test SMS", "error", err, "tenant_id", tenantID)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wysłać testowego SMS. Sprawdź konfigurację.")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to send test SMS. Check configuration.")
 		return
 	}
 

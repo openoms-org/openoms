@@ -27,7 +27,7 @@ func TestAllegroShipmentHandler_CreateShipment_InvalidJSON(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Nieprawidłowy format danych", resp["error"])
+	assert.Equal(t, "Invalid request body", resp["error"])
 }
 
 // --- GetLabel ---
@@ -45,7 +45,7 @@ func TestAllegroShipmentHandler_GetLabel_MissingShipmentID(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Brak ID przesyłki", resp["error"])
+	assert.Equal(t, "Missing shipment ID", resp["error"])
 }
 
 func TestAllegroShipmentHandler_GetLabel_EmptyShipmentIDInRoute(t *testing.T) {
@@ -64,7 +64,7 @@ func TestAllegroShipmentHandler_GetLabel_EmptyShipmentIDInRoute(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Brak ID przesyłki", resp["error"])
+	assert.Equal(t, "Missing shipment ID", resp["error"])
 }
 
 // --- CancelShipment ---
@@ -81,7 +81,7 @@ func TestAllegroShipmentHandler_CancelShipment_MissingShipmentID(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Brak ID przesyłki", resp["error"])
+	assert.Equal(t, "Missing shipment ID", resp["error"])
 }
 
 func TestAllegroShipmentHandler_CancelShipment_EmptyShipmentIDInRoute(t *testing.T) {
@@ -100,7 +100,7 @@ func TestAllegroShipmentHandler_CancelShipment_EmptyShipmentIDInRoute(t *testing
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Brak ID przesyłki", resp["error"])
+	assert.Equal(t, "Missing shipment ID", resp["error"])
 }
 
 // --- GetPickupProposals ---
@@ -117,7 +117,7 @@ func TestAllegroShipmentHandler_GetPickupProposals_InvalidJSON(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Nieprawidłowy format danych", resp["error"])
+	assert.Equal(t, "Invalid request body", resp["error"])
 }
 
 // --- SchedulePickup ---
@@ -134,7 +134,7 @@ func TestAllegroShipmentHandler_SchedulePickup_InvalidJSON(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Nieprawidłowy format danych", resp["error"])
+	assert.Equal(t, "Invalid request body", resp["error"])
 }
 
 // --- GenerateProtocol ---
@@ -151,7 +151,7 @@ func TestAllegroShipmentHandler_GenerateProtocol_InvalidJSON(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Nieprawidłowy format danych", resp["error"])
+	assert.Equal(t, "Invalid request body", resp["error"])
 }
 
 func TestAllegroShipmentHandler_GenerateProtocol_EmptyShipmentIDs(t *testing.T) {
@@ -166,7 +166,7 @@ func TestAllegroShipmentHandler_GenerateProtocol_EmptyShipmentIDs(t *testing.T) 
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Wymagane jest co najmniej jedno ID przesyłki", resp["error"])
+	assert.Equal(t, "At least one shipment ID is required", resp["error"])
 }
 
 func TestAllegroShipmentHandler_GenerateProtocol_MissingShipmentIDsKey(t *testing.T) {
@@ -181,5 +181,5 @@ func TestAllegroShipmentHandler_GenerateProtocol_MissingShipmentIDsKey(t *testin
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "Wymagane jest co najmniej jedno ID przesyłki", resp["error"])
+	assert.Equal(t, "At least one shipment ID is required", resp["error"])
 }

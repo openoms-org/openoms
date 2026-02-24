@@ -1,24 +1,13 @@
 package model
 
-import "strings"
+import "github.com/microcosm-cc/bluemonday"
 
-// StripHTMLTags removes HTML tags from input to prevent stored XSS.
-// This is a simple approach -- strips anything between < and >.
+// stripPolicy is initialized once and reused (thread-safe).
+var stripPolicy = bluemonday.StrictPolicy()
+
+// StripHTMLTags removes all HTML tags and attributes using bluemonday.
+// Handles HTML entities, nested tags, SVG vectors, and other bypass techniques
+// that a naive character-by-character parser would miss.
 func StripHTMLTags(s string) string {
-	var result strings.Builder
-	inTag := false
-	for _, r := range s {
-		if r == '<' {
-			inTag = true
-			continue
-		}
-		if r == '>' {
-			inTag = false
-			continue
-		}
-		if !inTag {
-			result.WriteRune(r)
-		}
-	}
-	return result.String()
+	return stripPolicy.Sanitize(s)
 }

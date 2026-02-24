@@ -54,8 +54,9 @@ func TestStripHTMLTags_SimpleTags(t *testing.T) {
 }
 
 func TestStripHTMLTags_Script(t *testing.T) {
+	// bluemonday StrictPolicy strips script tags AND their content
 	result := StripHTMLTags(`<script>alert("xss")</script>`)
-	assert.Equal(t, `alert("xss")`, result)
+	assert.Equal(t, "", result)
 }
 
 func TestStripHTMLTags_NestedTags(t *testing.T) {
@@ -204,7 +205,7 @@ func TestGenerateLabelRequest_Validate_LockerRequiresTargetPoint(t *testing.T) {
 }
 
 func TestGenerateLabelRequest_Validate_InvalidFormat(t *testing.T) {
-	req := GenerateLabelRequest{ServiceType: "standard", LabelFormat: "png"}
+	req := GenerateLabelRequest{ServiceType: "standard", LabelFormat: "bmp"}
 	assert.Error(t, req.Validate())
 }
 

@@ -50,7 +50,7 @@ func TestLoginRequest_Validate(t *testing.T) {
 func TestRegisterRequest_Validate(t *testing.T) {
 	valid := RegisterRequest{
 		Email:      "test@example.com",
-		Password:   "password123",
+		Password:   "Password123",
 		Name:       "Jan",
 		TenantName: "Acme Corp",
 		TenantSlug: "acme",
