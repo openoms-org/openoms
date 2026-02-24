@@ -69,7 +69,7 @@ func TestResolveCarrier_EmptySettings(t *testing.T) {
 func TestResolveCarrier_AutoCreateDisabled(t *testing.T) {
 	settings := mustJSON(t, map[string]any{
 		"auto_create_shipment": false,
-		"default_carrier":     "inpost",
+		"default_carrier":      "inpost",
 	})
 	assert.Equal(t, "", resolveCarrier(settings, "anything"))
 }
@@ -77,7 +77,7 @@ func TestResolveCarrier_AutoCreateDisabled(t *testing.T) {
 func TestResolveCarrier_DefaultCarrierNoMapping(t *testing.T) {
 	settings := mustJSON(t, map[string]any{
 		"auto_create_shipment": true,
-		"default_carrier":     "dhl",
+		"default_carrier":      "dhl",
 	})
 	assert.Equal(t, "dhl", resolveCarrier(settings, ""))
 }
@@ -85,7 +85,7 @@ func TestResolveCarrier_DefaultCarrierNoMapping(t *testing.T) {
 func TestResolveCarrier_DefaultCarrierWhenDeliveryMethodDoesNotMatch(t *testing.T) {
 	settings := mustJSON(t, map[string]any{
 		"auto_create_shipment": true,
-		"default_carrier":     "dpd",
+		"default_carrier":      "dpd",
 		"carrier_mapping": map[string]string{
 			"inpost":    "inpost",
 			"paczkomat": "inpost",
@@ -97,7 +97,7 @@ func TestResolveCarrier_DefaultCarrierWhenDeliveryMethodDoesNotMatch(t *testing.
 func TestResolveCarrier_CarrierMappingExactSubstringMatch(t *testing.T) {
 	settings := mustJSON(t, map[string]any{
 		"auto_create_shipment": true,
-		"default_carrier":     "dpd",
+		"default_carrier":      "dpd",
 		"carrier_mapping": map[string]string{
 			"inpost":    "inpost",
 			"paczkomat": "inpost",
@@ -109,7 +109,7 @@ func TestResolveCarrier_CarrierMappingExactSubstringMatch(t *testing.T) {
 func TestResolveCarrier_CarrierMappingCaseInsensitive(t *testing.T) {
 	settings := mustJSON(t, map[string]any{
 		"auto_create_shipment": true,
-		"default_carrier":     "dpd",
+		"default_carrier":      "dpd",
 		"carrier_mapping": map[string]string{
 			"INPOST": "inpost",
 		},
@@ -121,7 +121,7 @@ func TestResolveCarrier_CarrierMappingCaseInsensitive(t *testing.T) {
 func TestResolveCarrier_EmptyDeliveryMethodUsesDefault(t *testing.T) {
 	settings := mustJSON(t, map[string]any{
 		"auto_create_shipment": true,
-		"default_carrier":     "gls",
+		"default_carrier":      "gls",
 		"carrier_mapping": map[string]string{
 			"inpost": "inpost",
 		},
@@ -340,7 +340,7 @@ func TestBuildOrder_WithDeliveryMethodFromRawData(t *testing.T) {
 		Currency:     "PLN",
 		RawData: map[string]any{
 			"delivery_method_name": "InPost Paczkomaty 24/7",
-			"pickup_point_id":     "KRA04A",
+			"pickup_point_id":      "KRA04A",
 		},
 	}
 
