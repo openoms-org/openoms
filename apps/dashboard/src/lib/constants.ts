@@ -98,7 +98,7 @@ export const ROLES: Record<string, string> = {
   member: "Członek",
 };
 
-export const ORDER_SOURCES = ["manual", "allegro", "amazon", "empik", "erli", "ebay", "kaufland", "olx", "woocommerce"] as const;
+export const ORDER_SOURCES = ["manual", "supplier", "allegro", "amazon", "empik", "erli", "ebay", "kaufland", "olx", "woocommerce"] as const;
 
 export const ORDER_PRIORITIES: Record<string, { label: string; color: string }> = {
   urgent: { label: "Pilne", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
@@ -121,6 +121,7 @@ export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "woocommerce", "ebay"
 
 export const ORDER_SOURCE_LABELS: Record<string, string> = {
   manual: "Ręczne",
+  supplier: "Dostawca",
   allegro: "Allegro",
   amazon: "Amazon",
   empik: "Empik",

@@ -22,44 +22,54 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 	argIdx := 1
 
 	if filter.Name != nil {
-		conditions = append(conditions, fmt.Sprintf("name ILIKE '%%' || $%d || '%%'", argIdx))
+		conditions = append(conditions, fmt.Sprintf("p.name ILIKE '%%' || $%d || '%%'", argIdx))
 		args = append(args, *filter.Name)
 		argIdx++
 	}
 	if filter.SKU != nil {
-		conditions = append(conditions, fmt.Sprintf("sku ILIKE '%%' || $%d || '%%'", argIdx))
+		conditions = append(conditions, fmt.Sprintf("p.sku ILIKE '%%' || $%d || '%%'", argIdx))
 		args = append(args, *filter.SKU)
 		argIdx++
 	}
 	if filter.Tag != nil {
-		conditions = append(conditions, fmt.Sprintf("tags @> ARRAY[$%d]::text[]", argIdx))
+		conditions = append(conditions, fmt.Sprintf("p.tags @> ARRAY[$%d]::text[]", argIdx))
 		args = append(args, *filter.Tag)
 		argIdx++
 	}
 	if filter.Category != nil {
-		conditions = append(conditions, fmt.Sprintf("category = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("p.category = $%d", argIdx))
 		args = append(args, *filter.Category)
 		argIdx++
 	}
 	if len(filter.CategoryIDs) > 0 {
-		conditions = append(conditions, fmt.Sprintf("category_id = ANY($%d)", argIdx))
+		conditions = append(conditions, fmt.Sprintf("p.category_id = ANY($%d)", argIdx))
 		args = append(args, filter.CategoryIDs)
 		argIdx++
 	}
 	if filter.SupplierID != nil {
-		conditions = append(conditions, fmt.Sprintf("dropship_supplier_id = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("p.dropship_supplier_id = $%d", argIdx))
 		args = append(args, *filter.SupplierID)
 		argIdx++
 	}
 	if filter.Source != nil {
-		conditions = append(conditions, fmt.Sprintf("source = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("p.source = $%d", argIdx))
 		args = append(args, *filter.Source)
 		argIdx++
 	}
 	if filter.Search != nil {
-		conditions = append(conditions, fmt.Sprintf("(name ILIKE '%%' || $%d || '%%' OR sku ILIKE '%%' || $%d || '%%' OR ean ILIKE '%%' || $%d || '%%')", argIdx, argIdx, argIdx))
+		conditions = append(conditions, fmt.Sprintf("(p.name ILIKE '%%' || $%d || '%%' OR p.sku ILIKE '%%' || $%d || '%%' OR p.ean ILIKE '%%' || $%d || '%%')", argIdx, argIdx, argIdx))
 		args = append(args, *filter.Search)
 		argIdx++
+	}
+	if filter.Marketplace != nil {
+		if *filter.Marketplace == "none" {
+			conditions = append(conditions, "NOT EXISTS (SELECT 1 FROM product_listings pl WHERE pl.product_id = p.id)")
+		} else {
+			conditions = append(conditions, fmt.Sprintf(
+				"EXISTS (SELECT 1 FROM product_listings pl JOIN integrations i ON pl.integration_id = i.id WHERE pl.product_id = p.id AND i.provider = $%d)", argIdx))
+			args = append(args, *filter.Marketplace)
+			argIdx++
+		}
 	}
 
 	where := ""
@@ -67,25 +77,36 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		where = "WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", where)
+	fromClause := "FROM products p"
+
+	countQuery := fmt.Sprintf("SELECT COUNT(*) %s %s", fromClause, where)
 	var total int
 	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count products: %w", err)
 	}
 
 	allowedSortColumns := map[string]string{
-		"created_at":     "created_at",
-		"name":           "name",
-		"sku":            "sku",
-		"price":          "price",
-		"stock_quantity": "stock_quantity",
+		"created_at":     "p.created_at",
+		"name":           "p.name",
+		"sku":            "p.sku",
+		"price":          "p.price",
+		"stock_quantity": "p.stock_quantity",
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id, created_at, updated_at
-		 FROM products %s %s LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		`SELECT p.id, p.tenant_id, p.external_id, p.source, p.name, p.sku, p.ean, p.price, p.stock_quantity,
+		        p.metadata, p.tags, p.description_short, p.description_long, p.weight, p.width, p.height, p.depth,
+		        p.category, p.image_url, p.images, p.has_variants, p.is_bundle, p.is_dropship, p.dropship_supplier_id,
+		        (SELECT s.name FROM supplier_products sp JOIN suppliers s ON sp.supplier_id = s.id
+		                  WHERE sp.product_id = p.id LIMIT 1) AS supplier_name,
+		        COALESCE((SELECT array_agg(DISTINCT i.provider ORDER BY i.provider)
+		                  FROM product_listings pl
+		                  JOIN integrations i ON pl.integration_id = i.id
+		                  WHERE pl.product_id = p.id), ARRAY[]::text[]) AS marketplace_providers,
+		        p.created_at, p.updated_at
+		 %s %s %s LIMIT $%d OFFSET $%d`,
+		fromClause, where, orderByClause, argIdx, argIdx+1,
 	)
 	args = append(args, filter.Limit, filter.Offset)
 
@@ -102,8 +123,12 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 			&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 			&p.DescriptionShort, &p.DescriptionLong,
 			&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
-			&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID,
+			&p.SupplierName, &p.MarketplaceProviders, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan product: %w", err)
+		}
+		if p.MarketplaceProviders == nil {
+			p.MarketplaceProviders = []string{}
 		}
 		products = append(products, p)
 	}

@@ -83,6 +83,9 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	if src := r.URL.Query().Get("source"); src != "" {
 		filter.Source = &src
 	}
+	if mp := r.URL.Query().Get("marketplace"); mp != "" {
+		filter.Marketplace = &mp
+	}
 
 	products, total, err := h.productService.List(r.Context(), tenantID, filter)
 	if err != nil {

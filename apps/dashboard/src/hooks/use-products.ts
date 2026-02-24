@@ -20,6 +20,7 @@ export function useProducts(params: ProductListParams = {}) {
   if (params.category_id) query.set("category_id", params.category_id);
   if (params.supplier_id) query.set("supplier_id", params.supplier_id);
   if (params.source) query.set("source", params.source);
+  if (params.marketplace) query.set("marketplace", params.marketplace);
   if (params.sort_by) query.set("sort_by", params.sort_by);
   if (params.sort_order) query.set("sort_order", params.sort_order);
 
