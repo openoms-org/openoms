@@ -121,6 +121,11 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	if err := emailCfg.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	actorID := middleware.UserIDFromContext(r.Context())
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		// If password is masked, keep the existing one
@@ -675,6 +680,13 @@ func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http
 		return
 	}
 
+	if v, ok := invoicingCfg["default_tax_rate"]; ok {
+		if rate, ok := v.(float64); ok && (rate < 0 || rate > 100) {
+			writeError(w, http.StatusBadRequest, "default_tax_rate must be between 0 and 100")
+			return
+		}
+	}
+
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "invoicing", invoicingCfg); err != nil {
 			return err
@@ -726,6 +738,11 @@ func (h *SettingsHandler) UpdateSMSSettings(w http.ResponseWriter, r *http.Reque
 	var smsCfg model.SMSSettings
 	if err := json.NewDecoder(r.Body).Decode(&smsCfg); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := smsCfg.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
