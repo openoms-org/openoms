@@ -27,6 +27,7 @@ import { useIntegrations } from "@/hooks/use-integrations";
 import {
   useProductListings,
   useCreateProductListing,
+  useCreateWooCommerceListing,
   useDeleteProductListing,
   useSyncProductListing,
   useUpdateListingSyncMode,
@@ -71,6 +72,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -641,6 +643,10 @@ function CreateListingWizard({
     return <CreateAllegroListingDialog product={product} onClose={onClose} />;
   }
 
+  if (selectedProvider === "woocommerce") {
+    return <CreateWooCommerceListingDialog product={product} onClose={onClose} />;
+  }
+
   // Marketplace picker step
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -687,6 +693,158 @@ function CreateListingWizard({
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Anuluj
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ===================== WooCommerce Create Dialog =====================
+
+function CreateWooCommerceListingDialog({
+  product,
+  onClose,
+}: {
+  product: Product;
+  onClose: () => void;
+}) {
+  const { data: integrations } = useIntegrations();
+  const wooIntegrationId = useMemo(
+    () => integrations?.find((i) => i.provider === "woocommerce")?.id ?? "",
+    [integrations]
+  );
+
+  const [price, setPrice] = useState(String(product.price));
+  const [stock, setStock] = useState(String(product.stock_quantity));
+  const [description, setDescription] = useState(
+    product.description_long || product.description_short || ""
+  );
+  const [categories, setCategories] = useState("");
+
+  const createListing = useCreateWooCommerceListing(product.id);
+
+  const handleSubmit = () => {
+    const cats = categories
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    createListing.mutate(
+      {
+        integration_id: wooIntegrationId,
+        price_override: parseFloat(price) || undefined,
+        stock_override: parseInt(stock) || undefined,
+        description: description || undefined,
+        categories: cats.length > 0 ? cats : undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Produkt wystawiony na WooCommerce");
+          onClose();
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Nie udalo sie wystawic produktu na WooCommerce"
+          );
+        },
+      }
+    );
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Wystaw na WooCommerce</DialogTitle>
+          <DialogDescription>
+            Publikacja produktu &quot;{product.name}&quot; w sklepie WooCommerce
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Price */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Cena (PLN)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cena produktu: {product.price} PLN
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Stan magazynowy</Label>
+              <Input
+                type="number"
+                min="0"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Aktualny stan: {product.stock_quantity}
+              </p>
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label>Opis produktu</Label>
+            <Textarea
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Opis produktu w sklepie WooCommerce"
+            />
+          </div>
+
+          {/* Categories */}
+          <div className="space-y-2">
+            <Label>Kategorie WooCommerce</Label>
+            <Input
+              value={categories}
+              onChange={(e) => setCategories(e.target.value)}
+              placeholder="np. Czesci samochodowe, Oleje (oddzielone przecinkami)"
+            />
+            <p className="text-xs text-muted-foreground">
+              Nazwy kategorii oddzielone przecinkami. Jesli kategoria nie istnieje, zostanie utworzona.
+            </p>
+          </div>
+
+          {/* Product info summary */}
+          <div className="rounded-md border bg-muted/50 p-3 space-y-1 text-sm">
+            <p>
+              <span className="text-muted-foreground">SKU/EAN:</span>{" "}
+              {product.ean || product.sku || "---"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Zdjecia:</span>{" "}
+              {(product.images?.length ?? 0) > 0
+                ? `${product.images!.length} zdjec`
+                : "Brak"}
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Anuluj
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={createListing.isPending || !wooIntegrationId}
+          >
+            {createListing.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Wystaw na WooCommerce
           </Button>
         </DialogFooter>
       </DialogContent>

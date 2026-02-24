@@ -399,6 +399,9 @@ func main() {
 	// Allegro listings handler (publish products to Allegro)
 	allegroListingsHandler := handler.NewAllegroListingsHandler(integrationService, productService, productListingRepo, encryptionKey, pool, cfg)
 
+	// WooCommerce listings handler (publish products to WooCommerce)
+	wooCommerceListingsHandler := handler.NewWooCommerceListingsHandler(integrationService, productService, productListingRepo, pool)
+
 	// Allegro catalog + finance handler
 	allegroCatalogHandler := handler.NewAllegroCatalogHandler(integrationService, encryptionKey)
 
@@ -666,8 +669,9 @@ func main() {
 		AllegroDelivery:   allegroDeliveryHandler,
 		AllegroDisputes:   allegroDisputesHandler,
 		AllegroRatings:    allegroRatingsHandler,
-		AllegroListings:   allegroListingsHandler,
-		Tracking:          trackingHandler,
+		AllegroListings:     allegroListingsHandler,
+		WooCommerceListings: wooCommerceListingsHandler,
+		Tracking:            trackingHandler,
 		Feed:              feedHandler,
 		PurchaseOrder:     purchaseOrderHandler,
 		PickPack:          pickPackHandler,
