@@ -381,10 +381,10 @@ OpenOMS/
 
 ## 5. Backend API
 
-### Middleware Stack (12 middleware)
+### Middleware Stack (15 middleware)
 
 ```
-Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> Logger -> Recoverer -> CORS
+Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS -> Logger -> Recoverer -> CORS
     -> JWTAuth -> TokenBlacklist -> RequireRole -> RequirePermission
     -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
@@ -1272,18 +1272,22 @@ Uprawnienia np.:
 | Zagrozenie | Mitygacja |
 |-----------|-----------|
 | SQL Injection | Parametryzowane zapytania (pgx driver) |
-| XSS | Sanityzacja HTML w inputach (strip tags) + CSP header |
-| CSRF | SameSite cookies + CORS whitelist |
+| XSS | React auto-escape + sanityzacja inputow (strip tags) + CSP header. dangerouslySetInnerHTML usuniete. |
+| CSRF | Double-submit cookie (csrf_token cookie + X-CSRF-Token header, SameSite=Lax, Domain=.openoms.org) |
 | Clickjacking | X-Frame-Options: DENY + CSP frame-ancestors 'none' |
 | Tenant leakage | RLS + FORCE ROW LEVEL SECURITY |
 | Token theft | SHA-256 hash w blacklist, httpOnly cookies |
-| SSRF | Webhook dispatcher sprawdza private IP ranges |
-| Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public) |
-| DoS | Max body size (1MB default, 10MB upload) |
+| Token revocation | Composite blacklist (Redis + in-memory fallback, zapobiega fail-open) |
+| SSRF | noPrivateDialer na wszystkich polaczeniach wychodzacych (webhooks, automation, supplier feeds). IPv4 + IPv6 (w tym ::/128, ff00::/8). |
+| SSRF (WebSocket) | Walidacja Origin header + ticket-only auth (JWT w URL usuniety) |
+| Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). |
+| DoS | Max body size (1MB default, 10MB upload). MaxBytesReader na webhook handlerach. |
 | Account takeover | 2FA/TOTP, bcrypt, Ed25519 JWT |
 | Info disclosure | Brak wersji w /health, brak X-Powered-By, /metrics chroniony tokenem |
 | MIME sniffing | X-Content-Type-Options: nosniff |
 | Referrer leak | Referrer-Policy: strict-origin-when-cross-origin |
+| HSTS | Strict-Transport-Security w produkcji |
+| Supply chain | Swagger UI CDN pinned do dokladnej wersji (5.18.2) |
 
 ### Bezpieczenstwo infrastruktury (Kubernetes)
 

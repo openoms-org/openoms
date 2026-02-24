@@ -1,8 +1,8 @@
 # Project State
-Updated: 2026-02-20 by Rafal
+Updated: 2026-02-24
 
 ## Target
-Open production for paying customers: **May 2026** (~12 weeks remaining)
+Open production for paying customers: **May 2026** (~11 weeks remaining)
 
 ## Pricing Model
 Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
@@ -15,10 +15,12 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 
 ## In Progress
 - [x] Supabase migration — DONE (simple_protocol JSONB fix deployed 2026-02-20)
-- [ ] CSRF cross-subdomain fix — plan exists (plan: fancy-cuddling-snail.md), not implemented
-- [ ] Security audit HIGH findings — 2 unfixed (WebSocket origin, SSRF in automation)
+- [x] CSRF cross-subdomain fix — DONE (PR #36, double-submit cookie with Domain=.openoms.org)
+- [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-02-24: Audit remediation v2 — SSRF IPv6, atomic rate limiter, WS ticket-only auth, XSS fix, settings validation, dead code cleanup, 12 hook migrations (PR #38)
+- 2026-02-24: Security hardening — CSRF middleware, composite token blacklist, WebSocket Origin validation, HSTS, automation SSRF fix, webhook body limits, input sanitization, response helpers (PR #36)
 - 2026-02-20: JSONB type registration fix for pgx simple_protocol (AfterConnect + JSONBCodec)
 - 2026-02-20: Tenant repository explicit jsonb cast
 - 2026-02-19: Supplier product enrichment (PR #13)
@@ -27,10 +29,10 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - 2026-02-17: Gap analysis vs competitors (BaseLinker, Sellasist, Apilo)
 
 ## Recent Deploys
+- 2026-02-24: PR #38 merged — audit remediation v2
+- 2026-02-24: PR #36 merged — security hardening + code quality
 - 2026-02-20 14:00: `6bd6a7d` — JSONBCodec Marshal/Unmarshal fix (fixed login panic)
 - 2026-02-20 13:50: `8dc4a19` — Tenant repository jsonb cast
-- 2026-02-20 13:40: `b9aab06` — Lint fix (unused ctx param)
-- 2026-02-20 13:30: `ed3bbe2` — json.RawMessage JSONB type registration
 
 ## Active Blockers
 - None currently blocking development
@@ -42,4 +44,4 @@ Billing → Monitoring → Onboarding → Allegro polish → Stock sync
 ```
 
 ## Estimated Hours Remaining to MVP
-~400h (tight fit in 600h capacity over 12 weeks)
+~400h (tight fit in 600h capacity over 11 weeks)
