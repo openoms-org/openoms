@@ -101,6 +101,7 @@ type ShipmentRepo interface {
 type ProductRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.ProductListFilter) ([]model.Product, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Product, error)
+	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.Product, error)
 	FindBySKU(ctx context.Context, tx pgx.Tx, sku string) (*model.Product, error)
 	FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.Product, error)
 	Create(ctx context.Context, tx pgx.Tx, product *model.Product) error

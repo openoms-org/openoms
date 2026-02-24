@@ -521,24 +521,43 @@ func (s *ShipmentService) calculateOrderWeight(ctx context.Context, tx pgx.Tx, o
 		return 0
 	}
 
-	var items []struct {
+	type orderItem struct {
 		ProductID *uuid.UUID `json:"product_id"`
 		Quantity  int        `json:"quantity"`
 	}
+	var items []orderItem
 	if err := json.Unmarshal(order.Items, &items); err != nil {
 		return 0
 	}
 
-	var totalWeight float64
+	// Collect unique product IDs and build quantity map.
+	quantityByID := make(map[uuid.UUID]int)
+	var productIDs []uuid.UUID
 	for _, item := range items {
 		if item.ProductID == nil || *item.ProductID == uuid.Nil || item.Quantity <= 0 {
 			continue
 		}
-		product, err := s.productRepo.FindByID(ctx, tx, *item.ProductID)
-		if err != nil || product == nil || product.Weight == nil || *product.Weight <= 0 {
+		if _, exists := quantityByID[*item.ProductID]; !exists {
+			productIDs = append(productIDs, *item.ProductID)
+		}
+		quantityByID[*item.ProductID] += item.Quantity
+	}
+	if len(productIDs) == 0 {
+		return 0
+	}
+
+	// Batch-fetch all products in a single query.
+	products, err := s.productRepo.FindByIDs(ctx, tx, productIDs)
+	if err != nil {
+		return 0
+	}
+
+	var totalWeight float64
+	for _, p := range products {
+		if p.Weight == nil || *p.Weight <= 0 {
 			continue
 		}
-		totalWeight += *product.Weight * float64(item.Quantity)
+		totalWeight += *p.Weight * float64(quantityByID[p.ID])
 	}
 	return totalWeight
 }

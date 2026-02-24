@@ -154,6 +154,35 @@ func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return &p, nil
 }
 
+// FindByIDs returns products matching the given IDs in a single query.
+func (r *ProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.Product, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx,
+		`SELECT id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id, created_at, updated_at
+		 FROM products WHERE id = ANY($1)`, ids,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find products by ids: %w", err)
+	}
+	defer rows.Close()
+
+	var products []model.Product
+	for rows.Next() {
+		var p model.Product
+		if err := rows.Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
+			&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
+			&p.DescriptionShort, &p.DescriptionLong,
+			&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
+			&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan product: %w", err)
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
+}
+
 func (r *ProductRepository) Create(ctx context.Context, tx pgx.Tx, product *model.Product) error {
 	tags := product.Tags
 	if tags == nil {

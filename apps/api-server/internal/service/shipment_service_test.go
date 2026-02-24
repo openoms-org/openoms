@@ -2,16 +2,53 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
+
+// stubProductRepo implements repository.ProductRepo for testing calculateOrderWeight.
+type stubProductRepo struct {
+	products map[uuid.UUID]*model.Product
+}
+
+func (s *stubProductRepo) List(_ context.Context, _ pgx.Tx, _ model.ProductListFilter) ([]model.Product, int, error) {
+	return nil, 0, nil
+}
+func (s *stubProductRepo) FindByID(_ context.Context, _ pgx.Tx, id uuid.UUID) (*model.Product, error) {
+	if p, ok := s.products[id]; ok {
+		return p, nil
+	}
+	return nil, nil
+}
+func (s *stubProductRepo) FindByIDs(_ context.Context, _ pgx.Tx, ids []uuid.UUID) ([]model.Product, error) {
+	var result []model.Product
+	for _, id := range ids {
+		if p, ok := s.products[id]; ok {
+			result = append(result, *p)
+		}
+	}
+	return result, nil
+}
+func (s *stubProductRepo) FindBySKU(_ context.Context, _ pgx.Tx, _ string) (*model.Product, error) {
+	return nil, nil
+}
+func (s *stubProductRepo) FindByEAN(_ context.Context, _ pgx.Tx, _ string) (*model.Product, error) {
+	return nil, nil
+}
+func (s *stubProductRepo) Create(_ context.Context, _ pgx.Tx, _ *model.Product) error { return nil }
+func (s *stubProductRepo) Update(_ context.Context, _ pgx.Tx, _ uuid.UUID, _ model.UpdateProductRequest) error {
+	return nil
+}
+func (s *stubProductRepo) Delete(_ context.Context, _ pgx.Tx, _ uuid.UUID) error { return nil }
 
 func TestShipmentService_Create_ValidationError_MissingOrderID(t *testing.T) {
 	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
@@ -116,4 +153,153 @@ func TestShipmentService_Create_ValidationError_ProviderTooLong(t *testing.T) {
 	var ve *ValidationError
 	assert.True(t, errors.As(err, &ve))
 	assert.Contains(t, err.Error(), "provider")
+}
+
+// ---------------------------------------------------------------------------
+// calculateOrderWeight tests
+// ---------------------------------------------------------------------------
+
+func ptrFloat(v float64) *float64 { return &v }
+
+func TestCalculateOrderWeight_TwoProducts(t *testing.T) {
+	pid1 := uuid.New()
+	pid2 := uuid.New()
+	repo := &stubProductRepo{products: map[uuid.UUID]*model.Product{
+		pid1: {ID: pid1, Weight: ptrFloat(1.5)},
+		pid2: {ID: pid2, Weight: ptrFloat(0.8)},
+	}}
+	svc := &ShipmentService{productRepo: repo}
+
+	items, _ := json.Marshal([]map[string]any{
+		{"product_id": pid1, "quantity": 2},
+		{"product_id": pid2, "quantity": 3},
+	})
+	order := &model.Order{Items: items}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	// 1.5*2 + 0.8*3 = 3.0 + 2.4 = 5.4
+	assert.InDelta(t, 5.4, got, 0.001)
+}
+
+func TestCalculateOrderWeight_NilProductRepo(t *testing.T) {
+	svc := &ShipmentService{productRepo: nil}
+	items, _ := json.Marshal([]map[string]any{
+		{"product_id": uuid.New(), "quantity": 1},
+	})
+	order := &model.Order{Items: items}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.Equal(t, 0.0, got)
+}
+
+func TestCalculateOrderWeight_EmptyItems(t *testing.T) {
+	svc := &ShipmentService{productRepo: &stubProductRepo{}}
+	order := &model.Order{Items: json.RawMessage(`[]`)}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.Equal(t, 0.0, got)
+}
+
+func TestCalculateOrderWeight_NilItems(t *testing.T) {
+	svc := &ShipmentService{productRepo: &stubProductRepo{}}
+	order := &model.Order{}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.Equal(t, 0.0, got)
+}
+
+func TestCalculateOrderWeight_InvalidJSON(t *testing.T) {
+	svc := &ShipmentService{productRepo: &stubProductRepo{}}
+	order := &model.Order{Items: json.RawMessage(`not json`)}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.Equal(t, 0.0, got)
+}
+
+func TestCalculateOrderWeight_SkipsNilProductID(t *testing.T) {
+	pid := uuid.New()
+	repo := &stubProductRepo{products: map[uuid.UUID]*model.Product{
+		pid: {ID: pid, Weight: ptrFloat(2.0)},
+	}}
+	svc := &ShipmentService{productRepo: repo}
+
+	items, _ := json.Marshal([]map[string]any{
+		{"quantity": 1},
+		{"product_id": pid, "quantity": 3},
+	})
+	order := &model.Order{Items: items}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.InDelta(t, 6.0, got, 0.001)
+}
+
+func TestCalculateOrderWeight_SkipsZeroQuantity(t *testing.T) {
+	pid := uuid.New()
+	repo := &stubProductRepo{products: map[uuid.UUID]*model.Product{
+		pid: {ID: pid, Weight: ptrFloat(1.0)},
+	}}
+	svc := &ShipmentService{productRepo: repo}
+
+	items, _ := json.Marshal([]map[string]any{
+		{"product_id": pid, "quantity": 0},
+	})
+	order := &model.Order{Items: items}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.Equal(t, 0.0, got)
+}
+
+func TestCalculateOrderWeight_SkipsProductWithoutWeight(t *testing.T) {
+	pid1 := uuid.New()
+	pid2 := uuid.New()
+	repo := &stubProductRepo{products: map[uuid.UUID]*model.Product{
+		pid1: {ID: pid1, Weight: ptrFloat(2.0)},
+		pid2: {ID: pid2, Weight: nil},
+	}}
+	svc := &ShipmentService{productRepo: repo}
+
+	items, _ := json.Marshal([]map[string]any{
+		{"product_id": pid1, "quantity": 1},
+		{"product_id": pid2, "quantity": 5},
+	})
+	order := &model.Order{Items: items}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.InDelta(t, 2.0, got, 0.001)
+}
+
+func TestCalculateOrderWeight_SkipsProductNotInRepo(t *testing.T) {
+	pid1 := uuid.New()
+	pidMissing := uuid.New()
+	repo := &stubProductRepo{products: map[uuid.UUID]*model.Product{
+		pid1: {ID: pid1, Weight: ptrFloat(3.0)},
+	}}
+	svc := &ShipmentService{productRepo: repo}
+
+	items, _ := json.Marshal([]map[string]any{
+		{"product_id": pid1, "quantity": 1},
+		{"product_id": pidMissing, "quantity": 2},
+	})
+	order := &model.Order{Items: items}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	assert.InDelta(t, 3.0, got, 0.001)
+}
+
+func TestCalculateOrderWeight_DuplicateProductIDSumsQuantities(t *testing.T) {
+	pid := uuid.New()
+	repo := &stubProductRepo{products: map[uuid.UUID]*model.Product{
+		pid: {ID: pid, Weight: ptrFloat(1.0)},
+	}}
+	svc := &ShipmentService{productRepo: repo}
+
+	items, _ := json.Marshal([]map[string]any{
+		{"product_id": pid, "quantity": 2},
+		{"product_id": pid, "quantity": 3},
+	})
+	order := &model.Order{Items: items}
+
+	got := svc.calculateOrderWeight(context.Background(), nil, order)
+	// 1.0 * (2+3) = 5.0
+	assert.InDelta(t, 5.0, got, 0.001)
 }
