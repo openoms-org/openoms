@@ -113,20 +113,20 @@ type CreateStockSyncChannelRequest struct {
 func (r *CreateStockSyncChannelRequest) Validate() error {
 	r.ChannelType = strings.TrimSpace(strings.ToLower(r.ChannelType))
 	if r.ChannelType == "" {
-		return errors.New("channel_type jest wymagany")
+		return errors.New("channel_type is required")
 	}
 	if !validChannelTypes[r.ChannelType] {
-		return errors.New("nieprawidłowy channel_type")
+		return errors.New("invalid channel_type")
 	}
 	if r.SyncMode != nil {
 		mode := strings.TrimSpace(strings.ToLower(*r.SyncMode))
 		r.SyncMode = &mode
 		if !validSyncModes[mode] {
-			return errors.New("nieprawidłowy sync_mode")
+			return errors.New("invalid sync_mode")
 		}
 	}
 	if r.StockBuffer != nil && *r.StockBuffer < 0 {
-		return errors.New("stock_buffer nie może być ujemny")
+		return errors.New("stock_buffer must not be negative")
 	}
 	return nil
 }
@@ -142,17 +142,17 @@ type UpdateStockSyncChannelRequest struct {
 // Validate validates the update channel request.
 func (r *UpdateStockSyncChannelRequest) Validate() error {
 	if r.Enabled == nil && r.StockBuffer == nil && r.SyncMode == nil && r.Priority == nil {
-		return errors.New("co najmniej jedno pole musi być podane")
+		return errors.New("at least one field is required")
 	}
 	if r.SyncMode != nil {
 		mode := strings.TrimSpace(strings.ToLower(*r.SyncMode))
 		r.SyncMode = &mode
 		if !validSyncModes[mode] {
-			return errors.New("nieprawidłowy sync_mode")
+			return errors.New("invalid sync_mode")
 		}
 	}
 	if r.StockBuffer != nil && *r.StockBuffer < 0 {
-		return errors.New("stock_buffer nie może być ujemny")
+		return errors.New("stock_buffer must not be negative")
 	}
 	return nil
 }

@@ -617,10 +617,12 @@ func (s *ListingSyncService) logSyncEntryWithChanges(ctx context.Context, tx pgx
 func (s *ListingSyncService) updateLastSync(ctx context.Context, tenantID uuid.UUID, configID uuid.UUID, hadErrors bool) {
 	var lastError *string
 	if hadErrors {
-		errMsg := "Niektóre elementary nie zostały zsynchronizowane"
+		errMsg := "Some items were not synchronized"
 		lastError = &errMsg
 	}
-	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		return s.syncRepo.UpdateLastSync(ctx, tx, configID, lastError)
-	})
+	}); err != nil {
+		slog.Error("failed to update last sync timestamp", "error", err, "tenant_id", tenantID, "config_id", configID)
+	}
 }

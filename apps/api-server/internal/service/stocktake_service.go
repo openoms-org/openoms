@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -446,7 +447,7 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 	// Trigger stock sync for all products with discrepancies
 	if s.stockSyncService != nil {
 		// Re-read discrepancies (we need the product IDs outside the tx)
-		_ = database.WithTenant(context.Background(), s.pool, tenantID, func(tx pgx.Tx) error {
+		if err := database.WithTenant(context.Background(), s.pool, tenantID, func(tx pgx.Tx) error {
 			disc, err := s.itemRepo.ListDiscrepancies(ctx, tx, stocktakeID)
 			if err != nil {
 				return err
@@ -459,7 +460,9 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 				go s.stockSyncService.OnStockChange(context.Background(), tenantID, item.ProductID, "recount", item.ExpectedQuantity, counted)
 			}
 			return nil
-		})
+		}); err != nil {
+			slog.Error("failed to trigger stock sync after stocktake", "error", err, "tenant_id", tenantID, "stocktake_id", stocktakeID)
+		}
 	}
 
 	return stocktake, nil

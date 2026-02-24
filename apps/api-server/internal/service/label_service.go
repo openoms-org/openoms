@@ -140,7 +140,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		}
 		// InPost requires phone number specifically
 		if shipment.Provider == "inpost" && !hasPhone {
-			return NewValidationError(fmt.Errorf("InPost wymaga numeru telefonu odbiorcy — uzupełnij telefon w zamówieniu"))
+			return NewValidationError(fmt.Errorf("InPost requires a recipient phone number — add a phone number to the order"))
 		}
 
 		// Find active integration for this carrier

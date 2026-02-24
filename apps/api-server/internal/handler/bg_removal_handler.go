@@ -62,7 +62,7 @@ var bgAllowedMimeTypes = map[string]string{
 // Accepts a multipart file upload, removes the background, saves the result and returns the URL.
 func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Request) {
 	if !h.bgService.IsConfigured() {
-		writeError(w, http.StatusUnprocessableEntity, "Usuwanie tła nie jest skonfigurowane. Ustaw REMOVEBG_API_KEY.")
+		writeError(w, http.StatusUnprocessableEntity, "Background removal not configured. Set REMOVEBG_API_KEY.")
 		return
 	}
 
@@ -70,21 +70,21 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxSize)
 	if err := r.ParseMultipartForm(h.maxSize); err != nil {
-		writeError(w, http.StatusBadRequest, "plik za duży lub nieprawidłowy formularz")
+		writeError(w, http.StatusBadRequest, "file too large or invalid form data")
 		return
 	}
 	defer r.MultipartForm.RemoveAll()
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "brak pola 'file'")
+		writeError(w, http.StatusBadRequest, "missing 'file' field")
 		return
 	}
 	defer file.Close()
 
 	imageData, err := io.ReadAll(file)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "nie udało się odczytać pliku")
+		writeError(w, http.StatusInternalServerError, "failed to read file")
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 	detectLen := min(len(imageData), 512)
 	contentType := http.DetectContentType(imageData[:detectLen])
 	if _, ok := bgAllowedMimeTypes[contentType]; !ok {
-		writeError(w, http.StatusBadRequest, "nieobsługiwany typ pliku — dozwolone: JPEG, PNG, WEBP")
+		writeError(w, http.StatusBadRequest, "unsupported file type — allowed: JPEG, PNG, WEBP")
 		return
 	}
 
@@ -100,7 +100,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 	resultBytes, resultContentType, err := h.bgService.RemoveBackground(r.Context(), imageData, header.Filename)
 	if err != nil {
 		slog.Error("background removal failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "usuwanie tła nie powiodło się")
+		writeError(w, http.StatusInternalServerError, "background removal failed")
 		return
 	}
 
@@ -115,7 +115,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 	url, err := h.storage.Upload(r.Context(), key, bytes.NewReader(resultBytes), resultContentType)
 	if err != nil {
 		slog.Error("failed to save processed image", "error", err)
-		writeError(w, http.StatusInternalServerError, "nie udało się zapisać przetworzonego obrazu")
+		writeError(w, http.StatusInternalServerError, "failed to save processed image")
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 // Use index -1 to process the main image_url, or 0+ for the images[] array.
 func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r *http.Request) {
 	if !h.bgService.IsConfigured() {
-		writeError(w, http.StatusUnprocessableEntity, "Usuwanie tła nie jest skonfigurowane. Ustaw REMOVEBG_API_KEY.")
+		writeError(w, http.StatusUnprocessableEntity, "Background removal not configured. Set REMOVEBG_API_KEY.")
 		return
 	}
 
@@ -138,14 +138,14 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 
 	productID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "nieprawidłowy identyfikator produktu")
+		writeError(w, http.StatusBadRequest, "invalid product ID")
 		return
 	}
 
 	indexStr := chi.URLParam(r, "index")
 	index, err := strconv.Atoi(indexStr)
 	if err != nil || index < -1 {
-		writeError(w, http.StatusBadRequest, "nieprawidłowy indeks zdjęcia (użyj -1 dla image_url lub 0+ dla images[])")
+		writeError(w, http.StatusBadRequest, "invalid image index (use -1 for image_url or 0+ for images[])")
 		return
 	}
 
@@ -183,11 +183,11 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	})
 	if err != nil {
 		if err == service.ErrProductNotFound {
-			writeError(w, http.StatusNotFound, "produkt nie znaleziony")
+			writeError(w, http.StatusNotFound, "product not found")
 			return
 		}
 		slog.Error("failed to fetch product", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "nie udało się pobrać produktu")
+		writeError(w, http.StatusInternalServerError, "failed to fetch product")
 		return
 	}
 
@@ -195,20 +195,20 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	var targetURL string
 	if index == -1 {
 		if imageURL == "" {
-			writeError(w, http.StatusBadRequest, "produkt nie ma zdjęcia głównego")
+			writeError(w, http.StatusBadRequest, "product has no main image")
 			return
 		}
 		targetURL = imageURL
 	} else {
 		if index >= len(images) {
-			writeError(w, http.StatusBadRequest, fmt.Sprintf("indeks %d poza zakresem (dostępne: %d zdjęć)", index, len(images)))
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("index %d out of range (product has %d images)", index, len(images)))
 			return
 		}
 		targetURL = images[index].URL
 	}
 
 	if targetURL == "" {
-		writeError(w, http.StatusBadRequest, "brak URL zdjęcia do przetworzenia")
+		writeError(w, http.StatusBadRequest, "no image URL to process")
 		return
 	}
 
@@ -216,12 +216,12 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	imageData, contentType, err := h.downloadImage(r.Context(), targetURL)
 	if err != nil {
 		slog.Error("failed to download image", "error", err, "url", targetURL)
-		writeError(w, http.StatusInternalServerError, "nie udało się pobrać zdjęcia")
+		writeError(w, http.StatusInternalServerError, "failed to download image")
 		return
 	}
 
 	if _, ok := bgAllowedMimeTypes[contentType]; !ok {
-		writeError(w, http.StatusBadRequest, "nieobsługiwany typ pliku obrazu")
+		writeError(w, http.StatusBadRequest, "unsupported image file type")
 		return
 	}
 
@@ -229,7 +229,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	resultBytes, resultContentType, err := h.bgService.RemoveBackground(r.Context(), imageData, "image.png")
 	if err != nil {
 		slog.Error("background removal failed", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "usuwanie tła nie powiodło się")
+		writeError(w, http.StatusInternalServerError, "background removal failed")
 		return
 	}
 
@@ -244,7 +244,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	newURL, err := h.storage.Upload(r.Context(), key, bytes.NewReader(resultBytes), resultContentType)
 	if err != nil {
 		slog.Error("failed to save processed image", "error", err)
-		writeError(w, http.StatusInternalServerError, "nie udało się zapisać przetworzonego obrazu")
+		writeError(w, http.StatusInternalServerError, "failed to save processed image")
 		return
 	}
 
@@ -258,7 +258,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 		// Update the specific image in the images array
 		images[index].URL = newURL
 		if images[index].Alt == "" {
-			images[index].Alt = productName + " (bez tła)"
+			images[index].Alt = productName + " (background removed)"
 		}
 		imagesJSON, err := json.Marshal(images)
 		if err != nil {
@@ -271,14 +271,14 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 	})
 	if err != nil {
 		slog.Error("failed to update product image", "error", err, "product_id", productID)
-		writeError(w, http.StatusInternalServerError, "nie udało się zaktualizować produktu")
+		writeError(w, http.StatusInternalServerError, "failed to update product")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{
 		"url":          newURL,
 		"content_type": resultContentType,
-		"message":      "Tło zostało usunięte",
+		"message":      "Background removed successfully",
 	})
 }
 
