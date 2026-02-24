@@ -141,7 +141,10 @@ func retryableStatusCode(code int) bool {
 // defaultRetryDelay returns the backoff delay for a given retry attempt.
 // Delays: 500ms, 1s, 2s (exponential: 500ms << attempt).
 func defaultRetryDelay(attempt int) time.Duration {
-	return time.Duration(500<<uint(attempt)) * time.Millisecond
+	if attempt < 0 {
+		attempt = 0
+	}
+	return time.Duration(500<<min(attempt, 30)) * time.Millisecond
 }
 
 // WithHTTPClient sets a custom HTTP client.

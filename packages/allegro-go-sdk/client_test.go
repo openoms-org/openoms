@@ -377,15 +377,15 @@ func TestDefaultRetryDelay(t *testing.T) {
 
 func TestClient_RetryOn429(t *testing.T) {
 	var attempts atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		n := attempts.Add(1)
 		if n <= 2 {
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+			_, _ = w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"success"}`))
+		_, _ = w.Write([]byte(`{"id":"success"}`))
 	}))
 	defer srv.Close()
 
@@ -412,11 +412,11 @@ func TestClient_RetryOn429(t *testing.T) {
 
 func TestClient_RetryOn5xx(t *testing.T) {
 	var attempts atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		n := attempts.Add(1)
 		if n <= 1 {
 			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"code":"BAD_GATEWAY","message":"Bad gateway"}`))
+			_, _ = w.Write([]byte(`{"code":"BAD_GATEWAY","message":"Bad gateway"}`))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
@@ -447,10 +447,10 @@ func TestClient_RetryOn5xx(t *testing.T) {
 
 func TestClient_MaxRetriesExceeded(t *testing.T) {
 	var attempts atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		attempts.Add(1)
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+		_, _ = w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
 	}))
 	defer srv.Close()
 
