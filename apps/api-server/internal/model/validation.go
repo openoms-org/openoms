@@ -8,6 +8,7 @@ import (
 	"unicode"
 )
 
+// Validation limits for user-facing input fields.
 const (
 	MaxEmailLength = 254
 	MaxSlugLength  = 63
