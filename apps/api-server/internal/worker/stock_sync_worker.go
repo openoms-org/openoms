@@ -166,7 +166,7 @@ func (w *StockSyncWorker) syncBulk(
 				"batch_size", len(chunk),
 				"error", err,
 			)
-			errMsg := truncateErrorMessage(err.Error(), 500)
+			errMsg := truncateErrorMessage(err.Error())
 			for _, l := range batchListings {
 				_, _ = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
@@ -214,7 +214,7 @@ func (w *StockSyncWorker) syncOneByOne(
 			)
 			_, _ = tx.Exec(ctx,
 				`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-				l.ListingID, truncateErrorMessage(err.Error(), 500),
+				l.ListingID, truncateErrorMessage(err.Error()),
 			)
 			continue
 		}

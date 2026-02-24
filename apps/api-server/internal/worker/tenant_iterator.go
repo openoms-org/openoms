@@ -71,14 +71,16 @@ func closeProvider(provider any) {
 	}
 }
 
-// truncateErrorMessage limits error messages stored in the database to maxLen bytes.
+const maxErrorMessageLen = 500
+
+// truncateErrorMessage limits error messages stored in the database to 500 bytes.
 // Truncates at a valid UTF-8 boundary to avoid invalid strings in PostgreSQL.
-func truncateErrorMessage(msg string, maxLen int) string {
-	if len(msg) <= maxLen {
+func truncateErrorMessage(msg string) string {
+	if len(msg) <= maxErrorMessageLen {
 		return msg
 	}
 	// Walk back from maxLen to find a valid UTF-8 boundary
-	truncated := msg[:maxLen]
+	truncated := msg[:maxErrorMessageLen]
 	for len(truncated) > 0 && !utf8.ValidString(truncated) {
 		truncated = truncated[:len(truncated)-1]
 	}

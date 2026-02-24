@@ -28,13 +28,13 @@ func TestChunkSlice_Empty(t *testing.T) {
 
 func TestTruncateErrorMessage(t *testing.T) {
 	short := "short error"
-	assert.Equal(t, short, truncateErrorMessage(short, 500))
+	assert.Equal(t, short, truncateErrorMessage(short))
 
 	long := make([]byte, 600)
 	for i := range long {
 		long[i] = 'x'
 	}
-	result := truncateErrorMessage(string(long), 500)
+	result := truncateErrorMessage(string(long))
 	assert.Len(t, result, 500)
 }
 
@@ -45,7 +45,7 @@ func TestCloseProvider_WithCloser(t *testing.T) {
 	assert.True(t, called)
 }
 
-func TestCloseProvider_WithoutCloser(t *testing.T) {
+func TestCloseProvider_WithoutCloser(_ *testing.T) {
 	// Should not panic on a type without Close()
 	closeProvider("not a closer")
 }

@@ -22,12 +22,14 @@ type listingPrice struct {
 	Price      float64
 }
 
+// PriceSyncWorker pushes local product prices to marketplace listings in batches.
 type PriceSyncWorker struct {
 	pool          *pgxpool.Pool
 	encryptionKey []byte
 	logger        *slog.Logger
 }
 
+// NewPriceSyncWorker creates a worker that syncs product prices to marketplace listings.
 func NewPriceSyncWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.Logger) *PriceSyncWorker {
 	return &PriceSyncWorker{
 		pool:          pool,
@@ -36,14 +38,17 @@ func NewPriceSyncWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.L
 	}
 }
 
+// Name returns the worker identifier.
 func (w *PriceSyncWorker) Name() string {
 	return "price_sync"
 }
 
+// Interval returns how often the worker runs.
 func (w *PriceSyncWorker) Interval() time.Duration {
 	return 5 * time.Minute
 }
 
+// Run executes one price-sync cycle across all tenants and integrations.
 func (w *PriceSyncWorker) Run(ctx context.Context) error {
 	// Get all active marketplace integrations (all providers)
 	tis, err := ListAllActiveMarketplaceIntegrations(ctx, w.pool)
@@ -164,7 +169,7 @@ func (w *PriceSyncWorker) syncBulk(
 				"batch_size", len(chunk),
 				"error", err,
 			)
-			errMsg := truncateErrorMessage(err.Error(), 500)
+			errMsg := truncateErrorMessage(err.Error())
 			for _, l := range batchListings {
 				_, _ = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
@@ -212,7 +217,7 @@ func (w *PriceSyncWorker) syncOneByOne(
 			)
 			_, _ = tx.Exec(ctx,
 				`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-				l.ListingID, truncateErrorMessage(err.Error(), 500),
+				l.ListingID, truncateErrorMessage(err.Error()),
 			)
 			continue
 		}
