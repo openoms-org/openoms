@@ -265,9 +265,9 @@ func TestBulkUpdatePrice_EmptyNoop(t *testing.T) {
 }
 
 func TestBulkUpdateStock_APIError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"code":"BAD_REQUEST","message":"Invalid offers"}`))
+		_, _ = w.Write([]byte(`{"code":"BAD_REQUEST","message":"Invalid offers"}`))
 	}))
 	defer srv.Close()
 

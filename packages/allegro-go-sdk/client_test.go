@@ -420,7 +420,7 @@ func TestClient_RetryOn5xx(t *testing.T) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"ok"}`))
+		_, _ = w.Write([]byte(`{"id":"ok"}`))
 	}))
 	defer srv.Close()
 
@@ -477,15 +477,15 @@ func TestClient_MaxRetriesExceeded(t *testing.T) {
 
 func TestClient_RetryOn429_DoRaw(t *testing.T) {
 	var attempts atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		n := attempts.Add(1)
 		if n <= 2 {
 			w.WriteHeader(http.StatusTooManyRequests)
-			w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+			_, _ = w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`pdf-data`))
+		_, _ = w.Write([]byte(`pdf-data`))
 	}))
 	defer srv.Close()
 
@@ -511,10 +511,10 @@ func TestClient_RetryOn429_DoRaw(t *testing.T) {
 
 func TestClient_RetryRespectsContextCancellation(t *testing.T) {
 	var attempts atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		attempts.Add(1)
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
+		_, _ = w.Write([]byte(`{"code":"RATE_LIMIT","message":"Too many requests"}`))
 	}))
 	defer srv.Close()
 
@@ -545,10 +545,10 @@ func TestClient_RetryRespectsContextCancellation(t *testing.T) {
 
 func TestClient_NoRetryOnNonRetryableError(t *testing.T) {
 	var attempts atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		attempts.Add(1)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"code":"BAD_REQUEST","message":"Invalid input"}`))
+		_, _ = w.Write([]byte(`{"code":"BAD_REQUEST","message":"Invalid input"}`))
 	}))
 	defer srv.Close()
 
