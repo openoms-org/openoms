@@ -44,7 +44,7 @@ func (s *ShipmentManagementService) GetLabel(ctx context.Context, shipmentIDs []
 	body := map[string]any{
 		"shipmentIds": shipmentIDs,
 	}
-	return s.client.doRaw(ctx, "POST", "/shipment-management/label", body)
+	return s.client.doRaw(ctx, "POST", "/shipment-management/label", body, "application/pdf")
 }
 
 // CancelShipment cancels one or more managed shipments.
@@ -75,5 +75,5 @@ func (s *ShipmentManagementService) GenerateProtocol(ctx context.Context, shipme
 	body := map[string]any{
 		"shipmentIds": shipmentIDs,
 	}
-	return s.client.doRaw(ctx, "POST", "/shipment-management/protocol", body)
+	return s.client.doRaw(ctx, "POST", "/shipment-management/protocol", body, "application/pdf")
 }

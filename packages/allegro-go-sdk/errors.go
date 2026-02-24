@@ -17,7 +17,6 @@ var (
 // APIError represents an error response from the Allegro API.
 type APIError struct {
 	StatusCode int           `json:"-"`
-	RawBody    string        `json:"-"`
 	Code       string        `json:"code"`
 	Message    string        `json:"message"`
 	Details    []ErrorDetail `json:"errors"`

@@ -2,8 +2,11 @@ package allegro
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -136,5 +139,148 @@ func TestOffersGet(t *testing.T) {
 	}
 	if offer.Name != "Super Widget" {
 		t.Errorf("Name = %q, want %q", offer.Name, "Super Widget")
+	}
+}
+
+func TestBulkUpdateStock_GroupsByQuantity(t *testing.T) {
+	var requests []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/sale/offer-quantity-change-commands/") {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != "PUT" {
+			t.Errorf("method = %q, want PUT", r.Method)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var parsed map[string]any
+		if err := json.Unmarshal(body, &parsed); err != nil {
+			t.Fatalf("unmarshal body: %v", err)
+		}
+		requests = append(requests, parsed)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret", WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
+	defer c.Close()
+
+	err := c.Offers.BulkUpdateStock(context.Background(), []StockUpdate{
+		{OfferID: "a", Quantity: 5},
+		{OfferID: "b", Quantity: 5},
+		{OfferID: "c", Quantity: 10},
+	})
+	if err != nil {
+		t.Fatalf("BulkUpdateStock error: %v", err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("expected 2 commands (grouped by qty), got %d", len(requests))
+	}
+
+	for _, req := range requests {
+		mod, ok := req["modification"].(map[string]any)
+		if !ok {
+			t.Fatal("missing modification object")
+		}
+		if mod["changeType"] != "FIXED" {
+			t.Errorf("changeType = %v, want FIXED", mod["changeType"])
+		}
+		criteria, ok := req["offerCriteria"].([]any)
+		if !ok || len(criteria) == 0 {
+			t.Fatal("missing offerCriteria")
+		}
+		crit := criteria[0].(map[string]any)
+		if crit["type"] != "CONTAINS_OFFERS" {
+			t.Errorf("criteria type = %v, want CONTAINS_OFFERS", crit["type"])
+		}
+	}
+}
+
+func TestBulkUpdateStock_EmptyNoop(t *testing.T) {
+	c := NewClient("id", "secret")
+	defer c.Close()
+
+	err := c.Offers.BulkUpdateStock(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("BulkUpdateStock(nil) error: %v", err)
+	}
+}
+
+func TestBulkUpdatePrice_GroupsByPrice(t *testing.T) {
+	var requests []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/sale/offer-price-change-commands/") {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		var parsed map[string]any
+		if err := json.Unmarshal(body, &parsed); err != nil {
+			t.Fatalf("unmarshal body: %v", err)
+		}
+		requests = append(requests, parsed)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret", WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
+	defer c.Close()
+
+	err := c.Offers.BulkUpdatePrice(context.Background(), []PriceUpdate{
+		{OfferID: "a", Amount: 9.99, Currency: "PLN"},
+		{OfferID: "b", Amount: 9.99, Currency: "PLN"},
+		{OfferID: "c", Amount: 19.50, Currency: "PLN"},
+	})
+	if err != nil {
+		t.Fatalf("BulkUpdatePrice error: %v", err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("expected 2 commands (grouped by price), got %d", len(requests))
+	}
+
+	for _, req := range requests {
+		mod, ok := req["modification"].(map[string]any)
+		if !ok {
+			t.Fatal("missing modification object")
+		}
+		if mod["type"] != "FIXED_PRICE" {
+			t.Errorf("modification type = %v, want FIXED_PRICE", mod["type"])
+		}
+		price, ok := mod["price"].(map[string]any)
+		if !ok {
+			t.Fatal("missing price in modification")
+		}
+		if price["currency"] != "PLN" {
+			t.Errorf("currency = %v, want PLN", price["currency"])
+		}
+	}
+}
+
+func TestBulkUpdatePrice_EmptyNoop(t *testing.T) {
+	c := NewClient("id", "secret")
+	defer c.Close()
+
+	err := c.Offers.BulkUpdatePrice(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("BulkUpdatePrice(nil) error: %v", err)
+	}
+}
+
+func TestBulkUpdateStock_APIError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"code":"BAD_REQUEST","message":"Invalid offers"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret", WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
+	defer c.Close()
+
+	err := c.Offers.BulkUpdateStock(context.Background(), []StockUpdate{
+		{OfferID: "a", Quantity: 5},
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "bulk stock update") {
+		t.Errorf("error should contain 'bulk stock update', got: %v", err)
 	}
 }

@@ -497,7 +497,7 @@ func TestClient_RetryOn429_DoRaw(t *testing.T) {
 	c.retryDelay = noDelay
 	defer c.Close()
 
-	data, err := c.doRaw(context.Background(), "GET", "/label", nil)
+	data, err := c.doRaw(context.Background(), "GET", "/label", nil, "application/pdf")
 	if err != nil {
 		t.Fatalf("doRaw() returned error: %v", err)
 	}
