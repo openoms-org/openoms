@@ -241,10 +241,7 @@ func chunkPriceUpdates(items []integration.PriceUpdate, size int) [][]integratio
 	}
 	var chunks [][]integration.PriceUpdate
 	for i := 0; i < len(items); i += size {
-		end := i + size
-		if end > len(items) {
-			end = len(items)
-		}
+		end := min(i+size, len(items))
 		chunks = append(chunks, items[i:end])
 	}
 	return chunks

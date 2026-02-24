@@ -243,10 +243,7 @@ func chunkStockUpdates(items []integration.StockUpdate, size int) [][]integratio
 	}
 	var chunks [][]integration.StockUpdate
 	for i := 0; i < len(items); i += size {
-		end := i + size
-		if end > len(items) {
-			end = len(items)
-		}
+		end := min(i+size, len(items))
 		chunks = append(chunks, items[i:end])
 	}
 	return chunks
