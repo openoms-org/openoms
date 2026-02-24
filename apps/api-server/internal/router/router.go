@@ -78,8 +78,9 @@ type RouterDeps struct {
 	AllegroPromotions *handler.AllegroPromotionsHandler
 	AllegroDelivery   *handler.AllegroDeliveryHandler
 	AllegroPolicies   *handler.AllegroPoliciesHandler
-	AllegroListings   *handler.AllegroListingsHandler
-	Tracking          *handler.TrackingHandler
+	AllegroListings      *handler.AllegroListingsHandler
+	WooCommerceListings  *handler.WooCommerceListingsHandler
+	Tracking             *handler.TrackingHandler
 	Feed              *handler.FeedHandler
 	PurchaseOrder     *handler.PurchaseOrderHandler
 	PickPack          *handler.PickPackHandler
@@ -462,6 +463,9 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Use(middleware.RequireRole("admin"))
 						r.Get("/", deps.AllegroListings.ListByProduct)
 						r.Post("/allegro", deps.AllegroListings.CreateListing)
+						if deps.WooCommerceListings != nil {
+							r.Post("/woocommerce", deps.WooCommerceListings.CreateListing)
+						}
 						r.Get("/{listingId}", deps.AllegroListings.GetListing)
 						r.Patch("/{listingId}", deps.AllegroListings.UpdateListing)
 						r.Delete("/{listingId}", deps.AllegroListings.DeleteListing)

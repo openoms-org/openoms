@@ -1698,6 +1698,28 @@ export function useCreateProductListing(productId: string) {
   });
 }
 
+export interface CreateWooCommerceListingRequest {
+  integration_id: string;
+  price_override?: number;
+  stock_override?: number;
+  categories?: string[];
+  description?: string;
+}
+
+export function useCreateWooCommerceListing(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateWooCommerceListingRequest) =>
+      apiClient<ProductListing>(
+        `/v1/products/${productId}/listings/woocommerce`,
+        { method: "POST", body: JSON.stringify(data) }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", productId, "listings"] });
+    },
+  });
+}
+
 export function useDeleteProductListing(productId: string) {
   const queryClient = useQueryClient();
   return useMutation({
