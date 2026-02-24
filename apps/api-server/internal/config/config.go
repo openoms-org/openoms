@@ -25,9 +25,6 @@ type Config struct {
 	InPostOrgID         string `env:"INPOST_ORGANIZATION_ID"`
 	InPostWebhookSecret string `env:"INPOST_WEBHOOK_SECRET"`
 
-	FeatureAllegro bool `env:"FEATURE_ALLEGRO" envDefault:"true"`
-	FeatureInPost  bool `env:"FEATURE_INPOST" envDefault:"true"`
-
 	WorkersEnabled bool `env:"WORKERS_ENABLED" envDefault:"true"`
 
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
