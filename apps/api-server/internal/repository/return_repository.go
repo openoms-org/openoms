@@ -16,6 +16,36 @@ func NewReturnRepository() *ReturnRepository {
 	return &ReturnRepository{}
 }
 
+// returnSelectColumns is the canonical list of columns selected from returns.
+const returnSelectColumns = `id, tenant_id, order_id, status, reason, items, refund_amount, notes,
+		        return_token, customer_email, customer_notes,
+		        created_at, updated_at`
+
+// scanReturn scans a row into a model.Return using the returnSelectColumns column order.
+func scanReturn(row pgx.Row) (model.Return, error) {
+	var ret model.Return
+	err := row.Scan(
+		&ret.ID, &ret.TenantID, &ret.OrderID, &ret.Status, &ret.Reason,
+		&ret.Items, &ret.RefundAmount, &ret.Notes,
+		&ret.ReturnToken, &ret.CustomerEmail, &ret.CustomerNotes,
+		&ret.CreatedAt, &ret.UpdatedAt,
+	)
+	return ret, err
+}
+
+// scanReturns scans multiple rows into a slice of model.Return using the returnSelectColumns column order.
+func scanReturns(rows pgx.Rows) ([]model.Return, error) {
+	var returns []model.Return
+	for rows.Next() {
+		ret, err := scanReturn(rows)
+		if err != nil {
+			return nil, err
+		}
+		returns = append(returns, ret)
+	}
+	return returns, rows.Err()
+}
+
 func (r *ReturnRepository) List(ctx context.Context, tx pgx.Tx, filter model.ReturnListFilter) ([]model.Return, int, error) {
 	qb := NewQueryBuilder()
 
@@ -43,13 +73,11 @@ func (r *ReturnRepository) List(ctx context.Context, tx pgx.Tx, filter model.Ret
 
 	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
-		        return_token, customer_email, customer_notes,
-		        created_at, updated_at
+		`SELECT %s
 		 FROM returns %s
 		 %s
 		 LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		returnSelectColumns, where, orderByClause, argIdx, argIdx+1,
 	)
 
 	rows, err := tx.Query(ctx, query, qb.Args()...)
@@ -58,35 +86,17 @@ func (r *ReturnRepository) List(ctx context.Context, tx pgx.Tx, filter model.Ret
 	}
 	defer rows.Close()
 
-	var returns []model.Return
-	for rows.Next() {
-		var ret model.Return
-		if err := rows.Scan(
-			&ret.ID, &ret.TenantID, &ret.OrderID, &ret.Status, &ret.Reason,
-			&ret.Items, &ret.RefundAmount, &ret.Notes,
-			&ret.ReturnToken, &ret.CustomerEmail, &ret.CustomerNotes,
-			&ret.CreatedAt, &ret.UpdatedAt,
-		); err != nil {
-			return nil, 0, fmt.Errorf("scan return: %w", err)
-		}
-		returns = append(returns, ret)
+	returns, err := scanReturns(rows)
+	if err != nil {
+		return nil, 0, fmt.Errorf("scan return: %w", err)
 	}
-	return returns, total, rows.Err()
+	return returns, total, nil
 }
 
 func (r *ReturnRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Return, error) {
-	var ret model.Return
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
-		        return_token, customer_email, customer_notes,
-		        created_at, updated_at
-		 FROM returns WHERE id = $1`, id,
-	).Scan(
-		&ret.ID, &ret.TenantID, &ret.OrderID, &ret.Status, &ret.Reason,
-		&ret.Items, &ret.RefundAmount, &ret.Notes,
-		&ret.ReturnToken, &ret.CustomerEmail, &ret.CustomerNotes,
-		&ret.CreatedAt, &ret.UpdatedAt,
-	)
+	ret, err := scanReturn(tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM returns WHERE id = $1`, returnSelectColumns), id,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -97,18 +107,9 @@ func (r *ReturnRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID
 }
 
 func (r *ReturnRepository) FindByToken(ctx context.Context, tx pgx.Tx, token string) (*model.Return, error) {
-	var ret model.Return
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, order_id, status, reason, items, refund_amount, notes,
-		        return_token, customer_email, customer_notes,
-		        created_at, updated_at
-		 FROM returns WHERE return_token = $1`, token,
-	).Scan(
-		&ret.ID, &ret.TenantID, &ret.OrderID, &ret.Status, &ret.Reason,
-		&ret.Items, &ret.RefundAmount, &ret.Notes,
-		&ret.ReturnToken, &ret.CustomerEmail, &ret.CustomerNotes,
-		&ret.CreatedAt, &ret.UpdatedAt,
-	)
+	ret, err := scanReturn(tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM returns WHERE return_token = $1`, returnSelectColumns), token,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

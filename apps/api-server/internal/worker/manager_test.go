@@ -1,0 +1,259 @@
+package worker
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// ---------------------------------------------------------------------------
+// stubWorker implements the Worker interface for testing.
+// ---------------------------------------------------------------------------
+
+type stubWorker struct {
+	name     string
+	interval time.Duration
+	runFn    func(ctx context.Context) error
+}
+
+func (w *stubWorker) Name() string            { return w.name }
+func (w *stubWorker) Interval() time.Duration { return w.interval }
+func (w *stubWorker) Run(ctx context.Context) error {
+	if w.runFn != nil {
+		return w.runFn(ctx)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// NewManager
+// ---------------------------------------------------------------------------
+
+func TestNewManager(t *testing.T) {
+	logger := slog.Default()
+	m := NewManager(nil, logger)
+
+	require.NotNil(t, m)
+	assert.Empty(t, m.workers)
+	assert.Equal(t, logger, m.logger)
+	assert.Nil(t, m.cancel, "cancel should be nil before Start")
+}
+
+// ---------------------------------------------------------------------------
+// Register
+// ---------------------------------------------------------------------------
+
+func TestRegister_SingleWorker(t *testing.T) {
+	m := NewManager(nil, slog.Default())
+	w := &stubWorker{name: "test-worker", interval: time.Second}
+
+	m.Register(w)
+
+	require.Len(t, m.workers, 1)
+	assert.Equal(t, "test-worker", m.workers[0].Name())
+}
+
+func TestRegister_MultipleWorkers(t *testing.T) {
+	m := NewManager(nil, slog.Default())
+
+	w1 := &stubWorker{name: "worker-1", interval: time.Second}
+	w2 := &stubWorker{name: "worker-2", interval: 2 * time.Second}
+	w3 := &stubWorker{name: "worker-3", interval: 3 * time.Second}
+
+	m.Register(w1)
+	m.Register(w2)
+	m.Register(w3)
+
+	require.Len(t, m.workers, 3)
+	assert.Equal(t, "worker-1", m.workers[0].Name())
+	assert.Equal(t, "worker-2", m.workers[1].Name())
+	assert.Equal(t, "worker-3", m.workers[2].Name())
+}
+
+// ---------------------------------------------------------------------------
+// Start + Stop lifecycle
+// ---------------------------------------------------------------------------
+
+func TestStartStop_NoWorkers(t *testing.T) {
+	m := NewManager(nil, slog.Default())
+	m.Start(context.Background())
+	m.Stop()
+	// Should not hang or panic with zero workers.
+}
+
+func TestStartStop_WorkerExecutes(t *testing.T) {
+	var runCount atomic.Int32
+	w := &stubWorker{
+		name:     "counter",
+		interval: 50 * time.Millisecond,
+		runFn: func(_ context.Context) error {
+			runCount.Add(1)
+			return nil
+		},
+	}
+
+	m := NewManager(nil, slog.Default())
+	m.Register(w)
+	m.Start(context.Background())
+
+	// Worker does an immediate first run, then ticks at 50ms.
+	// Wait enough time for the immediate run + at least one tick.
+	time.Sleep(120 * time.Millisecond)
+
+	m.Stop()
+
+	count := runCount.Load()
+	assert.GreaterOrEqual(t, count, int32(2), "worker should have run at least twice (immediate + tick)")
+}
+
+func TestStartStop_WorkerErrorDoesNotCrash(t *testing.T) {
+	w := &stubWorker{
+		name:     "error-worker",
+		interval: 50 * time.Millisecond,
+		runFn: func(_ context.Context) error {
+			return errors.New("simulated failure")
+		},
+	}
+
+	m := NewManager(nil, slog.Default())
+	m.Register(w)
+	m.Start(context.Background())
+	time.Sleep(80 * time.Millisecond)
+	m.Stop()
+	// Manager should gracefully handle worker errors without crashing.
+}
+
+func TestStartStop_WorkerPanicRecovery(t *testing.T) {
+	var ranAfterPanic atomic.Bool
+	runCount := 0
+	w := &stubWorker{
+		name:     "panicker",
+		interval: 50 * time.Millisecond,
+		runFn: func(_ context.Context) error {
+			runCount++
+			if runCount == 1 {
+				panic("test panic")
+			}
+			ranAfterPanic.Store(true)
+			return nil
+		},
+	}
+
+	m := NewManager(nil, slog.Default())
+	m.Register(w)
+	m.Start(context.Background())
+
+	// Wait long enough for immediate run (panic) + at least one tick (should recover).
+	time.Sleep(150 * time.Millisecond)
+	m.Stop()
+
+	assert.True(t, ranAfterPanic.Load(), "worker should continue running after a panic in a previous run")
+}
+
+func TestStop_CalledBeforeStart(t *testing.T) {
+	m := NewManager(nil, slog.Default())
+	// Stop without Start should not panic (cancel is nil).
+	m.Stop()
+}
+
+func TestStartStop_ContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	var runCount atomic.Int32
+	w := &stubWorker{
+		name:     "ctx-worker",
+		interval: 10 * time.Millisecond,
+		runFn: func(_ context.Context) error {
+			runCount.Add(1)
+			return nil
+		},
+	}
+
+	m := NewManager(nil, slog.Default())
+	m.Register(w)
+	m.Start(ctx)
+
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	// Stop should return quickly since the context is already cancelled.
+	done := make(chan struct{})
+	go func() {
+		m.Stop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// ok
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() did not return in time after context cancellation")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// guardedRun — overlap prevention
+// ---------------------------------------------------------------------------
+
+func TestGuardedRun_SkipsOverlappingExecution(t *testing.T) {
+	var running atomic.Bool
+	var started atomic.Bool
+	blocker := make(chan struct{})
+
+	w := &stubWorker{
+		name:     "slow-worker",
+		interval: time.Hour, // irrelevant, we call guardedRun directly
+		runFn: func(_ context.Context) error {
+			started.Store(true)
+			<-blocker
+			return nil
+		},
+	}
+
+	m := NewManager(nil, slog.Default())
+
+	// First call: blocks inside Run()
+	go m.guardedRun(context.Background(), w, &running)
+
+	// Wait for the first run to start
+	require.Eventually(t, func() bool { return started.Load() }, time.Second, 5*time.Millisecond)
+
+	// Second call while first is running: should be skipped (no-op)
+	secondRan := false
+	origFn := w.runFn
+	w.runFn = func(ctx context.Context) error {
+		secondRan = true
+		return origFn(ctx)
+	}
+	m.guardedRun(context.Background(), w, &running)
+	assert.False(t, secondRan, "second guardedRun should have been skipped while first is running")
+
+	// Unblock the first run
+	close(blocker)
+
+	// Wait for the running flag to clear
+	require.Eventually(t, func() bool { return !running.Load() }, time.Second, 5*time.Millisecond)
+}
+
+// ---------------------------------------------------------------------------
+// Worker interface compliance
+// ---------------------------------------------------------------------------
+
+func TestWorkerInterface(t *testing.T) {
+	w := &stubWorker{
+		name:     "interface-test",
+		interval: 5 * time.Second,
+	}
+
+	// Verify the stub satisfies the Worker interface.
+	var _ Worker = w
+
+	assert.Equal(t, "interface-test", w.Name())
+	assert.Equal(t, 5*time.Second, w.Interval())
+	assert.NoError(t, w.Run(context.Background()))
+}
