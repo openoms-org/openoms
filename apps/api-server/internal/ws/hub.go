@@ -131,4 +131,3 @@ func (h *Hub) Register(client *Client) {
 func (h *Hub) Unregister(client *Client) {
 	h.unregister <- client
 }
-

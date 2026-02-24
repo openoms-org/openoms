@@ -34,4 +34,3 @@ type Action struct {
 type EventProcessor interface {
 	ProcessEvent(ctx context.Context, event Event)
 }
-
