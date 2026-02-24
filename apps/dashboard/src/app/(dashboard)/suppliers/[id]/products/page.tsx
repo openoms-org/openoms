@@ -604,12 +604,9 @@ export default function SupplierProductsPage() {
                   {getMetaString(detailProduct.metadata, "description") && (
                     <div>
                       <h4 className="text-sm font-medium mb-1">Opis</h4>
-                      <div
-                        className="text-sm text-muted-foreground prose prose-sm max-w-none max-h-[200px] overflow-y-auto rounded border p-3 bg-muted/20"
-                        dangerouslySetInnerHTML={{
-                          __html: getMetaString(detailProduct.metadata, "description") || "",
-                        }}
-                      />
+                      <div className="text-sm text-muted-foreground prose prose-sm max-w-none max-h-[200px] overflow-y-auto rounded border p-3 bg-muted/20 whitespace-pre-wrap">
+                        {getMetaString(detailProduct.metadata, "description") || ""}
+                      </div>
                     </div>
                   )}
 

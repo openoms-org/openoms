@@ -39,30 +39,6 @@ var ValidTriggerEvents = map[string]bool{
 	"product.updated":         true,
 }
 
-// ValidConditionOperators is the set of supported condition operators.
-var ValidConditionOperators = map[string]bool{
-	"eq":           true,
-	"neq":          true,
-	"in":           true,
-	"not_in":       true,
-	"gt":           true,
-	"gte":          true,
-	"lt":           true,
-	"lte":          true,
-	"contains":     true,
-	"not_contains": true,
-	"starts_with":  true,
-}
-
-// ValidActionTypes is the set of supported action types.
-var ValidActionTypes = map[string]bool{
-	"set_status":     true,
-	"add_tag":        true,
-	"send_email":     true,
-	"create_invoice": true,
-	"webhook":        true,
-}
-
 // AutomationCondition represents a single condition in an automation rule.
 type AutomationCondition struct {
 	Field    string `json:"field"`

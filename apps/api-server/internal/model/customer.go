@@ -54,7 +54,7 @@ func (r *CreateCustomerRequest) Validate() error {
 		return err
 	}
 	if r.Email != nil && *r.Email != "" && !emailRegex.MatchString(*r.Email) {
-		return errors.New("nieprawidłowy format adresu email")
+		return errors.New("invalid email format")
 	}
 	if err := validateMaxLengthPtr("phone", r.Phone, 50); err != nil {
 		return err
@@ -103,7 +103,7 @@ func (r *UpdateCustomerRequest) Validate() error {
 		return err
 	}
 	if r.Email != nil && *r.Email != "" && !emailRegex.MatchString(*r.Email) {
-		return errors.New("nieprawidłowy format adresu email")
+		return errors.New("invalid email format")
 	}
 	if err := validateMaxLengthPtr("phone", r.Phone, 50); err != nil {
 		return err

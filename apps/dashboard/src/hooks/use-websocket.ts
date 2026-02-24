@@ -6,11 +6,10 @@ import { useAuthStore } from "@/lib/auth";
 import { API_URL } from "@/lib/api-client";
 import type { WSEvent } from "@/types/api";
 
-// Convert http(s) to ws(s) with ticket-based or token-based auth
-function getWSUrl(param: string, isTicket: boolean): string {
+// Convert http(s) to ws(s) with ticket-based auth
+function getWSUrl(ticket: string): string {
   const base = API_URL.replace(/^http/, "ws");
-  const key = isTicket ? "ticket" : "token";
-  return `${base}/v1/ws?${key}=${encodeURIComponent(param)}`;
+  return `${base}/v1/ws?ticket=${encodeURIComponent(ticket)}`;
 }
 
 // Map event types to React Query cache keys to invalidate
@@ -65,7 +64,7 @@ export function useWebSocket(): UseWebSocketReturn {
     }
 
     try {
-      // Try ticket-based auth first (keeps JWT out of URLs/logs)
+      // Ticket-based auth (keeps JWT out of URLs/logs)
       let wsUrl: string;
       try {
         const resp = await fetch(`${API_URL}/v1/auth/ws-ticket`, {
@@ -73,14 +72,22 @@ export function useWebSocket(): UseWebSocketReturn {
           headers: { Authorization: `Bearer ${freshToken}` },
           credentials: "include",
         });
-        if (resp.ok) {
-          const { ticket } = await resp.json();
-          wsUrl = getWSUrl(ticket, true);
-        } else {
-          wsUrl = getWSUrl(freshToken, false);
+        if (!resp.ok) {
+          // Schedule reconnect instead of leaking JWT in URL
+          const attempt = reconnectAttemptRef.current;
+          const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+          reconnectAttemptRef.current = attempt + 1;
+          reconnectTimeoutRef.current = setTimeout(() => { connect(); }, delay);
+          return;
         }
+        const { ticket } = await resp.json();
+        wsUrl = getWSUrl(ticket);
       } catch {
-        wsUrl = getWSUrl(freshToken, false);
+        const attempt = reconnectAttemptRef.current;
+        const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
+        reconnectAttemptRef.current = attempt + 1;
+        reconnectTimeoutRef.current = setTimeout(() => { connect(); }, delay);
+        return;
       }
 
       const ws = new WebSocket(wsUrl);

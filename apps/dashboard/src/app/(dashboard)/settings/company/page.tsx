@@ -17,6 +17,7 @@ import {
   useUpdateCompanySettings,
 } from "@/hooks/use-settings";
 import { uploadFile, apiFetch, apiClient } from "@/lib/api-client";
+import { downloadBlob } from "@/lib/download";
 import { getErrorMessage } from "@/lib/api-client";
 import { Loader2, Save, Upload, Download, Building2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -314,14 +315,7 @@ export default function CompanySettingsPage() {
                 try {
                   const res = await apiFetch("/v1/settings/export");
                   const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `ustawienia-${new Date().toISOString().slice(0, 10)}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
+                  downloadBlob(blob, `ustawienia-${new Date().toISOString().slice(0, 10)}.json`);
                   toast.success("Ustawienia wyeksportowane");
                 } catch (err) {
                   toast.error(getErrorMessage(err));

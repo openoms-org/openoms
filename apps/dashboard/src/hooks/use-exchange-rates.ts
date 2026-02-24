@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   ExchangeRate,
-  ListResponse,
   ExchangeRateListParams,
   CreateExchangeRateRequest,
   UpdateExchangeRateRequest,
@@ -11,74 +11,21 @@ import type {
   FetchNBPResponse,
 } from "@/types/api";
 
-export function useExchangeRates(params: ExchangeRateListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.base_currency) query.set("base_currency", params.base_currency);
-  if (params.target_currency)
-    query.set("target_currency", params.target_currency);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
+const exchangeRateHooks = createCrudHooks<
+  ExchangeRate,
+  CreateExchangeRateRequest,
+  UpdateExchangeRateRequest,
+  ExchangeRateListParams
+>({
+  resourceKey: "exchange-rates",
+  basePath: "/v1/exchange-rates",
+});
 
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["exchange-rates", params],
-    queryFn: () =>
-      apiClient<ListResponse<ExchangeRate>>(
-        `/v1/exchange-rates${qs ? `?${qs}` : ""}`
-      ),
-  });
-}
-
-export function useExchangeRate(id: string) {
-  return useQuery({
-    queryKey: ["exchange-rates", id],
-    queryFn: () => apiClient<ExchangeRate>(`/v1/exchange-rates/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useCreateExchangeRate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateExchangeRateRequest) =>
-      apiClient<ExchangeRate>("/v1/exchange-rates", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
-    },
-  });
-}
-
-export function useUpdateExchangeRate(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateExchangeRateRequest) =>
-      apiClient<ExchangeRate>(`/v1/exchange-rates/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
-      queryClient.invalidateQueries({ queryKey: ["exchange-rates", id] });
-    },
-  });
-}
-
-export function useDeleteExchangeRate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/exchange-rates/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
-    },
-  });
-}
+export const useExchangeRates = exchangeRateHooks.useList;
+export const useExchangeRate = exchangeRateHooks.useGet;
+export const useCreateExchangeRate = exchangeRateHooks.useCreate;
+export const useUpdateExchangeRate = exchangeRateHooks.useUpdate;
+export const useDeleteExchangeRate = exchangeRateHooks.useDelete;
 
 export function useFetchNBPRates() {
   const queryClient = useQueryClient();

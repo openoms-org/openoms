@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,6 +44,14 @@ type EmailSettings struct {
 	NotifyOn  []string `json:"notify_on"`
 }
 
+// Validate validates the email settings.
+func (s *EmailSettings) Validate() error {
+	if s.SMTPPort < 0 || s.SMTPPort > 65535 {
+		return errors.New("smtp_port must be between 0 and 65535")
+	}
+	return nil
+}
+
 type CompanySettings struct {
 	CompanyName string `json:"company_name"`
 	LogoURL     string `json:"logo_url"`
@@ -61,6 +70,14 @@ type SMSSettings struct {
 	From      string            `json:"from"`
 	NotifyOn  []string          `json:"notify_on"`
 	Templates map[string]string `json:"templates"`
+}
+
+// Validate validates the SMS settings.
+func (s *SMSSettings) Validate() error {
+	if s.From != "" && len(s.From) > 11 {
+		return errors.New("SMS sender name must be 11 characters or fewer")
+	}
+	return nil
 }
 
 // InventorySettings controls warehouse inventory behaviour for a tenant.

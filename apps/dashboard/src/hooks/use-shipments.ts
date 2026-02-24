@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiFetch } from "@/lib/api-client";
+import { downloadBlob } from "@/lib/download";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   Shipment,
-  ListResponse,
   ShipmentListParams,
   CreateShipmentRequest,
   UpdateShipmentRequest,
@@ -14,24 +15,21 @@ import type {
   DispatchOrderResponse,
 } from "@/types/api";
 
-export function useShipments(params: ShipmentListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.status) query.set("status", params.status);
-  if (params.provider) query.set("provider", params.provider);
-  if (params.order_id) query.set("order_id", params.order_id);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
+const shipmentHooks = createCrudHooks<
+  Shipment,
+  CreateShipmentRequest,
+  UpdateShipmentRequest,
+  ShipmentListParams
+>({
+  resourceKey: "shipments",
+  basePath: "/v1/shipments",
+});
 
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["shipments", params],
-    queryFn: () =>
-      apiClient<ListResponse<Shipment>>(`/v1/shipments${qs ? `?${qs}` : ""}`),
-  });
-}
+export const useShipments = shipmentHooks.useList;
+export const useShipment = shipmentHooks.useGet;
+export const useCreateShipment = shipmentHooks.useCreate;
+export const useUpdateShipment = shipmentHooks.useUpdate;
+export const useDeleteShipment = shipmentHooks.useDelete;
 
 // Returns all shipments for a specific order, sorted by package_number.
 export function useOrderShipments(orderId: string) {
@@ -54,58 +52,6 @@ export function useCreateOrderShipment(orderId: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", orderId, "shipments"] });
-      queryClient.invalidateQueries({ queryKey: ["shipments"] });
-    },
-  });
-}
-
-export function useShipment(id: string) {
-  return useQuery({
-    queryKey: ["shipments", id],
-    queryFn: () => apiClient<Shipment>(`/v1/shipments/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useCreateShipment() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: CreateShipmentRequest) =>
-      apiClient<Shipment>("/v1/shipments", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shipments"] });
-    },
-  });
-}
-
-export function useUpdateShipment(id: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: UpdateShipmentRequest) =>
-      apiClient<Shipment>(`/v1/shipments/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shipments"] });
-    },
-  });
-}
-
-export function useDeleteShipment() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/shipments/${id}`, {
-        method: "DELETE",
-      }),
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["shipments"] });
     },
   });
@@ -159,14 +105,7 @@ export function useBatchLabels() {
         body: JSON.stringify(data),
       });
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "labels.zip";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(blob, "labels.zip");
     },
   });
 }

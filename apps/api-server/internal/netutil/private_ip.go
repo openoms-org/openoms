@@ -38,6 +38,8 @@ func init() {
 		"fc00::/7",
 		"fe80::/10",
 		"2001:db8::/32", // RFC 3849 — Documentation
+		"::/128",        // IPv6 unspecified address
+		"ff00::/8",      // IPv6 multicast
 	}
 	for _, cidr := range privateRanges {
 		_, ipNet, err := net.ParseCIDR(cidr)

@@ -265,7 +265,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		productQtys := extractProductQuantities(order.Items)
 		if len(productQtys) > 0 {
 			bgCtx := context.Background()
-			_ = database.WithTenant(bgCtx, s.pool, tenantID, func(tx pgx.Tx) error {
+			if err := database.WithTenant(bgCtx, s.pool, tenantID, func(tx pgx.Tx) error {
 				for productID, qty := range productQtys {
 					stocks, err := s.warehouseStockRepo.ListByProduct(bgCtx, tx, productID)
 					if err != nil || len(stocks) == 0 {
@@ -281,15 +281,19 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 							continue
 						}
 						reserveQty := min(remaining, available)
-						_, _ = tx.Exec(bgCtx,
+						if _, err := tx.Exec(bgCtx,
 							`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
 							 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-							reserveQty, stock.WarehouseID, productID)
+							reserveQty, stock.WarehouseID, productID); err != nil {
+							slog.Error("failed to reserve stock", "error", err, "product_id", productID, "warehouse_id", stock.WarehouseID)
+						}
 						remaining -= reserveQty
 					}
 				}
 				return nil
-			})
+			}); err != nil {
+				slog.Error("failed to reserve stock for order", "error", err, "tenant_id", tenantID)
+			}
 			s.triggerStockSync(tenantID, productQtys, "order_placed")
 		}
 	}
