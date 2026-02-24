@@ -7,6 +7,7 @@ import { Package, Plus, Search, Sparkles, Loader2, Download, Upload, ShoppingBag
 import { toast } from "sonner";
 import { useBulkCategorize } from "@/hooks/use-ai";
 import { apiFetch } from "@/lib/api-client";
+import { downloadBlob } from "@/lib/download";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type EditableColumnConfig } from "@/components/shared/data-table";
@@ -485,14 +486,7 @@ function MyProductsTab() {
               try {
                 const res = await apiFetch("/v1/products/export");
                 const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `products_${new Date().toISOString().slice(0, 10)}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                downloadBlob(blob, `products_${new Date().toISOString().slice(0, 10)}.csv`);
                 toast.success("Eksport CSV rozpoczęty");
               } catch {
                 toast.error("Błąd eksportu CSV");
@@ -1109,12 +1103,9 @@ function SupplierCatalogTab() {
                 {getMetaString(detailProduct.metadata, "description") && (
                   <div>
                     <h4 className="text-sm font-medium mb-1">Opis</h4>
-                    <div
-                      className="text-sm text-muted-foreground prose prose-sm max-w-none max-h-[200px] overflow-y-auto rounded border p-3 bg-muted/20"
-                      dangerouslySetInnerHTML={{
-                        __html: getMetaString(detailProduct.metadata, "description") || "",
-                      }}
-                    />
+                    <div className="text-sm text-muted-foreground prose prose-sm max-w-none max-h-[200px] overflow-y-auto rounded border p-3 bg-muted/20 whitespace-pre-wrap">
+                      {getMetaString(detailProduct.metadata, "description") || ""}
+                    </div>
                   </div>
                 )}
 
