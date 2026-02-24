@@ -132,6 +132,37 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, pric
 	return p.client.Offers.UpdatePrice(ctx, externalOfferID, price, "PLN")
 }
 
+// BulkUpdateStock implements integration.BulkStockUpdater using Allegro command API.
+func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.StockUpdate) error {
+	if len(updates) == 0 {
+		return nil
+	}
+	sdkUpdates := make([]allegrosdk.StockUpdate, len(updates))
+	for i, u := range updates {
+		sdkUpdates[i] = allegrosdk.StockUpdate{
+			OfferID:  u.ExternalOfferID,
+			Quantity: u.Quantity,
+		}
+	}
+	return p.client.Offers.BulkUpdateStock(ctx, sdkUpdates)
+}
+
+// BulkUpdatePrice implements integration.BulkPriceUpdater using Allegro command API.
+func (p *Provider) BulkUpdatePrice(ctx context.Context, updates []integration.PriceUpdate) error {
+	if len(updates) == 0 {
+		return nil
+	}
+	sdkUpdates := make([]allegrosdk.PriceUpdate, len(updates))
+	for i, u := range updates {
+		sdkUpdates[i] = allegrosdk.PriceUpdate{
+			OfferID:  u.ExternalOfferID,
+			Amount:   u.Amount,
+			Currency: u.Currency,
+		}
+	}
+	return p.client.Offers.BulkUpdatePrice(ctx, sdkUpdates)
+}
+
 // UpdateFulfillment updates the fulfillment status of an Allegro order.
 func (p *Provider) UpdateFulfillment(ctx context.Context, externalOrderID, status string) error {
 	if err := p.client.Fulfillment.UpdateStatus(ctx, externalOrderID, status); err != nil {

@@ -13,38 +13,43 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 )
 
-const stockBulkBatchSize = 100
+const priceBulkBatchSize = 100
 
-// listingStock holds the data needed to sync stock for a single product listing.
-type listingStock struct {
+// listingPrice holds the data needed to sync price for a single product listing.
+type listingPrice struct {
 	ListingID  string
 	ExternalID string
-	StockQty   int
+	Price      float64
 }
 
-type StockSyncWorker struct {
+// PriceSyncWorker pushes local product prices to marketplace listings in batches.
+type PriceSyncWorker struct {
 	pool          *pgxpool.Pool
 	encryptionKey []byte
 	logger        *slog.Logger
 }
 
-func NewStockSyncWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.Logger) *StockSyncWorker {
-	return &StockSyncWorker{
+// NewPriceSyncWorker creates a worker that syncs product prices to marketplace listings.
+func NewPriceSyncWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.Logger) *PriceSyncWorker {
+	return &PriceSyncWorker{
 		pool:          pool,
 		encryptionKey: encryptionKey,
 		logger:        logger,
 	}
 }
 
-func (w *StockSyncWorker) Name() string {
-	return "stock_sync"
+// Name returns the worker identifier.
+func (w *PriceSyncWorker) Name() string {
+	return "price_sync"
 }
 
-func (w *StockSyncWorker) Interval() time.Duration {
+// Interval returns how often the worker runs.
+func (w *PriceSyncWorker) Interval() time.Duration {
 	return 5 * time.Minute
 }
 
-func (w *StockSyncWorker) Run(ctx context.Context) error {
+// Run executes one price-sync cycle across all tenants and integrations.
+func (w *PriceSyncWorker) Run(ctx context.Context) error {
 	// Get all active marketplace integrations (all providers)
 	tis, err := ListAllActiveMarketplaceIntegrations(ctx, w.pool)
 	if err != nil {
@@ -56,27 +61,25 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 	for _, ti := range tis {
 		credJSON, err := crypto.Decrypt(ti.Credentials, w.encryptionKey)
 		if err != nil {
-			w.logger.Error("stock sync: failed to decrypt credentials", "integration_id", ti.IntegrationID, "error", err)
+			w.logger.Error("price sync: failed to decrypt credentials", "integration_id", ti.IntegrationID, "error", err)
 			continue
 		}
 
 		provider, err := integration.NewMarketplaceProvider(ti.Provider, credJSON, ti.Settings)
 		if err != nil {
-			w.logger.Error("stock sync: failed to create provider", "integration_id", ti.IntegrationID, "error", err)
+			w.logger.Error("price sync: failed to create provider", "integration_id", ti.IntegrationID, "error", err)
 			continue
 		}
 
 		tenantErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
-			// Query auto-sync product_listings with warehouse-based available stock.
+			// Query auto-sync product_listings with price data.
 			// stock_sync_mode = 'auto' gates both stock and price sync (single toggle per listing).
 			rows, err := tx.Query(ctx,
-				`SELECT pl.id, pl.external_id, pl.stock_override,
-				        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
+				`SELECT pl.id, pl.external_id, COALESCE(pl.price_override, p.price) AS sync_price
 				 FROM product_listings pl
-				 LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
+				 JOIN products p ON p.id = pl.product_id
 				 WHERE pl.integration_id = $1 AND pl.status = 'active'
-				   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
-				 GROUP BY pl.id, pl.external_id, pl.stock_override`,
+				   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'`,
 				ti.IntegrationID,
 			)
 			if err != nil {
@@ -85,26 +88,24 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			defer rows.Close()
 
 			// Collect all listings into a slice
-			var listings []listingStock
+			var listings []listingPrice
 			for rows.Next() {
 				var listingID, externalID string
-				var stockOverride *int
-				var availableQty int
-				if err := rows.Scan(&listingID, &externalID, &stockOverride, &availableQty); err != nil {
-					w.logger.Error("stock sync: scan listing", "error", err)
+				var price float64
+				if err := rows.Scan(&listingID, &externalID, &price); err != nil {
+					w.logger.Error("price sync: scan listing", "error", err)
 					continue
 				}
 
-				// Use stock_override if set
-				stockQty := availableQty
-				if stockOverride != nil {
-					stockQty = *stockOverride
+				// Skip rows where price <= 0
+				if price <= 0 {
+					continue
 				}
 
-				listings = append(listings, listingStock{
+				listings = append(listings, listingPrice{
 					ListingID:  listingID,
 					ExternalID: externalID,
-					StockQty:   stockQty,
+					Price:      price,
 				})
 			}
 			if err := rows.Err(); err != nil {
@@ -112,7 +113,7 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			}
 
 			// Try bulk path if provider supports it
-			bulkProvider, hasBulk := provider.(integration.BulkStockUpdater)
+			bulkProvider, hasBulk := provider.(integration.BulkPriceUpdater)
 			if hasBulk {
 				totalSynced += w.syncBulk(ctx, tx, ti, bulkProvider, listings)
 			} else {
@@ -123,35 +124,37 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 		})
 		closeProvider(provider)
 		if tenantErr != nil {
-			w.logger.Error("stock sync: tenant error", "tenant_id", ti.TenantID, "error", tenantErr)
+			w.logger.Error("price sync: tenant error", "tenant_id", ti.TenantID, "error", tenantErr)
 			continue
 		}
 	}
 
-	w.logger.Info("stock sync completed", "tenants", len(tis), "synced", totalSynced)
+	w.logger.Info("price sync completed", "tenants", len(tis), "synced", totalSynced)
 	return nil
 }
 
-// syncBulk sends stock updates in batches of stockBulkBatchSize.
-func (w *StockSyncWorker) syncBulk(
+// syncBulk sends price updates in batches of priceBulkBatchSize.
+func (w *PriceSyncWorker) syncBulk(
 	ctx context.Context,
 	tx pgx.Tx,
 	ti TenantIntegration,
-	provider integration.BulkStockUpdater,
-	listings []listingStock,
+	provider integration.BulkPriceUpdater,
+	listings []listingPrice,
 ) int {
 	synced := 0
 
-	// Build StockUpdate slice for chunking
-	updates := make([]integration.StockUpdate, len(listings))
+	// Build PriceUpdate slice for chunking.
+	// Currency hardcoded to PLN — all supported marketplaces (Allegro) operate in PLN.
+	updates := make([]integration.PriceUpdate, len(listings))
 	for i, l := range listings {
-		updates[i] = integration.StockUpdate{
+		updates[i] = integration.PriceUpdate{
 			ExternalOfferID: l.ExternalID,
-			Quantity:        l.StockQty,
+			Amount:          l.Price,
+			Currency:        "PLN",
 		}
 	}
 
-	chunks := chunkStockUpdates(updates, stockBulkBatchSize)
+	chunks := chunkPriceUpdates(updates, priceBulkBatchSize)
 
 	// Process each chunk; the listing slice is indexed in parallel with the update slice
 	offset := 0
@@ -159,9 +162,9 @@ func (w *StockSyncWorker) syncBulk(
 		batchListings := listings[offset : offset+len(chunk)]
 		offset += len(chunk)
 
-		if err := provider.BulkUpdateStock(ctx, chunk); err != nil {
-			w.logger.Error("stock sync: bulk update failed",
-				"operation", "listing.stock_bulk_update",
+		if err := provider.BulkUpdatePrice(ctx, chunk); err != nil {
+			w.logger.Error("price sync: bulk update failed",
+				"operation", "listing.price_bulk_update",
 				"tenant_id", ti.TenantID,
 				"batch_size", len(chunk),
 				"error", err,
@@ -182,8 +185,8 @@ func (w *StockSyncWorker) syncBulk(
 				l.ListingID,
 			)
 		}
-		w.logger.Info("worker: stock batch synced",
-			"operation", "listing.stock_bulk_update",
+		w.logger.Info("worker: price batch synced",
+			"operation", "listing.price_bulk_update",
 			"tenant_id", ti.TenantID,
 			"batch_size", len(chunk),
 		)
@@ -193,20 +196,20 @@ func (w *StockSyncWorker) syncBulk(
 	return synced
 }
 
-// syncOneByOne updates stock one listing at a time (fallback for providers without bulk support).
-func (w *StockSyncWorker) syncOneByOne(
+// syncOneByOne updates price one listing at a time (fallback for providers without bulk support).
+func (w *PriceSyncWorker) syncOneByOne(
 	ctx context.Context,
 	tx pgx.Tx,
 	ti TenantIntegration,
 	provider integration.MarketplaceProvider,
-	listings []listingStock,
+	listings []listingPrice,
 ) int {
 	synced := 0
 
 	for _, l := range listings {
-		if err := provider.UpdateStock(ctx, l.ExternalID, l.StockQty); err != nil {
-			w.logger.Error("stock sync: update stock failed",
-				"operation", "listing.stock_update",
+		if err := provider.UpdatePrice(ctx, l.ExternalID, l.Price); err != nil {
+			w.logger.Error("price sync: update price failed",
+				"operation", "listing.price_update",
 				"tenant_id", ti.TenantID,
 				"entity_id", l.ListingID,
 				"external_id", l.ExternalID,
@@ -223,12 +226,12 @@ func (w *StockSyncWorker) syncOneByOne(
 			`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 			l.ListingID,
 		)
-		w.logger.Info("worker: stock synced",
-			"operation", "listing.stock_update",
+		w.logger.Info("worker: price synced",
+			"operation", "listing.price_update",
 			"tenant_id", ti.TenantID,
 			"entity_id", l.ListingID,
 			"external_id", l.ExternalID,
-			"stock_quantity", l.StockQty,
+			"price", l.Price,
 		)
 		synced++
 	}
@@ -236,12 +239,12 @@ func (w *StockSyncWorker) syncOneByOne(
 	return synced
 }
 
-// chunkStockUpdates splits a slice of StockUpdate into chunks of the given size.
-func chunkStockUpdates(items []integration.StockUpdate, size int) [][]integration.StockUpdate {
+// chunkPriceUpdates splits a slice of PriceUpdate into chunks of the given size.
+func chunkPriceUpdates(items []integration.PriceUpdate, size int) [][]integration.PriceUpdate {
 	if len(items) == 0 {
 		return nil
 	}
-	var chunks [][]integration.StockUpdate
+	var chunks [][]integration.PriceUpdate
 	for i := 0; i < len(items); i += size {
 		end := min(i+size, len(items))
 		chunks = append(chunks, items[i:end])

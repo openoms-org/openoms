@@ -3,9 +3,12 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 )
 
 // TenantIntegration holds data needed for cross-tenant worker operations.
@@ -56,13 +59,48 @@ func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider st
 	return result, rows.Err()
 }
 
+// providerCloser is implemented by providers that hold resources (e.g., rate limiter goroutines).
+type providerCloser interface {
+	Close()
+}
+
+// closeProvider closes a provider if it implements providerCloser.
+func closeProvider(provider any) {
+	if c, ok := provider.(providerCloser); ok {
+		c.Close()
+	}
+}
+
+const maxErrorMessageLen = 500
+
+// truncateErrorMessage limits error messages stored in the database to 500 bytes.
+// Truncates at a valid UTF-8 boundary to avoid invalid strings in PostgreSQL.
+func truncateErrorMessage(msg string) string {
+	if len(msg) <= maxErrorMessageLen {
+		return msg
+	}
+	// Walk back from maxLen to find a valid UTF-8 boundary
+	truncated := msg[:maxErrorMessageLen]
+	for len(truncated) > 0 && !utf8.ValidString(truncated) {
+		truncated = truncated[:len(truncated)-1]
+	}
+	return truncated
+}
+
 // ListAllActiveMarketplaceIntegrations queries all active marketplace integrations
-// across all providers. This is used by the stock sync worker.
+// across all registered marketplace providers. Only fetches integrations whose
+// provider is registered in the marketplace factory (excludes carriers, invoicing, etc.).
 func ListAllActiveMarketplaceIntegrations(ctx context.Context, pool *pgxpool.Pool) ([]TenantIntegration, error) {
+	providers := integration.RegisteredMarketplaceProviders()
+	if len(providers) == 0 {
+		return nil, nil
+	}
+
 	rows, err := pool.Query(ctx,
 		`SELECT tenant_id, id, provider, sync_cursor, credentials, settings
 		   FROM integrations
-		  WHERE status = 'active'`,
+		  WHERE status = 'active' AND provider = ANY($1)`,
+		providers,
 	)
 	if err != nil {
 		return nil, err

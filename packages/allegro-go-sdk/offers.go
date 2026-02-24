@@ -135,21 +135,43 @@ func (s *OfferService) Activate(ctx context.Context, offerID string) error {
 }
 
 // BulkUpdateStock updates the stock quantity for multiple offers at once.
+// Offers are grouped by quantity value; one command is issued per unique value
+// using the Allegro command pattern (modification + offerCriteria).
 func (s *OfferService) BulkUpdateStock(ctx context.Context, updates []StockUpdate) error {
-	commandID := generateCommandID()
-	modifications := make([]map[string]any, len(updates))
-	for i, u := range updates {
-		modifications[i] = map[string]any{
-			"id": u.OfferID,
-			"input": map[string]any{
-				"stock": map[string]int{"available": u.Quantity},
+	if len(updates) == 0 {
+		return nil
+	}
+
+	// Group offers by target quantity
+	byQty := map[int][]string{}
+	for _, u := range updates {
+		byQty[u.Quantity] = append(byQty[u.Quantity], u.OfferID)
+	}
+
+	for qty, offerIDs := range byQty {
+		commandID := generateCommandID()
+		offers := make([]map[string]string, len(offerIDs))
+		for i, id := range offerIDs {
+			offers[i] = map[string]string{"id": id}
+		}
+		body := map[string]any{
+			"modification": map[string]any{
+				"changeType": "FIXED",
+				"value":      qty,
+			},
+			"offerCriteria": []map[string]any{
+				{
+					"type":   "CONTAINS_OFFERS",
+					"offers": offers,
+				},
 			},
 		}
+		if err := s.client.do(ctx, "PUT",
+			fmt.Sprintf("/sale/offer-quantity-change-commands/%s", commandID), body, nil); err != nil {
+			return fmt.Errorf("bulk stock update (qty=%d, offers=%d): %w", qty, len(offerIDs), err)
+		}
 	}
-	body := map[string]any{
-		"modification": modifications,
-	}
-	return s.client.do(ctx, "PUT", fmt.Sprintf("/sale/offer-quantity-change-commands/%s", commandID), body, nil)
+	return nil
 }
 
 // UploadImageURL uploads an image by URL to Allegro's image hosting service.
@@ -226,22 +248,50 @@ func (s *OfferService) CreateResponsibleProducer(ctx context.Context, name strin
 }
 
 // BulkUpdatePrice updates the price for multiple offers at once.
+// Offers are grouped by price+currency; one command is issued per unique price
+// using the Allegro command pattern (modification + offerCriteria).
 func (s *OfferService) BulkUpdatePrice(ctx context.Context, updates []PriceUpdate) error {
-	commandID := generateCommandID()
-	modifications := make([]map[string]any, len(updates))
-	for i, u := range updates {
-		modifications[i] = map[string]any{
-			"id": u.OfferID,
-			"input": map[string]any{
-				"buyNowPrice": map[string]string{
-					"amount":   fmt.Sprintf("%.2f", u.Amount),
-					"currency": u.Currency,
+	if len(updates) == 0 {
+		return nil
+	}
+
+	// Group offers by price+currency
+	type priceKey struct {
+		Amount   string
+		Currency string
+	}
+	byPrice := map[priceKey][]string{}
+	for _, u := range updates {
+		key := priceKey{Amount: fmt.Sprintf("%.2f", u.Amount), Currency: u.Currency}
+		byPrice[key] = append(byPrice[key], u.OfferID)
+	}
+
+	for key, offerIDs := range byPrice {
+		commandID := generateCommandID()
+		offers := make([]map[string]string, len(offerIDs))
+		for i, id := range offerIDs {
+			offers[i] = map[string]string{"id": id}
+		}
+		body := map[string]any{
+			"modification": map[string]any{
+				"type": "FIXED_PRICE",
+				"price": map[string]string{
+					"amount":   key.Amount,
+					"currency": key.Currency,
+				},
+			},
+			"offerCriteria": []map[string]any{
+				{
+					"type":   "CONTAINS_OFFERS",
+					"offers": offers,
 				},
 			},
 		}
+		if err := s.client.do(ctx, "PUT",
+			fmt.Sprintf("/sale/offer-price-change-commands/%s", commandID), body, nil); err != nil {
+			return fmt.Errorf("bulk price update (price=%s %s, offers=%d): %w",
+				key.Amount, key.Currency, len(offerIDs), err)
+		}
 	}
-	body := map[string]any{
-		"modification": modifications,
-	}
-	return s.client.do(ctx, "PUT", fmt.Sprintf("/sale/offer-price-change-commands/%s", commandID), body, nil)
+	return nil
 }

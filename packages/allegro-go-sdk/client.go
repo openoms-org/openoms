@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,11 @@ const (
 	sandboxAuthURL     = "https://allegro.pl.allegrosandbox.pl/auth/oauth"
 	defaultRateLimit   = 150
 	defaultRedirectURI = "https://localhost/callback"
+	maxRetries         = 3
+	// maxResponseBody caps response body reads to prevent memory exhaustion (50 MB).
+	maxResponseBody = 50 << 20
+	// maxErrorBody caps error response body reads (1 MB).
+	maxErrorBody = 1 << 20
 )
 
 // Client is the Allegro API client.
@@ -30,11 +36,13 @@ type Client struct {
 	clientID       string
 	clientSecret   string
 	redirectURI    string
+	mu             sync.Mutex // protects token fields below
 	accessToken    string
 	refreshToken   string
 	tokenExpiry    time.Time
 	onTokenRefresh func(accessToken, refreshToken string, expiry time.Time)
 	rateLimiter    *rateLimiter
+	retryDelay     func(attempt int) time.Duration
 
 	Orders             *OrderService
 	Events             *EventService
@@ -78,6 +86,9 @@ func NewClient(clientID, clientSecret string, opts ...Option) *Client {
 	if c.rateLimiter == nil {
 		c.rateLimiter = newRateLimiter(defaultRateLimit)
 	}
+	if c.retryDelay == nil {
+		c.retryDelay = defaultRetryDelay
+	}
 
 	c.Orders = &OrderService{client: c}
 	c.Events = &EventService{client: c}
@@ -106,6 +117,34 @@ func (c *Client) Close() {
 	if c.rateLimiter != nil {
 		c.rateLimiter.Close()
 	}
+}
+
+// getAccessToken returns the current access token (thread-safe).
+func (c *Client) getAccessToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.accessToken
+}
+
+// getRefreshToken returns the current refresh token (thread-safe).
+func (c *Client) getRefreshToken() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.refreshToken
+}
+
+// retryableStatusCode returns true for status codes that should be retried.
+func retryableStatusCode(code int) bool {
+	return code == 429 || code == 502 || code == 503 || code == 504
+}
+
+// defaultRetryDelay returns the backoff delay for a given retry attempt.
+// Delays: 500ms, 1s, 2s (exponential: 500ms << attempt).
+func defaultRetryDelay(attempt int) time.Duration {
+	if attempt < 0 {
+		attempt = 0
+	}
+	return time.Duration(500<<min(attempt, 30)) * time.Millisecond
 }
 
 // WithHTTPClient sets a custom HTTP client.
@@ -162,31 +201,56 @@ func WithRateLimit(requestsPerMinute int) Option {
 }
 
 // doRaw executes an authenticated API request and returns the raw response body bytes.
-// This is used for endpoints that return binary data such as PDF labels or protocols.
-func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]byte, error) {
+// acceptType specifies the Accept header (e.g. "application/pdf").
+// Retries automatically on 401 (token refresh) and 429/5xx (exponential backoff).
+func (c *Client) doRaw(ctx context.Context, method, path string, body any, acceptType string) ([]byte, error) {
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return nil, err
 	}
 
 	c.ensureValidToken(ctx)
 
-	data, err := c.doRawOnce(ctx, method, path, body)
-	if err == nil {
-		return data, nil
-	}
-
-	// On 401, try to refresh the token and retry once
-	if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == 401 && c.refreshToken != "" {
-		if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
-			return c.doRawOnce(ctx, method, path, body)
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		data, err := c.doRawOnce(ctx, method, path, body, acceptType)
+		if err == nil {
+			return data, nil
 		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			return nil, err
+		}
+
+		// On 401, try to refresh the token and retry once (only on first attempt)
+		if apiErr.StatusCode == 401 && attempt == 0 && c.getRefreshToken() != "" {
+			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
+				lastErr = err
+				continue
+			}
+			return nil, err
+		}
+
+		// On retryable status codes (429, 502, 503, 504), backoff and retry
+		if retryableStatusCode(apiErr.StatusCode) && attempt < maxRetries {
+			delay := c.retryDelay(attempt)
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+			}
+			lastErr = err
+			continue
+		}
+
+		return nil, err
 	}
 
-	return nil, err
+	return nil, lastErr
 }
 
 // doRawOnce executes a single raw API request without retry.
-func (c *Client) doRawOnce(ctx context.Context, method, path string, body any) ([]byte, error) {
+func (c *Client) doRawOnce(ctx context.Context, method, path string, body any, acceptType string) ([]byte, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
@@ -201,10 +265,10 @@ func (c *Client) doRawOnce(ctx context.Context, method, path string, body any) (
 		return nil, fmt.Errorf("allegro: create request: %w", err)
 	}
 
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	if token := c.getAccessToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
-	req.Header.Set("Accept", "application/pdf")
+	req.Header.Set("Accept", acceptType)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/vnd.allegro.public.v1+json")
 	}
@@ -217,13 +281,13 @@ func (c *Client) doRawOnce(ctx context.Context, method, path string, body any) (
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		if err := json.NewDecoder(resp.Body).Decode(apiErr); err != nil {
+		if err := json.NewDecoder(io.LimitReader(resp.Body, maxErrorBody)).Decode(apiErr); err != nil {
 			apiErr.Message = http.StatusText(resp.StatusCode)
 		}
 		return nil, apiErr
 	}
 
-	data, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBody))
 	if err != nil {
 		return nil, fmt.Errorf("allegro: read response body: %w", err)
 	}
@@ -232,16 +296,16 @@ func (c *Client) doRawOnce(ctx context.Context, method, path string, body any) (
 
 // ensureValidToken proactively refreshes the access token if it is expired or about to expire.
 func (c *Client) ensureValidToken(ctx context.Context) {
-	if c.refreshToken == "" {
-		return
-	}
-	// Refresh if token expires within 60 seconds
-	if !c.tokenExpiry.IsZero() && time.Until(c.tokenExpiry) < 60*time.Second {
+	c.mu.Lock()
+	needsRefresh := c.refreshToken != "" && !c.tokenExpiry.IsZero() && time.Until(c.tokenExpiry) < 60*time.Second
+	c.mu.Unlock()
+	if needsRefresh {
 		_, _ = c.RefreshAccessToken(ctx)
 	}
 }
 
-// do executes an authenticated API request with automatic token refresh on 401.
+// do executes an authenticated API request with automatic token refresh on 401
+// and retry with exponential backoff on 429/5xx.
 func (c *Client) do(ctx context.Context, method, path string, body any, result any) error {
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return err
@@ -249,19 +313,43 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 	c.ensureValidToken(ctx)
 
-	err := c.doOnce(ctx, method, path, body, result)
-	if err == nil {
-		return nil
-	}
-
-	// On 401, try to refresh the token and retry once
-	if apiErr, ok := err.(*APIError); ok && apiErr.StatusCode == 401 && c.refreshToken != "" {
-		if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
-			return c.doOnce(ctx, method, path, body, result)
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		err := c.doOnce(ctx, method, path, body, result)
+		if err == nil {
+			return nil
 		}
+
+		apiErr, ok := err.(*APIError)
+		if !ok {
+			return err
+		}
+
+		// On 401, try to refresh the token and retry once (only on first attempt)
+		if apiErr.StatusCode == 401 && attempt == 0 && c.getRefreshToken() != "" {
+			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
+				lastErr = err
+				continue
+			}
+			return err
+		}
+
+		// On retryable status codes (429, 502, 503, 504), backoff and retry
+		if retryableStatusCode(apiErr.StatusCode) && attempt < maxRetries {
+			delay := c.retryDelay(attempt)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(delay):
+			}
+			lastErr = err
+			continue
+		}
+
+		return err
 	}
 
-	return err
+	return lastErr
 }
 
 // doUpload executes an authenticated request against the upload host (upload.allegro.pl).
@@ -280,8 +368,8 @@ func (c *Client) doUpload(ctx context.Context, path string, body any, result any
 	if err != nil {
 		return fmt.Errorf("allegro: create upload request: %w", err)
 	}
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	if token := c.getAccessToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	req.Header.Set("Accept", "application/vnd.allegro.public.v1+json")
 	req.Header.Set("Content-Type", "application/vnd.allegro.public.v1+json")
@@ -293,7 +381,7 @@ func (c *Client) doUpload(ctx context.Context, path string, body any, result any
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		rawBody, _ := io.ReadAll(resp.Body)
+		rawBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
 		apiErr := &APIError{StatusCode: resp.StatusCode}
 		if err := json.Unmarshal(rawBody, apiErr); err != nil {
 			apiErr.Message = http.StatusText(resp.StatusCode)
@@ -321,8 +409,8 @@ func (c *Client) doUploadBinary(ctx context.Context, path string, data []byte, c
 	if err != nil {
 		return "", fmt.Errorf("allegro: create upload request: %w", err)
 	}
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	if token := c.getAccessToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	req.Header.Set("Accept", "application/vnd.allegro.public.v1+json")
 	req.Header.Set("Content-Type", contentType)
@@ -334,8 +422,8 @@ func (c *Client) doUploadBinary(ctx context.Context, path string, data []byte, c
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		rawBody, _ := io.ReadAll(resp.Body)
-		apiErr := &APIError{StatusCode: resp.StatusCode, RawBody: string(rawBody)}
+		rawBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
+		apiErr := &APIError{StatusCode: resp.StatusCode}
 		if err := json.Unmarshal(rawBody, apiErr); err != nil {
 			apiErr.Message = http.StatusText(resp.StatusCode)
 		}
@@ -368,8 +456,8 @@ func (c *Client) doOnce(ctx context.Context, method, path string, body any, resu
 		return fmt.Errorf("allegro: create request: %w", err)
 	}
 
-	if c.accessToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.accessToken)
+	if token := c.getAccessToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	req.Header.Set("Accept", "application/vnd.allegro.public.v1+json")
 	if body != nil {
@@ -383,8 +471,8 @@ func (c *Client) doOnce(ctx context.Context, method, path string, body any, resu
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		rawBody, _ := io.ReadAll(resp.Body)
-		apiErr := &APIError{StatusCode: resp.StatusCode, RawBody: string(rawBody)}
+		rawBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
+		apiErr := &APIError{StatusCode: resp.StatusCode}
 		if err := json.Unmarshal(rawBody, apiErr); err != nil {
 			apiErr.Message = http.StatusText(resp.StatusCode)
 		}

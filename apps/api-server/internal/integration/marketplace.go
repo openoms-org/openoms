@@ -49,6 +49,29 @@ type MarketplaceProvider interface {
 	UpdatePrice(ctx context.Context, externalOfferID string, price float64) error
 }
 
+// BulkStockUpdater is optionally implemented by providers that support batch stock updates.
+type BulkStockUpdater interface {
+	BulkUpdateStock(ctx context.Context, updates []StockUpdate) error
+}
+
+// BulkPriceUpdater is optionally implemented by providers that support batch price updates.
+type BulkPriceUpdater interface {
+	BulkUpdatePrice(ctx context.Context, updates []PriceUpdate) error
+}
+
+// StockUpdate represents a stock change for one offer.
+type StockUpdate struct {
+	ExternalOfferID string
+	Quantity        int
+}
+
+// PriceUpdate represents a price change for one offer.
+type PriceUpdate struct {
+	ExternalOfferID string
+	Amount          float64
+	Currency        string
+}
+
 // MarketplaceOrderToCreateRequest converts a MarketplaceOrder to a model.CreateOrderRequest.
 func MarketplaceOrderToCreateRequest(mo MarketplaceOrder, source string, integrationID uuid.UUID) model.CreateOrderRequest {
 	req := model.CreateOrderRequest{

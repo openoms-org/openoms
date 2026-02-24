@@ -43,9 +43,10 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*TokenResponse,
 
 // RefreshAccessToken refreshes the access token using the stored refresh token.
 func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error) {
+	rt := c.getRefreshToken()
 	data := url.Values{
 		"grant_type":    {"refresh_token"},
-		"refresh_token": {c.refreshToken},
+		"refresh_token": {rt},
 	}
 
 	tok, err := c.postToken(ctx, data)
@@ -55,8 +56,15 @@ func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error)
 
 	c.applyTokenResponse(tok)
 
-	if c.onTokenRefresh != nil {
-		c.onTokenRefresh(c.accessToken, c.refreshToken, c.tokenExpiry)
+	c.mu.Lock()
+	callback := c.onTokenRefresh
+	at := c.accessToken
+	refreshTok := c.refreshToken
+	expiry := c.tokenExpiry
+	c.mu.Unlock()
+
+	if callback != nil {
+		callback(at, refreshTok, expiry)
 	}
 
 	return tok, nil
@@ -64,6 +72,8 @@ func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error)
 
 // SetTokens manually updates the stored OAuth tokens.
 func (c *Client) SetTokens(accessToken, refreshToken string, expiry time.Time) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.accessToken = accessToken
 	c.refreshToken = refreshToken
 	c.tokenExpiry = expiry
@@ -103,6 +113,8 @@ func (c *Client) postToken(ctx context.Context, data url.Values) (*TokenResponse
 }
 
 func (c *Client) applyTokenResponse(tok *TokenResponse) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.accessToken = tok.AccessToken
 	c.refreshToken = tok.RefreshToken
 	c.tokenExpiry = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
