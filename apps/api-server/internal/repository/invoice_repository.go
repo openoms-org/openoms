@@ -15,6 +15,41 @@ func NewInvoiceRepository() *InvoiceRepository {
 	return &InvoiceRepository{}
 }
 
+// invoiceSelectColumns is the canonical list of columns selected from invoices.
+const invoiceSelectColumns = `id, tenant_id, order_id, provider, external_id, external_number,
+		        status, invoice_type, total_net, total_gross, currency,
+		        issue_date, due_date, pdf_url, metadata, error_message,
+		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
+		        created_at, updated_at`
+
+// scanInvoice scans a row into a model.Invoice using the invoiceSelectColumns column order.
+func scanInvoice(row pgx.Row) (model.Invoice, error) {
+	var inv model.Invoice
+	err := row.Scan(
+		&inv.ID, &inv.TenantID, &inv.OrderID, &inv.Provider,
+		&inv.ExternalID, &inv.ExternalNumber,
+		&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
+		&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
+		&inv.Metadata, &inv.ErrorMessage,
+		&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
+		&inv.CreatedAt, &inv.UpdatedAt,
+	)
+	return inv, err
+}
+
+// scanInvoices scans multiple rows into a slice of model.Invoice using the invoiceSelectColumns column order.
+func scanInvoices(rows pgx.Rows) ([]model.Invoice, error) {
+	var invoices []model.Invoice
+	for rows.Next() {
+		inv, err := scanInvoice(rows)
+		if err != nil {
+			return nil, err
+		}
+		invoices = append(invoices, inv)
+	}
+	return invoices, rows.Err()
+}
+
 func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.InvoiceListFilter) ([]model.Invoice, int, error) {
 	qb := NewQueryBuilder()
 
@@ -46,15 +81,11 @@ func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.In
 
 	argIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
-		        status, invoice_type, total_net, total_gross, currency,
-		        issue_date, due_date, pdf_url, metadata, error_message,
-		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
-		        created_at, updated_at
+		`SELECT %s
 		 FROM invoices %s
 		 %s
 		 LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		invoiceSelectColumns, where, orderByClause, argIdx, argIdx+1,
 	)
 
 	rows, err := tx.Query(ctx, query, qb.Args()...)
@@ -63,43 +94,17 @@ func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.In
 	}
 	defer rows.Close()
 
-	var invoices []model.Invoice
-	for rows.Next() {
-		var inv model.Invoice
-		if err := rows.Scan(
-			&inv.ID, &inv.TenantID, &inv.OrderID, &inv.Provider,
-			&inv.ExternalID, &inv.ExternalNumber,
-			&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
-			&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
-			&inv.Metadata, &inv.ErrorMessage,
-			&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
-			&inv.CreatedAt, &inv.UpdatedAt,
-		); err != nil {
-			return nil, 0, fmt.Errorf("scan invoice: %w", err)
-		}
-		invoices = append(invoices, inv)
+	invoices, err := scanInvoices(rows)
+	if err != nil {
+		return nil, 0, fmt.Errorf("scan invoice: %w", err)
 	}
-	return invoices, total, rows.Err()
+	return invoices, total, nil
 }
 
 func (r *InvoiceRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Invoice, error) {
-	var inv model.Invoice
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
-		        status, invoice_type, total_net, total_gross, currency,
-		        issue_date, due_date, pdf_url, metadata, error_message,
-		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
-		        created_at, updated_at
-		 FROM invoices WHERE id = $1`, id,
-	).Scan(
-		&inv.ID, &inv.TenantID, &inv.OrderID, &inv.Provider,
-		&inv.ExternalID, &inv.ExternalNumber,
-		&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
-		&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
-		&inv.Metadata, &inv.ErrorMessage,
-		&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
-		&inv.CreatedAt, &inv.UpdatedAt,
-	)
+	inv, err := scanInvoice(tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM invoices WHERE id = $1`, invoiceSelectColumns), id,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -111,35 +116,18 @@ func (r *InvoiceRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 
 func (r *InvoiceRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.Invoice, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
-		        status, invoice_type, total_net, total_gross, currency,
-		        issue_date, due_date, pdf_url, metadata, error_message,
-		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
-		        created_at, updated_at
-		 FROM invoices WHERE order_id = $1 ORDER BY created_at DESC`, orderID,
+		fmt.Sprintf(`SELECT %s FROM invoices WHERE order_id = $1 ORDER BY created_at DESC`, invoiceSelectColumns), orderID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find invoices by order_id: %w", err)
 	}
 	defer rows.Close()
 
-	var invoices []model.Invoice
-	for rows.Next() {
-		var inv model.Invoice
-		if err := rows.Scan(
-			&inv.ID, &inv.TenantID, &inv.OrderID, &inv.Provider,
-			&inv.ExternalID, &inv.ExternalNumber,
-			&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
-			&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
-			&inv.Metadata, &inv.ErrorMessage,
-			&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
-			&inv.CreatedAt, &inv.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scan invoice: %w", err)
-		}
-		invoices = append(invoices, inv)
+	invoices, err := scanInvoices(rows)
+	if err != nil {
+		return nil, fmt.Errorf("scan invoice: %w", err)
 	}
-	return invoices, rows.Err()
+	return invoices, nil
 }
 
 func (r *InvoiceRepository) Create(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error {
@@ -197,35 +185,18 @@ func (r *InvoiceRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 // FindPendingKSeF returns all invoices with ksef_status = 'pending'.
 func (r *InvoiceRepository) FindPendingKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, tenant_id, order_id, provider, external_id, external_number,
-		        status, invoice_type, total_net, total_gross, currency,
-		        issue_date, due_date, pdf_url, metadata, error_message,
-		        ksef_number, ksef_status, ksef_sent_at, ksef_response,
-		        created_at, updated_at
-		 FROM invoices WHERE ksef_status = 'pending' ORDER BY ksef_sent_at ASC LIMIT 100`,
+		fmt.Sprintf(`SELECT %s FROM invoices WHERE ksef_status = 'pending' ORDER BY ksef_sent_at ASC LIMIT 100`, invoiceSelectColumns),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find pending ksef invoices: %w", err)
 	}
 	defer rows.Close()
 
-	var invoices []model.Invoice
-	for rows.Next() {
-		var inv model.Invoice
-		if err := rows.Scan(
-			&inv.ID, &inv.TenantID, &inv.OrderID, &inv.Provider,
-			&inv.ExternalID, &inv.ExternalNumber,
-			&inv.Status, &inv.InvoiceType, &inv.TotalNet, &inv.TotalGross,
-			&inv.Currency, &inv.IssueDate, &inv.DueDate, &inv.PDFURL,
-			&inv.Metadata, &inv.ErrorMessage,
-			&inv.KSeFNumber, &inv.KSeFStatus, &inv.KSeFSentAt, &inv.KSeFResponse,
-			&inv.CreatedAt, &inv.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scan invoice: %w", err)
-		}
-		invoices = append(invoices, inv)
+	invoices, err := scanInvoices(rows)
+	if err != nil {
+		return nil, fmt.Errorf("scan invoice: %w", err)
 	}
-	return invoices, rows.Err()
+	return invoices, nil
 }
 
 // UpdateKSeFStatus updates only the KSeF-related fields of an invoice.
