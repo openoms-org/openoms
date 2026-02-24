@@ -1,8 +1,11 @@
 # API Contracts
-Version: 1 (bump after every endpoint change)
-Updated: 2026-02-20
+Version: 2 (bump after every endpoint change)
+Updated: 2026-02-24
 
 ## Recently Changed
+- 2026-02-24: All mutation endpoints (POST/PUT/PATCH/DELETE) now require CSRF token (`X-CSRF-Token` header matching `csrf_token` cookie)
+- 2026-02-24: `GET /v1/ws` — ticket-only auth (JWT query param fallback removed)
+- 2026-02-24: Settings validation added: EmailSettings (smtp_port 0-65535), SMSSettings (from max 11 chars), InvoicingSettings (default_tax_rate 0-100)
 - 2026-02-19: `POST /v1/suppliers` — added `feed_url`, `feed_format`, `feed_mapping` fields
 - 2026-02-19: `GET /v1/suppliers/:id/products` — new endpoint (supplier product catalog)
 - 2026-02-19: `POST /v1/suppliers/:id/products/enrich` — new endpoint (enrich products from supplier feed)
@@ -85,6 +88,7 @@ POST   /v1/webhooks/inpost                  → 200 (HMAC-SHA256 verified)
 ```
 GET    /v1/ws?ticket=xxx             → WebSocket upgrade (ticket from /v1/auth/ws-ticket)
 ```
+Note: JWT query param auth removed in PR #38. Ticket-only.
 
 ## Response Conventions
 - Success: `200 OK` (read), `201 Created` (create), `204 No Content` (delete)
@@ -92,3 +96,10 @@ GET    /v1/ws?ticket=xxx             → WebSocket upgrade (ticket from /v1/auth
 - Pagination: `{"items": [...], "total": N, "page": N, "limit": N}`
 - All timestamps: ISO 8601 (UTC)
 - All IDs: UUID v4
+
+## CSRF Protection
+Mutation requests (POST/PUT/PATCH/DELETE) require:
+- `csrf_token` cookie (set automatically on first GET request)
+- `X-CSRF-Token` header with value matching the cookie
+
+**Exempt paths:** `/v1/auth/login`, `/v1/auth/register`, `/v1/auth/refresh`, `/v1/auth/ws-ticket`, `/v1/public/*`, `/v1/webhooks/*`, `/health`, `/metrics`
