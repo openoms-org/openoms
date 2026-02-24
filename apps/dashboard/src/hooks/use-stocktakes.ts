@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   Stocktake,
   StocktakeItem,
@@ -10,58 +11,20 @@ import type {
   UpdateStocktakeItemRequest,
 } from "@/types/api";
 
-export function useStocktakes(params: StocktakeListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.warehouse_id) query.set("warehouse_id", params.warehouse_id);
-  if (params.status) query.set("status", params.status);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
+const stocktakeHooks = createCrudHooks<
+  Stocktake,
+  CreateStocktakeRequest,
+  Partial<Stocktake>,
+  StocktakeListParams
+>({
+  resourceKey: "stocktakes",
+  basePath: "/v1/stocktakes",
+});
 
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["stocktakes", params],
-    queryFn: () =>
-      apiClient<ListResponse<Stocktake>>(
-        `/v1/stocktakes${qs ? `?${qs}` : ""}`
-      ),
-  });
-}
-
-export function useStocktake(id: string) {
-  return useQuery({
-    queryKey: ["stocktakes", id],
-    queryFn: () => apiClient<Stocktake>(`/v1/stocktakes/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useCreateStocktake() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateStocktakeRequest) =>
-      apiClient<Stocktake>("/v1/stocktakes", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stocktakes"] });
-    },
-  });
-}
-
-export function useDeleteStocktake() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/stocktakes/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["stocktakes"] });
-    },
-  });
-}
+export const useStocktakes = stocktakeHooks.useList;
+export const useStocktake = stocktakeHooks.useGet;
+export const useCreateStocktake = stocktakeHooks.useCreate;
+export const useDeleteStocktake = stocktakeHooks.useDelete;
 
 export function useStartStocktake() {
   const queryClient = useQueryClient();

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiFetch } from "@/lib/api-client";
+import { downloadBlob } from "@/lib/download";
 import type { ProductListing } from "@/types/api";
 
 // --- Types ---
@@ -162,14 +163,7 @@ export async function downloadAllegroLabel(shipmentId: string) {
     `/v1/integrations/allegro/shipments/${shipmentId}/label`
   );
   const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `etykieta-${shipmentId}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  downloadBlob(blob, `etykieta-${shipmentId}.pdf`);
 }
 
 // Cancel a managed shipment
@@ -239,14 +233,7 @@ export async function downloadAllegroProtocol(shipmentIds: string[]) {
     body: JSON.stringify({ shipment_ids: shipmentIds }),
   });
   const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "protokol-allegro.pdf";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  downloadBlob(blob, "protokol-allegro.pdf");
 }
 
 // --- Messaging Types ---

@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useBGRemovalStatus, useRemoveBackground } from "@/hooks/use-bg-removal";
+import { downloadBlob } from "@/lib/download";
 
 export default function BGRemovalPage() {
   const { data: bgStatus, isLoading: isLoadingStatus } = useBGRemovalStatus();
@@ -80,14 +81,11 @@ export default function BGRemovalPage() {
     });
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!resultUrl) return;
-    const a = document.createElement("a");
-    a.href = resultUrl;
-    a.download = `${originalFile?.name?.replace(/\.[^.]+$/, "") || "image"}-nobg.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const res = await fetch(resultUrl);
+    const blob = await res.blob();
+    downloadBlob(blob, `${originalFile?.name?.replace(/\.[^.]+$/, "") || "image"}-nobg.png`);
   };
 
   const handleReset = () => {

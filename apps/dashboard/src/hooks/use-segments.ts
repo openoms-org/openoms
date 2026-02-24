@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { buildSearchParams } from "@/lib/search-params";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   CustomerSegment,
   SegmentMember,
@@ -9,83 +11,32 @@ import type {
   CreateSegmentRequest,
   UpdateSegmentRequest,
   AddSegmentMemberRequest,
+  PaginationParams,
 } from "@/types/api";
 
-export function useSegments(params: SegmentListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
+const segmentHooks = createCrudHooks<
+  CustomerSegment,
+  CreateSegmentRequest,
+  UpdateSegmentRequest,
+  PaginationParams
+>({
+  resourceKey: "segments",
+  basePath: "/v1/segments",
+  updateMethod: "PUT",
+});
 
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["segments", params],
-    queryFn: () =>
-      apiClient<ListResponse<CustomerSegment>>(
-        `/v1/segments${qs ? `?${qs}` : ""}`
-      ),
-  });
-}
-
-export function useSegment(id: string) {
-  return useQuery({
-    queryKey: ["segments", id],
-    queryFn: () => apiClient<CustomerSegment>(`/v1/segments/${id}`),
-    enabled: !!id,
-  });
-}
-
-export function useCreateSegment() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateSegmentRequest) =>
-      apiClient<CustomerSegment>("/v1/segments", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["segments"] });
-    },
-  });
-}
-
-export function useUpdateSegment(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateSegmentRequest) =>
-      apiClient<CustomerSegment>(`/v1/segments/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["segments"] });
-      queryClient.invalidateQueries({ queryKey: ["segments", id] });
-    },
-  });
-}
-
-export function useDeleteSegment() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/segments/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["segments"] });
-    },
-  });
-}
+export const useSegments = segmentHooks.useList;
+export const useSegment = segmentHooks.useGet;
+export const useCreateSegment = segmentHooks.useCreate;
+export const useUpdateSegment = segmentHooks.useUpdate;
+export const useDeleteSegment = segmentHooks.useDelete;
 
 export function useSegmentMembers(
   segmentId: string,
   params: { limit?: number; offset?: number } = {}
 ) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-
-  const qs = query.toString();
+  const sp = buildSearchParams(params);
+  const qs = sp.toString();
 
   return useQuery({
     queryKey: ["segments", segmentId, "members", params],
