@@ -41,8 +41,7 @@ type MarketplaceOrderPoller struct {
 	interval       time.Duration
 	// mapOrder allows provider-specific customization of the order mapping.
 	// If nil, a default mapping is used.
-	mapOrder   OrderMapper
-	seenOrders map[string]struct{} // in-memory dedup cache for current run
+	mapOrder OrderMapper
 }
 
 // MarketplaceOrderPollerConfig configures a MarketplaceOrderPoller.
@@ -88,7 +87,7 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 		return err
 	}
 
-	p.seenOrders = make(map[string]struct{})
+	seenOrders := make(map[string]struct{})
 	totalOrders := 0
 
 	for _, ti := range tis {
@@ -103,6 +102,7 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 			p.logger.Error("failed to create provider", "integration_id", ti.IntegrationID, "error", err)
 			continue
 		}
+		defer closeProvider(provider)
 
 		cursor := ""
 		if ti.SyncCursor != nil {
@@ -117,10 +117,10 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 
 		for _, mo := range orders {
 			// In-memory dedup: skip if already processed in this run
-			if _, seen := p.seenOrders[mo.ExternalID]; seen {
+			if _, seen := seenOrders[mo.ExternalID]; seen {
 				continue
 			}
-			p.seenOrders[mo.ExternalID] = struct{}{}
+			seenOrders[mo.ExternalID] = struct{}{}
 
 			req := integration.MarketplaceOrderToCreateRequest(mo, p.providerName, ti.IntegrationID)
 			order := p.buildOrder(mo, ti, req)

@@ -66,8 +66,9 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			continue
 		}
 
-		if err := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
-			// Query auto-sync product_listings with warehouse-based available stock
+		tenantErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
+			// Query auto-sync product_listings with warehouse-based available stock.
+			// stock_sync_mode = 'auto' gates both stock and price sync (single toggle per listing).
 			rows, err := tx.Query(ctx,
 				`SELECT pl.id, pl.external_id, pl.stock_override,
 				        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
@@ -119,8 +120,10 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			}
 
 			return nil
-		}); err != nil {
-			w.logger.Error("stock sync: tenant error", "tenant_id", ti.TenantID, "error", err)
+		})
+		closeProvider(provider)
+		if tenantErr != nil {
+			w.logger.Error("stock sync: tenant error", "tenant_id", ti.TenantID, "error", tenantErr)
 			continue
 		}
 	}
@@ -163,30 +166,27 @@ func (w *StockSyncWorker) syncBulk(
 				"batch_size", len(chunk),
 				"error", err,
 			)
-			// Mark all listings in this batch as error
+			errMsg := truncateErrorMessage(err.Error(), 500)
 			for _, l := range batchListings {
 				_, _ = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-					l.ListingID, err.Error(),
+					l.ListingID, errMsg,
 				)
 			}
 			continue
 		}
 
-		// Mark all listings in this batch as synced
 		for _, l := range batchListings {
 			_, _ = tx.Exec(ctx,
 				`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 				l.ListingID,
 			)
-			w.logger.Info("worker: stock synced",
-				"operation", "listing.stock_update",
-				"tenant_id", ti.TenantID,
-				"entity_id", l.ListingID,
-				"external_id", l.ExternalID,
-				"stock_quantity", l.StockQty,
-			)
 		}
+		w.logger.Info("worker: stock batch synced",
+			"operation", "listing.stock_bulk_update",
+			"tenant_id", ti.TenantID,
+			"batch_size", len(chunk),
+		)
 		synced += len(chunk)
 	}
 
@@ -214,7 +214,7 @@ func (w *StockSyncWorker) syncOneByOne(
 			)
 			_, _ = tx.Exec(ctx,
 				`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-				l.ListingID, err.Error(),
+				l.ListingID, truncateErrorMessage(err.Error(), 500),
 			)
 			continue
 		}

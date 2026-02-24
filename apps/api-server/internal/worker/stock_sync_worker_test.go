@@ -25,3 +25,37 @@ func TestChunkSlice_Empty(t *testing.T) {
 	chunks := chunkStockUpdates(nil, 100)
 	assert.Nil(t, chunks)
 }
+
+func TestTruncateErrorMessage(t *testing.T) {
+	short := "short error"
+	assert.Equal(t, short, truncateErrorMessage(short, 500))
+
+	long := make([]byte, 600)
+	for i := range long {
+		long[i] = 'x'
+	}
+	result := truncateErrorMessage(string(long), 500)
+	assert.Len(t, result, 500)
+}
+
+func TestCloseProvider_WithCloser(t *testing.T) {
+	called := false
+	p := &mockCloser{onClose: func() { called = true }}
+	closeProvider(p)
+	assert.True(t, called)
+}
+
+func TestCloseProvider_WithoutCloser(t *testing.T) {
+	// Should not panic on a type without Close()
+	closeProvider("not a closer")
+}
+
+type mockCloser struct {
+	onClose func()
+}
+
+func (m *mockCloser) Close() {
+	if m.onClose != nil {
+		m.onClose()
+	}
+}

@@ -56,6 +56,26 @@ func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider st
 	return result, rows.Err()
 }
 
+// providerCloser is implemented by providers that hold resources (e.g., rate limiter goroutines).
+type providerCloser interface {
+	Close()
+}
+
+// closeProvider closes a provider if it implements providerCloser.
+func closeProvider(provider any) {
+	if c, ok := provider.(providerCloser); ok {
+		c.Close()
+	}
+}
+
+// truncateErrorMessage limits error messages stored in the database to maxLen bytes.
+func truncateErrorMessage(msg string, maxLen int) string {
+	if len(msg) <= maxLen {
+		return msg
+	}
+	return msg[:maxLen]
+}
+
 // ListAllActiveMarketplaceIntegrations queries all active marketplace integrations
 // across all providers. This is used by the stock sync worker.
 func ListAllActiveMarketplaceIntegrations(ctx context.Context, pool *pgxpool.Pool) ([]TenantIntegration, error) {
