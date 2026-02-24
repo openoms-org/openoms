@@ -197,32 +197,6 @@ Zwroc JSON: {"tags": ["tag1", "tag2", "tag3"]}`,
 	return parsed.Tags, nil
 }
 
-// GenerateDescription generates a long product description.
-func (s *AIService) GenerateDescription(ctx context.Context, productName, shortDescription string) (string, error) {
-	systemPrompt := "Jestes copywriterem e-commerce. Piszesz opisy produktow po polsku. Zwracasz TYLKO surowy JSON, bez markdown."
-	userPrompt := fmt.Sprintf(
-		`Produkt: "%s"
-Krotki opis: "%s"
-
-Napisz atrakcyjny, szczegolowy opis produktu (3-5 zdan). Opis powinien byc po polsku, zachecajacy do zakupu.
-Zwroc JSON: {"description": "tresc opisu"}`,
-		productName, shortDescription,
-	)
-
-	result, err := s.callOpenAI(ctx, systemPrompt, userPrompt)
-	if err != nil {
-		return "", err
-	}
-
-	var parsed struct {
-		Description string `json:"description"`
-	}
-	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-		return result, nil
-	}
-	return parsed.Description, nil
-}
-
 // DescribeOptions holds optional parameters for enhanced description generation.
 type DescribeOptions struct {
 	Style       string `json:"style"`       // "professional" | "promotional" | "casual" | "seo"

@@ -48,19 +48,6 @@ type RecurringOrderItem struct {
 	CreatedAt        time.Time  `json:"created_at"`
 }
 
-// --- Valid statuses ---
-
-var validRecurringStatuses = map[string]bool{
-	"active":    true,
-	"paused":    true,
-	"cancelled": true,
-	"completed": true,
-}
-
-func IsValidRecurringStatus(s string) bool {
-	return validRecurringStatuses[s]
-}
-
 // --- Valid frequencies ---
 
 var validFrequencies = map[string]bool{

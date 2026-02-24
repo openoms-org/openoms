@@ -132,13 +132,3 @@ func (h *Hub) Unregister(client *Client) {
 	h.unregister <- client
 }
 
-// ConnectedClients returns the total number of connected clients across all tenants.
-func (h *Hub) ConnectedClients() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	total := 0
-	for _, clients := range h.tenants {
-		total += len(clients)
-	}
-	return total
-}

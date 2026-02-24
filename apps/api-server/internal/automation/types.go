@@ -35,26 +35,3 @@ type EventProcessor interface {
 	ProcessEvent(ctx context.Context, event Event)
 }
 
-// ValidOperators is the set of supported condition operators.
-var ValidOperators = map[string]bool{
-	"eq":           true,
-	"neq":          true,
-	"in":           true,
-	"not_in":       true,
-	"gt":           true,
-	"gte":          true,
-	"lt":           true,
-	"lte":          true,
-	"contains":     true,
-	"not_contains": true,
-	"starts_with":  true,
-}
-
-// ValidActionTypes is the set of supported action types.
-var ValidActionTypes = map[string]bool{
-	"set_status":     true,
-	"add_tag":        true,
-	"send_email":     true,
-	"create_invoice": true,
-	"webhook":        true,
-}
