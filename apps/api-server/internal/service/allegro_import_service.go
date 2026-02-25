@@ -289,6 +289,7 @@ func (s *AllegroImportService) createListing(
 		Status:        "active",
 		SyncStatus:    "synced",
 		StockSyncMode: "manual",
+		Metadata:      json.RawMessage(`{}`),
 	}
 	return s.listingRepo.Create(ctx, tx, listing)
 }
