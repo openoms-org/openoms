@@ -173,7 +173,7 @@ type Offer struct {
 	Stock        *OfferStock       `json:"stock,omitempty"`
 	Publication  *OfferPublication `json:"publication,omitempty"`
 	PrimaryImage *OfferImage       `json:"primaryImage,omitempty"`
-	Images       []OfferImage      `json:"images,omitempty"`
+	Images       []string          `json:"images,omitempty"`
 	Description  *OfferDescription `json:"description,omitempty"`
 	External     *OfferExternal    `json:"external,omitempty"`
 	ProductSet   []ProductSetEntry `json:"productSet,omitempty"`

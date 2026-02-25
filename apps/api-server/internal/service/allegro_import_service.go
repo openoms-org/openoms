@@ -325,19 +325,12 @@ func mapAllegroOfferToProduct(offer allegrosdk.Offer, tenantID uuid.UUID) model.
 		product.StockQuantity = offer.Stock.Available
 	}
 
-	// Images: collect all offer images; set ImageURL to the first one.
+	// Images: offer.Images is []string of URLs from Allegro API.
 	if len(offer.Images) > 0 {
-		urls := make([]string, 0, len(offer.Images))
-		for _, img := range offer.Images {
-			if img.URL != "" {
-				urls = append(urls, img.URL)
-			}
-		}
-		if len(urls) > 0 {
-			product.ImageURL = &urls[0]
-			if data, err := json.Marshal(urls); err == nil {
-				product.Images = data
-			}
+		first := offer.Images[0]
+		product.ImageURL = &first
+		if data, err := json.Marshal(offer.Images); err == nil {
+			product.Images = data
 		}
 	} else if offer.PrimaryImage != nil && offer.PrimaryImage.URL != "" {
 		product.ImageURL = &offer.PrimaryImage.URL
