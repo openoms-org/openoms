@@ -12,6 +12,11 @@ import (
 const (
 	productionBaseURL = "https://api.erli.pl/v2"
 	sandboxBaseURL    = "https://api-sandbox.erli.pl/v2"
+
+	// maxResponseBody caps response body reads to prevent memory exhaustion (50 MB).
+	maxResponseBody = 50 << 20
+	// maxErrorBody caps error response body reads (1 MB).
+	maxErrorBody = 1 << 20
 )
 
 // Client is an Erli.pl marketplace API client.
@@ -110,17 +115,17 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("erli: failed to read response: %w", err)
-	}
-
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		if len(respBody) > 0 {
-			_ = json.Unmarshal(respBody, apiErr)
+		if err := json.NewDecoder(io.LimitReader(resp.Body, maxErrorBody)).Decode(apiErr); err != nil {
+			apiErr.Message = http.StatusText(resp.StatusCode)
 		}
 		return nil, apiErr
+	}
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBody))
+	if err != nil {
+		return nil, fmt.Errorf("erli: failed to read response: %w", err)
 	}
 
 	return respBody, nil
