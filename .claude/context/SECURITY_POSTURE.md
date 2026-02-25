@@ -1,5 +1,5 @@
 # Security Posture
-Last full audit: 2026-02-24 (2 rounds: PR #36, #38)
+Last full audit: 2026-02-25 (3 rounds: PR #36, #38, #42; test hardening: PRs #43-56)
 
 ## Unfixed Findings
 
@@ -20,6 +20,11 @@ Last full audit: 2026-02-24 (2 rounds: PR #36, #38)
    - Effort: L
 
 ## Recently Fixed
+- 2026-02-25: PRs #43-56 — Massive test coverage expansion: SDK tests for all 27 packages (100%), middleware tests for all 18 files (100%), worker tests for all 19 files (100%), handler validation tests for all handlers, model Validate() coverage for 54 request types, service-layer tests (carbon, repricing, webhook, dropship, invoice, automation conditions)
+- 2026-02-25: PR #52 — SafeGo helper for goroutine panic recovery (prevents silent worker crashes)
+- 2026-02-25: PR #42 — Audit remediation v3: additional security fixes, error handling improvements, code quality
+- 2026-02-25: PR #41 — Weight propagation: supplier sync writes product weight, shipment auto-calculates weight from order items
+- 2026-02-25: PR #40 — Allegro integration hardening: retry with backoff, bulk sync, order deduplication
 - 2026-02-24: PR #38 — SSRF IPv6 bypass (::/128, ff00::/8), atomic rate limiter (Lua script), WS ticket-only auth, Swagger CDN pinned to 5.18.2, XSS dangerouslySetInnerHTML removed, Polish errors translated, discarded DB errors logged, settings validation (Email/SMS/Invoicing), 12 dead code items removed, 12 hooks migrated to createCrudHooks
 - 2026-02-24: PR #36 — CSRF double-submit cookie middleware, composite token blacklist (Redis + in-memory), WebSocket Origin validation + ticket-only auth, automation SSRF fix (noPrivateDialer), webhook body size limits (1MB), HSTS header, security headers hardening, input sanitization (StripTags), response helpers (writeServerError, writeValidationError)
 - 2026-02-20: JSONBCodec nil Marshal/Unmarshal → panic on Scan (production login broken)

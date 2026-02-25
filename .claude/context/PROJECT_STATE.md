@@ -1,5 +1,5 @@
 # Project State
-Updated: 2026-02-24
+Updated: 2026-02-25
 
 ## Target
 Open production for paying customers: **May 2026** (~11 weeks remaining)
@@ -19,6 +19,13 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-02-25: Test coverage expansion — SDK 27/27, middleware 18/18, worker 19/19, handlers all covered, 54 model validators, service-layer tests (PRs #43-56)
+- 2026-02-25: SafeGo panic recovery helper for goroutines (PR #52)
+- 2026-02-25: Quiet CI/dev tooling — summary-only test output, eslint --quiet (PR #54)
+- 2026-02-25: Audit remediation v3 — additional security, error handling, quality (PR #42)
+- 2026-02-25: Weight propagation — supplier→product→shipment auto-calculation (PR #41)
+- 2026-02-25: Allegro hardening — retry with backoff, bulk sync, order dedup (PR #40)
+- 2026-02-24: Documentation update post-audit (PR #39)
 - 2026-02-24: Audit remediation v2 — SSRF IPv6, atomic rate limiter, WS ticket-only auth, XSS fix, settings validation, dead code cleanup, 12 hook migrations (PR #38)
 - 2026-02-24: Security hardening — CSRF middleware, composite token blacklist, WebSocket Origin validation, HSTS, automation SSRF fix, webhook body limits, input sanitization, response helpers (PR #36)
 - 2026-02-20: JSONB type registration fix for pgx simple_protocol (AfterConnect + JSONBCodec)
@@ -29,6 +36,7 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - 2026-02-17: Gap analysis vs competitors (BaseLinker, Sellasist, Apilo)
 
 ## Recent Deploys
+- 2026-02-25: PRs #40-56 merged — Allegro hardening, weight propagation, audit v3, test coverage expansion
 - 2026-02-24: PR #38 merged — audit remediation v2
 - 2026-02-24: PR #36 merged — security hardening + code quality
 - 2026-02-20 14:00: `6bd6a7d` — JSONBCodec Marshal/Unmarshal fix (fixed login panic)
