@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -78,7 +79,11 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 
 	product, err := h.productService.Get(ctx, tenantID, productID)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "product not found")
+		if errors.Is(err, service.ErrProductNotFound) {
+			writeError(w, http.StatusNotFound, "product not found")
+		} else {
+			writeServerError(w, "failed to get product", err)
+		}
 		return
 	}
 
