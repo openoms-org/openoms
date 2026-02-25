@@ -752,6 +752,26 @@ export interface UpsertCategoryMappingRequest {
   confirmed: boolean;
 }
 
+export interface MarketplaceCategoryMapping {
+  id: string;
+  tenant_id: string;
+  integration_id: string;
+  external_category_id: string;
+  external_category_name: string;
+  category_id?: string;
+  auto_created: boolean;
+  confirmed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpsertMarketplaceCategoryMappingRequest {
+  external_category_id: string;
+  external_category_name?: string;
+  category_id?: string;
+  confirmed: boolean;
+}
+
 export interface AllegroParameterMapping {
   id: string;
   supplier_id: string;
