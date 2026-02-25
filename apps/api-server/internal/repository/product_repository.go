@@ -19,7 +19,7 @@ func NewProductRepository() *ProductRepository {
 // productSelectColumns is the canonical list of columns selected from products.
 const productSelectColumns = `id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity,
 		        metadata, tags, description_short, description_long, weight, width, height, depth,
-		        category, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id,
+		        category, category_id, image_url, images, has_variants, is_bundle, is_dropship, dropship_supplier_id,
 		        created_at, updated_at`
 
 // scanProduct scans a row into a model.Product using the productSelectColumns column order.
@@ -29,7 +29,7 @@ func scanProduct(row pgx.Row) (model.Product, error) {
 		&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
 		&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 		&p.DescriptionShort, &p.DescriptionLong,
-		&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
+		&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category, &p.CategoryID,
 		&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID,
 		&p.CreatedAt, &p.UpdatedAt,
 	)
@@ -107,7 +107,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 	query := fmt.Sprintf(
 		`SELECT p.id, p.tenant_id, p.external_id, p.source, p.name, p.sku, p.ean, p.price, p.stock_quantity,
 		        p.metadata, p.tags, p.description_short, p.description_long, p.weight, p.width, p.height, p.depth,
-		        p.category, p.image_url, p.images, p.has_variants, p.is_bundle, p.is_dropship, p.dropship_supplier_id,
+		        p.category, p.category_id, p.image_url, p.images, p.has_variants, p.is_bundle, p.is_dropship, p.dropship_supplier_id,
 		        (SELECT s.name FROM supplier_products sp JOIN suppliers s ON sp.supplier_id = s.id
 		                  WHERE sp.product_id = p.id LIMIT 1) AS supplier_name,
 		        COALESCE((SELECT array_agg(DISTINCT i.provider ORDER BY i.provider)
@@ -131,7 +131,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 		if err := rows.Scan(&p.ID, &p.TenantID, &p.ExternalID, &p.Source, &p.Name,
 			&p.SKU, &p.EAN, &p.Price, &p.StockQuantity, &p.Metadata, &p.Tags,
 			&p.DescriptionShort, &p.DescriptionLong,
-			&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category,
+			&p.Weight, &p.Width, &p.Height, &p.Depth, &p.Category, &p.CategoryID,
 			&p.ImageURL, &p.Images, &p.HasVariants, &p.IsBundle, &p.IsDropship, &p.DropshipSupplierID,
 			&p.SupplierName, &p.MarketplaceProviders, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scan product: %w", err)
@@ -183,13 +183,13 @@ func (r *ProductRepository) Create(ctx context.Context, tx pgx.Tx, product *mode
 		tags = []string{}
 	}
 	return tx.QueryRow(ctx,
-		`INSERT INTO products (id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, image_url, images, is_bundle, is_dropship, dropship_supplier_id)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+		`INSERT INTO products (id, tenant_id, external_id, source, name, sku, ean, price, stock_quantity, metadata, tags, description_short, description_long, weight, width, height, depth, category, category_id, image_url, images, is_bundle, is_dropship, dropship_supplier_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 		 RETURNING created_at, updated_at`,
 		product.ID, product.TenantID, product.ExternalID, product.Source, product.Name,
 		product.SKU, product.EAN, product.Price, product.StockQuantity, product.Metadata, tags,
 		product.DescriptionShort, product.DescriptionLong,
-		product.Weight, product.Width, product.Height, product.Depth, product.Category,
+		product.Weight, product.Width, product.Height, product.Depth, product.Category, product.CategoryID,
 		product.ImageURL, product.Images, product.IsBundle, product.IsDropship, product.DropshipSupplierID,
 	).Scan(&product.CreatedAt, &product.UpdatedAt)
 }
@@ -277,6 +277,11 @@ func (r *ProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID,
 	if req.Category != nil {
 		setClauses = append(setClauses, fmt.Sprintf("category = $%d", argIdx))
 		args = append(args, *req.Category)
+		argIdx++
+	}
+	if req.CategoryID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("category_id = $%d", argIdx))
+		args = append(args, *req.CategoryID)
 		argIdx++
 	}
 	if req.ImageURL != nil {

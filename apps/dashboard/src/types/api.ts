@@ -374,6 +374,7 @@ export interface CreateProductRequest {
   metadata?: Record<string, unknown>;
   tags?: string[];
   category?: string;
+  category_id?: string;
   description_short?: string;
   description_long?: string;
   weight?: number;
@@ -397,6 +398,7 @@ export interface UpdateProductRequest {
   metadata?: Record<string, unknown>;
   tags?: string[];
   category?: string;
+  category_id?: string;
   description_short?: string;
   description_long?: string;
   weight?: number;
@@ -746,6 +748,26 @@ export interface SupplierCategoryMapping {
 
 export interface UpsertCategoryMappingRequest {
   source_category: string;
+  category_id?: string;
+  confirmed: boolean;
+}
+
+export interface MarketplaceCategoryMapping {
+  id: string;
+  tenant_id: string;
+  integration_id: string;
+  external_category_id: string;
+  external_category_name: string;
+  category_id?: string;
+  auto_created: boolean;
+  confirmed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpsertMarketplaceCategoryMappingRequest {
+  external_category_id: string;
+  external_category_name?: string;
   category_id?: string;
   confirmed: boolean;
 }

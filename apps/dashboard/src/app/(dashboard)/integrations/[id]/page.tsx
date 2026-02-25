@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
@@ -11,9 +11,16 @@ import {
   useUpdateIntegration,
   useDeleteIntegration,
 } from "@/hooks/use-integrations";
+import {
+  useMarketplaceCategoryMappings,
+  useUpsertMarketplaceCategoryMapping,
+  useDeleteMarketplaceCategoryMapping,
+} from "@/hooks/use-marketplace-category-mappings";
 import { IntegrationForm } from "@/components/integrations/integration-form";
+import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { getErrorMessage } from "@/lib/api-client";
 import {
   INTEGRATION_STATUSES,
   INTEGRATION_PROVIDER_LABELS,
@@ -25,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -35,6 +43,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const DEDICATED_PAGES: Record<string, string> = {
@@ -328,6 +345,10 @@ export default function IntegrationDetailPage() {
         />
       )}
 
+      {isMarketplace && (
+        <MarketplaceCategoryMappingSection integrationId={params.id} />
+      )}
+
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
@@ -340,5 +361,131 @@ export default function IntegrationDetailPage() {
       />
     </div>
     </AdminGuard>
+  );
+}
+
+function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: string }) {
+  const { data: categoryMappings } = useMarketplaceCategoryMappings(integrationId);
+  const upsertMapping = useUpsertMarketplaceCategoryMapping(integrationId);
+  const deleteMapping = useDeleteMarketplaceCategoryMapping(integrationId);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Mapowanie kategorii marketplace</CardTitle>
+        <CardDescription>
+          Powiązania między kategoriami z marketplace a kategoriami OMS
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!categoryMappings || categoryMappings.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Brak mapowań. Import ofert z marketplace utworzy mapowania automatycznie.
+          </p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Kategoria marketplace</TableHead>
+                <TableHead>ID zewnętrzne</TableHead>
+                <TableHead>Kategoria OMS</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[100px]">Akcje</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {categoryMappings.map((mapping) => (
+                <TableRow key={mapping.id}>
+                  <TableCell className="font-medium">
+                    {mapping.external_category_name || mapping.external_category_id}
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {mapping.external_category_id}
+                  </TableCell>
+                  <TableCell>
+                    <CategoryTreePicker
+                      value={mapping.category_id}
+                      onChange={(value) => {
+                        upsertMapping.mutate(
+                          {
+                            external_category_id: mapping.external_category_id,
+                            external_category_name: mapping.external_category_name,
+                            category_id: value,
+                            confirmed: true,
+                          },
+                          {
+                            onSuccess: () => toast.success("Mapowanie zaktualizowane"),
+                            onError: (error) => toast.error(getErrorMessage(error)),
+                          }
+                        );
+                      }}
+                      placeholder="Przypisz kategorię..."
+                      className="w-[220px]"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {mapping.confirmed ? (
+                      <Badge variant="default" className="gap-1">
+                        <Check className="h-3 w-3" />
+                        Potwierdzone
+                      </Badge>
+                    ) : mapping.auto_created ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Auto-utworzone
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">Nieprzypisane</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      {!mapping.confirmed && mapping.category_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          title="Potwierdź"
+                          onClick={() => {
+                            upsertMapping.mutate(
+                              {
+                                external_category_id: mapping.external_category_id,
+                                external_category_name: mapping.external_category_name,
+                                category_id: mapping.category_id,
+                                confirmed: true,
+                              },
+                              {
+                                onSuccess: () => toast.success("Mapowanie potwierdzone"),
+                                onError: (error) => toast.error(getErrorMessage(error)),
+                              }
+                            );
+                          }}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        title="Usuń"
+                        onClick={() => {
+                          deleteMapping.mutate(mapping.id, {
+                            onSuccess: () => toast.success("Mapowanie usunięte"),
+                            onError: (error) => toast.error(getErrorMessage(error)),
+                          });
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }

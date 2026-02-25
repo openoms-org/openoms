@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	"github.com/google/uuid"
@@ -22,20 +23,25 @@ var (
 )
 
 type ProductCategoryService struct {
-	categoryRepo repository.ProductCategoryRepo
-	auditRepo    repository.AuditRepo
-	pool         *pgxpool.Pool
+	categoryRepo           repository.ProductCategoryRepo
+	marketplaceMappingRepo repository.MarketplaceCategoryMappingRepo
+	auditRepo              repository.AuditRepo
+	pool                   *pgxpool.Pool
+	logger                 *slog.Logger
 }
 
 func NewProductCategoryService(
 	categoryRepo repository.ProductCategoryRepo,
+	marketplaceMappingRepo repository.MarketplaceCategoryMappingRepo,
 	auditRepo repository.AuditRepo,
 	pool *pgxpool.Pool,
 ) *ProductCategoryService {
 	return &ProductCategoryService{
-		categoryRepo: categoryRepo,
-		auditRepo:    auditRepo,
-		pool:         pool,
+		categoryRepo:           categoryRepo,
+		marketplaceMappingRepo: marketplaceMappingRepo,
+		auditRepo:              auditRepo,
+		pool:                   pool,
+		logger:                 slog.Default().With("component", "product_category_service"),
 	}
 }
 
@@ -268,4 +274,129 @@ func (s *ProductCategoryService) GetDescendantIDs(ctx context.Context, tenantID,
 		return nil, fmt.Errorf("get descendant IDs: %w", err)
 	}
 	return ids, nil
+}
+
+// ResolveMarketplaceCategory resolves an external marketplace category to an internal category.
+// Priority: existing mapping → fuzzy match + auto-create mapping → auto-create category → defaultCategoryID → nil.
+// This is called within an existing transaction (tx already has tenant context set).
+func (s *ProductCategoryService) ResolveMarketplaceCategory(
+	ctx context.Context,
+	tx pgx.Tx,
+	tenantID uuid.UUID,
+	integrationID uuid.UUID,
+	externalCategoryID string,
+	externalCategoryName string,
+	autoCreate bool,
+	defaultCategoryID *uuid.UUID,
+) (*uuid.UUID, error) {
+	if externalCategoryID == "" {
+		return defaultCategoryID, nil
+	}
+
+	// 1. Check existing mapping
+	mapping, err := s.marketplaceMappingRepo.FindByExternalID(ctx, tx, integrationID, externalCategoryID)
+	if err != nil {
+		s.logger.Error("failed to find marketplace category mapping",
+			"integration_id", integrationID,
+			"external_category_id", externalCategoryID,
+			"error", err)
+		return defaultCategoryID, nil
+	}
+
+	if mapping != nil && mapping.CategoryID != nil {
+		return mapping.CategoryID, nil
+	}
+
+	// 2. No mapping or mapping without category_id — try fuzzy match by name
+	if externalCategoryName != "" && mapping == nil {
+		matches, err := s.categoryRepo.FuzzyMatch(ctx, tx, externalCategoryName)
+		if err != nil {
+			s.logger.Error("failed to fuzzy match category",
+				"external_category_name", externalCategoryName, "error", err)
+			return defaultCategoryID, nil
+		}
+
+		newMapping := &model.MarketplaceCategoryMapping{
+			ID:                   uuid.New(),
+			TenantID:             tenantID,
+			IntegrationID:        integrationID,
+			ExternalCategoryID:   externalCategoryID,
+			ExternalCategoryName: externalCategoryName,
+			AutoCreated:          true,
+			Confirmed:            false,
+		}
+
+		if len(matches) > 0 {
+			newMapping.CategoryID = &matches[0].ID
+			if err := s.marketplaceMappingRepo.Upsert(ctx, tx, newMapping); err != nil {
+				s.logger.Error("failed to create auto-matched mapping",
+					"external_category_id", externalCategoryID, "error", err)
+			}
+			return &matches[0].ID, nil
+		}
+
+		// 3. No fuzzy match — optionally auto-create internal category
+		if autoCreate {
+			newCat := &model.ProductCategory{
+				ID:       uuid.New(),
+				TenantID: tenantID,
+				Name:     externalCategoryName,
+				Slug:     model.GenerateSlug(externalCategoryName),
+				Color:    "#6b7280", // default gray
+			}
+			// Guard against empty slug from non-alphanumeric names
+			if newCat.Slug == "" {
+				newCat.Slug = newCat.ID.String()[:8]
+			}
+			// Ensure slug uniqueness
+			count, err := s.categoryRepo.CountBySlug(ctx, tx, newCat.Slug)
+			if err != nil {
+				s.logger.Error("failed to count slugs during auto-create",
+					"slug", newCat.Slug, "error", err)
+				// continue — DB unique constraint will catch true duplicates
+			} else if count > 0 {
+				newCat.Slug = fmt.Sprintf("%s-%d", newCat.Slug, count+1)
+			}
+			if err := s.categoryRepo.Create(ctx, tx, newCat); err != nil {
+				s.logger.Error("failed to auto-create category",
+					"name", externalCategoryName, "error", err)
+				// Still create mapping without category
+				if upsertErr := s.marketplaceMappingRepo.Upsert(ctx, tx, newMapping); upsertErr != nil {
+					s.logger.Error("failed to create unmapped mapping",
+						"external_category_id", externalCategoryID, "error", upsertErr)
+				}
+				return defaultCategoryID, nil
+			}
+			newMapping.CategoryID = &newCat.ID
+			if err := s.marketplaceMappingRepo.Upsert(ctx, tx, newMapping); err != nil {
+				s.logger.Error("failed to create auto-created mapping",
+					"external_category_id", externalCategoryID, "error", err)
+			}
+			return &newCat.ID, nil
+		}
+
+		// No autoCreate — create mapping without category
+		if err := s.marketplaceMappingRepo.Upsert(ctx, tx, newMapping); err != nil {
+			s.logger.Error("failed to create unmapped mapping",
+				"external_category_id", externalCategoryID, "error", err)
+		}
+	}
+
+	// 4. Mapping exists but no category_id, or no name to match — create/update mapping record
+	if mapping == nil && externalCategoryName == "" {
+		newMapping := &model.MarketplaceCategoryMapping{
+			ID:                 uuid.New(),
+			TenantID:           tenantID,
+			IntegrationID:      integrationID,
+			ExternalCategoryID: externalCategoryID,
+			AutoCreated:        true,
+			Confirmed:          false,
+		}
+		if err := s.marketplaceMappingRepo.Upsert(ctx, tx, newMapping); err != nil {
+			s.logger.Error("failed to create placeholder mapping",
+				"external_category_id", externalCategoryID, "error", err)
+		}
+	}
+
+	return defaultCategoryID, nil
 }

@@ -221,6 +221,14 @@ type ProductCategoryRepo interface {
 	CountBySlug(ctx context.Context, tx pgx.Tx, slug string) (int, error)
 }
 
+// MarketplaceCategoryMappingRepo defines the interface for marketplace category mapping persistence.
+type MarketplaceCategoryMappingRepo interface {
+	ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID) ([]model.MarketplaceCategoryMapping, error)
+	FindByExternalID(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID, externalCategoryID string) (*model.MarketplaceCategoryMapping, error)
+	Upsert(ctx context.Context, tx pgx.Tx, m *model.MarketplaceCategoryMapping) error
+	Delete(ctx context.Context, tx pgx.Tx, integrationID, id uuid.UUID) error
+}
+
 // InvoiceRepo defines the interface for invoice persistence operations.
 type InvoiceRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.InvoiceListFilter) ([]model.Invoice, int, error)

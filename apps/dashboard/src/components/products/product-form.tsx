@@ -28,7 +28,7 @@ import type { Product, CreateProductRequest, UpdateProductRequest } from "@/type
 import { normalizeProductImages } from "@/types/api";
 import { uploadFile, getErrorMessage } from "@/lib/api-client";
 import { toast } from "sonner";
-import { useProductCategories } from "@/hooks/use-product-categories";
+import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
 import { useImproveDescription, useTranslateDescription } from "@/hooks/use-ai";
 import { useSuppliers } from "@/hooks/use-suppliers";
 import { Switch } from "@/components/ui/switch";
@@ -76,7 +76,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
     normalizeProductImages(product?.images).map((img) => ({ url: img.url, alt: img.alt || "" }))
   );
   const [tags, setTags] = useState<string[]>(product?.tags || []);
-  const [selectedCategory, setSelectedCategory] = useState<string>(product?.category || "");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(product?.category_id || undefined);
   const [isDropship, setIsDropship] = useState(product?.is_dropship || false);
   const [dropshipSupplierId, setDropshipSupplierId] = useState<string>(product?.dropship_supplier_id || "");
   const { data: suppliersData } = useSuppliers({ limit: 100 });
@@ -84,7 +84,6 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const mainFileRef = useRef<HTMLInputElement>(null);
   const galleryFileRef = useRef<HTMLInputElement>(null);
-  const { data: categoriesConfig } = useProductCategories();
   const improveDescription = useImproveDescription();
   const translateDescription = useTranslateDescription();
 
@@ -168,7 +167,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         .filter((img) => img.url.trim() !== "")
         .map((img, i) => ({ url: img.url, alt: img.alt || undefined, position: i + 1 })),
       tags: tags.length > 0 ? tags : undefined,
-      category: selectedCategory && selectedCategory !== "__none__" ? selectedCategory : undefined,
+      category_id: selectedCategoryId || undefined,
       is_dropship: isDropship || undefined,
       dropship_supplier_id: isDropship && dropshipSupplierId ? dropshipSupplierId : undefined,
     });
@@ -287,22 +286,13 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="category">Kategoria</Label>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger>
-            <SelectValue placeholder="Wybierz kategorię" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">Brak kategorii</SelectItem>
-            {categoriesConfig?.categories
-              ?.sort((a, b) => a.position - b.position)
-              .map((cat) => (
-                <SelectItem key={cat.key} value={cat.key}>
-                  {cat.label}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        <Label>Kategoria</Label>
+        <CategoryTreePicker
+          value={selectedCategoryId}
+          onChange={setSelectedCategoryId}
+          placeholder="Wybierz kategorię..."
+          className="w-full"
+        />
       </div>
 
       <div className="space-y-2">

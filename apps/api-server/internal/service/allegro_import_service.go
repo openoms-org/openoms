@@ -31,6 +31,7 @@ type AllegroImportService struct {
 	integrationService *IntegrationService
 	productRepo        repository.ProductRepo
 	listingRepo        repository.ProductListingRepo
+	categoryService    *ProductCategoryService
 	pool               *pgxpool.Pool
 	stockSyncService   *StockSyncService
 	logger             *slog.Logger
@@ -47,12 +48,14 @@ func NewAllegroImportService(
 	integrationService *IntegrationService,
 	productRepo repository.ProductRepo,
 	listingRepo repository.ProductListingRepo,
+	categoryService *ProductCategoryService,
 	pool *pgxpool.Pool,
 ) *AllegroImportService {
 	return &AllegroImportService{
 		integrationService: integrationService,
 		productRepo:        productRepo,
 		listingRepo:        listingRepo,
+		categoryService:    categoryService,
 		pool:               pool,
 		logger:             slog.Default().With("component", "allegro_import"),
 	}
@@ -173,7 +176,7 @@ func (s *AllegroImportService) ImportOffers(ctx context.Context, tenantID uuid.U
 			continue
 		}
 
-		detail := s.processOffer(ctx, tenantID, integrationID, offer)
+		detail := s.processOffer(ctx, tenantID, integrationID, offer, client)
 		switch detail.Action {
 		case "created":
 			result.Created++
@@ -218,10 +221,18 @@ func (s *AllegroImportService) processOffer(
 	tenantID uuid.UUID,
 	integrationID uuid.UUID,
 	offer *allegrosdk.Offer,
+	client *allegrosdk.Client,
 ) model.AllegroImportDetail {
 	detail := model.AllegroImportDetail{
 		OfferID:   offer.ID,
 		OfferName: offer.Name,
+	}
+
+	// Fetch Allegro category name BEFORE the transaction to avoid holding a DB
+	// connection during an external HTTP call.
+	var categoryName string
+	if s.categoryService != nil && offer.Category != nil && offer.Category.ID != "" {
+		categoryName = s.fetchAllegroCategoryName(ctx, client, offer.Category.ID)
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -240,6 +251,19 @@ func (s *AllegroImportService) processOffer(
 			if err := s.createListing(ctx, tx, tenantID, matchedProduct.ID, integrationID, offer); err != nil {
 				return fmt.Errorf("create listing for matched product: %w", err)
 			}
+
+			// Backfill category_id if the existing product doesn't have one yet.
+			if s.categoryService != nil && matchedProduct.CategoryID == nil && offer.Category != nil && offer.Category.ID != "" {
+				categoryID, err := s.categoryService.ResolveMarketplaceCategory(
+					ctx, tx, tenantID, integrationID,
+					offer.Category.ID, categoryName,
+					true, nil,
+				)
+				if err == nil && categoryID != nil {
+					_ = s.productRepo.Update(ctx, tx, matchedProduct.ID, model.UpdateProductRequest{CategoryID: categoryID})
+				}
+			}
+
 			detail.Action = "linked"
 			detail.ProductID = matchedProduct.ID.String()
 			return nil
@@ -247,6 +271,19 @@ func (s *AllegroImportService) processOffer(
 
 		// No existing product — create a new one from the offer data.
 		product := mapAllegroOfferToProduct(*offer, tenantID)
+
+		// Resolve Allegro category to an internal product category via mapping system.
+		if s.categoryService != nil && offer.Category != nil && offer.Category.ID != "" {
+			categoryID, err := s.categoryService.ResolveMarketplaceCategory(
+				ctx, tx, tenantID, integrationID,
+				offer.Category.ID, categoryName,
+				true, nil,
+			)
+			if err == nil && categoryID != nil {
+				product.CategoryID = categoryID
+			}
+		}
+
 		if err := s.productRepo.Create(ctx, tx, &product); err != nil {
 			return fmt.Errorf("create product: %w", err)
 		}
@@ -269,6 +306,18 @@ func (s *AllegroImportService) processOffer(
 	}
 
 	return detail
+}
+
+// fetchAllegroCategoryName fetches a category name from Allegro API.
+// Best-effort: returns empty string on error (category will still be mapped without name).
+func (s *AllegroImportService) fetchAllegroCategoryName(ctx context.Context, client *allegrosdk.Client, categoryID string) string {
+	cat, err := client.Categories.Get(ctx, categoryID)
+	if err != nil {
+		s.logger.Warn("failed to fetch Allegro category name",
+			"category_id", categoryID, "error", err)
+		return ""
+	}
+	return cat.Name
 }
 
 // createListing creates a ProductListing record linking a product to an Allegro offer.
@@ -314,6 +363,12 @@ func mapAllegroOfferToProduct(offer allegrosdk.Offer, tenantID uuid.UUID) model.
 		sku := offer.External.ID
 		product.SKU = &sku
 		product.ExternalID = &sku
+	}
+
+	// Preserve the Allegro category ID on the product for reference/filtering.
+	if offer.Category != nil && offer.Category.ID != "" {
+		cat := offer.Category.ID
+		product.Category = &cat
 	}
 
 	if offer.SellingMode != nil {

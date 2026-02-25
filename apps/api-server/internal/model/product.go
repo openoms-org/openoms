@@ -28,6 +28,7 @@ type Product struct {
 	Height               *float64        `json:"height,omitempty"`
 	Depth                *float64        `json:"depth,omitempty"`
 	Category             *string         `json:"category,omitempty"`
+	CategoryID           *uuid.UUID      `json:"category_id,omitempty"`
 	ImageURL             *string         `json:"image_url,omitempty"`
 	Images               json.RawMessage `json:"images"`
 	HasVariants          bool            `json:"has_variants"`
@@ -57,6 +58,7 @@ type CreateProductRequest struct {
 	Height             *float64        `json:"height,omitempty"`
 	Depth              *float64        `json:"depth,omitempty"`
 	Category           *string         `json:"category,omitempty"`
+	CategoryID         *uuid.UUID      `json:"category_id,omitempty"`
 	ImageURL           *string         `json:"image_url,omitempty"`
 	Images             json.RawMessage `json:"images,omitempty"`
 	IsDropship         *bool           `json:"is_dropship,omitempty"`
@@ -119,6 +121,7 @@ type UpdateProductRequest struct {
 	Height             *float64         `json:"height,omitempty"`
 	Depth              *float64         `json:"depth,omitempty"`
 	Category           *string          `json:"category,omitempty"`
+	CategoryID         *uuid.UUID       `json:"category_id,omitempty"`
 	ImageURL           *string          `json:"image_url,omitempty"`
 	Images             *json.RawMessage `json:"images,omitempty"`
 	IsBundle           *bool            `json:"is_bundle,omitempty"`
@@ -131,7 +134,7 @@ func (r *UpdateProductRequest) Validate() error {
 		r.EAN == nil && r.Price == nil && r.StockQuantity == nil && r.Metadata == nil &&
 		r.Tags == nil && r.DescriptionShort == nil && r.DescriptionLong == nil &&
 		r.Weight == nil && r.Width == nil && r.Height == nil && r.Depth == nil &&
-		r.Category == nil && r.ImageURL == nil && r.Images == nil && r.IsBundle == nil &&
+		r.Category == nil && r.CategoryID == nil && r.ImageURL == nil && r.Images == nil && r.IsBundle == nil &&
 		r.IsDropship == nil && r.DropshipSupplierID == nil {
 		return errors.New("at least one field must be provided")
 	}
