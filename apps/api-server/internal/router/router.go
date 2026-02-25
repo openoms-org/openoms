@@ -80,6 +80,7 @@ type RouterDeps struct {
 	AllegroPolicies     *handler.AllegroPoliciesHandler
 	AllegroListings     *handler.AllegroListingsHandler
 	WooCommerceListings *handler.WooCommerceListingsHandler
+	ErliListings        *handler.ErliListingsHandler
 	Tracking            *handler.TrackingHandler
 	Feed                *handler.FeedHandler
 	PurchaseOrder       *handler.PurchaseOrderHandler
@@ -468,6 +469,9 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Post("/allegro", deps.AllegroListings.CreateListing)
 						if deps.WooCommerceListings != nil {
 							r.Post("/woocommerce", deps.WooCommerceListings.CreateListing)
+						}
+						if deps.ErliListings != nil {
+							r.Post("/erli", deps.ErliListings.CreateListing)
 						}
 						r.Get("/{listingId}", deps.AllegroListings.GetListing)
 						r.Patch("/{listingId}", deps.AllegroListings.UpdateListing)
