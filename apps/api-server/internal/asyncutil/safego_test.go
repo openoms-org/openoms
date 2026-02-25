@@ -1,4 +1,4 @@
-package util
+package asyncutil
 
 import (
 	"sync"
@@ -38,7 +38,7 @@ func TestSafeGo_RecoversPanic(t *testing.T) {
 	}
 }
 
-func TestSafeGo_RunsAsynchronously(t *testing.T) {
+func TestSafeGo_RunsAsynchronously(_ *testing.T) {
 	ch := make(chan struct{})
 
 	SafeGo(func() {

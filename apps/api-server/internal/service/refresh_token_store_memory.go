@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/util"
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 )
 
 type memRefreshFamily struct {
@@ -35,7 +35,7 @@ func NewMemoryRefreshTokenStore() *MemoryRefreshTokenStore {
 		tokens:   make(map[string]*memRefreshToken),
 		done:     make(chan struct{}),
 	}
-	util.SafeGo(func() { s.cleanup() })
+	asyncutil.SafeGo(func() { s.cleanup() })
 	return s
 }
 

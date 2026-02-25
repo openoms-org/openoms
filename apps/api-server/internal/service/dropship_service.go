@@ -12,11 +12,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
-	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 )
 
 var (
@@ -297,7 +297,7 @@ func (s *DropshipService) AutoRouteOrder(ctx context.Context, tenantID, orderID,
 
 	if s.webhookDispatch != nil {
 		for _, ds := range result {
-			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", ds) })
+			asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", ds) })
 		}
 	}
 	return result, nil
@@ -385,7 +385,7 @@ func (s *DropshipService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	}
 
 	if s.webhookDispatch != nil {
-		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", d) })
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", d) })
 	}
 	return d, nil
 }
@@ -460,7 +460,7 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 	}
 
 	if s.webhookDispatch != nil {
-		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.status_updated", d) })
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.status_updated", d) })
 	}
 	return d, nil
 }
@@ -515,7 +515,7 @@ func (s *DropshipService) Cancel(ctx context.Context, tenantID, id uuid.UUID, ac
 	}
 
 	if s.webhookDispatch != nil {
-		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.cancelled", d) })
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.cancelled", d) })
 	}
 	return d, nil
 }

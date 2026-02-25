@@ -1,4 +1,5 @@
-package util
+// Package asyncutil provides helpers for safe asynchronous execution.
+package asyncutil
 
 import (
 	"log/slog"
