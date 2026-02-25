@@ -126,3 +126,32 @@ func BuildCategoryTree(categories []ProductCategory) []ProductCategory {
 
 	return attachChildren(roots)
 }
+
+// MarketplaceCategoryMapping maps an external marketplace category to an internal OMS category.
+type MarketplaceCategoryMapping struct {
+	ID                   uuid.UUID  `json:"id"`
+	TenantID             uuid.UUID  `json:"tenant_id"`
+	IntegrationID        uuid.UUID  `json:"integration_id"`
+	ExternalCategoryID   string     `json:"external_category_id"`
+	ExternalCategoryName string     `json:"external_category_name"`
+	CategoryID           *uuid.UUID `json:"category_id,omitempty"`
+	AutoCreated          bool       `json:"auto_created"`
+	Confirmed            bool       `json:"confirmed"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+}
+
+// UpsertMarketplaceCategoryMappingRequest is the request body for creating/updating a mapping.
+type UpsertMarketplaceCategoryMappingRequest struct {
+	ExternalCategoryID   string     `json:"external_category_id"`
+	ExternalCategoryName string     `json:"external_category_name,omitempty"`
+	CategoryID           *uuid.UUID `json:"category_id,omitempty"`
+	Confirmed            bool       `json:"confirmed"`
+}
+
+func (r *UpsertMarketplaceCategoryMappingRequest) Validate() error {
+	if strings.TrimSpace(r.ExternalCategoryID) == "" {
+		return errors.New("external_category_id is required")
+	}
+	return nil
+}
