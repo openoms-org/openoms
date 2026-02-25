@@ -104,6 +104,21 @@ export function usePushAllStock() {
   });
 }
 
+export function usePushChannelStock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (channelId: string) =>
+      apiClient<{ message: string }>(`/v1/stock-sync/push/channel/${channelId}`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["stock-sync-channels"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-sync-events"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-sync-dashboard"] });
+    },
+  });
+}
+
 export function usePushProductStock() {
   const queryClient = useQueryClient();
   return useMutation({

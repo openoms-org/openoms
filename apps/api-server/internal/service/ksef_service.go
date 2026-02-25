@@ -29,6 +29,7 @@ type KSeFSettings struct {
 	Environment string `json:"environment"` // "test" or "production"
 	NIP         string `json:"nip"`
 	Token       string `json:"token"`
+	AutoSend    bool   `json:"auto_send"` // Auto-send to KSeF on invoice creation
 	// Company details for XML generation
 	CompanyName    string `json:"company_name"`
 	CompanyStreet  string `json:"company_street"`
@@ -141,9 +142,21 @@ func (s *KSeFService) TestConnection(ctx context.Context, tenantID uuid.UUID) (*
 }
 
 // SendToKSeF sends a single invoice to KSeF.
+// Uses a three-phase approach to avoid holding a DB connection during external API calls:
+// Phase 1: short DB transaction to read invoice data and validate status.
+// Phase 2: external KSeF API calls (no DB connection held).
+// Phase 3: short DB transaction to update invoice with results.
 func (s *KSeFService) SendToKSeF(ctx context.Context, tenantID, invoiceID, actorID uuid.UUID, ip string) error {
-	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		inv, err := s.invoiceRepo.FindByID(ctx, tx, invoiceID)
+	// Phase 1: Read invoice, settings, and order data in a short transaction.
+	var inv *model.Invoice
+	var order *model.Order
+	var cfg KSeFSettings
+	var xmlBytes []byte
+	var existingRetryCount int
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		inv, err = s.invoiceRepo.FindByID(ctx, tx, invoiceID)
 		if err != nil {
 			return err
 		}
@@ -151,11 +164,11 @@ func (s *KSeFService) SendToKSeF(ctx context.Context, tenantID, invoiceID, actor
 			return ErrInvoiceNotFound
 		}
 
-		if inv.KSeFStatus != "not_sent" {
+		if inv.KSeFStatus != "not_sent" && inv.KSeFStatus != "retrying" {
 			return ErrKSeFAlreadySent
 		}
 
-		cfg, err := s.loadKSeFSettings(ctx, tx, tenantID)
+		cfg, err = s.loadKSeFSettings(ctx, tx, tenantID)
 		if err != nil {
 			return err
 		}
@@ -164,46 +177,69 @@ func (s *KSeFService) SendToKSeF(ctx context.Context, tenantID, invoiceID, actor
 		}
 
 		// Load order for buyer details
-		order, err := s.orderRepo.FindByID(ctx, tx, inv.OrderID)
+		order, err = s.orderRepo.FindByID(ctx, tx, inv.OrderID)
 		if err != nil {
 			return fmt.Errorf("load order: %w", err)
 		}
 
-		// Build the invoice XML
+		// Preserve existing retry_count from ksef_response
+		if inv.KSeFResponse != nil {
+			var existing map[string]any
+			if jsonErr := json.Unmarshal(inv.KSeFResponse, &existing); jsonErr == nil {
+				if rc, ok := existing["retry_count"].(float64); ok {
+					existingRetryCount = int(rc)
+				}
+			}
+		}
+
+		// Build the invoice XML while we still have the data
 		invoiceData := s.buildInvoiceData(inv, order, cfg)
-		xmlBytes, err := ksef.BuildInvoiceXML(invoiceData)
+		xmlBytes, err = ksef.BuildInvoiceXML(invoiceData)
 		if err != nil {
 			return fmt.Errorf("build invoice XML: %w", err)
 		}
 
-		// Initialize session, send invoice, terminate session
-		client := s.createClient(cfg)
-		now := time.Now()
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
-		// Step 1: Get authorisation challenge
-		challenge, err := client.Session.AuthorisationChallenge(ctx, cfg.NIP)
-		if err != nil {
-			return s.markKSeFError(ctx, tx, inv, fmt.Errorf("authorisation challenge: %w", err))
-		}
+	// Phase 2: External KSeF API calls — no DB connection held.
+	client := s.createClient(cfg)
+	now := time.Now()
 
-		// Step 2: Init session with token
-		session, err := client.Session.InitToken(ctx, cfg.NIP, cfg.Token, challenge.Challenge)
-		if err != nil {
-			return s.markKSeFError(ctx, tx, inv, fmt.Errorf("init session: %w", err))
-		}
+	// Step 1: Get authorisation challenge
+	challenge, err := client.Session.AuthorisationChallenge(ctx, cfg.NIP)
+	if err != nil {
+		ksefErr := fmt.Errorf("authorisation challenge: %w", err)
+		s.markKSeFErrorOutsideTx(ctx, tenantID, inv, existingRetryCount, ksefErr)
+		return ksefErr
+	}
 
-		// Step 3: Send the invoice
-		sendResp, err := client.Invoice.Send(ctx, session.SessionToken.Token, xmlBytes)
-		if err != nil {
-			// Try to terminate session even if send failed
-			_, _ = client.Session.Terminate(ctx, session.SessionToken.Token)
-			return s.markKSeFError(ctx, tx, inv, fmt.Errorf("send invoice: %w", err))
-		}
+	// Step 2: Init session with token
+	session, err := client.Session.InitToken(ctx, cfg.NIP, cfg.Token, challenge.Challenge)
+	if err != nil {
+		ksefErr := fmt.Errorf("init session: %w", err)
+		s.markKSeFErrorOutsideTx(ctx, tenantID, inv, existingRetryCount, ksefErr)
+		return ksefErr
+	}
+	// Ensure session cleanup on any failure path (context cancellation, panic, etc.).
+	// Uses background context since the caller's context may already be cancelled.
+	defer func() {
+		_, _ = client.Session.Terminate(context.Background(), session.SessionToken.Token)
+	}()
 
-		// Step 4: Terminate session
-		_, _ = client.Session.Terminate(ctx, session.SessionToken.Token)
+	// Step 3: Send the invoice
+	sendResp, err := client.Invoice.Send(ctx, session.SessionToken.Token, xmlBytes)
+	if err != nil {
+		ksefErr := fmt.Errorf("send invoice: %w", err)
+		s.markKSeFErrorOutsideTx(ctx, tenantID, inv, existingRetryCount, ksefErr)
+		return ksefErr
+	}
 
-		// Update invoice with KSeF tracking info
+	// Phase 3: Short DB transaction to update invoice with results.
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		inv.KSeFStatus = "pending"
 		inv.KSeFSentAt = &now
 
@@ -212,6 +248,7 @@ func (s *KSeFService) SendToKSeF(ctx context.Context, tenantID, invoiceID, actor
 			"reference_number":         sendResp.ReferenceNumber,
 			"processing_code":          sendResp.ProcessingCode,
 			"timestamp":                sendResp.Timestamp,
+			"retry_count":              existingRetryCount,
 		})
 		inv.KSeFResponse = responseJSON
 
@@ -229,6 +266,25 @@ func (s *KSeFService) SendToKSeF(ctx context.Context, tenantID, invoiceID, actor
 			IPAddress:  ip,
 		})
 	})
+}
+
+// markKSeFErrorOutsideTx persists a KSeF error status using its own short transaction.
+// Used when the error occurs outside the main DB transaction (during external API calls).
+func (s *KSeFService) markKSeFErrorOutsideTx(ctx context.Context, tenantID uuid.UUID, inv *model.Invoice, retryCount int, ksefErr error) {
+	updateErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		inv.KSeFStatus = "error"
+		errMsg := ksefErr.Error()
+		responseJSON, _ := json.Marshal(map[string]any{
+			"error":         errMsg,
+			"retry_count":   retryCount,
+			"last_error_at": time.Now().UTC().Format(time.RFC3339),
+		})
+		inv.KSeFResponse = responseJSON
+		return s.invoiceRepo.Update(ctx, tx, inv)
+	})
+	if updateErr != nil {
+		slog.Error("ksef: failed to persist error status", "invoice_id", inv.ID, "update_error", updateErr, "ksef_error", ksefErr)
+	}
 }
 
 // CheckKSeFStatus checks the KSeF status of a submitted invoice.
@@ -352,68 +408,80 @@ func (s *KSeFService) BulkSendToKSeF(ctx context.Context, tenantID uuid.UUID, in
 }
 
 // SyncPendingStatuses checks status of all pending KSeF invoices for a tenant.
+// Uses a two-phase approach to avoid holding a DB connection during external API calls:
+// Phase 1: gather pending invoices + KSeF settings inside a short transaction.
+// Phase 2: call KSeF API for each invoice, persisting updates in short per-invoice transactions.
+// Batch size is limited to 100 invoices per run (enforced by FindPendingKSeF SQL LIMIT).
 func (s *KSeFService) SyncPendingStatuses(ctx context.Context, tenantID uuid.UUID) (int, error) {
-	synced := 0
+	// Phase 1: gather data inside short transaction
+	var pending []model.Invoice
+	var cfg KSeFSettings
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		pending, err := s.invoiceRepo.FindPendingKSeF(ctx, tx)
+		var err error
+		pending, err = s.invoiceRepo.FindPendingKSeF(ctx, tx)
 		if err != nil {
 			return err
 		}
-
 		if len(pending) == 0 {
 			return nil
 		}
-
-		cfg, err := s.loadKSeFSettings(ctx, tx, tenantID)
-		if err != nil || !cfg.Enabled {
-			return nil
-		}
-
-		client := s.createClient(cfg)
-
-		for _, inv := range pending {
-			var respData map[string]any
-			if inv.KSeFResponse != nil {
-				_ = json.Unmarshal(inv.KSeFResponse, &respData)
-			}
-			refNum, _ := respData["reference_number"].(string)
-			if refNum == "" {
-				continue
-			}
-
-			upo, err := client.Invoice.GetUPO(ctx, refNum)
-			if err != nil {
-				slog.Warn("ksef: sync status failed", "invoice_id", inv.ID, "error", err)
-				continue
-			}
-
-			if upo.ProcessingCode == 200 {
-				responseJSON, _ := json.Marshal(map[string]any{
-					"reference_number":       upo.ReferenceNumber,
-					"processing_code":        upo.ProcessingCode,
-					"processing_description": upo.ProcessingDescription,
-				})
-				if err := s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, &upo.ReferenceNumber, "accepted", responseJSON); err != nil {
-					slog.Error("ksef: update status failed", "invoice_id", inv.ID, "error", err)
-					continue
-				}
-				synced++
-			} else if upo.ProcessingCode >= 400 {
-				responseJSON, _ := json.Marshal(map[string]any{
-					"reference_number":       upo.ReferenceNumber,
-					"processing_code":        upo.ProcessingCode,
-					"processing_description": upo.ProcessingDescription,
-				})
-				if err := s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, nil, "rejected", responseJSON); err != nil {
-					slog.Error("ksef: update status failed", "invoice_id", inv.ID, "error", err)
-					continue
-				}
-				synced++
-			}
-		}
-		return nil
+		cfg, err = s.loadKSeFSettings(ctx, tx, tenantID)
+		return err
 	})
-	return synced, err
+	if err != nil || len(pending) == 0 || !cfg.Enabled {
+		return 0, err
+	}
+
+	// Phase 2: external API calls + short DB updates outside the main transaction
+	client := s.createClient(cfg)
+	synced := 0
+
+	for _, inv := range pending {
+		var respData map[string]any
+		if inv.KSeFResponse != nil {
+			_ = json.Unmarshal(inv.KSeFResponse, &respData)
+		}
+		refNum, _ := respData["reference_number"].(string)
+		if refNum == "" {
+			continue
+		}
+
+		upo, err := client.Invoice.GetUPO(ctx, refNum)
+		if err != nil {
+			slog.Warn("ksef: failed to check status", "invoice_id", inv.ID, "error", err)
+			continue
+		}
+
+		if upo.ProcessingCode == 200 {
+			responseJSON, _ := json.Marshal(map[string]any{
+				"reference_number":       upo.ReferenceNumber,
+				"processing_code":        upo.ProcessingCode,
+				"processing_description": upo.ProcessingDescription,
+			})
+			if updateErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+				return s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, &upo.ReferenceNumber, "accepted", responseJSON)
+			}); updateErr != nil {
+				slog.Error("ksef: update status failed", "invoice_id", inv.ID, "error", updateErr)
+				continue
+			}
+			synced++
+		} else if upo.ProcessingCode >= 400 {
+			responseJSON, _ := json.Marshal(map[string]any{
+				"reference_number":       upo.ReferenceNumber,
+				"processing_code":        upo.ProcessingCode,
+				"processing_description": upo.ProcessingDescription,
+			})
+			if updateErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+				return s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, nil, "rejected", responseJSON)
+			}); updateErr != nil {
+				slog.Error("ksef: update status failed", "invoice_id", inv.ID, "error", updateErr)
+				continue
+			}
+			synced++
+		}
+	}
+
+	return synced, nil
 }
 
 // loadKSeFSettings reads the "ksef" section from tenant settings.
@@ -619,13 +687,131 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 }
 
 // markKSeFError updates an invoice with a KSeF error status.
+// Uses "error" status (retryable) instead of "rejected" (terminal, only for UPO rejections).
 func (s *KSeFService) markKSeFError(ctx context.Context, tx pgx.Tx, inv *model.Invoice, err error) error {
-	inv.KSeFStatus = "rejected"
+	// Preserve existing retry_count from ksef_response
+	retryCount := 0
+	if inv.KSeFResponse != nil {
+		var existing map[string]any
+		if jsonErr := json.Unmarshal(inv.KSeFResponse, &existing); jsonErr == nil {
+			if rc, ok := existing["retry_count"].(float64); ok {
+				retryCount = int(rc)
+			}
+		}
+	}
+
+	inv.KSeFStatus = "error"
 	errMsg := err.Error()
 	responseJSON, _ := json.Marshal(map[string]any{
-		"error": errMsg,
+		"error":         errMsg,
+		"retry_count":   retryCount,
+		"last_error_at": time.Now().UTC().Format(time.RFC3339),
 	})
 	inv.KSeFResponse = responseJSON
-	_ = s.invoiceRepo.Update(ctx, tx, inv)
+	if updateErr := s.invoiceRepo.Update(ctx, tx, inv); updateErr != nil {
+		slog.Error("ksef: failed to persist error status", "invoice_id", inv.ID, "update_error", updateErr, "ksef_error", err)
+	}
 	return err
+}
+
+// RetryErroredInvoices retries sending invoices with ksef_status = 'error'.
+// Max 3 retries with exponential backoff (5min, 15min, 45min).
+// After max retries, status is set to "rejected" (terminal).
+// Batch size is limited to 100 invoices per run (enforced by FindErrorKSeF SQL LIMIT).
+func (s *KSeFService) RetryErroredInvoices(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	// Phase 1: Inside a single transaction, evaluate errored invoices and either
+	// mark them as "rejected" (terminal) or set them to "retrying" (intermediate).
+	// Collect IDs of invoices that were set to "retrying" for the send phase.
+	var retryIDs []uuid.UUID
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		errored, err := s.invoiceRepo.FindErrorKSeF(ctx, tx)
+		if err != nil {
+			return err
+		}
+
+		if len(errored) == 0 {
+			return nil
+		}
+
+		cfg, err := s.loadKSeFSettings(ctx, tx, tenantID)
+		if err != nil || !cfg.Enabled {
+			return nil
+		}
+
+		now := time.Now()
+		for _, inv := range errored {
+			retryCount := 0
+			var lastErrorAt time.Time
+
+			if inv.KSeFResponse != nil {
+				var respData map[string]any
+				if jsonErr := json.Unmarshal(inv.KSeFResponse, &respData); jsonErr == nil {
+					if rc, ok := respData["retry_count"].(float64); ok {
+						retryCount = int(rc)
+					}
+					if lea, ok := respData["last_error_at"].(string); ok {
+						lastErrorAt, _ = time.Parse(time.RFC3339, lea)
+					}
+				}
+			}
+
+			// Max 3 retries — after that, mark as "rejected" (terminal)
+			const maxRetries = 3
+			if retryCount >= maxRetries {
+				responseJSON, _ := json.Marshal(map[string]any{
+					"error":       "max retries exceeded",
+					"retry_count": retryCount,
+				})
+				if err := s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, nil, "rejected", responseJSON); err != nil {
+					slog.Error("ksef: failed to mark rejected", "invoice_id", inv.ID, "error", err)
+				}
+				continue
+			}
+
+			// Exponential backoff: 5min, 15min, 45min
+			backoff := 5 * time.Minute * time.Duration(pow3(retryCount))
+			if !lastErrorAt.IsZero() && now.Before(lastErrorAt.Add(backoff)) {
+				continue // Too early to retry
+			}
+
+			// Reset status to "retrying" so SendToKSeF accepts it, and bump retry_count
+			responseJSON, _ := json.Marshal(map[string]any{
+				"retry_count":   retryCount + 1,
+				"last_error_at": now.UTC().Format(time.RFC3339),
+			})
+			if err := s.invoiceRepo.UpdateKSeFStatus(ctx, tx, inv.ID, nil, "retrying", responseJSON); err != nil {
+				slog.Error("ksef: failed to reset for retry", "invoice_id", inv.ID, "error", err)
+				continue
+			}
+			retryIDs = append(retryIDs, inv.ID)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// Phase 2: Send each "retrying" invoice outside the transaction.
+	// SendToKSeF opens its own WithTenant — no nesting risk.
+	// Track actual send successes, not just resets.
+	sent := 0
+	for _, id := range retryIDs {
+		if sendErr := s.SendToKSeF(ctx, tenantID, id, uuid.Nil, "system"); sendErr != nil {
+			slog.Warn("ksef: retry send failed", "invoice_id", id, "error", sendErr)
+		} else {
+			sent++
+		}
+	}
+
+	return sent, nil
+}
+
+// pow3 returns 3^n (used for exponential backoff multiplier).
+func pow3(n int) int {
+	result := 1
+	for range n {
+		result *= 3
+	}
+	return result
 }

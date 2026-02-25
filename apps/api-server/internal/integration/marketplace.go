@@ -49,6 +49,12 @@ type MarketplaceProvider interface {
 	UpdatePrice(ctx context.Context, externalOfferID string, price float64) error
 }
 
+// ListingActivator is optionally implemented by providers that support activating/relisting
+// marketplace offers (e.g. Allegro offer publication commands).
+type ListingActivator interface {
+	ActivateOffer(ctx context.Context, externalOfferID string) error
+}
+
 // BulkStockUpdater is optionally implemented by providers that support batch stock updates.
 type BulkStockUpdater interface {
 	BulkUpdateStock(ctx context.Context, updates []StockUpdate) error

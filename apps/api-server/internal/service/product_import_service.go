@@ -20,9 +20,15 @@ import (
 
 // ProductImportService handles CSV import/export of products.
 type ProductImportService struct {
-	productRepo repository.ProductRepo
-	auditRepo   repository.AuditRepo
-	pool        *pgxpool.Pool
+	productRepo      repository.ProductRepo
+	auditRepo        repository.AuditRepo
+	pool             *pgxpool.Pool
+	stockSyncService *StockSyncService
+}
+
+// SetStockSyncService sets the stock sync service for propagating stock changes after import.
+func (s *ProductImportService) SetStockSyncService(svc *StockSyncService) {
+	s.stockSyncService = svc
 }
 
 // NewProductImportService creates a new ProductImportService.
@@ -206,7 +212,7 @@ func (s *ProductImportService) ImportCSV(
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for rowNum := 1; rowNum < len(records); rowNum++ {
 			row := records[rowNum]
-			rowErr := s.importProductRow(ctx, tx, tenantID, row, headerIdx, rowNum, result)
+			_, rowErr := s.importProductRow(ctx, tx, tenantID, row, headerIdx, rowNum, result)
 			if rowErr != nil {
 				result.Errors = append(result.Errors, *rowErr)
 			}
@@ -236,6 +242,8 @@ func (s *ProductImportService) ImportCSV(
 	return result, nil
 }
 
+// importProductRow processes a single CSV row and returns the product ID if stock was set (for sync),
+// or uuid.Nil if no stock change occurred. Returns an ImportError if the row failed.
 func (s *ProductImportService) importProductRow(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -244,7 +252,7 @@ func (s *ProductImportService) importProductRow(
 	headerIdx map[string]int,
 	rowNum int,
 	result *ProductImportResult,
-) *model.ImportError {
+) (uuid.UUID, *model.ImportError) {
 	getVal := func(field string) string {
 		idx, ok := headerIdx[field]
 		if !ok || idx >= len(row) {
@@ -255,7 +263,7 @@ func (s *ProductImportService) importProductRow(
 
 	name := getVal("name")
 	if name == "" {
-		return &model.ImportError{Row: rowNum, Field: "name", Message: "name is required"}
+		return uuid.Nil, &model.ImportError{Row: rowNum, Field: "name", Message: "name is required"}
 	}
 
 	sku := getVal("sku")
@@ -270,25 +278,27 @@ func (s *ProductImportService) importProductRow(
 		v = strings.ReplaceAll(v, ",", ".")
 		parsed, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			return &model.ImportError{Row: rowNum, Field: "price", Message: fmt.Sprintf("invalid number: %s", v)}
+			return uuid.Nil, &model.ImportError{Row: rowNum, Field: "price", Message: fmt.Sprintf("invalid number: %s", v)}
 		}
 		if parsed < 0 {
-			return &model.ImportError{Row: rowNum, Field: "price", Message: "price must not be negative"}
+			return uuid.Nil, &model.ImportError{Row: rowNum, Field: "price", Message: "price must not be negative"}
 		}
 		price = parsed
 	}
 
 	// Parse stock_quantity
 	var stockQty int
+	hasStock := false
 	if v := getVal("stock_quantity"); v != "" {
 		parsed, err := strconv.Atoi(v)
 		if err != nil {
-			return &model.ImportError{Row: rowNum, Field: "stock_quantity", Message: fmt.Sprintf("invalid integer: %s", v)}
+			return uuid.Nil, &model.ImportError{Row: rowNum, Field: "stock_quantity", Message: fmt.Sprintf("invalid integer: %s", v)}
 		}
 		if parsed < 0 {
-			return &model.ImportError{Row: rowNum, Field: "stock_quantity", Message: "stock_quantity must not be negative"}
+			return uuid.Nil, &model.ImportError{Row: rowNum, Field: "stock_quantity", Message: "stock_quantity must not be negative"}
 		}
 		stockQty = parsed
+		hasStock = true
 	}
 
 	// Parse tags (comma-separated)
@@ -328,7 +338,7 @@ func (s *ProductImportService) importProductRow(
 	if sku != "" {
 		existing, err := s.productRepo.FindBySKU(ctx, tx, sku)
 		if err != nil {
-			return &model.ImportError{Row: rowNum, Message: fmt.Sprintf("error looking up SKU: %s", err.Error())}
+			return uuid.Nil, &model.ImportError{Row: rowNum, Message: fmt.Sprintf("error looking up SKU: %s", err.Error())}
 		}
 		if existing != nil {
 			// Update existing product
@@ -361,10 +371,14 @@ func (s *ProductImportService) importProductRow(
 			}
 
 			if err := s.productRepo.Update(ctx, tx, existing.ID, req); err != nil {
-				return &model.ImportError{Row: rowNum, Message: fmt.Sprintf("failed to update product: %s", err.Error())}
+				return uuid.Nil, &model.ImportError{Row: rowNum, Message: fmt.Sprintf("failed to update product: %s", err.Error())}
 			}
 			result.Updated++
-			return nil
+			// Return product ID for stock sync if stock was in the CSV
+			if hasStock {
+				return existing.ID, nil
+			}
+			return uuid.Nil, nil
 		}
 	}
 
@@ -403,8 +417,12 @@ func (s *ProductImportService) importProductRow(
 	}
 
 	if err := s.productRepo.Create(ctx, tx, product); err != nil {
-		return &model.ImportError{Row: rowNum, Message: fmt.Sprintf("failed to create product: %s", err.Error())}
+		return uuid.Nil, &model.ImportError{Row: rowNum, Message: fmt.Sprintf("failed to create product: %s", err.Error())}
 	}
 	result.Created++
-	return nil
+	// Return product ID for stock sync if stock was set
+	if hasStock && stockQty > 0 {
+		return product.ID, nil
+	}
+	return uuid.Nil, nil
 }

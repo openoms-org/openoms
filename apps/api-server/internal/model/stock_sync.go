@@ -69,7 +69,9 @@ type ChannelSummary struct {
 	StockBuffer int        `json:"stock_buffer"`
 	LastSyncAt  *time.Time `json:"last_sync_at,omitempty"`
 	LastError   *string    `json:"last_error,omitempty"`
-	Status      string     `json:"status"` // ok, warning, error
+	Status      string     `json:"status"`       // ok, warning, error
+	ErrorCount  int        `json:"error_count"`  // errors in last 24h
+	ItemsSynced int        `json:"items_synced"` // items in last sync
 }
 
 // Valid channel types.
@@ -91,12 +93,19 @@ var validSyncModes = map[string]bool{
 
 // Valid trigger types.
 var validTriggerTypes = map[string]bool{
-	"order_placed":    true,
-	"order_cancelled": true,
-	"order_shipped":   true,
-	"stock_adjusted":  true,
-	"manual":          true,
-	"recount":         true,
+	"order_placed":       true,
+	"order_cancelled":    true,
+	"order_shipped":      true,
+	"stock_adjusted":     true,
+	"manual":             true,
+	"manual_update":      true,
+	"recount":            true,
+	"product_created":    true,
+	"product_import":     true,
+	"warehouse_document": true,
+	"supplier_sync":      true,
+	"supplier_delinked":  true,
+	"allegro_import":     true,
 }
 
 // CreateStockSyncChannelRequest is the payload for creating a stock sync channel.

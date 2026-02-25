@@ -76,6 +76,25 @@ func (r *UpdateProductListingRequest) Validate() error {
 	return nil
 }
 
+// AllegroImportResult contains the summary of an Allegro offer import operation.
+type AllegroImportResult struct {
+	TotalOffers int                   `json:"total_offers"`
+	Created     int                   `json:"created"`
+	Linked      int                   `json:"linked"`
+	Skipped     int                   `json:"skipped"`
+	Errors      int                   `json:"errors"`
+	Details     []AllegroImportDetail `json:"details,omitempty"`
+}
+
+// AllegroImportDetail describes the outcome of importing a single Allegro offer.
+type AllegroImportDetail struct {
+	OfferID   string `json:"offer_id"`
+	OfferName string `json:"offer_name"`
+	Action    string `json:"action"` // "created", "linked", "skipped", "error"
+	ProductID string `json:"product_id,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
 type SyncJob struct {
 	ID             uuid.UUID       `json:"id"`
 	TenantID       uuid.UUID       `json:"tenant_id"`

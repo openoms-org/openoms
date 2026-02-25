@@ -24,11 +24,17 @@ type ProductService struct {
 	pool              *pgxpool.Pool
 	webhookDispatch   *WebhookDispatchService
 	automationService *AutomationService
+	stockSyncService  *StockSyncService
 }
 
 // SetAutomationService sets the automation service for rule processing.
 func (s *ProductService) SetAutomationService(automationSvc *AutomationService) {
 	s.automationService = automationSvc
+}
+
+// SetStockSyncService sets the stock sync service for propagating stock changes.
+func (s *ProductService) SetStockSyncService(svc *StockSyncService) {
+	s.stockSyncService = svc
 }
 
 func NewProductService(
@@ -149,6 +155,12 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 		"source": product.Source,
 	})
+	// Trigger marketplace stock sync if product was created with stock
+	if s.stockSyncService != nil && product.StockQuantity > 0 {
+		asyncutil.SafeGo(func() {
+			s.stockSyncService.OnStockChange(context.Background(), tenantID, product.ID, "product_created", 0, product.StockQuantity)
+		})
+	}
 	return product, nil
 }
 
@@ -172,6 +184,7 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 	}
 
 	var product *model.Product
+	var oldStockQty int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error
 		product, err = s.productRepo.FindByID(ctx, tx, productID)
@@ -181,6 +194,7 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 		if product == nil {
 			return ErrProductNotFound
 		}
+		oldStockQty = product.StockQuantity
 
 		if err := s.productRepo.Update(ctx, tx, productID, req); err != nil {
 			return err
@@ -215,6 +229,12 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 			"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 			"source": product.Source,
 		})
+		// Trigger marketplace stock sync if stock quantity changed
+		if s.stockSyncService != nil && req.StockQuantity != nil && product.StockQuantity != oldStockQty {
+			asyncutil.SafeGo(func() {
+				s.stockSyncService.OnStockChange(context.Background(), tenantID, productID, "manual_update", oldStockQty, product.StockQuantity)
+			})
+		}
 	}
 	return product, err
 }

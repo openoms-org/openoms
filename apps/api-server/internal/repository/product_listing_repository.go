@@ -146,6 +146,29 @@ func (r *ProductListingRepository) FindByProductAndIntegration(ctx context.Conte
 	return &l, nil
 }
 
+func (r *ProductListingRepository) FindByExternalIDAndIntegration(ctx context.Context, tx pgx.Tx, externalID string, integrationID uuid.UUID) (*model.ProductListing, error) {
+	var l model.ProductListing
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, product_id, integration_id, external_id,
+		        status, url, price_override, stock_override,
+		        sync_status, last_synced_at, error_message, stock_sync_mode, metadata,
+		        created_at, updated_at
+		 FROM product_listings WHERE external_id = $1 AND integration_id = $2`, externalID, integrationID,
+	).Scan(
+		&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
+		&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
+		&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
+		&l.CreatedAt, &l.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find product listing by external id and integration: %w", err)
+	}
+	return &l, nil
+}
+
 func (r *ProductListingRepository) ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,

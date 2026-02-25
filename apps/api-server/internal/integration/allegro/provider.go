@@ -62,6 +62,11 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 
 func (p *Provider) ProviderName() string { return "allegro" }
 
+// SDKClient returns the underlying Allegro SDK client for direct API access.
+func (p *Provider) SDKClient() *allegrosdk.Client {
+	return p.client
+}
+
 // Close releases resources held by the underlying SDK client.
 func (p *Provider) Close() {
 	if p.client != nil {
@@ -130,6 +135,11 @@ func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quan
 // UpdatePrice updates the price for an Allegro offer.
 func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
 	return p.client.Offers.UpdatePrice(ctx, externalOfferID, price, "PLN")
+}
+
+// ActivateOffer implements integration.ListingActivator using Allegro publication commands.
+func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) error {
+	return p.client.Offers.Activate(ctx, externalOfferID)
 }
 
 // BulkUpdateStock implements integration.BulkStockUpdater using Allegro command API.

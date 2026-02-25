@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -22,11 +23,17 @@ var (
 
 // WarehouseDocumentService provides business logic for warehouse documents.
 type WarehouseDocumentService struct {
-	docRepo   repository.WarehouseDocumentRepo
-	itemRepo  repository.WarehouseDocItemRepo
-	stockRepo repository.WarehouseStockRepo
-	auditRepo repository.AuditRepo
-	pool      *pgxpool.Pool
+	docRepo          repository.WarehouseDocumentRepo
+	itemRepo         repository.WarehouseDocItemRepo
+	stockRepo        repository.WarehouseStockRepo
+	auditRepo        repository.AuditRepo
+	pool             *pgxpool.Pool
+	stockSyncService *StockSyncService
+}
+
+// SetStockSyncService sets the stock sync service for propagating stock changes after document confirmation.
+func (s *WarehouseDocumentService) SetStockSyncService(svc *StockSyncService) {
+	s.stockSyncService = svc
 }
 
 // NewWarehouseDocumentService creates a new WarehouseDocumentService.
@@ -249,6 +256,12 @@ func (s *WarehouseDocumentService) Delete(ctx context.Context, tenantID, docID u
 // MM: subtracts from source, adds to target
 func (s *WarehouseDocumentService) Confirm(ctx context.Context, tenantID, docID uuid.UUID, actorID uuid.UUID, ip string) (*model.WarehouseDocument, error) {
 	var doc *model.WarehouseDocument
+
+	// oldStockTotals tracks the total warehouse stock per product BEFORE adjustments,
+	// so we can pass accurate old/new quantities to OnStockChange and avoid false
+	// stock_restored events.
+	oldStockTotals := make(map[uuid.UUID]int)
+
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.docRepo.FindByID(ctx, tx, docID)
 		if err != nil {
@@ -265,6 +278,21 @@ func (s *WarehouseDocumentService) Confirm(ctx context.Context, tenantID, docID 
 		items, err := s.itemRepo.ListByDocumentID(ctx, tx, docID)
 		if err != nil {
 			return err
+		}
+
+		// Snapshot current stock totals per product BEFORE adjustments
+		for _, item := range items {
+			if _, seen := oldStockTotals[item.ProductID]; !seen {
+				stocks, listErr := s.stockRepo.ListByProduct(ctx, tx, item.ProductID)
+				if listErr != nil {
+					return fmt.Errorf("snapshot stock for product %s: %w", item.ProductID, listErr)
+				}
+				total := 0
+				for _, ws := range stocks {
+					total += ws.Quantity
+				}
+				oldStockTotals[item.ProductID] = total
+			}
 		}
 
 		// Update stock based on document type
@@ -319,6 +347,29 @@ func (s *WarehouseDocumentService) Confirm(ctx context.Context, tenantID, docID 
 	if err != nil {
 		return nil, err
 	}
+
+	// Trigger marketplace stock sync for all affected products.
+	// Pass actual old stock totals to avoid false stock_restored events
+	// (previously oldQty was always 0, which falsely triggers product.stock_restored).
+	if s.stockSyncService != nil && doc != nil {
+		for _, item := range doc.Items {
+			oldQty := oldStockTotals[item.ProductID]
+			// Calculate new total: for PZ, stock increased by item.Quantity;
+			// for WZ, it decreased; for MM, net change across warehouses is 0
+			// (but we still notify since individual warehouse levels changed).
+			newQty := oldQty + item.Quantity // PZ: positive delta
+			switch doc.DocumentType {
+			case "WZ":
+				newQty = oldQty - item.Quantity
+			case "MM":
+				newQty = oldQty // net zero for cross-warehouse move
+			}
+			asyncutil.SafeGo(func() {
+				s.stockSyncService.OnStockChange(context.Background(), tenantID, item.ProductID, "warehouse_document", oldQty, newQty)
+			})
+		}
+	}
+
 	return doc, nil
 }
 

@@ -103,6 +103,7 @@ type RouterDeps struct {
 	PublicConfig        *handler.ConfigHandler
 	Invitation          *handler.InvitationHandler
 	Category            *handler.ProductCategoryHandler
+	MessageTemplate     *handler.MessageTemplateHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -491,6 +492,9 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Post("/orders/{orderId}/fulfillment", deps.Allegro.UpdateFulfillment)
 					r.Post("/orders/{orderId}/tracking", deps.Allegro.AddTracking)
 
+					// Import Allegro offers as products + listings
+					r.Post("/import-offers", deps.Allegro.ImportOffers)
+
 					// Shipment management ("Wysyłam z Allegro")
 					r.Get("/delivery-services", deps.AllegroShipment.ListDeliveryServices)
 					r.Post("/shipments", deps.AllegroShipment.CreateShipment)
@@ -861,6 +865,22 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}/items/{itemId}", deps.PriceList.DeleteItem)
 			})
 
+			// Message templates — read: any authenticated user; write: admin only
+			if deps.MessageTemplate != nil {
+				r.Route("/message-templates", func(r chi.Router) {
+					r.Get("/", deps.MessageTemplate.List)
+					r.Get("/{id}", deps.MessageTemplate.Get)
+
+					// Write operations — admin only
+					r.Group(func(r chi.Router) {
+						r.Use(middleware.RequireRole("admin"))
+						r.Post("/", deps.MessageTemplate.Create)
+						r.Put("/{id}", deps.MessageTemplate.Update)
+						r.Delete("/{id}", deps.MessageTemplate.Delete)
+					})
+				})
+			}
+
 			// Warehouse documents — admin only
 			r.Route("/warehouse-documents", func(r chi.Router) {
 				r.Use(middleware.RequireRole("admin"))
@@ -973,6 +993,7 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Put("/channels/{id}", deps.StockSync.UpdateChannel)
 					r.Delete("/channels/{id}", deps.StockSync.DeleteChannel)
 					r.Post("/push", deps.StockSync.PushAll)
+					r.Post("/push/channel/{channel_id}", deps.StockSync.PushChannel)
 					r.Post("/push/{product_id}", deps.StockSync.PushProduct)
 					r.Post("/push/listing/{listing_id}", deps.StockSync.PushListing)
 					r.Post("/reconcile/{product_id}", deps.StockSync.ReconcileProduct)

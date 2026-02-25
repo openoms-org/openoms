@@ -37,6 +37,7 @@ var ValidTriggerEvents = map[string]bool{
 	"return.status_changed":   true,
 	"product.created":         true,
 	"product.updated":         true,
+	"product.stock_restored":  true,
 }
 
 // AutomationCondition represents a single condition in an automation rule.

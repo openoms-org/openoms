@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS: KSeFSettings = {
   environment: "test",
   nip: "",
   token: "",
+  auto_send: false,
   company_name: "",
   company_street: "",
   company_city: "",
@@ -132,6 +133,36 @@ export default function KSeFSettingsPage() {
                 {form.enabled ? "KSeF włączony" : "KSeF wyłączony"}
               </span>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Auto-send */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Automatyczne wysyłanie</CardTitle>
+            <CardDescription>
+              Automatycznie wysyłaj nowo utworzone faktury do KSeF.
+              Nieudane wysyłki będą automatycznie ponawiane (maks. 3 próby).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Switch
+                checked={form.auto_send}
+                onCheckedChange={(checked) =>
+                  setForm({ ...form, auto_send: checked })
+                }
+                disabled={!form.enabled}
+              />
+              <span className="text-sm">
+                {form.auto_send ? "Auto-send włączony" : "Auto-send wyłączony"}
+              </span>
+            </div>
+            {!form.enabled && form.auto_send && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Włącz integrację KSeF, aby korzystać z automatycznego wysyłania.
+              </p>
+            )}
           </CardContent>
         </Card>
 

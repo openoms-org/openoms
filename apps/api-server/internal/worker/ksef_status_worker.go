@@ -57,6 +57,7 @@ func (w *KSeFStatusWorker) Run(ctx context.Context) error {
 	}
 
 	totalSynced := 0
+	totalRetried := 0
 	for _, tenantID := range tenantIDs {
 		synced, err := w.ksefService.SyncPendingStatuses(ctx, tenantID)
 		if err != nil {
@@ -64,10 +65,17 @@ func (w *KSeFStatusWorker) Run(ctx context.Context) error {
 			continue
 		}
 		totalSynced += synced
+
+		retried, err := w.ksefService.RetryErroredInvoices(ctx, tenantID)
+		if err != nil {
+			w.logger.Error("ksef worker: retry errored", "tenant_id", tenantID, "error", err)
+			continue
+		}
+		totalRetried += retried
 	}
 
-	if totalSynced > 0 {
-		w.logger.Info("ksef worker completed", "tenants", len(tenantIDs), "synced", totalSynced)
+	if totalSynced > 0 || totalRetried > 0 {
+		w.logger.Info("ksef worker completed", "tenants", len(tenantIDs), "synced", totalSynced, "retried", totalRetried)
 	}
 	return nil
 }

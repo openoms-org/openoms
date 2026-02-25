@@ -52,6 +52,42 @@ func (s *OfferService) List(ctx context.Context, params *ListOffersParams) (*Off
 	return &result, nil
 }
 
+// ListAll fetches all seller offers by automatically paginating through the List endpoint.
+// It uses the maximum page size (1000) and collects all OfferSummary items.
+// Returns an empty slice (not nil) when the seller has no offers.
+// On error, returns any partially collected offers along with the error.
+func (s *OfferService) ListAll(ctx context.Context) ([]OfferSummary, error) {
+	const maxPageSize = 1000
+	var all []OfferSummary
+
+	for offset := 0; ; offset += maxPageSize {
+		if err := ctx.Err(); err != nil {
+			return all, err
+		}
+
+		page, err := s.List(ctx, &ListOffersParams{
+			Limit:  maxPageSize,
+			Offset: offset,
+		})
+		if err != nil {
+			return all, fmt.Errorf("list offers offset=%d: %w", offset, err)
+		}
+
+		if len(page.Offers) == 0 {
+			break
+		}
+		all = append(all, page.Offers...)
+		if len(all) >= page.TotalCount {
+			break
+		}
+	}
+
+	if all == nil {
+		all = []OfferSummary{}
+	}
+	return all, nil
+}
+
 // Get retrieves a single offer by ID.
 func (s *OfferService) Get(ctx context.Context, offerID string) (*Offer, error) {
 	var result Offer
