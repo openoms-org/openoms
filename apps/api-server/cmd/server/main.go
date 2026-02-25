@@ -462,6 +462,9 @@ func main() {
 	// WooCommerce listings handler (publish products to WooCommerce)
 	wooCommerceListingsHandler := handler.NewWooCommerceListingsHandler(integrationService, productService, productListingRepo, pool)
 
+	// Erli listings handler (publish products to Erli.pl)
+	erliListingsHandler := handler.NewErliListingsHandler(integrationService, productService, productListingRepo, pool)
+
 	// Allegro catalog + finance handler
 	allegroCatalogHandler := handler.NewAllegroCatalogHandler(integrationService, encryptionKey)
 
@@ -788,6 +791,7 @@ func main() {
 		PlanCache:                  planCache,
 		Checkout:                   checkoutHandler,
 		StripeWebhook:              stripeWebhookHandler,
+		ErliListings:               erliListingsHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)

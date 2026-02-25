@@ -108,6 +108,7 @@ type RouterDeps struct {
 	PlanCache                  *service.PlanCache
 	Checkout                   *handler.CheckoutHandler
 	StripeWebhook              *handler.StripeWebhookHandler
+	ErliListings               *handler.ErliListingsHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -493,6 +494,9 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Post("/allegro", deps.AllegroListings.CreateListing)
 						if deps.WooCommerceListings != nil {
 							r.Post("/woocommerce", deps.WooCommerceListings.CreateListing)
+						}
+						if deps.ErliListings != nil {
+							r.Post("/erli", deps.ErliListings.CreateListing)
 						}
 						r.Get("/{listingId}", deps.AllegroListings.GetListing)
 						r.Patch("/{listingId}", deps.AllegroListings.UpdateListing)
