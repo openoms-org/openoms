@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -93,14 +94,14 @@ func (h *MarketplaceCategoryMappingHandler) Upsert(w http.ResponseWriter, r *htt
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, mapping)
+	writeJSON(w, http.StatusOK, mapping)
 }
 
 // Delete handles DELETE /v1/integrations/{id}/category-mappings/{mid} — removes a mapping.
 func (h *MarketplaceCategoryMappingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	_, err := uuid.Parse(chi.URLParam(r, "id"))
+	integrationID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid integration ID")
 		return
@@ -113,9 +114,13 @@ func (h *MarketplaceCategoryMappingHandler) Delete(w http.ResponseWriter, r *htt
 	}
 
 	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		return h.repo.Delete(r.Context(), tx, mappingID)
+		return h.repo.Delete(r.Context(), tx, integrationID, mappingID)
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeError(w, http.StatusNotFound, "category mapping not found")
+			return
+		}
 		writeServerError(w, "failed to delete category mapping", err)
 		return
 	}

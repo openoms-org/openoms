@@ -1,3 +1,4 @@
 ALTER TABLE integrations DROP COLUMN IF EXISTS default_category_id;
+DROP TRIGGER IF EXISTS trigger_marketplace_cat_mappings_updated_at ON marketplace_category_mappings;
 DROP POLICY IF EXISTS marketplace_category_mappings_tenant_isolation ON marketplace_category_mappings;
 DROP TABLE IF EXISTS marketplace_category_mappings;

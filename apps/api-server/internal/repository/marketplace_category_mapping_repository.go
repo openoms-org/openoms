@@ -61,14 +61,19 @@ func (r *MarketplaceCategoryMappingRepository) Upsert(ctx context.Context, tx pg
 		`INSERT INTO marketplace_category_mappings (id, tenant_id, integration_id, external_category_id, external_category_name, category_id, auto_created, confirmed)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		 ON CONFLICT (tenant_id, integration_id, external_category_id)
-		 DO UPDATE SET external_category_name = EXCLUDED.external_category_name, category_id = EXCLUDED.category_id, auto_created = EXCLUDED.auto_created, confirmed = EXCLUDED.confirmed
+		 DO UPDATE SET
+		     external_category_name = COALESCE(NULLIF(EXCLUDED.external_category_name, ''), marketplace_category_mappings.external_category_name),
+		     category_id = COALESCE(EXCLUDED.category_id, marketplace_category_mappings.category_id),
+		     auto_created = CASE WHEN marketplace_category_mappings.confirmed THEN marketplace_category_mappings.auto_created ELSE EXCLUDED.auto_created END,
+		     confirmed = CASE WHEN marketplace_category_mappings.confirmed THEN true ELSE EXCLUDED.confirmed END,
+		     updated_at = NOW()
 		 RETURNING id, created_at, updated_at`,
 		m.ID, m.TenantID, m.IntegrationID, m.ExternalCategoryID, m.ExternalCategoryName, m.CategoryID, m.AutoCreated, m.Confirmed,
 	).Scan(&m.ID, &m.CreatedAt, &m.UpdatedAt)
 }
 
-func (r *MarketplaceCategoryMappingRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
-	ct, err := tx.Exec(ctx, "DELETE FROM marketplace_category_mappings WHERE id = $1", id)
+func (r *MarketplaceCategoryMappingRepository) Delete(ctx context.Context, tx pgx.Tx, integrationID, id uuid.UUID) error {
+	ct, err := tx.Exec(ctx, "DELETE FROM marketplace_category_mappings WHERE id = $1 AND integration_id = $2", id, integrationID)
 	if err != nil {
 		return fmt.Errorf("delete marketplace category mapping: %w", err)
 	}

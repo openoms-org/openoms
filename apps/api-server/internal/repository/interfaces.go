@@ -226,7 +226,7 @@ type MarketplaceCategoryMappingRepo interface {
 	ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID) ([]model.MarketplaceCategoryMapping, error)
 	FindByExternalID(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID, externalCategoryID string) (*model.MarketplaceCategoryMapping, error)
 	Upsert(ctx context.Context, tx pgx.Tx, m *model.MarketplaceCategoryMapping) error
-	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	Delete(ctx context.Context, tx pgx.Tx, integrationID, id uuid.UUID) error
 }
 
 // InvoiceRepo defines the interface for invoice persistence operations.

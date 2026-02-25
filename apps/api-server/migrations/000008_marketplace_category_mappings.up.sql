@@ -19,6 +19,13 @@ CREATE INDEX idx_marketplace_cat_mappings_integration
 CREATE INDEX idx_marketplace_cat_mappings_category
     ON marketplace_category_mappings(category_id);
 
+CREATE INDEX idx_marketplace_cat_mappings_tenant_integration
+    ON marketplace_category_mappings(tenant_id, integration_id);
+
+CREATE TRIGGER trigger_marketplace_cat_mappings_updated_at
+    BEFORE UPDATE ON marketplace_category_mappings
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
 ALTER TABLE marketplace_category_mappings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE marketplace_category_mappings FORCE ROW LEVEL SECURITY;
 

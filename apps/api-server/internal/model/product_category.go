@@ -153,5 +153,11 @@ func (r *UpsertMarketplaceCategoryMappingRequest) Validate() error {
 	if strings.TrimSpace(r.ExternalCategoryID) == "" {
 		return errors.New("external_category_id is required")
 	}
+	if err := validateMaxLength("external_category_id", r.ExternalCategoryID, 100); err != nil {
+		return err
+	}
+	if err := validateMaxLength("external_category_name", r.ExternalCategoryName, 500); err != nil {
+		return err
+	}
 	return nil
 }

@@ -360,6 +360,12 @@ func mapAllegroOfferToProduct(offer allegrosdk.Offer, tenantID uuid.UUID) model.
 		product.ExternalID = &sku
 	}
 
+	// Preserve the Allegro category ID on the product for reference/filtering.
+	if offer.Category != nil && offer.Category.ID != "" {
+		cat := offer.Category.ID
+		product.Category = &cat
+	}
+
 	if offer.SellingMode != nil {
 		if p, err := strconv.ParseFloat(offer.SellingMode.Price.Amount, 64); err == nil {
 			product.Price = p
