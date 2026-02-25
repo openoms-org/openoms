@@ -18,36 +18,36 @@ func TestHaversine_SamePoint(t *testing.T) {
 
 func TestHaversine_KnownCityPairs(t *testing.T) {
 	tests := []struct {
-		name     string
-		lat1     float64
-		lon1     float64
-		lat2     float64
-		lon2     float64
-		wantMin  float64
-		wantMax  float64
+		name    string
+		lat1    float64
+		lon1    float64
+		lat2    float64
+		lon2    float64
+		wantMin float64
+		wantMax float64
 	}{
 		{
-			name:    "Warsaw to Krakow (~250 km)",
-			lat1:    52.23, lon1: 21.01,
-			lat2:    50.06, lon2: 19.94,
+			name: "Warsaw to Krakow (~250 km)",
+			lat1: 52.23, lon1: 21.01,
+			lat2: 50.06, lon2: 19.94,
 			wantMin: 240, wantMax: 260,
 		},
 		{
-			name:    "Warsaw to Gdansk (~300 km)",
-			lat1:    52.23, lon1: 21.01,
-			lat2:    54.35, lon2: 18.65,
+			name: "Warsaw to Gdansk (~300 km)",
+			lat1: 52.23, lon1: 21.01,
+			lat2: 54.35, lon2: 18.65,
 			wantMin: 280, wantMax: 310,
 		},
 		{
-			name:    "Krakow to Wroclaw (~240 km)",
-			lat1:    50.06, lon1: 19.94,
-			lat2:    51.11, lon2: 17.04,
+			name: "Krakow to Wroclaw (~240 km)",
+			lat1: 50.06, lon1: 19.94,
+			lat2: 51.11, lon2: 17.04,
 			wantMin: 220, wantMax: 260,
 		},
 		{
-			name:    "Poznan to Szczecin (~250 km)",
-			lat1:    52.41, lon1: 16.93,
-			lat2:    53.43, lon2: 14.55,
+			name: "Poznan to Szczecin (~250 km)",
+			lat1: 52.41, lon1: 16.93,
+			lat2: 53.43, lon2: 14.55,
 			wantMin: 180, wantMax: 220,
 		},
 	}
@@ -126,9 +126,9 @@ func TestIsInternational(t *testing.T) {
 		{name: "Polish code Krakow", input: "31-456", expect: false},
 		{name: "German postal code (5 letters)", input: "10115", expect: false}, // 5 digits, looks Polish structurally
 		{name: "UK postal code", input: "SW1A1AA", expect: true},
-		{name: "US ZIP code (short)", input: "9021", expect: true},    // only 4 digits
-		{name: "US ZIP+4", input: "90210-1234", expect: true},         // 9 digits after cleanup
-		{name: "French postal code", input: "750008", expect: true},   // 6 digits
+		{name: "US ZIP code (short)", input: "9021", expect: true},  // only 4 digits
+		{name: "US ZIP+4", input: "90210-1234", expect: true},       // 9 digits after cleanup
+		{name: "French postal code", input: "750008", expect: true}, // 6 digits
 		{name: "empty string", input: "", expect: false},
 		{name: "letters in code", input: "AB-CDE", expect: true},
 		{name: "mixed alphanumeric", input: "1A2B3", expect: true},
