@@ -28,7 +28,7 @@ func TestRedisTokenBlacklist_NewReturnsNonNil(t *testing.T) {
 	assert.NotNil(t, bl, "NewRedisTokenBlacklist should return a non-nil instance")
 }
 
-func TestRedisTokenBlacklist_ImplementsTokenBlacklistStore(t *testing.T) {
+func TestRedisTokenBlacklist_ImplementsTokenBlacklistStore(_ *testing.T) {
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	defer client.Close()
 

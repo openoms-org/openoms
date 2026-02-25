@@ -31,7 +31,7 @@ func TestRedisRateLimiter_NewReturnsNonNil(t *testing.T) {
 	assert.NotNil(t, limiter, "NewRedisRateLimiter should return a non-nil instance")
 }
 
-func TestRedisRateLimiter_ImplementsRateLimiterInterface(t *testing.T) {
+func TestRedisRateLimiter_ImplementsRateLimiterInterface(_ *testing.T) {
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
 	defer client.Close()
 

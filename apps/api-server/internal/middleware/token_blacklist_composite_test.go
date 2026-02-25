@@ -11,7 +11,7 @@ import (
 
 // --- Dedicated composite blacklist tests ---
 
-func TestCompositeTokenBlacklist_ImplementsTokenBlacklistStore(t *testing.T) {
+func TestCompositeTokenBlacklist_ImplementsTokenBlacklistStore(_ *testing.T) {
 	primary := &mockBlacklistStore{tokens: make(map[string]bool)}
 	fallback := &mockBlacklistStore{tokens: make(map[string]bool)}
 	composite := middleware.NewCompositeTokenBlacklist(primary, fallback)
@@ -149,7 +149,6 @@ func TestCompositeTokenBlacklist_ExpiredInFallback_ChecksPrimary(t *testing.T) {
 type expiryTrackingStore struct {
 	lastToken  string
 	lastExpiry time.Time
-	tokens     map[string]bool
 }
 
 func (e *expiryTrackingStore) Revoke(tokenHash string, expiresAt time.Time) {

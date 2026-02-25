@@ -92,7 +92,7 @@ func TestLogging_LogsStatusCode(t *testing.T) {
 func TestLogging_LogsDefaultStatusCode200(t *testing.T) {
 	// When the handler doesn't explicitly call WriteHeader, default should be 200
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 	handler := middleware.Logging(next)
 	req := httptest.NewRequest("GET", "/health", nil)
@@ -196,7 +196,7 @@ func TestLogging_LogsVariousMethods(t *testing.T) {
 func TestLogging_WrittenStatusCodeCaptured(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte("accepted"))
+		_, _ = w.Write([]byte("accepted"))
 	})
 	handler := middleware.Logging(next)
 	req := httptest.NewRequest("POST", "/v1/shipments", nil)
@@ -215,7 +215,7 @@ func TestLogging_PreservesResponseBody(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	})
 	handler := middleware.Logging(next)
 	req := httptest.NewRequest("GET", "/v1/orders/1", nil)
