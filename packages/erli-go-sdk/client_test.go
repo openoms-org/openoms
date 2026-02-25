@@ -347,7 +347,9 @@ func TestOffersCreate(t *testing.T) {
 			t.Errorf("Content-Type = %q, want application/json", r.Header.Get("Content-Type"))
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(CreateOfferResponse{ID: "OFFER-NEW-42"})
 	}))
 	defer srv.Close()
 
@@ -356,14 +358,17 @@ func TestOffersCreate(t *testing.T) {
 		WithHTTPClient(srv.Client()),
 	)
 
-	offer := map[string]any{
-		"title": "Test Product",
-		"price": 19.99,
-		"stock": 100,
+	req := CreateOfferRequest{
+		Title: "Test Product",
+		Price: 19.99,
+		Stock: 100,
 	}
-	err := c.Offers.Create(context.Background(), offer)
+	offerID, err := c.Offers.Create(context.Background(), req)
 	if err != nil {
 		t.Fatalf("Create() error: %v", err)
+	}
+	if offerID != "OFFER-NEW-42" {
+		t.Errorf("Create() offerID = %q, want %q", offerID, "OFFER-NEW-42")
 	}
 }
 
