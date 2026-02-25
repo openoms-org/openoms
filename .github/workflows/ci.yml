@@ -199,6 +199,30 @@ jobs:
         working-directory: packages/order-engine
         run: go test ./...
 
+      - name: Test dhl-go-sdk
+        working-directory: packages/dhl-go-sdk
+        run: go test ./...
+
+      - name: Test ksef-go-sdk
+        working-directory: packages/ksef-go-sdk
+        run: go test ./...
+
+      - name: Test amazon-sp-sdk
+        working-directory: packages/amazon-sp-sdk
+        run: go test ./...
+
+      - name: Test dpd-go-sdk
+        working-directory: packages/dpd-go-sdk
+        run: go test ./...
+
+      - name: Test gls-go-sdk
+        working-directory: packages/gls-go-sdk
+        run: go test ./...
+
+      - name: Test btp-go-sdk
+        working-directory: packages/btp-go-sdk
+        run: go test ./...
+
   security-tests:
     name: Security Tests
     needs: [test]
@@ -222,7 +246,7 @@ jobs:
         working-directory: apps/api-server
         env:
           REDIS_URL: redis://localhost:6379
-        run: go test -race -run 'TestSecurity_' -v ./internal/middleware/ ./internal/handler/
+        run: go test -race -run 'TestSecurity_' ./internal/middleware/ ./internal/handler/
 
   vet:
     name: Vet
