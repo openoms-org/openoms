@@ -129,4 +129,3 @@ func (s *MessageTemplateService) Delete(ctx context.Context, tenantID, id uuid.U
 		return s.repo.Delete(ctx, tx, id)
 	})
 }
-
