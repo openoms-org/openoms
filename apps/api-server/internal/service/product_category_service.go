@@ -344,9 +344,17 @@ func (s *ProductCategoryService) ResolveMarketplaceCategory(
 				Slug:     model.GenerateSlug(externalCategoryName),
 				Color:    "#6b7280", // default gray
 			}
+			// Guard against empty slug from non-alphanumeric names
+			if newCat.Slug == "" {
+				newCat.Slug = newCat.ID.String()[:8]
+			}
 			// Ensure slug uniqueness
 			count, err := s.categoryRepo.CountBySlug(ctx, tx, newCat.Slug)
-			if err == nil && count > 0 {
+			if err != nil {
+				s.logger.Error("failed to count slugs during auto-create",
+					"slug", newCat.Slug, "error", err)
+				// continue — DB unique constraint will catch true duplicates
+			} else if count > 0 {
 				newCat.Slug = fmt.Sprintf("%s-%d", newCat.Slug, count+1)
 			}
 			if err := s.categoryRepo.Create(ctx, tx, newCat); err != nil {
