@@ -401,7 +401,9 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 	})
 	if err == nil {
 		if s.webhookDispatch != nil {
-			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()}) })
+			util.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()})
+			})
 		}
 	}
 	return err
@@ -477,10 +479,14 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 	})
 	if err == nil && order != nil {
 		if s.emailService != nil {
-			util.SafeGo(func() { s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status) })
+			util.SafeGo(func() {
+				s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
+			})
 		}
 		if s.webhookDispatch != nil {
-			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status}) })
+			util.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
+			})
 		}
 		if s.invoiceService != nil {
 			util.SafeGo(func() { s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order) })
@@ -624,10 +630,14 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 	// Dispatch notifications outside the transaction
 	for _, n := range pendingEmails {
 		if s.emailService != nil {
-			util.SafeGo(func() { s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus) })
+			util.SafeGo(func() {
+				s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+			})
 		}
 		if s.smsService != nil {
-			util.SafeGo(func() { s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus) })
+			util.SafeGo(func() {
+				s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+			})
 		}
 		// Auto-sync fulfillment status to Allegro (async, best-effort)
 		if s.allegroSync != nil && n.order.Source == "allegro" {
@@ -643,7 +653,9 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 	}
 	for _, n := range pendingWebhooks {
 		if s.webhookDispatch != nil {
-			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus}) })
+			util.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
+			})
 		}
 	}
 

@@ -245,7 +245,9 @@ func (s *ProductService) Delete(ctx context.Context, tenantID, productID uuid.UU
 	})
 	if err == nil {
 		if s.webhookDispatch != nil {
-			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.deleted", map[string]any{"product_id": productID.String()}) })
+			util.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.deleted", map[string]any{"product_id": productID.String()})
+			})
 		}
 	}
 	return err

@@ -196,7 +196,9 @@ func (s *CustomerService) Delete(ctx context.Context, tenantID, customerID uuid.
 		})
 	})
 	if err == nil && s.webhookDispatch != nil {
-		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.deleted", map[string]any{"customer_id": customerID.String()}) })
+		util.SafeGo(func() {
+			s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.deleted", map[string]any{"customer_id": customerID.String()})
+		})
 	}
 	return err
 }

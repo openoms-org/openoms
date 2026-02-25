@@ -277,7 +277,9 @@ func (s *RecurringOrderService) Delete(ctx context.Context, tenantID, id uuid.UU
 		})
 	})
 	if err == nil && s.webhookDispatch != nil {
-		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "recurring_order.deleted", map[string]any{"recurring_order_id": id.String()}) })
+		util.SafeGo(func() {
+			s.webhookDispatch.Dispatch(context.Background(), tenantID, "recurring_order.deleted", map[string]any{"recurring_order_id": id.String()})
+		})
 	}
 	return err
 }

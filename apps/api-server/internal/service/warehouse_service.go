@@ -331,7 +331,9 @@ func (s *WarehouseService) UpsertStock(ctx context.Context, tenantID, warehouseI
 
 	// Trigger stock sync after successful upsert
 	if s.stockSyncService != nil {
-		util.SafeGo(func() { s.stockSyncService.OnStockChange(context.Background(), tenantID, req.ProductID, "stock_adjusted", 0, req.Quantity) })
+		util.SafeGo(func() {
+			s.stockSyncService.OnStockChange(context.Background(), tenantID, req.ProductID, "stock_adjusted", 0, req.Quantity)
+		})
 	}
 
 	return stock, nil

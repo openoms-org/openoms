@@ -13,12 +13,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
-	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration/btp"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 	btpsdk "github.com/openoms-org/openoms/packages/btp-go-sdk"
 	iof "github.com/openoms-org/openoms/packages/iof-parser"
 )
@@ -229,7 +229,9 @@ func (s *SupplierService) Delete(ctx context.Context, tenantID, supplierID uuid.
 		})
 	})
 	if err == nil && s.webhookDispatch != nil {
-		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.deleted", map[string]any{"supplier_id": supplierID.String()}) })
+		util.SafeGo(func() {
+			s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.deleted", map[string]any{"supplier_id": supplierID.String()})
+		})
 	}
 	return err
 }

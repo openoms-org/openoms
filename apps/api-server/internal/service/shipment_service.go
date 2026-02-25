@@ -214,7 +214,9 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	})
 	// Auto-sync tracking to Allegro if shipment has a tracking number (async, best-effort)
 	if s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
-		util.SafeGo(func() { s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber) })
+		util.SafeGo(func() {
+			s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber)
+		})
 	}
 	return shipment, nil
 }
@@ -279,7 +281,9 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 		}
 		// Auto-sync tracking to Allegro when tracking number is set/changed (async, best-effort)
 		if trackingChanged && s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
-			util.SafeGo(func() { s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber) })
+			util.SafeGo(func() {
+				s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber)
+			})
 		}
 	}
 	return shipment, err
@@ -311,7 +315,9 @@ func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, acto
 	})
 	if err == nil {
 		if s.webhookDispatch != nil {
-			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.deleted", map[string]any{"shipment_id": shipmentID.String()}) })
+			util.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.deleted", map[string]any{"shipment_id": shipmentID.String()})
+			})
 		}
 	}
 	return err
@@ -407,7 +413,9 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 	})
 	if err == nil && shipment != nil {
 		if s.webhookDispatch != nil {
-			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment) })
+			util.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment)
+			})
 		}
 		if s.smsService != nil {
 			util.SafeGo(func() { s.smsService.SendShipmentStatusSMS(context.Background(), tenantID, shipment, "") })

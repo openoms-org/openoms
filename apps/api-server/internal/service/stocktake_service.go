@@ -458,7 +458,9 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 				if item.CountedQuantity != nil {
 					counted = *item.CountedQuantity
 				}
-				util.SafeGo(func() { s.stockSyncService.OnStockChange(context.Background(), tenantID, item.ProductID, "recount", item.ExpectedQuantity, counted) })
+				util.SafeGo(func() {
+					s.stockSyncService.OnStockChange(context.Background(), tenantID, item.ProductID, "recount", item.ExpectedQuantity, counted)
+				})
 			}
 			return nil
 		}); err != nil {
