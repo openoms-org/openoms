@@ -103,7 +103,8 @@ type RouterDeps struct {
 	PublicConfig        *handler.ConfigHandler
 	Invitation          *handler.InvitationHandler
 	Category            *handler.ProductCategoryHandler
-	MessageTemplate     *handler.MessageTemplateHandler
+	MessageTemplate              *handler.MessageTemplateHandler
+	MarketplaceCategoryMapping   *handler.MarketplaceCategoryMappingHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -612,6 +613,15 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Post("/shoper/setup", deps.StoreAuth.SetupShoper)
 					r.Post("/prestashop/setup", deps.StoreAuth.SetupPrestaShop)
 					r.Post("/shopify/setup", deps.StoreAuth.SetupShopify)
+				}
+
+				// Marketplace category mappings (per-integration)
+				if deps.MarketplaceCategoryMapping != nil {
+					r.Route("/{id}/category-mappings", func(r chi.Router) {
+						r.Get("/", deps.MarketplaceCategoryMapping.List)
+						r.Put("/", deps.MarketplaceCategoryMapping.Upsert)
+						r.Delete("/{mid}", deps.MarketplaceCategoryMapping.Delete)
+					})
 				}
 
 				r.Get("/", deps.Integration.List)

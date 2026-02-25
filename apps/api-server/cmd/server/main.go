@@ -477,6 +477,7 @@ func main() {
 	// Supplier handler
 	supplierHandler := handler.NewSupplierHandler(supplierService)
 	productCategoryHandler := handler.NewProductCategoryHandler(productCategoryService)
+	marketplaceCategoryMappingHandler := handler.NewMarketplaceCategoryMappingHandler(marketplaceCategoryMappingRepo, pool)
 
 	// Import service & handler
 	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool)
@@ -733,7 +734,8 @@ func main() {
 		ListingSync:         listingSyncHandler,
 		PublicConfig:        configHandler,
 		Invitation:          invitationHandler,
-		MessageTemplate:     messageTemplateHandler,
+		MessageTemplate:              messageTemplateHandler,
+		MarketplaceCategoryMapping:   marketplaceCategoryMappingHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)
