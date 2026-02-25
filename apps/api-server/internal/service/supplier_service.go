@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration/btp"
@@ -156,7 +157,7 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.created", supplier)
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.created", supplier) })
 	}
 	return supplier, nil
 }
@@ -198,7 +199,7 @@ func (s *SupplierService) Update(ctx context.Context, tenantID, supplierID uuid.
 		return nil, err
 	}
 	if supplier != nil && s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.updated", supplier)
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.updated", supplier) })
 	}
 	return supplier, err
 }
@@ -228,7 +229,9 @@ func (s *SupplierService) Delete(ctx context.Context, tenantID, supplierID uuid.
 		})
 	})
 	if err == nil && s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.deleted", map[string]any{"supplier_id": supplierID.String()})
+		asyncutil.SafeGo(func() {
+			s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.deleted", map[string]any{"supplier_id": supplierID.String()})
+		})
 	}
 	return err
 }
@@ -1430,7 +1433,7 @@ func (s *SupplierService) BTPWizardStartImport(ctx context.Context, tenantID uui
 	}
 
 	// Start async XML import
-	go s.runBTPXMLImport(tenantID, supplier.ID, feedURL)
+	asyncutil.SafeGo(func() { s.runBTPXMLImport(tenantID, supplier.ID, feedURL) })
 
 	return supplier, nil
 }
@@ -1713,12 +1716,12 @@ func (s *SupplierService) BTPWizardCompleteSyncSettings(ctx context.Context, ten
 	}
 
 	// Trigger immediate API inventory sync to get real stock data
-	go func() {
+	asyncutil.SafeGo(func() {
 		updated, _ := s.Get(context.Background(), tenantID, supplierID)
 		if updated != nil {
 			_ = s.syncXMLInventory(context.Background(), tenantID, supplierID, updated)
 		}
-	}()
+	})
 
 	return s.Get(ctx, tenantID, supplierID)
 }

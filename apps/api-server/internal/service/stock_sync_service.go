@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
@@ -284,7 +285,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 
 	// Dispatch webhook for stock change
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event)
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event) })
 	}
 
 	s.logger.Info("stock sync: stock change recorded",
@@ -297,7 +298,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 	)
 
 	// Propagate stock to marketplaces asynchronously
-	go s.PropagateStockToMarketplaces(context.Background(), tenantID, productID)
+	asyncutil.SafeGo(func() { s.PropagateStockToMarketplaces(context.Background(), tenantID, productID) })
 }
 
 // CalculateAvailableStock returns stock allocation per channel for a product.

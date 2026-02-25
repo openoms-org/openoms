@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -441,7 +442,7 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 
 	// Dispatch webhook asynchronously
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "stocktake.completed", stocktake)
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "stocktake.completed", stocktake) })
 	}
 
 	// Trigger stock sync for all products with discrepancies
@@ -457,7 +458,9 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 				if item.CountedQuantity != nil {
 					counted = *item.CountedQuantity
 				}
-				go s.stockSyncService.OnStockChange(context.Background(), tenantID, item.ProductID, "recount", item.ExpectedQuantity, counted)
+				asyncutil.SafeGo(func() {
+					s.stockSyncService.OnStockChange(context.Background(), tenantID, item.ProductID, "recount", item.ExpectedQuantity, counted)
+				})
 			}
 			return nil
 		}); err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -330,7 +331,9 @@ func (s *WarehouseService) UpsertStock(ctx context.Context, tenantID, warehouseI
 
 	// Trigger stock sync after successful upsert
 	if s.stockSyncService != nil {
-		go s.stockSyncService.OnStockChange(context.Background(), tenantID, req.ProductID, "stock_adjusted", 0, req.Quantity)
+		asyncutil.SafeGo(func() {
+			s.stockSyncService.OnStockChange(context.Background(), tenantID, req.ProductID, "stock_adjusted", 0, req.Quantity)
+		})
 	}
 
 	return stock, nil

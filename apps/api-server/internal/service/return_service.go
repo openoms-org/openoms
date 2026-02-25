@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -141,7 +142,7 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 		return nil, err
 	}
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.created", ret)
+		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.created", ret) })
 	}
 	FireAutomationEvent(s.automationService, tenantID, "return", "return.created", ret.ID, map[string]any{
 		"status": ret.Status, "reason": ret.Reason, "order_id": ret.OrderID.String(),
@@ -185,7 +186,7 @@ func (s *ReturnService) Update(ctx context.Context, tenantID, returnID uuid.UUID
 	})
 	if err == nil && ret != nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.updated", ret)
+			asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.updated", ret) })
 		}
 	}
 	return ret, err
@@ -246,7 +247,9 @@ func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID
 	})
 	if err == nil && ret != nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.status_changed", map[string]any{"return_id": returnID.String(), "from": oldStatus, "to": req.Status})
+			asyncutil.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.status_changed", map[string]any{"return_id": returnID.String(), "from": oldStatus, "to": req.Status})
+			})
 		}
 		FireAutomationEvent(s.automationService, tenantID, "return", "return.status_changed", ret.ID, map[string]any{
 			"status": ret.Status, "old_status": oldStatus, "new_status": req.Status,
@@ -282,7 +285,9 @@ func (s *ReturnService) Delete(ctx context.Context, tenantID, returnID, actorID 
 	})
 	if err == nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.deleted", map[string]any{"return_id": returnID.String()})
+			asyncutil.SafeGo(func() {
+				s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.deleted", map[string]any{"return_id": returnID.String()})
+			})
 		}
 	}
 	return err
