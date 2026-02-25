@@ -227,6 +227,13 @@ func (s *AllegroImportService) processOffer(
 		OfferName: offer.Name,
 	}
 
+	// Fetch Allegro category name BEFORE the transaction to avoid holding a DB
+	// connection during an external HTTP call.
+	var categoryName string
+	if s.categoryService != nil && offer.Category != nil && offer.Category.ID != "" {
+		categoryName = s.fetchAllegroCategoryName(ctx, client, offer.Category.ID)
+	}
+
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		// Try to match an existing product by SKU.
 		var matchedProduct *model.Product
@@ -246,7 +253,6 @@ func (s *AllegroImportService) processOffer(
 
 			// Backfill category_id if the existing product doesn't have one yet.
 			if s.categoryService != nil && matchedProduct.CategoryID == nil && offer.Category != nil && offer.Category.ID != "" {
-				categoryName := s.fetchAllegroCategoryName(ctx, client, offer.Category.ID)
 				categoryID, err := s.categoryService.ResolveMarketplaceCategory(
 					ctx, tx, tenantID, integrationID,
 					offer.Category.ID, categoryName,
@@ -267,7 +273,6 @@ func (s *AllegroImportService) processOffer(
 
 		// Resolve Allegro category to an internal product category via mapping system.
 		if s.categoryService != nil && offer.Category != nil && offer.Category.ID != "" {
-			categoryName := s.fetchAllegroCategoryName(ctx, client, offer.Category.ID)
 			categoryID, err := s.categoryService.ResolveMarketplaceCategory(
 				ctx, tx, tenantID, integrationID,
 				offer.Category.ID, categoryName,
