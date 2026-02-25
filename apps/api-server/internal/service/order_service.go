@@ -15,6 +15,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 )
 
 var (
@@ -299,7 +300,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	}
 
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order)
+		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order) })
 	}
 	FireAutomationEvent(s.automationService, tenantID, "order", "order.created", order.ID, map[string]any{
 		"status": order.Status, "source": order.Source,
@@ -309,7 +310,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 
 	// Auto-create shipment if requested (best effort — never fails order creation)
 	if req.AutoCreateShipment && req.ShipmentProvider != nil && *req.ShipmentProvider != "" && s.shipmentService != nil {
-		go func() {
+		util.SafeGo(func() {
 			shipReq := model.CreateShipmentRequest{
 				OrderID:  order.ID,
 				Provider: *req.ShipmentProvider,
@@ -322,7 +323,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 			if _, err := s.shipmentService.Create(context.Background(), tenantID, shipReq, actorID, ip); err != nil {
 				slog.Error("auto-create shipment failed", "order_id", order.ID, "provider", *req.ShipmentProvider, "error", err)
 			}
-		}()
+		})
 	}
 
 	return order, nil
@@ -363,7 +364,7 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 	})
 	if err == nil && order != nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order)
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order) })
 		}
 		FireAutomationEvent(s.automationService, tenantID, "order", "order.updated", order.ID, map[string]any{
 			"status": order.Status, "source": order.Source,
@@ -400,7 +401,7 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 	})
 	if err == nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()})
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()}) })
 		}
 	}
 	return err
@@ -476,16 +477,16 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 	})
 	if err == nil && order != nil {
 		if s.emailService != nil {
-			go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
+			util.SafeGo(func() { s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status) })
 		}
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status}) })
 		}
 		if s.invoiceService != nil {
-			go s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order)
+			util.SafeGo(func() { s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order) })
 		}
 		if s.smsService != nil {
-			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, oldStatus, req.Status)
+			util.SafeGo(func() { s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, oldStatus, req.Status) })
 		}
 		FireAutomationEvent(s.automationService, tenantID, "order", "order.status_changed", order.ID, map[string]any{
 			"status": order.Status, "old_status": oldStatus, "new_status": req.Status,
@@ -495,14 +496,14 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		})
 		// Auto-sync fulfillment status to Allegro (async, best-effort)
 		if s.allegroSync != nil && order.Source == "allegro" {
-			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, req.Status)
+			util.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, req.Status) })
 		}
 		// Stock sync on status change
 		switch req.Status {
 		case "shipped":
-			go s.handleStockOnShip(context.Background(), tenantID, order)
+			util.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
 		case "cancelled":
-			go s.handleStockOnCancel(context.Background(), tenantID, order)
+			util.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
 		}
 	}
 	return order, err
@@ -623,26 +624,26 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 	// Dispatch notifications outside the transaction
 	for _, n := range pendingEmails {
 		if s.emailService != nil {
-			go s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+			util.SafeGo(func() { s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus) })
 		}
 		if s.smsService != nil {
-			go s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
+			util.SafeGo(func() { s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus) })
 		}
 		// Auto-sync fulfillment status to Allegro (async, best-effort)
 		if s.allegroSync != nil && n.order.Source == "allegro" {
-			go s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, n.order, n.newStatus)
+			util.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, n.order, n.newStatus) })
 		}
 		// Stock sync on status change
 		switch n.newStatus {
 		case "shipped":
-			go s.handleStockOnShip(context.Background(), tenantID, n.order)
+			util.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
 		case "cancelled":
-			go s.handleStockOnCancel(context.Background(), tenantID, n.order)
+			util.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
 		}
 	}
 	for _, n := range pendingWebhooks {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus}) })
 		}
 	}
 
@@ -687,7 +688,7 @@ func (s *OrderService) triggerStockSync(tenantID uuid.UUID, productQtys map[uuid
 		return
 	}
 	for productID, qty := range productQtys {
-		go s.stockSyncService.OnStockChange(context.Background(), tenantID, productID, trigger, qty, qty)
+		util.SafeGo(func() { s.stockSyncService.OnStockChange(context.Background(), tenantID, productID, trigger, qty, qty) })
 	}
 }
 

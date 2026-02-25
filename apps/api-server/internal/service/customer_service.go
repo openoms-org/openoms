@@ -12,6 +12,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 )
 
 var (
@@ -123,7 +124,7 @@ func (s *CustomerService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.created", customer)
+		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.created", customer) })
 	}
 	return customer, nil
 }
@@ -165,7 +166,7 @@ func (s *CustomerService) Update(ctx context.Context, tenantID, customerID uuid.
 		return nil, err
 	}
 	if customer != nil && s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.updated", customer)
+		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.updated", customer) })
 	}
 	return customer, err
 }
@@ -195,7 +196,7 @@ func (s *CustomerService) Delete(ctx context.Context, tenantID, customerID uuid.
 		})
 	})
 	if err == nil && s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.deleted", map[string]any{"customer_id": customerID.String()})
+		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.deleted", map[string]any{"customer_id": customerID.String()}) })
 	}
 	return err
 }

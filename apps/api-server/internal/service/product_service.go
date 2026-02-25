@@ -10,6 +10,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 )
 
 var (
@@ -142,7 +143,7 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		return nil, err
 	}
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.created", product)
+		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.created", product) })
 	}
 	FireAutomationEvent(s.automationService, tenantID, "product", "product.created", product.ID, map[string]any{
 		"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
@@ -208,7 +209,7 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 	}
 	if product != nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.updated", product)
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.updated", product) })
 		}
 		FireAutomationEvent(s.automationService, tenantID, "product", "product.updated", product.ID, map[string]any{
 			"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
@@ -244,7 +245,7 @@ func (s *ProductService) Delete(ctx context.Context, tenantID, productID uuid.UU
 	})
 	if err == nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.deleted", map[string]any{"product_id": productID.String()})
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "product.deleted", map[string]any{"product_id": productID.String()}) })
 		}
 	}
 	return err

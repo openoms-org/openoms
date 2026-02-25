@@ -18,6 +18,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 )
 
 var (
@@ -206,14 +207,14 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.created", shipment)
+		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.created", shipment) })
 	}
 	FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.created", shipment.ID, map[string]any{
 		"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
 	})
 	// Auto-sync tracking to Allegro if shipment has a tracking number (async, best-effort)
 	if s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
-		go s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber)
+		util.SafeGo(func() { s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber) })
 	}
 	return shipment, nil
 }
@@ -274,11 +275,11 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 	})
 	if err == nil && shipment != nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.updated", shipment)
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.updated", shipment) })
 		}
 		// Auto-sync tracking to Allegro when tracking number is set/changed (async, best-effort)
 		if trackingChanged && s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
-			go s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber)
+			util.SafeGo(func() { s.allegroSync.SyncTracking(context.Background(), tenantID, associatedOrder, shipment.Provider, *shipment.TrackingNumber) })
 		}
 	}
 	return shipment, err
@@ -310,7 +311,7 @@ func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, acto
 	})
 	if err == nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.deleted", map[string]any{"shipment_id": shipmentID.String()})
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.deleted", map[string]any{"shipment_id": shipmentID.String()}) })
 		}
 	}
 	return err
@@ -406,10 +407,10 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 	})
 	if err == nil && shipment != nil {
 		if s.webhookDispatch != nil {
-			go s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment)
+			util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", shipment) })
 		}
 		if s.smsService != nil {
-			go s.smsService.SendShipmentStatusSMS(context.Background(), tenantID, shipment, "")
+			util.SafeGo(func() { s.smsService.SendShipmentStatusSMS(context.Background(), tenantID, shipment, "") })
 		}
 		FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.status_changed", shipment.ID, map[string]any{
 			"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),

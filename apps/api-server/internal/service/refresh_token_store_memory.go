@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 )
 
 type memRefreshFamily struct {
@@ -33,7 +35,7 @@ func NewMemoryRefreshTokenStore() *MemoryRefreshTokenStore {
 		tokens:   make(map[string]*memRefreshToken),
 		done:     make(chan struct{}),
 	}
-	go s.cleanup()
+	util.SafeGo(func() { s.cleanup() })
 	return s
 }
 

@@ -17,6 +17,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/util"
 )
 
 var (
@@ -284,7 +285,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 
 	// Dispatch webhook for stock change
 	if s.webhookDispatch != nil {
-		go s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event)
+		util.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event) })
 	}
 
 	s.logger.Info("stock sync: stock change recorded",
@@ -297,7 +298,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 	)
 
 	// Propagate stock to marketplaces asynchronously
-	go s.PropagateStockToMarketplaces(context.Background(), tenantID, productID)
+	util.SafeGo(func() { s.PropagateStockToMarketplaces(context.Background(), tenantID, productID) })
 }
 
 // CalculateAvailableStock returns stock allocation per channel for a product.
