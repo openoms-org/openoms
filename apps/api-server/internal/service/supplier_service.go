@@ -40,7 +40,13 @@ type SupplierService struct {
 	pool                *pgxpool.Pool
 	webhookDispatch     *WebhookDispatchService
 	integrationSvc      *IntegrationService
+	stockSyncService    *StockSyncService
 	logger              *slog.Logger
+}
+
+// SetStockSyncService sets the stock sync service for propagating stock changes after supplier sync.
+func (s *SupplierService) SetStockSyncService(svc *StockSyncService) {
+	s.stockSyncService = svc
 }
 
 func NewSupplierService(
@@ -1759,5 +1765,7 @@ func (s *SupplierService) removeStaleProducts(ctx context.Context, tenantID, sup
 	if err != nil {
 		s.logger.Error("failed to remove stale products",
 			"supplier_id", supplierID, "error", err)
+		return
 	}
+
 }

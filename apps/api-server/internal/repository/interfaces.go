@@ -175,6 +175,7 @@ type ProductListingRepo interface {
 	ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error)
 	ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID) ([]*model.ProductListing, error)
 	ListAutoSyncByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error)
+	FindByExternalIDAndIntegration(ctx context.Context, tx pgx.Tx, externalID string, integrationID uuid.UUID) (*model.ProductListing, error)
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 
@@ -229,6 +230,8 @@ type InvoiceRepo interface {
 	Update(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	FindPendingKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error)
+	FindErrorKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error)
+	FindRetryableKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error)
 	UpdateKSeFStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, ksefNumber *string, ksefStatus string, ksefResponse []byte) error
 }
 
@@ -452,6 +455,15 @@ type StockSyncEventRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.StockSyncEventListFilter) ([]model.StockSyncEvent, int, error)
 	CountRecentErrors(ctx context.Context, tx pgx.Tx) (int, error)
 	GetAvailableStock(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (totalQty int, reservedQty int, err error)
+}
+
+// MessageTemplateRepo defines the interface for message template persistence operations.
+type MessageTemplateRepo interface {
+	List(ctx context.Context, tx pgx.Tx, filter model.MessageTemplateListFilter) ([]model.MessageTemplate, int, error)
+	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.MessageTemplate, error)
+	Create(ctx context.Context, tx pgx.Tx, template *model.MessageTemplate) error
+	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateMessageTemplateRequest) error
+	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 
 // InvitationRepo defines the interface for invitation persistence operations.

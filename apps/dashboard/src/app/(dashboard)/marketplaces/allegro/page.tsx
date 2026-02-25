@@ -19,6 +19,7 @@ import {
   ExternalLink,
   User,
   Star,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -724,6 +725,14 @@ function ConnectedState({
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
                 Odśwież token
+              </Button>
+            )}
+            {integration.status === "active" && (
+              <Button className="w-full" variant="outline" asChild>
+                <Link href="/marketplaces/allegro/import">
+                  <Download className="mr-2 h-4 w-4" />
+                  Importuj oferty
+                </Link>
               </Button>
             )}
             <Button

@@ -16,19 +16,21 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
-// AllegroHandler handles Allegro-specific API endpoints (fulfillment, tracking, etc.).
+// AllegroHandler handles Allegro-specific API endpoints (fulfillment, tracking, import, etc.).
 type AllegroHandler struct {
-	integrationService *service.IntegrationService
-	orderService       *service.OrderService
-	encryptionKey      []byte
+	integrationService   *service.IntegrationService
+	orderService         *service.OrderService
+	allegroImportService *service.AllegroImportService
+	encryptionKey        []byte
 }
 
 // NewAllegroHandler creates a new AllegroHandler.
-func NewAllegroHandler(integrationService *service.IntegrationService, orderService *service.OrderService, encryptionKey []byte) *AllegroHandler {
+func NewAllegroHandler(integrationService *service.IntegrationService, orderService *service.OrderService, allegroImportService *service.AllegroImportService, encryptionKey []byte) *AllegroHandler {
 	return &AllegroHandler{
-		integrationService: integrationService,
-		orderService:       orderService,
-		encryptionKey:      encryptionKey,
+		integrationService:   integrationService,
+		orderService:         orderService,
+		allegroImportService: allegroImportService,
+		encryptionKey:        encryptionKey,
 	}
 }
 
@@ -199,4 +201,22 @@ func (h *AllegroHandler) SyncOrders(w http.ResponseWriter, r *http.Request) {
 		"synced_count": len(orders),
 		"cursor":       cursor,
 	})
+}
+
+// ImportOffers handles POST /v1/integrations/allegro/import-offers.
+// It fetches all seller offers from Allegro and imports them as Product + ProductListing records.
+func (h *AllegroHandler) ImportOffers(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	if tenantID == uuid.Nil {
+		writeError(w, http.StatusUnauthorized, "missing tenant context")
+		return
+	}
+
+	result, err := h.allegroImportService.ImportOffers(r.Context(), tenantID)
+	if err != nil {
+		writeServerError(w, "failed to import offers from Allegro", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }

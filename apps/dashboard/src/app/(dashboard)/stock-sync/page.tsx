@@ -44,6 +44,7 @@ import {
   useUpdateStockSyncChannel,
   useDeleteStockSyncChannel,
   usePushAllStock,
+  usePushChannelStock,
 } from "@/hooks/use-stock-sync";
 import type {
   StockSyncChannel,
@@ -212,6 +213,7 @@ function AddChannelDialog() {
 function ChannelCard({ channel }: { channel: ChannelSummary }) {
   const deleteChannel = useDeleteStockSyncChannel();
   const updateChannel = useUpdateStockSyncChannel(channel.id);
+  const pushChannel = usePushChannelStock();
 
   const handleToggle = async (enabled: boolean) => {
     await updateChannel.mutateAsync({ enabled });
@@ -221,6 +223,10 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
     if (confirm("Czy na pewno chcesz usunąć ten kanał?")) {
       await deleteChannel.mutateAsync(channel.id);
     }
+  };
+
+  const handlePush = async () => {
+    await pushChannel.mutateAsync(channel.id);
   };
 
   return (
@@ -233,6 +239,17 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
           </CardTitle>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePush}
+            disabled={pushChannel.isPending || !channel.enabled}
+            title="Synchronizuj kanał"
+          >
+            <RefreshCw
+              className={`h-4 w-4 text-muted-foreground ${pushChannel.isPending ? "animate-spin" : ""}`}
+            />
+          </Button>
           <Switch
             checked={channel.enabled}
             onCheckedChange={handleToggle}
@@ -262,6 +279,16 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
             <span className="text-muted-foreground">Bufor</span>
             <span>{channel.stock_buffer} szt.</span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Błędy (24h)</span>
+            <span className={channel.error_count > 0 ? "text-red-600 font-medium" : ""}>
+              {channel.error_count}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Zsync. produktów</span>
+            <span>{channel.items_synced}</span>
+          </div>
           {channel.last_sync_at && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Ostatnia synchronizacja</span>
@@ -280,7 +307,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
 }
 
 export default function StockSyncPage() {
-  const { data: dashboard, isLoading: dashLoading } = useStockSyncDashboard();
+  const { data: dashboard, isLoading: dashLoading, dataUpdatedAt } = useStockSyncDashboard();
   const { isLoading: channelsLoading } =
     useStockSyncChannels({ limit: 100 });
   const pushAll = usePushAllStock();
@@ -300,6 +327,11 @@ export default function StockSyncPage() {
               Synchronizacja stanów magazynowych z kanałami sprzedaży w czasie
               rzeczywistym
             </p>
+            {dataUpdatedAt > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Odświeżono: {new Date(dataUpdatedAt).toLocaleTimeString("pl-PL")}
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button

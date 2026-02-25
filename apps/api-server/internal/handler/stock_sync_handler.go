@@ -155,6 +155,28 @@ func (h *StockSyncHandler) PushAll(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// PushChannel handles POST /v1/stock-sync/push/channel/{channel_id} — push all stock for a specific channel.
+func (h *StockSyncHandler) PushChannel(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	channelID, err := uuid.Parse(chi.URLParam(r, "channel_id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid channel ID")
+		return
+	}
+
+	if err := h.stockSyncService.PushStockToChannel(r.Context(), tenantID, channelID); err != nil {
+		if errors.Is(err, service.ErrStockSyncChannelNotFound) {
+			writeError(w, http.StatusNotFound, "sync channel not found")
+			return
+		}
+		writeServerError(w, "failed to sync channel", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"message": "channel sync started",
+	})
+}
+
 // PushProduct handles POST /v1/stock-sync/push/{product_id} — push single product.
 func (h *StockSyncHandler) PushProduct(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
@@ -240,7 +262,7 @@ func (h *StockSyncHandler) PushListing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.stockSyncService.PushSingleListing(r.Context(), tenantID, listingID); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		writeServerError(w, "failed to sync listing stock", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{

@@ -1049,6 +1049,7 @@ export interface KSeFSettings {
   environment: string;
   nip: string;
   token: string;
+  auto_send: boolean;
   company_name: string;
   company_street: string;
   company_city: string;
@@ -2805,6 +2806,8 @@ export interface ChannelSummary {
   last_sync_at?: string;
   last_error?: string;
   status: "ok" | "warning" | "error" | "disabled";
+  error_count: number;
+  items_synced: number;
 }
 
 export interface StockSyncDashboard {
@@ -2839,4 +2842,47 @@ export interface StockSyncChannelListParams extends PaginationParams {
 export interface StockSyncEventListParams extends PaginationParams {
   product_id?: string;
   trigger_type?: string;
+}
+
+// === Message Templates ===
+export interface MessageTemplate {
+  id: string;
+  tenant_id: string;
+  name: string;
+  channel: string; // "allegro" | "email" | "sms"
+  subject: string;
+  body: string;
+  variables: string[];
+  is_autoresponder: boolean;
+  trigger_event?: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMessageTemplateRequest {
+  name: string;
+  channel: string;
+  subject?: string;
+  body: string;
+  variables?: string[];
+  is_autoresponder?: boolean;
+  trigger_event?: string;
+  enabled?: boolean;
+}
+
+export interface UpdateMessageTemplateRequest {
+  name?: string;
+  channel?: string;
+  subject?: string;
+  body?: string;
+  variables?: string[];
+  is_autoresponder?: boolean;
+  trigger_event?: string;
+  enabled?: boolean;
+}
+
+export interface MessageTemplateListParams {
+  channel?: string;
+  enabled?: boolean;
 }

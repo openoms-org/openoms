@@ -34,6 +34,7 @@ type StockSyncService struct {
 	integrationRepo repository.IntegrationRepo
 	pool            *pgxpool.Pool
 	webhookDispatch *WebhookDispatchService
+	automationSvc   *AutomationService
 	encryptionKey   []byte
 	logger          *slog.Logger
 }
@@ -63,6 +64,11 @@ func NewStockSyncService(
 		encryptionKey:   encryptionKey,
 		logger:          logger,
 	}
+}
+
+// SetAutomationService sets the automation service for firing stock-restored events.
+func (s *StockSyncService) SetAutomationService(automationSvc *AutomationService) {
+	s.automationSvc = automationSvc
 }
 
 // --- Channel CRUD ---
@@ -288,6 +294,29 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event) })
 	}
 
+	// Detect stock restored: stock was 0, now > 0.
+	// If automation engine is wired, fire the event and let user-configured rules handle relisting.
+	// Otherwise, fall back to direct auto-relisting of inactive marketplace listings.
+	if oldQty == 0 && newQty > 0 {
+		s.logger.Info("stock sync: stock restored from zero, triggering auto-relisting",
+			"tenant_id", tenantID,
+			"product_id", productID,
+			"new_qty", newQty,
+		)
+
+		if s.automationSvc != nil {
+			// Fire product.stock_restored automation event for custom rules
+			FireAutomationEvent(s.automationSvc, tenantID, "product", "product.stock_restored", productID, map[string]any{
+				"old_quantity": oldQty,
+				"new_quantity": newQty,
+				"trigger_type": triggerType,
+			})
+		} else {
+			// Fallback: direct auto-relisting when automation engine is not wired
+			asyncutil.SafeGo(func() { s.reactivateListings(context.Background(), tenantID, productID) })
+		}
+	}
+
 	s.logger.Info("stock sync: stock change recorded",
 		"tenant_id", tenantID,
 		"product_id", productID,
@@ -299,6 +328,121 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 
 	// Propagate stock to marketplaces asynchronously
 	asyncutil.SafeGo(func() { s.PropagateStockToMarketplaces(context.Background(), tenantID, productID) })
+}
+
+// reactivateListings finds inactive/ended marketplace listings for a product and
+// reactivates them via the marketplace provider's ActivateOffer API.
+// This is the direct fallback called when stock is restored from zero and the
+// automation engine is not wired. When the automation engine IS available,
+// the equivalent logic runs via automation.executeActivateListing instead.
+// The two implementations are kept separate to avoid a circular dependency between
+// the service and automation packages (see automation/actions.go for details).
+func (s *StockSyncService) reactivateListings(ctx context.Context, tenantID, productID uuid.UUID) {
+	type relistJob struct {
+		listingID   uuid.UUID
+		externalID  string
+		integration *model.IntegrationWithCreds
+	}
+
+	var jobs []relistJob
+
+	// Phase 1: Gather inactive listings inside a transaction.
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		listings, err := s.listingRepo.ListByProduct(ctx, tx, productID)
+		if err != nil {
+			return err
+		}
+
+		for _, listing := range listings {
+			if listing.Status != "inactive" && listing.Status != "ended" {
+				continue
+			}
+			if listing.ExternalID == nil || *listing.ExternalID == "" {
+				continue
+			}
+
+			integ, err := s.integrationRepo.FindByID(ctx, tx, listing.IntegrationID)
+			if err != nil || integ == nil {
+				s.logger.Warn("auto-relist: integration not found for listing",
+					"listing_id", listing.ID, "integration_id", listing.IntegrationID)
+				continue
+			}
+
+			jobs = append(jobs, relistJob{
+				listingID:   listing.ID,
+				externalID:  *listing.ExternalID,
+				integration: integ,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.Error("auto-relist: failed to gather listings",
+			"tenant_id", tenantID, "product_id", productID, "error", err)
+		return
+	}
+
+	if len(jobs) == 0 {
+		return
+	}
+
+	// Phase 2: Activate via marketplace APIs outside the transaction.
+	activated, failed := 0, 0
+	for _, job := range jobs {
+		if job.integration.EncryptedCredentials == "" {
+			s.logger.Warn("auto-relist: no credentials for integration",
+				"integration_id", job.integration.ID)
+			failed++
+			continue
+		}
+
+		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, s.encryptionKey)
+		if err != nil {
+			s.logger.Error("auto-relist: decrypt credentials failed",
+				"integration_id", job.integration.ID, "error", err)
+			failed++
+			continue
+		}
+
+		provider, err := integration.NewMarketplaceProvider(job.integration.Provider, credJSON, job.integration.Settings)
+		if err != nil {
+			s.logger.Error("auto-relist: create provider failed",
+				"provider", job.integration.Provider, "error", err)
+			failed++
+			continue
+		}
+
+		// Check if provider supports listing activation
+		activator, ok := provider.(integration.ListingActivator)
+		if !ok {
+			s.logger.Info("auto-relist: provider does not support activation, skipping",
+				"provider", job.integration.Provider)
+			continue
+		}
+
+		if err := activator.ActivateOffer(ctx, job.externalID); err != nil {
+			s.logger.Error("auto-relist: activation failed",
+				"listing_id", job.listingID, "external_id", job.externalID,
+				"provider", job.integration.Provider, "error", err)
+			failed++
+			continue
+		}
+
+		// Update listing status to active (best-effort)
+		activeStatus := "active"
+		syncOK := "synced"
+		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.listingRepo.Update(ctx, tx, job.listingID, &model.UpdateProductListingRequest{
+				Status:     &activeStatus,
+				SyncStatus: &syncOK,
+			})
+		})
+		activated++
+	}
+
+	s.logger.Info("auto-relist: completed",
+		"tenant_id", tenantID, "product_id", productID,
+		"activated", activated, "failed", failed)
 }
 
 // CalculateAvailableStock returns stock allocation per channel for a product.

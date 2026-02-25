@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -40,6 +42,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
@@ -207,6 +210,8 @@ func main() {
 	dropshipItemRepo := repository.NewDropshipOrderItemRepository()
 	recurringOrderRepo := repository.NewRecurringOrderRepository()
 
+	messageTemplateRepo := repository.NewMessageTemplateRepository()
+
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
 
 	// Login lockout (per-account brute-force protection)
@@ -264,9 +269,11 @@ func main() {
 	customerService := service.NewCustomerService(customerRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	barcodeService := service.NewBarcodeService(productRepo, variantRepo, orderRepo, auditRepo, pool)
 	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
+	messageTemplateService := service.NewMessageTemplateService(messageTemplateRepo, pool)
 	warehouseDocService := service.NewWarehouseDocumentService(warehouseDocRepo, warehouseDocItemRepo, warehouseStockRepo, auditRepo, pool)
 	exchangeRateService := service.NewExchangeRateService(exchangeRateRepo, auditRepo, pool)
 	ksefService := service.NewKSeFService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool)
+	invoiceService.SetKSeFService(ksefService)
 	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
 	purchaseOrderService := service.NewPurchaseOrderService(purchaseOrderRepo, purchaseOrderItemRepo, warehouseStockRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 	pickPackService := service.NewPickPackService(pickPackRepo, orderRepo, productRepo, variantRepo, auditRepo, pool)
@@ -286,6 +293,9 @@ func main() {
 	orderService.SetWarehouseStockRepo(warehouseStockRepo)
 	warehouseService.SetStockSyncService(stockSyncService)
 	stocktakeService.SetStockSyncService(stockSyncService)
+	productService.SetStockSyncService(stockSyncService)
+	warehouseDocService.SetStockSyncService(stockSyncService)
+	supplierService.SetStockSyncService(stockSyncService)
 
 	// Segment & Loyalty
 	segmentRepo := repository.NewCustomerSegmentRepository()
@@ -301,6 +311,18 @@ func main() {
 	automationExecutor.SetOrderServices(orderService, orderService, orderRepo, pool)
 	automationExecutor.SetEmailSender(emailService)
 	automationExecutor.SetInvoiceCreator(invoiceService)
+	automationExecutor.SetListingActivatorDeps(&automation.ListingActivatorDeps{
+		ListingRepo:     productListingRepo,
+		IntegrationRepo: integrationRepo,
+		EncryptionKey:   encryptionKey,
+		ProviderFactory: newListingActivatorFactory(),
+	})
+	automationExecutor.SetMarketplaceMessageDeps(&automation.MarketplaceMessageDeps{
+		TemplateRepo:   messageTemplateRepo,
+		OrderRepo:      orderRepo,
+		Pool:           pool,
+		IntegrationSvc: integrationService,
+	})
 	automationEngine := automation.NewEngine(automationRuleRepo, automationRuleLogRepo, pool, automationExecutor, slog.Default())
 	automationEngine.SetDelayedActionRepo(delayedActionRepo)
 	automationService := service.NewAutomationService(automationRuleRepo, automationRuleLogRepo, pool, automationEngine, slog.Default())
@@ -311,6 +333,7 @@ func main() {
 	shipmentService.SetAutomationService(automationService)
 	returnService.SetAutomationService(automationService)
 	productService.SetAutomationService(automationService)
+	stockSyncService.SetAutomationService(automationService)
 
 	// Invitation service (for invite-only registration mode)
 	invitationRepo := repository.NewInvitationRepository()
@@ -360,6 +383,7 @@ func main() {
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
 	productImportService := service.NewProductImportService(productRepo, auditRepo, pool)
+	productImportService.SetStockSyncService(stockSyncService)
 	productHandler := handler.NewProductHandler(productService, productImportService, productCategoryService)
 	integrationHandler := handler.NewIntegrationHandler(integrationService, integrationRepo, pool)
 	returnHandler := handler.NewReturnHandler(returnService)
@@ -385,8 +409,12 @@ func main() {
 	}
 	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
 
+	// Allegro import service (import Allegro offers as products + listings)
+	allegroImportService := service.NewAllegroImportService(integrationService, productRepo, productListingRepo, pool)
+	allegroImportService.SetStockSyncService(stockSyncService)
+
 	// Allegro fulfillment + tracking handler (Batch 1)
-	allegroHandler := handler.NewAllegroHandler(integrationService, orderService, encryptionKey)
+	allegroHandler := handler.NewAllegroHandler(integrationService, orderService, allegroImportService, encryptionKey)
 
 	// Allegro shipment management handler ("Wysyłam z Allegro")
 	allegroShipmentHandler := handler.NewAllegroShipmentHandler(integrationService, shipmentService, orderRepo, shipmentRepo, pool, encryptionKey)
@@ -479,6 +507,9 @@ func main() {
 
 	// Price list handler
 	priceListHandler := handler.NewPriceListHandler(priceListService)
+
+	// Message template handler
+	messageTemplateHandler := handler.NewMessageTemplateHandler(messageTemplateService)
 
 	// Warehouse document handler
 	warehouseDocHandler := handler.NewWarehouseDocumentHandler(warehouseDocService)
@@ -701,6 +732,7 @@ func main() {
 		ListingSync:         listingSyncHandler,
 		PublicConfig:        configHandler,
 		Invitation:          invitationHandler,
+		MessageTemplate:     messageTemplateHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)
@@ -760,4 +792,21 @@ func main() {
 	wsCancel()
 	workerMgr.Stop()
 	slog.Info("server stopped")
+}
+
+// newListingActivatorFactory returns a factory function that creates ListingActivatorProvider
+// instances from marketplace provider credentials. It bridges the automation package's
+// ListingActivatorProvider interface to the integration package's MarketplaceProvider.
+func newListingActivatorFactory() func(provider string, credentials json.RawMessage, settings json.RawMessage) (automation.ListingActivatorProvider, error) {
+	return func(providerName string, credentials json.RawMessage, settings json.RawMessage) (automation.ListingActivatorProvider, error) {
+		mp, err := integration.NewMarketplaceProvider(providerName, credentials, settings)
+		if err != nil {
+			return nil, err
+		}
+		activator, ok := mp.(automation.ListingActivatorProvider)
+		if !ok {
+			return nil, fmt.Errorf("provider %q does not support offer activation", providerName)
+		}
+		return activator, nil
+	}
 }

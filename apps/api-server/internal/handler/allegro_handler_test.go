@@ -25,7 +25,7 @@ func newChiContextWithParam(key, value string) context.Context {
 // --- UpdateFulfillment ---
 
 func TestAllegroHandler_UpdateFulfillment_InvalidOrderID(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("orderId", "not-a-uuid")
@@ -44,7 +44,7 @@ func TestAllegroHandler_UpdateFulfillment_InvalidOrderID(t *testing.T) {
 }
 
 func TestAllegroHandler_UpdateFulfillment_InvalidJSON(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	orderID := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -64,7 +64,7 @@ func TestAllegroHandler_UpdateFulfillment_InvalidJSON(t *testing.T) {
 }
 
 func TestAllegroHandler_UpdateFulfillment_MissingStatus(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	orderID := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -84,7 +84,7 @@ func TestAllegroHandler_UpdateFulfillment_MissingStatus(t *testing.T) {
 }
 
 func TestAllegroHandler_UpdateFulfillment_EmptyBody(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	orderID := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -104,7 +104,7 @@ func TestAllegroHandler_UpdateFulfillment_EmptyBody(t *testing.T) {
 }
 
 func TestAllegroHandler_UpdateFulfillment_MissingOrderIDParam(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	// No chi route context → orderId will be empty string → uuid.Parse fails
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/orders//fulfillment", strings.NewReader(`{"status":"SENT"}`))
@@ -122,7 +122,7 @@ func TestAllegroHandler_UpdateFulfillment_MissingOrderIDParam(t *testing.T) {
 // --- AddTracking ---
 
 func TestAllegroHandler_AddTracking_InvalidOrderID(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("orderId", "bad-id")
@@ -141,7 +141,7 @@ func TestAllegroHandler_AddTracking_InvalidOrderID(t *testing.T) {
 }
 
 func TestAllegroHandler_AddTracking_InvalidJSON(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	orderID := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -161,7 +161,7 @@ func TestAllegroHandler_AddTracking_InvalidJSON(t *testing.T) {
 }
 
 func TestAllegroHandler_AddTracking_MissingCarrierID(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	orderID := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -181,7 +181,7 @@ func TestAllegroHandler_AddTracking_MissingCarrierID(t *testing.T) {
 }
 
 func TestAllegroHandler_AddTracking_MissingWaybill(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	orderID := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -201,7 +201,7 @@ func TestAllegroHandler_AddTracking_MissingWaybill(t *testing.T) {
 }
 
 func TestAllegroHandler_AddTracking_BothFieldsMissing(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	orderID := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -221,7 +221,7 @@ func TestAllegroHandler_AddTracking_BothFieldsMissing(t *testing.T) {
 }
 
 func TestAllegroHandler_AddTracking_MissingOrderIDParam(t *testing.T) {
-	h := NewAllegroHandler(nil, nil, nil)
+	h := NewAllegroHandler(nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/orders//tracking", strings.NewReader(`{"carrier_id":"DHL","waybill":"12345"}`))
 	rr := httptest.NewRecorder()

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -38,6 +39,12 @@ type InvoiceService struct {
 	auditRepo   repository.AuditRepo
 	pool        *pgxpool.Pool
 	encKey      []byte
+	ksefService *KSeFService
+}
+
+// SetKSeFService sets the KSeF service for automatic sending on invoice creation.
+func (s *InvoiceService) SetKSeFService(ksefSvc *KSeFService) {
+	s.ksefService = ksefSvc
 }
 
 func NewInvoiceService(
@@ -239,6 +246,11 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		})
 	})
 
+	// Trigger KSeF auto-send after successful creation (outside the transaction)
+	if err == nil && inv != nil && inv.Status == "issued" {
+		s.triggerKSeFAutoSend(tenantID, inv.ID)
+	}
+
 	return inv, err
 }
 
@@ -307,6 +319,7 @@ func (s *InvoiceService) GetPDF(ctx context.Context, tenantID, invoiceID uuid.UU
 // HandleOrderStatusChange is called when an order's status changes. If auto-invoicing
 // is configured for this status, it creates an invoice automatically.
 func (s *InvoiceService) HandleOrderStatusChange(ctx context.Context, tenantID uuid.UUID, order *model.Order) {
+	var createdInvoice *model.Invoice
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		invoicingCfg, err := s.loadInvoicingSettings(ctx, tx, tenantID)
 		if err != nil {
@@ -407,6 +420,8 @@ func (s *InvoiceService) HandleOrderStatusChange(ctx context.Context, tenantID u
 		}
 		_ = s.invoiceRepo.Update(ctx, tx, invoice)
 
+		createdInvoice = invoice
+
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
 			UserID:     uuid.Nil,
@@ -418,7 +433,32 @@ func (s *InvoiceService) HandleOrderStatusChange(ctx context.Context, tenantID u
 	})
 	if err != nil {
 		slog.Error("auto-invoice failed", "tenant_id", tenantID, "order_id", order.ID, "error", err)
+		return
 	}
+
+	// Trigger KSeF auto-send after successful auto-creation (outside the transaction)
+	if createdInvoice != nil && createdInvoice.Status == "issued" {
+		s.triggerKSeFAutoSend(tenantID, createdInvoice.ID)
+	}
+}
+
+// triggerKSeFAutoSend sends the invoice to KSeF in a background goroutine.
+// The settings check is performed inside the goroutine to avoid synchronous DB calls on the hot path.
+func (s *InvoiceService) triggerKSeFAutoSend(tenantID, invoiceID uuid.UUID) {
+	if s.ksefService == nil {
+		return
+	}
+
+	asyncutil.SafeGo(func() {
+		bgCtx := context.Background()
+		cfg, err := s.ksefService.GetSettings(bgCtx, tenantID)
+		if err != nil || cfg == nil || !cfg.AutoSend || !cfg.Enabled {
+			return
+		}
+		if err := s.ksefService.SendToKSeF(bgCtx, tenantID, invoiceID, uuid.Nil, "system"); err != nil {
+			slog.Error("ksef auto-send failed", "invoice_id", invoiceID, "error", err)
+		}
+	})
 }
 
 // loadInvoicingSettings reads the "invoicing" section from tenant settings.

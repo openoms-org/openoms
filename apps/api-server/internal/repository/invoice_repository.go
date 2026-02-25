@@ -199,6 +199,46 @@ func (r *InvoiceRepository) FindPendingKSeF(ctx context.Context, tx pgx.Tx) ([]m
 	return invoices, nil
 }
 
+// FindErrorKSeF returns all invoices with ksef_status = 'error' (eligible for retry).
+func (r *InvoiceRepository) FindErrorKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error) {
+	rows, err := tx.Query(ctx,
+		fmt.Sprintf(`SELECT %s FROM invoices WHERE ksef_status = 'error' ORDER BY updated_at ASC LIMIT 100`, invoiceSelectColumns),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find error ksef invoices: %w", err)
+	}
+	defer rows.Close()
+
+	invoices, err := scanInvoices(rows)
+	if err != nil {
+		return nil, fmt.Errorf("scan invoice: %w", err)
+	}
+	return invoices, nil
+}
+
+// FindRetryableKSeF returns invoices with ksef_status = 'retrying' that have a retry_count > 0
+// in their ksef_response JSONB (i.e., invoices that were reset for retry, not fresh invoices).
+func (r *InvoiceRepository) FindRetryableKSeF(ctx context.Context, tx pgx.Tx) ([]model.Invoice, error) {
+	rows, err := tx.Query(ctx,
+		fmt.Sprintf(`SELECT %s FROM invoices
+			WHERE ksef_status = 'retrying'
+			  AND ksef_response IS NOT NULL
+			  AND ksef_response ? 'retry_count'
+			  AND (ksef_response->>'retry_count')::int > 0
+			ORDER BY updated_at ASC LIMIT 50`, invoiceSelectColumns),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find retryable ksef invoices: %w", err)
+	}
+	defer rows.Close()
+
+	invoices, err := scanInvoices(rows)
+	if err != nil {
+		return nil, fmt.Errorf("scan invoice: %w", err)
+	}
+	return invoices, nil
+}
+
 // UpdateKSeFStatus updates only the KSeF-related fields of an invoice.
 func (r *InvoiceRepository) UpdateKSeFStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, ksefNumber *string, ksefStatus string, ksefResponse []byte) error {
 	ct, err := tx.Exec(ctx,
