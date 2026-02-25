@@ -114,7 +114,7 @@ func TestWooCommerceOrderMapper_CustomerNoteFromRawData(t *testing.T) {
 		TotalAmount:  10.0,
 		Currency:     "PLN",
 		RawData: map[string]any{
-			"customer_note":       "Dzwoneczek przy drzwiach nie dziala",
+			"customer_note":        "Dzwoneczek przy drzwiach nie dziala",
 			"woocommerce_order_id": 42,
 		},
 	}

@@ -214,8 +214,8 @@ func TestStoreOrderMapper_CustomerNoteFromRawData(t *testing.T) {
 		TotalAmount:  10.0,
 		Currency:     "PLN",
 		RawData: map[string]any{
-			"customer_note":    "Prosze o szybka wysylke",
-			"shoper_order_id":  "123",
+			"customer_note":   "Prosze o szybka wysylke",
+			"shoper_order_id": "123",
 		},
 	}
 	mapper := storeOrderMapper("shoper")
