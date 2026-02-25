@@ -1,5 +1,5 @@
 # Security Posture
-Last full audit: 2026-02-25 (3 rounds: PR #36, #38, #42; test hardening: PRs #43-56)
+Last full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PRs #43-56)
 
 ## Unfixed Findings
 
@@ -20,6 +20,7 @@ Last full audit: 2026-02-25 (3 rounds: PR #36, #38, #42; test hardening: PRs #43
    - Effort: L
 
 ## Recently Fixed
+- 2026-02-25: PR #58 — Allegro competitive parity with full security audit: SendToKSeF three-phase refactor (no DB during external calls), unique index on product_listings(external_id, integration_id), per-tenant ImportOffers concurrency guard, KSeF session defer-terminate, message template body max length validation, raw error leak fix in PushListing, proper Allegro provider in automation (token refresh), warehouse doc stock quantities fix
 - 2026-02-25: PRs #43-56 — Massive test coverage expansion: SDK tests for all 27 packages (100%), middleware tests for all 18 files (100%), worker tests for all 19 files (100%), handler validation tests for all handlers, model Validate() coverage for 54 request types, service-layer tests (carbon, repricing, webhook, dropship, invoice, automation conditions)
 - 2026-02-25: PR #52 — SafeGo helper for goroutine panic recovery (prevents silent worker crashes)
 - 2026-02-25: PR #42 — Audit remediation v3: additional security fixes, error handling improvements, code quality
@@ -55,3 +56,6 @@ Last full audit: 2026-02-25 (3 rounds: PR #36, #38, #42; test hardening: PRs #43
 - HSTS: Strict-Transport-Security in production
 - K8s: PSS enforce:restricted, NetworkPolicies default-deny
 - Headers: CSP, X-Frame-Options:DENY, X-Content-Type-Options:nosniff, Referrer-Policy:strict-origin-when-cross-origin
+- DB connection safety: three-phase pattern for external API calls (no DB held during HTTP), deferred KSeF session cleanup
+- Concurrency: per-tenant mutex on ImportOffers, unique index on product_listings(external_id, integration_id)
+- Input validation: message template body max 50k chars, name max 200 chars
