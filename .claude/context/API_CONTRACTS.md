@@ -1,8 +1,11 @@
 # API Contracts
-Version: 2 (bump after every endpoint change)
-Updated: 2026-02-24
+Version: 3 (bump after every endpoint change)
+Updated: 2026-02-25
 
 ## Recently Changed
+- 2026-02-25: `POST /v1/shipments` — auto-calculates weight from order items when weight not provided (PR #41)
+- 2026-02-25: Supplier sync now propagates product weight to products table (PR #41)
+- 2026-02-25: Allegro order polling: retry with backoff, bulk sync, order deduplication (PR #40)
 - 2026-02-24: All mutation endpoints (POST/PUT/PATCH/DELETE) now require CSRF token (`X-CSRF-Token` header matching `csrf_token` cookie)
 - 2026-02-24: `GET /v1/ws` — ticket-only auth (JWT query param fallback removed)
 - 2026-02-24: Settings validation added: EmailSettings (smtp_port 0-65535), SMSSettings (from max 11 chars), InvoicingSettings (default_tax_rate 0-100)

@@ -70,3 +70,17 @@ Append-only log. Each entry is immutable once written.
 - **Decision:** Generic `createCrudHooks<T, CreateReq, UpdateReq, ListParams>` factory in `hooks/create-crud-hooks.ts`. Custom hooks stay in individual files alongside the factory-generated CRUD hooks.
 - **File:** `apps/dashboard/src/hooks/create-crud-hooks.ts`
 - **Consequences:** ~600 lines removed. New resources auto-get CRUD hooks. ListParams requires `as unknown as` cast for interface compatibility with generic constraint.
+
+## ADR-010: SafeGo Helper for Goroutine Panic Recovery
+- **Date:** 2026-02-25
+- **Context:** Uncaught panics in goroutines (workers, background tasks) crash the entire process silently. Go runtime terminates on unrecovered goroutine panics.
+- **Decision:** `SafeGo(logger, fn)` wrapper in `internal/util/safego.go` — recovers panics, logs stack trace with slog, prevents process termination.
+- **File:** `apps/api-server/internal/util/safego.go`
+- **Consequences:** All background goroutines should use `SafeGo` instead of bare `go func()`. Panic is logged, not re-raised.
+
+## ADR-011: Weight Propagation (Supplier → Product → Shipment)
+- **Date:** 2026-02-25
+- **Context:** Shipments need weight for carrier label generation. Manual weight entry is error-prone. Supplier feeds (IOF/CSV) include product weights.
+- **Decision:** Three-step propagation: (1) supplier sync writes weight to products table, (2) shipment creation auto-sums product weights from order items, (3) manual weight override still takes precedence.
+- **Files:** `supplier_service.go` (sync weight), `shipment_service.go` (calculateOrderWeight)
+- **Consequences:** ShipmentService now depends on ProductRepo. Weight calculated only when not explicitly provided.
