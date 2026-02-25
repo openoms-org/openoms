@@ -298,10 +298,13 @@ func (s *AllegroImportService) createListing(
 // The Allegro offer ID belongs on the ProductListing (as listing.ExternalID), not on the Product.
 func mapAllegroOfferToProduct(offer allegrosdk.Offer, tenantID uuid.UUID) model.Product {
 	product := model.Product{
-		ID:       uuid.New(),
-		TenantID: tenantID,
-		Name:     offer.Name,
-		Source:   "allegro",
+		ID:            uuid.New(),
+		TenantID:      tenantID,
+		Name:          offer.Name,
+		Source:         "allegro",
+		Metadata:       json.RawMessage(`{}`),
+		Tags:           []string{},
+		Images:         json.RawMessage(`[]`),
 	}
 
 	// External.ID is the seller's own SKU — use it as both SKU and ExternalID.
