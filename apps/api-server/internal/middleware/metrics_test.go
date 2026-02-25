@@ -70,7 +70,7 @@ func TestMetricsCollector_Middleware_TracksBytesWritten(t *testing.T) {
 	body := `{"items":[1,2,3]}`
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	})
 	handler := mc.Middleware()(next)
 
@@ -192,7 +192,7 @@ func TestMetricsCollector_Middleware_PreservesResponseBody(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(body))
+		_, _ = w.Write([]byte(body))
 	})
 	handler := mc.Middleware()(next)
 
@@ -208,7 +208,7 @@ func TestMetricsCollector_Middleware_WriteWithoutExplicitWriteHeader(t *testing.
 	mc := middleware.NewMetricsCollector()
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Write without calling WriteHeader first; should default to 200
-		w.Write([]byte("hello"))
+		_, _ = w.Write([]byte("hello"))
 	})
 	handler := mc.Middleware()(next)
 

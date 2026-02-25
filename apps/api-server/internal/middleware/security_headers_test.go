@@ -145,7 +145,7 @@ func TestSecurityHeaders_HeadersPresentOnNonGET(t *testing.T) {
 func TestSecurityHeaders_PreservesHandlerResponseBody(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"id":1}`))
+		_, _ = w.Write([]byte(`{"id":1}`))
 	})
 	handler := middleware.SecurityHeaders(next)
 	req := httptest.NewRequest("POST", "/v1/orders", nil)
