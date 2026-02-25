@@ -168,12 +168,41 @@ type Offer struct {
 	ID           string            `json:"id"`
 	Name         string            `json:"name"`
 	Category     *OfferCategory    `json:"category,omitempty"`
+	Parameters   []OfferParameter  `json:"parameters,omitempty"`
 	SellingMode  *OfferSellingMode `json:"sellingMode,omitempty"`
 	Stock        *OfferStock       `json:"stock,omitempty"`
 	Publication  *OfferPublication `json:"publication,omitempty"`
 	PrimaryImage *OfferImage       `json:"primaryImage,omitempty"`
+	Images       []OfferImage      `json:"images,omitempty"`
 	Description  *OfferDescription `json:"description,omitempty"`
 	External     *OfferExternal    `json:"external,omitempty"`
+	ProductSet   []ProductSetEntry `json:"productSet,omitempty"`
+}
+
+// OfferParameter represents a single parameter (attribute) of an offer.
+type OfferParameter struct {
+	ID            string   `json:"id"`
+	Name          string   `json:"name,omitempty"`
+	Values        []string `json:"values,omitempty"`
+	ValuesIDs     []string `json:"valuesIds,omitempty"`
+	RangeValue    *Range   `json:"rangeValue,omitempty"`
+}
+
+// Range represents a numeric range value.
+type Range struct {
+	From string `json:"from,omitempty"`
+	To   string `json:"to,omitempty"`
+}
+
+// ProductSetEntry links an offer to a product in the Allegro catalog.
+type ProductSetEntry struct {
+	Product *ProductRef `json:"product,omitempty"`
+}
+
+// ProductRef is a reference to an Allegro catalog product.
+type ProductRef struct {
+	ID         string            `json:"id,omitempty"`
+	Parameters []OfferParameter  `json:"parameters,omitempty"`
 }
 
 // OfferSellingMode represents the selling mode and price of an offer.
