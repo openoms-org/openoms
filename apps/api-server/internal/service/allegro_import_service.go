@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -323,8 +324,55 @@ func mapAllegroOfferToProduct(offer allegrosdk.Offer, tenantID uuid.UUID) model.
 	if offer.Stock != nil {
 		product.StockQuantity = offer.Stock.Available
 	}
-	if offer.PrimaryImage != nil {
+
+	// Images: collect all offer images; set ImageURL to the first one.
+	if len(offer.Images) > 0 {
+		urls := make([]string, 0, len(offer.Images))
+		for _, img := range offer.Images {
+			if img.URL != "" {
+				urls = append(urls, img.URL)
+			}
+		}
+		if len(urls) > 0 {
+			product.ImageURL = &urls[0]
+			if data, err := json.Marshal(urls); err == nil {
+				product.Images = data
+			}
+		}
+	} else if offer.PrimaryImage != nil && offer.PrimaryImage.URL != "" {
 		product.ImageURL = &offer.PrimaryImage.URL
 	}
+
+	// Category from Allegro category ID.
+	if offer.Category != nil && offer.Category.ID != "" {
+		cat := offer.Category.ID
+		product.Category = &cat
+	}
+
+	// EAN from offer parameters (match by name containing "EAN" or "GTIN").
+	for _, p := range offer.Parameters {
+		nameLower := strings.ToLower(p.Name)
+		if (strings.Contains(nameLower, "ean") || strings.Contains(nameLower, "gtin")) && len(p.Values) > 0 && p.Values[0] != "" {
+			ean := p.Values[0]
+			product.EAN = &ean
+			break
+		}
+	}
+
+	// Description from offer description sections (TEXT items).
+	if offer.Description != nil && len(offer.Description.Sections) > 0 {
+		var parts []string
+		for _, section := range offer.Description.Sections {
+			for _, item := range section.Items {
+				if item.Type == "TEXT" && strings.TrimSpace(item.Content) != "" {
+					parts = append(parts, item.Content)
+				}
+			}
+		}
+		if len(parts) > 0 {
+			product.DescriptionLong = strings.Join(parts, "\n")
+		}
+	}
+
 	return product
 }
