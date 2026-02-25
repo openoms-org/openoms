@@ -9,12 +9,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// MarketplaceCategoryMappingRepository implements MarketplaceCategoryMappingRepo.
 type MarketplaceCategoryMappingRepository struct{}
 
+// NewMarketplaceCategoryMappingRepository creates a new repository instance.
 func NewMarketplaceCategoryMappingRepository() *MarketplaceCategoryMappingRepository {
 	return &MarketplaceCategoryMappingRepository{}
 }
 
+// ListByIntegration returns all mappings for the given integration.
 func (r *MarketplaceCategoryMappingRepository) ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID) ([]model.MarketplaceCategoryMapping, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, integration_id, external_category_id, external_category_name, category_id, auto_created, confirmed, created_at, updated_at
@@ -39,6 +42,7 @@ func (r *MarketplaceCategoryMappingRepository) ListByIntegration(ctx context.Con
 	return mappings, rows.Err()
 }
 
+// FindByExternalID finds a mapping by external category ID within an integration.
 func (r *MarketplaceCategoryMappingRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID, externalCategoryID string) (*model.MarketplaceCategoryMapping, error) {
 	var m model.MarketplaceCategoryMapping
 	err := tx.QueryRow(ctx,
@@ -56,6 +60,7 @@ func (r *MarketplaceCategoryMappingRepository) FindByExternalID(ctx context.Cont
 	return &m, nil
 }
 
+// Upsert creates or updates a mapping, preserving confirmed flags on existing confirmed rows.
 func (r *MarketplaceCategoryMappingRepository) Upsert(ctx context.Context, tx pgx.Tx, m *model.MarketplaceCategoryMapping) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO marketplace_category_mappings (id, tenant_id, integration_id, external_category_id, external_category_name, category_id, auto_created, confirmed)
@@ -72,6 +77,7 @@ func (r *MarketplaceCategoryMappingRepository) Upsert(ctx context.Context, tx pg
 	).Scan(&m.ID, &m.CreatedAt, &m.UpdatedAt)
 }
 
+// Delete removes a mapping by ID scoped to the given integration.
 func (r *MarketplaceCategoryMappingRepository) Delete(ctx context.Context, tx pgx.Tx, integrationID, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM marketplace_category_mappings WHERE id = $1 AND integration_id = $2", id, integrationID)
 	if err != nil {

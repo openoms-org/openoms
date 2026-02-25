@@ -149,6 +149,7 @@ type UpsertMarketplaceCategoryMappingRequest struct {
 	Confirmed            bool       `json:"confirmed"`
 }
 
+// Validate checks required fields and length limits.
 func (r *UpsertMarketplaceCategoryMappingRequest) Validate() error {
 	if strings.TrimSpace(r.ExternalCategoryID) == "" {
 		return errors.New("external_category_id is required")
