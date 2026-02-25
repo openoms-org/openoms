@@ -80,7 +80,7 @@ func TestRegister_MultipleWorkers(t *testing.T) {
 // Start + Stop lifecycle
 // ---------------------------------------------------------------------------
 
-func TestStartStop_NoWorkers(t *testing.T) {
+func TestStartStop_NoWorkers(_ *testing.T) {
 	m := NewManager(nil, slog.Default())
 	m.Start(context.Background())
 	m.Stop()
@@ -112,7 +112,7 @@ func TestStartStop_WorkerExecutes(t *testing.T) {
 	assert.GreaterOrEqual(t, count, int32(2), "worker should have run at least twice (immediate + tick)")
 }
 
-func TestStartStop_WorkerErrorDoesNotCrash(t *testing.T) {
+func TestStartStop_WorkerErrorDoesNotCrash(_ *testing.T) {
 	w := &stubWorker{
 		name:     "error-worker",
 		interval: 50 * time.Millisecond,
@@ -156,7 +156,7 @@ func TestStartStop_WorkerPanicRecovery(t *testing.T) {
 	assert.True(t, ranAfterPanic.Load(), "worker should continue running after a panic in a previous run")
 }
 
-func TestStop_CalledBeforeStart(t *testing.T) {
+func TestStop_CalledBeforeStart(_ *testing.T) {
 	m := NewManager(nil, slog.Default())
 	// Stop without Start should not panic (cancel is nil).
 	m.Stop()
