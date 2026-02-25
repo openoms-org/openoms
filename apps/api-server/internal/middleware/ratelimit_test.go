@@ -41,7 +41,7 @@ func TestMemoryRateLimiter_Allow_ExceedLimitBlocked(t *testing.T) {
 	limit := 3
 
 	// Use up the limit
-	for i := 0; i < limit; i++ {
+	for range limit {
 		allowed, err := limiter.Allow(ctx, "user1", limit, time.Minute)
 		assert.NoError(t, err)
 		assert.True(t, allowed)
@@ -58,12 +58,12 @@ func TestMemoryRateLimiter_Allow_MultipleExceedAllBlocked(t *testing.T) {
 	ctx := context.Background()
 	limit := 2
 
-	for i := 0; i < limit; i++ {
+	for range limit {
 		limiter.Allow(ctx, "key", limit, time.Minute)
 	}
 
 	// All subsequent requests should be blocked
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		allowed, err := limiter.Allow(ctx, "key", limit, time.Minute)
 		assert.NoError(t, err)
 		assert.False(t, allowed, "request %d after limit should be blocked", i+1)
@@ -95,7 +95,7 @@ func TestMemoryRateLimiter_Allow_ManyKeysIndependent(t *testing.T) {
 
 	keys := []string{"192.168.1.1", "10.0.0.1", "172.16.0.1", "8.8.8.8", "1.1.1.1"}
 	for _, key := range keys {
-		for i := 0; i < limit; i++ {
+		for i := range limit {
 			allowed, err := limiter.Allow(ctx, key, limit, time.Minute)
 			assert.NoError(t, err)
 			assert.True(t, allowed, "key %s request %d should be allowed", key, i+1)
@@ -134,7 +134,7 @@ func TestMemoryRateLimiter_Allow_WindowExpiryResetsCount(t *testing.T) {
 	window := 50 * time.Millisecond
 
 	// Use all requests in window
-	for i := 0; i < limit; i++ {
+	for range limit {
 		limiter.Allow(ctx, "user1", limit, window)
 	}
 	blocked, _ := limiter.Allow(ctx, "user1", limit, window)
@@ -144,7 +144,7 @@ func TestMemoryRateLimiter_Allow_WindowExpiryResetsCount(t *testing.T) {
 	time.Sleep(60 * time.Millisecond)
 
 	// Full limit should be available again
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		allowed, err := limiter.Allow(ctx, "user1", limit, window)
 		assert.NoError(t, err)
 		assert.True(t, allowed, "request %d after window reset should be allowed", i+1)
@@ -169,7 +169,7 @@ func TestMemoryRateLimiter_Allow_ErrorIsAlwaysNil(t *testing.T) {
 	ctx := context.Background()
 
 	// The in-memory implementation should never return an error
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		_, err := limiter.Allow(ctx, "any", 5, time.Minute)
 		assert.NoError(t, err, "in-memory limiter should never return errors")
 	}
@@ -187,18 +187,16 @@ func TestMemoryRateLimiter_Allow_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 	var allowedCount atomic.Int64
 
-	for g := 0; g < goroutines; g++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for r := 0; r < requestsPerGoroutine; r++ {
+	for range goroutines {
+		wg.Go(func() {
+			for range requestsPerGoroutine {
 				allowed, err := limiter.Allow(ctx, "shared-key", limit, time.Minute)
 				assert.NoError(t, err)
 				if allowed {
 					allowedCount.Add(1)
 				}
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -218,12 +216,12 @@ func TestMemoryRateLimiter_Allow_ConcurrentDifferentKeys(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	for k := 0; k < numKeys; k++ {
+	for k := range numKeys {
 		wg.Add(1)
 		go func(keyIdx int) {
 			defer wg.Done()
 			key := fmt.Sprintf("key-%d", keyIdx)
-			for i := 0; i < limit; i++ {
+			for i := range limit {
 				allowed, err := limiter.Allow(ctx, key, limit, time.Minute)
 				assert.NoError(t, err)
 				assert.True(t, allowed, "request %d for %s should be allowed", i+1, key)
@@ -251,7 +249,7 @@ func TestRateLimitWith_AllowedRequestsPassThrough(t *testing.T) {
 	limiter := middleware.NewMemoryRateLimiter()
 	handler := middleware.RateLimitWith(limiter, 5, time.Minute)(testOKHandler())
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		req := httptest.NewRequest("GET", "/api/data", nil)
 		req.RemoteAddr = "203.0.113.50:12345"
 		rr := httptest.NewRecorder()
@@ -266,7 +264,7 @@ func TestRateLimitWith_ExceededReturns429(t *testing.T) {
 
 	ip := "198.51.100.1:54321"
 	// Exhaust limit
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		req := httptest.NewRequest("POST", "/v1/auth/login", nil)
 		req.RemoteAddr = ip
 		rr := httptest.NewRecorder()
@@ -347,7 +345,7 @@ func TestRateLimit_LegacyConstructorWorks(t *testing.T) {
 	ip := "203.0.113.99:9999"
 
 	// First two should pass
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		req := httptest.NewRequest("GET", "/", nil)
 		req.RemoteAddr = ip
 		rr := httptest.NewRecorder()
