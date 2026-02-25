@@ -181,11 +181,11 @@ type Offer struct {
 
 // OfferParameter represents a single parameter (attribute) of an offer.
 type OfferParameter struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name,omitempty"`
-	Values        []string `json:"values,omitempty"`
-	ValuesIDs     []string `json:"valuesIds,omitempty"`
-	RangeValue    *Range   `json:"rangeValue,omitempty"`
+	ID         string   `json:"id"`
+	Name       string   `json:"name,omitempty"`
+	Values     []string `json:"values,omitempty"`
+	ValuesIDs  []string `json:"valuesIds,omitempty"`
+	RangeValue *Range   `json:"rangeValue,omitempty"`
 }
 
 // Range represents a numeric range value.
@@ -201,8 +201,8 @@ type ProductSetEntry struct {
 
 // ProductRef is a reference to an Allegro catalog product.
 type ProductRef struct {
-	ID         string            `json:"id,omitempty"`
-	Parameters []OfferParameter  `json:"parameters,omitempty"`
+	ID         string           `json:"id,omitempty"`
+	Parameters []OfferParameter `json:"parameters,omitempty"`
 }
 
 // OfferSellingMode represents the selling mode and price of an offer.
