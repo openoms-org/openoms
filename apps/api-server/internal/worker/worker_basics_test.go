@@ -22,7 +22,7 @@ func TestDelayedActionWorker_Interval(t *testing.T) {
 	assert.Equal(t, 30*time.Second, w.Interval())
 }
 
-func TestDelayedActionWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestDelayedActionWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewDelayedActionWorker(nil, nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -41,7 +41,7 @@ func TestExchangeRateWorker_Interval(t *testing.T) {
 	assert.Equal(t, 24*time.Hour, w.Interval())
 }
 
-func TestExchangeRateWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestExchangeRateWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewExchangeRateWorker(nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -60,7 +60,7 @@ func TestKSeFStatusWorker_Interval(t *testing.T) {
 	assert.Equal(t, 5*time.Minute, w.Interval())
 }
 
-func TestKSeFStatusWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestKSeFStatusWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewKSeFStatusWorker(nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -79,7 +79,7 @@ func TestListingSyncWorker_Interval(t *testing.T) {
 	assert.Equal(t, 5*time.Minute, w.Interval())
 }
 
-func TestListingSyncWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestListingSyncWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewListingSyncWorker(nil, nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -98,7 +98,7 @@ func TestOAuthRefresher_Interval(t *testing.T) {
 	assert.Equal(t, 30*time.Minute, w.Interval())
 }
 
-func TestOAuthRefresher_ImplementsWorkerInterface(t *testing.T) {
+func TestOAuthRefresher_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewOAuthRefresher(nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -117,7 +117,7 @@ func TestRecurringOrderWorker_Interval(t *testing.T) {
 	assert.Equal(t, 1*time.Hour, w.Interval())
 }
 
-func TestRecurringOrderWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestRecurringOrderWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewRecurringOrderWorker(nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -136,7 +136,7 @@ func TestRepricingWorker_Interval(t *testing.T) {
 	assert.Equal(t, 15*time.Minute, w.Interval())
 }
 
-func TestRepricingWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestRepricingWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewRepricingWorker(nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -155,7 +155,7 @@ func TestSupplierSyncWorker_Interval(t *testing.T) {
 	assert.Equal(t, 1*time.Minute, w.Interval())
 }
 
-func TestSupplierSyncWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestSupplierSyncWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewSupplierSyncWorker(nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -174,7 +174,7 @@ func TestTrackingPoller_Interval(t *testing.T) {
 	assert.Equal(t, 10*time.Minute, w.Interval())
 }
 
-func TestTrackingPoller_ImplementsWorkerInterface(t *testing.T) {
+func TestTrackingPoller_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewTrackingPoller(nil, nil, nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -193,7 +193,7 @@ func TestPriceSyncWorker_Interval(t *testing.T) {
 	assert.Equal(t, 5*time.Minute, w.Interval())
 }
 
-func TestPriceSyncWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestPriceSyncWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewPriceSyncWorker(nil, nil, slog.Default())
 	var _ Worker = w
 }
@@ -212,7 +212,7 @@ func TestStockSyncWorker_Interval(t *testing.T) {
 	assert.Equal(t, 5*time.Minute, w.Interval())
 }
 
-func TestStockSyncWorker_ImplementsWorkerInterface(t *testing.T) {
+func TestStockSyncWorker_ImplementsWorkerInterface(_ *testing.T) {
 	w := NewStockSyncWorker(nil, nil, slog.Default())
 	var _ Worker = w
 }
