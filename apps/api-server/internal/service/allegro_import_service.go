@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -289,6 +290,7 @@ func (s *AllegroImportService) createListing(
 		Status:        "active",
 		SyncStatus:    "synced",
 		StockSyncMode: "manual",
+		Metadata:      json.RawMessage(`{}`),
 	}
 	return s.listingRepo.Create(ctx, tx, listing)
 }
@@ -302,6 +304,9 @@ func mapAllegroOfferToProduct(offer allegrosdk.Offer, tenantID uuid.UUID) model.
 		TenantID: tenantID,
 		Name:     offer.Name,
 		Source:   "allegro",
+		Metadata: json.RawMessage(`{}`),
+		Tags:     []string{},
+		Images:   json.RawMessage(`[]`),
 	}
 
 	// External.ID is the seller's own SKU — use it as both SKU and ExternalID.
@@ -319,8 +324,48 @@ func mapAllegroOfferToProduct(offer allegrosdk.Offer, tenantID uuid.UUID) model.
 	if offer.Stock != nil {
 		product.StockQuantity = offer.Stock.Available
 	}
-	if offer.PrimaryImage != nil {
+
+	// Images: offer.Images is []string of URLs from Allegro API.
+	if len(offer.Images) > 0 {
+		first := offer.Images[0]
+		product.ImageURL = &first
+		if data, err := json.Marshal(offer.Images); err == nil {
+			product.Images = data
+		}
+	} else if offer.PrimaryImage != nil && offer.PrimaryImage.URL != "" {
 		product.ImageURL = &offer.PrimaryImage.URL
 	}
+
+	// Category from Allegro category ID.
+	if offer.Category != nil && offer.Category.ID != "" {
+		cat := offer.Category.ID
+		product.Category = &cat
+	}
+
+	// EAN from offer parameters (match by name containing "EAN" or "GTIN").
+	for _, p := range offer.Parameters {
+		nameLower := strings.ToLower(p.Name)
+		if (strings.Contains(nameLower, "ean") || strings.Contains(nameLower, "gtin")) && len(p.Values) > 0 && p.Values[0] != "" {
+			ean := p.Values[0]
+			product.EAN = &ean
+			break
+		}
+	}
+
+	// Description from offer description sections (TEXT items).
+	if offer.Description != nil && len(offer.Description.Sections) > 0 {
+		var parts []string
+		for _, section := range offer.Description.Sections {
+			for _, item := range section.Items {
+				if item.Type == "TEXT" && strings.TrimSpace(item.Content) != "" {
+					parts = append(parts, item.Content)
+				}
+			}
+		}
+		if len(parts) > 0 {
+			product.DescriptionLong = strings.Join(parts, "\n")
+		}
+	}
+
 	return product
 }
