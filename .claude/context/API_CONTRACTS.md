@@ -1,8 +1,14 @@
 # API Contracts
-Version: 3 (bump after every endpoint change)
+Version: 4 (bump after every endpoint change)
 Updated: 2026-02-25
 
 ## Recently Changed
+- 2026-02-25: `POST /v1/integrations/allegro/import-offers` — new endpoint: imports all Allegro seller offers as Product + ProductListing with SKU matching (PR #58)
+- 2026-02-25: `POST /v1/stock-sync/push/channel/{channel_id}` — new endpoint: trigger stock sync for a single channel (PR #58)
+- 2026-02-25: Message templates CRUD — `GET/POST /v1/message-templates`, `GET/PUT/DELETE /v1/message-templates/:id` (admin-guarded writes) (PR #58)
+- 2026-02-25: KSeF auto-send — invoices auto-sent to KSeF on creation when `auto_send` enabled in KSeF settings (PR #58)
+- 2026-02-25: New automation actions: `activate_listing`, `send_marketplace_message` (PR #58)
+- 2026-02-25: New automation trigger: `product.stock_restored` (fires when stock goes 0→>0) (PR #58)
 - 2026-02-25: `POST /v1/shipments` — auto-calculates weight from order items when weight not provided (PR #41)
 - 2026-02-25: Supplier sync now propagates product weight to products table (PR #41)
 - 2026-02-25: Allegro order polling: retry with backoff, bulk sync, order deduplication (PR #40)
@@ -72,6 +78,21 @@ POST   /v1/integrations              {provider, label, credentials, settings} �
 GET    /v1/integrations/:id          → Integration (credentials redacted)
 PUT    /v1/integrations/:id          → Integration
 DELETE /v1/integrations/:id          → 204
+POST   /v1/integrations/allegro/import-offers → {created, linked, skipped, errors[]}
+```
+
+### Message Templates (tenant-scoped, admin-guarded writes)
+```
+GET    /v1/message-templates         ?channel=&enabled= → paginated
+POST   /v1/message-templates         {name, channel, subject, body, enabled} → MessageTemplate
+GET    /v1/message-templates/:id     → MessageTemplate
+PUT    /v1/message-templates/:id     → MessageTemplate
+DELETE /v1/message-templates/:id     → 204
+```
+
+### Stock Sync (tenant-scoped)
+```
+POST   /v1/stock-sync/push/channel/:channel_id → {status: "ok"}
 ```
 
 ### Public (no auth, rate limited)

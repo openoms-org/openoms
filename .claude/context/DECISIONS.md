@@ -84,3 +84,32 @@ Append-only log. Each entry is immutable once written.
 - **Decision:** Three-step propagation: (1) supplier sync writes weight to products table, (2) shipment creation auto-sums product weights from order items, (3) manual weight override still takes precedence.
 - **Files:** `supplier_service.go` (sync weight), `shipment_service.go` (calculateOrderWeight)
 - **Consequences:** ShipmentService now depends on ProductRepo. Weight calculated only when not explicitly provided.
+
+## ADR-012: Three-Phase Pattern for External API Calls
+- **Date:** 2026-02-25
+- **Context:** SendToKSeF and SyncPendingStatuses held DB connections during external HTTP calls (KSeF API, marketplace APIs). Under load, this exhausts pgx connection pool.
+- **Decision:** Three-phase pattern: (1) short DB transaction to read/validate, (2) external API calls with no DB connection, (3) short DB transaction to persist results.
+- **Files:** `ksef_service.go` (SendToKSeF, SyncPendingStatuses, RetryErroredInvoices)
+- **Consequences:** More complex code (data passed between phases via local vars). Error handling split across phases. KSeF session cleanup via `defer Terminate`.
+
+## ADR-013: KSeF Auto-Send with Retry and Exponential Backoff
+- **Date:** 2026-02-25
+- **Context:** KSeF (Polish national e-invoice system) mandatory April 2026. Manual sending is impractical for high-volume tenants.
+- **Decision:** Auto-send on invoice creation (async via SafeGo). Failed sends marked "error" (retryable, max 3 retries with 5/15/45 min backoff). Intermediate "retrying" status prevents duplicate submissions. Terminal "rejected" for KSeF UPO rejections.
+- **Status flow:** `not_sent` → `retrying` → `pending` → `accepted`/`rejected`; `error` (retryable) → max 3 → `rejected` (terminal)
+- **Files:** `ksef_service.go`, `invoice_service.go` (SetKSeFService setter), `ksef_status_worker.go`
+- **Consequences:** InvoiceService depends on KSeFService via setter injection (avoids circular imports). Worker runs retry after status sync per tenant.
+
+## ADR-014: Allegro Offer Import with SKU Matching
+- **Date:** 2026-02-25
+- **Context:** Sellers have existing Allegro offers. Need to link them to OMS products without manual mapping.
+- **Decision:** Import endpoint fetches all seller offers via `ListAll()` (auto-pagination, max 1000/page). SKU matching: if offer has EAN/GTIN, match to product.ean; else match offer title words to product.sku. Creates ProductListing records for linked products.
+- **Files:** `allegro_import_service.go`, `allegro-go-sdk/offers.go` (ListAll)
+- **Consequences:** Per-tenant mutex prevents concurrent imports. Unique index on `product_listings(external_id, integration_id)` prevents duplicates at DB level.
+
+## ADR-015: Message Templates with Variable Substitution
+- **Date:** 2026-02-25
+- **Context:** Automation engine needs to send marketplace messages (e.g., Allegro buyer notifications). Templates must support dynamic content (order ID, buyer name, tracking number).
+- **Decision:** `message_templates` table with `{{variable}}` placeholder syntax. `substituteVariables` replaces placeholders from event data map. Templates are per-tenant, channel-scoped (allegro, email, sms), admin-guarded writes.
+- **Files:** `message_template_service.go`, `message_template_handler.go`, `automation/actions.go` (executeSendMarketplaceMessage)
+- **Consequences:** Body max 50k chars validation. Frontend uses `enabled` field (not `is_active`). Template variables are not validated against schema — invalid placeholders pass through unchanged.

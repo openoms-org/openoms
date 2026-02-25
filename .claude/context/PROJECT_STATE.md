@@ -11,7 +11,7 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [ ] Billing/Subscription integration (Stripe + Przelewy24?) — **0% done, #1 blocker**
 - [ ] Monitoring/Alerting (Grafana/Sentry) — **10% done, SaaS requirement**
 - [ ] Onboarding wizard (first-time user flow) — **25% done**
-- [ ] Allegro edge cases polish — **70% done, needs hardening**
+- [x] Allegro competitive parity — **DONE** (PR #58: offer import, stock sync, messaging, KSeF auto-send)
 
 ## In Progress
 - [x] Supabase migration — DONE (simple_protocol JSONB fix deployed 2026-02-20)
@@ -19,6 +19,7 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-02-25: Allegro competitive parity — offer import (SKU matching + auto-pagination), stock sync (per-channel push, error counts), message templates CRUD, send_marketplace_message action, KSeF auto-send + retry, activate_listing automation, full audit fixes (PR #58, 49 files, +5012/-139)
 - 2026-02-25: Test coverage expansion — SDK 27/27, middleware 18/18, worker 19/19, handlers all covered, 54 model validators, service-layer tests (PRs #43-56)
 - 2026-02-25: SafeGo panic recovery helper for goroutines (PR #52)
 - 2026-02-25: Quiet CI/dev tooling — summary-only test output, eslint --quiet (PR #54)
@@ -36,6 +37,7 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - 2026-02-17: Gap analysis vs competitors (BaseLinker, Sellasist, Apilo)
 
 ## Recent Deploys
+- 2026-02-25: PR #58 merged — Allegro competitive parity (offer import, stock sync, messaging, KSeF auto-send, audit fixes)
 - 2026-02-25: PRs #40-56 merged — Allegro hardening, weight propagation, audit v3, test coverage expansion
 - 2026-02-24: PR #38 merged — audit remediation v2
 - 2026-02-24: PR #36 merged — security hardening + code quality
@@ -47,9 +49,9 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 
 ## MVP Critical Path
 ```
-Billing → Monitoring → Onboarding → Allegro polish → Stock sync
-→ Listing sync → KSeF → BaseLinker import → Landing page → 3 carriers
+Billing → Monitoring → Onboarding → BaseLinker import → Landing page → 3 carriers
 ```
+Note: Allegro polish, stock sync, listing sync, KSeF — all done in PR #58.
 
 ## Estimated Hours Remaining to MVP
 ~400h (tight fit in 600h capacity over 11 weeks)
