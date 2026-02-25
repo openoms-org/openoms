@@ -374,6 +374,7 @@ export interface CreateProductRequest {
   metadata?: Record<string, unknown>;
   tags?: string[];
   category?: string;
+  category_id?: string;
   description_short?: string;
   description_long?: string;
   weight?: number;
@@ -397,6 +398,7 @@ export interface UpdateProductRequest {
   metadata?: Record<string, unknown>;
   tags?: string[];
   category?: string;
+  category_id?: string;
   description_short?: string;
   description_long?: string;
   weight?: number;
