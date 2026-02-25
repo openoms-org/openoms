@@ -411,7 +411,7 @@ func main() {
 	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
 
 	// Allegro import service (import Allegro offers as products + listings)
-	allegroImportService := service.NewAllegroImportService(integrationService, productRepo, productListingRepo, pool)
+	allegroImportService := service.NewAllegroImportService(integrationService, productRepo, productListingRepo, productCategoryService, pool)
 	allegroImportService.SetStockSyncService(stockSyncService)
 
 	// Allegro fulfillment + tracking handler (Batch 1)

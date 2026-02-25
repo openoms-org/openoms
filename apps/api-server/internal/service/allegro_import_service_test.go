@@ -9,7 +9,7 @@ import (
 )
 
 func TestAllegroImportService_New(t *testing.T) {
-	svc := NewAllegroImportService(nil, nil, nil, nil)
+	svc := NewAllegroImportService(nil, nil, nil, nil, nil)
 	assert.NotNil(t, svc)
 	assert.NotNil(t, svc.logger)
 }
