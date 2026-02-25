@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,8 +16,6 @@ type healthResponse struct {
 }
 
 func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	dbStatus := "connected"
 	status := "ok"
 	httpStatus := http.StatusOK
@@ -29,8 +26,7 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httpStatus = http.StatusServiceUnavailable
 	}
 
-	w.WriteHeader(httpStatus)
-	json.NewEncoder(w).Encode(healthResponse{
+	writeJSON(w, httpStatus, healthResponse{
 		Status:   status,
 		Database: dbStatus,
 	})
