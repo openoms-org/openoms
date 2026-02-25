@@ -21,6 +21,16 @@ func TestMatchesEvent(t *testing.T) {
 		{"multiple events match", []string{"order.created", "order.updated"}, "order.updated", true},
 		{"multiple events no match", []string{"order.created", "order.updated"}, "shipment.created", false},
 		{"wildcard among others", []string{"order.created", "*"}, "anything", true},
+		{"empty event type", []string{"order.created"}, "", false},
+		{"empty event type with wildcard", []string{"*"}, "", true},
+		{"nil events", nil, "order.created", false},
+		{"both empty", []string{}, "", false},
+		{"single empty string in events", []string{""}, "", true},
+		{"single empty string in events no match", []string{""}, "order.created", false},
+		{"whitespace not trimmed", []string{"order.created "}, "order.created", false},
+		{"dot prefix no wildcard matching", []string{"order."}, "order.created", false},
+		{"exact dot star literal", []string{"order.*"}, "order.*", true},
+		{"order.* does not glob match order.created", []string{"order.*"}, "order.created", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
