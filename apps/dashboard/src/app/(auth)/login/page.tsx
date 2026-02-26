@@ -25,7 +25,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { login, verify2FALogin } = useAuth();
-  const { registration_mode } = usePublicConfig();
+  const config = usePublicConfig();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
@@ -216,7 +216,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Logowanie..." : "Zaloguj się"}
             </Button>
-            {registration_mode === "open" && (
+            {(config.registration_mode === "open" || (config.registration_mode === "invite" && config.license_enabled)) && (
               <p className="text-sm text-muted-foreground">
                 Nie masz konta?{" "}
                 <Link href="/register" className="text-primary underline-offset-4 hover:underline">

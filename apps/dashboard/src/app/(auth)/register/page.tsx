@@ -37,6 +37,8 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get("token") || "";
+  const licenseToken = searchParams.get("license_token") || "";
+  const hasToken = inviteToken || licenseToken;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -58,7 +60,8 @@ function RegisterForm() {
     try {
       await registerUser({
         ...data,
-        ...(registration_mode === "invite" && inviteToken ? { invite_token: inviteToken } : {}),
+        ...(inviteToken ? { invite_token: inviteToken } : {}),
+        ...(licenseToken ? { license_token: licenseToken } : {}),
       });
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -79,10 +82,10 @@ function RegisterForm() {
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
-          {registration_mode === "invite" && !inviteToken && (
+          {registration_mode === "invite" && !hasToken && (
             <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
               <p className="text-sm text-destructive">
-                Brak tokenu zaproszenia. Użyj linku otrzymanego w zaproszeniu.
+                Brak tokenu. Użyj linku otrzymanego w zaproszeniu lub po zakupie subskrypcji.
               </p>
             </div>
           )}
@@ -153,7 +156,7 @@ function RegisterForm() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isSubmitting || (registration_mode === "invite" && !inviteToken)}
+            disabled={isSubmitting || (registration_mode === "invite" && !hasToken)}
           >
             {isSubmitting ? "Rejestracja..." : "Zarejestruj się"}
           </Button>

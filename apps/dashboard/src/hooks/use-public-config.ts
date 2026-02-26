@@ -5,9 +5,10 @@ import { API_URL } from "@/lib/api-client";
 
 interface PublicConfig {
   registration_mode: "open" | "invite" | "disabled";
+  license_enabled: boolean;
 }
 
-const defaultConfig: PublicConfig = { registration_mode: "open" };
+const defaultConfig: PublicConfig = { registration_mode: "open", license_enabled: false };
 
 let cachedConfig: PublicConfig | null = null;
 
