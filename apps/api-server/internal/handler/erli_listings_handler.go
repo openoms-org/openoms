@@ -61,6 +61,7 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var req createErliListingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
