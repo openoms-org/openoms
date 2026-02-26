@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/ed25519"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
@@ -49,6 +51,10 @@ type Config struct {
 
 	// RegistrationMode controls public registration: "open" (default), "invite" (token required), "disabled".
 	RegistrationMode string `env:"REGISTRATION_MODE" envDefault:"open"`
+
+	// LicensePublicKey is the base64-encoded Ed25519 public key for verifying license tokens.
+	// Empty = license token feature disabled (self-hosted mode).
+	LicensePublicKey string `env:"LICENSE_PUBLIC_KEY" envDefault:""`
 }
 
 func Load() (*Config, error) {
@@ -93,4 +99,20 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// ParseLicensePublicKey decodes the base64-encoded Ed25519 public key.
+// Returns nil if the key is empty (feature disabled).
+func (c *Config) ParseLicensePublicKey() (ed25519.PublicKey, error) {
+	if c.LicensePublicKey == "" {
+		return nil, nil
+	}
+	decoded, err := base64.StdEncoding.DecodeString(c.LicensePublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("LICENSE_PUBLIC_KEY: invalid base64: %w", err)
+	}
+	if len(decoded) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("LICENSE_PUBLIC_KEY: expected %d bytes, got %d", ed25519.PublicKeySize, len(decoded))
+	}
+	return ed25519.PublicKey(decoded), nil
 }
