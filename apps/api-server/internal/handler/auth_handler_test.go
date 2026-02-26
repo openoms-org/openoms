@@ -103,6 +103,20 @@ func TestClientIP(t *testing.T) {
 	}
 }
 
+func TestAuthHandler_Register_LicenseToken_MissingBothTokens(t *testing.T) {
+	h := &AuthHandler{registrationMode: "invite"}
+
+	body := `{"email":"jan@test.pl","password":"test1234","name":"Jan","tenant_name":"Test","tenant_slug":"test"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	h.Register(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "invite_token or license_token is required")
+}
+
 func TestIsValidationError(t *testing.T) {
 	assert.True(t, isValidationError(service.NewValidationError(errors.New("email is required"))))
 	assert.False(t, isValidationError(errors.New("some other error")))

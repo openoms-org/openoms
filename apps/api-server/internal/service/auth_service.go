@@ -147,7 +147,12 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 		ID:   tenantID,
 		Name: req.TenantName,
 		Slug: req.TenantSlug,
-		Plan: "free",
+		Plan: func() string {
+			if req.Plan != "" {
+				return req.Plan
+			}
+			return "free"
+		}(),
 	}
 
 	user := &model.User{
