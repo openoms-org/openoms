@@ -72,7 +72,7 @@ CREATE POLICY billing_subscriptions_tenant_isolation ON public.billing_subscript
     USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
 
 -- ============================================================================
--- SECURITY DEFINER functions for pre-registration checkout operations
+-- SECURITY DEFINER functions — checkout session lifecycle
 -- (no RLS context available during checkout/registration)
 -- ============================================================================
 
@@ -133,12 +133,9 @@ AS $$
     WHERE cs.stripe_session_id = p_stripe_session_id;
 $$;
 
--- Atomically claim a checkout session for registration.
--- Returns true if claimed (status changed to 'registered'), false if already claimed.
-CREATE OR REPLACE FUNCTION public.billing_claim_checkout_session(
-    p_stripe_session_id text,
-    p_tenant_id uuid
-)
+-- Atomically claim a checkout session (pre-registration, no tenant_id yet).
+-- Returns true if claimed, false if already claimed or not completed.
+CREATE OR REPLACE FUNCTION public.billing_claim_checkout_session(p_stripe_session_id text)
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
@@ -146,15 +143,146 @@ SET search_path = 'public'
 AS $$
     WITH upd AS (
         UPDATE billing_checkout_sessions
-        SET status = 'registered', tenant_id = p_tenant_id, updated_at = now()
+        SET status = 'registered', updated_at = now()
         WHERE stripe_session_id = p_stripe_session_id AND status = 'completed'
         RETURNING id
     )
     SELECT EXISTS(SELECT 1 FROM upd);
 $$;
 
+-- Set tenant_id on a claimed checkout session (post-registration).
+CREATE OR REPLACE FUNCTION public.billing_update_checkout_tenant(
+    p_stripe_session_id text,
+    p_tenant_id uuid
+)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+    UPDATE billing_checkout_sessions
+    SET tenant_id = p_tenant_id, updated_at = now()
+    WHERE stripe_session_id = p_stripe_session_id AND status = 'registered';
+$$;
+
 -- ============================================================================
--- Grant permissions to app roles (self-hosted: openoms, Supabase: openoms_app, auth: openoms_auth)
+-- SECURITY DEFINER functions — billing customers (webhook + registration context)
+-- ============================================================================
+
+-- Create a billing customer record (bypasses RLS for registration flow)
+CREATE OR REPLACE FUNCTION public.billing_create_customer(
+    p_tenant_id uuid,
+    p_stripe_customer_id text
+)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+    INSERT INTO billing_customers (tenant_id, stripe_customer_id)
+    VALUES (p_tenant_id, p_stripe_customer_id)
+    ON CONFLICT (tenant_id) DO UPDATE SET stripe_customer_id = EXCLUDED.stripe_customer_id
+    RETURNING id;
+$$;
+
+-- Look up a billing customer by Stripe customer ID (webhook context, no RLS)
+CREATE OR REPLACE FUNCTION public.billing_get_customer_by_stripe_id(p_stripe_customer_id text)
+RETURNS TABLE(
+    id uuid,
+    tenant_id uuid,
+    stripe_customer_id text,
+    created_at timestamptz
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+    SELECT bc.id, bc.tenant_id, bc.stripe_customer_id, bc.created_at
+    FROM billing_customers bc
+    WHERE bc.stripe_customer_id = p_stripe_customer_id;
+$$;
+
+-- ============================================================================
+-- SECURITY DEFINER functions — billing subscriptions (webhook context)
+-- ============================================================================
+
+-- Upsert a subscription (create or update by stripe_subscription_id)
+CREATE OR REPLACE FUNCTION public.billing_upsert_subscription(
+    p_tenant_id uuid,
+    p_stripe_subscription_id text,
+    p_stripe_customer_id text,
+    p_plan text,
+    p_billing_interval text,
+    p_status text,
+    p_trial_end timestamptz,
+    p_current_period_start timestamptz,
+    p_current_period_end timestamptz
+)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+    INSERT INTO billing_subscriptions
+        (tenant_id, stripe_subscription_id, stripe_customer_id, plan, billing_interval, status,
+         trial_end, current_period_start, current_period_end)
+    VALUES (p_tenant_id, p_stripe_subscription_id, p_stripe_customer_id, p_plan, p_billing_interval, p_status,
+            p_trial_end, p_current_period_start, p_current_period_end)
+    ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+        status = EXCLUDED.status,
+        current_period_start = COALESCE(EXCLUDED.current_period_start, billing_subscriptions.current_period_start),
+        current_period_end = COALESCE(EXCLUDED.current_period_end, billing_subscriptions.current_period_end),
+        updated_at = now()
+    RETURNING id;
+$$;
+
+-- Update subscription status by Stripe subscription ID (webhook context)
+CREATE OR REPLACE FUNCTION public.billing_update_subscription_by_stripe_id(
+    p_stripe_sub_id text,
+    p_status text,
+    p_period_start timestamptz,
+    p_period_end timestamptz,
+    p_canceled_at timestamptz
+)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+    WITH upd AS (
+        UPDATE billing_subscriptions
+        SET status = p_status,
+            current_period_start = COALESCE(p_period_start, current_period_start),
+            current_period_end = COALESCE(p_period_end, current_period_end),
+            canceled_at = COALESCE(p_canceled_at, canceled_at),
+            updated_at = now()
+        WHERE stripe_subscription_id = p_stripe_sub_id
+        RETURNING id
+    )
+    SELECT EXISTS(SELECT 1 FROM upd);
+$$;
+
+-- ============================================================================
+-- SECURITY DEFINER function — tenant plan sync (webhook context)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.billing_sync_tenant_plan(
+    p_tenant_id uuid,
+    p_settings jsonb
+)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+    UPDATE tenants
+    SET settings = COALESCE(settings, '{}'::jsonb) || p_settings,
+        updated_at = now()
+    WHERE id = p_tenant_id;
+$$;
+
+-- ============================================================================
+-- Grant permissions to app roles
 -- ============================================================================
 DO $$
 BEGIN
@@ -163,7 +291,13 @@ BEGIN
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_create_checkout_session(text, text, text) TO openoms';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_complete_checkout_session(text, text) TO openoms';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_get_checkout_session(text) TO openoms';
-    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_claim_checkout_session(text, uuid) TO openoms';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_claim_checkout_session(text) TO openoms';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_update_checkout_tenant(text, uuid) TO openoms';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_create_customer(uuid, text) TO openoms';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_get_customer_by_stripe_id(text) TO openoms';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_upsert_subscription(uuid, text, text, text, text, text, timestamptz, timestamptz, timestamptz) TO openoms';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_update_subscription_by_stripe_id(text, text, timestamptz, timestamptz, timestamptz) TO openoms';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_sync_tenant_plan(uuid, jsonb) TO openoms';
     EXECUTE 'GRANT ALL ON TABLE public.billing_checkout_sessions TO openoms';
     EXECUTE 'GRANT ALL ON TABLE public.billing_customers TO openoms';
     EXECUTE 'GRANT ALL ON TABLE public.billing_subscriptions TO openoms';
@@ -174,7 +308,13 @@ BEGIN
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_create_checkout_session(text, text, text) TO openoms_app';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_complete_checkout_session(text, text) TO openoms_app';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_get_checkout_session(text) TO openoms_app';
-    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_claim_checkout_session(text, uuid) TO openoms_app';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_claim_checkout_session(text) TO openoms_app';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_update_checkout_tenant(text, uuid) TO openoms_app';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_create_customer(uuid, text) TO openoms_app';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_get_customer_by_stripe_id(text) TO openoms_app';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_upsert_subscription(uuid, text, text, text, text, text, timestamptz, timestamptz, timestamptz) TO openoms_app';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_update_subscription_by_stripe_id(text, text, timestamptz, timestamptz, timestamptz) TO openoms_app';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_sync_tenant_plan(uuid, jsonb) TO openoms_app';
     EXECUTE 'GRANT ALL ON TABLE public.billing_checkout_sessions TO openoms_app';
     EXECUTE 'GRANT ALL ON TABLE public.billing_customers TO openoms_app';
     EXECUTE 'GRANT ALL ON TABLE public.billing_subscriptions TO openoms_app';
@@ -185,7 +325,9 @@ BEGIN
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_create_checkout_session(text, text, text) TO openoms_auth';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_complete_checkout_session(text, text) TO openoms_auth';
     EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_get_checkout_session(text) TO openoms_auth';
-    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_claim_checkout_session(text, uuid) TO openoms_auth';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_claim_checkout_session(text) TO openoms_auth';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_update_checkout_tenant(text, uuid) TO openoms_auth';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.billing_create_customer(uuid, text) TO openoms_auth';
   END IF;
 END;
 $$;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -40,6 +40,7 @@ function CompleteRegistrationForm() {
   const [session, setSession] = useState<CheckoutSessionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const {
     register,
@@ -49,56 +50,70 @@ function CompleteRegistrationForm() {
     resolver: zodResolver(registerSchema),
   });
 
-  const pollSession = useCallback(async () => {
+  useEffect(() => {
     if (!sessionId) {
       setError("Brak identyfikatora sesji płatności");
       return;
     }
 
-    const maxAttempts = 15;
-    const intervalMs = 2000;
+    let cancelled = false;
+    const controller = new AbortController();
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        const res = await fetch(`${API_URL}/v1/billing/checkout/${sessionId}`);
-        if (!res.ok) {
-          if (res.status === 404) {
-            setError("Sesja płatności nie została znaleziona");
+    const poll = async () => {
+      const maxAttempts = 15;
+      const intervalMs = 2000;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        if (cancelled) return;
+        try {
+          const res = await fetch(`${API_URL}/v1/billing/checkout/${sessionId}`, {
+            signal: controller.signal,
+          });
+          if (!res.ok) {
+            if (res.status === 404) {
+              setError("Sesja płatności nie została znaleziona");
+              return;
+            }
+            throw new Error("Błąd serwera");
+          }
+          const data: CheckoutSessionStatus = await res.json();
+
+          if (data.status === "registered") {
+            setError("Ta sesja płatności została już wykorzystana");
             return;
           }
-          throw new Error("Błąd serwera");
-        }
-        const data: CheckoutSessionStatus = await res.json();
 
-        if (data.status === "registered") {
-          setError("Ta sesja płatności została już wykorzystana");
-          return;
-        }
+          if (data.status === "completed") {
+            setSession(data);
+            return;
+          }
 
-        if (data.status === "completed") {
-          setSession(data);
-          return;
-        }
-
-        // Still pending — wait and retry
-        if (attempt < maxAttempts - 1) {
+          // Still pending — wait and retry
+          if (attempt < maxAttempts - 1) {
+            await new Promise((r) => setTimeout(r, intervalMs));
+          }
+        } catch (err) {
+          if (cancelled || (err instanceof DOMException && err.name === "AbortError")) return;
+          if (attempt === maxAttempts - 1) {
+            setError("Nie udało się zweryfikować płatności. Spróbuj ponownie za chwilę.");
+            return;
+          }
           await new Promise((r) => setTimeout(r, intervalMs));
         }
-      } catch {
-        if (attempt === maxAttempts - 1) {
-          setError("Nie udało się zweryfikować płatności. Spróbuj ponownie za chwilę.");
-          return;
-        }
-        await new Promise((r) => setTimeout(r, intervalMs));
       }
-    }
 
-    setError("Płatność nie została jeszcze potwierdzona. Spróbuj odświeżyć stronę za chwilę.");
-  }, [sessionId]);
+      if (!cancelled) {
+        setError("Płatność nie została jeszcze potwierdzona. Spróbuj odświeżyć stronę za chwilę.");
+      }
+    };
 
-  useEffect(() => {
-    pollSession();
-  }, [pollSession]);
+    poll();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [sessionId, retryCount]);
 
   if (!sessionId) {
     return (
@@ -128,7 +143,7 @@ function CompleteRegistrationForm() {
           <p className="text-destructive">{error}</p>
         </CardContent>
         <CardFooter className="flex flex-col gap-2 items-center">
-          <Button variant="outline" onClick={() => { setError(null); pollSession(); }}>
+          <Button variant="outline" onClick={() => { setError(null); setRetryCount((c) => c + 1); }}>
             Spróbuj ponownie
           </Button>
           <Link href="/register" className="text-sm text-primary underline-offset-4 hover:underline">

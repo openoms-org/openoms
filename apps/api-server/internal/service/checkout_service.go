@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -115,9 +116,9 @@ func (s *CheckoutService) CreateCheckoutSession(ctx context.Context, planID, int
 		return nil, fmt.Errorf("stripe create checkout session: %w", err)
 	}
 
-	// Record in our DB
+	// Record in our DB — fail if DB write fails to avoid orphaned Stripe sessions
 	if err := s.billingRepo.CreateCheckoutSession(ctx, s.pool, sess.ID, planID, interval); err != nil {
-		slog.Error("failed to record checkout session in DB", "stripe_session_id", sess.ID, "error", err)
+		return nil, fmt.Errorf("record checkout session in DB: %w", err)
 	}
 
 	return &model.CheckoutSessionResponse{
@@ -198,49 +199,77 @@ func (s *CheckoutService) GetSessionStatus(ctx context.Context, stripeSessionID 
 	}, nil
 }
 
-// ClaimSession atomically claims a checkout session for a tenant during registration.
-// Returns the plan limits for setting up the tenant.
-func (s *CheckoutService) ClaimSession(ctx context.Context, stripeSessionID string, tenantID uuid.UUID) (*config.PlanConfig, error) {
+// ClaimSession atomically claims a checkout session BEFORE registration.
+// This prevents TOCTOU race conditions — only one concurrent request succeeds.
+// Tenant ID is set later via FinalizeCheckoutClaim after registration succeeds.
+func (s *CheckoutService) ClaimSession(ctx context.Context, stripeSessionID string) error {
 	// Get session to verify status and plan
 	dbSession, err := s.billingRepo.GetCheckoutSession(ctx, s.pool, stripeSessionID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if dbSession == nil {
-		return nil, ErrCheckoutSessionNotFound
+		return ErrCheckoutSessionNotFound
 	}
 	if dbSession.Status == "registered" {
-		return nil, ErrCheckoutSessionClaimed
+		return ErrCheckoutSessionClaimed
 	}
 	if dbSession.Status != "completed" {
-		return nil, ErrCheckoutSessionPending
+		return ErrCheckoutSessionPending
 	}
 
-	plan := s.FindPlan(dbSession.Plan)
-	if plan == nil {
-		return nil, ErrPlanNotFound
-	}
-
-	// Atomically claim
-	claimed, err := s.billingRepo.ClaimCheckoutSession(ctx, s.pool, stripeSessionID, tenantID)
+	// Atomically claim (pre-registration, no tenant_id)
+	claimed, err := s.billingRepo.ClaimCheckoutSession(ctx, s.pool, stripeSessionID)
 	if err != nil {
-		return nil, fmt.Errorf("claim checkout session: %w", err)
+		return fmt.Errorf("claim checkout session: %w", err)
 	}
 	if !claimed {
-		return nil, ErrCheckoutSessionClaimed
+		return ErrCheckoutSessionClaimed
 	}
 
-	// Create billing customer record from Stripe session
+	return nil
+}
+
+// FinalizeCheckoutClaim sets tenant_id on a claimed session and creates billing records.
+// Called after registration succeeds. Best-effort — errors are logged but don't fail registration.
+func (s *CheckoutService) FinalizeCheckoutClaim(ctx context.Context, stripeSessionID string, tenantID uuid.UUID, plan string, interval string) {
+	// Set tenant_id on the claimed checkout session
+	if err := s.billingRepo.UpdateClaimedCheckoutTenant(ctx, s.pool, stripeSessionID, tenantID); err != nil {
+		slog.Error("failed to update checkout session tenant", "session_id", stripeSessionID, "error", err)
+	}
+
+	// Get Stripe session to extract customer/subscription IDs
 	sess, err := session.Get(stripeSessionID, nil)
 	if err != nil {
-		slog.Error("failed to get Stripe session for customer creation", "error", err)
-	} else if sess.Customer != nil {
-		if err := s.billingRepo.CreateBillingCustomer(ctx, nil, tenantID, sess.Customer.ID); err != nil {
-			slog.Error("failed to create billing customer via pool", "error", err)
+		slog.Error("failed to get Stripe session for finalization", "session_id", stripeSessionID, "error", err)
+		return
+	}
+
+	// Create billing customer record
+	if sess.Customer != nil && sess.Customer.ID != "" {
+		if err := s.billingRepo.CreateBillingCustomer(ctx, s.pool, tenantID, sess.Customer.ID); err != nil {
+			slog.Error("failed to create billing customer", "tenant_id", tenantID, "error", err)
 		}
 	}
 
-	return plan, nil
+	// Create initial subscription record
+	if sess.Subscription != nil && sess.Subscription.ID != "" {
+		sub := &model.BillingSubscription{
+			TenantID:             tenantID,
+			StripeSubscriptionID: sess.Subscription.ID,
+			StripeCustomerID:     sess.Customer.ID,
+			Plan:                 plan,
+			BillingInterval:      interval,
+			Status:               string(sess.Subscription.Status),
+		}
+		if sess.Subscription.TrialEnd > 0 {
+			t := time.Unix(sess.Subscription.TrialEnd, 0)
+			sub.TrialEnd = &t
+		}
+		if err := s.billingRepo.UpsertSubscription(ctx, s.pool, sub); err != nil {
+			slog.Error("failed to create initial subscription", "tenant_id", tenantID, "error", err)
+		}
+	}
 }
 
 // PlanLimitsJSON returns the plan limits as a JSON-encoded settings map,
