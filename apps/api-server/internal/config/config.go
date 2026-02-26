@@ -58,9 +58,9 @@ type Config struct {
 	LicensePublicKey string `env:"LICENSE_PUBLIC_KEY" envDefault:""`
 
 	// Stripe billing configuration. All empty = billing disabled (self-hosted mode).
-	StripeSecretKey    string `env:"STRIPE_SECRET_KEY" envDefault:""`
+	StripeSecretKey     string `env:"STRIPE_SECRET_KEY" envDefault:""`
 	StripeWebhookSecret string `env:"STRIPE_WEBHOOK_SECRET" envDefault:""`
-	StripePublicKey    string `env:"STRIPE_PUBLIC_KEY" envDefault:""`
+	StripePublicKey     string `env:"STRIPE_PUBLIC_KEY" envDefault:""`
 
 	// BillingPlansJSON is a JSON array of plan configs. Parsed at startup via ParseBillingPlans().
 	// Empty = billing disabled. Plan names, prices, limits are all defined here, never hardcoded.
@@ -119,16 +119,16 @@ func (c *Config) BillingEnabled() bool {
 // PlanConfig defines a billing plan loaded from BILLING_PLANS env var.
 // Stripe Price IDs are kept server-side and never exposed to frontend.
 type PlanConfig struct {
-	ID             string         `json:"id"`
-	Name           string         `json:"name"`
-	MonthlyPriceID string         `json:"monthly_price_id"`
-	YearlyPriceID  string         `json:"yearly_price_id"`
-	MonthlyAmount  int64          `json:"monthly_amount"`  // in smallest currency unit (grosze)
-	YearlyAmount   int64          `json:"yearly_amount"`
-	Currency       string         `json:"currency"`
-	TrialDays      int64          `json:"trial_days"`
-	Limits         PlanLimits     `json:"limits"`
-	Features       []string       `json:"features"`
+	ID             string     `json:"id"`
+	Name           string     `json:"name"`
+	MonthlyPriceID string     `json:"monthly_price_id"`
+	YearlyPriceID  string     `json:"yearly_price_id"`
+	MonthlyAmount  int64      `json:"monthly_amount"` // in smallest currency unit (grosze)
+	YearlyAmount   int64      `json:"yearly_amount"`
+	Currency       string     `json:"currency"`
+	TrialDays      int64      `json:"trial_days"`
+	Limits         PlanLimits `json:"limits"`
+	Features       []string   `json:"features"`
 }
 
 // PlanLimits defines resource limits for a plan.

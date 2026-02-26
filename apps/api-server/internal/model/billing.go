@@ -77,12 +77,12 @@ type BillingSubscription struct {
 
 // PublicPlanInfo is the frontend-safe view of a plan (no Stripe Price IDs).
 type PublicPlanInfo struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	MonthlyAmount int64          `json:"monthly_amount"`
-	YearlyAmount  int64          `json:"yearly_amount"`
-	Currency      string         `json:"currency"`
-	TrialDays     int64          `json:"trial_days"`
-	Limits        LicenseLimits  `json:"limits"`
-	Features      []string       `json:"features"`
+	ID            string        `json:"id"`
+	Name          string        `json:"name"`
+	MonthlyAmount int64         `json:"monthly_amount"`
+	YearlyAmount  int64         `json:"yearly_amount"`
+	Currency      string        `json:"currency"`
+	TrialDays     int64         `json:"trial_days"`
+	Limits        LicenseLimits `json:"limits"`
+	Features      []string      `json:"features"`
 }

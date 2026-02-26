@@ -50,8 +50,8 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 	"github.com/openoms-org/openoms/apps/api-server/internal/worker"
 	"github.com/openoms-org/openoms/apps/api-server/internal/ws"
-	stripe "github.com/stripe/stripe-go/v82"
 	inpost "github.com/openoms-org/openoms/packages/inpost-go-sdk"
+	stripe "github.com/stripe/stripe-go/v82"
 )
 
 func main() {
