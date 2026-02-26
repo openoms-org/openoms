@@ -111,6 +111,12 @@ spec:
                   name: {{ include "openoms.secretName" . }}
                   key: METRICS_TOKEN
                   optional: true
+            - name: LICENSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: LICENSE_PUBLIC_KEY
+                  optional: true
           lifecycle:
             preStop:
               exec:
