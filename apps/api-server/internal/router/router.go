@@ -106,6 +106,8 @@ type RouterDeps struct {
 	MessageTemplate            *handler.MessageTemplateHandler
 	MarketplaceCategoryMapping *handler.MarketplaceCategoryMappingHandler
 	PlanCache                  *service.PlanCache
+	Checkout                   *handler.CheckoutHandler
+	StripeWebhook              *handler.StripeWebhookHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -196,6 +198,16 @@ func New(deps RouterDeps) *chi.Mux {
 			Get("/v1/config/public", deps.PublicConfig.PublicConfig)
 	}
 
+	// Public billing routes — no JWT required, rate-limited
+	if deps.Checkout != nil {
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).
+			Get("/v1/billing/plans", deps.Checkout.ListPlans)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute), middleware.MaxBodySize(1<<20)).
+			Post("/v1/billing/checkout", deps.Checkout.CreateCheckoutSession)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute)).
+			Get("/v1/billing/checkout/{session_id}", deps.Checkout.GetCheckoutSessionStatus)
+	}
+
 	// Public webhook routes — no JWT, signature-verified, rate-limited (120 req/min per IP)
 	r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
 		Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
@@ -210,6 +222,12 @@ func New(deps RouterDeps) *chi.Mux {
 	if deps.InPostWebhook != nil {
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
 			Post("/v1/webhooks/inpost", deps.InPostWebhook.HandleWebhook)
+	}
+
+	// Stripe webhook endpoint — no JWT, signature-verified, rate-limited (120 req/min per IP)
+	if deps.StripeWebhook != nil {
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute), middleware.MaxBodySize(1<<16)).
+			Post("/v1/webhooks/stripe", deps.StripeWebhook.HandleWebhook)
 	}
 
 	// Public return self-service routes — no JWT, rate-limited

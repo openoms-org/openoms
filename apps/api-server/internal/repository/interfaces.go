@@ -492,3 +492,26 @@ type InvitationRepo interface {
 	MarkUsed(ctx context.Context, pool *pgxpool.Pool, token string) error                         // SECURITY DEFINER, no RLS
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
+
+// BillingRepo provides database operations for Stripe billing integration.
+// All operations use SECURITY DEFINER functions via pool (no RLS context needed).
+type BillingRepo interface {
+	// Checkout session lifecycle
+	CreateCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, plan, interval string) error
+	CompleteCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, email string) (bool, error)
+	GetCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (*model.BillingCheckoutSession, error)
+	ClaimCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (bool, error)
+	UpdateClaimedCheckoutTenant(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string, tenantID uuid.UUID) error
+
+	// Billing customers
+	CreateBillingCustomer(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID, stripeCustomerID string) error
+	GetCustomerByStripeID(ctx context.Context, pool *pgxpool.Pool, stripeCustomerID string) (*model.BillingCustomer, error)
+
+	// Subscriptions
+	UpsertSubscription(ctx context.Context, pool *pgxpool.Pool, sub *model.BillingSubscription) error
+	UpdateSubscriptionByStripeID(ctx context.Context, pool *pgxpool.Pool, stripeSubID, status string, periodStart, periodEnd, canceledAt *time.Time) error
+	GetSubscriptionByTenant(ctx context.Context, tx pgx.Tx) (*model.BillingSubscription, error)
+
+	// Tenant plan sync
+	SyncTenantPlan(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID, settingsJSON []byte) error
+}

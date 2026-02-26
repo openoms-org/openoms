@@ -51,6 +51,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/worker"
 	"github.com/openoms-org/openoms/apps/api-server/internal/ws"
 	inpost "github.com/openoms-org/openoms/packages/inpost-go-sdk"
+	stripe "github.com/stripe/stripe-go/v82"
 )
 
 func main() {
@@ -614,7 +615,35 @@ func main() {
 	docsHandler := handler.NewDocsHandler(docs.OpenAPISpec)
 
 	// Public config handler
-	configHandler := handler.NewConfigHandler(cfg.RegistrationMode, licensePublicKey != nil)
+	configHandler := handler.NewConfigHandler(cfg.RegistrationMode, licensePublicKey != nil, cfg.BillingEnabled(), cfg.StripePublicKey)
+
+	// Stripe billing (conditional — disabled if no STRIPE_SECRET_KEY)
+	var checkoutHandler *handler.CheckoutHandler
+	var stripeWebhookHandler *handler.StripeWebhookHandler
+	var checkoutSvc *service.CheckoutService
+	if cfg.BillingEnabled() {
+		stripe.Key = cfg.StripeSecretKey
+
+		billingPlans, err := cfg.ParseBillingPlans()
+		if err != nil {
+			slog.Error("failed to parse BILLING_PLANS", "error", err)
+			os.Exit(1)
+		}
+
+		billingRepo := repository.NewBillingRepository()
+		checkoutSvc = service.NewCheckoutService(billingRepo, pool, billingPlans)
+		checkoutHandler = handler.NewCheckoutHandler(checkoutSvc, cfg.FrontendURL)
+		authHandler.SetCheckoutService(checkoutSvc)
+		slog.Info("stripe billing enabled", "plans", len(billingPlans))
+
+		if cfg.StripeWebhookSecret != "" {
+			webhookSvc := service.NewStripeWebhookService(cfg.StripeWebhookSecret, billingRepo, pool)
+			stripeWebhookHandler = handler.NewStripeWebhookHandler(webhookSvc)
+			slog.Info("stripe webhook handler enabled")
+		}
+	} else {
+		slog.Info("stripe billing disabled (no STRIPE_SECRET_KEY or BILLING_PLANS)")
+	}
 
 	// Invitation handler (admin CRUD for invitations)
 	invitationHandler := handler.NewInvitationHandler(invitationService)
@@ -757,6 +786,8 @@ func main() {
 		MessageTemplate:            messageTemplateHandler,
 		MarketplaceCategoryMapping: marketplaceCategoryMappingHandler,
 		PlanCache:                  planCache,
+		Checkout:                   checkoutHandler,
+		StripeWebhook:              stripeWebhookHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)

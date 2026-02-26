@@ -41,15 +41,17 @@ func (r *LoginRequest) Validate() error {
 
 // RegisterRequest is the body of POST /v1/auth/register.
 type RegisterRequest struct {
-	Email        string         `json:"email"`
-	Password     string         `json:"password"`
-	Name         string         `json:"name"`
-	TenantName   string         `json:"tenant_name"`
-	TenantSlug   string         `json:"tenant_slug"`
-	InviteToken  string         `json:"invite_token,omitempty"`
-	LicenseToken string         `json:"license_token,omitempty"`
-	Plan         string         `json:"-"` // set internally from license token, never from user input
-	PlanLimits   *LicenseLimits `json:"-"` // set internally from license token
+	Email                   string         `json:"email"`
+	Password                string         `json:"password"`
+	Name                    string         `json:"name"`
+	TenantName              string         `json:"tenant_name"`
+	TenantSlug              string         `json:"tenant_slug"`
+	InviteToken             string         `json:"invite_token,omitempty"`
+	LicenseToken            string         `json:"license_token,omitempty"`
+	CheckoutSessionID       string         `json:"checkout_session_id,omitempty"`
+	Plan                    string         `json:"-"` // set internally from license/checkout, never from user input
+	PlanLimits              *LicenseLimits `json:"-"` // set internally from license/checkout
+	CheckoutSessionInterval string         `json:"-"` // set internally from checkout session
 }
 
 func (r *RegisterRequest) Validate() error {
