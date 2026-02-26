@@ -56,13 +56,13 @@ func TenantPlanGuard(cache *service.PlanCache, pool *pgxpool.Pool) func(http.Han
 			switch plan {
 			case "suspended":
 				writePlanError(w, http.StatusPaymentRequired, "subscription_suspended",
-					"Subskrypcja została zawieszona. Odnów płatność aby kontynuować.")
+					"subscription has been suspended")
 				return
 
 			case "past_due":
 				if isMutation(r.Method) {
 					writePlanError(w, http.StatusPaymentRequired, "payment_past_due",
-						"Płatność zaległa. Now operacje zablokowane do czasu uregulowania należności.")
+						"payment past due, write operations are blocked")
 					return
 				}
 			}

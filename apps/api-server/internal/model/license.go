@@ -2,13 +2,14 @@ package model
 
 import (
 	"errors"
+	"slices"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
-// Valid plan tiers for license tokens.
+// ValidPlans lists the accepted plan tiers for license tokens.
 var ValidPlans = []string{"standard", "plus", "pro"}
 
 // LicenseIssuer is the expected issuer claim in license JWTs.
@@ -29,7 +30,7 @@ type LicenseClaims struct {
 	jwt.RegisteredClaims
 	Email  string        `json:"email"`
 	Plan   string        `json:"plan"`
-	Limits LicenseLimits `json:"limits,omitempty"`
+	Limits LicenseLimits `json:"limits"`
 	JTI    uuid.UUID     `json:"jti"`
 }
 
@@ -48,10 +49,5 @@ func (c *LicenseClaims) Validate() error {
 }
 
 func isValidPlan(plan string) bool {
-	for _, p := range ValidPlans {
-		if p == plan {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ValidPlans, plan)
 }

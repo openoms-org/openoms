@@ -17,7 +17,7 @@ func TestPlanGuard_ActivePlan_Passes(t *testing.T) {
 	tenantID := uuid.New()
 	cache.Set(tenantID, "plus", nil)
 
-	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -34,7 +34,7 @@ func TestPlanGuard_Suspended_BlocksAll(t *testing.T) {
 	tenantID := uuid.New()
 	cache.Set(tenantID, "suspended", nil)
 
-	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -44,7 +44,7 @@ func TestPlanGuard_Suspended_BlocksAll(t *testing.T) {
 
 	mw.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusPaymentRequired, rr.Code)
-	assert.Contains(t, rr.Body.String(), "suspended")
+	assert.Contains(t, rr.Body.String(), "subscription_suspended")
 }
 
 func TestPlanGuard_PastDue_AllowsGET(t *testing.T) {
@@ -52,7 +52,7 @@ func TestPlanGuard_PastDue_AllowsGET(t *testing.T) {
 	tenantID := uuid.New()
 	cache.Set(tenantID, "past_due", nil)
 
-	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -69,7 +69,7 @@ func TestPlanGuard_PastDue_BlocksPOST(t *testing.T) {
 	tenantID := uuid.New()
 	cache.Set(tenantID, "past_due", nil)
 
-	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -79,7 +79,7 @@ func TestPlanGuard_PastDue_BlocksPOST(t *testing.T) {
 
 	mw.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusPaymentRequired, rr.Code)
-	assert.Contains(t, rr.Body.String(), "past_due")
+	assert.Contains(t, rr.Body.String(), "payment_past_due")
 }
 
 func TestPlanGuard_FreePlan_NoLimits(t *testing.T) {
@@ -87,7 +87,7 @@ func TestPlanGuard_FreePlan_NoLimits(t *testing.T) {
 	tenantID := uuid.New()
 	cache.Set(tenantID, "free", nil)
 
-	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 

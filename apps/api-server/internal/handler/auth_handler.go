@@ -72,7 +72,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// In invite mode, validate the invitation or license token
 	var licenseClaims *model.LicenseClaims
 	if h.registrationMode == "invite" {
-		if req.LicenseToken != "" && h.licenseSvc != nil && !h.licenseSvc.IsDisabled() {
+		switch {
+		case req.LicenseToken != "" && h.licenseSvc != nil && !h.licenseSvc.IsDisabled():
 			// License token flow — cloud billing registration
 			claims, err := h.licenseSvc.VerifyToken(r.Context(), req.LicenseToken)
 			if err != nil {
@@ -94,7 +95,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			req.Email = claims.Email
 			req.Plan = claims.Plan
 			req.PlanLimits = &claims.Limits
-		} else if req.InviteToken != "" {
+		case req.InviteToken != "":
 			// Existing invite token flow
 			if h.invitationSvc == nil {
 				writeError(w, http.StatusInternalServerError, "invitation service not configured")
@@ -115,7 +116,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			req.Email = inv.Email
-		} else {
+		default:
 			writeError(w, http.StatusBadRequest, "invite_token or license_token is required")
 			return
 		}

@@ -8,6 +8,7 @@ type ConfigHandler struct {
 	licenseEnabled   bool
 }
 
+// NewConfigHandler creates a handler that serves public configuration.
 func NewConfigHandler(registrationMode string, licenseEnabled bool) *ConfigHandler {
 	return &ConfigHandler{registrationMode: registrationMode, licenseEnabled: licenseEnabled}
 }
