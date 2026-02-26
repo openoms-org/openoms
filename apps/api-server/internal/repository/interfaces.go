@@ -474,6 +474,12 @@ type MessageTemplateRepo interface {
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 
+// LicenseRepo provides database operations for license token tracking.
+type LicenseRepo interface {
+	IsTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti uuid.UUID) (bool, error)
+	MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID, email, plan string) error
+}
+
 // InvitationRepo defines the interface for invitation persistence operations.
 type InvitationRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, inv *model.Invitation) error
