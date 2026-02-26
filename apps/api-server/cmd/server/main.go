@@ -380,6 +380,23 @@ func main() {
 	authHandler.SetRegistrationMode(cfg.RegistrationMode)
 	authHandler.SetInvitationService(invitationService)
 	authHandler.SetWSTicketService(wsTicketSvc)
+
+	// License service for cloud billing
+	licensePublicKey, err := cfg.ParseLicensePublicKey()
+	if err != nil {
+		slog.Error("failed to parse LICENSE_PUBLIC_KEY", "error", err)
+		os.Exit(1)
+	}
+	if licensePublicKey != nil {
+		licenseRepo := repository.NewLicenseRepository()
+		licenseSvc := service.NewLicenseService(licensePublicKey, pool)
+		licenseSvc.SetRepository(licenseRepo)
+		authHandler.SetLicenseService(licenseSvc)
+		slog.Info("license token verification enabled")
+	} else {
+		slog.Info("license token verification disabled (no LICENSE_PUBLIC_KEY)")
+	}
+
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
@@ -594,7 +611,7 @@ func main() {
 	docsHandler := handler.NewDocsHandler(docs.OpenAPISpec)
 
 	// Public config handler
-	configHandler := handler.NewConfigHandler(cfg.RegistrationMode)
+	configHandler := handler.NewConfigHandler(cfg.RegistrationMode, licensePublicKey != nil)
 
 	// Invitation handler (admin CRUD for invitations)
 	invitationHandler := handler.NewInvitationHandler(invitationService)
