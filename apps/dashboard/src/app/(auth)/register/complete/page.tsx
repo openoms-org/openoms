@@ -68,6 +68,7 @@ function CompleteRegistrationForm() {
         try {
           const res = await fetch(`${API_URL}/v1/billing/checkout/${sessionId}`, {
             signal: controller.signal,
+            credentials: "include",
           });
           if (!res.ok) {
             if (res.status === 404) {

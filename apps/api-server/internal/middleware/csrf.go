@@ -58,6 +58,7 @@ func isCSRFExempt(path string) bool {
 		"/v1/auth/register",
 		"/v1/auth/refresh",
 		"/v1/auth/ws-ticket",
+		"/v1/billing/",
 		"/v1/public/",
 		"/v1/webhooks/",
 		"/health",
