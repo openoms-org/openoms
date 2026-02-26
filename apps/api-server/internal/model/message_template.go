@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+
 // MessageTemplate represents a reusable message template for marketplace messaging.
 type MessageTemplate struct {
 	ID              uuid.UUID `json:"id"`
@@ -59,6 +60,9 @@ func (r *CreateMessageTemplateRequest) Validate() error {
 	if !validChannels[r.Channel] {
 		return errors.New("channel must be allegro, email, or sms")
 	}
+	if r.TriggerEvent != nil && !ValidTriggerEvents[*r.TriggerEvent] {
+		return errors.New("trigger_event is not a valid event type")
+	}
 	return nil
 }
 
@@ -95,6 +99,9 @@ func (r *UpdateMessageTemplateRequest) Validate() error {
 	}
 	if err := validateMaxLengthPtr("body", r.Body, MaxTemplateBodyLength); err != nil {
 		return err
+	}
+	if r.TriggerEvent != nil && !ValidTriggerEvents[*r.TriggerEvent] {
+		return errors.New("trigger_event is not a valid event type")
 	}
 	return nil
 }

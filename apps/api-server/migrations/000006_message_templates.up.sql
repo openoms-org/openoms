@@ -19,3 +19,5 @@ CREATE POLICY message_templates_tenant ON message_templates
     USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 
 ALTER TABLE message_templates FORCE ROW LEVEL SECURITY;
+
+GRANT ALL ON message_templates TO openoms;
