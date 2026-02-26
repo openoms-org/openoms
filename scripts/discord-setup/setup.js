@@ -258,7 +258,7 @@ Open-source Order Management System dla polskiego e-commerce.
 4. Pytania techniczne → odpowiedni kanał forum w POMOC
 5. Bugi → #bugs lub GitHub Issues
 
-Licencja: AGPLv3 (core) + MIT (SDK packages)
+Licencja: Elastic License 2.0 (core) + MIT (SDK packages)
 `;
 
 // ── AutoMod rules ────────────────────────────────────────────────
@@ -1302,7 +1302,7 @@ Spam boty = natychmiastowy ban.`);
   }
 
   const description =
-    "OpenOMS — open-source Order Management System dla polskiego e-commerce. AGPLv3 + MIT.";
+    "OpenOMS — open-source Order Management System dla polskiego e-commerce. ELv2 + MIT.";
   if (guild.description !== description) {
     try {
       await guild.setDescription(description);

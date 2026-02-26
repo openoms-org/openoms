@@ -6,7 +6,7 @@ Najczesciej zadawane pytania przez sprzedawcow korzystajacych z OpenOMS.
 
 ## Q: Czy OpenOMS jest darmowy?
 
-Tak. OpenOMS to oprogramowanie open-source na licencji AGPLv3. Mozesz korzystac z niego za darmo, hostujac na wlasnym serwerze lub korzystajac z Dockera. Nie ma ukrytych oplat, limitow zamowien ani obowiazkowych subskrypcji. Pakiety pomocnicze (SDK, biblioteki) sa na licencji MIT.
+Tak. OpenOMS to oprogramowanie open-source na licencji Elastic License 2.0 (ELv2). Mozesz korzystac z niego za darmo, hostujac na wlasnym serwerze lub korzystajac z Dockera. Nie ma ukrytych oplat, limitow zamowien ani obowiazkowych subskrypcji. Pakiety pomocnicze (SDK, biblioteki) sa na licencji MIT.
 
 ---
 

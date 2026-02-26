@@ -117,7 +117,7 @@ When contributing a new integration, it starts as "In Development" until it has 
 
 ## License
 
-- **apps/** -- Licensed under [AGPLv3](LICENSE)
+- **apps/** -- Licensed under [Elastic License 2.0](LICENSE)
 - **packages/** -- Licensed under [MIT](packages/LICENSE)
 
 If you contribute code, you agree that your contributions will be licensed under the respective license for the directory they belong to.

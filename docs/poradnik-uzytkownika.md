@@ -31,7 +31,7 @@ OpenOMS to nowoczesny system zarzadzania zamowieniami (Order Management System) 
 - Wiele magazynow, inwentaryzacja, kontrola stanow
 - Raporty sprzedazy, trendow i prognoz
 
-OpenOMS jest oprogramowaniem open-source na licencji AGPLv3 — mozesz korzystac z niego za darmo, hostujac na wlasnym serwerze.
+OpenOMS jest oprogramowaniem open-source na licencji Elastic License 2.0 (ELv2) — mozesz korzystac z niego za darmo, hostujac na wlasnym serwerze.
 
 **Glowne zalety w porownaniu z innymi systemami:**
 

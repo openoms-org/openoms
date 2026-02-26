@@ -48,7 +48,7 @@
 
 ### Licencja
 
-- `apps/` -- AGPLv3 (core, converts to AGPLv3 on 2030-02-13)
+- `apps/` -- Elastic License 2.0 (core)
 - `packages/` -- MIT (SDK-i)
 
 ---
@@ -208,11 +208,11 @@ Domyslna liczba replik: 1 (API, Dashboard, Worker). Skalowanie przez `replicaCou
 ```
 OpenOMS/
 +-- apps/
-|   +-- api-server/          <- Go backend (AGPLv3)
+|   +-- api-server/          <- Go backend (ELv2)
 |   |   +-- cmd/server/      <- punkt wejscia
 |   |   +-- internal/        <- logika aplikacji (386 plikow Go, 71 testow)
 |   |   +-- migrations/      <- 94 migracji SQL (000001-000094)
-|   +-- dashboard/           <- Next.js frontend (AGPLv3)
+|   +-- dashboard/           <- Next.js frontend (ELv2)
 |       +-- src/app/         <- 124 strony (App Router)
 |       +-- src/components/  <- 81 komponentow React
 |       +-- src/hooks/       <- 45 custom hooks
@@ -1790,7 +1790,7 @@ Haslo testowe: `password123`
 | **Testy Go** | 751 (go test ./...) |
 | **Testy E2E** | 22 specow Playwright (124 testow) |
 | **Jezyki** | Go, TypeScript, SQL |
-| **Licencja** | AGPLv3 (apps) + MIT (packages) |
+| **Licencja** | Elastic License 2.0 (apps) + MIT (packages) |
 
 ### Testy
 
