@@ -113,7 +113,7 @@ func (s *LicenseService) ClaimToken(ctx context.Context, jti uuid.UUID, email, p
 	if s.licenseRepo == nil || s.pool == nil {
 		return nil
 	}
-	claimed, err := s.licenseRepo.MarkTokenUsed(ctx, s.pool, jti, uuid.Nil, email, plan)
+	claimed, err := s.licenseRepo.MarkTokenUsed(ctx, s.pool, jti, nil, email, plan)
 	if err != nil {
 		return fmt.Errorf("claim license token: %w", err)
 	}

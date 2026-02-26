@@ -478,7 +478,8 @@ type MessageTemplateRepo interface {
 type LicenseRepo interface {
 	IsTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti uuid.UUID) (bool, error)
 	// MarkTokenUsed atomically claims a token JTI. Returns true if claimed, false if already used.
-	MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID, email, plan string) (bool, error)
+	// tenantID may be nil when tenant doesn't exist yet (pre-registration claim).
+	MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti uuid.UUID, tenantID *uuid.UUID, email, plan string) (bool, error)
 	// UpdateClaimedTenant sets the tenant_id on a previously claimed token.
 	UpdateClaimedTenant(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID) error
 }
