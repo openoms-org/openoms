@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"io"
 	"net/http"
 
@@ -35,11 +34,6 @@ func (h *StripeWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := h.webhookSvc.HandleEvent(r.Context(), payload, sigHeader); err != nil {
-		// Signature verification failures are client errors (400) — don't let Stripe retry them
-		if errors.Is(err, service.ErrWebhookSignature) {
-			writeError(w, http.StatusBadRequest, "invalid webhook signature")
-			return
-		}
 		writeServerError(w, "webhook processing failed", err)
 		return
 	}

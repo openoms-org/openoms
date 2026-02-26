@@ -23,7 +23,7 @@ func NewCheckoutHandler(checkoutSvc *service.CheckoutService, frontendURL string
 
 // ListPlans returns available plans without Stripe-sensitive data.
 // GET /v1/billing/plans
-func (h *CheckoutHandler) ListPlans(w http.ResponseWriter, _ *http.Request) {
+func (h *CheckoutHandler) ListPlans(w http.ResponseWriter, r *http.Request) {
 	plans := h.checkoutSvc.ListPlans()
 	writeJSON(w, http.StatusOK, plans)
 }

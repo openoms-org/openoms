@@ -180,10 +180,8 @@ function InviteRegisterForm() {
 
 export default function InviteRegisterPage() {
   return (
-    <div className="max-w-md mx-auto">
-      <Suspense>
-        <InviteRegisterForm />
-      </Suspense>
-    </div>
+    <Suspense>
+      <InviteRegisterForm />
+    </Suspense>
   );
 }
