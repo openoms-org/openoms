@@ -397,6 +397,9 @@ func main() {
 		slog.Info("license token verification disabled (no LICENSE_PUBLIC_KEY)")
 	}
 
+	// Plan cache for enforcement middleware (5 min TTL)
+	planCache := service.NewPlanCache(5 * time.Minute)
+
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
@@ -753,6 +756,7 @@ func main() {
 		Invitation:                 invitationHandler,
 		MessageTemplate:            messageTemplateHandler,
 		MarketplaceCategoryMapping: marketplaceCategoryMappingHandler,
+		PlanCache:                  planCache,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)
