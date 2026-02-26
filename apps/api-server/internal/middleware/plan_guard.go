@@ -62,7 +62,7 @@ func TenantPlanGuard(cache *service.PlanCache, pool *pgxpool.Pool) func(http.Han
 			case "past_due":
 				if isMutation(r.Method) {
 					writePlanError(w, http.StatusPaymentRequired, "payment_past_due",
-						"Płatność zaległa. Nowe operacje zablokowane do czasu uregulowania należności.")
+						"Płatność zaległa. Now operacje zablokowane do czasu uregulowania należności.")
 					return
 				}
 			}
