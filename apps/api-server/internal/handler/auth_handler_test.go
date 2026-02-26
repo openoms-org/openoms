@@ -114,7 +114,7 @@ func TestAuthHandler_Register_LicenseToken_MissingBothTokens(t *testing.T) {
 	h.Register(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
-	assert.Contains(t, rr.Body.String(), "invite_token or license_token is required")
+	assert.Contains(t, rr.Body.String(), "invite_token, license_token, or checkout_session_id is required")
 }
 
 func TestIsValidationError(t *testing.T) {

@@ -6,9 +6,15 @@ import { API_URL } from "@/lib/api-client";
 interface PublicConfig {
   registration_mode: "open" | "invite" | "disabled";
   license_enabled: boolean;
+  billing_enabled: boolean;
+  stripe_public_key?: string;
 }
 
-const defaultConfig: PublicConfig = { registration_mode: "open", license_enabled: false };
+const defaultConfig: PublicConfig = {
+  registration_mode: "open",
+  license_enabled: false,
+  billing_enabled: false,
+};
 
 let cachedConfig: PublicConfig | null = null;
 
@@ -25,7 +31,7 @@ export function usePublicConfig() {
         setConfig(data);
       })
       .catch(() => {
-        // fallback to open if config endpoint unavailable
+        // fallback to defaults if config endpoint unavailable
       });
   }, []);
 

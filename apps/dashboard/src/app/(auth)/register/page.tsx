@@ -1,181 +1,207 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getErrorMessage } from "@/lib/api-client";
-import { useAuth } from "@/hooks/use-auth";
+import { API_URL, apiClient, getErrorMessage } from "@/lib/api-client";
 import { usePublicConfig } from "@/hooks/use-public-config";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { PublicPlanInfo, CheckoutSessionResponse } from "@/types/api";
 
-const registerSchema = z.object({
-  tenant_name: z.string().min(1, "Nazwa organizacji jest wymagana"),
-  tenant_slug: z
-    .string()
-    .min(1, "Slug organizacji jest wymagany")
-    .regex(/^[a-z0-9-]+$/, "Slug może zawierać tylko małe litery, cyfry i myślniki"),
-  name: z.string().min(1, "Imię i nazwisko jest wymagane"),
-  email: z.string().email("Nieprawidłowy adres email"),
-  password: z.string()
-    .min(8, "Hasło musi mieć minimum 8 znaków")
-    .regex(/[A-Z]/, "Hasło musi zawierać wielką literę")
-    .regex(/[0-9]/, "Hasło musi zawierać cyfrę"),
-});
+function formatPrice(amount: number, currency: string): string {
+  return new Intl.NumberFormat("pl-PL", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount / 100);
+}
 
-type RegisterForm = z.infer<typeof registerSchema>;
-
-function RegisterForm() {
-  const { register: registerUser } = useAuth();
-  const { registration_mode } = usePublicConfig();
+function PricingContent() {
+  const config = usePublicConfig();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const inviteToken = searchParams.get("token") || "";
-  const licenseToken = searchParams.get("license_token") || "";
-  const hasToken = inviteToken || licenseToken;
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [plans, setPlans] = useState<PublicPlanInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [yearly, setYearly] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-  });
+  useEffect(() => {
+    if (!config.billing_enabled) {
+      setIsLoading(false);
+      return;
+    }
 
-  // Redirect to login if registration is disabled
-  if (registration_mode === "disabled") {
-    router.replace("/login");
+    fetch(`${API_URL}/v1/billing/plans`)
+      .then((res) => res.json())
+      .then((data: PublicPlanInfo[]) => {
+        setPlans(data);
+      })
+      .catch(() => {
+        toast.error("Nie udało się załadować planów");
+      })
+      .finally(() => setIsLoading(false));
+  }, [config.billing_enabled]);
+
+  // If billing not enabled, show the invite-based registration
+  if (!config.billing_enabled) {
+    // Redirect to invite registration form
+    router.replace("/register/invite");
     return null;
   }
 
-  const onSubmit = async (data: RegisterForm) => {
-    setIsSubmitting(true);
+  const handleSelectPlan = async (planId: string) => {
+    setLoadingPlan(planId);
     try {
-      await registerUser({
-        ...data,
-        ...(inviteToken ? { invite_token: inviteToken } : {}),
-        ...(licenseToken ? { license_token: licenseToken } : {}),
+      const res = await apiClient<CheckoutSessionResponse>("/v1/billing/checkout", {
+        method: "POST",
+        body: JSON.stringify({
+          plan_id: planId,
+          interval: yearly ? "year" : "month",
+        }),
       });
+      window.location.href = res.checkout_url;
     } catch (error) {
       toast.error(getErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
+      setLoadingPlan(null);
     }
   };
 
-  return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Rejestracja</CardTitle>
-        <CardDescription>
-          {registration_mode === "invite"
-            ? "Dokończ rejestrację z zaproszenia"
-            : "Utwórz nową organizację w OpenOMS"}
-        </CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          {registration_mode === "invite" && !hasToken && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-              <p className="text-sm text-destructive">
-                Brak tokenu. Użyj linku otrzymanego w zaproszeniu lub po zakupie subskrypcji.
-              </p>
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="tenant_name">Nazwa organizacji <span className="text-destructive">*</span></Label>
-            <Input
-              id="tenant_name"
-              placeholder="Moja Firma Sp. z o.o."
-              aria-invalid={!!errors.tenant_name}
-              {...register("tenant_name")}
-            />
-            {errors.tenant_name && (
-              <p className="text-destructive text-xs mt-1">{errors.tenant_name.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tenant_slug">Slug organizacji <span className="text-destructive">*</span></Label>
-            <Input
-              id="tenant_slug"
-              placeholder="moja-firma"
-              aria-invalid={!!errors.tenant_slug}
-              {...register("tenant_slug")}
-            />
-            {errors.tenant_slug && (
-              <p className="text-destructive text-xs mt-1">{errors.tenant_slug.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Imię i nazwisko <span className="text-destructive">*</span></Label>
-            <Input
-              id="name"
-              placeholder="Jan Kowalski"
-              aria-invalid={!!errors.name}
-              {...register("name")}
-            />
-            {errors.name && (
-              <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="jan@example.com"
-              aria-invalid={!!errors.email}
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-destructive text-xs mt-1">{errors.email.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Hasło <span className="text-destructive">*</span></Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Minimum 8 znaków"
-              aria-invalid={!!errors.password}
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="text-destructive text-xs mt-1">{errors.password.message}</p>
-            )}
-          </div>
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <Skeleton className="h-8 w-64 mx-auto" />
+          <Skeleton className="h-5 w-96 mx-auto" />
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-80 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <Card className="max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <CardTitle>Brak dostępnych planów</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center text-muted-foreground">
+          <p>Plany cenowe nie są jeszcze skonfigurowane.</p>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting || (registration_mode === "invite" && !hasToken)}
-          >
-            {isSubmitting ? "Rejestracja..." : "Zarejestruj się"}
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Masz już konto?{" "}
-            <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-              Zaloguj się
-            </Link>
-          </p>
+        <CardFooter className="justify-center">
+          <Link href="/login" className="text-sm text-primary underline-offset-4 hover:underline">
+            Zaloguj się
+          </Link>
         </CardFooter>
-      </form>
-    </Card>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Wybierz plan</h1>
+        <p className="text-muted-foreground">
+          Rozpocznij zarządzanie zamówieniami z OpenOMS
+        </p>
+      </div>
+
+      <div className="flex items-center justify-center gap-3">
+        <Label htmlFor="billing-interval" className={!yearly ? "font-semibold" : "text-muted-foreground"}>
+          Miesięcznie
+        </Label>
+        <Switch
+          id="billing-interval"
+          checked={yearly}
+          onCheckedChange={setYearly}
+        />
+        <Label htmlFor="billing-interval" className={yearly ? "font-semibold" : "text-muted-foreground"}>
+          Rocznie
+        </Label>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        {plans.map((plan) => {
+          const price = yearly ? plan.yearly_amount : plan.monthly_amount;
+          const perMonth = yearly
+            ? Math.round(plan.yearly_amount / 12)
+            : plan.monthly_amount;
+
+          return (
+            <Card key={plan.id} className="flex flex-col">
+              <CardHeader className="text-center pb-2">
+                <CardTitle className="text-xl">{plan.name}</CardTitle>
+                <div className="mt-4">
+                  <span className="text-3xl font-bold">
+                    {formatPrice(perMonth, plan.currency)}
+                  </span>
+                  <span className="text-muted-foreground text-sm"> /mies.</span>
+                </div>
+                {yearly && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatPrice(price, plan.currency)} rocznie
+                  </p>
+                )}
+                {plan.trial_days > 0 && (
+                  <p className="text-xs text-primary mt-2 font-medium">
+                    {plan.trial_days} dni za darmo
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className="flex-1">
+                <ul className="space-y-2 text-sm">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-primary mt-0.5 shrink-0">&#10003;</span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  onClick={() => handleSelectPlan(plan.id)}
+                  disabled={loadingPlan !== null}
+                >
+                  {loadingPlan === plan.id ? "Przekierowanie..." : "Wybierz plan"}
+                </Button>
+              </CardFooter>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="text-center space-y-2 text-sm text-muted-foreground">
+        <p>
+          Masz już konto?{" "}
+          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
+            Zaloguj się
+          </Link>
+        </p>
+        <p>
+          Masz token zaproszenia?{" "}
+          <Link href="/register/invite" className="text-primary underline-offset-4 hover:underline">
+            Zarejestruj się z zaproszeniem
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 }
 
 export default function RegisterPage() {
   return (
     <Suspense>
-      <RegisterForm />
+      <PricingContent />
     </Suspense>
   );
 }

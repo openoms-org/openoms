@@ -77,6 +77,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/stripe/stripe-go/v82 v82.5.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect

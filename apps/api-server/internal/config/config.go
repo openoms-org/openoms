@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -55,6 +56,15 @@ type Config struct {
 	// LicensePublicKey is the base64-encoded Ed25519 public key for verifying license tokens.
 	// Empty = license token feature disabled (self-hosted mode).
 	LicensePublicKey string `env:"LICENSE_PUBLIC_KEY" envDefault:""`
+
+	// Stripe billing configuration. All empty = billing disabled (self-hosted mode).
+	StripeSecretKey    string `env:"STRIPE_SECRET_KEY" envDefault:""`
+	StripeWebhookSecret string `env:"STRIPE_WEBHOOK_SECRET" envDefault:""`
+	StripePublicKey    string `env:"STRIPE_PUBLIC_KEY" envDefault:""`
+
+	// BillingPlansJSON is a JSON array of plan configs. Parsed at startup via ParseBillingPlans().
+	// Empty = billing disabled. Plan names, prices, limits are all defined here, never hardcoded.
+	BillingPlansJSON string `env:"BILLING_PLANS" envDefault:""`
 }
 
 func Load() (*Config, error) {
@@ -99,6 +109,54 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// BillingEnabled returns true when Stripe billing is configured.
+func (c *Config) BillingEnabled() bool {
+	return c.StripeSecretKey != "" && c.BillingPlansJSON != ""
+}
+
+// PlanConfig defines a billing plan loaded from BILLING_PLANS env var.
+// Stripe Price IDs are kept server-side and never exposed to frontend.
+type PlanConfig struct {
+	ID             string         `json:"id"`
+	Name           string         `json:"name"`
+	MonthlyPriceID string         `json:"monthly_price_id"`
+	YearlyPriceID  string         `json:"yearly_price_id"`
+	MonthlyAmount  int64          `json:"monthly_amount"`  // in smallest currency unit (grosze)
+	YearlyAmount   int64          `json:"yearly_amount"`
+	Currency       string         `json:"currency"`
+	TrialDays      int64          `json:"trial_days"`
+	Limits         PlanLimits     `json:"limits"`
+	Features       []string       `json:"features"`
+}
+
+// PlanLimits defines resource limits for a plan.
+type PlanLimits struct {
+	MaxUsers         int `json:"max_users"`
+	MaxOrdersMonthly int `json:"max_orders_monthly"`
+	MaxIntegrations  int `json:"max_integrations"`
+}
+
+// ParseBillingPlans parses the BILLING_PLANS JSON env var.
+// Returns nil if empty (billing disabled).
+func (c *Config) ParseBillingPlans() ([]PlanConfig, error) {
+	if c.BillingPlansJSON == "" {
+		return nil, nil
+	}
+	var plans []PlanConfig
+	if err := json.Unmarshal([]byte(c.BillingPlansJSON), &plans); err != nil {
+		return nil, fmt.Errorf("BILLING_PLANS: invalid JSON: %w", err)
+	}
+	for i, p := range plans {
+		if p.ID == "" || p.Name == "" {
+			return nil, fmt.Errorf("BILLING_PLANS[%d]: id and name are required", i)
+		}
+		if p.Currency == "" {
+			plans[i].Currency = "pln"
+		}
+	}
+	return plans, nil
 }
 
 // ParseLicensePublicKey decodes the base64-encoded Ed25519 public key.

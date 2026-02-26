@@ -17,6 +17,7 @@ type AuthHandler struct {
 	authService      *service.AuthService
 	invitationSvc    *service.InvitationService
 	licenseSvc       *service.LicenseService
+	checkoutSvc      *service.CheckoutService
 	wsTicketSvc      *service.WSTicketService
 	isDev            bool
 	registrationMode string // "open", "invite", "disabled"
@@ -49,6 +50,11 @@ func (h *AuthHandler) SetLicenseService(svc *service.LicenseService) {
 	h.licenseSvc = svc
 }
 
+// SetCheckoutService sets the Stripe checkout service for billing registration.
+func (h *AuthHandler) SetCheckoutService(svc *service.CheckoutService) {
+	h.checkoutSvc = svc
+}
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Check registration mode
 	switch h.registrationMode {
@@ -69,10 +75,33 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In invite mode, validate the invitation or license token
+	// In invite mode, validate the invitation, license token, or checkout session
 	var licenseClaims *model.LicenseClaims
+	var checkoutSessionID string
 	if h.registrationMode == "invite" {
 		switch {
+		case req.CheckoutSessionID != "" && h.checkoutSvc != nil:
+			// Stripe checkout session flow — post-payment registration
+			session, err := h.checkoutSvc.GetSessionStatus(r.Context(), req.CheckoutSessionID)
+			if err != nil {
+				writeServerError(w, "failed to verify checkout session", err)
+				return
+			}
+			if session == nil {
+				writeError(w, http.StatusBadRequest, "checkout session not found")
+				return
+			}
+			if session.Status != "completed" {
+				writeError(w, http.StatusBadRequest, "checkout session is not completed")
+				return
+			}
+			if !strings.EqualFold(session.Email, req.Email) {
+				writeError(w, http.StatusBadRequest, "email does not match checkout session")
+				return
+			}
+			checkoutSessionID = req.CheckoutSessionID
+			req.Plan = session.Plan
+			req.PlanLimits = session.Limits
 		case req.LicenseToken != "" && h.licenseSvc != nil && !h.licenseSvc.IsDisabled():
 			// License token flow — cloud billing registration
 			claims, err := h.licenseSvc.VerifyToken(r.Context(), req.LicenseToken)
@@ -117,7 +146,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			}
 			req.Email = inv.Email
 		default:
-			writeError(w, http.StatusBadRequest, "invite_token or license_token is required")
+			writeError(w, http.StatusBadRequest, "invite_token, license_token, or checkout_session_id is required")
 			return
 		}
 	}
@@ -163,6 +192,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if licenseClaims != nil && h.licenseSvc != nil {
 		if err := h.licenseSvc.UpdateClaimedTenant(r.Context(), licenseClaims.JTI, resp.Tenant.ID); err != nil {
 			slog.Warn("failed to update license token tenant_id", "error", err)
+		}
+	}
+
+	// Claim the checkout session after successful registration
+	if checkoutSessionID != "" && h.checkoutSvc != nil {
+		if _, err := h.checkoutSvc.ClaimSession(r.Context(), checkoutSessionID, resp.Tenant.ID); err != nil {
+			slog.Warn("failed to claim checkout session", "session_id", checkoutSessionID, "error", err)
 		}
 	}
 

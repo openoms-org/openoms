@@ -117,6 +117,30 @@ spec:
                   name: {{ include "openoms.secretName" . }}
                   key: LICENSE_PUBLIC_KEY
                   optional: true
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: STRIPE_SECRET_KEY
+                  optional: true
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: STRIPE_WEBHOOK_SECRET
+                  optional: true
+            - name: STRIPE_PUBLIC_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openoms.fullname" . }}-config
+                  key: STRIPE_PUBLIC_KEY
+                  optional: true
+            - name: BILLING_PLANS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openoms.fullname" . }}-config
+                  key: BILLING_PLANS
+                  optional: true
           lifecycle:
             preStop:
               exec:
