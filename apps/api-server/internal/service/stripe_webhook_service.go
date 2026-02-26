@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -14,20 +15,21 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// ErrWebhookSignature indicates a Stripe signature verification failure (client error, not retryable).
+var ErrWebhookSignature = errors.New("webhook signature verification failed")
+
 // StripeWebhookService processes Stripe webhook events.
 type StripeWebhookService struct {
 	webhookSecret string
 	billingRepo   repository.BillingRepo
-	tenantRepo    repository.TenantRepo
 	pool          *pgxpool.Pool
 }
 
 // NewStripeWebhookService creates a new StripeWebhookService.
-func NewStripeWebhookService(webhookSecret string, billingRepo repository.BillingRepo, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *StripeWebhookService {
+func NewStripeWebhookService(webhookSecret string, billingRepo repository.BillingRepo, pool *pgxpool.Pool) *StripeWebhookService {
 	return &StripeWebhookService{
 		webhookSecret: webhookSecret,
 		billingRepo:   billingRepo,
-		tenantRepo:    tenantRepo,
 		pool:          pool,
 	}
 }
@@ -36,7 +38,7 @@ func NewStripeWebhookService(webhookSecret string, billingRepo repository.Billin
 func (s *StripeWebhookService) HandleEvent(ctx context.Context, payload []byte, sigHeader string) error {
 	event, err := webhook.ConstructEvent(payload, sigHeader, s.webhookSecret)
 	if err != nil {
-		return fmt.Errorf("verify webhook signature: %w", err)
+		return fmt.Errorf("%w: %w", ErrWebhookSignature, err)
 	}
 
 	switch event.Type {
@@ -103,6 +105,7 @@ func (s *StripeWebhookService) handleSubscriptionUpdated(ctx context.Context, ev
 		canceledAt = &t
 	}
 
+	// Use SECURITY DEFINER function to bypass RLS
 	if err := s.billingRepo.UpdateSubscriptionByStripeID(ctx, s.pool, sub.ID, status, periodStart, periodEnd, canceledAt); err != nil {
 		return fmt.Errorf("update subscription: %w", err)
 	}
@@ -162,6 +165,7 @@ func (s *StripeWebhookService) handlePaymentFailed(ctx context.Context, event st
 }
 
 // syncTenantPlan updates the tenant's plan status based on subscription state.
+// Uses SECURITY DEFINER function to bypass RLS.
 func (s *StripeWebhookService) syncTenantPlan(ctx context.Context, stripeCustomerID, subStatus string) {
 	customer, err := s.billingRepo.GetCustomerByStripeID(ctx, s.pool, stripeCustomerID)
 	if err != nil || customer == nil {
@@ -169,12 +173,9 @@ func (s *StripeWebhookService) syncTenantPlan(ctx context.Context, stripeCustome
 		return
 	}
 
-	// Update tenant settings with subscription status for plan_guard middleware
 	settings := map[string]any{"subscription_status": subStatus}
 	settingsJSON, _ := json.Marshal(settings)
-	if _, err := s.pool.Exec(ctx,
-		`UPDATE tenants SET settings = settings || $1::jsonb, updated_at = now() WHERE id = $2`,
-		settingsJSON, customer.TenantID); err != nil {
+	if err := s.billingRepo.SyncTenantPlan(ctx, s.pool, customer.TenantID, settingsJSON); err != nil {
 		slog.Error("failed to sync tenant plan status", "tenant_id", customer.TenantID, "error", err)
 	}
 }

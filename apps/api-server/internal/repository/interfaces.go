@@ -494,17 +494,24 @@ type InvitationRepo interface {
 }
 
 // BillingRepo provides database operations for Stripe billing integration.
+// All operations use SECURITY DEFINER functions via pool (no RLS context needed).
 type BillingRepo interface {
-	// SECURITY DEFINER (pool) — pre-registration, no RLS context.
+	// Checkout session lifecycle
 	CreateCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, plan, interval string) error
 	CompleteCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, email string) (bool, error)
 	GetCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (*model.BillingCheckoutSession, error)
-	ClaimCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string, tenantID uuid.UUID) (bool, error)
+	ClaimCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (bool, error)
+	UpdateClaimedCheckoutTenant(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string, tenantID uuid.UUID) error
 
-	// RLS (tx) — post-registration, tenant context set.
-	CreateBillingCustomer(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, stripeCustomerID string) error
-	CreateSubscription(ctx context.Context, tx pgx.Tx, sub *model.BillingSubscription) error
+	// Billing customers
+	CreateBillingCustomer(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID, stripeCustomerID string) error
+	GetCustomerByStripeID(ctx context.Context, pool *pgxpool.Pool, stripeCustomerID string) (*model.BillingCustomer, error)
+
+	// Subscriptions
+	UpsertSubscription(ctx context.Context, pool *pgxpool.Pool, sub *model.BillingSubscription) error
 	UpdateSubscriptionByStripeID(ctx context.Context, pool *pgxpool.Pool, stripeSubID, status string, periodStart, periodEnd, canceledAt *time.Time) error
 	GetSubscriptionByTenant(ctx context.Context, tx pgx.Tx) (*model.BillingSubscription, error)
-	GetCustomerByStripeID(ctx context.Context, pool *pgxpool.Pool, stripeCustomerID string) (*model.BillingCustomer, error)
+
+	// Tenant plan sync
+	SyncTenantPlan(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID, settingsJSON []byte) error
 }

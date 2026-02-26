@@ -48,9 +48,10 @@ type RegisterRequest struct {
 	TenantSlug        string         `json:"tenant_slug"`
 	InviteToken       string         `json:"invite_token,omitempty"`
 	LicenseToken      string         `json:"license_token,omitempty"`
-	CheckoutSessionID string         `json:"checkout_session_id,omitempty"`
-	Plan              string         `json:"-"` // set internally from license/checkout, never from user input
-	PlanLimits        *LicenseLimits `json:"-"` // set internally from license/checkout
+	CheckoutSessionID       string         `json:"checkout_session_id,omitempty"`
+	Plan                    string         `json:"-"` // set internally from license/checkout, never from user input
+	PlanLimits              *LicenseLimits `json:"-"` // set internally from license/checkout
+	CheckoutSessionInterval string         `json:"-"` // set internally from checkout session
 }
 
 func (r *RegisterRequest) Validate() error {

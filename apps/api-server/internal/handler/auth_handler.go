@@ -102,6 +102,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			checkoutSessionID = req.CheckoutSessionID
 			req.Plan = session.Plan
 			req.PlanLimits = session.Limits
+			req.CheckoutSessionInterval = session.Interval
 		case req.LicenseToken != "" && h.licenseSvc != nil && !h.licenseSvc.IsDisabled():
 			// License token flow — cloud billing registration
 			claims, err := h.licenseSvc.VerifyToken(r.Context(), req.LicenseToken)
@@ -165,6 +166,19 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Atomically claim the checkout session BEFORE registration to prevent TOCTOU race.
+	// Same pattern as license token: claim first, set tenant_id after registration.
+	if checkoutSessionID != "" && h.checkoutSvc != nil {
+		if err := h.checkoutSvc.ClaimSession(r.Context(), checkoutSessionID); err != nil {
+			if errors.Is(err, service.ErrCheckoutSessionClaimed) {
+				writeError(w, http.StatusConflict, "checkout session has already been used")
+			} else {
+				writeServerError(w, "failed to claim checkout session", err)
+			}
+			return
+		}
+	}
+
 	resp, refreshToken, err := h.authService.Register(r.Context(), req, clientIP(r))
 	if err != nil {
 		slog.Error("registration error", "error", err)
@@ -195,11 +209,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Claim the checkout session after successful registration
+	// Finalize checkout claim: set tenant_id, create billing customer + subscription records
 	if checkoutSessionID != "" && h.checkoutSvc != nil {
-		if _, err := h.checkoutSvc.ClaimSession(r.Context(), checkoutSessionID, resp.Tenant.ID); err != nil {
-			slog.Warn("failed to claim checkout session", "session_id", checkoutSessionID, "error", err)
-		}
+		h.checkoutSvc.FinalizeCheckoutClaim(r.Context(), checkoutSessionID, resp.Tenant.ID, req.Plan, req.CheckoutSessionInterval)
 	}
 
 	h.setRefreshCookie(w, refreshToken, 30*24*3600)
