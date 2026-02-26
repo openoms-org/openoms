@@ -1,6 +1,6 @@
 -- Track used license tokens to prevent replay attacks.
 -- Each JTI (JWT ID) can only be used once.
-CREATE TABLE public.used_license_tokens (
+CREATE TABLE IF NOT EXISTS public.used_license_tokens (
     jti       uuid PRIMARY KEY,
     tenant_id uuid REFERENCES public.tenants(id) ON DELETE CASCADE,
     email     text NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE public.used_license_tokens (
 );
 
 -- Index for auditing: find all tokens used by a tenant
-CREATE INDEX idx_used_license_tokens_tenant ON public.used_license_tokens (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_used_license_tokens_tenant ON public.used_license_tokens (tenant_id);
 
 -- RLS: defense-in-depth — direct access denied; all access via SECURITY DEFINER functions.
 ALTER TABLE public.used_license_tokens ENABLE ROW LEVEL SECURITY;
@@ -60,6 +60,12 @@ AS $$
 $$;
 
 -- Grant minimal permissions to the auth role (used during registration)
-GRANT EXECUTE ON FUNCTION public.check_license_token_used(uuid) TO openoms_auth;
-GRANT EXECUTE ON FUNCTION public.mark_license_token_used(uuid, uuid, text, text) TO openoms_auth;
-GRANT EXECUTE ON FUNCTION public.update_license_token_tenant(uuid, uuid) TO openoms_auth;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms_auth') THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.check_license_token_used(uuid) TO openoms_auth';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.mark_license_token_used(uuid, uuid, text, text) TO openoms_auth';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.update_license_token_tenant(uuid, uuid) TO openoms_auth';
+  END IF;
+END;
+$$;
