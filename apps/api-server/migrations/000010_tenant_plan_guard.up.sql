@@ -11,6 +11,17 @@ AS $$
     SELECT t.plan, t.settings FROM tenants t WHERE t.id = p_tenant_id;
 $$;
 
--- Grant to the app role (not just auth role — this runs for authenticated requests)
-GRANT EXECUTE ON FUNCTION public.get_tenant_plan(uuid) TO openoms;
-GRANT EXECUTE ON FUNCTION public.get_tenant_plan(uuid) TO openoms_auth;
+-- Grant to the app role — try both self-hosted (openoms) and Supabase (openoms_app)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms') THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_tenant_plan(uuid) TO openoms';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms_app') THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_tenant_plan(uuid) TO openoms_app';
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms_auth') THEN
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.get_tenant_plan(uuid) TO openoms_auth';
+  END IF;
+END;
+$$;
