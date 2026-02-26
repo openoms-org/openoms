@@ -726,11 +726,19 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 }
 
 // buildTenantSettings merges plan limits into existing tenant settings.
+// Returns nil if there are no settings to store or if JSON operations fail.
 func buildTenantSettings(existing json.RawMessage, limits *model.LicenseLimits) json.RawMessage {
+	if limits == nil && existing == nil {
+		return nil
+	}
+
 	settings := make(map[string]any)
 
 	if existing != nil {
-		json.Unmarshal(existing, &settings)
+		if err := json.Unmarshal(existing, &settings); err != nil {
+			slog.Warn("buildTenantSettings: failed to unmarshal existing settings", "error", err)
+			settings = make(map[string]any)
+		}
 	}
 
 	if limits != nil {
@@ -741,6 +749,10 @@ func buildTenantSettings(existing json.RawMessage, limits *model.LicenseLimits) 
 		return nil
 	}
 
-	data, _ := json.Marshal(settings)
+	data, err := json.Marshal(settings)
+	if err != nil {
+		slog.Warn("buildTenantSettings: failed to marshal settings", "error", err)
+		return nil
+	}
 	return data
 }

@@ -477,7 +477,10 @@ type MessageTemplateRepo interface {
 // LicenseRepo provides database operations for license token tracking.
 type LicenseRepo interface {
 	IsTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti uuid.UUID) (bool, error)
-	MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID, email, plan string) error
+	// MarkTokenUsed atomically claims a token JTI. Returns true if claimed, false if already used.
+	MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID, email, plan string) (bool, error)
+	// UpdateClaimedTenant sets the tenant_id on a previously claimed token.
+	UpdateClaimedTenant(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID) error
 }
 
 // InvitationRepo defines the interface for invitation persistence operations.

@@ -106,10 +106,28 @@ func (s *LicenseService) VerifyToken(ctx context.Context, tokenStr string) (*mod
 	return claims, nil
 }
 
-// MarkUsed records a license token JTI as consumed after successful registration.
-func (s *LicenseService) MarkUsed(ctx context.Context, jti, tenantID uuid.UUID, email, plan string) error {
+// ClaimToken atomically marks a license token JTI as consumed.
+// Called BEFORE registration with a nil tenant_id (tenant doesn't exist yet).
+// Returns ErrLicenseTokenUsed if the token was already claimed by a concurrent request.
+func (s *LicenseService) ClaimToken(ctx context.Context, jti uuid.UUID, email, plan string) error {
 	if s.licenseRepo == nil || s.pool == nil {
 		return nil
 	}
-	return s.licenseRepo.MarkTokenUsed(ctx, s.pool, jti, tenantID, email, plan)
+	claimed, err := s.licenseRepo.MarkTokenUsed(ctx, s.pool, jti, uuid.Nil, email, plan)
+	if err != nil {
+		return fmt.Errorf("claim license token: %w", err)
+	}
+	if !claimed {
+		return ErrLicenseTokenUsed
+	}
+	return nil
+}
+
+// UpdateClaimedTenant sets the tenant_id on a previously claimed license token.
+// Called after successful registration.
+func (s *LicenseService) UpdateClaimedTenant(ctx context.Context, jti, tenantID uuid.UUID) error {
+	if s.licenseRepo == nil || s.pool == nil {
+		return nil
+	}
+	return s.licenseRepo.UpdateClaimedTenant(ctx, s.pool, jti, tenantID)
 }

@@ -70,6 +70,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// In invite mode, validate the invitation or license token
+	var licenseClaims *model.LicenseClaims
 	if h.registrationMode == "invite" {
 		if req.LicenseToken != "" && h.licenseSvc != nil && !h.licenseSvc.IsDisabled() {
 			// License token flow — cloud billing registration
@@ -89,6 +90,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusBadRequest, "email does not match license token")
 				return
 			}
+			licenseClaims = claims
 			req.Email = claims.Email
 			req.Plan = claims.Plan
 			req.PlanLimits = &claims.Limits
@@ -119,6 +121,20 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Atomically claim the license token BEFORE registration to prevent TOCTOU race.
+	// If two concurrent requests use the same token, only one will succeed here.
+	// tenant_id is initially NULL and updated after registration.
+	if licenseClaims != nil {
+		if err := h.licenseSvc.ClaimToken(r.Context(), licenseClaims.JTI, licenseClaims.Email, licenseClaims.Plan); err != nil {
+			if errors.Is(err, service.ErrLicenseTokenUsed) {
+				writeError(w, http.StatusConflict, "license token has already been used")
+			} else {
+				writeServerError(w, "failed to claim license token", err)
+			}
+			return
+		}
+	}
+
 	resp, refreshToken, err := h.authService.Register(r.Context(), req, clientIP(r))
 	if err != nil {
 		slog.Error("registration error", "error", err)
@@ -142,13 +158,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Mark license token as used
-	if req.LicenseToken != "" && h.licenseSvc != nil {
-		claims, _ := h.licenseSvc.ParseAndVerify(req.LicenseToken)
-		if claims != nil {
-			if err := h.licenseSvc.MarkUsed(r.Context(), claims.JTI, resp.Tenant.ID, claims.Email, claims.Plan); err != nil {
-				slog.Warn("failed to mark license token as used", "error", err)
-			}
+	// Set the actual tenant_id on the claimed license token
+	if licenseClaims != nil && h.licenseSvc != nil {
+		if err := h.licenseSvc.UpdateClaimedTenant(r.Context(), licenseClaims.JTI, resp.Tenant.ID); err != nil {
+			slog.Warn("failed to update license token tenant_id", "error", err)
 		}
 	}
 

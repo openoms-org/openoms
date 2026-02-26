@@ -105,7 +105,7 @@ func PlanLimitsFromContext(ctx context.Context) *PlanLimits {
 func writePlanError(w http.ResponseWriter, status int, errorCode, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]string{
+	_ = json.NewEncoder(w).Encode(map[string]string{
 		"error":   errorCode,
 		"message": message,
 	})

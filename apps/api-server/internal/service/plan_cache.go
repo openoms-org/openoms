@@ -19,11 +19,15 @@ type PlanStatus struct {
 
 // PlanCache provides an in-memory cache for tenant plan lookups.
 // TTL-based: entries expire after the configured duration.
+// Expired entries are lazily evicted on reads and periodically on writes.
 type PlanCache struct {
-	mu    sync.RWMutex
-	items map[uuid.UUID]PlanStatus
-	ttl   time.Duration
+	mu         sync.RWMutex
+	items      map[uuid.UUID]PlanStatus
+	ttl        time.Duration
+	writeCount int
 }
+
+const evictionInterval = 100 // clean up every N writes
 
 // NewPlanCache creates a plan cache with the given TTL.
 func NewPlanCache(ttl time.Duration) *PlanCache {
@@ -34,22 +38,41 @@ func NewPlanCache(ttl time.Duration) *PlanCache {
 }
 
 // Get returns the cached plan for a tenant. Returns ok=false if missing or expired.
+// Expired entries are lazily deleted.
 func (c *PlanCache) Get(tenantID uuid.UUID) (string, json.RawMessage, bool) {
 	c.mu.RLock()
 	entry, exists := c.items[tenantID]
 	c.mu.RUnlock()
 
-	if !exists || time.Since(entry.CachedAt) > c.ttl {
+	if !exists {
+		return "", nil, false
+	}
+	if time.Since(entry.CachedAt) > c.ttl {
+		// Lazy eviction of expired entry
+		c.mu.Lock()
+		if e, ok := c.items[tenantID]; ok && time.Since(e.CachedAt) > c.ttl {
+			delete(c.items, tenantID)
+		}
+		c.mu.Unlock()
 		return "", nil, false
 	}
 	return entry.Plan, entry.Settings, true
 }
 
-// Set stores a plan entry in the cache.
+// Set stores a plan entry in the cache and periodically evicts expired entries.
 func (c *PlanCache) Set(tenantID uuid.UUID, plan string, settings json.RawMessage) {
 	c.mu.Lock()
 	c.items[tenantID] = PlanStatus{Plan: plan, Settings: settings, CachedAt: time.Now()}
+	c.writeCount++
+	shouldEvict := c.writeCount >= evictionInterval
+	if shouldEvict {
+		c.writeCount = 0
+	}
 	c.mu.Unlock()
+
+	if shouldEvict {
+		c.evictExpired()
+	}
 }
 
 // Invalidate removes a tenant's cached plan entry.
@@ -57,6 +80,18 @@ func (c *PlanCache) Invalidate(tenantID uuid.UUID) {
 	c.mu.Lock()
 	delete(c.items, tenantID)
 	c.mu.Unlock()
+}
+
+// evictExpired removes all expired entries from the cache.
+func (c *PlanCache) evictExpired() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := time.Now()
+	for id, entry := range c.items {
+		if now.Sub(entry.CachedAt) > c.ttl {
+			delete(c.items, id)
+		}
+	}
 }
 
 // LoadFromDB fetches tenant plan via SECURITY DEFINER function (no RLS context needed).

@@ -26,11 +26,22 @@ func (r *LicenseRepository) IsTokenUsed(ctx context.Context, pool *pgxpool.Pool,
 	return used, nil
 }
 
-// MarkTokenUsed records a license token JTI as consumed after successful registration.
-func (r *LicenseRepository) MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID, email, plan string) error {
-	_, err := pool.Exec(ctx, `SELECT mark_license_token_used($1, $2, $3, $4)`, jti, tenantID, email, plan)
+// MarkTokenUsed atomically claims a license token JTI. Returns true if the
+// token was successfully claimed (inserted), false if it was already used.
+func (r *LicenseRepository) MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID, email, plan string) (bool, error) {
+	var claimed bool
+	err := pool.QueryRow(ctx, `SELECT mark_license_token_used($1, $2, $3, $4)`, jti, tenantID, email, plan).Scan(&claimed)
 	if err != nil {
-		return fmt.Errorf("mark license token used: %w", err)
+		return false, fmt.Errorf("mark license token used: %w", err)
+	}
+	return claimed, nil
+}
+
+// UpdateClaimedTenant sets the tenant_id on a previously claimed token.
+func (r *LicenseRepository) UpdateClaimedTenant(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID) error {
+	_, err := pool.Exec(ctx, `SELECT update_license_token_tenant($1, $2)`, jti, tenantID)
+	if err != nil {
+		return fmt.Errorf("update license token tenant: %w", err)
 	}
 	return nil
 }

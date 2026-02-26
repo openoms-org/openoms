@@ -78,6 +78,29 @@ export function isAuthError(error: unknown): boolean {
   return error instanceof ApiClientError && error.status === 401;
 }
 
+/**
+ * Handles 402 Payment Required responses by refreshing tenant data
+ * in the Zustand store and throwing an ApiClientError.
+ */
+async function handlePaymentRequired(res: Response): Promise<never> {
+  const body = await res.json().catch(() => ({ message: "Brak aktywnej subskrypcji" }));
+  const authState = useAuthStore.getState();
+  if (authState.isAuthenticated && authState.token) {
+    try {
+      const meResp = await fetch(`${API_URL}/v1/users/me`, {
+        headers: { Authorization: `Bearer ${authState.token}` },
+      });
+      if (meResp.ok) {
+        const me = await meResp.json();
+        authState.setAuth(authState.token, me.user, me.tenant);
+      }
+    } catch {
+      // ignore — banner will show on next navigation
+    }
+  }
+  throw new ApiClientError(402, body.message || "Brak aktywnej subskrypcji");
+}
+
 export async function apiClient<T>(
   path: string,
   options: RequestInit = {}
@@ -121,25 +144,8 @@ export async function apiClient<T>(
     }
   }
 
-  // Handle 402 Payment Required — subscription issues
   if (res.status === 402) {
-    const body = await res.json().catch(() => ({ message: "Brak aktywnej subskrypcji" }));
-    // Re-fetch tenant data to update plan status in Zustand store
-    const authState = useAuthStore.getState();
-    if (authState.isAuthenticated && authState.token) {
-      try {
-        const meResp = await fetch(`${API_URL}/v1/users/me`, {
-          headers: { Authorization: `Bearer ${authState.token}` },
-        });
-        if (meResp.ok) {
-          const me = await meResp.json();
-          authState.setAuth(authState.token, me.user, me.tenant);
-        }
-      } catch {
-        // ignore — banner will show on next navigation
-      }
-    }
-    throw new ApiClientError(402, body.message || "Brak aktywnej subskrypcji");
+    await handlePaymentRequired(res);
   }
 
   if (!res.ok) {
@@ -194,25 +200,8 @@ export async function apiFetch(
     }
   }
 
-  // Handle 402 Payment Required — subscription issues
   if (res.status === 402) {
-    const body = await res.json().catch(() => ({ message: "Brak aktywnej subskrypcji" }));
-    // Re-fetch tenant data to update plan status in Zustand store
-    const authState = useAuthStore.getState();
-    if (authState.isAuthenticated && authState.token) {
-      try {
-        const meResp = await fetch(`${API_URL}/v1/users/me`, {
-          headers: { Authorization: `Bearer ${authState.token}` },
-        });
-        if (meResp.ok) {
-          const me = await meResp.json();
-          authState.setAuth(authState.token, me.user, me.tenant);
-        }
-      } catch {
-        // ignore — banner will show on next navigation
-      }
-    }
-    throw new ApiClientError(402, body.message || "Brak aktywnej subskrypcji");
+    await handlePaymentRequired(res);
   }
 
   if (!res.ok) {
