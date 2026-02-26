@@ -143,11 +143,17 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 		return nil, "", fmt.Errorf("hash password: %w", err)
 	}
 
+	plan := "free"
+	if req.Plan != "" {
+		plan = req.Plan
+	}
+
 	tenant := &model.Tenant{
-		ID:   tenantID,
-		Name: req.TenantName,
-		Slug: req.TenantSlug,
-		Plan: "free",
+		ID:       tenantID,
+		Name:     req.TenantName,
+		Slug:     req.TenantSlug,
+		Plan:     plan,
+		Settings: buildTenantSettings(nil, req.PlanLimits),
 	}
 
 	user := &model.User{
@@ -169,11 +175,15 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 		if err != nil {
 			return fmt.Errorf("marshal default order status config: %w", err)
 		}
-		initialSettings, err := json.Marshal(map[string]json.RawMessage{
+		baseSettings, err := json.Marshal(map[string]json.RawMessage{
 			"order_statuses": cfgJSON,
 		})
 		if err != nil {
 			return fmt.Errorf("marshal initial settings: %w", err)
+		}
+		initialSettings := buildTenantSettings(baseSettings, req.PlanLimits)
+		if initialSettings == nil {
+			initialSettings = baseSettings
 		}
 		if err := s.tenantRepo.UpdateSettings(ctx, tx, tenantID, initialSettings); err != nil {
 			return fmt.Errorf("set default settings: %w", err)
@@ -713,4 +723,36 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 	}
 
 	return resp, newRefreshToken, nil
+}
+
+// buildTenantSettings merges plan limits into existing tenant settings.
+// Returns nil if there are no settings to store or if JSON operations fail.
+func buildTenantSettings(existing json.RawMessage, limits *model.LicenseLimits) json.RawMessage {
+	if limits == nil && existing == nil {
+		return nil
+	}
+
+	settings := make(map[string]any)
+
+	if existing != nil {
+		if err := json.Unmarshal(existing, &settings); err != nil {
+			slog.Warn("buildTenantSettings: failed to unmarshal existing settings", "error", err)
+			settings = make(map[string]any)
+		}
+	}
+
+	if limits != nil {
+		settings["limits"] = limits
+	}
+
+	if len(settings) == 0 {
+		return nil
+	}
+
+	data, err := json.Marshal(settings)
+	if err != nil {
+		slog.Warn("buildTenantSettings: failed to marshal settings", "error", err)
+		return nil
+	}
+	return data
 }

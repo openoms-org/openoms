@@ -11,6 +11,7 @@ import { SidebarProvider } from "@/components/layout/sidebar-context";
 import { TableDensityProvider } from "@/lib/table-density";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useServiceWorker } from "@/hooks/use-service-worker";
+import { SubscriptionBanner } from "@/components/subscription-banner";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -40,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="dashboard-base flex h-screen overflow-hidden">
           <Sidebar />
           <div className="flex flex-1 flex-col overflow-hidden">
+            <SubscriptionBanner />
             <Header />
             <main className="flex-1 overflow-y-auto p-6">
               <ErrorBoundary>{children}</ErrorBoundary>

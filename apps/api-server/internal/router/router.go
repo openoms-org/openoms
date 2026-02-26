@@ -105,6 +105,7 @@ type RouterDeps struct {
 	Category                   *handler.ProductCategoryHandler
 	MessageTemplate            *handler.MessageTemplateHandler
 	MarketplaceCategoryMapping *handler.MarketplaceCategoryMappingHandler
+	PlanCache                  *service.PlanCache
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -254,6 +255,11 @@ func New(deps RouterDeps) *chi.Mux {
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {
 		r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+
+		// Plan enforcement — blocks suspended/past_due tenants
+		if deps.PlanCache != nil {
+			r.Use(middleware.TenantPlanGuard(deps.PlanCache, deps.Pool))
+		}
 
 		// Upload endpoint — has its own body size limit, no global MaxBodySize
 		r.Post("/uploads", deps.Upload.Upload)

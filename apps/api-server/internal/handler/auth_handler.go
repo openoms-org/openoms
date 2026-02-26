@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -15,6 +16,7 @@ import (
 type AuthHandler struct {
 	authService      *service.AuthService
 	invitationSvc    *service.InvitationService
+	licenseSvc       *service.LicenseService
 	wsTicketSvc      *service.WSTicketService
 	isDev            bool
 	registrationMode string // "open", "invite", "disabled"
@@ -42,6 +44,11 @@ func (h *AuthHandler) SetWSTicketService(svc *service.WSTicketService) {
 	h.wsTicketSvc = svc
 }
 
+// SetLicenseService sets the license verification service for cloud billing.
+func (h *AuthHandler) SetLicenseService(svc *service.LicenseService) {
+	h.licenseSvc = svc
+}
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Check registration mode
 	switch h.registrationMode {
@@ -62,32 +69,71 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// In invite mode, validate the invitation token
+	// In invite mode, validate the invitation or license token
+	var licenseClaims *model.LicenseClaims
 	if h.registrationMode == "invite" {
-		if req.InviteToken == "" {
-			writeError(w, http.StatusBadRequest, "invite_token is required")
+		switch {
+		case req.LicenseToken != "" && h.licenseSvc != nil && !h.licenseSvc.IsDisabled():
+			// License token flow — cloud billing registration
+			claims, err := h.licenseSvc.VerifyToken(r.Context(), req.LicenseToken)
+			if err != nil {
+				switch {
+				case errors.Is(err, service.ErrLicenseTokenExpired):
+					writeError(w, http.StatusBadRequest, "license token has expired")
+				case errors.Is(err, service.ErrLicenseTokenUsed):
+					writeError(w, http.StatusConflict, "license token has already been used")
+				default:
+					writeError(w, http.StatusBadRequest, "invalid license token")
+				}
+				return
+			}
+			if !strings.EqualFold(claims.Email, req.Email) {
+				writeError(w, http.StatusBadRequest, "email does not match license token")
+				return
+			}
+			licenseClaims = claims
+			req.Email = claims.Email
+			req.Plan = claims.Plan
+			req.PlanLimits = &claims.Limits
+		case req.InviteToken != "":
+			// Existing invite token flow
+			if h.invitationSvc == nil {
+				writeError(w, http.StatusInternalServerError, "invitation service not configured")
+				return
+			}
+			inv, err := h.invitationSvc.ValidateToken(r.Context(), req.InviteToken)
+			if err != nil {
+				switch err {
+				case service.ErrInvitationNotFound:
+					writeError(w, http.StatusBadRequest, "invalid invitation token")
+				case service.ErrInvitationExpired:
+					writeError(w, http.StatusBadRequest, "invitation has expired")
+				case service.ErrInvitationUsed:
+					writeError(w, http.StatusBadRequest, "invitation has already been used")
+				default:
+					writeServerError(w, "failed to validate invitation", err)
+				}
+				return
+			}
+			req.Email = inv.Email
+		default:
+			writeError(w, http.StatusBadRequest, "invite_token or license_token is required")
 			return
 		}
-		if h.invitationSvc == nil {
-			writeError(w, http.StatusInternalServerError, "invitation service not configured")
-			return
-		}
-		inv, err := h.invitationSvc.ValidateToken(r.Context(), req.InviteToken)
-		if err != nil {
-			switch err {
-			case service.ErrInvitationNotFound:
-				writeError(w, http.StatusBadRequest, "invalid invitation token")
-			case service.ErrInvitationExpired:
-				writeError(w, http.StatusBadRequest, "invitation has expired")
-			case service.ErrInvitationUsed:
-				writeError(w, http.StatusBadRequest, "invitation has already been used")
-			default:
-				writeServerError(w, "failed to validate invitation", err)
+	}
+
+	// Atomically claim the license token BEFORE registration to prevent TOCTOU race.
+	// If two concurrent requests use the same token, only one will succeed here.
+	// tenant_id is initially NULL and updated after registration.
+	if licenseClaims != nil {
+		if err := h.licenseSvc.ClaimToken(r.Context(), licenseClaims.JTI, licenseClaims.Email, licenseClaims.Plan); err != nil {
+			if errors.Is(err, service.ErrLicenseTokenUsed) {
+				writeError(w, http.StatusConflict, "license token has already been used")
+			} else {
+				writeServerError(w, "failed to claim license token", err)
 			}
 			return
 		}
-		// Override email with invitation email for security
-		req.Email = inv.Email
 	}
 
 	resp, refreshToken, err := h.authService.Register(r.Context(), req, clientIP(r))
@@ -110,6 +156,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if h.registrationMode == "invite" && req.InviteToken != "" && h.invitationSvc != nil {
 		if err := h.invitationSvc.MarkUsed(r.Context(), req.InviteToken); err != nil {
 			slog.Warn("failed to mark invitation as used", "error", err)
+		}
+	}
+
+	// Set the actual tenant_id on the claimed license token
+	if licenseClaims != nil && h.licenseSvc != nil {
+		if err := h.licenseSvc.UpdateClaimedTenant(r.Context(), licenseClaims.JTI, resp.Tenant.ID); err != nil {
+			slog.Warn("failed to update license token tenant_id", "error", err)
 		}
 	}
 
