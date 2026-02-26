@@ -1,5 +1,5 @@
 # Project State
-Updated: 2026-02-25
+Updated: 2026-02-26
 
 ## Target
 Open production for paying customers: **May 2026** (~11 weeks remaining)
@@ -19,6 +19,11 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-02-26: Erli SDK integration tests — 10 tests against real sandbox API (build tag `integration`); requires ERLI_SANDBOX_TOKEN env var; covers Orders list/get/pagination/404, Offers create/update-stock/update-price/invalid, status mapping; graceful skip when sandbox data unavailable (branch: pipeline/pipeline--mc-live-test)
+- 2026-02-26: MessageTemplate handler body limits — MaxBytesReader 1MB added to Create and Update endpoints (previously unbounded)
+- 2026-02-26: Warehouse document stock sync bug fix — `currentStockTotals` running map replaces `oldStockTotals` read in loop; multiple line items for same product now accumulate correctly before OnStockChange event
+- 2026-02-26: Erli order poller marshal error logging — slog.Warn on JSON marshal failure for ShippingAddress/Items (was silently ignoring errors)
+- 2026-02-25: Erli marketplace SDK — full implementation of MarketplaceProvider interface (PollOrders, GetOrder, PushOffer, UpdateStock, UpdatePrice), order poller worker, listings handler, provider wired to factory/handler/router; response body capped with io.LimitReader (50 MB success / 1 MB error); product-not-found 404 vs 500 discrimination (feat/erli-sdk-complete)
 - 2026-02-25: Test coverage expansion — SDK 27/27, middleware 18/18, worker 19/19, handlers all covered, 54 model validators, service-layer tests (PRs #43-56)
 - 2026-02-25: SafeGo panic recovery helper for goroutines (PR #52)
 - 2026-02-25: Quiet CI/dev tooling — summary-only test output, eslint --quiet (PR #54)

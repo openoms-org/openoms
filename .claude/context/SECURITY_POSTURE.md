@@ -1,5 +1,6 @@
 # Security Posture
 Last full audit: 2026-02-25 (3 rounds: PR #36, #38, #42; test hardening: PRs #43-56)
+Last update: 2026-02-26
 
 ## Unfixed Findings
 
@@ -20,6 +21,7 @@ Last full audit: 2026-02-25 (3 rounds: PR #36, #38, #42; test hardening: PRs #43
    - Effort: L
 
 ## Recently Fixed
+- 2026-02-26: MessageTemplate Create/Update handlers — added MaxBytesReader 1MB (body size was previously unbounded, potential DoS vector)
 - 2026-02-25: PRs #43-56 — Massive test coverage expansion: SDK tests for all 27 packages (100%), middleware tests for all 18 files (100%), worker tests for all 19 files (100%), handler validation tests for all handlers, model Validate() coverage for 54 request types, service-layer tests (carbon, repricing, webhook, dropship, invoice, automation conditions)
 - 2026-02-25: PR #52 — SafeGo helper for goroutine panic recovery (prevents silent worker crashes)
 - 2026-02-25: PR #42 — Audit remediation v3: additional security fixes, error handling improvements, code quality
