@@ -28,7 +28,7 @@ func (r *LicenseRepository) IsTokenUsed(ctx context.Context, pool *pgxpool.Pool,
 
 // MarkTokenUsed atomically claims a license token JTI. Returns true if the
 // token was successfully claimed (inserted), false if it was already used.
-func (r *LicenseRepository) MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti, tenantID uuid.UUID, email, plan string) (bool, error) {
+func (r *LicenseRepository) MarkTokenUsed(ctx context.Context, pool *pgxpool.Pool, jti uuid.UUID, tenantID *uuid.UUID, email, plan string) (bool, error) {
 	var claimed bool
 	err := pool.QueryRow(ctx, `SELECT mark_license_token_used($1, $2, $3, $4)`, jti, tenantID, email, plan).Scan(&claimed)
 	if err != nil {
