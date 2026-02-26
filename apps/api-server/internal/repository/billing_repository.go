@@ -16,6 +16,7 @@ import (
 // for all billing operations (no RLS context during checkout/webhook flows).
 type BillingRepository struct{}
 
+// NewBillingRepository creates a new BillingRepository.
 func NewBillingRepository() *BillingRepository {
 	return &BillingRepository{}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// Checkout session error sentinels.
 var (
 	ErrCheckoutSessionNotFound = errors.New("checkout session not found")
 	ErrCheckoutSessionClaimed  = errors.New("checkout session already claimed")

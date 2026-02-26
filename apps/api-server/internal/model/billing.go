@@ -13,6 +13,7 @@ type CheckoutSessionRequest struct {
 	Interval string `json:"interval"` // "month" or "year"
 }
 
+// Validate checks that the checkout session request has required fields.
 func (r *CheckoutSessionRequest) Validate() error {
 	if r.PlanID == "" {
 		return errors.New("plan_id is required")
