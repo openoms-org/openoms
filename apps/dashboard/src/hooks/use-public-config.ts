@@ -24,7 +24,7 @@ export function usePublicConfig() {
   useEffect(() => {
     if (cachedConfig) return;
 
-    fetch(`${API_URL}/v1/config/public`)
+    fetch(`${API_URL}/v1/config/public`, { credentials: "include" })
       .then((res) => res.json())
       .then((data: PublicConfig) => {
         cachedConfig = data;

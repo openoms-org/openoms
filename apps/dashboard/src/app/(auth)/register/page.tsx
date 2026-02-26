@@ -36,7 +36,7 @@ function PricingContent() {
       return;
     }
 
-    fetch(`${API_URL}/v1/billing/plans`)
+    fetch(`${API_URL}/v1/billing/plans`, { credentials: "include" })
       .then((res) => res.json())
       .then((data: PublicPlanInfo[]) => {
         setPlans(data);
