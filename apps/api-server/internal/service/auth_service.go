@@ -143,16 +143,17 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 		return nil, "", fmt.Errorf("hash password: %w", err)
 	}
 
+	plan := "free"
+	if req.Plan != "" {
+		plan = req.Plan
+	}
+
 	tenant := &model.Tenant{
-		ID:   tenantID,
-		Name: req.TenantName,
-		Slug: req.TenantSlug,
-		Plan: func() string {
-			if req.Plan != "" {
-				return req.Plan
-			}
-			return "free"
-		}(),
+		ID:       tenantID,
+		Name:     req.TenantName,
+		Slug:     req.TenantSlug,
+		Plan:     plan,
+		Settings: buildTenantSettings(nil, req.PlanLimits),
 	}
 
 	user := &model.User{
@@ -174,11 +175,15 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 		if err != nil {
 			return fmt.Errorf("marshal default order status config: %w", err)
 		}
-		initialSettings, err := json.Marshal(map[string]json.RawMessage{
+		baseSettings, err := json.Marshal(map[string]json.RawMessage{
 			"order_statuses": cfgJSON,
 		})
 		if err != nil {
 			return fmt.Errorf("marshal initial settings: %w", err)
+		}
+		initialSettings := buildTenantSettings(baseSettings, req.PlanLimits)
+		if initialSettings == nil {
+			initialSettings = baseSettings
 		}
 		if err := s.tenantRepo.UpdateSettings(ctx, tx, tenantID, initialSettings); err != nil {
 			return fmt.Errorf("set default settings: %w", err)
@@ -718,4 +723,24 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 	}
 
 	return resp, newRefreshToken, nil
+}
+
+// buildTenantSettings merges plan limits into existing tenant settings.
+func buildTenantSettings(existing json.RawMessage, limits *model.LicenseLimits) json.RawMessage {
+	settings := make(map[string]any)
+
+	if existing != nil {
+		json.Unmarshal(existing, &settings)
+	}
+
+	if limits != nil {
+		settings["limits"] = limits
+	}
+
+	if len(settings) == 0 {
+		return nil
+	}
+
+	data, _ := json.Marshal(settings)
+	return data
 }
