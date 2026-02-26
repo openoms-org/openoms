@@ -90,7 +90,7 @@ func (s *CheckoutService) CreateCheckoutSession(ctx context.Context, planID, int
 	}
 
 	params := &stripe.CheckoutSessionParams{
-		Mode:      stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		Mode:       stripe.String(string(stripe.CheckoutSessionModeSubscription)),
 		SuccessURL: stripe.String(successURL),
 		CancelURL:  stripe.String(cancelURL),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
