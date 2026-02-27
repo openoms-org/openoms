@@ -84,7 +84,7 @@ export default function LoginPage() {
 
   if (requires2FA) {
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center max-w-md mx-auto">
         <div className="mb-6 flex flex-col items-center gap-2">
           <Package className="h-10 w-10 text-primary" />
           <span className="text-2xl font-bold tracking-tight">OpenOMS</span>
@@ -146,7 +146,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center max-w-md mx-auto">
       <div className="mb-6 flex flex-col items-center gap-2">
         <Package className="h-10 w-10 text-primary" />
         <span className="text-2xl font-bold tracking-tight">OpenOMS</span>
