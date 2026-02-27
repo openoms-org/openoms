@@ -269,8 +269,10 @@ function CompleteRegistrationForm() {
 
 export default function CompleteRegistrationPage() {
   return (
-    <Suspense>
-      <CompleteRegistrationForm />
-    </Suspense>
+    <div className="max-w-md mx-auto">
+      <Suspense>
+        <CompleteRegistrationForm />
+      </Suspense>
+    </div>
   );
 }

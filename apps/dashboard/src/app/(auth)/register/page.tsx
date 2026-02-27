@@ -4,13 +4,15 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Check, Sparkles, ArrowRight, Loader2, Package } from "lucide-react";
 import { API_URL, apiClient, getErrorMessage } from "@/lib/api-client";
 import { usePublicConfig } from "@/hooks/use-public-config";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { PublicPlanInfo, CheckoutSessionResponse } from "@/types/api";
 
 function formatPrice(amount: number, currency: string): string {
@@ -18,7 +20,7 @@ function formatPrice(amount: number, currency: string): string {
     style: "currency",
     currency: currency.toUpperCase(),
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(amount / 100);
 }
 
@@ -42,14 +44,12 @@ function PricingContent() {
         setPlans(data);
       })
       .catch(() => {
-        toast.error("Nie udało się załadować planów");
+        toast.error("Nie udalo sie zaladowac planow");
       })
       .finally(() => setIsLoading(false));
   }, [config.billing_enabled]);
 
-  // If billing not enabled, show the invite-based registration
   if (!config.billing_enabled) {
-    // Redirect to invite registration form
     router.replace("/register/invite");
     return null;
   }
@@ -73,14 +73,15 @@ function PricingContent() {
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-4xl mx-auto space-y-6">
-        <div className="text-center space-y-2">
-          <Skeleton className="h-8 w-64 mx-auto" />
-          <Skeleton className="h-5 w-96 mx-auto" />
+      <div className="max-w-5xl mx-auto space-y-10 py-12">
+        <div className="text-center space-y-3">
+          <Skeleton className="h-10 w-72 mx-auto" />
+          <Skeleton className="h-5 w-80 mx-auto" />
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
+        <Skeleton className="h-10 w-64 mx-auto rounded-full" />
+        <div className="grid md:grid-cols-3 gap-6 px-4">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-80 rounded-lg" />
+            <Skeleton key={i} className="h-[460px] rounded-2xl" />
           ))}
         </div>
       </div>
@@ -89,108 +90,183 @@ function PricingContent() {
 
   if (plans.length === 0) {
     return (
-      <Card className="max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <CardTitle>Brak dostępnych planów</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center text-muted-foreground">
-          <p>Plany cenowe nie są jeszcze skonfigurowane.</p>
-        </CardContent>
-        <CardFooter className="justify-center">
-          <Link href="/login" className="text-sm text-primary underline-offset-4 hover:underline">
-            Zaloguj się
-          </Link>
-        </CardFooter>
-      </Card>
+      <div className="max-w-md mx-auto text-center py-20 space-y-4">
+        <Package className="size-12 mx-auto text-muted-foreground/50" />
+        <h2 className="text-xl font-semibold">Brak dostepnych planow</h2>
+        <p className="text-muted-foreground text-sm">
+          Plany cenowe nie sa jeszcze skonfigurowane.
+        </p>
+        <Link href="/login" className="text-sm text-primary underline-offset-4 hover:underline">
+          Zaloguj sie
+        </Link>
+      </div>
     );
   }
 
+  // Middle plan is the "featured" one
+  const featuredIndex = plans.length >= 3 ? 1 : 0;
+
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Wybierz plan</h1>
-        <p className="text-muted-foreground">
-          Rozpocznij zarządzanie zamówieniami z OpenOMS
+    <div className="max-w-5xl mx-auto py-8 md:py-12 px-4">
+      {/* Header */}
+      <div className="text-center space-y-3 mb-10">
+        <div className="inline-flex items-center gap-2 text-xs font-medium tracking-widest uppercase text-muted-foreground mb-2">
+          <div className="size-1.5 rounded-full bg-success animate-pulse" />
+          14 dni za darmo
+        </div>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+          Wybierz plan dla swojego biznesu
+        </h1>
+        <p className="text-muted-foreground max-w-lg mx-auto">
+          Wszystkie plany z pelnym dostepem przez 14 dni. Bez karty na start.
+          Zrezygnuj kiedy chcesz.
         </p>
       </div>
 
-      <div className="flex items-center justify-center gap-3">
-        <Label htmlFor="billing-interval" className={!yearly ? "font-semibold" : "text-muted-foreground"}>
-          Miesięcznie
+      {/* Interval toggle */}
+      <div className="flex items-center justify-center gap-3 mb-10">
+        <Label
+          htmlFor="billing-interval"
+          className={cn(
+            "text-sm cursor-pointer transition-colors",
+            !yearly ? "text-foreground font-medium" : "text-muted-foreground"
+          )}
+        >
+          Miesiecznie
         </Label>
         <Switch
           id="billing-interval"
           checked={yearly}
           onCheckedChange={setYearly}
         />
-        <Label htmlFor="billing-interval" className={yearly ? "font-semibold" : "text-muted-foreground"}>
+        <Label
+          htmlFor="billing-interval"
+          className={cn(
+            "text-sm cursor-pointer transition-colors",
+            yearly ? "text-foreground font-medium" : "text-muted-foreground"
+          )}
+        >
           Rocznie
         </Label>
+        {yearly && (
+          <Badge variant="success" className="text-[11px] ml-1">
+            -17%
+          </Badge>
+        )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {plans.map((plan) => {
-          const price = yearly ? plan.yearly_amount : plan.monthly_amount;
+      {/* Plan cards */}
+      <div className="grid md:grid-cols-3 gap-5 items-start">
+        {plans.map((plan, index) => {
+          const isFeatured = index === featuredIndex;
           const perMonth = yearly
             ? Math.round(plan.yearly_amount / 12)
             : plan.monthly_amount;
+          const totalYearly = plan.yearly_amount;
+          const isCurrentLoading = loadingPlan === plan.id;
 
           return (
-            <Card key={plan.id} className="flex flex-col">
-              <CardHeader className="text-center pb-2">
-                <CardTitle className="text-xl">{plan.name}</CardTitle>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">
+            <div
+              key={plan.id}
+              className={cn(
+                "relative flex flex-col rounded-2xl border bg-card text-card-foreground transition-all duration-200",
+                isFeatured
+                  ? "border-primary/20 shadow-[0_0_0_1px_var(--primary),0_8px_40px_-12px_oklch(0.3_0.05_250/0.25)] md:scale-[1.03] z-10"
+                  : "border-border hover:border-border/80 shadow-sm hover:shadow-md",
+              )}
+            >
+              {/* Featured badge */}
+              {isFeatured && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <Badge className="bg-primary text-primary-foreground shadow-md text-[11px] px-3 py-0.5">
+                    <Sparkles className="size-3 mr-1" />
+                    Najpopularniejszy
+                  </Badge>
+                </div>
+              )}
+
+              {/* Card header */}
+              <div className={cn("p-6 pb-4", isFeatured && "pt-8")}>
+                <h3 className="text-lg font-semibold">{plan.name}</h3>
+
+                {/* Price */}
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-4xl font-bold tracking-tight tabular-nums">
                     {formatPrice(perMonth, plan.currency)}
                   </span>
-                  <span className="text-muted-foreground text-sm"> /mies.</span>
+                  <span className="text-muted-foreground text-sm">/mies.</span>
                 </div>
+
                 {yearly && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatPrice(price, plan.currency)} rocznie
+                    {formatPrice(totalYearly, plan.currency)} rocznie
                   </p>
                 )}
+
                 {plan.trial_days > 0 && (
-                  <p className="text-xs text-primary mt-2 font-medium">
-                    {plan.trial_days} dni za darmo
+                  <p className="text-xs text-success font-medium mt-2">
+                    {plan.trial_days} dni za darmo na start
                   </p>
                 )}
-              </CardHeader>
-              <CardContent className="flex-1">
-                <ul className="space-y-2 text-sm">
+              </div>
+
+              {/* Divider */}
+              <div className="mx-6 border-t" />
+
+              {/* Features */}
+              <div className="p-6 pt-4 flex-1">
+                <ul className="space-y-2.5">
                   {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-primary mt-0.5 shrink-0">&#10003;</span>
+                    <li key={i} className="flex items-start gap-2.5 text-sm">
+                      <Check className="size-4 shrink-0 mt-0.5 text-success" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-              <CardFooter>
+              </div>
+
+              {/* CTA */}
+              <div className="p-6 pt-2">
                 <Button
-                  className="w-full"
+                  className={cn(
+                    "w-full h-11 font-medium",
+                    isFeatured
+                      ? ""
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                  )}
                   onClick={() => handleSelectPlan(plan.id)}
                   disabled={loadingPlan !== null}
                 >
-                  {loadingPlan === plan.id ? "Przekierowanie..." : "Wybierz plan"}
+                  {isCurrentLoading ? (
+                    <>
+                      <Loader2 className="size-4 mr-2 animate-spin" />
+                      Przekierowanie...
+                    </>
+                  ) : (
+                    <>
+                      Zacznij za darmo
+                      <ArrowRight className="size-4 ml-2" />
+                    </>
+                  )}
                 </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </div>
           );
         })}
       </div>
 
-      <div className="text-center space-y-2 text-sm text-muted-foreground">
+      {/* Footer links */}
+      <div className="mt-10 text-center space-y-2 text-sm text-muted-foreground">
         <p>
-          Masz już konto?{" "}
-          <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-            Zaloguj się
+          Masz juz konto?{" "}
+          <Link href="/login" className="text-foreground font-medium underline-offset-4 hover:underline">
+            Zaloguj sie
           </Link>
         </p>
         <p>
           Masz token zaproszenia?{" "}
-          <Link href="/register/invite" className="text-primary underline-offset-4 hover:underline">
-            Zarejestruj się z zaproszeniem
+          <Link href="/register/invite" className="text-foreground font-medium underline-offset-4 hover:underline">
+            Zarejestruj sie z zaproszeniem
           </Link>
         </p>
       </div>
