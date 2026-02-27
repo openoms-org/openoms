@@ -105,22 +105,30 @@ function PricingContent() {
 
   // Middle plan is the "featured" one
   const featuredIndex = plans.length >= 3 ? 1 : 0;
+  const trialDays = plans[0]?.trial_days ?? 0;
+  const yearlySavingsPercent = plans[0]
+    ? Math.round(100 - (plans[0].yearly_amount / (plans[0].monthly_amount * 12)) * 100)
+    : 0;
 
   return (
     <div className="max-w-5xl mx-auto py-8 md:py-12 px-4">
       {/* Header */}
       <div className="text-center space-y-3 mb-10">
-        <div className="inline-flex items-center gap-2 text-xs font-medium tracking-widest uppercase text-muted-foreground mb-2">
-          <div className="size-1.5 rounded-full bg-success animate-pulse" />
-          14 dni za darmo
-        </div>
+        {trialDays > 0 && (
+          <div className="inline-flex items-center gap-2 text-xs font-medium tracking-widest uppercase text-muted-foreground mb-2">
+            <div className="size-1.5 rounded-full bg-success animate-pulse" />
+            {trialDays} dni za darmo
+          </div>
+        )}
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
           Wybierz plan dla swojego biznesu
         </h1>
-        <p className="text-muted-foreground max-w-lg mx-auto">
-          Wszystkie plany z pelnym dostepem przez 14 dni. Bez karty na start.
-          Zrezygnuj kiedy chcesz.
-        </p>
+        {trialDays > 0 && (
+          <p className="text-muted-foreground max-w-lg mx-auto">
+            Wszystkie plany z pelnym dostepem przez {trialDays} dni. Bez karty na start.
+            Zrezygnuj kiedy chcesz.
+          </p>
+        )}
       </div>
 
       {/* Interval toggle */}
@@ -148,9 +156,9 @@ function PricingContent() {
         >
           Rocznie
         </Label>
-        {yearly && (
+        {yearly && yearlySavingsPercent > 0 && (
           <Badge variant="success" className="text-[11px] ml-1">
-            -17%
+            -{yearlySavingsPercent}%
           </Badge>
         )}
       </div>
