@@ -124,7 +124,7 @@ Carrier rate shopping across all providers.
 | React components | 91 |
 | Custom hooks | 69 |
 | Handlers / Services / Repos | 80 / 57 / 40 |
-| Background workers | 19 |
+| Background workers | 20 |
 | Middleware | 12 |
 | SDK packages | 26 |
 
