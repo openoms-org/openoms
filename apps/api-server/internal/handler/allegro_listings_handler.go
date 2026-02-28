@@ -457,14 +457,14 @@ func (h *AllegroListingsHandler) uploadImageToAllegro(ctx context.Context, clien
 // If listing has a non-empty DescriptionHTML, it takes precedence over product descriptions.
 func buildDescription(product *model.Product, listing *model.ProductListing) map[string]any {
 	var content string
-	if listing != nil && listing.DescriptionHTML != nil && *listing.DescriptionHTML != "" {
-		content = *listing.DescriptionHTML
-		content = sanitizeForAllegro(content)
-	} else if product.DescriptionLong != "" {
+	switch {
+	case listing != nil && listing.DescriptionHTML != nil && *listing.DescriptionHTML != "":
+		content = sanitizeForAllegro(*listing.DescriptionHTML)
+	case product.DescriptionLong != "":
 		content = sanitizeForAllegro(product.DescriptionLong)
-	} else if product.DescriptionShort != "" {
+	case product.DescriptionShort != "":
 		content = sanitizeForAllegro(product.DescriptionShort)
-	} else {
+	default:
 		content = sanitizeForAllegro(product.Name)
 	}
 	return map[string]any{

@@ -20,6 +20,8 @@ var listingHTMLPolicy = func() *bluemonday.Policy {
 
 const maxListingHTMLLength = 50000
 
+// SanitizeListingHTML sanitizes HTML for marketplace listing descriptions.
+// Only allows structural tags: h1, h2, p, ul, ol, li. Strips all attributes.
 func SanitizeListingHTML(s string) string {
 	if len(s) > maxListingHTMLLength {
 		s = s[:maxListingHTMLLength]
