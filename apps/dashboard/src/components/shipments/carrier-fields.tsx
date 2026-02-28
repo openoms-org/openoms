@@ -40,6 +40,16 @@ export function CarrierFields({ provider, values, onChange }: CarrierFieldsProps
       return <DHLFields values={values} onChange={onChange} />;
     case "dpd":
       return <DPDFields values={values} onChange={onChange} />;
+    case "gls":
+      return <GLSFields values={values} onChange={onChange} />;
+    case "ups":
+      return <UPSFields values={values} onChange={onChange} />;
+    case "fedex":
+      return <FedExFields values={values} onChange={onChange} />;
+    case "poczta_polska":
+      return <PocztaPolskaFields values={values} onChange={onChange} />;
+    case "orlen_paczka":
+      return <OrlenPaczkaFields values={values} onChange={onChange} />;
     default:
       return null;
   }
@@ -301,6 +311,182 @@ function DPDFields({
       </div>
 
       <ParcelDimensionFields values={values} onChange={onChange} />
+    </>
+  );
+}
+
+function CODAndInsuranceFields({
+  values,
+  onChange,
+}: {
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Kwota pobrania (PLN)</Label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Opcjonalnie"
+          value={values.cod_amount ?? ""}
+          onChange={(e) =>
+            onChange("cod_amount", e.target.value ? parseFloat(e.target.value) : undefined)
+          }
+        />
+      </div>
+      <div className="space-y-2">
+        <Label>Wartość ubezpieczenia (PLN)</Label>
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Opcjonalnie"
+          value={values.insured_value ?? ""}
+          onChange={(e) =>
+            onChange("insured_value", e.target.value ? parseFloat(e.target.value) : undefined)
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+function GLSFields({
+  values,
+  onChange,
+}: {
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
+}) {
+  return (
+    <>
+      <ParcelDimensionFields values={values} onChange={onChange} />
+      <CODAndInsuranceFields values={values} onChange={onChange} />
+    </>
+  );
+}
+
+function UPSFields({
+  values,
+  onChange,
+}: {
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
+}) {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label>Typ usługi</Label>
+        <Select
+          value={(values.service_type as string) ?? "11"}
+          onValueChange={(v) => onChange("service_type", v)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="11">UPS Standard</SelectItem>
+            <SelectItem value="65">UPS Express Saver</SelectItem>
+            <SelectItem value="07">UPS Express</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <ParcelDimensionFields values={values} onChange={onChange} />
+    </>
+  );
+}
+
+function FedExFields({
+  values,
+  onChange,
+}: {
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
+}) {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label>Typ usługi</Label>
+        <Select
+          value={(values.service_type as string) ?? "FEDEX_INTERNATIONAL_PRIORITY"}
+          onValueChange={(v) => onChange("service_type", v)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="FEDEX_INTERNATIONAL_PRIORITY">FedEx International Priority</SelectItem>
+            <SelectItem value="INTERNATIONAL_ECONOMY">FedEx International Economy</SelectItem>
+            <SelectItem value="FEDEX_GROUND">FedEx Ground</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <ParcelDimensionFields values={values} onChange={onChange} />
+      <CODAndInsuranceFields values={values} onChange={onChange} />
+    </>
+  );
+}
+
+function PocztaPolskaFields({
+  values,
+  onChange,
+}: {
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
+}) {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label>Typ usługi</Label>
+        <Select
+          value={(values.service_type as string) ?? "POCZTEX_KURIER_48"}
+          onValueChange={(v) => onChange("service_type", v)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="POCZTEX_KURIER_48">Pocztex Kurier 48h</SelectItem>
+            <SelectItem value="POCZTEX_KURIER_24">Pocztex Kurier 24h</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <ParcelDimensionFields values={values} onChange={onChange} />
+      <CODAndInsuranceFields values={values} onChange={onChange} />
+    </>
+  );
+}
+
+function OrlenPaczkaFields({
+  values,
+  onChange,
+}: {
+  values: CarrierFieldValues;
+  onChange: (field: string, value: unknown) => void;
+}) {
+  return (
+    <>
+      <div className="space-y-2">
+        <Label>Automat Orlen Paczka</Label>
+        <Input
+          type="text"
+          placeholder="np. PL10001"
+          value={(values.target_point as string) ?? ""}
+          onChange={(e) => onChange("target_point", e.target.value || undefined)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Identyfikator automatu docelowego Orlen Paczka.
+        </p>
+      </div>
+
+      <ParcelDimensionFields values={values} onChange={onChange} />
+      <CODAndInsuranceFields values={values} onChange={onChange} />
     </>
   );
 }
