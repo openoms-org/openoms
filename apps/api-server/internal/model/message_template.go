@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-
 // MessageTemplate represents a reusable message template for marketplace messaging.
 type MessageTemplate struct {
 	ID              uuid.UUID `json:"id"`
