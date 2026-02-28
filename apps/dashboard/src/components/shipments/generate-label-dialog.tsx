@@ -38,6 +38,11 @@ const DEFAULT_VALUES: Record<string, Record<string, any>> = {
   inpost: { service_type: "inpost_locker_standard", parcel_size: "small" },
   dhl: { service_type: "dhl_parcel" },
   dpd: { service_type: "dpd_classic" },
+  gls: {},
+  ups: { service_type: "11" },
+  fedex: { service_type: "FEDEX_INTERNATIONAL_PRIORITY" },
+  poczta_polska: { service_type: "POCZTEX_KURIER_48" },
+  orlen_paczka: {},
 };
 
 function buildInitialValues(provider: string, shipment?: Shipment): Record<string, any> {

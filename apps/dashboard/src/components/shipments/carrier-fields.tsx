@@ -252,35 +252,7 @@ function DHLFields({
       </div>
 
       <ParcelDimensionFields values={values} onChange={onChange} />
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Kwota pobrania (PLN)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Opcjonalnie"
-            value={values.cod_amount ?? ""}
-            onChange={(e) =>
-              onChange("cod_amount", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Wartość ubezpieczenia (PLN)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Opcjonalnie"
-            value={values.insured_value ?? ""}
-            onChange={(e) =>
-              onChange("insured_value", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
-          />
-        </div>
-      </div>
+      <CODAndInsuranceFields values={values} onChange={onChange} />
     </>
   );
 }
@@ -396,6 +368,7 @@ function UPSFields({
       </div>
 
       <ParcelDimensionFields values={values} onChange={onChange} />
+      <CODAndInsuranceFields values={values} onChange={onChange} />
     </>
   );
 }
