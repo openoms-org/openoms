@@ -75,7 +75,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -722,7 +721,7 @@ function CreateWooCommerceListingDialog({
   const [price, setPrice] = useState(String(product.price));
   const [stock, setStock] = useState(String(product.stock_quantity));
   const [description, setDescription] = useState(
-    product.description_long || product.description_short || ""
+    plainTextToHTML(product.description_long || product.description_short || "")
   );
   const [categories, setCategories] = useState("");
 
@@ -800,12 +799,11 @@ function CreateWooCommerceListingDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Opis produktu</Label>
-            <Textarea
-              rows={4}
+            <label className="text-sm font-medium">Opis</label>
+            <DescriptionEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Opis produktu w sklepie WooCommerce"
+              onChange={setDescription}
+              placeholder="Opis produktu..."
             />
           </div>
 
