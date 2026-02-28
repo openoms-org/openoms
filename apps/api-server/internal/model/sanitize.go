@@ -11,3 +11,18 @@ var stripPolicy = bluemonday.StrictPolicy()
 func StripHTMLTags(s string) string {
 	return stripPolicy.Sanitize(s)
 }
+
+var listingHTMLPolicy = func() *bluemonday.Policy {
+	p := bluemonday.NewPolicy()
+	p.AllowElements("h1", "h2", "p", "ul", "ol", "li")
+	return p
+}()
+
+const maxListingHTMLLength = 50000
+
+func SanitizeListingHTML(s string) string {
+	if len(s) > maxListingHTMLLength {
+		s = s[:maxListingHTMLLength]
+	}
+	return listingHTMLPolicy.Sanitize(s)
+}
