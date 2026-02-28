@@ -27,9 +27,9 @@ CREATE INDEX IF NOT EXISTS idx_message_templates_tenant_id
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms_app') THEN
-        GRANT ALL ON message_templates TO openoms_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON message_templates TO openoms_app;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms') THEN
-        GRANT ALL ON message_templates TO openoms;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON message_templates TO openoms;
     END IF;
 END $$;

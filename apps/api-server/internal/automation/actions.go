@@ -8,13 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"strings"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
@@ -614,15 +613,13 @@ func (e *DefaultActionExecutor) executeSendMarketplaceMessage(_ context.Context,
 	}
 
 	// Phase 2: Build variable data and substitute into the template body.
+	// Intentionally excluded: customer_email (PII, unnecessary in outbound marketplace messages).
 	vars := map[string]string{
 		"order_id":      order.ID.String(),
 		"external_id":   *order.ExternalID,
 		"customer_name": order.CustomerName,
 		"order_total":   fmt.Sprintf("%.2f %s", order.TotalAmount, order.Currency),
 		"status":        order.Status,
-	}
-	if order.CustomerEmail != nil {
-		vars["customer_email"] = *order.CustomerEmail
 	}
 	// Include tracking number from event data if available.
 	if tn, ok := event.Data["tracking_number"].(string); ok && tn != "" {

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
@@ -78,6 +79,15 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	if req.PriceOverride != nil && *req.PriceOverride < 0 {
+		writeError(w, http.StatusBadRequest, "price_override must be non-negative")
+		return
+	}
+	if req.StockOverride != nil && *req.StockOverride < 0 {
+		writeError(w, http.StatusBadRequest, "stock_override must be non-negative")
+		return
+	}
+
 	product, err := h.productService.Get(ctx, tenantID, productID)
 	if err != nil {
 		if errors.Is(err, service.ErrProductNotFound) {
@@ -85,22 +95,6 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		} else {
 			writeServerError(w, "failed to get product", err)
 		}
-		return
-	}
-
-	// Check for duplicate listing
-	var existingListing *model.ProductListing
-	err = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
-		var findErr error
-		existingListing, findErr = h.listingRepo.FindByProductAndIntegration(ctx, tx, productID, integrationID)
-		return findErr
-	})
-	if err != nil {
-		writeServerError(w, "failed to check existing listing", err)
-		return
-	}
-	if existingListing != nil {
-		writeError(w, http.StatusConflict, "listing already exists for this product and integration")
 		return
 	}
 
@@ -134,9 +128,13 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	metadataJSON, _ := json.Marshal(map[string]any{
+	metadataJSON, err := json.Marshal(map[string]any{
 		"category_id": req.CategoryID,
 	})
+	if err != nil {
+		slog.Warn("erli listings: failed to marshal metadata", "error", err)
+		metadataJSON = []byte("{}")
+	}
 
 	now := time.Now()
 	listing := &model.ProductListing{
@@ -157,7 +155,13 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		return h.listingRepo.Create(ctx, tx, listing)
 	})
 	if err != nil {
-		writeServerError(w, "product published to Erli but failed to save listing record", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			writeError(w, http.StatusConflict, "listing already exists for this product and integration")
+			return
+		}
+		slog.Error("erli listings: offer created on Erli but DB save failed", "external_id", externalID, "tenant_id", tenantID, "error", err)
+		writeServerError(w, "failed to save listing record", err)
 		return
 	}
 

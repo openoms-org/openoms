@@ -25,7 +25,7 @@ func NewErliOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repo
 		AuditRepo:     auditRepo,
 		Logger:        logger,
 		ProviderName:  "erli",
-		Interval:      60 * time.Second,
+		Interval:      45 * time.Second,
 		MapOrder:      erliOrderMapper,
 	})
 }

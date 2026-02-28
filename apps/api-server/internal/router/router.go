@@ -498,6 +498,8 @@ func New(deps RouterDeps) *chi.Mux {
 						if deps.ErliListings != nil {
 							r.Post("/erli", deps.ErliListings.CreateListing)
 						}
+						// TODO: These routes use AllegroListings for all providers (Erli, WooCommerce).
+						// A future refactor should dispatch based on the listing's integration provider.
 						r.Get("/{listingId}", deps.AllegroListings.GetListing)
 						r.Patch("/{listingId}", deps.AllegroListings.UpdateListing)
 						r.Delete("/{listingId}", deps.AllegroListings.DeleteListing)

@@ -477,12 +477,12 @@ func TestMapStatus(t *testing.T) {
 		oms    string
 		wantOK bool
 	}{
-		{"new", "pending", true},
+		{"new", "new", true},
 		{"paid", "confirmed", true},
 		{"shipped", "shipped", true},
 		{"delivered", "delivered", true},
 		{"cancelled", "cancelled", true},
-		{"returned", "returned", true},
+		{"returned", "refunded", true},
 		{"NONEXISTENT", "", false},
 		{"", "", false},
 	}

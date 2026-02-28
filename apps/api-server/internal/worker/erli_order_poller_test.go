@@ -25,7 +25,7 @@ func TestNewErliOrderPoller_Name(t *testing.T) {
 
 func TestNewErliOrderPoller_Interval(t *testing.T) {
 	p := NewErliOrderPoller(nil, nil, nil, nil, nil, slog.Default())
-	assert.Equal(t, 60*time.Second, p.Interval())
+	assert.Equal(t, 45*time.Second, p.Interval())
 }
 
 func TestNewErliOrderPoller_HasCustomMapper(t *testing.T) {

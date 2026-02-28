@@ -14,8 +14,8 @@ const (
 	productionBaseURL = "https://api.erli.pl/v2"
 	sandboxBaseURL    = "https://api-sandbox.erli.pl/v2"
 
-	// maxResponseBody caps response body reads to prevent memory exhaustion (50 MB).
-	maxResponseBody = 50 << 20
+	// maxResponseBody caps response body reads to prevent memory exhaustion (10 MB).
+	maxResponseBody = 10 << 20
 	// maxErrorBody caps error response body reads (1 MB).
 	maxErrorBody = 1 << 20
 )

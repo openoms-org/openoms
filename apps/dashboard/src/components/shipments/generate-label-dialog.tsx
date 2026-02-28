@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGenerateLabel } from "@/hooks/use-shipments";
-import { CarrierFields } from "@/components/shipments/carrier-fields";
+import { CarrierFields, type CarrierFieldValues } from "@/components/shipments/carrier-fields";
 import { SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import type { Order, Shipment, GenerateLabelRequest } from "@/types/api";
 
@@ -34,7 +34,7 @@ interface GenerateLabelDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const DEFAULT_VALUES: Record<string, Record<string, any>> = {
+const DEFAULT_VALUES: Record<string, CarrierFieldValues> = {
   inpost: { service_type: "inpost_locker_standard", parcel_size: "small" },
   dhl: { service_type: "dhl_parcel" },
   dpd: { service_type: "dpd_classic" },
@@ -45,9 +45,9 @@ const DEFAULT_VALUES: Record<string, Record<string, any>> = {
   orlen_paczka: {},
 };
 
-function buildInitialValues(provider: string, shipment?: Shipment): Record<string, any> {
+function buildInitialValues(provider: string, shipment?: Shipment): CarrierFieldValues {
   const defaults = DEFAULT_VALUES[provider] ?? {};
-  const carrierData = shipment?.carrier_data as Record<string, any> | undefined;
+  const carrierData = shipment?.carrier_data as CarrierFieldValues | undefined;
   if (!carrierData) return { ...defaults };
   // Merge: shipment carrier_data overrides defaults
   return { ...defaults, ...carrierData };
@@ -69,12 +69,12 @@ export function GenerateLabelDialog({
 }: GenerateLabelDialogProps) {
   const generateLabel = useGenerateLabel(shipmentId);
 
-  const [carrierValues, setCarrierValues] = useState<Record<string, any>>(
+  const [carrierValues, setCarrierValues] = useState<CarrierFieldValues>(
     () => buildInitialValues(provider, shipment)
   );
   const [labelFormat, setLabelFormat] = useState<string>("pdf");
 
-  const handleFieldChange = (field: string, value: any) => {
+  const handleFieldChange = (field: string, value: unknown) => {
     setCarrierValues((prev) => ({ ...prev, [field]: value }));
   };
 
