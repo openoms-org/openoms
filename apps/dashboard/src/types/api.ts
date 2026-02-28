@@ -88,6 +88,7 @@ export interface AIDescribeRequest {
   language?: "pl" | "en" | "de";
   length?: "short" | "medium" | "long";
   marketplace?: "allegro" | "amazon" | "ebay";
+  format?: "text" | "html";
 }
 
 export interface BGRemovalResult {
