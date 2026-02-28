@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 const (
@@ -56,7 +57,7 @@ func WithBaseURL(url string) Option {
 // NewClient creates a new Erli API client.
 func NewClient(apiToken string, opts ...Option) *Client {
 	c := &Client{
-		httpClient: http.DefaultClient,
+		httpClient: &http.Client{Timeout: 30 * time.Second},
 		baseURL:    productionBaseURL,
 		apiToken:   apiToken,
 	}
