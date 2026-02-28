@@ -13,6 +13,9 @@ import (
 	erli "github.com/openoms-org/openoms/packages/erli-go-sdk"
 )
 
+// sandboxProductSKU is the seller-side product ID used as externalId in Erli API paths.
+const sandboxProductSKU = "OMS-INTEGRATION-TEST-001"
+
 var (
 	erliToken      string
 	sandboxOfferID string
@@ -158,8 +161,10 @@ func TestIntegration_OrdersGetNotFound(t *testing.T) {
 
 // --- Group 3: Offers ---
 
-// TestIntegration_OffersCreate creates a minimal offer in sandbox and stores
+// TestIntegration_OffersCreate creates a minimal product in sandbox and stores
 // the returned ID in createdOfferID for subsequent update tests.
+// Erli responds with 202 Accepted when a product is queued for async validation;
+// in that case ErrProductPendingValidation is returned alongside the externalID.
 func TestIntegration_OffersCreate(t *testing.T) {
 	if sandboxOfferID != "" {
 		t.Skip("ERLI_SANDBOX_OFFER_ID already set via env, skipping create")
@@ -169,8 +174,15 @@ func TestIntegration_OffersCreate(t *testing.T) {
 		Title: "OpenOMS Integration Test Offer",
 		Price: 9.99,
 		Stock: 1,
+		SKU:   sandboxProductSKU,
 	}
-	offerID, err := c.Offers.Create(testCtx(t), req)
+	offerID, err := c.Offers.Create(testCtx(t), sandboxProductSKU, req)
+	if errors.Is(err, erli.ErrProductPendingValidation) {
+		// 202 Accepted — product queued for validation. This is expected in sandbox.
+		t.Logf("product accepted for async validation, externalID: %s", offerID)
+		createdOfferID = offerID
+		return
+	}
 	if err != nil {
 		// Log raw error — helps diagnose schema mismatches between models.go and real API.
 		t.Fatalf("Offers.Create() error: %v\nhint: check if CreateOfferRequest is missing required fields per sandbox docs", err)
@@ -179,7 +191,7 @@ func TestIntegration_OffersCreate(t *testing.T) {
 		t.Fatal("Offers.Create() returned empty offer ID")
 	}
 	createdOfferID = offerID
-	t.Logf("created sandbox offer ID: %s", offerID)
+	t.Logf("created sandbox product, ID: %s", offerID)
 }
 
 func TestIntegration_OffersUpdateStock(t *testing.T) {

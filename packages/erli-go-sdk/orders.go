@@ -12,13 +12,13 @@ type OrderService struct {
 	client *Client
 }
 
-// List retrieves orders with optional cursor-based pagination.
-// Only returns paid orders by default.
+// List retrieves purchased orders with optional cursor-based pagination.
+// Only returns purchased (paid) orders by default.
 func (s *OrderService) List(ctx context.Context, cursor string) (*OrdersResponse, error) {
 	u, _ := url.Parse("/orders")
-	q := url.Values{"status": {"paid"}}
+	q := url.Values{"status": {"purchased"}}
 	if cursor != "" {
-		q.Set("cursor", cursor)
+		q.Set("after", cursor)
 	}
 	u.RawQuery = q.Encode()
 	path := u.String()

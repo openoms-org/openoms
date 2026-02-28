@@ -222,12 +222,12 @@ func TestErliOrderMapper_MetadataFromRawData(t *testing.T) {
 	ti := TenantIntegration{TenantID: uuid.New(), IntegrationID: uuid.New()}
 	mo := integration.MarketplaceOrder{
 		ExternalID:     "ERLI-RAW-1",
-		ExternalStatus: "paid",
+		ExternalStatus: "purchased",
 		CustomerName:   "Test",
 		TotalAmount:    10.0,
 		Currency:       "PLN",
 		RawData: map[string]any{
-			"erli_status": "paid",
+			"erli_status": "purchased",
 			"oms_status":  "confirmed",
 		},
 	}
@@ -237,7 +237,7 @@ func TestErliOrderMapper_MetadataFromRawData(t *testing.T) {
 	require.NotNil(t, order.Metadata)
 	var metadata map[string]any
 	require.NoError(t, json.Unmarshal(order.Metadata, &metadata))
-	assert.Equal(t, "paid", metadata["erli_status"])
+	assert.Equal(t, "purchased", metadata["erli_status"])
 	assert.Equal(t, "confirmed", metadata["oms_status"])
 }
 
@@ -245,7 +245,7 @@ func TestErliOrderMapper_MetadataFallbackFromExternalStatus(t *testing.T) {
 	ti := TenantIntegration{TenantID: uuid.New(), IntegrationID: uuid.New()}
 	mo := integration.MarketplaceOrder{
 		ExternalID:     "ERLI-FALLBACK-1",
-		ExternalStatus: "shipped",
+		ExternalStatus: "purchased",
 		CustomerName:   "Test",
 		TotalAmount:    10.0,
 		Currency:       "PLN",
@@ -257,8 +257,8 @@ func TestErliOrderMapper_MetadataFallbackFromExternalStatus(t *testing.T) {
 	require.NotNil(t, order.Metadata)
 	var metadata map[string]any
 	require.NoError(t, json.Unmarshal(order.Metadata, &metadata))
-	assert.Equal(t, "shipped", metadata["erli_status"])
-	assert.Equal(t, "shipped", metadata["oms_status"])
+	assert.Equal(t, "purchased", metadata["erli_status"])
+	assert.Equal(t, "confirmed", metadata["oms_status"])
 }
 
 func TestErliOrderMapper_MetadataNoStatusForUnknownExternalStatus(t *testing.T) {

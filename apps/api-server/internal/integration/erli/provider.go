@@ -3,6 +3,7 @@ package erli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -57,7 +58,7 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 
 func (p *Provider) ProviderName() string { return "erli" }
 
-// PollOrders polls Erli for paid orders using cursor-based pagination.
+// PollOrders polls Erli for purchased orders using cursor-based pagination.
 func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration.MarketplaceOrder, string, error) {
 	resp, err := p.client.Orders.List(ctx, cursor)
 	if err != nil {
@@ -92,21 +93,22 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 	return &mo, nil
 }
 
-// PushOffer creates an offer on Erli from a product and returns the new offer ID.
+// PushOffer creates a product on Erli using the product SKU as the externalID path parameter.
+// SKU is mandatory — Erli identifies products by the seller's own product ID.
 func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
-	req := erlisdk.CreateOfferRequest{}
+	if product == nil || product.SKU == nil || *product.SKU == "" {
+		return "", fmt.Errorf("erli: SKU is required as product externalId")
+	}
+	externalID := *product.SKU
 
-	if product != nil {
-		req.Title = product.Name
-		req.Description = model.StripHTMLTags(product.DescriptionLong)
-		req.Price = product.Price
-		req.Stock = product.StockQuantity
-		if product.SKU != nil {
-			req.SKU = *product.SKU
-		}
-		if product.EAN != nil {
-			req.EAN = *product.EAN
-		}
+	req := erlisdk.CreateOfferRequest{}
+	req.Title = product.Name
+	req.Description = model.StripHTMLTags(product.DescriptionLong)
+	req.Price = product.Price
+	req.Stock = product.StockQuantity
+	req.SKU = externalID
+	if product.EAN != nil {
+		req.EAN = *product.EAN
 	}
 
 	// listingData overrides take precedence over product defaults.
@@ -126,22 +128,24 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 		req.CategoryID = catID
 	}
 
-	offerID, err := p.client.Offers.Create(ctx, req)
+	offerID, err := p.client.Offers.Create(ctx, externalID, req)
+	if errors.Is(err, erlisdk.ErrProductPendingValidation) {
+		p.logger.Warn("erli: product accepted for async validation, not yet live",
+			"external_id", offerID)
+		return offerID, nil
+	}
 	if err != nil {
 		return "", fmt.Errorf("erli: create offer: %w", err)
-	}
-	if offerID == "" {
-		return "", fmt.Errorf("erli: create offer: no offer ID returned")
 	}
 	return offerID, nil
 }
 
-// UpdateStock updates the stock quantity for an Erli offer.
+// UpdateStock updates the stock quantity for an Erli product.
 func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
 	return p.client.Offers.UpdateStock(ctx, externalOfferID, quantity)
 }
 
-// UpdatePrice updates the price for an Erli offer.
+// UpdatePrice updates the price for an Erli product.
 func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
 	return p.client.Offers.UpdatePrice(ctx, externalOfferID, price)
 }
