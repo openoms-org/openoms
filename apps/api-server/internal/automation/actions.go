@@ -614,6 +614,7 @@ func (e *DefaultActionExecutor) executeSendMarketplaceMessage(_ context.Context,
 
 	// Phase 2: Build variable data and substitute into the template body.
 	// Intentionally excluded: customer_email (PII, unnecessary in outbound marketplace messages).
+	// customer_name is retained: addressing the buyer by name is standard marketplace practice.
 	vars := map[string]string{
 		"order_id":      order.ID.String(),
 		"external_id":   *order.ExternalID,

@@ -79,8 +79,8 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if req.PriceOverride != nil && *req.PriceOverride < 0 {
-		writeError(w, http.StatusBadRequest, "price_override must be non-negative")
+	if req.PriceOverride != nil && *req.PriceOverride <= 0 {
+		writeError(w, http.StatusBadRequest, "price_override must be greater than zero")
 		return
 	}
 	if req.StockOverride != nil && *req.StockOverride < 0 {
@@ -124,7 +124,8 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 
 	externalID, err := provider.PushOffer(ctx, product, listingData)
 	if err != nil {
-		writeServerError(w, "Erli listing error", err)
+		slog.Error("erli listings: failed to push offer", "error", err, "tenant_id", tenantID)
+		writeError(w, http.StatusBadGateway, "failed to publish listing")
 		return
 	}
 
@@ -157,6 +158,8 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			slog.Warn("erli listings: duplicate listing conflict; newly created Erli offer is orphaned",
+				"orphaned_external_id", externalID, "tenant_id", tenantID)
 			writeError(w, http.StatusConflict, "listing already exists for this product and integration")
 			return
 		}
