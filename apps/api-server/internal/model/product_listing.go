@@ -9,23 +9,23 @@ import (
 )
 
 type ProductListing struct {
-	ID            uuid.UUID       `json:"id"`
-	TenantID      uuid.UUID       `json:"tenant_id"`
-	ProductID     uuid.UUID       `json:"product_id"`
-	IntegrationID uuid.UUID       `json:"integration_id"`
-	ExternalID    *string         `json:"external_id,omitempty"`
-	Status        string          `json:"status"`
-	URL           *string         `json:"url,omitempty"`
-	PriceOverride *float64        `json:"price_override,omitempty"`
-	StockOverride *int            `json:"stock_override,omitempty"`
-	SyncStatus    string          `json:"sync_status"`
-	LastSyncedAt  *time.Time      `json:"last_synced_at,omitempty"`
-	ErrorMessage  *string         `json:"error_message,omitempty"`
+	ID              uuid.UUID       `json:"id"`
+	TenantID        uuid.UUID       `json:"tenant_id"`
+	ProductID       uuid.UUID       `json:"product_id"`
+	IntegrationID   uuid.UUID       `json:"integration_id"`
+	ExternalID      *string         `json:"external_id,omitempty"`
+	Status          string          `json:"status"`
+	URL             *string         `json:"url,omitempty"`
+	PriceOverride   *float64        `json:"price_override,omitempty"`
+	StockOverride   *int            `json:"stock_override,omitempty"`
+	SyncStatus      string          `json:"sync_status"`
+	LastSyncedAt    *time.Time      `json:"last_synced_at,omitempty"`
+	ErrorMessage    *string         `json:"error_message,omitempty"`
 	StockSyncMode   string          `json:"stock_sync_mode"`
 	DescriptionHTML *string         `json:"description_html,omitempty"`
 	Metadata        json.RawMessage `json:"metadata"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 type CreateProductListingRequest struct {
@@ -54,11 +54,11 @@ func (r *CreateProductListingRequest) Validate() error {
 }
 
 type UpdateProductListingRequest struct {
-	ExternalID    *string          `json:"external_id,omitempty"`
-	Status        *string          `json:"status,omitempty"`
-	URL           *string          `json:"url,omitempty"`
-	PriceOverride *float64         `json:"price_override,omitempty"`
-	StockOverride *int             `json:"stock_override,omitempty"`
+	ExternalID      *string          `json:"external_id,omitempty"`
+	Status          *string          `json:"status,omitempty"`
+	URL             *string          `json:"url,omitempty"`
+	PriceOverride   *float64         `json:"price_override,omitempty"`
+	StockOverride   *int             `json:"stock_override,omitempty"`
 	StockSyncMode   *string          `json:"stock_sync_mode,omitempty"`
 	DescriptionHTML *string          `json:"description_html,omitempty"`
 	SyncStatus      *string          `json:"sync_status,omitempty"`
