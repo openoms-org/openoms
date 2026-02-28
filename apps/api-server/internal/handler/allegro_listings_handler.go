@@ -59,16 +59,17 @@ func NewAllegroListingsHandler(
 
 // createListingRequest is the request body for creating a new Allegro listing.
 type createListingRequest struct {
-	IntegrationID  string           `json:"integration_id"`
-	CategoryID     string           `json:"category_id"`
-	Parameters     []map[string]any `json:"parameters"`
-	ShippingRateID string           `json:"shipping_rate_id"`
-	ReturnPolicyID string           `json:"return_policy_id"`
-	WarrantyID     string           `json:"warranty_id"`
-	HandlingTime   string           `json:"handling_time"`
-	PriceOverride  *float64         `json:"price_override"`
-	StockOverride  *int             `json:"stock_override"`
-	Location       *locationRequest `json:"location"`
+	IntegrationID   string           `json:"integration_id"`
+	CategoryID      string           `json:"category_id"`
+	Parameters      []map[string]any `json:"parameters"`
+	ShippingRateID  string           `json:"shipping_rate_id"`
+	ReturnPolicyID  string           `json:"return_policy_id"`
+	WarrantyID      string           `json:"warranty_id"`
+	HandlingTime    string           `json:"handling_time"`
+	PriceOverride   *float64         `json:"price_override"`
+	StockOverride   *int             `json:"stock_override"`
+	DescriptionHTML *string          `json:"description_html"`
+	Location        *locationRequest `json:"location"`
 }
 
 type locationRequest struct {
@@ -211,8 +212,14 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		slog.Warn("allegro listings: failed to resolve responsible producer, offer may fail GPSR", "error", err)
 	}
 
+	// Build temporary listing to pass description_html to the payload builder
+	var descListing *model.ProductListing
+	if req.DescriptionHTML != nil {
+		descListing = &model.ProductListing{DescriptionHTML: req.DescriptionHTML}
+	}
+
 	// Build and create offer on Allegro
-	payload := buildAllegroOfferPayload(product, req, uploadedImages, productParams, offerParams, producerID)
+	payload := buildAllegroOfferPayload(product, req, uploadedImages, productParams, offerParams, producerID, descListing)
 
 	offer, err := client.Offers.Create(ctx, payload)
 	if err != nil {
@@ -250,6 +257,11 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		Metadata:      metadata,
 	}
 
+	if req.DescriptionHTML != nil && *req.DescriptionHTML != "" {
+		sanitized := model.SanitizeListingHTML(*req.DescriptionHTML)
+		listing.DescriptionHTML = &sanitized
+	}
+
 	// Create listing record in database
 	err = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
 		return h.listingRepo.Create(ctx, tx, listing)
@@ -265,7 +277,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 // buildAllegroOfferPayload maps product data to the Allegro sale/product-offers format.
 // Product-describing parameters go inside productSet[0].product.parameters.
 // Offer-level parameters (e.g. "Stan") go in top-level parameters.
-func buildAllegroOfferPayload(product *model.Product, req createListingRequest, images []string, productParams, offerParams []map[string]any, producerID string) map[string]any {
+func buildAllegroOfferPayload(product *model.Product, req createListingRequest, images []string, productParams, offerParams []map[string]any, producerID string, listing *model.ProductListing) map[string]any {
 	price := product.Price
 	if req.PriceOverride != nil {
 		price = *req.PriceOverride
@@ -310,7 +322,7 @@ func buildAllegroOfferPayload(product *model.Product, req createListingRequest, 
 			"available": stock,
 			"unit":      "UNIT",
 		},
-		"description": buildDescription(product),
+		"description": buildDescription(product, listing),
 		"publication": map[string]any{"status": "ACTIVE"},
 	}
 
@@ -442,16 +454,19 @@ func (h *AllegroListingsHandler) uploadImageToAllegro(ctx context.Context, clien
 }
 
 // buildDescription builds the Allegro description structure from product data.
-func buildDescription(product *model.Product) map[string]any {
+// If listing has a non-empty DescriptionHTML, it takes precedence over product descriptions.
+func buildDescription(product *model.Product, listing *model.ProductListing) map[string]any {
 	var content string
-	if product.DescriptionLong != "" {
-		content = product.DescriptionLong
+	if listing != nil && listing.DescriptionHTML != nil && *listing.DescriptionHTML != "" {
+		content = *listing.DescriptionHTML
+		content = sanitizeForAllegro(content)
+	} else if product.DescriptionLong != "" {
+		content = sanitizeForAllegro(product.DescriptionLong)
 	} else if product.DescriptionShort != "" {
-		content = product.DescriptionShort
+		content = sanitizeForAllegro(product.DescriptionShort)
 	} else {
-		content = product.Name
+		content = sanitizeForAllegro(product.Name)
 	}
-	content = sanitizeForAllegro(content)
 	return map[string]any{
 		"sections": []map[string]any{
 			{"items": []map[string]any{

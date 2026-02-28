@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -112,6 +113,30 @@ func TestSanitizeForAllegro_TableStripped(t *testing.T) {
 	assert.NotContains(t, result, "<td>")
 	assert.Contains(t, result, "Cell 1")
 	assert.Contains(t, result, "Cell 2")
+}
+
+func TestBuildDescription_UsesListingDescriptionHTML(t *testing.T) {
+	html := "<h1>Custom</h1><p>Override description</p>"
+	listing := &model.ProductListing{DescriptionHTML: &html}
+	product := &model.Product{DescriptionLong: "Product default"}
+
+	result := buildDescription(product, listing)
+	sections := result["sections"].([]map[string]any)
+	content := sections[0]["items"].([]map[string]any)[0]["content"].(string)
+
+	assert.Contains(t, content, "Custom")
+	assert.Contains(t, content, "Override description")
+	assert.NotContains(t, content, "Product default")
+}
+
+func TestBuildDescription_FallsBackToProductWhenNoListingHTML(t *testing.T) {
+	product := &model.Product{DescriptionLong: "Product default"}
+
+	result := buildDescription(product, nil)
+	sections := result["sections"].([]map[string]any)
+	content := sections[0]["items"].([]map[string]any)[0]["content"].(string)
+
+	assert.Contains(t, content, "Product default")
 }
 
 // assertValidAllegroHTML checks that all text content is inside allowed block elements.
