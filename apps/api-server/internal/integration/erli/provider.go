@@ -130,6 +130,9 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 	if err != nil {
 		return "", fmt.Errorf("erli: create offer: %w", err)
 	}
+	if offerID == "" {
+		return "", fmt.Errorf("erli: create offer: no offer ID returned")
+	}
 	return offerID, nil
 }
 
