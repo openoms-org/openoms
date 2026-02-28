@@ -113,7 +113,7 @@ func TestOrdersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{
+		_ = json.NewEncoder(w).Encode(OrdersResponse{
 			Data: []Order{
 				{
 					ID:          "ORD-001",
@@ -172,7 +172,7 @@ func TestOrdersListWithCursor(t *testing.T) {
 			t.Errorf("cursor = %q, want page2", r.URL.Query().Get("cursor"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{Data: []Order{}})
+		_ = json.NewEncoder(w).Encode(OrdersResponse{Data: []Order{}})
 	}))
 	defer srv.Close()
 
@@ -200,7 +200,7 @@ func TestOrdersGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(Order{
+		_ = json.NewEncoder(w).Encode(Order{
 			ID:            "ORD-123",
 			Status:        "paid",
 			BuyerName:     "Anna Nowak",
@@ -245,7 +245,7 @@ func TestOrdersGet(t *testing.T) {
 func TestOrdersGetError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Order not found",
 			"code":    "NOT_FOUND",
 		})
@@ -349,7 +349,7 @@ func TestOffersCreate(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(CreateOfferResponse{ID: "OFFER-NEW-42"})
+		_ = json.NewEncoder(w).Encode(CreateOfferResponse{ID: "OFFER-NEW-42"})
 	}))
 	defer srv.Close()
 
@@ -375,7 +375,7 @@ func TestOffersCreate(t *testing.T) {
 func TestOffersUpdateStockError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid stock value",
 			"code":    "VALIDATION_ERROR",
 		})
@@ -396,7 +396,7 @@ func TestOffersUpdateStockError(t *testing.T) {
 func TestServerError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
 	}))
