@@ -32,7 +32,7 @@ type Provider struct {
 }
 
 // NewProvider creates an Erli MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
 	var creds ErliCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("erli: parse credentials: %w", err)
@@ -98,7 +98,7 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 
 	if product != nil {
 		req.Title = product.Name
-		req.Description = product.DescriptionLong
+		req.Description = model.StripHTMLTags(product.DescriptionLong)
 		req.Price = product.Price
 		req.Stock = product.StockQuantity
 		if product.SKU != nil {
