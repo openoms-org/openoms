@@ -29,13 +29,19 @@ func TestMain(m *testing.M) {
 		fmt.Println("ERLI_SANDBOX_TOKEN not set, skipping Erli integration tests")
 		os.Exit(0)
 	}
+	sandboxURL := os.Getenv("ERLI_SANDBOX_URL")
+	if sandboxURL == "" {
+		fmt.Println("ERLI_SANDBOX_URL not set, skipping Erli integration tests (sandbox URL required — contact Erli BOK)")
+		os.Exit(0)
+	}
 	sandboxOfferID = os.Getenv("ERLI_SANDBOX_OFFER_ID")
 	sandboxOrderID = os.Getenv("ERLI_SANDBOX_ORDER_ID")
 	os.Exit(m.Run())
 }
 
 func newSandboxClient() *erli.Client {
-	return erli.NewClient(erliToken, erli.WithSandbox())
+	sandboxURL := os.Getenv("ERLI_SANDBOX_URL")
+	return erli.NewClient(erliToken, erli.WithBaseURL(sandboxURL))
 }
 
 func testCtx(t *testing.T) context.Context {
@@ -74,7 +80,7 @@ func resolveOrderID(t *testing.T, c *erli.Client) (string, bool) {
 // --- Group 1: Auth / Connectivity ---
 
 func TestIntegration_InvalidToken(t *testing.T) {
-	c := erli.NewClient("definitely-invalid-token", erli.WithSandbox())
+	c := erli.NewClient("definitely-invalid-token", erli.WithBaseURL(os.Getenv("ERLI_SANDBOX_URL")))
 	_, err := c.Orders.List(testCtx(t), "")
 	if err == nil {
 		t.Fatal("expected error for invalid token, got nil")

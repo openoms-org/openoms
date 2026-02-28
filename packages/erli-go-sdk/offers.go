@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 )
@@ -59,5 +60,7 @@ func (s *OfferService) Create(ctx context.Context, externalID string, req Create
 		return resp.ID, nil
 	}
 	// Fallback: return externalID when no ID in response body.
+	// Log a warning so API schema divergence is visible in operator logs.
+	slog.Warn("erli: create product response missing id field, falling back to externalID", "external_id", externalID)
 	return externalID, nil
 }

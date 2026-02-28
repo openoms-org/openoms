@@ -14,11 +14,6 @@ import (
 const (
 	productionBaseURL = "https://erli.pl/svc/shop-api"
 
-	// sandboxBaseURL is not publicly documented by Erli.
-	// Contact Erli BOK for sandbox credentials and use WithBaseURL() to configure
-	// the correct sandbox endpoint. This value is kept only for backward compatibility.
-	sandboxBaseURL = "https://api-sandbox.erli.pl/v2"
-
 	// maxResponseBody caps response body reads to prevent memory exhaustion (10 MB).
 	maxResponseBody = 10 << 20
 	// maxErrorBody caps error response body reads (1 MB).
@@ -50,13 +45,13 @@ func WithHTTPClient(c *http.Client) Option {
 	}
 }
 
-// WithSandbox configures the client to use the Erli sandbox environment.
-// Note: the sandbox URL is not publicly documented. Use WithBaseURL() to set
-// the correct sandbox endpoint provided by Erli BOK.
+// Deprecated: WithSandbox is a no-op. The Erli sandbox URL is not publicly
+// documented and the previously hardcoded value was incorrect. Use WithBaseURL()
+// with the URL provided by Erli BOK instead:
+//
+//	erli.NewClient(token, erli.WithBaseURL(os.Getenv("ERLI_SANDBOX_URL")))
 func WithSandbox() Option {
-	return func(cl *Client) {
-		cl.baseURL = sandboxBaseURL
-	}
+	return func(_ *Client) {}
 }
 
 // WithBaseURL sets a custom base URL (useful for testing or sandbox access).

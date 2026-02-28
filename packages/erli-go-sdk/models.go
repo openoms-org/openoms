@@ -21,6 +21,9 @@ type Order struct {
 	Currency      string      `json:"currency"`
 	PaymentStatus string      `json:"payment_status"`
 	Items         []OrderItem `json:"items"`
+	// Cursor is the per-order pagination cursor used as the next pagination.after value.
+	// Per Erli docs: use the cursor from the last order in the response to paginate.
+	Cursor string `json:"cursor"`
 }
 
 // Address represents a delivery address.

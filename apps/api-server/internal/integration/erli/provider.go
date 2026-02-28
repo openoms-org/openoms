@@ -45,6 +45,7 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 
 	var opts []erlisdk.Option
 	if creds.Sandbox {
+		slog.Warn("erli: sandbox mode is deprecated; WithSandbox() is a no-op — use WithBaseURL with ERLI_SANDBOX_URL instead")
 		opts = append(opts, erlisdk.WithSandbox())
 	}
 
@@ -181,6 +182,9 @@ func (p *Provider) mapErliOrder(o *erlisdk.Order) integration.MarketplaceOrder {
 			"erli_status": o.Status,
 			"oms_status":  omsStatus,
 		}
+	} else {
+		p.logger.Warn("erli: unknown order status — not in statusmap.go; skipping OMS status mapping",
+			"erli_status", o.Status, "order_id", o.ID)
 	}
 
 	// Line items

@@ -26,11 +26,13 @@ func TestNewClientDefaults(t *testing.T) {
 	}
 }
 
+// TestWithSandbox verifies that the deprecated WithSandbox() option is a no-op:
+// it must not override the default production base URL. Use WithBaseURL() for sandbox.
 func TestWithSandbox(t *testing.T) {
 	c := NewClient("tok", WithSandbox())
 
-	if c.baseURL != sandboxBaseURL {
-		t.Errorf("baseURL = %q, want %q", c.baseURL, sandboxBaseURL)
+	if c.baseURL != productionBaseURL {
+		t.Errorf("WithSandbox() changed baseURL to %q; deprecated noop should leave production URL %q unchanged", c.baseURL, productionBaseURL)
 	}
 }
 
