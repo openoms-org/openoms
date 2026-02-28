@@ -20,4 +20,16 @@ CREATE POLICY message_templates_tenant ON message_templates
 
 ALTER TABLE message_templates FORCE ROW LEVEL SECURITY;
 
-GRANT ALL ON message_templates TO openoms;
+-- Speed up RLS-filtered queries on message_templates.
+CREATE INDEX IF NOT EXISTS idx_message_templates_tenant_id
+    ON message_templates(tenant_id);
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms_app') THEN
+        GRANT ALL ON message_templates TO openoms_app;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms') THEN
+        GRANT ALL ON message_templates TO openoms;
+    END IF;
+END $$;
