@@ -203,6 +203,7 @@ type DescribeOptions struct {
 	Language    string `json:"language"`    // "pl" | "en" | "de"
 	Length      string `json:"length"`      // "short" | "medium" | "long"
 	Marketplace string `json:"marketplace"` // "" | "allegro" | "amazon" | "ebay"
+	Format      string `json:"format"`      // "" | "html"
 }
 
 // AISuggestion holds all AI-generated suggestions for a product.
@@ -359,6 +360,11 @@ func (s *AIService) GenerateEnhancedDescription(ctx context.Context, productName
 		marketplaceInstruction = fmt.Sprintf("\n%s", marketplaceHint)
 	}
 
+	formatInstruction := ""
+	if opts.Format == "html" {
+		formatInstruction = "\nSformatuj opisy uzywajac TYLKO tych tagow HTML: <h1>, <h2>, <p>, <ul>, <ol>, <li>.\nKazdy paragraf owin w <p>. Listy cech uzyj <ul><li>. Sekcje tytuluj <h2>.\nNIE uzywaj: <b>, <i>, <strong>, <em>, <a>, <img>, <br>, <div>, <span>, <table>."
+	}
+
 	userPrompt := fmt.Sprintf(
 		`Produkt: "%s"
 Krotki opis: "%s"
@@ -368,9 +374,9 @@ Napisz:
 2. Dlugi opis produktu (%s)
 
 Jezyk: %s
-%s
+%s%s
 Zwroc JSON: {"short_description": "...", "long_description": "..."}`,
-		productName, shortDescription, length, lang, marketplaceInstruction,
+		productName, shortDescription, length, lang, marketplaceInstruction, formatInstruction,
 	)
 
 	result, err := s.callOpenAI(ctx, systemPrompt, userPrompt)
@@ -396,7 +402,7 @@ Zwroc JSON: {"short_description": "...", "long_description": "..."}`,
 }
 
 // ImproveDescription takes an existing description and improves it.
-func (s *AIService) ImproveDescription(ctx context.Context, description, style, language string) (string, error) {
+func (s *AIService) ImproveDescription(ctx context.Context, description, style, language, format string) (string, error) {
 	if style == "" {
 		style = "professional"
 	}
@@ -425,14 +431,19 @@ func (s *AIService) ImproveDescription(ctx context.Context, description, style, 
 		styleTxt = styleMap["professional"]
 	}
 
+	formatHint := ""
+	if format == "html" {
+		formatHint = "\nUzyj TYLKO tagow HTML: <h1>, <h2>, <p>, <ul>, <ol>, <li>. NIE uzywaj innych tagow."
+	}
+
 	systemPrompt := fmt.Sprintf("Jestes copywriterem e-commerce. Poprawiasz opisy produktow. Jezyk: %s. Styl: %s. Zwracasz TYLKO surowy JSON, bez markdown.", lang, styleTxt)
 	userPrompt := fmt.Sprintf(
 		`Obecny opis produktu:
 "%s"
 
-Popraw ten opis - ulepsz styl, popraw bledy, uczyni go bardziej atrakcyjnym dla klientow. Zachowaj kluczowe informacje.
+Popraw ten opis - ulepsz styl, popraw bledy, uczyni go bardziej atrakcyjnym dla klientow. Zachowaj kluczowe informacje.%s
 Zwroc JSON: {"description": "poprawiony opis"}`,
-		description,
+		description, formatHint,
 	)
 
 	result, err := s.callOpenAI(ctx, systemPrompt, userPrompt)

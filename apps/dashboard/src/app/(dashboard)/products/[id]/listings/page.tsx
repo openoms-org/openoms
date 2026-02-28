@@ -19,6 +19,9 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { DescriptionEditor, plainTextToHTML } from "@/components/editor/description-editor";
+import { apiClient } from "@/lib/api-client";
+import type { AISuggestion, AITextResult } from "@/types/api";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useProduct } from "@/hooks/use-products";
@@ -72,7 +75,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -235,7 +237,7 @@ export default function ProductListingsPage() {
             <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
               <li>
                 Kliknij &quot;Wystaw na Allegro&quot; i przejdz przez
-                4-krokowy formularz.
+                5-krokowy formularz.
               </li>
               <li>
                 Wybierz kategorie Allegro (musisz dotrzec do kategorii koncowej
@@ -719,7 +721,7 @@ function CreateWooCommerceListingDialog({
   const [price, setPrice] = useState(String(product.price));
   const [stock, setStock] = useState(String(product.stock_quantity));
   const [description, setDescription] = useState(
-    product.description_long || product.description_short || ""
+    plainTextToHTML(product.description_long || product.description_short || "")
   );
   const [categories, setCategories] = useState("");
 
@@ -797,12 +799,11 @@ function CreateWooCommerceListingDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Opis produktu</Label>
-            <Textarea
-              rows={4}
+            <label className="text-sm font-medium">Opis</label>
+            <DescriptionEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Opis produktu w sklepie WooCommerce"
+              onChange={setDescription}
+              placeholder="Opis produktu..."
             />
           </div>
 
@@ -894,13 +895,17 @@ function CreateAllegroListingDialog({
     Record<string, { valuesIds?: string[]; values?: string[] }>
   >({});
 
-  // Step 3: Delivery/Policies
+  // Step 3: Description
+  const [descriptionHTML, setDescriptionHTML] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // Step 4: Delivery/Policies
   const [shippingRateId, setShippingRateId] = useState("");
   const [returnPolicyId, setReturnPolicyId] = useState("");
   const [warrantyId, setWarrantyId] = useState("");
   const [handlingTime, setHandlingTime] = useState("PT24H");
 
-  // Step 4: Price/Location
+  // Step 5: Price/Location
   const [priceOverride, setPriceOverride] = useState(String(product.price));
   const [stockOverride, setStockOverride] = useState(
     String(product.stock_quantity)
@@ -1368,6 +1373,7 @@ function CreateAllegroListingDialog({
         integration_id: allegroIntegrationId,
         category_id: selectedCategoryId,
         parameters,
+        description_html: descriptionHTML || undefined,
         shipping_rate_id: shippingRateId,
         return_policy_id: returnPolicyId,
         warranty_id: warrantyId,
@@ -1407,20 +1413,29 @@ function CreateAllegroListingDialog({
     });
   }, [paramsData, paramValues]);
   const canProceedStep2 = missingRequiredParams.length === 0;
-  const canProceedStep3 =
+  const canProceedStep4 =
     !!shippingRateId && !!returnPolicyId && !!warrantyId;
+
+  // Initialize description when entering step 3
+  useEffect(() => {
+    if (step === 3 && !descriptionHTML && product) {
+      const text = product.description_long || product.description_short || "";
+      setDescriptionHTML(plainTextToHTML(text));
+    }
+  }, [step, descriptionHTML, product]);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Wystaw na Allegro — krok {step} z 4</DialogTitle>
+          <DialogTitle>Wystaw na Allegro — krok {step} z 5</DialogTitle>
           <DialogDescription>
             {step === 1 && "Wybierz kategorie Allegro dla produktu"}
             {step === 2 && "Wypelnij parametry wymagane przez kategorie"}
-            {step === 3 &&
-              "Wybierz ustawienia dostawy i polityki sprzedazy"}
+            {step === 3 && "Edytuj opis oferty"}
             {step === 4 &&
+              "Wybierz ustawienia dostawy i polityki sprzedazy"}
+            {step === 5 &&
               "Ustaw cene, stan magazynowy i lokalizacje"}
           </DialogDescription>
         </DialogHeader>
@@ -1637,8 +1652,61 @@ function CreateAllegroListingDialog({
           </div>
         )}
 
-        {/* Step 3: Delivery & Policies */}
+        {/* Step 3: Description */}
         {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium">Opis oferty</h3>
+              <p className="text-sm text-muted-foreground">
+                Edytuj opis przed wystawieniem. Dozwolone: naglowki, paragrafy, listy.
+              </p>
+            </div>
+            <DescriptionEditor
+              value={descriptionHTML}
+              onChange={setDescriptionHTML}
+              placeholder="Wpisz opis oferty..."
+              onAiGenerate={async () => {
+                setAiLoading(true);
+                try {
+                  const res = await apiClient<AISuggestion>("/v1/ai/describe", {
+                    method: "POST",
+                    body: JSON.stringify({
+                      product_id: product.id,
+                      marketplace: "allegro",
+                      format: "html",
+                    }),
+                  });
+                  if (res.long_description) {
+                    setDescriptionHTML(res.long_description);
+                  }
+                } finally {
+                  setAiLoading(false);
+                }
+              }}
+              onAiImprove={async (html: string) => {
+                setAiLoading(true);
+                try {
+                  const res = await apiClient<AITextResult>("/v1/ai/improve", {
+                    method: "POST",
+                    body: JSON.stringify({
+                      description: html,
+                      format: "html",
+                    }),
+                  });
+                  if (res.description) {
+                    setDescriptionHTML(res.description);
+                  }
+                } finally {
+                  setAiLoading(false);
+                }
+              }}
+              aiLoading={aiLoading}
+            />
+          </div>
+        )}
+
+        {/* Step 4: Delivery & Policies */}
+        {step === 4 && (
           <Step3DeliveryPolicies
             shippingRateId={shippingRateId}
             setShippingRateId={setShippingRateId}
@@ -1652,8 +1720,8 @@ function CreateAllegroListingDialog({
           />
         )}
 
-        {/* Step 4: Price & Location */}
-        {step === 4 && (
+        {/* Step 5: Price & Location */}
+        {step === 5 && (
           <div className="space-y-6">
             {/* Summary */}
             <div className="rounded-md border bg-muted/50 p-4 space-y-2">
@@ -1771,7 +1839,7 @@ function CreateAllegroListingDialog({
             <Button variant="outline" onClick={onClose}>
               Anuluj
             </Button>
-            {step < 4 ? (
+            {step < 5 ? (
               <Button
                 onClick={() => setStep((s) => s + 1)}
                 disabled={
@@ -1779,7 +1847,9 @@ function CreateAllegroListingDialog({
                     ? !canProceedStep1
                     : step === 2
                       ? !canProceedStep2
-                      : !canProceedStep3
+                      : step === 4
+                        ? !canProceedStep4
+                        : false
                 }
               >
                 Dalej

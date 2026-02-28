@@ -51,6 +51,7 @@ export interface CreateProductListingRequest {
   integration_id: string;
   category_id: string;
   parameters: { id: string; valuesIds?: string[]; values?: string[] }[];
+  description_html?: string;
   shipping_rate_id: string;
   return_policy_id: string;
   warranty_id: string;

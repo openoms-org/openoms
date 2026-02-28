@@ -21,12 +21,12 @@ func (r *ProductListingRepository) Create(ctx context.Context, tx pgx.Tx, listin
 		`INSERT INTO product_listings (
 			id, tenant_id, product_id, integration_id, external_id,
 			status, url, price_override, stock_override,
-			sync_status, last_synced_at, error_message, stock_sync_mode, metadata
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			sync_status, last_synced_at, error_message, stock_sync_mode, description_html, metadata
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING created_at, updated_at`,
 		listing.ID, listing.TenantID, listing.ProductID, listing.IntegrationID, listing.ExternalID,
 		listing.Status, listing.URL, listing.PriceOverride, listing.StockOverride,
-		listing.SyncStatus, listing.LastSyncedAt, listing.ErrorMessage, listing.StockSyncMode, listing.Metadata,
+		listing.SyncStatus, listing.LastSyncedAt, listing.ErrorMessage, listing.StockSyncMode, listing.DescriptionHTML, listing.Metadata,
 	).Scan(&listing.CreatedAt, &listing.UpdatedAt)
 }
 
@@ -75,6 +75,11 @@ func (r *ProductListingRepository) Update(ctx context.Context, tx pgx.Tx, id uui
 		args = append(args, *req.StockSyncMode)
 		argIdx++
 	}
+	if req.DescriptionHTML != nil {
+		setClauses = append(setClauses, fmt.Sprintf("description_html = $%d", argIdx))
+		args = append(args, *req.DescriptionHTML)
+		argIdx++
+	}
 	if req.Metadata != nil {
 		setClauses = append(setClauses, fmt.Sprintf("metadata = $%d", argIdx))
 		args = append(args, *req.Metadata)
@@ -105,13 +110,13 @@ func (r *ProductListingRepository) GetByID(ctx context.Context, tx pgx.Tx, id uu
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
 		        status, url, price_override, stock_override,
-		        sync_status, last_synced_at, error_message, stock_sync_mode, metadata,
+		        sync_status, last_synced_at, error_message, stock_sync_mode, description_html, metadata,
 		        created_at, updated_at
 		 FROM product_listings WHERE id = $1`, id,
 	).Scan(
 		&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 		&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-		&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
+		&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.DescriptionHTML, &l.Metadata,
 		&l.CreatedAt, &l.UpdatedAt,
 	)
 	if err != nil {
@@ -128,13 +133,13 @@ func (r *ProductListingRepository) FindByProductAndIntegration(ctx context.Conte
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
 		        status, url, price_override, stock_override,
-		        sync_status, last_synced_at, error_message, stock_sync_mode, metadata,
+		        sync_status, last_synced_at, error_message, stock_sync_mode, description_html, metadata,
 		        created_at, updated_at
 		 FROM product_listings WHERE product_id = $1 AND integration_id = $2`, productID, integrationID,
 	).Scan(
 		&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 		&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-		&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
+		&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.DescriptionHTML, &l.Metadata,
 		&l.CreatedAt, &l.UpdatedAt,
 	)
 	if err != nil {
@@ -151,13 +156,13 @@ func (r *ProductListingRepository) FindByExternalIDAndIntegration(ctx context.Co
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
 		        status, url, price_override, stock_override,
-		        sync_status, last_synced_at, error_message, stock_sync_mode, metadata,
+		        sync_status, last_synced_at, error_message, stock_sync_mode, description_html, metadata,
 		        created_at, updated_at
 		 FROM product_listings WHERE external_id = $1 AND integration_id = $2`, externalID, integrationID,
 	).Scan(
 		&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 		&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-		&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
+		&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.DescriptionHTML, &l.Metadata,
 		&l.CreatedAt, &l.UpdatedAt,
 	)
 	if err != nil {
@@ -173,7 +178,7 @@ func (r *ProductListingRepository) ListByProduct(ctx context.Context, tx pgx.Tx,
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
 		        status, url, price_override, stock_override,
-		        sync_status, last_synced_at, error_message, stock_sync_mode, metadata,
+		        sync_status, last_synced_at, error_message, stock_sync_mode, description_html, metadata,
 		        created_at, updated_at
 		 FROM product_listings WHERE product_id = $1 ORDER BY created_at`, productID,
 	)
@@ -188,7 +193,7 @@ func (r *ProductListingRepository) ListByProduct(ctx context.Context, tx pgx.Tx,
 		if err := rows.Scan(
 			&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 			&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
+			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.DescriptionHTML, &l.Metadata,
 			&l.CreatedAt, &l.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan product listing: %w", err)
@@ -202,7 +207,7 @@ func (r *ProductListingRepository) ListByIntegration(ctx context.Context, tx pgx
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
 		        status, url, price_override, stock_override,
-		        sync_status, last_synced_at, error_message, stock_sync_mode, metadata,
+		        sync_status, last_synced_at, error_message, stock_sync_mode, description_html, metadata,
 		        created_at, updated_at
 		 FROM product_listings WHERE integration_id = $1 ORDER BY created_at`, integrationID,
 	)
@@ -217,7 +222,7 @@ func (r *ProductListingRepository) ListByIntegration(ctx context.Context, tx pgx
 		if err := rows.Scan(
 			&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 			&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
+			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.DescriptionHTML, &l.Metadata,
 			&l.CreatedAt, &l.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan product listing: %w", err)
@@ -232,7 +237,7 @@ func (r *ProductListingRepository) ListAutoSyncByProduct(ctx context.Context, tx
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
 		        status, url, price_override, stock_override,
-		        sync_status, last_synced_at, error_message, stock_sync_mode, metadata,
+		        sync_status, last_synced_at, error_message, stock_sync_mode, description_html, metadata,
 		        created_at, updated_at
 		 FROM product_listings
 		 WHERE product_id = $1 AND status = 'active' AND external_id IS NOT NULL AND stock_sync_mode = 'auto'
@@ -249,7 +254,7 @@ func (r *ProductListingRepository) ListAutoSyncByProduct(ctx context.Context, tx
 		if err := rows.Scan(
 			&l.ID, &l.TenantID, &l.ProductID, &l.IntegrationID, &l.ExternalID,
 			&l.Status, &l.URL, &l.PriceOverride, &l.StockOverride,
-			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.Metadata,
+			&l.SyncStatus, &l.LastSyncedAt, &l.ErrorMessage, &l.StockSyncMode, &l.DescriptionHTML, &l.Metadata,
 			&l.CreatedAt, &l.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan auto-sync product listing: %w", err)

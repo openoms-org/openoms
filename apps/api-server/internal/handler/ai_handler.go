@@ -67,6 +67,7 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 		Language    string    `json:"language"`
 		Length      string    `json:"length"`
 		Marketplace string    `json:"marketplace"`
+		Format      string    `json:"format"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -82,6 +83,7 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 		Language:    req.Language,
 		Length:      req.Length,
 		Marketplace: req.Marketplace,
+		Format:      req.Format,
 	}
 
 	result, err := h.aiService.Describe(r.Context(), tenantID, req.ProductID, opts)
@@ -108,6 +110,7 @@ func (h *AIHandler) Improve(w http.ResponseWriter, r *http.Request) {
 		Description string `json:"description"`
 		Style       string `json:"style"`
 		Language    string `json:"language"`
+		Format      string `json:"format"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -118,7 +121,7 @@ func (h *AIHandler) Improve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.aiService.ImproveDescription(r.Context(), req.Description, req.Style, req.Language)
+	result, err := h.aiService.ImproveDescription(r.Context(), req.Description, req.Style, req.Language, req.Format)
 	if err != nil {
 		writeServerError(w, "AI description improvement failed", err)
 		return
