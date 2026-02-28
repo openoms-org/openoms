@@ -32,7 +32,7 @@ type Provider struct {
 }
 
 // NewProvider creates an Erli MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
 	var creds ErliCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("erli: parse credentials: %w", err)
@@ -92,13 +92,48 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 	return &mo, nil
 }
 
-// PushOffer creates an offer on Erli from a product.
+// PushOffer creates an offer on Erli from a product and returns the new offer ID.
 func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
-	if err := p.client.Offers.Create(ctx, listingData); err != nil {
+	req := erlisdk.CreateOfferRequest{}
+
+	if product != nil {
+		req.Title = product.Name
+		req.Description = model.StripHTMLTags(product.DescriptionLong)
+		req.Price = product.Price
+		req.Stock = product.StockQuantity
+		if product.SKU != nil {
+			req.SKU = *product.SKU
+		}
+		if product.EAN != nil {
+			req.EAN = *product.EAN
+		}
+	}
+
+	// listingData overrides take precedence over product defaults.
+	if title, ok := listingData["title"].(string); ok && title != "" {
+		req.Title = title
+	}
+	if price, ok := listingData["price"].(float64); ok {
+		req.Price = price
+	}
+	switch v := listingData["stock"].(type) {
+	case int:
+		req.Stock = v
+	case float64:
+		req.Stock = int(v)
+	}
+	if catID, ok := listingData["category_id"].(string); ok {
+		req.CategoryID = catID
+	}
+
+	offerID, err := p.client.Offers.Create(ctx, req)
+	if err != nil {
 		return "", fmt.Errorf("erli: create offer: %w", err)
 	}
-	// Erli's Create endpoint does not return an ID in our simplified SDK
-	return "", nil
+	if offerID == "" {
+		return "", fmt.Errorf("erli: create offer: no offer ID returned")
+	}
+	return offerID, nil
 }
 
 // UpdateStock updates the stock quantity for an Erli offer.

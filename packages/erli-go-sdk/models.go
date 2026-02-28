@@ -40,3 +40,20 @@ type OrderItem struct {
 	Quantity int     `json:"quantity"`
 	Price    float64 `json:"unit_price"`
 }
+
+// CreateOfferRequest is the request body for creating a new Erli offer.
+type CreateOfferRequest struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description,omitempty"`
+	Price       float64  `json:"price"`
+	Stock       int      `json:"stock"`
+	SKU         string   `json:"sku,omitempty"`
+	EAN         string   `json:"ean,omitempty"`
+	CategoryID  string   `json:"category_id,omitempty"`
+	Images      []string `json:"images,omitempty"`
+}
+
+// CreateOfferResponse is the response body after creating an Erli offer.
+type CreateOfferResponse struct {
+	ID string `json:"id"`
+}

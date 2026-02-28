@@ -40,6 +40,11 @@ Thumbs.db
 # Git worktrees
 .worktrees/
 
+# Internal AI context files (not for public repo)
+.claude/context/
+.claude/agent-memory/
+.pipeline.lock
+
 # Test coverage & results
 coverage/
 **/test-results/

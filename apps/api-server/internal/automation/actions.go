@@ -8,13 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"strings"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
@@ -186,7 +185,6 @@ func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uui
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
 		"entity_id", event.EntityID,
-		"params", action.Params,
 	)
 
 	if e.orderTransitioner == nil {
@@ -238,7 +236,6 @@ func (e *DefaultActionExecutor) executeAddTag(_ context.Context, tenantID uuid.U
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
 		"entity_id", event.EntityID,
-		"params", action.Params,
 	)
 
 	if e.orderRepo == nil || e.pool == nil {
@@ -307,7 +304,6 @@ func (e *DefaultActionExecutor) executeSendEmail(_ context.Context, tenantID uui
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
 		"entity_id", event.EntityID,
-		"params", action.Params,
 	)
 
 	if e.emailSender == nil || e.orderGetter == nil {
@@ -359,7 +355,6 @@ func (e *DefaultActionExecutor) executeCreateInvoice(ctx context.Context, tenant
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
 		"entity_id", event.EntityID,
-		"params", action.Params,
 	)
 
 	if e.invoiceCreator == nil || e.orderGetter == nil {
@@ -515,12 +510,15 @@ func (e *DefaultActionExecutor) executeActivateListing(_ context.Context, tenant
 		// Update listing status to active (best-effort)
 		activeStatus := "active"
 		syncOK := "synced"
-		_ = database.WithTenant(bgCtx, e.pool, tenantID, func(tx pgx.Tx) error {
+		if err := database.WithTenant(bgCtx, e.pool, tenantID, func(tx pgx.Tx) error {
 			return e.listingDeps.ListingRepo.Update(bgCtx, tx, job.listingID, &model.UpdateProductListingRequest{
 				Status:     &activeStatus,
 				SyncStatus: &syncOK,
 			})
-		})
+		}); err != nil {
+			e.logger.Warn("activate_listing: failed to update listing status in DB",
+				"listing_id", job.listingID, "error", err)
+		}
 		activated++
 	}
 
@@ -544,7 +542,6 @@ func (e *DefaultActionExecutor) executeSendMarketplaceMessage(_ context.Context,
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
 		"entity_id", event.EntityID,
-		"params", action.Params,
 	)
 
 	if e.marketplaceMessageDeps == nil || e.marketplaceMessageDeps.Pool == nil {
@@ -616,15 +613,14 @@ func (e *DefaultActionExecutor) executeSendMarketplaceMessage(_ context.Context,
 	}
 
 	// Phase 2: Build variable data and substitute into the template body.
+	// Intentionally excluded: customer_email (PII, unnecessary in outbound marketplace messages).
+	// customer_name is retained: addressing the buyer by name is standard marketplace practice.
 	vars := map[string]string{
 		"order_id":      order.ID.String(),
 		"external_id":   *order.ExternalID,
 		"customer_name": order.CustomerName,
 		"order_total":   fmt.Sprintf("%.2f %s", order.TotalAmount, order.Currency),
 		"status":        order.Status,
-	}
-	if order.CustomerEmail != nil {
-		vars["customer_email"] = *order.CustomerEmail
 	}
 	// Include tracking number from event data if available.
 	if tn, ok := event.Data["tracking_number"].(string); ok && tn != "" {
@@ -638,7 +634,17 @@ func (e *DefaultActionExecutor) executeSendMarketplaceMessage(_ context.Context,
 		vars["old_status"] = os
 	}
 
-	messageBody := substituteVariables(tmpl.Body, vars)
+	// Only substitute variables declared in the template's Variables list.
+	// This prevents a template author from embedding undeclared {{keys}} to
+	// exfiltrate data that was not intentionally exposed (e.g., {{customer_email}}
+	// on a template that declared only ["order_id", "status"]).
+	allowedVars := make(map[string]string, len(tmpl.Variables))
+	for _, v := range tmpl.Variables {
+		if val, ok := vars[v]; ok {
+			allowedVars[v] = val
+		}
+	}
+	messageBody := substituteVariables(tmpl.Body, allowedVars)
 	if messageBody == "" {
 		return fmt.Errorf("send_marketplace_message: template body is empty after substitution")
 	}

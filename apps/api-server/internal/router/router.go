@@ -108,6 +108,7 @@ type RouterDeps struct {
 	PlanCache                  *service.PlanCache
 	Checkout                   *handler.CheckoutHandler
 	StripeWebhook              *handler.StripeWebhookHandler
+	ErliListings               *handler.ErliListingsHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -494,6 +495,13 @@ func New(deps RouterDeps) *chi.Mux {
 						if deps.WooCommerceListings != nil {
 							r.Post("/woocommerce", deps.WooCommerceListings.CreateListing)
 						}
+						if deps.ErliListings != nil {
+							r.Post("/erli", deps.ErliListings.CreateListing)
+						}
+						// TODO: The entire listings group is gated by AllegroListings != nil.
+						// Erli/WooCommerce listing creation is inaccessible if AllegroListings is nil.
+						// These routes also use AllegroListings for all providers (Erli, WooCommerce).
+						// A future refactor should register unconditionally and dispatch by provider.
 						r.Get("/{listingId}", deps.AllegroListings.GetListing)
 						r.Patch("/{listingId}", deps.AllegroListings.UpdateListing)
 						r.Delete("/{listingId}", deps.AllegroListings.DeleteListing)

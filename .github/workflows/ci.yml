@@ -32,7 +32,7 @@ jobs:
 
       - name: Auto-fix Go code
         run: |
-          for dir in apps/api-server packages/allegro-go-sdk packages/inpost-go-sdk packages/order-engine; do
+          for dir in apps/api-server packages/allegro-go-sdk packages/inpost-go-sdk packages/order-engine packages/erli-go-sdk; do
             echo "Fixing $dir..."
             golangci-lint run --fix --timeout=5m "./$dir/..." || true
           done
@@ -98,6 +98,14 @@ jobs:
           args: --timeout=5m
           only-new-issues: true
 
+      - name: Lint erli-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          working-directory: packages/erli-go-sdk
+          args: --timeout=5m
+          only-new-issues: true
+
   security:
     name: Security
     runs-on: ubuntu-latest
@@ -125,6 +133,10 @@ jobs:
 
       - name: Scan order-engine
         working-directory: packages/order-engine
+        run: govulncheck ./...
+
+      - name: Scan erli-go-sdk
+        working-directory: packages/erli-go-sdk
         run: govulncheck ./...
 
       - uses: actions/setup-node@v4
@@ -186,6 +198,10 @@ jobs:
       - name: Test api-server
         working-directory: apps/api-server
         run: go test -race -cover ./...
+
+      - name: Test erli-go-sdk
+        working-directory: packages/erli-go-sdk
+        run: go test ./...
 
       - name: Test allegro-go-sdk
         working-directory: packages/allegro-go-sdk
@@ -272,6 +288,10 @@ jobs:
 
       - name: Vet order-engine
         working-directory: packages/order-engine
+        run: go vet ./...
+
+      - name: Vet erli-go-sdk
+        working-directory: packages/erli-go-sdk
         run: go vet ./...
 
   frontend:

@@ -32,10 +32,11 @@ func (s *OfferService) UpdatePrice(ctx context.Context, offerID string, price fl
 	return nil
 }
 
-// Create creates a new offer on Erli.
-func (s *OfferService) Create(ctx context.Context, offer map[string]any) error {
-	if err := s.client.do(ctx, http.MethodPost, "/offers", offer, nil); err != nil {
-		return fmt.Errorf("erli: create offer: %w", err)
+// Create creates a new offer on Erli and returns the new offer ID.
+func (s *OfferService) Create(ctx context.Context, req CreateOfferRequest) (string, error) {
+	var resp CreateOfferResponse
+	if err := s.client.do(ctx, http.MethodPost, "/offers", req, &resp); err != nil {
+		return "", fmt.Errorf("erli: create offer: %w", err)
 	}
-	return nil
+	return resp.ID, nil
 }
