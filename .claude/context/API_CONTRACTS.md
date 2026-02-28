@@ -1,8 +1,9 @@
 # API Contracts
 Version: 4 (bump after every endpoint change)
-Updated: 2026-02-25
+Updated: 2026-02-28
 
 ## Recently Changed
+- 2026-02-28: Erli carrier integration endpoints rebuilt (internal SDK, not public API) — base URL fix, product creation via /products/{externalId}, stock/price update via PATCH /products/{externalId}, status mapping fixed (3 statuses: pending/purchased/cancelled), polling parameter (after), 202 async handling
 - 2026-02-25: `POST /v1/integrations/allegro/import-offers` — new endpoint: imports all Allegro seller offers as Product + ProductListing with SKU matching (PR #58)
 - 2026-02-25: `POST /v1/stock-sync/push/channel/{channel_id}` — new endpoint: trigger stock sync for a single channel (PR #58)
 - 2026-02-25: Message templates CRUD — `GET/POST /v1/message-templates`, `GET/PUT/DELETE /v1/message-templates/:id` (admin-guarded writes) (PR #58)

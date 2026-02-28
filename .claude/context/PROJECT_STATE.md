@@ -19,6 +19,7 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-02-28: Erli SDK rebuild — fixed base URL (→ erli.pl/svc/shop-api), endpoints (/products/{externalId}), status mapping (3 statuses), polling (purchased), pagination (after), 202 async handling, provider integration, tests; security audit 1 HIGH (provider.go sandbox flag fix required), 4 MEDIUM (deferred), CONDITIONAL PASS
 - 2026-02-25: Allegro competitive parity — offer import (SKU matching + auto-pagination), stock sync (per-channel push, error counts), message templates CRUD, send_marketplace_message action, KSeF auto-send + retry, activate_listing automation, full audit fixes (PR #58, 49 files, +5012/-139)
 - 2026-02-25: Test coverage expansion — SDK 27/27, middleware 18/18, worker 19/19, handlers all covered, 54 model validators, service-layer tests (PRs #43-56)
 - 2026-02-25: SafeGo panic recovery helper for goroutines (PR #52)
