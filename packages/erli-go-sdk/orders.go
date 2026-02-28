@@ -18,8 +18,7 @@ func (s *OrderService) List(ctx context.Context, cursor string) (*OrdersResponse
 	u, _ := url.Parse("/orders")
 	q := url.Values{"status": {"purchased"}}
 	if cursor != "" {
-		// The Erli API uses dot-notation for nested pagination params.
-		q.Set("pagination.after", cursor)
+		q.Set("after", cursor)
 	}
 	u.RawQuery = q.Encode()
 	path := u.String()
