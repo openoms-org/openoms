@@ -118,9 +118,9 @@ func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *htt
 	listingData := make(map[string]any)
 
 	if req.Description != "" {
-		listingData["description"] = req.Description
+		listingData["description"] = model.SanitizeListingHTML(req.Description)
 	} else if product.DescriptionLong != "" {
-		listingData["description"] = product.DescriptionLong
+		listingData["description"] = model.SanitizeListingHTML(product.DescriptionLong)
 	}
 	if product.DescriptionShort != "" {
 		listingData["short_description"] = product.DescriptionShort

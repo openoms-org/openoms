@@ -1,6 +1,10 @@
 package model
 
-import "github.com/microcosm-cc/bluemonday"
+import (
+	"unicode/utf8"
+
+	"github.com/microcosm-cc/bluemonday"
+)
 
 // stripPolicy is initialized once and reused (thread-safe).
 var stripPolicy = bluemonday.StrictPolicy()
@@ -24,7 +28,11 @@ const maxListingHTMLLength = 50000
 // Only allows structural tags: h1, h2, p, ul, ol, li. Strips all attributes.
 func SanitizeListingHTML(s string) string {
 	if len(s) > maxListingHTMLLength {
+		// Truncate at a valid UTF-8 rune boundary to avoid splitting multi-byte characters.
 		s = s[:maxListingHTMLLength]
+		for !utf8.ValidString(s) && len(s) > 0 {
+			s = s[:len(s)-1]
+		}
 	}
 	return listingHTMLPolicy.Sanitize(s)
 }

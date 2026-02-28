@@ -237,7 +237,7 @@ export default function ProductListingsPage() {
             <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
               <li>
                 Kliknij &quot;Wystaw na Allegro&quot; i przejdz przez
-                4-krokowy formularz.
+                5-krokowy formularz.
               </li>
               <li>
                 Wybierz kategorie Allegro (musisz dotrzec do kategorii koncowej
@@ -1422,7 +1422,7 @@ function CreateAllegroListingDialog({
       const text = product.description_long || product.description_short || "";
       setDescriptionHTML(plainTextToHTML(text));
     }
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, descriptionHTML, product]);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>

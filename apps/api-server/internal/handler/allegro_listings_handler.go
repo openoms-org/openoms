@@ -212,10 +212,17 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		slog.Warn("allegro listings: failed to resolve responsible producer, offer may fail GPSR", "error", err)
 	}
 
+	// Sanitize description_html before use (security: strip XSS before sending to Allegro)
+	var sanitizedDescHTML *string
+	if req.DescriptionHTML != nil && *req.DescriptionHTML != "" {
+		s := model.SanitizeListingHTML(*req.DescriptionHTML)
+		sanitizedDescHTML = &s
+	}
+
 	// Build temporary listing to pass description_html to the payload builder
 	var descListing *model.ProductListing
-	if req.DescriptionHTML != nil {
-		descListing = &model.ProductListing{DescriptionHTML: req.DescriptionHTML}
+	if sanitizedDescHTML != nil {
+		descListing = &model.ProductListing{DescriptionHTML: sanitizedDescHTML}
 	}
 
 	// Build and create offer on Allegro
@@ -257,9 +264,8 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		Metadata:      metadata,
 	}
 
-	if req.DescriptionHTML != nil && *req.DescriptionHTML != "" {
-		sanitized := model.SanitizeListingHTML(*req.DescriptionHTML)
-		listing.DescriptionHTML = &sanitized
+	if sanitizedDescHTML != nil {
+		listing.DescriptionHTML = sanitizedDescHTML
 	}
 
 	// Create listing record in database
@@ -729,6 +735,12 @@ func (h *AllegroListingsHandler) UpdateListing(w http.ResponseWriter, r *http.Re
 	if err := req.Validate(); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// Sanitize description_html before storing to prevent stored XSS
+	if req.DescriptionHTML != nil && *req.DescriptionHTML != "" {
+		sanitized := model.SanitizeListingHTML(*req.DescriptionHTML)
+		req.DescriptionHTML = &sanitized
 	}
 
 	var listing *model.ProductListing

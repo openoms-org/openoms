@@ -181,11 +181,19 @@ export function DescriptionEditor({
   );
 }
 
+function escapeHTML(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function plainTextToHTML(text: string): string {
   if (!text) return "";
   return text
     .split(/\n\n+/)
     .filter((p) => p.trim())
-    .map((p) => `<p>${p.replace(/\n/g, " ").trim()}</p>`)
+    .map((p) => `<p>${escapeHTML(p.replace(/\n/g, " ").trim())}</p>`)
     .join("");
 }

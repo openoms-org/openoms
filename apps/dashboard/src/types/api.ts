@@ -881,6 +881,7 @@ export interface ProductListing {
   last_synced_at?: string;
   error_message?: string;
   stock_sync_mode: 'auto' | 'manual';
+  description_html?: string;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;

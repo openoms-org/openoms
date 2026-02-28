@@ -3,6 +3,7 @@ package model
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestSanitizeListingHTML_AllowsValidTags(t *testing.T) {
@@ -41,5 +42,18 @@ func TestSanitizeListingHTML_EmptyInput(t *testing.T) {
 	result := SanitizeListingHTML("")
 	if result != "" {
 		t.Errorf("expected empty string, got %q", result)
+	}
+}
+
+func TestSanitizeListingHTML_TruncatesAtRuneBoundary(t *testing.T) {
+	// Build a string over the byte limit using multi-byte Polish characters.
+	// "ą" is 2 bytes in UTF-8. Naive byte truncation would split a character.
+	base := strings.Repeat("ą", maxListingHTMLLength) // 2x bytes
+	result := SanitizeListingHTML(base)
+	if !utf8.ValidString(result) {
+		t.Error("expected valid UTF-8 after truncation")
+	}
+	if len(result) > maxListingHTMLLength {
+		t.Errorf("expected result <= %d bytes, got %d", maxListingHTMLLength, len(result))
 	}
 }
