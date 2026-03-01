@@ -23,6 +23,7 @@ func init() {
 // ErliCredentials is the JSON structure stored in encrypted integration credentials.
 type ErliCredentials struct {
 	APIToken string `json:"api_token"`
+	BaseURL  string `json:"base_url,omitempty"`
 	Sandbox  bool   `json:"sandbox,omitempty"`
 }
 
@@ -43,10 +44,13 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 		return nil, fmt.Errorf("erli: api_token is required")
 	}
 
-	var opts []erlisdk.Option
 	if creds.Sandbox {
-		slog.Warn("erli: sandbox mode is deprecated; WithSandbox() is a no-op — use WithBaseURL with ERLI_SANDBOX_URL instead")
-		opts = append(opts, erlisdk.WithSandbox())
+		return nil, fmt.Errorf("erli: sandbox mode requires explicit base URL — set 'base_url' in credentials (contact Erli BOK for sandbox URL)")
+	}
+
+	var opts []erlisdk.Option
+	if creds.BaseURL != "" {
+		opts = append(opts, erlisdk.WithBaseURL(creds.BaseURL))
 	}
 
 	client := erlisdk.NewClient(creds.APIToken, opts...)
