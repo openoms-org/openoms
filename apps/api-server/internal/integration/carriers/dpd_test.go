@@ -48,7 +48,7 @@ func newMockDPDServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 		// Handle auth endpoint for current session-based code
 		if r.URL.Path == "/auth/login" {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"token": "test-token"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"token": "test-token"})
 			return
 		}
 		handler(w, r)
@@ -90,7 +90,7 @@ func TestDPD_CreateShipment_MapsReceiverCorrectly(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","sessionId":42,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"0000012345678"}]}]}`))
+		_, _ = w.Write([]byte(`{"status":"OK","sessionId":42,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"0000012345678"}]}]}`))
 	})
 	defer srv.Close()
 
@@ -137,7 +137,7 @@ func TestDPD_CreateShipment_CODMappedCorrectly(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"WB001"}]}]}`))
+		_, _ = w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"WB001"}]}]}`))
 	})
 	defer srv.Close()
 
@@ -196,7 +196,7 @@ func TestDPD_CreateShipment_InsuranceMappedCorrectly(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"WB001"}]}]}`))
+		_, _ = w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"WB001"}]}]}`))
 	})
 	defer srv.Close()
 
@@ -240,7 +240,7 @@ func TestDPD_CreateShipment_DefaultsCODCurrency(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"WB001"}]}]}`))
+		_, _ = w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[{"statusInfo":{"status":"OK"},"parcels":[{"status":"OK","reference":"PRC-001","waybill":"WB001"}]}]}`))
 	})
 	defer srv.Close()
 
@@ -277,10 +277,10 @@ func TestDPD_CreateShipment_DefaultsCODCurrency(t *testing.T) {
 // --- GetLabel ---
 
 func TestDPD_GetLabel_ReturnsDecodedBytes(t *testing.T) {
-	srv := newMockDPDServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newMockDPDServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// base64 of "%PDF"
-		w.Write([]byte(`{"status":"OK","documentData":"JVBERg=="}`))
+		_, _ = w.Write([]byte(`{"status":"OK","documentData":"JVBERg=="}`))
 	})
 	defer srv.Close()
 

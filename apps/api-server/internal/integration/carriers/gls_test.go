@@ -268,7 +268,7 @@ func TestGLS_GetLabel_ReturnsErrorNotSupported(t *testing.T) {
 // --- GetTracking ---
 
 func TestGLS_GetTracking_MapsEventsCorrectly(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"events":[
 			{"status":"PREADVICE","location":"Krakow","details":"Registered"},
