@@ -792,7 +792,6 @@ func (h *SettingsHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]string{"message": "onboarding completed"})
 }
 
-
 func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
