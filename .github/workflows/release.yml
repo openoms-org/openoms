@@ -143,6 +143,8 @@ jobs:
   notify-deploy:
     name: Trigger Deploy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [build-api, build-dashboard, build-migrate, scan-images]
     steps:
       - name: Dispatch to deploy repo
@@ -160,6 +162,8 @@ jobs:
   notify-discord:
     name: Discord Notification
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [build-api, build-dashboard, build-migrate]
     steps:
       - uses: actions/checkout@v4
