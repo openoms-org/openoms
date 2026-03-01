@@ -410,7 +410,7 @@ function FedExFields({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="FEDEX_INTERNATIONAL_PRIORITY">FedEx International Priority</SelectItem>
-            <SelectItem value="FEDEX_INTERNATIONAL_ECONOMY">International Economy</SelectItem>
+            <SelectItem value="FEDEX_INTERNATIONAL_ECONOMY">FedEx International Economy</SelectItem>
           </SelectContent>
         </Select>
       </div>
