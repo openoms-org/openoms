@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	glssdk "github.com/openoms-org/openoms/packages/gls-go-sdk"
@@ -147,21 +146,46 @@ func TestGLS_CreateShipment_CODUsesServiceStructure(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	// COD should be sent as a structured Service with amount/currency, not a flat string
-	services, ok := receivedBody["Services"]
+	// COD should be sent as a structured Service section, not a flat string array
+	svcSection, ok := receivedBody["Service"]
 	if !ok {
-		t.Error("request should contain 'Services' field for COD")
+		t.Error("request should contain 'Service' field for COD")
 		return
 	}
 
-	// The services should NOT be a flat string array like ["COD"]
-	// It should be a structured array with serviceName and amount
-	svcArr, isArr := services.([]any)
-	if isArr && len(svcArr) > 0 {
-		firstSvc, isStr := svcArr[0].(string)
-		if isStr && firstSvc == "COD" {
-			t.Error("COD should be a structured Service with amount/currency, not flat string 'COD'")
-		}
+	// Service should be a structured section with nested Service array
+	svcMap, isMap := svcSection.(map[string]any)
+	if !isMap {
+		t.Errorf("Service should be a structured section, got %T", svcSection)
+		return
+	}
+	innerServices, ok := svcMap["Service"]
+	if !ok {
+		t.Error("Service section should contain inner 'Service' array")
+		return
+	}
+	svcArr, isArr := innerServices.([]any)
+	if !isArr || len(svcArr) == 0 {
+		t.Error("Service array should contain at least one service entry")
+		return
+	}
+
+	// Verify the service has structured COD with amount/currency
+	firstSvc, isFirstMap := svcArr[0].(map[string]any)
+	if !isFirstMap {
+		t.Errorf("first service should be a map, got %T", svcArr[0])
+		return
+	}
+	if firstSvc["ServiceName"] != "service_cash" {
+		t.Errorf("ServiceName = %v, want service_cash", firstSvc["ServiceName"])
+	}
+	cash, ok := firstSvc["Cash"].(map[string]any)
+	if !ok {
+		t.Error("COD service should have structured 'Cash' field")
+		return
+	}
+	if cash["Amount"] != 150.0 {
+		t.Errorf("Cash.Amount = %v, want 150.0", cash["Amount"])
 	}
 }
 
@@ -192,9 +216,9 @@ func TestGLS_CreateShipment_PropagatesServiceType(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	svcType, _ := receivedBody["ServiceType"].(string)
-	if svcType != "express_10" {
-		t.Errorf("ServiceType = %q, want %q", svcType, "express_10")
+	product, _ := receivedBody["Product"].(string)
+	if product != "EXPRESS_10" {
+		t.Errorf("Product = %q, want %q", product, "EXPRESS_10")
 	}
 }
 
@@ -222,33 +246,22 @@ func TestGLS_CreateShipment_DefaultsServiceType(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	svcType, _ := receivedBody["ServiceType"].(string)
-	if svcType == "" {
-		t.Error("ServiceType should default when empty, not be blank")
+	product, _ := receivedBody["Product"].(string)
+	if product != "PARCEL" {
+		t.Errorf("Product = %q, want %q (default)", product, "PARCEL")
 	}
 }
 
 // --- GetLabel ---
 
-func TestGLS_GetLabel_ReturnsDecodedPDFBytes(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		// base64 of "%PDF"
-		w.Write([]byte(`{"labelData":"JVBERg==","labelFormat":"PDF"}`))
-	}))
-	defer srv.Close()
+func TestGLS_GetLabel_ReturnsErrorNotSupported(t *testing.T) {
+	// GLS ShipIT API returns labels inline during shipment creation
+	// (CreatedShipment.PrintData[].Data). Separate label retrieval is not supported.
+	provider := newTestGLSProvider(t, "http://unused")
 
-	provider := newTestGLSProvider(t, srv.URL)
-
-	data, err := provider.GetLabel(context.Background(), "EXT-001", "pdf")
-	if err != nil {
-		t.Fatalf("GetLabel() error: %v", err)
-	}
-	if len(data) == 0 {
-		t.Error("label data should not be empty")
-	}
-	if !strings.HasPrefix(string(data), "%PDF") {
-		t.Errorf("label should start with %%PDF, got %q", string(data)[:min(len(data), 10)])
+	_, err := provider.GetLabel(context.Background(), "EXT-001", "pdf")
+	if err == nil {
+		t.Error("GetLabel() should return error — GLS labels are embedded in create response")
 	}
 }
 

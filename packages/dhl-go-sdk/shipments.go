@@ -32,6 +32,7 @@ type soapShipment struct {
 	Content     string      `xml:"content,omitempty"`
 	ShipperRef  string      `xml:"shipperAccountNumber,omitempty"`
 	COD         *soapCOD    `xml:"cod,omitempty"`
+	Insurance   *soapCOD    `xml:"insurance,omitempty"`
 }
 
 type soapParty struct {
@@ -110,6 +111,13 @@ func (s *ShipmentService) Create(ctx context.Context, req *CreateShipmentRequest
 		shipment.COD = &soapCOD{
 			Amount:   req.COD.Amount,
 			Currency: req.COD.Currency,
+		}
+	}
+
+	if req.Insurance != nil {
+		shipment.Insurance = &soapCOD{
+			Amount:   req.Insurance.Amount,
+			Currency: req.Insurance.Currency,
 		}
 	}
 

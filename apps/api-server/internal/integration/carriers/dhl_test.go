@@ -3,10 +3,12 @@ package carriers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	dhlsdk "github.com/openoms-org/openoms/packages/dhl-go-sdk"
@@ -19,11 +21,11 @@ import (
 //
 // These tests verify the DHL integration provider correctly:
 //   - Creates providers via factory with proper credentials
-//   - Maps CarrierShipmentRequest → DHL SDK request (all fields)
-//   - Handles COD and Insurance
+//   - Maps CarrierShipmentRequest → DHL SOAP request (all fields)
+//   - Handles COD and Insurance in SOAP XML
 //   - Defaults service type to "AH" (DHL Parcel domestic)
-//   - Populates Shipper from account number
-//   - Returns ExternalID, TrackingNumber, Status from response
+//   - Populates ShipperAccountNumber from account number
+//   - Returns ExternalID, TrackingNumber, Status from SOAP response
 // =============================================================================
 
 func newTestDHLProvider(t *testing.T, serverURL string) *DHLProvider {
@@ -38,6 +40,52 @@ func newTestDHLProvider(t *testing.T, serverURL string) *DHLProvider {
 		client: client,
 		logger: slog.Default().With("provider", "dhl-test"),
 	}
+}
+
+// SOAP XML response helpers
+
+func dhlCreateSOAPResponse(shipmentID, tracking, status string) string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<Envelope>
+  <Body>
+    <createShipmentsResponse>
+      <shipmentId>%s</shipmentId>
+      <trackingNumber>%s</trackingNumber>
+      <status>%s</status>
+    </createShipmentsResponse>
+  </Body>
+</Envelope>`, shipmentID, tracking, status)
+}
+
+func dhlLabelsSOAPResponse(labelData string) string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<Envelope>
+  <Body>
+    <getLabelsResponse>
+      <labelData>%s</labelData>
+    </getLabelsResponse>
+  </Body>
+</Envelope>`, labelData)
+}
+
+func dhlTrackingSOAPResponse(events string) string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<Envelope>
+  <Body>
+    <getTrackAndTraceInfoResponse>
+      <events>%s</events>
+    </getTrackAndTraceInfoResponse>
+  </Body>
+</Envelope>`, events)
+}
+
+func dhlEmptySOAPResponse() string {
+	return `<?xml version="1.0" encoding="UTF-8"?>
+<Envelope>
+  <Body>
+    <deleteShipmentResponse/>
+  </Body>
+</Envelope>`
 }
 
 // --- Factory Registration ---
@@ -68,18 +116,14 @@ func TestDHL_FactoryRegistration_InvalidCredentials(t *testing.T) {
 // --- CreateShipment ---
 
 func TestDHL_CreateShipment_MapsAllFields(t *testing.T) {
-	var receivedBody map[string]any
+	var requestXML string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(body, &receivedBody)
+		requestXML = string(body)
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
-			"shipmentId": "SHP-001",
-			"trackingNumber": "1234567890",
-			"status": "CREATED"
-		}`))
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, dhlCreateSOAPResponse("SHP-001", "1234567890", "CREATED"))
 	}))
 	defer srv.Close()
 
@@ -121,37 +165,32 @@ func TestDHL_CreateShipment_MapsAllFields(t *testing.T) {
 		t.Errorf("Status = %q, want CREATED", resp.Status)
 	}
 
-	// Verify receiver was mapped
-	receiver, _ := receivedBody["receiver"].(map[string]any)
-	if receiver == nil {
-		t.Fatal("request should contain 'receiver' field")
+	// Verify receiver was mapped into SOAP XML
+	if !strings.Contains(requestXML, "<name>Jan Kowalski</name>") {
+		t.Error("SOAP request should contain receiver name")
 	}
-	if receiver["name"] != "Jan Kowalski" {
-		t.Errorf("receiver.name = %v, want Jan Kowalski", receiver["name"])
+	if !strings.Contains(requestXML, "<city>Warszawa</city>") {
+		t.Error("SOAP request should contain receiver city")
 	}
-	if receiver["city"] != "Warszawa" {
-		t.Errorf("receiver.city = %v, want Warszawa", receiver["city"])
+	if !strings.Contains(requestXML, "<postalCode>00-001</postalCode>") {
+		t.Error("SOAP request should contain receiver postalCode")
 	}
 
 	// Verify piece dimensions
-	piece, _ := receivedBody["piece"].(map[string]any)
-	if piece == nil {
-		t.Fatal("request should contain 'piece' field")
-	}
-	if piece["weight"] != 2.5 {
-		t.Errorf("piece.weight = %v, want 2.5", piece["weight"])
+	if !strings.Contains(requestXML, "<weight>2.5</weight>") {
+		t.Error("SOAP request should contain piece weight")
 	}
 }
 
 func TestDHL_CreateShipment_DefaultsServiceTypeToAH(t *testing.T) {
-	var receivedBody map[string]any
+	var requestXML string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(body, &receivedBody)
+		requestXML = string(body)
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"shipmentId":"S","trackingNumber":"T","status":"CREATED"}`))
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
 	}))
 	defer srv.Close()
 
@@ -170,21 +209,20 @@ func TestDHL_CreateShipment_DefaultsServiceTypeToAH(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	svcType, _ := receivedBody["serviceType"].(string)
-	if svcType != "AH" {
-		t.Errorf("serviceType = %q, want AH (default)", svcType)
+	if !strings.Contains(requestXML, "<serviceType>AH</serviceType>") {
+		t.Error("SOAP request should contain serviceType=AH as default")
 	}
 }
 
 func TestDHL_CreateShipment_CODMappedCorrectly(t *testing.T) {
-	var receivedBody map[string]any
+	var requestXML string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(body, &receivedBody)
+		requestXML = string(body)
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"shipmentId":"S","trackingNumber":"T","status":"CREATED"}`))
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
 	}))
 	defer srv.Close()
 
@@ -204,37 +242,26 @@ func TestDHL_CreateShipment_CODMappedCorrectly(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	cod, ok := receivedBody["cod"]
-	if !ok || cod == nil {
-		t.Error("request should contain 'cod' when CODAmount > 0")
-		return
+	if !strings.Contains(requestXML, "<cod>") {
+		t.Error("SOAP request should contain <cod> element when CODAmount > 0")
 	}
-
-	codMap, isMap := cod.(map[string]any)
-	if !isMap {
-		t.Errorf("cod should be a map, got %T", cod)
-		return
+	if !strings.Contains(requestXML, "<amount>200</amount>") {
+		t.Error("SOAP request should contain COD amount")
 	}
-
-	amount, _ := codMap["amount"].(float64)
-	if amount != 200.0 {
-		t.Errorf("cod.amount = %f, want 200.0", amount)
-	}
-	currency, _ := codMap["currency"].(string)
-	if currency != "PLN" {
-		t.Errorf("cod.currency = %q, want PLN", currency)
+	if !strings.Contains(requestXML, "<currency>PLN</currency>") {
+		t.Error("SOAP request should contain COD currency")
 	}
 }
 
 func TestDHL_CreateShipment_InsuranceMappedCorrectly(t *testing.T) {
-	var receivedBody map[string]any
+	var requestXML string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(body, &receivedBody)
+		requestXML = string(body)
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"shipmentId":"S","trackingNumber":"T","status":"CREATED"}`))
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
 	}))
 	defer srv.Close()
 
@@ -253,32 +280,23 @@ func TestDHL_CreateShipment_InsuranceMappedCorrectly(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	ins, ok := receivedBody["insurance"]
-	if !ok || ins == nil {
-		t.Error("request should contain 'insurance' when InsuredValue > 0")
-		return
+	if !strings.Contains(requestXML, "<insurance>") {
+		t.Error("SOAP request should contain <insurance> element when InsuredValue > 0")
 	}
-
-	insMap, isMap := ins.(map[string]any)
-	if !isMap {
-		return
-	}
-
-	amount, _ := insMap["amount"].(float64)
-	if amount != 5000.0 {
-		t.Errorf("insurance.amount = %f, want 5000.0", amount)
+	if !strings.Contains(requestXML, "<amount>5000</amount>") {
+		t.Error("SOAP request should contain insurance amount")
 	}
 }
 
 func TestDHL_CreateShipment_AccountNumberInRequest(t *testing.T) {
-	var receivedBody map[string]any
+	var requestXML string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
-		_ = json.Unmarshal(body, &receivedBody)
+		requestXML = string(body)
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"shipmentId":"S","trackingNumber":"T","status":"CREATED"}`))
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
 	}))
 	defer srv.Close()
 
@@ -296,9 +314,8 @@ func TestDHL_CreateShipment_AccountNumberInRequest(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	acct, _ := receivedBody["shipperAccount"].(string)
-	if acct != "ACC123" {
-		t.Errorf("shipperAccount = %q, want ACC123", acct)
+	if !strings.Contains(requestXML, "<shipperAccountNumber>ACC123</shipperAccountNumber>") {
+		t.Error("SOAP request should contain shipperAccountNumber=ACC123")
 	}
 }
 
@@ -306,9 +323,9 @@ func TestDHL_CreateShipment_AccountNumberInRequest(t *testing.T) {
 
 func TestDHL_GetLabel_ReturnsDecodedPDF(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "text/xml")
 		// base64 of "%PDF"
-		w.Write([]byte(`{"labelData":"JVBERg==","labelFormat":"PDF"}`))
+		fmt.Fprint(w, dhlLabelsSOAPResponse("JVBERg=="))
 	}))
 	defer srv.Close()
 
@@ -327,15 +344,11 @@ func TestDHL_GetLabel_ReturnsDecodedPDF(t *testing.T) {
 
 func TestDHL_GetTracking_MapsEventsCorrectly(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
-			"shipmentId": "SHP-001",
-			"trackingNumber": "1234567890",
-			"events": [
-				{"status":"PICKED_UP","location":"Warszawa","details":"Collected"},
-				{"status":"DELIVERED","location":"Krakow","details":"Delivered"}
-			]
-		}`))
+		w.Header().Set("Content-Type", "text/xml")
+		events := `
+        <event><status>PICKED_UP</status><location>Warszawa</location><details>Collected</details></event>
+        <event><status>DELIVERED</status><location>Krakow</location><details>Delivered</details></event>`
+		fmt.Fprint(w, dhlTrackingSOAPResponse(events))
 	}))
 	defer srv.Close()
 
@@ -362,11 +375,12 @@ func TestDHL_GetTracking_MapsEventsCorrectly(t *testing.T) {
 // --- CancelShipment ---
 
 func TestDHL_CancelShipment_CallsSDK(t *testing.T) {
-	var gotPath string
+	var gotRequest bool
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		w.WriteHeader(http.StatusNoContent)
+		gotRequest = true
+		w.Header().Set("Content-Type", "text/xml")
+		fmt.Fprint(w, dhlEmptySOAPResponse())
 	}))
 	defer srv.Close()
 
@@ -377,7 +391,7 @@ func TestDHL_CancelShipment_CallsSDK(t *testing.T) {
 		t.Fatalf("CancelShipment() error: %v", err)
 	}
 
-	if gotPath == "" {
+	if !gotRequest {
 		t.Error("expected a request to be made for cancel")
 	}
 }
