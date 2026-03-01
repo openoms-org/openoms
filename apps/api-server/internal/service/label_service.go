@@ -249,7 +249,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 	case "png":
 		ext = "png"
 	default:
-		return nil, fmt.Errorf("unsupported label format: %s", req.LabelFormat)
+		return nil, fmt.Errorf("unsupported label format")
 	}
 	labelDir := filepath.Join(s.uploadDir, tenantID.String())
 	if err := os.MkdirAll(labelDir, 0755); err != nil {
