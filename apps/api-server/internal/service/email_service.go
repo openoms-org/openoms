@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"log/slog"
 	"net/smtp"
 	"slices"
@@ -120,7 +121,7 @@ func (s *EmailService) SendTestEmail(ctx context.Context, settings model.EmailSe
 
 func renderEmailTemplate(order *model.Order, newStatus string, companyName string, statusCfg *model.OrderStatusConfig) (string, string) {
 	orderShort := order.ID.String()[:8]
-	customerName := order.CustomerName
+	customerName := html.EscapeString(order.CustomerName)
 
 	// Dynamic label lookup
 	statusLabel := newStatus
@@ -131,6 +132,10 @@ func renderEmailTemplate(order *model.Order, newStatus string, companyName strin
 	}
 
 	subject := fmt.Sprintf("Zamowienie #%s — %s", orderShort, statusLabel)
+
+	// Escape all tenant-controlled values before HTML interpolation
+	statusLabel = html.EscapeString(statusLabel)
+	companyName = html.EscapeString(companyName)
 
 	// Dynamic color lookup
 	statusColor := "#6b7280" // default gray
@@ -153,7 +158,7 @@ func renderEmailTemplate(order *model.Order, newStatus string, companyName strin
 		extraInfo = `<p style="margin-top:15px;padding:12px;background:#fffbeb;border-radius:6px;">Zwrot srodkow zostal zainicjowany. Pieniadze pojawia sie na Twoim koncie w ciagu kilku dni roboczych.</p>`
 	}
 
-	totalAmount := fmt.Sprintf("%.2f %s", order.TotalAmount, order.Currency)
+	totalAmount := fmt.Sprintf("%.2f %s", order.TotalAmount, html.EscapeString(order.Currency))
 
 	body := fmt.Sprintf(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -190,9 +195,10 @@ func sendMail(cfg model.EmailSettings, to, subject, htmlBody string) error {
 	fromName := sanitizer.Replace(cfg.FromName)
 	subject = sanitizer.Replace(subject)
 
-	from := cfg.FromEmail
+	fromEmail := sanitizer.Replace(cfg.FromEmail)
+	from := fromEmail
 	if fromName != "" {
-		from = fmt.Sprintf("%s <%s>", fromName, cfg.FromEmail)
+		from = fmt.Sprintf("%s <%s>", fromName, fromEmail)
 	}
 
 	headers := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n",
@@ -206,5 +212,5 @@ func sendMail(cfg model.EmailSettings, to, subject, htmlBody string) error {
 		auth = smtp.PlainAuth("", cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPHost)
 	}
 
-	return smtp.SendMail(addr, auth, cfg.FromEmail, []string{to}, msg)
+	return smtp.SendMail(addr, auth, fromEmail, []string{to}, msg)
 }
