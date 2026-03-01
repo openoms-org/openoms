@@ -52,7 +52,13 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 func (p *GLSProvider) ProviderName() string { return "gls" }
 
 func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
+	svcType := req.ServiceType
+	if svcType == "" {
+		svcType = "standard"
+	}
+
 	glsReq := &glssdk.CreateParcelRequest{
+		ServiceType: svcType,
 		Consignee: glssdk.Party{
 			Name:        req.Receiver.Name,
 			Email:       req.Receiver.Email,

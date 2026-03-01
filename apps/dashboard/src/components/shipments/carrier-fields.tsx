@@ -335,6 +335,23 @@ function GLSFields({
 }) {
   return (
     <>
+      <div className="space-y-2">
+        <Label>Typ usługi</Label>
+        <Select
+          value={(values.service_type as string) ?? "standard"}
+          onValueChange={(v) => onChange("service_type", v)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">GLS Standard</SelectItem>
+            <SelectItem value="express_10">GLS Express 10:00</SelectItem>
+            <SelectItem value="express_12">GLS Express 12:00</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <ParcelDimensionFields values={values} onChange={onChange} />
       <CODAndInsuranceFields values={values} onChange={onChange} />
     </>
@@ -361,7 +378,7 @@ function UPSFields({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="11">UPS Standard</SelectItem>
-            <SelectItem value="65">UPS Express Saver</SelectItem>
+            <SelectItem value="65">UPS Worldwide Saver</SelectItem>
             <SelectItem value="07">UPS Express</SelectItem>
           </SelectContent>
         </Select>
@@ -393,8 +410,7 @@ function FedExFields({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="FEDEX_INTERNATIONAL_PRIORITY">FedEx International Priority</SelectItem>
-            <SelectItem value="INTERNATIONAL_ECONOMY">FedEx International Economy</SelectItem>
-            <SelectItem value="FEDEX_GROUND">FedEx Ground</SelectItem>
+            <SelectItem value="FEDEX_INTERNATIONAL_ECONOMY">FedEx International Economy</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -426,6 +442,9 @@ function PocztaPolskaFields({
           <SelectContent>
             <SelectItem value="POCZTEX_KURIER_48">Pocztex Kurier 48h</SelectItem>
             <SelectItem value="POCZTEX_KURIER_24">Pocztex Kurier 24h</SelectItem>
+            <SelectItem value="POCZTEX_2_0">Pocztex 2.0</SelectItem>
+            <SelectItem value="PACZKA_POCZTOWA">Paczka Pocztowa</SelectItem>
+            <SelectItem value="EMS">EMS (Express Mail Service)</SelectItem>
           </SelectContent>
         </Select>
       </div>

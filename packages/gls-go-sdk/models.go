@@ -4,11 +4,12 @@ import "time"
 
 // CreateParcelRequest is the payload sent to create a new GLS parcel.
 type CreateParcelRequest struct {
-	Shipper   Party    `json:"shipper"`
-	Consignee Party    `json:"consignee"`
-	Parcels   []Parcel `json:"parcels"`
-	Services  []string `json:"services,omitempty"`
-	Reference string   `json:"reference,omitempty"`
+	Shipper     Party    `json:"shipper"`
+	Consignee   Party    `json:"consignee"`
+	Parcels     []Parcel `json:"parcels"`
+	ServiceType string   `json:"serviceType,omitempty"` // e.g. "standard", "express_10", "express_12"
+	Services    []string `json:"services,omitempty"`
+	Reference   string   `json:"reference,omitempty"`
 }
 
 // Party contains address details for shipper or consignee.
