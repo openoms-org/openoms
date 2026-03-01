@@ -72,7 +72,7 @@ func TestGLS_CreateShipment_MapsReceiverCorrectly(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -120,7 +120,7 @@ func TestGLS_CreateShipment_CODUsesServiceStructure(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -197,7 +197,7 @@ func TestGLS_CreateShipment_PropagatesServiceType(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -229,7 +229,7 @@ func TestGLS_CreateShipment_DefaultsServiceType(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		_ = json.Unmarshal(body, &receivedBody)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -270,7 +270,7 @@ func TestGLS_GetLabel_ReturnsErrorNotSupported(t *testing.T) {
 func TestGLS_GetTracking_MapsEventsCorrectly(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"events":[
+		_, _ = w.Write([]byte(`{"events":[
 			{"status":"PREADVICE","location":"Krakow","details":"Registered"},
 			{"status":"DELIVERED","location":"Warszawa","details":"Delivered"}
 		]}`))
