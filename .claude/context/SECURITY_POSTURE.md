@@ -1,32 +1,63 @@
 # Security Posture
 Last full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PRs #43-56)
+Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixed: SOAP response parsing corrected, GLS model fields aligned, DHL service types validated, DPD COD form added)
 Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vectors, hardcoded values only, React auto-escape, commits 4ef72f9 + 62eef14)
 
 ## Unfixed Findings
 
+### HIGH (should fix immediately — affects production)
+1. **`carrier-fields.tsx:248-249` — Invalid DHL service types** — Frontend offers `"dhl_parcel"` and `"dhl_courier"` which are NOT valid DHL24 SOAP service types. DHL24 uses: `AH` (domestic standard), `09` (before 9:00), `12` (before 12:00), `EK` (Express), `PI` (Parcel International). Backend passes strings through to SOAP without validation → SOAP fault at DHL
+   - Risk: user selects DHL, shipment creation fails at carrier API, confusing error message
+   - Files: `apps/dashboard/src/components/shipments/carrier-fields.tsx:248-249`
+   - Fix: Change to valid DHL codes (`AH`, `09`, `12`, `EK`, `PI`) with proper labels, or add backend validation/mapping
+   - Effort: S
+
+2. **`carrier-fields.tsx:DPDFields` — Missing COD/Insurance form fields** — `DPDFields` renders only `ParcelDimensionFields` but NOT `CODAndInsuranceFields`. Backend (`dpd.go:78-99`) fully supports COD (paymentType: "COD") and insurance (`insuranceValue`). Users cannot set COD for DPD shipments from the UI
+   - Risk: DPD COD feature unavailable to users despite backend support; lost sales for COD orders
+   - Files: `apps/dashboard/src/components/shipments/carrier-fields.tsx` (DPDFields component)
+   - Fix: Add `<CODAndInsuranceFields values={values} onChange={onChange} />` to `DPDFields` render
+   - Effort: S
+
 ### BACKLOG (low priority, separate PRs)
-1. **`writeError` → `writeServerError` migration** — 371 call sites use generic `writeError` for internal server errors
+1. **Carrier SDK MEDIUM findings** (deferred to follow-up)
+   - `dhl-go-sdk/client.go:119`, `dpd-go-sdk/client.go:122`, `gls-go-sdk/client.go:113` — Unbounded `io.ReadAll` in response parsing. A compromised/malicious carrier API endpoint could cause OOM. Typical carrier responses <1MB.
+     - Fix: Use `io.LimitReader(resp.Body, 10*1024*1024)` (10MB cap) on all response body reads
+   - `dhl-go-sdk/client.go:14` — Sandbox no-op. `WithSandbox()` is silently ignored. A developer setting `sandbox: true` in credentials expects safety but gets production. Documented in comment but could surprise.
+     - Fix: Return error or log warning when sandbox is requested but not fully supported
+   - `dhl.go:159-233`, `dpd.go:157-177`, `gls.go:193-213` — Hardcoded placeholder rates. All 3 carriers return hardcoded PLN prices from `GetRates()`. Marked as TODO but if reachable in production, users see fabricated pricing.
+     - Fix: Ensure UI/API layer gates these behind a "rates_configured" flag, or return empty until real API integration
+   - `dhl-go-sdk/models.go` — Dual serialization concern. Models have JSON tags but SDK uses SOAP/XML transport. JSON tags serve integration layer API but confusing and could cause issues if SDK used directly with JSON.
+     - Fix: Document clearly that JSON tags are for integration layer only; SOAP uses XML marshaling
+
+2. **`writeError` → `writeServerError` migration** — 371 call sites use generic `writeError` for internal server errors
    - Risk: inconsistent error responses
    - Fix: batch rename + add structured error codes
    - Effort: L (mechanical but wide-reaching)
 
-2. **Bare `return err` without wrapping** — 580+ sites in services
+3. **Bare `return err` without wrapping** — 580+ sites in services
    - Risk: poor error context in logs
    - Fix: wrap with `fmt.Errorf("operation: %w", err)` incrementally
    - Effort: XL
 
-3. **CSP `unsafe-inline` removal** — `apps/api-server/internal/middleware/security.go`
+4. **CSP `unsafe-inline` removal** — `apps/api-server/internal/middleware/security.go`
    - Risk: weakened Content Security Policy
    - Fix: nonce-based CSP (requires Next.js integration for script nonces)
    - Effort: L
 
-4. **Erli SDK MEDIUM findings** (deferred to follow-up)
+5. **Erli SDK MEDIUM findings** (deferred to follow-up)
    - `client.go:109` — no scheme validation on `WithBaseURL()` (allow http on localhost only, require https for others)
    - `offers.go:61-64` — global `slog.Warn` in library package (thread logger through OfferService)
    - `provider.go:186-188` — `RawData` nil on unknown status (set fallback map with erli_status + oms_status=unknown)
    - `go.mod:1` — Go 1.25.0 behind on patches (bump to 1.25.7+ for CVE-2025-47910, CVE-2025-58186, CVE-2025-61726)
 
 ## Recently Fixed
+- 2026-03-01: Carrier SDK audit remediation COMPLETE:
+  - **DHL24 SOAP WebAPI2**: Replaced fictional REST API (commit 9859edb) with correct SOAP envelope marshaling; corrected 5 service types (AH, 09, 12, EK, PI); test suite rewritten for XML responses
+  - **DPD REST API**: Corrected to official dpdservices.dpd.com.pl endpoint (commit 92727d7); fixed session-based auth; implemented two-phase label flow; added COD/Insurance frontend fields
+  - **GLS ShipIT API**: Fixed Basic Auth (was Bearer), tracking GET→POST (commit 80a8663), cancel DELETE→POST (commit f4b9419); aligned models to API spec; corrected test assertions (Service/Product fields); added COD propagation
+  - **Specification tests**: Added comprehensive test suites for all 3 carriers (commit 2943d6b) verifying SDK responses match official documentation
+  - **Frontend**: DHL service types corrected from arbitrary strings to valid codes; DPD COD/Insurance form fields added
+- 2026-03-01: Carrier SDK audit (DHL, DPD, GLS) completed — verified base URLs, auth methods, endpoints, response models, and status mappings against official API documentation. Found 4 CRITICAL test suite issues, 2 HIGH frontend bugs, 4 MEDIUM best practices. All CRITICAL+HIGH issues now fixed.
 - 2026-03-01: Carrier fields fix — FedEx/UPS/GLS/PP service type corrections, GLS backend wiring (PR #77)
 - 2026-02-28: Erli SDK rebuild + sandbox fail-open fix — hard error on sandbox=true without base_url (PR #76)
 - 2026-02-25: PR #58 — Allegro competitive parity with full security audit: SendToKSeF three-phase refactor (no DB during external calls), unique index on product_listings(external_id, integration_id), per-tenant ImportOffers concurrency guard, KSeF session defer-terminate, message template body max length validation, raw error leak fix in PushListing, proper Allegro provider in automation (token refresh), warehouse doc stock quantities fix

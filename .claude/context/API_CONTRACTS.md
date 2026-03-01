@@ -1,8 +1,9 @@
 # API Contracts
-Version: 4 (bump after every endpoint change)
-Updated: 2026-02-28
+Version: 5 (bump after every endpoint change)
+Updated: 2026-03-01
 
 ## Recently Changed
+- 2026-03-01: Carrier SDK audit completed (internal SDKs, not public API) — DHL24 migrated to SOAP WebAPI2 (dhl24.com.pl/webapi2), DPD aligned to official REST API (dpdservices.dpd.com.pl), GLS verified against ShipIT REST v3.4.19. All base URLs, auth methods, endpoints, and response models verified against official documentation. Fix PR pending.
 - 2026-02-28: Erli carrier integration endpoints rebuilt (internal SDK, not public API) — base URL fix, product creation via /products/{externalId}, stock/price update via PATCH /products/{externalId}, status mapping fixed (3 statuses: pending/purchased/cancelled), polling parameter (after), 202 async handling
 - 2026-02-25: `POST /v1/integrations/allegro/import-offers` — new endpoint: imports all Allegro seller offers as Product + ProductListing with SKU matching (PR #58)
 - 2026-02-25: `POST /v1/stock-sync/push/channel/{channel_id}` — new endpoint: trigger stock sync for a single channel (PR #58)

@@ -121,3 +121,35 @@ Append-only log. Each entry is immutable once written.
 - **Files:** `packages/erli-go-sdk/client.go` (base URL), `offers.go` (endpoints), `statusmap.go` (3 statuses), `orders.go` (polling), `provider.go` (integration), `*_test.go` (updated mocks)
 - **Security audit findings:** 1 HIGH (provider.go:47-49 — sandbox flag silent fail-open to production), 4 MEDIUM (deferred to follow-up: scheme validation, global logger, nil RawData fallback, Go 1.25.0 patches)
 - **Consequences:** All Erli integrations fixed. 202 handling requires client code to detect async creation. Sandbox tenants must set `ERLI_SANDBOX_URL` or use `WithBaseURL()`; without it, sandbox flag is now a hard error (pending security fix merge).
+
+## ADR-017: DHL24 SOAP Integration (WebAPI2)
+- **Date:** 2026-03-01
+- **Context:** Initial DHL SDK used fictional REST API endpoints. Official DHL Parcel Poland provides WebAPI2 (SOAP). Audit verified against https://dhl24.com.pl/en/webapi2/doc.html.
+- **Decision:** Full SOAP integration via `packages/dhl-go-sdk/`: (1) base URL `dhl24.com.pl/webapi2` (prod) + `dhl24-test.dpd.com.pl/webapi2` (DHL has no official sandbox, test via credentials), (2) Auth via `AuthData` struct in SOAP body (username + password), (3) SOAP methods: createShipments, getLabels, getTrackAndTraceInfo, deleteShipment (all verified in WSDL), (4) Service type "AH" (domestic standard) or "09"/"12"/"EK"/"PI" for speed/express variants, (5) no sandbox URL (hard error if sandbox flag requested without base_url override).
+- **Files:** `packages/dhl-go-sdk/client.go` (SOAP transport, auth), `shipments.go` (SOAP methods), `models.go` (SOAP request/response types with XML tags), `statusmap.go` (8 DHL24 event types), `provider.go` (integration layer), `*_test.go` (SOAP XML mocks)
+- **Audit findings:** 4 CRITICAL (test suite — mock server returns JSON but SDK expects XML; GLS assertion fields stale), 1 HIGH (frontend offers invalid DHL service types "dhl_parcel"/"dhl_courier" not valid in SOAP API), 1 MEDIUM (unbounded io.ReadAll in response parsing)
+- **Consequences:** DHL tracking requires separate portal login (not available via API). Statuses from WSDL are event-based (PICKED_UP, IN_TRANSIT, etc.) not order-based. Tests require SOAP XML envelopes, not JSON. Frontend service_type dropdown must use SOAP codes or map UI names to codes.
+
+## ADR-018: DPD Poland REST API Alignment
+- **Date:** 2026-03-01
+- **Context:** DPD SDK base URLs were hardcoded as `dpd.com.pl/api/v1` (wrong — no such endpoint). Audit verified against https://dpdservices.dpd.com.pl/api-docs.
+- **Decision:** Full REST API rebuild via `packages/dpd-go-sdk/`: (1) base URL `dpdservices.dpd.com.pl` (prod) + `dpdservicesdemo.dpd.com.pl` (sandbox), (2) Auth via Basic Auth (username:password base64) + `x-dpd-fid: {{masterfid}}` header, (3) endpoints verified: `/public/shipment/v1/generatePackagesNumbers` (create), `/public/shipment/v1/generateSpedLabels` (labels), (4) tracking and cancel NOT available via API (documented in statusmap), (5) COD support via `paymentType: "COD"` in request, insurance via `insuranceValue` field.
+- **Files:** `packages/dpd-go-sdk/client.go` (REST client, auth headers), `shipments.go` (endpoints), `models.go` (DPD REST request/response models), `statusmap.go` (DPD statuses), `provider.go` (integration layer), `*_test.go` (REST HTTP mocks)
+- **Audit findings:** 1 HIGH (frontend DPDFields missing `<CODAndInsuranceFields>` component — users cannot set COD from UI despite backend support), 1 MEDIUM (unbounded io.ReadAll in response parsing)
+- **Consequences:** Tracking and cancel require separate manual portal access (not OMS-integrated). Labels returned as PDF base64 in response, embedded in response (not URL). Two-step label flow: generatePackagesNumbers → generateSpedLabels. Frontend form must include COD checkbox and insurance amount field.
+
+## ADR-019: GLS ShipIT REST API Verification
+- **Date:** 2026-03-01
+- **Context:** GLS SDK claimed Bearer token auth with centralized ShipIT API. Audit verified against https://shipit.gls-group.eu/webservices/3_4_19/doxygen/WS-REST-API/index.html. Base URL `api.gls-group.eu/public/v1` is per-contract (varies by region/customer).
+- **Decision:** Confirmed GLS implementation via `packages/gls-go-sdk/` is compliant: (1) Auth: HTTP Basic Auth (username:password base64, NOT Bearer token — corrected from initial bearer assumption), (2) Content-Type `application/glsVersion1+json` (custom header required), (3) endpoints: POST `/shipments` (create, labels inline in response), POST `/shipments/parceldetails` (tracking via `TrackID` in body), POST `/shipments/cancel/{trackID}` (cancel), (4) products PARCEL/EXPRESS verified valid, (5) COD via `service_cash` (service object, not boolean), insurance via `service_addonliability`.
+- **Files:** `packages/gls-go-sdk/client.go` (REST client, auth), `shipments.go` (endpoints, proper path escaping on cancel), `models.go` (GLS request/response types), `statusmap.go` (GLS event statuses), `provider.go` (integration layer), `*_test.go` (REST HTTP mocks)
+- **Audit findings:** 3 CRITICAL (test suite — wrong field assertions: `Services` vs `Service`, `ServiceType` vs `Product`, stale GetLabel test expecting success), 1 MEDIUM (unbounded io.ReadAll)
+- **Consequences:** Labels returned embedded in create response (not separate getLabel call). Tracking requires POST with TrackID in body (not GET). Status model response changed to include `CancelStatus` with enum. Tests require assertions matching actual API field names (singular Service, not plural Services).
+
+## ADR-020: Carrier SDK Audit Pipeline (Multi-Carrier Verification Pattern)
+- **Date:** 2026-03-01
+- **Context:** Erli audit (ADR-016) uncovered wholesale SDK misconceptions. Needed systematic verification for DHL/DPD/GLS to prevent production failures.
+- **Decision:** Establish carrier SDK audit checklist for future integrations: (1) **Faza 1 — Documentation verification:** official API docs search, base URL + auth method + endpoints + models + status list verification, (2) **Faza 2 — Integration audit:** shipment creation field mapping, label retrieval format, tracking response parsing, cancel semantics, error handling, (3) **Faza 3 — Frontend audit:** service type options, COD/insurance form fields, rate display, (4) **Faza 4 — Test quality:** mock servers must match actual API transport (JSON vs XML/SOAP), assertion fields match API response structure, end-to-end tests catch integration breaks.
+- **Files:** Audit script/checklist (future: `scripts/carrier-audit.sh` or wiki page)
+- **Findings summary:** 4 CRITICAL (test suite), 2 HIGH (frontend), 4 MEDIUM (best practices). Verdict: FAIL (CI blocks merge until tests fixed).
+- **Consequences:** All future carrier integrations must pass this audit before merge. Test suite quality raised to production standard. Frontend field mapping must be verified against backend API contracts. No "fictional" endpoints/codes — docs-first approach mandatory.
