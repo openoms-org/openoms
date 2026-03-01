@@ -8,7 +8,10 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
+	"strconv"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -610,6 +613,201 @@ func (h *SettingsHandler) UpdateOnboardingSettings(w http.ResponseWriter, r *htt
 	}
 
 	writeJSON(w, http.StatusOK, cfg)
+}
+
+// GetOnboardingStatus returns the current onboarding wizard state for the tenant.
+// For new tenants with no data, it returns sensible defaults (current_step=1, empty slices).
+func (h *SettingsHandler) GetOnboardingStatus(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	cfg := model.OnboardingSettings{
+		CurrentStep:    1,
+		CompletedSteps: []int{},
+		SkippedSteps:   []int{},
+	}
+
+	if h.pool != nil {
+		err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+			return h.getSettingsSection(r.Context(), tx, tenantID, "onboarding", &cfg)
+		})
+		if err != nil {
+			writeServerError(w, "failed to load onboarding status", err)
+			return
+		}
+	}
+
+	// Apply defaults for new tenants (zero value from missing/empty JSON).
+	if cfg.CurrentStep == 0 {
+		cfg.CurrentStep = 1
+	}
+	if cfg.CompletedSteps == nil {
+		cfg.CompletedSteps = []int{}
+	}
+	if cfg.SkippedSteps == nil {
+		cfg.SkippedSteps = []int{}
+	}
+
+	writeJSON(w, http.StatusOK, cfg)
+}
+
+// UpdateOnboardingStep marks a single onboarding step as completed or skipped.
+// Step must be 1-4; step 1 cannot be skipped; action must be "completed" or "skipped".
+func (h *SettingsHandler) UpdateOnboardingStep(w http.ResponseWriter, r *http.Request) {
+	stepStr := chi.URLParam(r, "step")
+	step, err := strconv.Atoi(stepStr)
+	if err != nil || step < 1 || step > 4 {
+		writeError(w, http.StatusBadRequest, "step must be a number between 1 and 4")
+		return
+	}
+
+	var req struct {
+		Action string `json:"action"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Action != "completed" && req.Action != "skipped" {
+		writeError(w, http.StatusBadRequest, "action must be 'completed' or 'skipped'")
+		return
+	}
+
+	if step == 1 && req.Action == "skipped" {
+		writeError(w, http.StatusBadRequest, "step 1 is required and cannot be skipped")
+		return
+	}
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	if h.pool == nil {
+		writeServerError(w, "failed to update onboarding step", fmt.Errorf("no database connection"))
+		return
+	}
+
+	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		var cfg model.OnboardingSettings
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "onboarding", &cfg); err != nil {
+			return err
+		}
+
+		// Apply defaults for new tenants.
+		if cfg.CurrentStep == 0 {
+			cfg.CurrentStep = 1
+		}
+		if cfg.CompletedSteps == nil {
+			cfg.CompletedSteps = []int{}
+		}
+		if cfg.SkippedSteps == nil {
+			cfg.SkippedSteps = []int{}
+		}
+
+		switch req.Action {
+		case "completed":
+			if !containsInt(cfg.CompletedSteps, step) {
+				cfg.CompletedSteps = append(cfg.CompletedSteps, step)
+			}
+			cfg.SkippedSteps = removeInt(cfg.SkippedSteps, step)
+		case "skipped":
+			if !containsInt(cfg.SkippedSteps, step) {
+				cfg.SkippedSteps = append(cfg.SkippedSteps, step)
+			}
+			cfg.CompletedSteps = removeInt(cfg.CompletedSteps, step)
+		}
+
+		// Advance current_step pointer.
+		if step >= cfg.CurrentStep && step < 4 {
+			cfg.CurrentStep = step + 1
+		}
+
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "onboarding", cfg); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "onboarding.step_" + req.Action,
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		writeServerError(w, "failed to update onboarding step", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"step": step, "action": req.Action})
+}
+
+// CompleteOnboarding marks the entire onboarding wizard as done.
+// Step 1 must be completed before this can be called.
+func (h *SettingsHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+
+	if h.pool == nil {
+		writeServerError(w, "failed to complete onboarding", fmt.Errorf("no database connection"))
+		return
+	}
+
+	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		var cfg model.OnboardingSettings
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "onboarding", &cfg); err != nil {
+			return err
+		}
+
+		if !containsInt(cfg.CompletedSteps, 1) {
+			return service.NewValidationError(fmt.Errorf("step 1 must be completed before finishing onboarding"))
+		}
+
+		cfg.Completed = true
+		cfg.CompletedAt = time.Now().UTC().Format(time.RFC3339)
+
+		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "onboarding", cfg); err != nil {
+			return err
+		}
+		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "onboarding.completed",
+			EntityType: "settings",
+			EntityID:   tenantID,
+			IPAddress:  clientIP(r),
+		})
+	})
+	if err != nil {
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeServerError(w, "failed to complete onboarding", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "onboarding completed"})
+}
+
+// containsInt reports whether val is in slice.
+func containsInt(slice []int, val int) bool {
+	for _, v := range slice {
+		if v == val {
+			return true
+		}
+	}
+	return false
+}
+
+// removeInt returns a new slice with all occurrences of val removed.
+func removeInt(slice []int, val int) []int {
+	result := slice[:0:0]
+	for _, v := range slice {
+		if v != val {
+			result = append(result, v)
+		}
+	}
+	return result
 }
 
 func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
