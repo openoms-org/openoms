@@ -44,17 +44,17 @@ func newTestDHLProvider(t *testing.T, serverURL string) *DHLProvider {
 
 // SOAP XML response helpers
 
-func dhlCreateSOAPResponse(shipmentID, tracking, status string) string {
+func dhlCreateSOAPResponse(shipmentID, tracking string) string {
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <Envelope>
   <Body>
     <createShipmentsResponse>
       <shipmentId>%s</shipmentId>
       <trackingNumber>%s</trackingNumber>
-      <status>%s</status>
+      <status>CREATED</status>
     </createShipmentsResponse>
   </Body>
-</Envelope>`, shipmentID, tracking, status)
+</Envelope>`, shipmentID, tracking)
 }
 
 func dhlLabelsSOAPResponse(labelData string) string {
@@ -123,7 +123,7 @@ func TestDHL_CreateShipment_MapsAllFields(t *testing.T) {
 		requestXML = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		fmt.Fprint(w, dhlCreateSOAPResponse("SHP-001", "1234567890", "CREATED"))
+		fmt.Fprint(w, dhlCreateSOAPResponse("SHP-001", "1234567890"))
 	}))
 	defer srv.Close()
 
@@ -190,7 +190,7 @@ func TestDHL_CreateShipment_DefaultsServiceTypeToAH(t *testing.T) {
 		requestXML = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
 	}))
 	defer srv.Close()
 
@@ -222,7 +222,7 @@ func TestDHL_CreateShipment_CODMappedCorrectly(t *testing.T) {
 		requestXML = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
 	}))
 	defer srv.Close()
 
@@ -261,7 +261,7 @@ func TestDHL_CreateShipment_InsuranceMappedCorrectly(t *testing.T) {
 		requestXML = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
 	}))
 	defer srv.Close()
 
@@ -296,7 +296,7 @@ func TestDHL_CreateShipment_AccountNumberInRequest(t *testing.T) {
 		requestXML = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T", "CREATED"))
+		fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
 	}))
 	defer srv.Close()
 
@@ -322,7 +322,7 @@ func TestDHL_CreateShipment_AccountNumberInRequest(t *testing.T) {
 // --- GetLabel ---
 
 func TestDHL_GetLabel_ReturnsDecodedPDF(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/xml")
 		// base64 of "%PDF"
 		fmt.Fprint(w, dhlLabelsSOAPResponse("JVBERg=="))
@@ -343,7 +343,7 @@ func TestDHL_GetLabel_ReturnsDecodedPDF(t *testing.T) {
 // --- GetTracking ---
 
 func TestDHL_GetTracking_MapsEventsCorrectly(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/xml")
 		events := `
         <event><status>PICKED_UP</status><location>Warszawa</location><details>Collected</details></event>
@@ -377,7 +377,7 @@ func TestDHL_GetTracking_MapsEventsCorrectly(t *testing.T) {
 func TestDHL_CancelShipment_CallsSDK(t *testing.T) {
 	var gotRequest bool
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		gotRequest = true
 		w.Header().Set("Content-Type", "text/xml")
 		fmt.Fprint(w, dhlEmptySOAPResponse())
