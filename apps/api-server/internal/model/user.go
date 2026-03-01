@@ -87,8 +87,12 @@ type InventorySettings struct {
 
 // OnboardingSettings tracks the onboarding state for a tenant.
 type OnboardingSettings struct {
-	Dismissed   bool   `json:"dismissed"`
-	CompletedAt string `json:"completed_at,omitempty"` // RFC3339 timestamp
+	Completed      bool   `json:"completed"`
+	CurrentStep    int    `json:"current_step"`
+	CompletedSteps []int  `json:"completed_steps"`
+	SkippedSteps   []int  `json:"skipped_steps"`
+	CompletedAt    string `json:"completed_at,omitempty"` // RFC3339 timestamp
+	Dismissed      bool   `json:"dismissed"`
 }
 
 // AuditEntry represents an audit log record.

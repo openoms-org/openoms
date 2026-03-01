@@ -102,6 +102,12 @@ function Step1Company({ onNext }: { onNext: () => void }) {
     if (!form.company_name.trim()) e.company_name = "Nazwa firmy jest wymagana";
     if (!form.nip.trim()) e.nip = "NIP jest wymagany";
     else if (!validateNip(form.nip)) e.nip = "Podaj poprawny numer NIP";
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      e.email = "Podaj poprawny adres email";
+    if (form.post_code && !/^\d{2}-\d{3}$/.test(form.post_code))
+      e.post_code = "Kod pocztowy musi mieć format XX-XXX";
+    if (form.phone && !/^\+?[\d\s\-()]{7,20}$/.test(form.phone))
+      e.phone = "Podaj poprawny numer telefonu";
     return e;
   };
 
@@ -308,7 +314,6 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
   const [apiKey, setApiKey] = useState("");
 
   const PROVIDERS = [
-    { value: "allegro", label: "Allegro" },
     { value: "amazon", label: "Amazon" },
     { value: "woocommerce", label: "WooCommerce" },
   ];
@@ -552,6 +557,7 @@ export default function OnboardingPage() {
       await updateStep.mutateAsync({ step, action: "skipped" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Nie udało się zapisać pominięcia kroku");
+      return;
     }
     const next = step + 1;
     if (next > 4) {

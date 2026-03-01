@@ -2948,3 +2948,27 @@ export interface MessageTemplateListParams {
   channel?: string;
   enabled?: boolean;
 }
+
+// === Onboarding ===
+export interface OnboardingStatus {
+  completed: boolean;
+  current_step: number;
+  completed_steps: number[];
+  skipped_steps: number[];
+  completed_at: string | null;
+  dismissed: boolean;
+}
+
+export interface UpdateOnboardingStepRequest {
+  action: "completed" | "skipped";
+}
+
+export interface CompanySettingsRequest {
+  name: string;
+  nip: string;
+  street: string;
+  city: string;
+  postal_code: string;
+  phone: string;
+  email: string;
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -12,10 +13,19 @@ import { TableDensityProvider } from "@/lib/table-density";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { SubscriptionBanner } from "@/components/subscription-banner";
+import { useOnboardingStatus } from "@/hooks/use-onboarding-wizard";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const isLoading = useAuthStore((s) => s.isLoading);
+  const { data: onboardingStatus } = useOnboardingStatus();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    if (onboardingStatus && !onboardingStatus.completed && !onboardingStatus.dismissed) {
+      router.replace("/onboarding");
+    }
+  }, [onboardingStatus, router]);
 
   const handleToggleCommandPalette = useCallback(() => {
     setCommandPaletteOpen((prev) => !prev);

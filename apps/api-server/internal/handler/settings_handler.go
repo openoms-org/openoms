@@ -627,7 +627,9 @@ func (h *SettingsHandler) GetOnboardingStatus(w http.ResponseWriter, r *http.Req
 		SkippedSteps:   []int{},
 	}
 
-	if h.pool != nil {
+	if h.pool == nil {
+		slog.Error("GetOnboardingStatus: database pool is nil, returning defaults")
+	} else {
 		err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 			return h.getSettingsSection(r.Context(), tx, tenantID, "onboarding", &cfg)
 		})
@@ -780,7 +782,7 @@ func (h *SettingsHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Requ
 	})
 	if err != nil {
 		if isValidationError(err) {
-			writeError(w, http.StatusBadRequest, err.Error())
+			writeError(w, http.StatusBadRequest, "step 1 must be completed before finishing onboarding")
 			return
 		}
 		writeServerError(w, "failed to complete onboarding", err)
