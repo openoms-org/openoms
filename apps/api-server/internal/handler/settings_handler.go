@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"maps"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -705,15 +706,15 @@ func (h *SettingsHandler) UpdateOnboardingStep(w http.ResponseWriter, r *http.Re
 
 		switch req.Action {
 		case "completed":
-			if !containsInt(cfg.CompletedSteps, step) {
+			if !slices.Contains(cfg.CompletedSteps, step) {
 				cfg.CompletedSteps = append(cfg.CompletedSteps, step)
 			}
-			cfg.SkippedSteps = removeInt(cfg.SkippedSteps, step)
+			cfg.SkippedSteps = slices.DeleteFunc(cfg.SkippedSteps, func(v int) bool { return v == step })
 		case "skipped":
-			if !containsInt(cfg.SkippedSteps, step) {
+			if !slices.Contains(cfg.SkippedSteps, step) {
 				cfg.SkippedSteps = append(cfg.SkippedSteps, step)
 			}
-			cfg.CompletedSteps = removeInt(cfg.CompletedSteps, step)
+			cfg.CompletedSteps = slices.DeleteFunc(cfg.CompletedSteps, func(v int) bool { return v == step })
 		}
 
 		// Advance current_step pointer.
@@ -758,7 +759,7 @@ func (h *SettingsHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Requ
 			return err
 		}
 
-		if !containsInt(cfg.CompletedSteps, 1) {
+		if !slices.Contains(cfg.CompletedSteps, 1) {
 			return service.NewValidationError(fmt.Errorf("step 1 must be completed before finishing onboarding"))
 		}
 
@@ -789,26 +790,6 @@ func (h *SettingsHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]string{"message": "onboarding completed"})
 }
 
-// containsInt reports whether val is in slice.
-func containsInt(slice []int, val int) bool {
-	for _, v := range slice {
-		if v == val {
-			return true
-		}
-	}
-	return false
-}
-
-// removeInt returns a new slice with all occurrences of val removed.
-func removeInt(slice []int, val int) []int {
-	result := slice[:0:0]
-	for _, v := range slice {
-		if v != val {
-			result = append(result, v)
-		}
-	}
-	return result
-}
 
 func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
