@@ -54,9 +54,9 @@ OpenOMS is a self-hostable, multi-tenant OMS with 430 API endpoints, 124 dashboa
 | Integration | Description | Status |
 |---|---|---|
 | **InPost** | Paczkomaty (parcel lockers) + courier + webhooks + dispatch orders | Verified |
-| **DHL** | Domestic and international shipping | In Development |
-| **DPD** | Parcel shipping | In Development |
-| **GLS** | Parcel shipping | In Development |
+| **DHL** | Domestic and international shipping (DHL24 SOAP WebAPI2) | Verified |
+| **DPD** | Parcel shipping (REST API with session-based auth) | Verified |
+| **GLS** | Parcel shipping (ShipIT REST API with Basic Auth) | Verified |
 | **UPS** | Domestic and international shipping | In Development |
 | **Poczta Polska** | National postal service | In Development |
 | **Orlen Paczka** | Parcel lockers | In Development |

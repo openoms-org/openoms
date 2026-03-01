@@ -103,8 +103,9 @@ func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.Carrie
 		return nil, fmt.Errorf("dpd: create shipment: %w", err)
 	}
 
+	// Use waybill as ExternalID — label generation requires the waybill number.
 	return &integration.CarrierShipmentResponse{
-		ExternalID:     resp.ParcelID,
+		ExternalID:     resp.Waybill,
 		TrackingNumber: resp.Waybill,
 		Status:         resp.Status,
 	}, nil

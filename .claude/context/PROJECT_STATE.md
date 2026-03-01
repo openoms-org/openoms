@@ -19,6 +19,13 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-03-01: Carrier SDK audit & remediation COMPLETE (DHL, DPD, GLS verified):
+  - **Audit findings**: 4 CRITICAL test failures, 2 HIGH frontend bugs, 4 MEDIUM best practices identified
+  - **DHL24 SOAP WebAPI2**: Fictional REST API → correct SOAP marshaling, service types AH/09/12/EK/PI, XML response parsing
+  - **DPD REST API**: Fictional URLs → dpdservices.dpd.com.pl, session auth, two-phase labels, COD+Insurance form fields
+  - **GLS ShipIT API**: Bearer → Basic Auth, tracking GET→POST, cancel DELETE→POST, model alignment, test assertion fixes
+  - **Status**: All 3 carriers now VERIFIED with specification tests (specs cover official API contracts)
+  - **Commits**: 9859edb (DHL), 92727d7 (DPD), 80a8663+f4b9419 (GLS), 2943d6b (spec tests)
 - 2026-03-01: Carrier fields fix — FedEx, UPS, GLS, Poczta Polska service type corrections + GLS backend wiring (PR #77)
 - 2026-02-28: Erli SDK rebuild — base URL, endpoints, statuses, polling, pagination, 202 handling, sandbox fail-open fix (PR #76)
 - 2026-02-25: Allegro competitive parity — offer import (SKU matching + auto-pagination), stock sync (per-channel push, error counts), message templates CRUD, send_marketplace_message action, KSeF auto-send + retry, activate_listing automation, full audit fixes (PR #58, 49 files, +5012/-139)

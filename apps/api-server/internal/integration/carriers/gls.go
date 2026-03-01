@@ -19,8 +19,9 @@ func init() {
 
 // GLSCredentials is the JSON structure stored in encrypted integration credentials.
 type GLSCredentials struct {
-	APIKey  string `json:"api_key"`
-	Sandbox bool   `json:"sandbox,omitempty"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Sandbox  bool   `json:"sandbox,omitempty"`
 }
 
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
@@ -41,7 +42,7 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 		opts = append(opts, glssdk.WithSandbox())
 	}
 
-	client := glssdk.NewClient(creds.APIKey, opts...)
+	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{
 		client: client,
@@ -52,39 +53,79 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 func (p *GLSProvider) ProviderName() string { return "gls" }
 
 func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
-	svcType := req.ServiceType
-	if svcType == "" {
-		svcType = "standard"
+	// Map OMS service type to GLS product code.
+	product := "PARCEL"
+	switch req.ServiceType {
+	case "express_10":
+		product = "EXPRESS_10"
+	case "express_12":
+		product = "EXPRESS_12"
 	}
 
 	glsReq := &glssdk.CreateParcelRequest{
-		ServiceType: svcType,
-		Consignee: glssdk.Party{
-			Name:        req.Receiver.Name,
-			Email:       req.Receiver.Email,
-			Phone:       req.Receiver.Phone,
-			Street:      req.Receiver.Street,
-			City:        req.Receiver.City,
-			ZipCode:     req.Receiver.PostalCode,
-			CountryCode: req.Receiver.Country,
+		Product: product,
+		Consignee: glssdk.Consignee{
+			Address: glssdk.ConsigneeAddress{
+				Name1:       req.Receiver.Name,
+				Street:      req.Receiver.Street,
+				City:        req.Receiver.City,
+				ZIPCode:     req.Receiver.PostalCode,
+				CountryCode: req.Receiver.Country,
+				Phone:       req.Receiver.Phone,
+				EMail:       req.Receiver.Email,
+			},
 		},
-		Parcels: []glssdk.Parcel{
+		ShippingUnit: []glssdk.ShipmentUnit{
 			{
 				Weight: req.Parcel.WeightKg,
 				Width:  req.Parcel.WidthCm,
 				Height: req.Parcel.HeightCm,
-				Length: req.Parcel.DepthCm,
+				Depth:  req.Parcel.DepthCm,
 			},
 		},
-		Reference: req.Reference,
+		PrintingOptions: &glssdk.PrintingOptions{
+			ReturnLabels: glssdk.LabelOptions{
+				TemplateSet: "NONE",
+				LabelFormat: "PDF",
+			},
+		},
 	}
 
+	if req.Reference != "" {
+		glsReq.References = []string{req.Reference}
+	}
+
+	var services []glssdk.Service
 	if req.CODAmount > 0 {
-		glsReq.Services = append(glsReq.Services, "COD")
+		currency := req.CODCurrency
+		if currency == "" {
+			currency = "PLN"
+		}
+		services = append(services, glssdk.Service{
+			ServiceName: "service_cash",
+			Cash: &glssdk.CashService{
+				Amount:   req.CODAmount,
+				Currency: currency,
+				Reason:   "COD",
+			},
+		})
 	}
 
 	if req.InsuredValue > 0 {
-		glsReq.Services = append(glsReq.Services, "INS")
+		services = append(services, glssdk.Service{
+			ServiceName: "service_addonliability",
+			AddOnLiability: &glssdk.AddOnLiabilityService{
+				ParcelContent: "goods",
+				Currency:      "PLN",
+				Amount:        req.InsuredValue,
+			},
+		})
+	}
+
+	if len(services) > 0 {
+		glsReq.Service = &glssdk.ServiceSection{
+			Service: services,
+		}
 	}
 
 	resp, err := p.client.Shipments.Create(ctx, glsReq)

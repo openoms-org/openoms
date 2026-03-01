@@ -18,7 +18,8 @@ const (
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
-	apiKey     string
+	username   string
+	password   string
 
 	Shipments *ShipmentService
 }
@@ -48,11 +49,12 @@ func WithBaseURL(url string) Option {
 }
 
 // NewClient creates a new GLS API client.
-func NewClient(apiKey string, opts ...Option) *Client {
+func NewClient(username, password string, opts ...Option) *Client {
 	c := &Client{
 		httpClient: http.DefaultClient,
 		baseURL:    productionBaseURL,
-		apiKey:     apiKey,
+		username:   username,
+		password:   password,
 	}
 
 	for _, opt := range opts {
@@ -96,11 +98,11 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 		return nil, fmt.Errorf("gls: failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.SetBasicAuth(c.username, c.password)
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", "application/glsVersion1+json")
 	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept", "application/glsVersion1+json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
