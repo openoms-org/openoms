@@ -361,10 +361,3 @@ func TestGLS_GetRates_OverweightReturnsEmpty(t *testing.T) {
 		t.Errorf("expected 0 rates for overweight, got %d", len(rates))
 	}
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
