@@ -3,18 +3,18 @@ package dhl
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
 )
 
 const (
-	productionBaseURL = "https://api-pl.dhl.com"
-	sandboxBaseURL    = "https://api-sandbox-pl.dhl.com"
+	productionBaseURL = "https://dhl24.com.pl/webapi2"
+	sandboxBaseURL    = "https://dhl24.com.pl/webapi2" // DHL24 has no separate sandbox URL
 )
 
-// Client is a DHL Parcel Poland API client.
+// Client is a DHL24 WebAPI2 SOAP client.
 type Client struct {
 	httpClient *http.Client
 	baseURL    string
@@ -35,11 +35,9 @@ func WithHTTPClient(c *http.Client) Option {
 	}
 }
 
-// WithSandbox configures the client to use the DHL sandbox environment.
+// WithSandbox is a no-op for DHL24 — there is no separate sandbox environment.
 func WithSandbox() Option {
-	return func(cl *Client) {
-		cl.baseURL = sandboxBaseURL
-	}
+	return func(_ *Client) {}
 }
 
 // WithBaseURL sets a custom base URL (useful for testing).
@@ -49,7 +47,7 @@ func WithBaseURL(url string) Option {
 	}
 }
 
-// NewClient creates a new DHL API client.
+// NewClient creates a new DHL24 SOAP API client.
 func NewClient(username, password, accountNumber string, opts ...Option) *Client {
 	c := &Client{
 		httpClient: http.DefaultClient,
@@ -73,43 +71,44 @@ func (c *Client) AccountNumber() string {
 	return c.accountNum
 }
 
-// do performs a JSON API request and decodes the response into result.
-func (c *Client) do(ctx context.Context, method, path string, body any, result any) error {
-	raw, err := c.doRaw(ctx, method, path, body)
-	if err != nil {
-		return err
-	}
-
-	if result != nil && len(raw) > 0 {
-		if err := json.Unmarshal(raw, result); err != nil {
-			return fmt.Errorf("dhl: failed to decode response: %w", err)
-		}
-	}
-
-	return nil
+// soapEnvelope wraps any SOAP body for XML marshaling.
+type soapEnvelope struct {
+	XMLName xml.Name `xml:"soap:Envelope"`
+	NS      string   `xml:"xmlns:soap,attr"`
+	Body    soapBody
 }
 
-// doRaw performs an API request and returns the raw response body.
-func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]byte, error) {
-	var reqBody io.Reader
-	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return nil, fmt.Errorf("dhl: failed to encode request: %w", err)
-		}
-		reqBody = bytes.NewReader(b)
+type soapBody struct {
+	XMLName xml.Name    `xml:"soap:Body"`
+	Content interface{} `xml:",omitempty"`
+}
+
+// authData is embedded in every DHL24 SOAP request.
+type authData struct {
+	XMLName  xml.Name `xml:"authData"`
+	Username string   `xml:"username"`
+	Password string   `xml:"password"`
+}
+
+// doSOAP sends a SOAP request and returns the raw XML response body.
+func (c *Client) doSOAP(ctx context.Context, soapAction string, body interface{}) ([]byte, error) {
+	env := soapEnvelope{
+		NS:   "http://schemas.xmlsoap.org/soap/envelope/",
+		Body: soapBody{Content: body},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reqBody)
+	xmlBytes, err := xml.MarshalIndent(env, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("dhl: failed to marshal SOAP request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, bytes.NewReader(xmlBytes))
 	if err != nil {
 		return nil, fmt.Errorf("dhl: failed to create request: %w", err)
 	}
 
-	req.SetBasicAuth(c.username, c.password)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "text/xml; charset=utf-8")
+	req.Header.Set("SOAPAction", soapAction)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -123,21 +122,41 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	}
 
 	if resp.StatusCode >= 400 {
-		apiErr := &APIError{StatusCode: resp.StatusCode}
-		if len(respBody) > 0 {
-			_ = json.Unmarshal(respBody, apiErr)
+		// Try to extract SOAP fault message
+		faultMsg := extractSOAPFault(respBody)
+		if faultMsg != "" {
+			return nil, fmt.Errorf("dhl: api error %d: %s", resp.StatusCode, faultMsg)
 		}
-		return nil, apiErr
+		return nil, fmt.Errorf("dhl: api error %d", resp.StatusCode)
+	}
+
+	// Check for SOAP fault in 200 response
+	if fault := extractSOAPFault(respBody); fault != "" {
+		return nil, fmt.Errorf("dhl: soap fault: %s", fault)
 	}
 
 	return respBody, nil
 }
 
-// APIError represents an error response from the DHL API.
+// extractSOAPFault extracts the faultstring from a SOAP Fault response.
+func extractSOAPFault(body []byte) string {
+	type soapFaultBody struct {
+		Fault struct {
+			FaultString string `xml:"faultstring"`
+		} `xml:"Body>Fault"`
+	}
+
+	var f soapFaultBody
+	if err := xml.Unmarshal(body, &f); err == nil && f.Fault.FaultString != "" {
+		return f.Fault.FaultString
+	}
+	return ""
+}
+
+// APIError represents an error from the DHL API.
 type APIError struct {
-	StatusCode int    `json:"-"`
-	Message    string `json:"message"`
-	Code       string `json:"code"`
+	StatusCode int
+	Message    string
 }
 
 func (e *APIError) Error() string {
