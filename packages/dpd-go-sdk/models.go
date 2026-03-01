@@ -2,9 +2,9 @@ package dpd
 
 import "time"
 
-// CreateParcelRequest is the payload sent to create a new DPD shipment.
+// CreateParcelRequest is the payload sent to POST /public/shipment/v1/generatePackagesNumbers.
 type CreateParcelRequest struct {
-	Sender    Address      `json:"sender"`
+	Sender    Address      `json:"sender,omitempty"`
 	Receiver  Address      `json:"receiver"`
 	Parcels   []ParcelSpec `json:"parcels"`
 	Services  *Services    `json:"services,omitempty"`
@@ -49,17 +49,51 @@ type Money struct {
 	Currency string  `json:"currency"`
 }
 
-// CreateParcelResponse is returned after a shipment is created.
-type CreateParcelResponse struct {
-	ParcelID string `json:"parcelId"`
-	Waybill  string `json:"waybill"`
-	Status   string `json:"status"`
+// createParcelRawResponse is the nested response from /public/shipment/v1/generatePackagesNumbers.
+type createParcelRawResponse struct {
+	Status    string            `json:"status"`
+	SessionID int64             `json:"sessionId"`
+	Packages  []responsePackage `json:"packages"`
 }
 
-// LabelResponse contains label data from the API.
-type LabelResponse struct {
-	LabelData   string `json:"labelData"`
-	LabelFormat string `json:"labelFormat"`
+type responsePackage struct {
+	StatusInfo packageStatus   `json:"statusInfo"`
+	Parcels    []responseParce `json:"parcels"`
+}
+
+type packageStatus struct {
+	Status string `json:"status"`
+}
+
+type responseParce struct {
+	Status    string `json:"status"`
+	Reference string `json:"reference,omitempty"`
+	Waybill   string `json:"waybill"`
+}
+
+// CreateParcelResponse is the parsed response after shipment creation.
+type CreateParcelResponse struct {
+	SessionID int64  `json:"sessionId"`
+	ParcelID  string `json:"parcelId"`
+	Waybill   string `json:"waybill"`
+	Status    string `json:"status"`
+}
+
+// generateLabelRequest is the payload for POST /public/shipment/v1/generateSpedLabels.
+type generateLabelRequest struct {
+	DPDServicesParcelsPPLOD []labelParcel `json:"DPDServicesParcelsPPLOD"`
+	OutputDocFormat         string        `json:"OutputDocFormat"`
+	OutputDocPage           string        `json:"OutputDocPage"`
+}
+
+type labelParcel struct {
+	WaybillRef string `json:"parcel_waybill"`
+}
+
+// generateLabelResponse contains label data from POST /public/shipment/v1/generateSpedLabels.
+type generateLabelResponse struct {
+	Status       string `json:"status"`
+	DocumentData string `json:"documentData"`
 }
 
 // TrackingResponse contains tracking information for a parcel.

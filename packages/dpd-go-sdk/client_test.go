@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -52,57 +53,20 @@ func TestMasterFid(t *testing.T) {
 	}
 }
 
-// newTestDPDServer creates a test server that handles DPD auth and API calls.
-// The auth endpoint always returns a valid token.
-func newTestDPDServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Handle authentication
-		if r.URL.Path == "/auth/login" {
-			var req authRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				t.Errorf("failed to decode auth request: %v", err)
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(authResponse{Token: "test-session-token"})
-			return
-		}
+func TestAuthentication_UsesBasicAuth(t *testing.T) {
+	var gotUser, gotPass, gotFid string
 
-		// Verify Bearer token
-		auth := r.Header.Get("Authorization")
-		if auth != "Bearer test-session-token" {
-			t.Errorf("Authorization = %q, want %q", auth, "Bearer test-session-token")
-		}
-
-		handler(w, r)
-	}))
-}
-
-func TestAuthentication(t *testing.T) {
-	var authCalled bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/auth/login" {
-			authCalled = true
-			var req authRequest
-			json.NewDecoder(r.Body).Decode(&req)
-			if req.Login != "testuser" {
-				t.Errorf("auth login = %q, want %q", req.Login, "testuser")
-			}
-			if req.Password != "testpass" {
-				t.Errorf("auth password = %q, want %q", req.Password, "testpass")
-			}
-			if req.MasterFid != "FID001" {
-				t.Errorf("auth masterFid = %q, want %q", req.MasterFid, "FID001")
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(authResponse{Token: "session-abc"})
-			return
+		user, pass, ok := r.BasicAuth()
+		if !ok {
+			t.Error("expected Basic Auth credentials")
 		}
+		gotUser = user
+		gotPass = pass
+		gotFid = r.Header.Get("x-dpd-fid")
 
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[]}`))
 	}))
 	defer srv.Close()
 
@@ -111,22 +75,29 @@ func TestAuthentication(t *testing.T) {
 		WithHTTPClient(srv.Client()),
 	)
 
-	err := c.do(context.Background(), "GET", "/test", nil, nil)
-	if err != nil {
-		t.Fatalf("do() error: %v", err)
+	_, _ = c.Shipments.Create(context.Background(), &CreateParcelRequest{
+		Receiver: Address{Name: "Test"},
+		Parcels:  []ParcelSpec{{Weight: 1.0}},
+	})
+
+	if gotUser != "testuser" {
+		t.Errorf("Basic Auth user = %q, want %q", gotUser, "testuser")
 	}
-	if !authCalled {
-		t.Error("authentication endpoint was not called")
+	if gotPass != "testpass" {
+		t.Errorf("Basic Auth pass = %q, want %q", gotPass, "testpass")
+	}
+	if gotFid != "FID001" {
+		t.Errorf("x-dpd-fid = %q, want %q", gotFid, "FID001")
 	}
 }
 
 func TestCreateParcel(t *testing.T) {
-	srv := newTestDPDServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if r.URL.Path != "/parcels" {
-			t.Errorf("path = %q, want /parcels", r.URL.Path)
+		if r.URL.Path != "/public/shipment/v1/generatePackagesNumbers" {
+			t.Errorf("path = %q, want /public/shipment/v1/generatePackagesNumbers", r.URL.Path)
 		}
 		if r.Header.Get("Content-Type") != "application/json" {
 			t.Errorf("Content-Type = %q, want application/json", r.Header.Get("Content-Type"))
@@ -147,12 +118,15 @@ func TestCreateParcel(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(CreateParcelResponse{
-			ParcelID: "PRC-001",
-			Waybill:  "PL1234567890",
-			Status:   "NEW",
-		})
-	})
+		w.Write([]byte(`{
+			"status": "OK",
+			"sessionId": 42,
+			"packages": [{
+				"statusInfo": {"status": "OK"},
+				"parcels": [{"status": "OK", "reference": "PRC-001", "waybill": "PL1234567890"}]
+			}]
+		}`))
+	}))
 	defer srv.Close()
 
 	c := NewClient("user", "pass", "FID",
@@ -190,8 +164,8 @@ func TestCreateParcel(t *testing.T) {
 	if resp.Waybill != "PL1234567890" {
 		t.Errorf("Waybill = %q, want %q", resp.Waybill, "PL1234567890")
 	}
-	if resp.Status != "NEW" {
-		t.Errorf("Status = %q, want %q", resp.Status, "NEW")
+	if resp.SessionID != 42 {
+		t.Errorf("SessionID = %d, want 42", resp.SessionID)
 	}
 }
 
@@ -199,20 +173,20 @@ func TestGetLabel(t *testing.T) {
 	pdfContent := []byte("%PDF-1.4 fake label")
 	encoded := base64.StdEncoding.EncodeToString(pdfContent)
 
-	srv := newTestDPDServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %q, want GET", r.Method)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if r.URL.Path != "/parcels/PRC-001/label" {
-			t.Errorf("path = %q, want /parcels/PRC-001/label", r.URL.Path)
+		if r.URL.Path != "/public/shipment/v1/generateSpedLabels" {
+			t.Errorf("path = %q, want /public/shipment/v1/generateSpedLabels", r.URL.Path)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(LabelResponse{
-			LabelData:   encoded,
-			LabelFormat: "PDF",
+		json.NewEncoder(w).Encode(generateLabelResponse{
+			Status:       "OK",
+			DocumentData: encoded,
 		})
-	})
+	}))
 	defer srv.Close()
 
 	c := NewClient("user", "pass", "FID",
@@ -220,7 +194,7 @@ func TestGetLabel(t *testing.T) {
 		WithHTTPClient(srv.Client()),
 	)
 
-	data, err := c.Shipments.GetLabel(context.Background(), "PRC-001")
+	data, err := c.Shipments.GetLabel(context.Background(), "PL1234567890")
 	if err != nil {
 		t.Fatalf("GetLabel() error: %v", err)
 	}
@@ -229,80 +203,37 @@ func TestGetLabel(t *testing.T) {
 	}
 }
 
-func TestGetTracking(t *testing.T) {
-	srv := newTestDPDServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %q, want GET", r.Method)
-		}
-		if r.URL.Path != "/tracking/PL1234567890" {
-			t.Errorf("path = %q, want /tracking/PL1234567890", r.URL.Path)
-		}
+func TestGetTracking_ReturnsError(t *testing.T) {
+	// DPD REST API does not have a tracking endpoint.
+	c := NewClient("user", "pass", "FID")
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(TrackingResponse{
-			Events: []TrackingEvent{
-				{Status: "SENT", Description: "Paczka nadana", Location: "Warszawa"},
-				{Status: "IN_TRANSIT", Description: "W drodze", Location: "Lodz"},
-				{Status: "DELIVERED", Description: "Doreczona"},
-			},
-		})
-	})
-	defer srv.Close()
-
-	c := NewClient("user", "pass", "FID",
-		WithBaseURL(srv.URL),
-		WithHTTPClient(srv.Client()),
-	)
-
-	resp, err := c.Shipments.GetTracking(context.Background(), "PL1234567890")
-	if err != nil {
-		t.Fatalf("GetTracking() error: %v", err)
+	_, err := c.Shipments.GetTracking(context.Background(), "PL1234567890")
+	if err == nil {
+		t.Fatal("expected error from GetTracking, got nil")
 	}
-	if len(resp.Events) != 3 {
-		t.Fatalf("len(Events) = %d, want 3", len(resp.Events))
-	}
-	if resp.Events[0].Status != "SENT" {
-		t.Errorf("Events[0].Status = %q, want %q", resp.Events[0].Status, "SENT")
-	}
-	if resp.Events[0].Location != "Warszawa" {
-		t.Errorf("Events[0].Location = %q, want %q", resp.Events[0].Location, "Warszawa")
-	}
-	if resp.Events[2].Status != "DELIVERED" {
-		t.Errorf("Events[2].Status = %q, want %q", resp.Events[2].Status, "DELIVERED")
+	if !strings.Contains(err.Error(), "not available") {
+		t.Errorf("error message should mention 'not available', got: %v", err)
 	}
 }
 
-func TestCancelParcel(t *testing.T) {
-	srv := newTestDPDServer(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete {
-			t.Errorf("method = %q, want DELETE", r.Method)
-		}
-		if r.URL.Path != "/parcels/PRC-001" {
-			t.Errorf("path = %q, want /parcels/PRC-001", r.URL.Path)
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-	defer srv.Close()
-
-	c := NewClient("user", "pass", "FID",
-		WithBaseURL(srv.URL),
-		WithHTTPClient(srv.Client()),
-	)
+func TestCancelParcel_ReturnsError(t *testing.T) {
+	// DPD REST API does not support parcel cancellation.
+	c := NewClient("user", "pass", "FID")
 
 	err := c.Shipments.Cancel(context.Background(), "PRC-001")
-	if err != nil {
-		t.Fatalf("Cancel() error: %v", err)
+	if err == nil {
+		t.Fatal("expected error from Cancel, got nil")
 	}
 }
 
 func TestCreateParcelError(t *testing.T) {
-	srv := newTestDPDServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"message": "Nieprawidlowe dane przesylki",
 			"code":    "VALIDATION_ERROR",
 		})
-	})
+	}))
 	defer srv.Close()
 
 	c := NewClient("user", "pass", "FID",
@@ -317,12 +248,12 @@ func TestCreateParcelError(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := newTestDPDServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
-	})
+	}))
 	defer srv.Close()
 
 	c := NewClient("user", "pass", "FID",
@@ -330,7 +261,10 @@ func TestServerError(t *testing.T) {
 		WithHTTPClient(srv.Client()),
 	)
 
-	_, err := c.Shipments.GetTracking(context.Background(), "invalid")
+	_, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
+		Receiver: Address{Name: "Test"},
+		Parcels:  []ParcelSpec{{Weight: 1.0}},
+	})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -338,12 +272,8 @@ func TestServerError(t *testing.T) {
 
 func TestAuthenticationError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/auth/login" {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"message":"Invalid credentials"}`))
-			return
-		}
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"message":"Invalid credentials"}`))
 	}))
 	defer srv.Close()
 
@@ -352,7 +282,10 @@ func TestAuthenticationError(t *testing.T) {
 		WithHTTPClient(srv.Client()),
 	)
 
-	_, err := c.Shipments.GetTracking(context.Background(), "PL123")
+	_, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
+		Receiver: Address{Name: "Test"},
+		Parcels:  []ParcelSpec{{Weight: 1.0}},
+	})
 	if err == nil {
 		t.Fatal("expected authentication error, got nil")
 	}
