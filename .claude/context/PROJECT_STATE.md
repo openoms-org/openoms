@@ -10,8 +10,8 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 ## Current Focus (P0 — must do next)
 - [ ] Billing/Subscription integration (Stripe + Przelewy24?) — **0% done, #1 blocker**
 - [ ] Monitoring/Alerting (Grafana/Sentry) — **10% done, SaaS requirement**
-- [ ] Onboarding wizard (first-time user flow) — **25% done**
 - [x] Allegro competitive parity — **DONE** (PR #58: offer import, stock sync, messaging, KSeF auto-send)
+- [x] Onboarding wizard (first-time user flow) — **DONE** (PR #80+: backend endpoints, JSONB state tracking, frontend stepper UI)
 
 ## In Progress
 - [x] Supabase migration — DONE (simple_protocol JSONB fix deployed 2026-02-20)
@@ -19,6 +19,13 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-03-01: Onboarding wizard COMPLETE — full multi-step setup flow for new tenants:
+  - **Backend**: 3 new endpoints (`GET /v1/onboarding/status`, `PUT /v1/onboarding/step/{step}`, `POST /v1/onboarding/complete`), extended `OnboardingSettings` model (current_step, completed_steps, skipped_steps tracking in JSONB)
+  - **Frontend**: Dedicated `/onboarding` route with 4-step stepper (Company details, Warehouse, Integration, Team invite), form-based flows reusing existing API endpoints, completion screen with redirect
+  - **Auth protection**: JWT-required backend endpoints, Next.js middleware protecting `/onboarding` route, auto-redirect on login if onboarding incomplete
+  - **State tracking**: Stored in tenants.settings JSONB, backward compatible with existing tenants (marked as completed)
+  - **Status**: All 4 steps functional, step 1 required, steps 2-4 skippable, dashboard banner for "Finish later"
+  - **Commits**: Multiple fixes after code review (0f3dc3e, 8f567b0) and security audit
 - 2026-03-01: Carrier SDK audit & remediation COMPLETE (DHL, DPD, GLS verified):
   - **Audit findings**: 4 CRITICAL test failures, 2 HIGH frontend bugs, 4 MEDIUM best practices identified
   - **DHL24 SOAP WebAPI2**: Fictional REST API → correct SOAP marshaling, service types AH/09/12/EK/PI, XML response parsing
