@@ -2,7 +2,6 @@ package gls
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -91,17 +90,17 @@ func TestCreateParcel(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatalf("failed to decode request: %v", err)
 		}
-		if req.Consignee.Name != "Jan Kowalski" {
-			t.Errorf("Consignee.Name = %q, want %q", req.Consignee.Name, "Jan Kowalski")
+		if req.Consignee.Address.Name1 != "Jan Kowalski" {
+			t.Errorf("Consignee.Address.Name1 = %q, want %q", req.Consignee.Address.Name1, "Jan Kowalski")
 		}
-		if len(req.Parcels) != 1 {
-			t.Fatalf("len(Parcels) = %d, want 1", len(req.Parcels))
+		if len(req.ShippingUnit) != 1 {
+			t.Fatalf("len(ShippingUnit) = %d, want 1", len(req.ShippingUnit))
 		}
-		if req.Parcels[0].Weight != 2.0 {
-			t.Errorf("Parcels[0].Weight = %f, want 2.0", req.Parcels[0].Weight)
+		if req.ShippingUnit[0].Weight != 2.0 {
+			t.Errorf("ShippingUnit[0].Weight = %f, want 2.0", req.ShippingUnit[0].Weight)
 		}
-		if req.Reference != "ORDER-001" {
-			t.Errorf("Reference = %q, want %q", req.Reference, "ORDER-001")
+		if len(req.References) == 0 || req.References[0] != "ORDER-001" {
+			t.Errorf("References[0] = %v, want ORDER-001", req.References)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -115,25 +114,21 @@ func TestCreateParcel(t *testing.T) {
 	)
 
 	resp, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
-		Shipper: Party{
-			Name:        "Sklep Online",
-			Street:      "Krakowska 10",
-			City:        "Krakow",
-			ZipCode:     "30-001",
-			CountryCode: "PL",
+		Product: "PARCEL",
+		Consignee: Consignee{
+			Address: ConsigneeAddress{
+				Name1:       "Jan Kowalski",
+				Street:      "Marszalkowska 1",
+				City:        "Warszawa",
+				ZIPCode:     "00-001",
+				CountryCode: "PL",
+				Phone:       "500100200",
+			},
 		},
-		Consignee: Party{
-			Name:        "Jan Kowalski",
-			Street:      "Marszalkowska 1",
-			City:        "Warszawa",
-			ZipCode:     "00-001",
-			CountryCode: "PL",
-			Phone:       "500100200",
-		},
-		Parcels: []Parcel{
+		ShippingUnit: []ShipmentUnit{
 			{Weight: 2.0, Width: 30, Height: 20, Depth: 40},
 		},
-		Reference: "ORDER-001",
+		References: []string{"ORDER-001"},
 	})
 	if err != nil {
 		t.Fatalf("Create() error: %v", err)
@@ -152,37 +147,14 @@ func TestCreateParcel(t *testing.T) {
 	}
 }
 
-func TestGetLabel(t *testing.T) {
-	pdfContent := []byte("%PDF-1.4 fake GLS label")
-	encoded := base64.StdEncoding.EncodeToString(pdfContent)
+func TestGetLabel_ReturnsError(t *testing.T) {
+	// GLS labels are embedded in the create shipment response (PrintData).
+	// GetLabel as a separate call is not supported.
+	c := NewClient("api-user", "api-pass", WithBaseURL("http://unused"))
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %q, want GET", r.Method)
-		}
-		if r.URL.Path != "/shipments/GLS-001/labels" {
-			t.Errorf("path = %q, want /shipments/GLS-001/labels", r.URL.Path)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(LabelResponse{
-			LabelData:   encoded,
-			LabelFormat: "PDF",
-		})
-	}))
-	defer srv.Close()
-
-	c := NewClient("api-user", "api-pass",
-		WithBaseURL(srv.URL),
-		WithHTTPClient(srv.Client()),
-	)
-
-	data, err := c.Shipments.GetLabel(context.Background(), "GLS-001")
-	if err != nil {
-		t.Fatalf("GetLabel() error: %v", err)
-	}
-	if string(data) != string(pdfContent) {
-		t.Errorf("label data mismatch: got %q, want %q", string(data), string(pdfContent))
+	_, err := c.Shipments.GetLabel(context.Background(), "GLS-001")
+	if err == nil {
+		t.Fatal("GetLabel() should return error — GLS does not support separate label retrieval")
 	}
 }
 
@@ -305,35 +277,6 @@ func TestServerError(t *testing.T) {
 	}
 	if apiErr.Message != "Internal server error" {
 		t.Errorf("Message = %q, want %q", apiErr.Message, "Internal server error")
-	}
-}
-
-func TestNotFoundError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Parcel not found",
-			"code":    "NOT_FOUND",
-		})
-	}))
-	defer srv.Close()
-
-	c := NewClient("api-user", "api-pass",
-		WithBaseURL(srv.URL),
-		WithHTTPClient(srv.Client()),
-	)
-
-	_, err := c.Shipments.GetLabel(context.Background(), "NONEXISTENT")
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) {
-		t.Fatalf("expected *APIError, got %T", err)
-	}
-	if apiErr.StatusCode != 404 {
-		t.Errorf("StatusCode = %d, want 404", apiErr.StatusCode)
 	}
 }
 

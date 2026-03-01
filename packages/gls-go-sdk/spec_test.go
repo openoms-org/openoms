@@ -18,8 +18,9 @@ import (
 //   - Authentication: Basic Auth (username:password), NOT Bearer token
 //   - Content-Type: application/glsVersion1+json
 //   - Create: POST /shipments (not /parcels)
-//   - Tracking: POST /shipments/parceldetails (not GET /tracking/{id})
+//   - Tracking: POST /shipments/parceldetails with TrackID (singular string)
 //   - Cancel: POST /shipments/cancel/{trackID} (not DELETE /parcels/{id})
+//   - Response: PrintData at CreatedShipment level (not inside ParcelData)
 //   - Status mapping: includes CANCELLED, CANCELLATION_PENDING, SCANNED
 // =============================================================================
 
@@ -49,7 +50,6 @@ func TestSpec_Auth_UsesBasicAuth(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Plan: NewClient(username, password string, opts ...Option)
 	c := NewClient("testuser", "testpass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
@@ -80,8 +80,9 @@ func TestSpec_ContentType_UsesGLSVersionHeader(t *testing.T) {
 	)
 
 	_, _ = c.Shipments.Create(context.Background(), &CreateParcelRequest{
-		Consignee: Party{Name: "Test"},
-		Parcels:   []Parcel{{Weight: 1.0}},
+		Product:      "PARCEL",
+		Consignee:    Consignee{Address: ConsigneeAddress{Name1: "Test"}},
+		ShippingUnit: []ShipmentUnit{{Weight: 1.0}},
 	})
 }
 
@@ -96,7 +97,7 @@ func TestSpec_CreateShipment_PostsToShipmentsEndpoint(t *testing.T) {
 		gotMethod = r.Method
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
+		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -106,14 +107,17 @@ func TestSpec_CreateShipment_PostsToShipmentsEndpoint(t *testing.T) {
 	)
 
 	_, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
-		Consignee: Party{
-			Name:        "Jan Kowalski",
-			Street:      "Marszalkowska 1",
-			City:        "Warszawa",
-			ZipCode:     "00-001",
-			CountryCode: "PL",
+		Product: "PARCEL",
+		Consignee: Consignee{
+			Address: ConsigneeAddress{
+				Name1:       "Jan Kowalski",
+				Street:      "Marszalkowska 1",
+				City:        "Warszawa",
+				ZIPCode:     "00-001",
+				CountryCode: "PL",
+			},
 		},
-		Parcels: []Parcel{{Weight: 2.0}},
+		ShippingUnit: []ShipmentUnit{{Weight: 2.0}},
 	})
 	if err != nil {
 		t.Fatalf("Create() unexpected error: %v", err)
@@ -127,15 +131,81 @@ func TestSpec_CreateShipment_PostsToShipmentsEndpoint(t *testing.T) {
 	}
 }
 
-func TestSpec_CreateShipment_ResponseHasCreatedShipmentStructure(t *testing.T) {
+func TestSpec_CreateShipment_RequestUsesCorrectFieldNames(t *testing.T) {
+	var gotBody map[string]any
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &gotBody)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"CreatedShipment":{"ParcelData":[{"TrackID":"T1"}]}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("key", "pass",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+	)
+
+	_, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
+		Product: "PARCEL",
+		Consignee: Consignee{
+			Address: ConsigneeAddress{
+				Name1:       "Jan Kowalski",
+				Street:      "Marszalkowska 1",
+				City:        "Warszawa",
+				ZIPCode:     "00-001",
+				CountryCode: "PL",
+				EMail:       "jan@test.pl",
+			},
+		},
+		ShippingUnit: []ShipmentUnit{{Weight: 2.0}},
+	})
+	if err != nil {
+		t.Fatalf("Create() error: %v", err)
+	}
+
+	// Verify Consignee uses nested Address structure with correct field names
+	consignee, _ := gotBody["Consignee"].(map[string]any)
+	if consignee == nil {
+		t.Fatal("request should have 'Consignee' field")
+	}
+	address, _ := consignee["Address"].(map[string]any)
+	if address == nil {
+		t.Fatal("Consignee should have nested 'Address' field")
+	}
+	if address["Name1"] != "Jan Kowalski" {
+		t.Errorf("Consignee.Address.Name1 = %v, want Jan Kowalski", address["Name1"])
+	}
+	// ZIPCode (not ZipCode) per GLS API spec
+	if address["ZIPCode"] != "00-001" {
+		t.Errorf("Consignee.Address.ZIPCode = %v, want 00-001 (must use ZIPCode not ZipCode)", address["ZIPCode"])
+	}
+	// eMail (not Email) per GLS API spec
+	if address["eMail"] != "jan@test.pl" {
+		t.Errorf("Consignee.Address.eMail = %v, want jan@test.pl (must use eMail not Email)", address["eMail"])
+	}
+
+	// ShippingUnit (not Parcels) per GLS API spec
+	units, _ := gotBody["ShippingUnit"].([]any)
+	if len(units) == 0 {
+		t.Error("request should have 'ShippingUnit' array (not 'Parcels')")
+	}
+}
+
+func TestSpec_CreateShipment_ResponsePrintDataAtCreatedShipmentLevel(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// GLS ShipIT returns CreatedShipment with ParcelData array
+		// PrintData is at CreatedShipment level (sibling of ParcelData), NOT inside ParcelData
 		w.Write([]byte(`{
 			"CreatedShipment": {
 				"ShipmentReference": "ORDER-001",
 				"ParcelData": [
-					{"TrackID": "GLS-TRK-001", "PrintData": "JVBERi0xLjQ="}
+					{"TrackID": "GLS-TRK-001"}
+				],
+				"PrintData": [
+					{"Data": "JVBERi0xLjQ=", "Sequence": 1}
 				]
 			}
 		}`))
@@ -148,17 +218,26 @@ func TestSpec_CreateShipment_ResponseHasCreatedShipmentStructure(t *testing.T) {
 	)
 
 	resp, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
-		Consignee: Party{Name: "Test"},
-		Parcels:   []Parcel{{Weight: 1.0}},
+		Product:      "PARCEL",
+		Consignee:    Consignee{Address: ConsigneeAddress{Name1: "Test"}},
+		ShippingUnit: []ShipmentUnit{{Weight: 1.0}},
 	})
 	if err != nil {
 		t.Fatalf("Create() error: %v", err)
 	}
 
-	// Plan: response should be CreateParcelResponse with CreatedShipment.ParcelData
-	// Current code expects {parcel_ids: [], track_ids: []} — this should fail
-	if len(resp.TrackIDs) == 0 && len(resp.ParcelIDs) == 0 {
-		t.Error("response should contain track IDs extracted from CreatedShipment.ParcelData")
+	if len(resp.TrackIDs) == 0 {
+		t.Error("response should contain TrackIDs from CreatedShipment.ParcelData")
+	}
+	if resp.TrackIDs[0] != "GLS-TRK-001" {
+		t.Errorf("TrackIDs[0] = %q, want GLS-TRK-001", resp.TrackIDs[0])
+	}
+	// PrintData must come from CreatedShipment.PrintData[].Data (not inside ParcelData)
+	if len(resp.PrintData) == 0 {
+		t.Error("response should contain PrintData from CreatedShipment.PrintData")
+	}
+	if resp.PrintData[0] != "JVBERi0xLjQ=" {
+		t.Errorf("PrintData[0] = %q, want JVBERi0xLjQ=", resp.PrintData[0])
 	}
 }
 
@@ -193,12 +272,35 @@ func TestSpec_GetTracking_UsesPostMethod(t *testing.T) {
 		t.Fatalf("GetTracking() error: %v", err)
 	}
 
-	// Plan: POST /shipments/parceldetails with TrackIDs in body
 	if gotMethod != http.MethodPost {
 		t.Errorf("method = %q, want POST (GLS ShipIT uses POST for tracking)", gotMethod)
 	}
 	if gotPath != "/shipments/parceldetails" {
 		t.Errorf("path = %q, want /shipments/parceldetails", gotPath)
+	}
+	// GLS API expects singular TrackID string, not an array
+	trackID, ok := gotBody["TrackID"].(string)
+	if !ok || trackID != "TRK-001" {
+		t.Errorf("request body TrackID = %v, want singular string 'TRK-001' (not TrackIDs array)", gotBody["TrackID"])
+	}
+	if _, hasArray := gotBody["TrackIDs"]; hasArray {
+		t.Error("should send TrackID (singular string), not TrackIDs (array)")
+	}
+}
+
+// --- GetLabel ---
+
+func TestSpec_GetLabel_ReturnsErrorNotSupported(t *testing.T) {
+	c := NewClient("key", "pass", WithBaseURL("http://unused"))
+
+	_, err := c.Shipments.GetLabel(context.Background(), "TRK-001")
+	if err == nil {
+		t.Fatal("GetLabel should return error — GLS does not support separate label retrieval")
+	}
+	// Error should explain where labels actually come from
+	msg := err.Error()
+	if !strings.Contains(msg, "create") || !strings.Contains(msg, "PrintData") {
+		t.Errorf("error should explain label is in create response PrintData, got: %v", msg)
 	}
 }
 
@@ -227,7 +329,6 @@ func TestSpec_Cancel_UsesPostToShipmentsCancel(t *testing.T) {
 		t.Fatalf("Cancel() error: %v", err)
 	}
 
-	// Plan: POST /shipments/cancel/{trackID} (not DELETE /parcels/{id})
 	if gotMethod != http.MethodPost {
 		t.Errorf("method = %q, want POST (GLS ShipIT uses POST for cancel)", gotMethod)
 	}
@@ -239,7 +340,7 @@ func TestSpec_Cancel_UsesPostToShipmentsCancel(t *testing.T) {
 // --- Status Mapping ---
 
 func TestSpec_StatusMapping_IncludesAllGLSStatuses(t *testing.T) {
-	// Plan: GLS ShipIT returns these statuses — all must be mapped
+	// GLS ShipIT returns these statuses — all must be mapped
 	tests := []struct {
 		glsStatus string
 		omsStatus string
@@ -251,7 +352,6 @@ func TestSpec_StatusMapping_IncludesAllGLSStatuses(t *testing.T) {
 		{"INDELIVERY", "out_for_delivery", true},
 		{"DELIVERED", "delivered", true},
 		{"RETURNED", "returned", true},
-		// These are MISSING in current code — tests should fail
 		{"CANCELLED", "cancelled", true},
 		{"CANCELLATION_PENDING", "cancelled", true},
 		{"SCANNED", "in_transit", true},
@@ -274,10 +374,10 @@ func TestSpec_StatusMapping_IncludesAllGLSStatuses(t *testing.T) {
 
 // --- Edge Cases ---
 
-func TestSpec_CreateShipment_EmptyParcels_ReturnsError(t *testing.T) {
+func TestSpec_CreateShipment_EmptyShippingUnit_ReturnsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"message":"At least one parcel is required"}`))
+		w.Write([]byte(`{"message":"At least one shipping unit is required"}`))
 	}))
 	defer srv.Close()
 
@@ -287,10 +387,12 @@ func TestSpec_CreateShipment_EmptyParcels_ReturnsError(t *testing.T) {
 	)
 
 	_, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
-		Parcels: []Parcel{},
+		Product:      "PARCEL",
+		Consignee:    Consignee{Address: ConsigneeAddress{Name1: "Test"}},
+		ShippingUnit: []ShipmentUnit{},
 	})
 	if err == nil {
-		t.Error("expected error for empty parcels, got nil")
+		t.Error("expected error for empty ShippingUnit, got nil")
 	}
 }
 
@@ -300,7 +402,9 @@ func TestSpec_CreateShipment_ServerUnavailable_ReturnsError(t *testing.T) {
 	)
 
 	_, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
-		Parcels: []Parcel{{Weight: 1.0}},
+		Product:      "PARCEL",
+		Consignee:    Consignee{Address: ConsigneeAddress{Name1: "Test"}},
+		ShippingUnit: []ShipmentUnit{{Weight: 1.0}},
 	})
 	if err == nil {
 		t.Error("expected error for unreachable server, got nil")

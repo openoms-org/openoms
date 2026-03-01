@@ -2,7 +2,6 @@ package gls
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -15,6 +14,7 @@ type ShipmentService struct {
 
 // Create creates new parcels in the GLS system.
 // Uses POST /shipments per GLS ShipIT REST API.
+// Labels are returned inline in the response (CreatedShipment.PrintData[].Data).
 func (s *ShipmentService) Create(ctx context.Context, req *CreateParcelRequest) (*CreateParcelResponse, error) {
 	var raw rawCreateParcelResponse
 	if err := s.client.do(ctx, http.MethodPost, "/shipments", req, &raw); err != nil {
@@ -27,33 +27,29 @@ func (s *ShipmentService) Create(ctx context.Context, req *CreateParcelRequest) 
 			resp.TrackIDs = append(resp.TrackIDs, pd.TrackID)
 			resp.ParcelIDs = append(resp.ParcelIDs, pd.TrackID)
 		}
-		if pd.PrintData != "" {
-			resp.PrintData = append(resp.PrintData, pd.PrintData)
+	}
+	// PrintData is at CreatedShipment level, not inside ParcelData
+	for _, pd := range raw.CreatedShipment.PrintData {
+		if pd.Data != "" {
+			resp.PrintData = append(resp.PrintData, pd.Data)
 		}
 	}
 	return resp, nil
 }
 
-// GetLabel retrieves the shipping label for a parcel. Returns raw PDF bytes.
-func (s *ShipmentService) GetLabel(ctx context.Context, parcelID string) ([]byte, error) {
-	path := fmt.Sprintf("/shipments/%s/labels", url.PathEscape(parcelID))
-	var resp LabelResponse
-	if err := s.client.do(ctx, http.MethodGet, path, nil, &resp); err != nil {
-		return nil, fmt.Errorf("gls: get label: %w", err)
-	}
-
-	data, err := base64.StdEncoding.DecodeString(resp.LabelData)
-	if err != nil {
-		return nil, fmt.Errorf("gls: decode label data: %w", err)
-	}
-	return data, nil
+// GetLabel is not supported as a separate API call in the GLS ShipIT REST API.
+// Labels are returned inline during shipment creation in CreatedShipment.PrintData[].Data.
+// Retrieve the label from the stored create response instead.
+func (s *ShipmentService) GetLabel(_ context.Context, _ string) ([]byte, error) {
+	return nil, fmt.Errorf("gls: label retrieval not supported as separate API call — labels are embedded in the create shipment response (CreatedShipment.PrintData[].Data)")
 }
 
 // GetTracking retrieves tracking events for a tracking ID.
 // Uses POST /shipments/parceldetails per GLS ShipIT REST API.
+// GLS expects a single TrackID string (not an array).
 func (s *ShipmentService) GetTracking(ctx context.Context, trackID string) (*TrackingResponse, error) {
 	reqBody := ParcelDetailsRequest{
-		TrackIDs: []string{trackID},
+		TrackID: trackID,
 	}
 	var resp TrackingResponse
 	if err := s.client.do(ctx, http.MethodPost, "/shipments/parceldetails", &reqBody, &resp); err != nil {

@@ -53,23 +53,29 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 func (p *GLSProvider) ProviderName() string { return "gls" }
 
 func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
-	svcType := req.ServiceType
-	if svcType == "" {
-		svcType = "standard"
+	// Map OMS service type to GLS product code.
+	product := "PARCEL"
+	switch req.ServiceType {
+	case "express_10":
+		product = "EXPRESS_10"
+	case "express_12":
+		product = "EXPRESS_12"
 	}
 
 	glsReq := &glssdk.CreateParcelRequest{
-		ServiceType: svcType,
-		Consignee: glssdk.Party{
-			Name:        req.Receiver.Name,
-			Email:       req.Receiver.Email,
-			Phone:       req.Receiver.Phone,
-			Street:      req.Receiver.Street,
-			City:        req.Receiver.City,
-			ZipCode:     req.Receiver.PostalCode,
-			CountryCode: req.Receiver.Country,
+		Product: product,
+		Consignee: glssdk.Consignee{
+			Address: glssdk.ConsigneeAddress{
+				Name1:       req.Receiver.Name,
+				Street:      req.Receiver.Street,
+				City:        req.Receiver.City,
+				ZIPCode:     req.Receiver.PostalCode,
+				CountryCode: req.Receiver.Country,
+				Phone:       req.Receiver.Phone,
+				EMail:       req.Receiver.Email,
+			},
 		},
-		Parcels: []glssdk.Parcel{
+		ShippingUnit: []glssdk.ShipmentUnit{
 			{
 				Weight: req.Parcel.WeightKg,
 				Width:  req.Parcel.WidthCm,
@@ -77,27 +83,49 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 				Depth:  req.Parcel.DepthCm,
 			},
 		},
-		Reference: req.Reference,
+		PrintingOptions: &glssdk.PrintingOptions{
+			ReturnLabels: glssdk.LabelOptions{
+				TemplateSet: "NONE",
+				LabelFormat: "PDF",
+			},
+		},
 	}
 
+	if req.Reference != "" {
+		glsReq.References = []string{req.Reference}
+	}
+
+	var services []glssdk.Service
 	if req.CODAmount > 0 {
 		currency := req.CODCurrency
 		if currency == "" {
 			currency = "PLN"
 		}
-		glsReq.Services = append(glsReq.Services, glssdk.Service{
-			ServiceName: "COD",
-			Amount:      req.CODAmount,
-			Currency:    currency,
+		services = append(services, glssdk.Service{
+			ServiceName: "service_cash",
+			Cash: &glssdk.CashService{
+				Amount:   req.CODAmount,
+				Currency: currency,
+				Reason:   "COD",
+			},
 		})
 	}
 
 	if req.InsuredValue > 0 {
-		glsReq.Services = append(glsReq.Services, glssdk.Service{
-			ServiceName: "INS",
-			Amount:      req.InsuredValue,
-			Currency:    "PLN",
+		services = append(services, glssdk.Service{
+			ServiceName: "service_addonliability",
+			AddOnLiability: &glssdk.AddOnLiabilityService{
+				ParcelContent: "goods",
+				Currency:      "PLN",
+				Amount:        req.InsuredValue,
+			},
 		})
+	}
+
+	if len(services) > 0 {
+		glsReq.Service = &glssdk.ServiceSection{
+			Service: services,
+		}
 	}
 
 	resp, err := p.client.Shipments.Create(ctx, glsReq)
