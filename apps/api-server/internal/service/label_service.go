@@ -240,8 +240,14 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 	// Save label file — allowlist extension to prevent path traversal
 	var ext string
 	switch req.LabelFormat {
-	case "pdf", "zpl", "epl", "png":
-		ext = req.LabelFormat
+	case "pdf":
+		ext = "pdf"
+	case "zpl":
+		ext = "zpl"
+	case "epl":
+		ext = "epl"
+	case "png":
+		ext = "png"
 	default:
 		return nil, fmt.Errorf("unsupported label format: %s", req.LabelFormat)
 	}

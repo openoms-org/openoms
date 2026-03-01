@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"log/slog"
 	"net/smtp"
 	"slices"
@@ -120,7 +121,7 @@ func (s *EmailService) SendTestEmail(ctx context.Context, settings model.EmailSe
 
 func renderEmailTemplate(order *model.Order, newStatus string, companyName string, statusCfg *model.OrderStatusConfig) (string, string) {
 	orderShort := order.ID.String()[:8]
-	customerName := order.CustomerName
+	customerName := html.EscapeString(order.CustomerName)
 
 	// Dynamic label lookup
 	statusLabel := newStatus
