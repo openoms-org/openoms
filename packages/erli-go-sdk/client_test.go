@@ -26,11 +26,13 @@ func TestNewClientDefaults(t *testing.T) {
 	}
 }
 
+// TestWithSandbox verifies that the deprecated WithSandbox() option is a no-op:
+// it must not override the default production base URL. Use WithBaseURL() for sandbox.
 func TestWithSandbox(t *testing.T) {
 	c := NewClient("tok", WithSandbox())
 
-	if c.baseURL != sandboxBaseURL {
-		t.Errorf("baseURL = %q, want %q", c.baseURL, sandboxBaseURL)
+	if c.baseURL != productionBaseURL {
+		t.Errorf("WithSandbox() changed baseURL to %q; deprecated noop should leave production URL %q unchanged", c.baseURL, productionBaseURL)
 	}
 }
 
@@ -108,8 +110,8 @@ func TestOrdersList(t *testing.T) {
 		if r.URL.Path != "/orders" {
 			t.Errorf("path = %q, want /orders", r.URL.Path)
 		}
-		if r.URL.Query().Get("status") != "paid" {
-			t.Errorf("status = %q, want paid", r.URL.Query().Get("status"))
+		if r.URL.Query().Get("status") != "purchased" {
+			t.Errorf("status = %q, want purchased", r.URL.Query().Get("status"))
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -117,7 +119,7 @@ func TestOrdersList(t *testing.T) {
 			Data: []Order{
 				{
 					ID:          "ORD-001",
-					Status:      "paid",
+					Status:      "purchased",
 					BuyerName:   "Jan Kowalski",
 					BuyerEmail:  "jan@example.com",
 					TotalAmount: 199.99,
@@ -168,8 +170,8 @@ func TestOrdersList(t *testing.T) {
 
 func TestOrdersListWithCursor(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("cursor") != "page2" {
-			t.Errorf("cursor = %q, want page2", r.URL.Query().Get("cursor"))
+		if r.URL.Query().Get("after") != "page2" {
+			t.Errorf("after = %q, want page2", r.URL.Query().Get("after"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(OrdersResponse{Data: []Order{}})
@@ -202,7 +204,7 @@ func TestOrdersGet(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(Order{
 			ID:            "ORD-123",
-			Status:        "paid",
+			Status:        "purchased",
 			BuyerName:     "Anna Nowak",
 			BuyerEmail:    "anna@example.com",
 			TotalAmount:   49.99,
@@ -276,8 +278,8 @@ func TestOffersUpdateStock(t *testing.T) {
 		if r.Method != http.MethodPatch {
 			t.Errorf("method = %q, want PATCH", r.Method)
 		}
-		if r.URL.Path != "/offers/OFFER-42" {
-			t.Errorf("path = %q, want /offers/OFFER-42", r.URL.Path)
+		if r.URL.Path != "/products/OFFER-42" {
+			t.Errorf("path = %q, want /products/OFFER-42", r.URL.Path)
 		}
 
 		var body map[string]any
@@ -308,8 +310,8 @@ func TestOffersUpdatePrice(t *testing.T) {
 		if r.Method != http.MethodPatch {
 			t.Errorf("method = %q, want PATCH", r.Method)
 		}
-		if r.URL.Path != "/offers/OFFER-42" {
-			t.Errorf("path = %q, want /offers/OFFER-42", r.URL.Path)
+		if r.URL.Path != "/products/OFFER-42" {
+			t.Errorf("path = %q, want /products/OFFER-42", r.URL.Path)
 		}
 
 		var body map[string]any
@@ -336,12 +338,14 @@ func TestOffersUpdatePrice(t *testing.T) {
 }
 
 func TestOffersCreate(t *testing.T) {
+	const testSKU = "SKU-001"
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if r.URL.Path != "/offers" {
-			t.Errorf("path = %q, want /offers", r.URL.Path)
+		if r.URL.Path != "/products/"+testSKU {
+			t.Errorf("path = %q, want /products/%s", r.URL.Path, testSKU)
 		}
 		if r.Header.Get("Content-Type") != "application/json" {
 			t.Errorf("Content-Type = %q, want application/json", r.Header.Get("Content-Type"))
@@ -349,7 +353,7 @@ func TestOffersCreate(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(CreateOfferResponse{ID: "OFFER-NEW-42"})
+		_ = json.NewEncoder(w).Encode(CreateOfferResponse{ID: "ERLI-INTERNAL-42"})
 	}))
 	defer srv.Close()
 
@@ -363,12 +367,46 @@ func TestOffersCreate(t *testing.T) {
 		Price: 19.99,
 		Stock: 100,
 	}
-	offerID, err := c.Offers.Create(context.Background(), req)
+	offerID, err := c.Offers.Create(context.Background(), testSKU, req)
 	if err != nil {
 		t.Fatalf("Create() error: %v", err)
 	}
-	if offerID != "OFFER-NEW-42" {
-		t.Errorf("Create() offerID = %q, want %q", offerID, "OFFER-NEW-42")
+	if offerID != "ERLI-INTERNAL-42" {
+		t.Errorf("Create() offerID = %q, want %q", offerID, "ERLI-INTERNAL-42")
+	}
+}
+
+func TestOffersCreate_202Accepted(t *testing.T) {
+	const testSKU = "SKU-ASYNC-001"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %q, want POST", r.Method)
+		}
+		if r.URL.Path != "/products/"+testSKU {
+			t.Errorf("path = %q, want /products/%s", r.URL.Path, testSKU)
+		}
+		// Erli responds 202 when product is queued for async validation.
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer srv.Close()
+
+	c := NewClient("tok",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+	)
+
+	req := CreateOfferRequest{
+		Title: "Async Product",
+		Price: 9.99,
+		Stock: 5,
+	}
+	offerID, err := c.Offers.Create(context.Background(), testSKU, req)
+	if !errors.Is(err, ErrProductPendingValidation) {
+		t.Errorf("Create() error = %v, want ErrProductPendingValidation", err)
+	}
+	if offerID != testSKU {
+		t.Errorf("Create() offerID = %q, want %q (externalID returned on 202)", offerID, testSKU)
 	}
 }
 
@@ -477,14 +515,17 @@ func TestMapStatus(t *testing.T) {
 		oms    string
 		wantOK bool
 	}{
-		{"new", "new", true},
-		{"paid", "confirmed", true},
-		{"shipped", "shipped", true},
-		{"delivered", "delivered", true},
+		{"pending", "new", true},
+		{"purchased", "confirmed", true},
 		{"cancelled", "cancelled", true},
-		{"returned", "refunded", true},
 		{"NONEXISTENT", "", false},
 		{"", "", false},
+		// Old statuses must no longer be in the map.
+		{"new", "", false},
+		{"paid", "", false},
+		{"shipped", "", false},
+		{"delivered", "", false},
+		{"returned", "", false},
 	}
 
 	for _, tc := range tests {

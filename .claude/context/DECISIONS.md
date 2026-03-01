@@ -113,3 +113,11 @@ Append-only log. Each entry is immutable once written.
 - **Decision:** `message_templates` table with `{{variable}}` placeholder syntax. `substituteVariables` replaces placeholders from event data map. Templates are per-tenant, channel-scoped (allegro, email, sms), admin-guarded writes.
 - **Files:** `message_template_service.go`, `message_template_handler.go`, `automation/actions.go` (executeSendMarketplaceMessage)
 - **Consequences:** Body max 50k chars validation. Frontend uses `enabled` field (not `is_active`). Template variables are not validated against schema — invalid placeholders pass through unchanged.
+
+## ADR-016: Erli SDK Rebuild Against Official API Docs
+- **Date:** 2026-02-28
+- **Context:** API Audit revealed entire `packages/erli-go-sdk/` was built on wrong assumptions — none of the endpoints matched official docs at https://erli.pl/svc/shop-api/doc/. Base URL was incorrect (api.erli.pl → erli.pl), endpoints wrong (POST /offers → POST /products/{externalId}), status mapping (6→3), polling parameter name (cursor → after).
+- **Decision:** Full SDK rebuild against official Erli docs: (1) base URL: `productionBaseURL = "https://erli.pl/svc/shop-api"`, sandbox via `WithBaseURL()` (no hardcoded URL), (2) offers → products/{externalId} endpoints, externalId in path (URL-escaped), (3) status map 6→3 (pending/purchased/cancelled only), (4) polling param "after" instead of "cursor", (5) handle 202 Accepted response (async product validation), (6) provider.go: SKU as externalId, Create(ctx, externalID, req).
+- **Files:** `packages/erli-go-sdk/client.go` (base URL), `offers.go` (endpoints), `statusmap.go` (3 statuses), `orders.go` (polling), `provider.go` (integration), `*_test.go` (updated mocks)
+- **Security audit findings:** 1 HIGH (provider.go:47-49 — sandbox flag silent fail-open to production), 4 MEDIUM (deferred to follow-up: scheme validation, global logger, nil RawData fallback, Go 1.25.0 patches)
+- **Consequences:** All Erli integrations fixed. 202 handling requires client code to detect async creation. Sandbox tenants must set `ERLI_SANDBOX_URL` or use `WithBaseURL()`; without it, sandbox flag is now a hard error (pending security fix merge).

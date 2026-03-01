@@ -3,6 +3,13 @@ Last full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PR
 
 ## Unfixed Findings
 
+### CRITICAL (blocks Erli merge)
+1. **`packages/erli-go-sdk/provider.go:47-49`** — **Sandbox flag silent fail-open to production** — When `creds.Sandbox == true`, code logs deprecation warning but appends no-op `WithSandbox()`. Tenant with `"sandbox": true` in credentials will silently hit production Erli API instead of sandbox.
+   - Risk: CRITICAL (real orders to wrong environment)
+   - Fix: Return hard error `"erli: sandbox mode requires WithBaseURL; set ERLI_SANDBOX_URL or remove sandbox:true"` OR skip appending no-op entirely
+   - Effort: S (3-line fix)
+   - Status: Merge blocker, pending fix
+
 ### BACKLOG (low priority, separate PRs)
 1. **`writeError` → `writeServerError` migration** — 371 call sites use generic `writeError` for internal server errors
    - Risk: inconsistent error responses
@@ -19,7 +26,14 @@ Last full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PR
    - Fix: nonce-based CSP (requires Next.js integration for script nonces)
    - Effort: L
 
+4. **Erli SDK MEDIUM findings** (deferred to follow-up)
+   - `client.go:109` — no scheme validation on `WithBaseURL()` (allow http on localhost only, require https for others)
+   - `offers.go:61-64` — global `slog.Warn` in library package (thread logger through OfferService)
+   - `provider.go:186-188` — `RawData` nil on unknown status (set fallback map with erli_status + oms_status=unknown)
+   - `go.mod:1` — Go 1.25.0 behind on patches (bump to 1.25.7+ for CVE-2025-47910, CVE-2025-58186, CVE-2025-61726)
+
 ## Recently Fixed
+- 2026-02-28: Erli SDK rebuild — base URL fix (erli.pl/svc/shop-api), endpoints (/products/{externalId}), status mapping (3 statuses), polling (after), pagination, 202 async handling, path escaping on all externalID, 30s HTTP timeout, response body limits (10MB), token in Auth header only; security audit: 1 HIGH blocker (provider.go sandbox flag — fix required before merge), 4 MEDIUM deferred
 - 2026-02-25: PR #58 — Allegro competitive parity with full security audit: SendToKSeF three-phase refactor (no DB during external calls), unique index on product_listings(external_id, integration_id), per-tenant ImportOffers concurrency guard, KSeF session defer-terminate, message template body max length validation, raw error leak fix in PushListing, proper Allegro provider in automation (token refresh), warehouse doc stock quantities fix
 - 2026-02-25: PRs #43-56 — Massive test coverage expansion: SDK tests for all 27 packages (100%), middleware tests for all 18 files (100%), worker tests for all 19 files (100%), handler validation tests for all handlers, model Validate() coverage for 54 request types, service-layer tests (carbon, repricing, webhook, dropship, invoice, automation conditions)
 - 2026-02-25: PR #52 — SafeGo helper for goroutine panic recovery (prevents silent worker crashes)
