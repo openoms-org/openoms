@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -148,8 +149,16 @@ func ParseCatalogueXML(r io.Reader) ([]CatalogueProduct, error) {
 
 // ParseCatalogueURL fetches and parses a BTP XML catalogue feed from the given URL.
 // The provided http.Client should have SSRF protections (e.g. netutil.SafeHTTPClient).
-func ParseCatalogueURL(ctx context.Context, url string, client *http.Client) ([]CatalogueProduct, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func ParseCatalogueURL(ctx context.Context, rawURL string, client *http.Client) ([]CatalogueProduct, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("btp: invalid catalogue URL: %w", err)
+	}
+	if parsed.Scheme != "https" && parsed.Scheme != "http" {
+		return nil, fmt.Errorf("btp: catalogue URL must use http or https scheme, got %q", parsed.Scheme)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("btp: create catalogue request: %w", err)
 	}

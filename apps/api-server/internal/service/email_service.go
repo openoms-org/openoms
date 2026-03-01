@@ -184,8 +184,9 @@ func sendMail(cfg model.EmailSettings, to, subject, htmlBody string) error {
 		return fmt.Errorf("SMTP not configured")
 	}
 
-	// Sanitize header values to prevent header injection
+	// Sanitize header values to prevent header injection (CRLF)
 	sanitizer := strings.NewReplacer("\r", "", "\n", "")
+	to = sanitizer.Replace(to)
 	fromName := sanitizer.Replace(cfg.FromName)
 	subject = sanitizer.Replace(subject)
 

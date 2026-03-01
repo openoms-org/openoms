@@ -237,8 +237,14 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		return nil, fmt.Errorf("carrier get label: %w", err)
 	}
 
-	// Save label file
-	ext := req.LabelFormat
+	// Save label file — allowlist extension to prevent path traversal
+	var ext string
+	switch req.LabelFormat {
+	case "pdf", "zpl", "epl", "png":
+		ext = req.LabelFormat
+	default:
+		return nil, fmt.Errorf("unsupported label format: %s", req.LabelFormat)
+	}
 	labelDir := filepath.Join(s.uploadDir, tenantID.String())
 	if err := os.MkdirAll(labelDir, 0755); err != nil {
 		return nil, fmt.Errorf("creating label directory: %w", err)
