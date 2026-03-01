@@ -29,7 +29,8 @@ import (
 func newTestGLSProvider(t *testing.T, serverURL string) *GLSProvider {
 	t.Helper()
 	client := glssdk.NewClient(
-		"test-api-key",
+		"test-username",
+		"test-password",
 		glssdk.WithBaseURL(serverURL),
 	)
 	return &GLSProvider{
@@ -42,8 +43,9 @@ func newTestGLSProvider(t *testing.T, serverURL string) *GLSProvider {
 
 func TestGLS_FactoryRegistration(t *testing.T) {
 	creds, _ := json.Marshal(map[string]any{
-		"api_key": "test-key",
-		"sandbox": true,
+		"username": "test-user",
+		"password": "test-pass",
+		"sandbox":  true,
 	})
 	provider, err := integration.NewCarrierProvider("gls", creds, nil)
 	if err != nil {
@@ -71,7 +73,7 @@ func TestGLS_CreateShipment_MapsReceiverCorrectly(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"parcel_ids":["P1"],"track_ids":["T1"]}`))
+		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -119,7 +121,7 @@ func TestGLS_CreateShipment_CODUsesServiceStructure(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"parcel_ids":["P1"],"track_ids":["T1"]}`))
+		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -145,16 +147,15 @@ func TestGLS_CreateShipment_CODUsesServiceStructure(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	// Plan: COD should be sent as a Service with ServiceInfo, not flat string
-	// Current code appends "COD" as string to Services []string — this is wrong
-	services, ok := receivedBody["services"]
+	// COD should be sent as a structured Service with amount/currency, not a flat string
+	services, ok := receivedBody["Services"]
 	if !ok {
-		t.Error("request should contain 'services' field for COD")
+		t.Error("request should contain 'Services' field for COD")
 		return
 	}
 
 	// The services should NOT be a flat string array like ["COD"]
-	// It should be a structured array with ServiceName and ServiceInfo
+	// It should be a structured array with serviceName and amount
 	svcArr, isArr := services.([]any)
 	if isArr && len(svcArr) > 0 {
 		firstSvc, isStr := svcArr[0].(string)
@@ -172,7 +173,7 @@ func TestGLS_CreateShipment_PropagatesServiceType(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"parcel_ids":["P1"],"track_ids":["T1"]}`))
+		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -191,9 +192,9 @@ func TestGLS_CreateShipment_PropagatesServiceType(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	svcType, _ := receivedBody["serviceType"].(string)
+	svcType, _ := receivedBody["ServiceType"].(string)
 	if svcType != "express_10" {
-		t.Errorf("serviceType = %q, want %q", svcType, "express_10")
+		t.Errorf("ServiceType = %q, want %q", svcType, "express_10")
 	}
 }
 
@@ -204,7 +205,7 @@ func TestGLS_CreateShipment_DefaultsServiceType(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		_ = json.Unmarshal(body, &receivedBody)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"parcel_ids":["P1"],"track_ids":["T1"]}`))
+		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1","PrintData":"AAAA"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -221,9 +222,9 @@ func TestGLS_CreateShipment_DefaultsServiceType(t *testing.T) {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	svcType, _ := receivedBody["serviceType"].(string)
+	svcType, _ := receivedBody["ServiceType"].(string)
 	if svcType == "" {
-		t.Error("serviceType should default when empty, not be blank")
+		t.Error("ServiceType should default when empty, not be blank")
 	}
 }
 

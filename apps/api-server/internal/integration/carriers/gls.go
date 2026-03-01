@@ -19,8 +19,9 @@ func init() {
 
 // GLSCredentials is the JSON structure stored in encrypted integration credentials.
 type GLSCredentials struct {
-	APIKey  string `json:"api_key"`
-	Sandbox bool   `json:"sandbox,omitempty"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Sandbox  bool   `json:"sandbox,omitempty"`
 }
 
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
@@ -41,7 +42,7 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 		opts = append(opts, glssdk.WithSandbox())
 	}
 
-	client := glssdk.NewClient(creds.APIKey, opts...)
+	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{
 		client: client,
@@ -73,18 +74,30 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 				Weight: req.Parcel.WeightKg,
 				Width:  req.Parcel.WidthCm,
 				Height: req.Parcel.HeightCm,
-				Length: req.Parcel.DepthCm,
+				Depth:  req.Parcel.DepthCm,
 			},
 		},
 		Reference: req.Reference,
 	}
 
 	if req.CODAmount > 0 {
-		glsReq.Services = append(glsReq.Services, "COD")
+		currency := req.CODCurrency
+		if currency == "" {
+			currency = "PLN"
+		}
+		glsReq.Services = append(glsReq.Services, glssdk.Service{
+			ServiceName: "COD",
+			Amount:      req.CODAmount,
+			Currency:    currency,
+		})
 	}
 
 	if req.InsuredValue > 0 {
-		glsReq.Services = append(glsReq.Services, "INS")
+		glsReq.Services = append(glsReq.Services, glssdk.Service{
+			ServiceName: "INS",
+			Amount:      req.InsuredValue,
+			Currency:    "PLN",
+		})
 	}
 
 	resp, err := p.client.Shipments.Create(ctx, glsReq)

@@ -50,8 +50,7 @@ func TestSpec_Auth_UsesBasicAuth(t *testing.T) {
 	defer srv.Close()
 
 	// Plan: NewClient(username, password string, opts ...Option)
-	// Current code takes apiKey — this documents the expected signature change
-	c := NewClient("testuser",
+	c := NewClient("testuser", "testpass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -75,7 +74,7 @@ func TestSpec_ContentType_UsesGLSVersionHeader(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("key",
+	c := NewClient("key", "pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -101,7 +100,7 @@ func TestSpec_CreateShipment_PostsToShipmentsEndpoint(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("key",
+	c := NewClient("key", "pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -143,7 +142,7 @@ func TestSpec_CreateShipment_ResponseHasCreatedShipmentStructure(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("key",
+	c := NewClient("key", "pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -184,7 +183,7 @@ func TestSpec_GetTracking_UsesPostMethod(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("key",
+	c := NewClient("key", "pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -218,7 +217,7 @@ func TestSpec_Cancel_UsesPostToShipmentsCancel(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("key",
+	c := NewClient("key", "pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -282,7 +281,7 @@ func TestSpec_CreateShipment_EmptyParcels_ReturnsError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("key",
+	c := NewClient("key", "pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -296,7 +295,7 @@ func TestSpec_CreateShipment_EmptyParcels_ReturnsError(t *testing.T) {
 }
 
 func TestSpec_CreateShipment_ServerUnavailable_ReturnsError(t *testing.T) {
-	c := NewClient("key",
+	c := NewClient("key", "pass",
 		WithBaseURL("http://localhost:1"), // unreachable
 	)
 

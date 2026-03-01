@@ -11,10 +11,13 @@ import (
 )
 
 func TestNewClientDefaults(t *testing.T) {
-	c := NewClient("api-key-123")
+	c := NewClient("testuser", "testpass")
 
-	if c.apiKey != "api-key-123" {
-		t.Errorf("apiKey = %q, want %q", c.apiKey, "api-key-123")
+	if c.username != "testuser" {
+		t.Errorf("username = %q, want %q", c.username, "testuser")
+	}
+	if c.password != "testpass" {
+		t.Errorf("password = %q, want %q", c.password, "testpass")
 	}
 	if c.baseURL != productionBaseURL {
 		t.Errorf("baseURL = %q, want %q", c.baseURL, productionBaseURL)
@@ -25,7 +28,7 @@ func TestNewClientDefaults(t *testing.T) {
 }
 
 func TestWithSandbox(t *testing.T) {
-	c := NewClient("key", WithSandbox())
+	c := NewClient("key", "pass", WithSandbox())
 
 	if c.baseURL != sandboxBaseURL {
 		t.Errorf("baseURL = %q, want %q", c.baseURL, sandboxBaseURL)
@@ -33,28 +36,34 @@ func TestWithSandbox(t *testing.T) {
 }
 
 func TestWithBaseURL(t *testing.T) {
-	c := NewClient("key", WithBaseURL("https://custom.api"))
+	c := NewClient("key", "pass", WithBaseURL("https://custom.api"))
 
 	if c.baseURL != "https://custom.api" {
 		t.Errorf("baseURL = %q, want %q", c.baseURL, "https://custom.api")
 	}
 }
 
-func TestDoSetsBearerToken(t *testing.T) {
+func TestDoSetsBasicAuth(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authorization")
-		if auth != "Bearer test-api-key" {
-			t.Errorf("Authorization = %q, want %q", auth, "Bearer test-api-key")
+		user, pass, ok := r.BasicAuth()
+		if !ok {
+			t.Error("expected Basic Auth")
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
+		if user != "test-user" {
+			t.Errorf("username = %q, want test-user", user)
+		}
+		if pass != "test-pass" {
+			t.Errorf("password = %q, want test-pass", pass)
+		}
+		if r.Header.Get("Accept") != "application/glsVersion1+json" {
+			t.Errorf("Accept = %q, want application/glsVersion1+json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
-	c := NewClient("test-api-key",
+	c := NewClient("test-user", "test-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -71,11 +80,11 @@ func TestCreateParcel(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if r.URL.Path != "/parcels" {
-			t.Errorf("path = %q, want /parcels", r.URL.Path)
+		if r.URL.Path != "/shipments" {
+			t.Errorf("path = %q, want /shipments", r.URL.Path)
 		}
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("Content-Type = %q, want application/json", r.Header.Get("Content-Type"))
+		if r.Header.Get("Content-Type") != "application/glsVersion1+json" {
+			t.Errorf("Content-Type = %q, want application/glsVersion1+json", r.Header.Get("Content-Type"))
 		}
 
 		var req CreateParcelRequest
@@ -96,14 +105,11 @@ func TestCreateParcel(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(CreateParcelResponse{
-			ParcelIDs: []string{"GLS-001", "GLS-002"},
-			TrackIDs:  []string{"TRK-001", "TRK-002"},
-		})
+		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"ORDER-001","ParcelData":[{"TrackID":"TRK-001"},{"TrackID":"TRK-002"}]}}`))
 	}))
 	defer srv.Close()
 
-	c := NewClient("api-key",
+	c := NewClient("api-user", "api-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -125,7 +131,7 @@ func TestCreateParcel(t *testing.T) {
 			Phone:       "500100200",
 		},
 		Parcels: []Parcel{
-			{Weight: 2.0, Width: 30, Height: 20, Length: 40},
+			{Weight: 2.0, Width: 30, Height: 20, Depth: 40},
 		},
 		Reference: "ORDER-001",
 	})
@@ -135,8 +141,8 @@ func TestCreateParcel(t *testing.T) {
 	if len(resp.ParcelIDs) != 2 {
 		t.Fatalf("len(ParcelIDs) = %d, want 2", len(resp.ParcelIDs))
 	}
-	if resp.ParcelIDs[0] != "GLS-001" {
-		t.Errorf("ParcelIDs[0] = %q, want %q", resp.ParcelIDs[0], "GLS-001")
+	if resp.ParcelIDs[0] != "TRK-001" {
+		t.Errorf("ParcelIDs[0] = %q, want %q", resp.ParcelIDs[0], "TRK-001")
 	}
 	if len(resp.TrackIDs) != 2 {
 		t.Fatalf("len(TrackIDs) = %d, want 2", len(resp.TrackIDs))
@@ -154,8 +160,8 @@ func TestGetLabel(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %q, want GET", r.Method)
 		}
-		if r.URL.Path != "/parcels/GLS-001/label" {
-			t.Errorf("path = %q, want /parcels/GLS-001/label", r.URL.Path)
+		if r.URL.Path != "/shipments/GLS-001/labels" {
+			t.Errorf("path = %q, want /shipments/GLS-001/labels", r.URL.Path)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -166,7 +172,7 @@ func TestGetLabel(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("api-key",
+	c := NewClient("api-user", "api-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -182,11 +188,11 @@ func TestGetLabel(t *testing.T) {
 
 func TestGetTracking(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %q, want GET", r.Method)
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if r.URL.Path != "/tracking/TRK-001" {
-			t.Errorf("path = %q, want /tracking/TRK-001", r.URL.Path)
+		if r.URL.Path != "/shipments/parceldetails" {
+			t.Errorf("path = %q, want /shipments/parceldetails", r.URL.Path)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -200,7 +206,7 @@ func TestGetTracking(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("api-key",
+	c := NewClient("api-user", "api-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -228,17 +234,18 @@ func TestGetTracking(t *testing.T) {
 
 func TestCancelParcel(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete {
-			t.Errorf("method = %q, want DELETE", r.Method)
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %q, want POST", r.Method)
 		}
-		if r.URL.Path != "/parcels/GLS-001" {
-			t.Errorf("path = %q, want /parcels/GLS-001", r.URL.Path)
+		if r.URL.Path != "/shipments/cancel/GLS-001" {
+			t.Errorf("path = %q, want /shipments/cancel/GLS-001", r.URL.Path)
 		}
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
-	c := NewClient("api-key",
+	c := NewClient("api-user", "api-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -259,7 +266,7 @@ func TestCreateParcelError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("api-key",
+	c := NewClient("api-user", "api-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -279,7 +286,7 @@ func TestServerError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("api-key",
+	c := NewClient("api-user", "api-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -311,7 +318,7 @@ func TestNotFoundError(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := NewClient("api-key",
+	c := NewClient("api-user", "api-pass",
 		WithBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
@@ -370,6 +377,9 @@ func TestMapStatus(t *testing.T) {
 		{"INDELIVERY", "out_for_delivery", true},
 		{"DELIVERED", "delivered", true},
 		{"RETURNED", "returned", true},
+		{"CANCELLED", "cancelled", true},
+		{"CANCELLATION_PENDING", "cancelled", true},
+		{"SCANNED", "in_transit", true},
 		{"NONEXISTENT", "", false},
 	}
 
