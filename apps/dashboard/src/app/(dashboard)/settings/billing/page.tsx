@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useSubscription } from "@/hooks/use-billing";
 import { Badge } from "@/components/ui/badge";
@@ -32,8 +33,24 @@ const INTERVAL_LABELS: Record<string, string> = {
   year: "Rocznie",
 };
 
+function computeDaysLeft(trialEnd: string): number {
+  return Math.max(
+    0,
+    Math.ceil(
+      (new Date(trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    )
+  );
+}
+
 export default function BillingSettingsPage() {
   const { data: subscription, isLoading } = useSubscription();
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (subscription?.status === "trialing" && subscription.trial_end) {
+      setDaysLeft(computeDaysLeft(subscription.trial_end));
+    }
+  }, [subscription?.status, subscription?.trial_end]);
 
   if (isLoading) {
     return (
@@ -62,17 +79,6 @@ export default function BillingSettingsPage() {
       </AdminGuard>
     );
   }
-
-  const daysLeft =
-    subscription.status === "trialing" && subscription.trial_end
-      ? Math.max(
-          0,
-          Math.ceil(
-            (new Date(subscription.trial_end).getTime() - Date.now()) /
-              (1000 * 60 * 60 * 24)
-          )
-        )
-      : null;
 
   return (
     <AdminGuard>

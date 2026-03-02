@@ -1,13 +1,30 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth";
 import { useSubscription } from "@/hooks/use-billing";
 import { AlertTriangle, Clock, XCircle } from "lucide-react";
 
+function computeDaysLeft(trialEnd: string): number {
+  return Math.max(
+    0,
+    Math.ceil(
+      (new Date(trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    )
+  );
+}
+
 export function SubscriptionBanner() {
   const tenant = useAuthStore((s) => s.tenant);
   const { data: subscription } = useSubscription();
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (subscription?.status === "trialing" && subscription.trial_end) {
+      setDaysLeft(computeDaysLeft(subscription.trial_end));
+    }
+  }, [subscription?.status, subscription?.trial_end]);
 
   if (!tenant) return null;
 
@@ -31,14 +48,7 @@ export function SubscriptionBanner() {
     );
   }
 
-  if (status === "trialing" && subscription?.trial_end) {
-    const daysLeft = Math.max(
-      0,
-      Math.ceil(
-        (new Date(subscription.trial_end).getTime() - Date.now()) /
-          (1000 * 60 * 60 * 24)
-      )
-    );
+  if (status === "trialing" && subscription?.trial_end && daysLeft !== null) {
     return (
       <div className="bg-blue-500 text-white px-4 py-3 text-center text-sm font-medium">
         <Clock className="mr-2 inline h-4 w-4" />
