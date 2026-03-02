@@ -72,6 +72,11 @@ jobs:
             ${{ env.DASHBOARD_IMAGE }}:latest
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:8080' }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN || '' }}
+            NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN || '' }}
+            SENTRY_ORG=${{ vars.SENTRY_ORG || '' }}
+            SENTRY_PROJECT=${{ vars.SENTRY_PROJECT || '' }}
           cache-from: type=gha,scope=dashboard
           cache-to: type=gha,mode=max,scope=dashboard
 
