@@ -8,6 +8,7 @@ metadata:
     {{- include "openoms.labels" . | nindent 4 }}
 data:
   config.alloy: |
+    // ── OpenOMS application metrics ────────────────────────────────
     prometheus.scrape "openoms_api" {
       targets = [{
         __address__ = "{{ include "openoms.fullname" . }}-api.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.apiServer.port }}",
@@ -18,11 +19,148 @@ data:
       bearer_token = env("METRICS_TOKEN")
     }
 
+    // ── Kubelet / cAdvisor metrics (per-pod CPU, memory, network) ─
+    discovery.kubernetes "nodes" {
+      role = "node"
+    }
+
+    prometheus.scrape "kubelet" {
+      targets         = discovery.kubernetes.nodes.targets
+      forward_to      = [prometheus.relabel.kubelet.receiver]
+      scheme          = "https"
+      scrape_interval = "30s"
+      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      tls_config {
+        insecure_skip_verify = true
+      }
+    }
+
+    prometheus.relabel "kubelet" {
+      forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+      // Keep only metrics we actually use in dashboards
+      rule {
+        source_labels = ["__name__"]
+        regex         = "kubelet_running_pods|kubelet_node_name|kubelet_volume_stats.*|rest_client_requests_total"
+        action        = "keep"
+      }
+    }
+
+    prometheus.scrape "cadvisor" {
+      targets         = discovery.kubernetes.nodes.targets
+      forward_to      = [prometheus.relabel.cadvisor.receiver]
+      scheme          = "https"
+      scrape_interval = "30s"
+      metrics_path    = "/metrics/cadvisor"
+      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      tls_config {
+        insecure_skip_verify = true
+      }
+    }
+
+    prometheus.relabel "cadvisor" {
+      forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+      // Keep only container resource metrics
+      rule {
+        source_labels = ["__name__"]
+        regex         = "container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|machine_memory_bytes|machine_cpu_cores"
+        action        = "keep"
+      }
+      // Drop metrics for pause containers
+      rule {
+        source_labels = ["container"]
+        regex         = ""
+        action        = "drop"
+      }
+      rule {
+        source_labels = ["container"]
+        regex         = "POD"
+        action        = "drop"
+      }
+    }
+
     prometheus.remote_write "grafana_cloud" {
       endpoint {
         url = env("GRAFANA_REMOTE_WRITE_URL")
         basic_auth {
           username = env("GRAFANA_USER")
+          password = env("GRAFANA_TOKEN")
+        }
+      }
+    }
+
+    // ── Log collection ─────────────────────────────────────────────
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+
+      // Set __path__ to the pod log path on the node
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+        target_label  = "__path__"
+        separator     = "/"
+        replacement   = "/var/log/pods/*$1/$2/*.log"
+      }
+
+      // Standard labels
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_node_name"]
+        target_label  = "node"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        target_label  = "app"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component"]
+        target_label  = "component"
+      }
+    }
+
+    local.file_match "pod_logs" {
+      path_targets = discovery.relabel.pod_logs.output
+    }
+
+    loki.source.file "pod_logs" {
+      targets    = local.file_match.pod_logs.targets
+      forward_to = [loki.process.pod_logs.receiver]
+    }
+
+    loki.process "pod_logs" {
+      // Parse CRI log format: timestamp stream flags message
+      stage.cri {}
+
+      // Try to detect JSON logs and extract level
+      stage.json {
+        expressions = { "level" = "level", "msg" = "msg" }
+        drop_malformed = true
+      }
+
+      // Normalize log level label
+      stage.label_drop { values = ["filename"] }
+
+      forward_to = [loki.write.grafana_cloud.receiver]
+    }
+
+    loki.write "grafana_cloud" {
+      endpoint {
+        url = env("LOKI_URL")
+        basic_auth {
+          username = env("LOKI_USER")
           password = env("GRAFANA_TOKEN")
         }
       }

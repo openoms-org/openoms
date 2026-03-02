@@ -1,0 +1,38 @@
+{{- if and .Values.monitoring .Values.monitoring.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "openoms.fullname" . }}-alloy
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+rules:
+  # Pod discovery + log collection
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  # Node discovery + kubelet metrics
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/metrics", "nodes/proxy"]
+    verbs: ["get", "list", "watch"]
+  # Endpoints for service discovery
+  - apiGroups: [""]
+    resources: ["endpoints", "services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "openoms.fullname" . }}-alloy
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "openoms.fullname" . }}-alloy
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "openoms.fullname" . }}-alloy
+    namespace: {{ .Values.namespace }}
+{{- end }}
