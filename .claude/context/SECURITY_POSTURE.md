@@ -4,28 +4,26 @@ Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixe
 Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vectors, hardcoded values only, React auto-escape, commits 4ef72f9 + 62eef14)
 Billing/Stripe integration security audit: 2026-03-02 (PASS — Stripe webhook signature verification, checkout session anti-replay, SECURITY DEFINER for pre-registration, no Stripe Price IDs exposed to frontend, runtime config only)
 Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend endpoints, Next.js middleware protecting routes, no credential exposure, backward-compatible JSONB migration)
+DHL carrier production-ready security audit: 2026-03-02 (PASS — no CRITICAL findings; 2 new HIGH items identified (hardcoded country "PL", service type passthrough) but not exploitable; resolves existing HIGH finding about invalid DHL service types via mapDHLServiceType mapping; commits 6656870, 199cba1, 3d5fc39)
 
 ## Unfixed Findings
 
 ### HIGH (should fix immediately — affects production)
-1. **`carrier-fields.tsx:248-249` — Invalid DHL service types** — Frontend offers `"dhl_parcel"` and `"dhl_courier"` which are NOT valid DHL24 SOAP service types. DHL24 uses: `AH` (domestic standard), `09` (before 9:00), `12` (before 12:00), `EK` (Express), `PI` (Parcel International). Backend passes strings through to SOAP without validation → SOAP fault at DHL
-   - Risk: user selects DHL, shipment creation fails at carrier API, confusing error message
-   - Files: `apps/dashboard/src/components/shipments/carrier-fields.tsx:248-249`
-   - Fix: Change to valid DHL codes (`AH`, `09`, `12`, `EK`, `PI`) with proper labels, or add backend validation/mapping
-   - Effort: S
-
-2. **`carrier-fields.tsx:DPDFields` — Missing COD/Insurance form fields** — `DPDFields` renders only `ParcelDimensionFields` but NOT `CODAndInsuranceFields`. Backend (`dpd.go:78-99`) fully supports COD (paymentType: "COD") and insurance (`insuranceValue`). Users cannot set COD for DPD shipments from the UI
+1. **`carrier-fields.tsx:DPDFields` — Missing COD/Insurance form fields** — `DPDFields` renders only `ParcelDimensionFields` but NOT `CODAndInsuranceFields`. Backend (`dpd.go:78-99`) fully supports COD (paymentType: "COD") and insurance (`insuranceValue`). Users cannot set COD for DPD shipments from the UI
    - Risk: DPD COD feature unavailable to users despite backend support; lost sales for COD orders
    - Files: `apps/dashboard/src/components/shipments/carrier-fields.tsx` (DPDFields component)
    - Fix: Add `<CODAndInsuranceFields values={values} onChange={onChange} />` to `DPDFields` render
    - Effort: S
 
+2. ~~**`label_service.go` — Hardcoded country "PL" in CompanySettings fallback**~~ — MITIGATED: inline comment added explaining DHL24-only scope. Country field in CompanySettings deferred to internationalization milestone.
+
+3. ~~**`carriers/dhl.go` — Unknown service type passthrough**~~ — FIXED: `mapDHLServiceType` now returns error for unknown types instead of passthrough. Test added.
+
 ### BACKLOG (low priority, separate PRs)
 1. **Carrier SDK MEDIUM findings** (deferred to follow-up)
    - `dhl-go-sdk/client.go:119`, `dpd-go-sdk/client.go:122`, `gls-go-sdk/client.go:113` — Unbounded `io.ReadAll` in response parsing. A compromised/malicious carrier API endpoint could cause OOM. Typical carrier responses <1MB.
      - Fix: Use `io.LimitReader(resp.Body, 10*1024*1024)` (10MB cap) on all response body reads
-   - `dhl-go-sdk/client.go:14` — Sandbox no-op. `WithSandbox()` is silently ignored. A developer setting `sandbox: true` in credentials expects safety but gets production. Documented in comment but could surprise.
-     - Fix: Return error or log warning when sandbox is requested but not fully supported
+   - ~~`dhl-go-sdk/client.go:14` — Sandbox no-op.~~ FIXED: `NewDHLProvider` now returns error when `Sandbox: true` in credentials.
    - `dhl.go:159-233`, `dpd.go:157-177`, `gls.go:193-213` — Hardcoded placeholder rates. All 3 carriers return hardcoded PLN prices from `GetRates()`. Marked as TODO but if reachable in production, users see fabricated pricing.
      - Fix: Ensure UI/API layer gates these behind a "rates_configured" flag, or return empty until real API integration
    - `dhl-go-sdk/models.go` — Dual serialization concern. Models have JSON tags but SDK uses SOAP/XML transport. JSON tags serve integration layer API but confusing and could cause issues if SDK used directly with JSON.

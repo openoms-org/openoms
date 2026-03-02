@@ -28,6 +28,17 @@ import (
 //   - Returns ExternalID, TrackingNumber, Status from SOAP response
 // =============================================================================
 
+// testShipperAddr is a minimal CarrierSender used in tests that don't specifically
+// test shipper mapping (requires a non-nil Shipper since DHL24 mandates it).
+var testShipperAddr = &integration.CarrierSender{
+	Name:       "Test Sender",
+	Phone:      "123456789",
+	Street:     "Nadawcza 1",
+	City:       "Warszawa",
+	PostalCode: "00-001",
+	Country:    "PL",
+}
+
 func newTestDHLProvider(t *testing.T, serverURL string) *DHLProvider {
 	t.Helper()
 	client := dhlsdk.NewClient(
@@ -95,7 +106,6 @@ func TestDHL_FactoryRegistration(t *testing.T) {
 		"username":       "test-user",
 		"password":       "test-pass",
 		"account_number": "ACC123",
-		"sandbox":        true,
 	})
 	provider, err := integration.NewCarrierProvider("dhl", creds, nil)
 	if err != nil {
@@ -103,6 +113,19 @@ func TestDHL_FactoryRegistration(t *testing.T) {
 	}
 	if provider.ProviderName() != "dhl" {
 		t.Errorf("ProviderName() = %q, want %q", provider.ProviderName(), "dhl")
+	}
+}
+
+func TestDHL_FactoryRegistration_SandboxReturnsError(t *testing.T) {
+	creds, _ := json.Marshal(map[string]any{
+		"username":       "test-user",
+		"password":       "test-pass",
+		"account_number": "ACC123",
+		"sandbox":        true,
+	})
+	_, err := integration.NewCarrierProvider("dhl", creds, nil)
+	if err == nil {
+		t.Fatal("expected error when sandbox is true — DHL24 has no sandbox mode")
 	}
 }
 
@@ -132,6 +155,7 @@ func TestDHL_CreateShipment_MapsAllFields(t *testing.T) {
 	req := integration.CarrierShipmentRequest{
 		OrderID:     "ORD-001",
 		ServiceType: "AH",
+		Shipper:     testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name:       "Jan Kowalski",
 			Email:      "jan@test.pl",
@@ -198,6 +222,7 @@ func TestDHL_CreateShipment_DefaultsServiceTypeToAH(t *testing.T) {
 
 	req := integration.CarrierShipmentRequest{
 		ServiceType: "", // empty — should default to AH
+		Shipper:     testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
@@ -229,6 +254,7 @@ func TestDHL_CreateShipment_CODMappedCorrectly(t *testing.T) {
 	provider := newTestDHLProvider(t, srv.URL)
 
 	req := integration.CarrierShipmentRequest{
+		Shipper: testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
@@ -268,6 +294,7 @@ func TestDHL_CreateShipment_InsuranceMappedCorrectly(t *testing.T) {
 	provider := newTestDHLProvider(t, srv.URL)
 
 	req := integration.CarrierShipmentRequest{
+		Shipper: testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
@@ -303,6 +330,7 @@ func TestDHL_CreateShipment_AccountNumberInRequest(t *testing.T) {
 	provider := newTestDHLProvider(t, srv.URL)
 
 	req := integration.CarrierShipmentRequest{
+		Shipper: testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
@@ -346,8 +374,8 @@ func TestDHL_GetTracking_MapsEventsCorrectly(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/xml")
 		events := `
-        <event><status>PICKED_UP</status><location>Warszawa</location><details>Collected</details></event>
-        <event><status>DELIVERED</status><location>Krakow</location><details>Delivered</details></event>`
+        <event><status>PICKED_UP</status><location>Warszawa</location><timestamp>2025-01-15T10:30:00Z</timestamp><details>Collected</details></event>
+        <event><status>DELIVERED</status><location>Krakow</location><timestamp>2025-01-16T14:00:00Z</timestamp><details>Delivered</details></event>`
 		fmt.Fprint(w, dhlTrackingSOAPResponse(events))
 	}))
 	defer srv.Close()

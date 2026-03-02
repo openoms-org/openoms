@@ -30,6 +30,8 @@ type Receiver struct {
 // Shipper contains sender details.
 type Shipper struct {
 	Name       string `json:"name"`
+	Email      string `json:"email,omitempty"`
+	Phone      string `json:"phone,omitempty"`
 	Street     string `json:"street"`
 	HouseNo    string `json:"houseNo,omitempty"`
 	City       string `json:"city"`

@@ -277,6 +277,7 @@ type AllegroParameterMappingRepo interface {
 type WarehouseRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.WarehouseListFilter) ([]model.Warehouse, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Warehouse, error)
+	FindDefault(ctx context.Context, tx pgx.Tx) (*model.Warehouse, error)
 	Create(ctx context.Context, tx pgx.Tx, warehouse *model.Warehouse) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateWarehouseRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error

@@ -166,3 +166,27 @@ Append-only log. Each entry is immutable once written.
 - **Backward compatibility:** Existing tenants (onboarding key missing or `{dismissed: true}`) treated as completed=true → no redirect. New tenants (registered after feature) start with current_step=1, completed=false.
 - **Files:** Backend `settings_handler.go` (3 new methods), frontend `app/(dashboard)/onboarding/page.tsx` (4-step form), `app/(dashboard)/layout.tsx` (redirect check), model `user.go` (OnboardingSettings struct)
 - **Consequences:** Tenants must complete step 1 (company details) before advancing, but can skip steps 2-4. Onboarding state is atomic per tenant (shared JSONB prevents race conditions via PostgreSQL transaction isolation). Dashboard banner reminds users to finish if they choose "Finish later" before completion.
+
+## ADR-022: Shipper Address Resolution from Warehouse + CompanySettings Fallback
+- **Date:** 2026-03-02
+- **Context:** DHL24 SOAP API requires shipper address (sender name, street, city, postal code, phone) in every shipment creation request. Users create multiple warehouses; each has an address.
+- **Decision:** (1) Add `CarrierSender` struct with fields: `Name`, `Street`, `City`, `PostalCode`, `Phone`, `Email`, `Country`. (2) Add optional `Shipper *CarrierSender` to `CarrierShipmentRequest`. (3) `LabelService.GenerateLabel()` resolves shipper via: (a) warehouse.Address JSON (preferred) → unmarshal to `CarrierSender`, or (b) tenant CompanySettings fallback (company name, country defaults to "PL" for DHL24-only context). (4) `WarehouseRepo.FindDefault()` returns the tenant's default active warehouse by `is_default=true AND active=true`.
+- **Files:** `integration/carrier.go` (CarrierSender struct), `service/label_service.go` (resolveShipper method), `repository/warehouse_repo.go` (FindDefault method), `carriers/dhl.go` (shipper SOAP mapping). DPD/GLS ignore Shipper for now.
+- **Alternatives rejected:**
+  - Store shipper in each shipment request (redundant, requires separate shipper_address column)
+  - Hardcode warehouse 1 as shipper (breaks multi-warehouse setups)
+  - Skip shipper if not provided (carriers error/use DHL defaults, unreliable)
+- **Consequences:**
+  - Shipper is resolved lazily per label generation (reads warehouse + tenant once per request)
+  - Fallback to CompanySettings is expected behavior — no shipper resolution warning needed for this path (may be added in future for international carrier support)
+  - Polish street/house number splitting required for DHL24/DPD SOAP — added `splitStreetHouseNo()` helper to parse "ul. Warszawska 10" → street="ul. Warszawska", houseNo="10"
+  - Warehouse address must be valid JSON or field mapping fails (silent nil return, carrier provides error on missing shipper)
+  - International carrier support (FedEx, UPS) will reuse this pattern but add country field to CompanySettings for tenant default country
+
+## ADR-023: Service Type Mapping (Frontend Codes → Carrier API Codes)
+- **Date:** 2026-03-02
+- **Context:** Frontend offers `dhl_parcel`, `dhl_courier`, etc. (human-readable UI labels). DHL24 SOAP API requires specific codes: `AH` (domestic standard), `09` (before 9:00), `12` (before 12:00), `EK` (Express), `PI` (Parcel International). Old code passed frontend strings directly to SOAP (caused SOAP faults).
+- **Decision:** Each carrier provider implements `mapServiceType(serviceName string) (string, error)` function. (1) DHL: `dhl_parcel→AH`, `dhl_courier→DR`, unknown→error. (2) DPD: `dpd_parcel→standard`, `dpd_courier→courier`. (3) GLS: `gls_parcel→PARCEL`, `gls_express→EXPRESS`. DHL rejects unknown service types with a clear error; DPD/GLS still use passthrough.
+- **Security note:** Service type strings come from `carrier_data` JSON in DB (populated from frontend). `encoding/xml` auto-escapes values when marshaling to SOAP XML, so there's no injection risk. DHL now validates against allowlist and returns error for unknown types.
+- **Files:** `carriers/dhl.go:mapDHLServiceType()`, `carriers/dpd.go:mapDPDServiceType()`, `carriers/gls.go:mapGLSServiceType()`
+- **Consequences:** All 3 carriers now map service types correctly. Frontend users cannot accidentally send SOAP faults. Future carriers must implement mapping or face passthrough risk.
