@@ -146,7 +146,7 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 						EntityType: "order",
 						EntityID:   order.ID,
 						Changes:    map[string]string{"source": p.providerName, "external_id": mo.ExternalID, "auto": "true"},
-						IPAddress:  "worker",
+						IPAddress:  "0.0.0.0",
 					}); err != nil {
 						p.logger.Error("worker: failed to log audit for order creation",
 							"order_id", order.ID, "error", err)
@@ -353,7 +353,7 @@ func (p *MarketplaceOrderPoller) autoCreateShipment(ctx context.Context, ti Tena
 				EntityType: "shipment",
 				EntityID:   shipment.ID,
 				Changes:    map[string]string{"order_id": order.ID.String(), "provider": carrier, "auto": "true"},
-				IPAddress:  "worker",
+				IPAddress:  "0.0.0.0",
 			})
 		}
 		return nil
@@ -418,6 +418,6 @@ func (p *MarketplaceOrderPoller) autoGenerateLabel(ctx context.Context, ti Tenan
 
 	// target_point is already in carrier_data; LabelService reads it from there
 
-	_, err := p.labelGenerator.GenerateLabel(ctx, ti.TenantID, shipment.ID, req, uuid.Nil, "worker")
+	_, err := p.labelGenerator.GenerateLabel(ctx, ti.TenantID, shipment.ID, req, uuid.Nil, "0.0.0.0")
 	return err
 }

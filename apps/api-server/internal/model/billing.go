@@ -45,7 +45,7 @@ type BillingCheckoutSession struct {
 	StripeSessionID string     `json:"stripe_session_id"`
 	Plan            string     `json:"plan"`
 	BillingInterval string     `json:"billing_interval"`
-	Email           string     `json:"email,omitempty"`
+	Email           *string    `json:"email,omitempty"`
 	Status          string     `json:"status"`
 	TenantID        *uuid.UUID `json:"tenant_id,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`

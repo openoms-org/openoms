@@ -197,7 +197,7 @@ func (s *AllegroWebhookSyncer) tryImportOrder(ctx context.Context, ti TenantInte
 			EntityType: "order",
 			EntityID:   order.ID,
 			Changes:    map[string]string{"source": "allegro", "trigger": "webhook", "external_id": mo.ExternalID},
-			IPAddress:  "webhook",
+			IPAddress:  "0.0.0.0",
 		})
 	}); err != nil {
 		s.logger.Error("allegro webhook syncer: failed to create order",
@@ -253,7 +253,7 @@ func (s *AllegroWebhookSyncer) tryImportOrder(ctx context.Context, ti TenantInte
 						EntityType: "shipment",
 						EntityID:   shipment.ID,
 						Changes:    map[string]string{"order_id": order.ID.String(), "provider": carrier, "auto": "true", "trigger": "webhook"},
-						IPAddress:  "webhook",
+						IPAddress:  "0.0.0.0",
 					})
 				}
 				return nil
@@ -357,7 +357,7 @@ func (s *AllegroWebhookSyncer) tryUpdateOrderStatus(ctx context.Context, ti Tena
 				"trigger":          "webhook",
 				"allegro_order_id": allegroOrderID,
 			},
-			IPAddress: "webhook",
+			IPAddress: "0.0.0.0",
 		})
 	}); err != nil {
 		s.logger.Error("allegro webhook syncer: failed to update order status",

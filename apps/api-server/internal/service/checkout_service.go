@@ -148,10 +148,14 @@ func (s *CheckoutService) GetSessionStatus(ctx context.Context, stripeSessionID 
 				MaxIntegrations:  plan.Limits.MaxIntegrations,
 			}
 		}
+		var email string
+		if dbSession.Email != nil {
+			email = *dbSession.Email
+		}
 		return &model.CheckoutSessionStatus{
 			Plan:     dbSession.Plan,
 			Interval: dbSession.BillingInterval,
-			Email:    dbSession.Email,
+			Email:    email,
 			Status:   dbSession.Status,
 			Limits:   limits,
 		}, nil

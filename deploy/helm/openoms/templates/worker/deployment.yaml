@@ -50,6 +50,12 @@ spec:
                 secretKeyRef:
                   name: {{ include "openoms.secretName" . }}
                   key: DATABASE_URL
+            - name: WORKER_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: WORKER_DATABASE_URL
+                  optional: true
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
