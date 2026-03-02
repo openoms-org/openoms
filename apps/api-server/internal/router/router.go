@@ -304,6 +304,11 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Get("/custom-fields", deps.Settings.GetCustomFields)
 			r.Get("/product-categories", deps.Settings.GetProductCategories)
 
+			// Billing — subscription status (authenticated)
+			if deps.Checkout != nil {
+				r.Get("/billing/subscription", deps.Checkout.GetSubscription)
+			}
+
 			// Onboarding wizard
 			r.Route("/onboarding", func(r chi.Router) {
 				r.Get("/status", deps.Settings.GetOnboardingStatus)

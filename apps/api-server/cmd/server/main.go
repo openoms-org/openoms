@@ -652,7 +652,7 @@ func main() {
 
 		billingRepo := repository.NewBillingRepository()
 		checkoutSvc = service.NewCheckoutService(billingRepo, pool, billingPlans)
-		checkoutHandler = handler.NewCheckoutHandler(checkoutSvc, cfg.FrontendURL)
+		checkoutHandler = handler.NewCheckoutHandler(checkoutSvc, planCache, pool, cfg.FrontendURL)
 		authHandler.SetCheckoutService(checkoutSvc)
 		slog.Info("stripe billing enabled", "plans", len(billingPlans))
 
