@@ -80,6 +80,7 @@ Carrier rate shopping across all providers.
 - Multi-tenant SaaS with PostgreSQL Row-Level Security
 - 430 REST API endpoints with OpenAPI 3.1 spec (Swagger UI)
 - 124 dashboard pages with dark mode, PWA support, keyboard shortcuts
+- **Guided onboarding wizard** for new tenants (company setup, warehouse, integration, team)
 - RBAC with custom roles
 - 2FA / TOTP authentication
 - WebSocket real-time updates

@@ -297,6 +297,16 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Get("/custom-fields", deps.Settings.GetCustomFields)
 			r.Get("/product-categories", deps.Settings.GetProductCategories)
 
+			// Onboarding wizard
+			r.Route("/onboarding", func(r chi.Router) {
+				r.Get("/status", deps.Settings.GetOnboardingStatus)
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Put("/step/{step}", deps.Settings.UpdateOnboardingStep)
+					r.Post("/complete", deps.Settings.CompleteOnboarding)
+				})
+			})
+
 			// Settings — admin only
 			r.Route("/settings", func(r chi.Router) {
 				r.Use(middleware.RequireRole("admin"))

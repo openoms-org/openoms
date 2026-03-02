@@ -2,6 +2,7 @@
 Last full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PRs #43-56)
 Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixed: SOAP response parsing corrected, GLS model fields aligned, DHL service types validated, DPD COD form added)
 Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vectors, hardcoded values only, React auto-escape, commits 4ef72f9 + 62eef14)
+Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend endpoints, Next.js middleware protecting routes, no credential exposure, backward-compatible JSONB migration)
 
 ## Unfixed Findings
 
@@ -51,6 +52,12 @@ Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vecto
    - `go.mod:1` — Go 1.25.0 behind on patches (bump to 1.25.7+ for CVE-2025-47910, CVE-2025-58186, CVE-2025-61726)
 
 ## Recently Fixed
+- 2026-03-01: Onboarding wizard security review COMPLETE:
+  - **Backend endpoints:** All 3 endpoints (`GET/PUT/POST /v1/onboarding/*`) behind JWT auth middleware, tenant-scoped via RLS context
+  - **Frontend routes:** `/onboarding` protected by Next.js middleware (unauthenticated users redirected to `/login`), checked on every request
+  - **State storage:** JSONB in tenants.settings, backward compatible (existing tenants treated as completed), no PII or credentials exposed
+  - **Form submission:** All steps use existing secure endpoints (PUT /v1/settings/company, POST /v1/warehouses, POST /v1/integrations, etc.), CSRF protection inherited
+  - **Verdict:** PASS — zero new security concerns identified
 - 2026-03-01: Carrier SDK audit remediation COMPLETE:
   - **DHL24 SOAP WebAPI2**: Replaced fictional REST API (commit 9859edb) with correct SOAP envelope marshaling; corrected 5 service types (AH, 09, 12, EK, PI); test suite rewritten for XML responses
   - **DPD REST API**: Corrected to official dpdservices.dpd.com.pl endpoint (commit 92727d7); fixed session-based auth; implemented two-phase label flow; added COD/Insurance frontend fields

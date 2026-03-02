@@ -153,3 +153,16 @@ Append-only log. Each entry is immutable once written.
 - **Files:** Audit script/checklist (future: `scripts/carrier-audit.sh` or wiki page)
 - **Findings summary:** 4 CRITICAL (test suite), 2 HIGH (frontend), 4 MEDIUM (best practices). Verdict: FAIL (CI blocks merge until tests fixed).
 - **Consequences:** All future carrier integrations must pass this audit before merge. Test suite quality raised to production standard. Frontend field mapping must be verified against backend API contracts. No "fictional" endpoints/codes — docs-first approach mandatory.
+
+## ADR-021: Onboarding Wizard State in JSONB (Tenant-Scoped Setup Flow)
+- **Date:** 2026-03-01
+- **Context:** New tenants land on empty dashboard post-registration with no data. Need guided setup (company details → warehouse → integration → team invite) before they can operate effectively.
+- **Decision:** Store onboarding progress in tenants.settings JSONB under key `"onboarding"` with structure: `{completed, current_step, completed_steps[], skipped_steps[], completed_at}`. Three new endpoints (backend handler methods):
+  1. `GET /v1/onboarding/status` — read current state (returns defaults if missing: current_step=1, empty slices)
+  2. `PUT /v1/onboarding/step/{step}` — idempotent mark step as completed/skipped (step 1 non-skippable, auto-advance current_step)
+  3. `POST /v1/onboarding/complete` — mark onboarding done and set completed_at timestamp
+- **Frontend:** Dedicated `/onboarding` route with 4-step stepper (Company, Warehouse, Integration, Team). Each step calls existing API endpoints (PUT /v1/settings/company, POST /v1/warehouses, POST /v1/integrations, etc.) then marks step done via onboarding endpoint. Dashboard auto-redirects to /onboarding if onboarding.completed==false (checked via Next.js middleware and auth context).
+- **Auth:** All endpoints JWT-required (under /v1 route with JWTAuth middleware), RLS-scoped to current tenant. Frontend route protected by Next.js middleware (unauthenticated users redirected to /login).
+- **Backward compatibility:** Existing tenants (onboarding key missing or `{dismissed: true}`) treated as completed=true → no redirect. New tenants (registered after feature) start with current_step=1, completed=false.
+- **Files:** Backend `settings_handler.go` (3 new methods), frontend `app/(dashboard)/onboarding/page.tsx` (4-step form), `app/(dashboard)/layout.tsx` (redirect check), model `user.go` (OnboardingSettings struct)
+- **Consequences:** Tenants must complete step 1 (company details) before advancing, but can skip steps 2-4. Onboarding state is atomic per tenant (shared JSONB prevents race conditions via PostgreSQL transaction isolation). Dashboard banner reminds users to finish if they choose "Finish later" before completion.

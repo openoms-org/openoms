@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Onboarding Wizard - First-Time Setup After Registration
+- **New API Endpoints**:
+  - `GET /v1/onboarding/status` — Retrieve current onboarding state (company setup, warehouses, integrations, team)
+  - `PUT /v1/onboarding/step/{step}` — Mark a wizard step (1-4) as completed or skipped (admin only)
+  - `POST /v1/onboarding/complete` — Mark entire onboarding as done (admin only)
+  - `GET/PUT /v1/settings/onboarding` — Get/update onboarding settings (admin only)
+- **Onboarding State Tracking**: Extended `OnboardingSettings` model with multi-step tracking (current step, completed steps, skipped steps, completion timestamp)
+- **Dashboard Onboarding Page** (`/onboarding`): 4-step interactive wizard with:
+  - Step 1: Company details (name, NIP, address, phone, email) — required
+  - Step 2: Default warehouse setup (name, address, mark as default) — optional
+  - Step 3: First integration (carrier or marketplace provider with credentials) — optional
+  - Step 4: Team invitations (invite 1-2 members by email) — optional
+- **Auto-redirect Logic**: New tenants redirected to `/onboarding` after login until setup is complete
+- **Wizard Features**: Progress stepper, skip functionality (except step 1), "Finish later" button to save progress, completion screen with confirmation
+- **Custom Hook**: `useOnboardingWizard` for managing multi-step form state and API calls
+- **Database**: No schema migration required — onboarding state stored in `tenants.settings` JSONB under `onboarding` key; backwards-compatible with existing tenants
+
 ### Fixed
 
 #### Carrier SDK Audit & Corrections (DHL, DPD, GLS)

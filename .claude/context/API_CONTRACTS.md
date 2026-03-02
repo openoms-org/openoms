@@ -1,8 +1,14 @@
 # API Contracts
-Version: 5 (bump after every endpoint change)
+Version: 6 (bump after every endpoint change)
 Updated: 2026-03-01
 
 ## Recently Changed
+- 2026-03-01: Onboarding wizard endpoints finalized (tenant-scoped, JWT required):
+  - `GET /v1/onboarding/status` — returns current onboarding state (current_step, completed_steps[], skipped_steps[], completed flag)
+  - `PUT /v1/onboarding/step/{step}` — mark step completed or skipped (step 1 non-skippable), idempotent
+  - `POST /v1/onboarding/complete` — mark onboarding as done (sets completed=true, completed_at timestamp)
+  - Response: `{"completed": bool, "current_step": int, "completed_steps": [], "skipped_steps": [], "completed_at": "ISO8601"}` stored in tenants.settings JSONB
+  - Backward compatible: existing tenants default to completed=true or dismissed=true → no redirect
 - 2026-03-01: Carrier SDK audit completed (internal SDKs, not public API) — DHL24 migrated to SOAP WebAPI2 (dhl24.com.pl/webapi2), DPD aligned to official REST API (dpdservices.dpd.com.pl), GLS verified against ShipIT REST v3.4.19. All base URLs, auth methods, endpoints, and response models verified against official documentation. Fix PR pending.
 - 2026-02-28: Erli carrier integration endpoints rebuilt (internal SDK, not public API) — base URL fix, product creation via /products/{externalId}, stock/price update via PATCH /products/{externalId}, status mapping fixed (3 statuses: pending/purchased/cancelled), polling parameter (after), 202 async handling
 - 2026-02-25: `POST /v1/integrations/allegro/import-offers` — new endpoint: imports all Allegro seller offers as Product + ProductListing with SKU matching (PR #58)
@@ -96,6 +102,14 @@ DELETE /v1/message-templates/:id     → 204
 ```
 POST   /v1/stock-sync/push/channel/:channel_id → {status: "ok"}
 ```
+
+### Onboarding (tenant-scoped, requires auth)
+```
+GET    /v1/onboarding/status             → {completed, current_step, completed_steps[], skipped_steps[], completed_at}
+PUT    /v1/onboarding/step/{step}        {action: "completed"|"skipped"} → OnboardingSettings (idempotent)
+POST   /v1/onboarding/complete           → {completed: true, completed_at}
+```
+Note: All state stored in tenants.settings JSONB. Backward compatible — existing tenants default to completed=true or dismissed=true.
 
 ### Public (no auth, rate limited)
 ```
