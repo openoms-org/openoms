@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
 import {
@@ -7,6 +7,7 @@ import {
   waitFor,
   userEvent,
 } from "@/test/test-utils";
+import { useAuthStore } from "@/lib/auth";
 
 const API_URL = "http://localhost:8080";
 
@@ -48,6 +49,9 @@ vi.mock("next/link", () => ({
 import OnboardingPage from "@/app/(onboarding)/onboarding/page";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+beforeEach(() => {
+  useAuthStore.getState().setAuth("test-token", {} as never, {} as never);
+});
 afterEach(() => {
   server.resetHandlers();
   mockPush.mockClear();

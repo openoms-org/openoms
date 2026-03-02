@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
+import { useAuthStore } from "@/lib/auth";
 
 const API_URL = "http://localhost:8080";
 
@@ -33,6 +34,10 @@ function createWrapper() {
 }
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+beforeEach(() => {
+  // Set authenticated state so useOnboardingStatus query is enabled
+  useAuthStore.getState().setAuth("test-token", {} as never, {} as never);
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
