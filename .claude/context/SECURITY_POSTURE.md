@@ -4,20 +4,27 @@ Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixe
 Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vectors, hardcoded values only, React auto-escape, commits 4ef72f9 + 62eef14)
 Billing/Stripe integration security audit: 2026-03-02 (PASS — Stripe webhook signature verification, checkout session anti-replay, SECURITY DEFINER for pre-registration, no Stripe Price IDs exposed to frontend, runtime config only)
 Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend endpoints, Next.js middleware protecting routes, no credential exposure, backward-compatible JSONB migration)
+DHL carrier production-ready security audit: 2026-03-02 (PASS — no CRITICAL findings; 2 new HIGH items identified (hardcoded country "PL", service type passthrough) but not exploitable; resolves existing HIGH finding about invalid DHL service types via mapDHLServiceType mapping; commits 6656870, 199cba1, 3d5fc39)
 
 ## Unfixed Findings
 
 ### HIGH (should fix immediately — affects production)
-1. **`carrier-fields.tsx:248-249` — Invalid DHL service types** — Frontend offers `"dhl_parcel"` and `"dhl_courier"` which are NOT valid DHL24 SOAP service types. DHL24 uses: `AH` (domestic standard), `09` (before 9:00), `12` (before 12:00), `EK` (Express), `PI` (Parcel International). Backend passes strings through to SOAP without validation → SOAP fault at DHL
-   - Risk: user selects DHL, shipment creation fails at carrier API, confusing error message
-   - Files: `apps/dashboard/src/components/shipments/carrier-fields.tsx:248-249`
-   - Fix: Change to valid DHL codes (`AH`, `09`, `12`, `EK`, `PI`) with proper labels, or add backend validation/mapping
-   - Effort: S
-
-2. **`carrier-fields.tsx:DPDFields` — Missing COD/Insurance form fields** — `DPDFields` renders only `ParcelDimensionFields` but NOT `CODAndInsuranceFields`. Backend (`dpd.go:78-99`) fully supports COD (paymentType: "COD") and insurance (`insuranceValue`). Users cannot set COD for DPD shipments from the UI
+1. **`carrier-fields.tsx:DPDFields` — Missing COD/Insurance form fields** — `DPDFields` renders only `ParcelDimensionFields` but NOT `CODAndInsuranceFields`. Backend (`dpd.go:78-99`) fully supports COD (paymentType: "COD") and insurance (`insuranceValue`). Users cannot set COD for DPD shipments from the UI
    - Risk: DPD COD feature unavailable to users despite backend support; lost sales for COD orders
    - Files: `apps/dashboard/src/components/shipments/carrier-fields.tsx` (DPDFields component)
    - Fix: Add `<CODAndInsuranceFields values={values} onChange={onChange} />` to `DPDFields` render
+   - Effort: S
+
+2. **`label_service.go:588` — Hardcoded country "PL" in CompanySettings fallback** — When shipper address cannot be resolved from warehouse, `resolveShipper` falls back to tenant CompanySettings but hardcodes `Country: "PL"`. If this code is reused by international carriers (DPD/GLS/FedEx extending beyond Poland), it silently forces `"PL"` for all tenants without explicit country setting in CompanySettings.
+   - Risk: Low today (DHL24 is Poland-only), but HIGH for future international carriers — shipper country would be wrong
+   - Files: `apps/api-server/internal/service/label_service.go:588` (resolveShipper method)
+   - Fix: Add inline comment explaining DHL24 scope, or add `Country` field to `model.CompanySettings` with default "PL" → explicit when internationalizing
+   - Effort: S (comment) or M (add field + migration)
+
+3. **`carriers/dhl.go:146-148` — Unknown service type passthrough without validation** — `mapDHLServiceType` logs warning for unknown types but passes them unchanged to DHL24 SOAP API. User-provided strings (from `carrier_data` JSON in DB) flow directly to SOAP `<serviceType>` element.
+   - Risk: Not exploitable (encoding/xml auto-escapes values), but sends arbitrary strings to external API causing confusing error responses. Wastes API calls and poor UX.
+   - Files: `apps/api-server/internal/carriers/dhl.go:146-150` (mapDHLServiceType function)
+   - Fix: Return error for unknown service types instead of passthrough, or validate against allowlist {AH, 09, 12, EK, PI}
    - Effort: S
 
 ### BACKLOG (low priority, separate PRs)

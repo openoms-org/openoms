@@ -19,6 +19,15 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-03-02: DHL carrier production-ready COMPLETE — shipper address + SDK fixes:
+  - **Shipper address support:** Added `CarrierSender` struct to `CarrierShipmentRequest`, resolved shipper from warehouse address or tenant `CompanySettings` fallback
+  - **SDK fixes:** Corrected DHL24 doc.go (SOAP not REST), added missing Phone field to Shipper SOAP mapping, fixed duplicate Service/ServiceType in shipments.go, fixed silent timestamp parse errors
+  - **Service type mapping:** Added `mapDHLServiceType()` function mapping frontend `dhl_parcel` → DHL24 code `AH` (domestic standard), `dhl_courier` → `DR` (courier domestic)
+  - **Polish address splitting:** Added `splitStreetHouseNo()` helper for correct SOAP mapping (e.g. "ul. Warszawska 10" → street="ul. Warszawska", houseNo="10")
+  - **LabelService enhancement:** Added `warehouseRepo` + `tenantRepo` dependencies, `FindDefault()` method on WarehouseRepo for default warehouse lookup
+  - **Test coverage:** 6 new test cases covering shipper mapping, service type mapping, street splitting; specification tests verify against official DHL24 SOAP API
+  - **Commits:** 6656870 (spec tests), 199cba1 (main implementation), 3d5fc39 (code review fixes)
+  - **Status:** Code merged, security audit PASS (resolves existing HIGH finding about invalid DHL service types), 2 new HIGH items identified for future hardening (hardcoded country, service type passthrough)
 - 2026-03-02: Billing/Stripe integration COMPLETE — full payment flow:
   - **Backend**: Stripe Checkout sessions, webhook handling (checkout.session.completed, subscription updates, payment failures), billing tables (customers, subscriptions, checkout_sessions), SECURITY DEFINER functions for pre-registration ops
   - **Frontend**: Plan selection page at /register (dynamic from API), /register/complete (post-Stripe form), invite flow preserved at /register/invite
