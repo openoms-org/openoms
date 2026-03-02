@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	ErrOrderNotFound       = errors.New("order not found")
-	ErrInvalidTransition   = errors.New("invalid status transition")
-	ErrUnknownStatus       = errors.New("unknown status")
-	ErrOrderLimitExceeded  = errors.New("monthly order limit exceeded")
+	ErrOrderNotFound      = errors.New("order not found")
+	ErrInvalidTransition  = errors.New("invalid status transition")
+	ErrUnknownStatus      = errors.New("unknown status")
+	ErrOrderLimitExceeded = errors.New("monthly order limit exceeded")
 )
 
 type OrderService struct {
