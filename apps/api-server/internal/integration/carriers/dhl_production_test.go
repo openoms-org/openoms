@@ -78,7 +78,7 @@ func TestDHL_CreateShipment_ServiceTypeMapping(t *testing.T) {
 }
 
 func TestDHL_CreateShipment_UnknownServiceTypeReturnsError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("SOAP request should not be sent for unknown service type")
 	}))
 	defer srv.Close()
