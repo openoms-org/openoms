@@ -1,13 +1,13 @@
 # OpenOMS
 
 [![License: ELv2](https://img.shields.io/badge/License-ELv2-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev/)
+[![Go](https://img.shields.io/badge/Go-1.25-00ADD8.svg)](https://go.dev/)
 [![Build](https://img.shields.io/github/actions/workflow/status/openoms-org/openoms/ci.yml?branch=main&label=CI)](https://github.com/openoms-org/openoms/actions)
 [![Discord](https://img.shields.io/discord/1234567890?color=5865F2&label=Discord&logo=discord&logoColor=white)](https://discord.gg/3Z5hzeH5)
 
 **Open-source Order Management System for e-commerce.**
 
-OpenOMS is a self-hostable, multi-tenant OMS with 430 API endpoints, 124 dashboard pages, and integrations with 8 marketplaces and 8 carriers. Built with Go and Next.js, designed for teams that need full control over their order operations.
+OpenOMS is a self-hostable, multi-tenant OMS with 463 API endpoints, 141 dashboard pages, and integrations with 8 marketplaces and 8 carriers. Built with Go and Next.js, designed for teams that need full control over their order operations.
 
 > **Status: Active Development** — Looking for beta testers! [Join our Discord](https://discord.gg/3Z5hzeH5)
 
@@ -36,7 +36,7 @@ OpenOMS is a self-hostable, multi-tenant OMS with 430 API endpoints, 124 dashboa
 - Product CSV import with preview
 - Product categories with color badges
 
-### Marketplace Integrations (8)
+### Marketplace Integrations (11)
 
 | Integration | Description | Status |
 |---|---|---|
@@ -48,6 +48,9 @@ OpenOMS is a self-hostable, multi-tenant OMS with 430 API endpoints, 124 dashboa
 | **OLX** | Listing and order management | In Development |
 | **Mirakl / Empik** | Marketplace connector | In Development |
 | **Erli** | Polish marketplace integration | In Development |
+| **Shoper** | Polish e-commerce platform integration | In Development |
+| **PrestaShop** | Open-source e-commerce platform | In Development |
+| **Shopify** | SaaS e-commerce platform | In Development |
 
 ### Carrier Integrations (8)
 
@@ -78,9 +81,11 @@ Carrier rate shopping across all providers.
 
 ### Platform
 - Multi-tenant SaaS with PostgreSQL Row-Level Security
-- 430 REST API endpoints with OpenAPI 3.1 spec (Swagger UI)
-- 124 dashboard pages with dark mode, PWA support, keyboard shortcuts
+- 463 REST API endpoints with OpenAPI 3.1 spec (Swagger UI)
+- 141 dashboard pages with dark mode, PWA support, keyboard shortcuts
 - **Guided onboarding wizard** for new tenants (company setup, warehouse, integration, team)
+- Registration with invite tokens, license tokens, or payment checkout
+- Background workers (16 registered: order pollers, stock sync, tracking, automation)
 - RBAC with custom roles
 - 2FA / TOTP authentication
 - WebSocket real-time updates
@@ -108,7 +113,7 @@ Carrier rate shopping across all providers.
 | Cache / Queue | Redis 7, asynq |
 | Auth | Ed25519 JWT, bcrypt, TOTP |
 | API Spec | OpenAPI 3.1, Swagger UI |
-| E2E Tests | Playwright (21 specs, 119 tests) |
+| E2E Tests | Playwright (22 specs, 124 tests) |
 | CI/CD | GitHub Actions (lint, test, security scan, auto-format, Trivy) |
 | Deployment | Docker Compose (dev + prod), Helm chart (k3s/k8s) |
 | Monitoring | Prometheus metrics (token-protected) |
@@ -117,17 +122,17 @@ Carrier rate shopping across all providers.
 
 | Metric | Count |
 |---|---|
-| Go source files | 536 (81 test files) |
+| Go source files | 345 (121 test files) |
 | TypeScript / TSX files | 308 |
-| SQL migrations | 64 (128 up/down files) |
-| API endpoints | 430 |
-| Dashboard pages | 124 |
-| React components | 91 |
-| Custom hooks | 69 |
-| Handlers / Services / Repos | 80 / 57 / 40 |
-| Background workers | 19 |
-| Middleware | 12 |
-| SDK packages | 26 |
+| SQL migrations | 12 (24 up/down files) |
+| API endpoints | 463 |
+| Dashboard pages | 141 |
+| React components | 96 |
+| Custom hooks | 73 |
+| Handlers / Services / Repos | 85 / 67 / 43 |
+| Background workers | 16 |
+| Middleware | 16 |
+| SDK packages | 27 |
 
 ---
 
@@ -186,10 +191,10 @@ openoms/
 │   ├── api-server/              # Go backend (ELv2)
 │   │   ├── cmd/server/          # Entrypoint
 │   │   ├── internal/            # Handlers, services, repositories, workers
-│   │   └── migrations/          # 64 migrations (128 SQL files)
+│   │   └── migrations/          # 12 migrations (24 SQL files)
 │   └── dashboard/               # Next.js frontend (ELv2)
 │       └── src/
-├── packages/                    # 26 standalone SDK libraries (MIT)
+├── packages/                    # 27 standalone SDK libraries (MIT)
 ├── deploy/
 │   └── helm/openoms/          # Helm chart for k3s/k8s
 ├── docs/
@@ -232,6 +237,12 @@ All packages are independently usable Go libraries, licensed under MIT.
 | `smsapi-go-sdk` | SMSAPI SMS Gateway |
 | `order-engine` | Order state machine and domain events |
 | `iof-parser` | IOF product feed parser |
+| `shoper-go-sdk` | Shoper REST API |
+| `prestashop-go-sdk` | PrestaShop Web Services |
+| `shopify-go-sdk` | Shopify Admin API |
+| `infakt-go-sdk` | inFakt Invoicing API |
+| `wfirma-go-sdk` | wFirma Invoicing API |
+| `btp-go-sdk` | BTP.pro Supplier API |
 
 ---
 
@@ -292,6 +303,16 @@ The Docker images are stateless and can be deployed behind a load balancer or on
 - Packing station with barcode scanner
 - Reports and CSV export
 - 2FA/TOTP, RBAC with custom roles
+- Carrier rate shopping across all providers
+- Product CSV import with preview
+- SMS notifications (SMSAPI)
+- Marketing automation (Mailchimp)
+- Print templates (orders, invoices, shipping labels)
+- Onboarding wizard (4-step guided setup for new tenants)
+- DHL, DPD, GLS carrier SDK audit and verification
+- Erli marketplace SDK rebuild and verification
+- Supplier portal (public, token-based)
+- Supplier product enrichment and category mapping
 
 ### In Progress (code written, needs production testing)
 
@@ -309,6 +330,7 @@ The Docker images are stateless and can be deployed behind a load balancer or on
 - Mobile application
 - Plugin/extension marketplace
 - Customer self-service portal
+- BaseLinker data import
 
 ---
 
