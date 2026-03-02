@@ -1,6 +1,6 @@
 # Roadmap
 
-> Last updated: February 2026
+> Last updated: March 2026
 
 ## Done
 
@@ -23,21 +23,29 @@
 - [x] CodeQL code quality (zero findings)
 - [x] Database backup CronJob (S3, daily, 30-day retention)
 - [x] Security hardening (Go 1.25, dependency audits, Helm NetworkPolicies)
+- [x] Onboarding wizard (4-step guided setup for new tenants)
+- [x] DHL, DPD, GLS carrier SDK audit and verification against official API docs
+- [x] Erli marketplace SDK rebuild and verification
+- [x] Supplier portal (public, token-based access for suppliers)
+- [x] Supplier product enrichment, category mapping, and Allegro parameter mapping
+- [x] Carrier rate shopping
+- [x] Product CSV import with preview
+- [x] SMS notifications (SMSAPI / Twilio)
+- [x] Marketing (Mailchimp sync, campaigns)
+- [x] Print templates (orders, invoices, labels)
+- [x] Payment checkout integration for self-service registration
+- [x] License token registration (Ed25519 JWT with replay protection)
 
 ## In Progress (code written, needs production testing)
 
-- [ ] 7 additional carriers (DHL, DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx)
-- [ ] 10 marketplaces (Amazon, eBay, WooCommerce, Kaufland, OLX, Empik, Erli, Shoper, PrestaShop, Shopify)
+- [ ] 7 additional carriers (DHL, DPD, GLS verified; UPS, Poczta Polska, Orlen Paczka, FedEx need testing)
+- [ ] 10 marketplaces (Amazon, eBay, WooCommerce, Kaufland, OLX, Empik, Erli verified; Shoper, PrestaShop, Shopify need testing)
 - [ ] Repricing engine (4 pricing strategies with simulation)
 - [ ] Multi-warehouse with PZ/WZ/MM documents and stocktaking
 - [ ] Invoicing (Fakturownia, inFakt, wFirma) + KSeF e-invoicing
 - [ ] Product variants and bundles
 - [ ] Multi-currency with NBP exchange rates
-- [ ] Carrier rate shopping
-- [ ] Product CSV import with preview
-- [ ] SMS notifications (SMSAPI / Twilio)
-- [ ] Marketing (Mailchimp) and helpdesk (Freshdesk) integrations
-- [ ] Print templates (orders, invoices, labels)
+- [ ] Helpdesk (Freshdesk) integration
 
 ## Planned
 
@@ -45,8 +53,9 @@
 - [ ] Mobile application
 - [ ] Plugin/extension marketplace
 - [ ] Customer self-service portal (returns, tracking)
-- [ ] Supplier portal
 - [ ] AI demand forecasting
+- [ ] BaseLinker data import
+- [ ] Monitoring and alerting (Grafana / Sentry)
 
 ---
 

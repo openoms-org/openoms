@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Payment Checkout Integration
+- **New API endpoints** (public, no auth required):
+  - `GET /v1/billing/plans` — list available subscription plans (rate limit 60/min)
+  - `POST /v1/billing/checkout` — create payment checkout session (rate limit 10/min)
+  - `GET /v1/billing/checkout/{session_id}` — check checkout session status
+- **Webhook handler**: `POST /v1/webhooks/stripe` with signature verification for payment event processing (checkout completed, subscription updates, payment failures)
+- **Registration flow**: Added `checkout_session_id` to registration request for payment-verified signups
+- **Database tables**: `billing_customers`, `billing_subscriptions`, `billing_checkout_sessions` with SECURITY DEFINER functions for pre-registration operations
+- **Frontend**: Plan selection page at `/register`, post-payment form at `/register/complete`, invite-based registration moved to `/register/invite`
+- **Configuration**: Plans loaded from `BILLING_PLANS` environment variable (JSON); payment disabled when API keys not configured
+
+#### License Token Registration
+- **Registration flow**: Added `license_token` to registration request for token-verified signups
+- **Database**: `used_license_tokens` table with JTI-based replay protection
+- **Validation**: Ed25519 signature verification via `LICENSE_PUBLIC_KEY` environment variable
+- **SECURITY DEFINER**: `validate_license_token()` function for pre-registration token validation
+
+#### Shipments Fix
+- Fixed NULL scan error when querying shipments with nullable columns (pointer types for optional fields)
+
+#### Onboarding Status Guard
+- Added `isAuthenticated` guard to `useOnboardingStatus` hook preventing 401 errors on initial page load
+
 #### Onboarding Wizard - First-Time Setup After Registration
 - **New API Endpoints**:
   - `GET /v1/onboarding/status` — Retrieve current onboarding state (company setup, warehouses, integrations, team)

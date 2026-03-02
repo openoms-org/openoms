@@ -48,6 +48,27 @@
 - Fields: name, address, is_default
 - Relations: → warehouse_stock (product quantities per warehouse), → warehouse_documents (PZ/WZ/MM)
 
+### BillingCustomer
+- Links tenant to Stripe customer
+- Fields: tenant_id (UNIQUE), stripe_customer_id (UNIQUE)
+- 1:1 with Tenant
+
+### BillingSubscription
+- Stripe subscription state
+- Fields: tenant_id, stripe_subscription_id (UNIQUE), plan, billing_interval (month/year), status (trialing/active/past_due/canceled/suspended), trial_end, current_period_start, current_period_end, canceled_at
+- Status machine: trialing → active → past_due/canceled/suspended
+
+### BillingCheckoutSession
+- Pre-registration checkout state
+- Fields: stripe_session_id (UNIQUE), plan, billing_interval, email, status (pending/completed/registered), tenant_id (set after registration)
+- Anti-replay: status transitions are atomic (pending→completed→registered)
+
+### OnboardingSettings
+- Stored in tenants.settings JSONB (not a separate table)
+- Fields: completed (bool), current_step (int), completed_steps (int[]), skipped_steps (int[]), completed_at (timestamp), dismissed (bool)
+- 4 steps: Company details, Warehouse, Integration, Team invite
+- Backward compatible: existing tenants default to completed=true
+
 ## Order State Machine
 
 ```
@@ -85,6 +106,11 @@ CREATE POLICY xxx_tenant ON xxx
 - `find_user_for_auth(email, tenant_id)` — Login flow
 - `find_order_tenant_id(order_id)` — Public return form
 - `find_return_by_token(token)` — Public return status
+- `create_checkout_session(...)` — Pre-registration billing checkout (bypass RLS)
+- `complete_checkout_session(...)` — Mark checkout session completed (bypass RLS)
+- `get_checkout_session(...)` — Get checkout session status (bypass RLS)
+- `claim_checkout_session(...)` — Claim session for tenant (bypass RLS)
+- `validate_license_token(...)` — Validate license token (bypass RLS)
 
 ## Business Rules
 

@@ -4,7 +4,7 @@ Thanks for your interest in contributing to OpenOMS! This guide will help you ge
 
 ## Prerequisites
 
-- **Go** 1.24+
+- **Go** 1.25+
 - **Node.js** 22+
 - **Docker** (with Docker Compose)
 - **[Task](https://taskfile.dev)** (task runner)
@@ -77,7 +77,7 @@ Examples:
 feat: add Allegro order sync
 fix: prevent duplicate webhook delivery
 docs: update self-hosting guide
-chore: bump Go to 1.24
+chore: bump Go to 1.25
 ```
 
 ## Pull Request Process

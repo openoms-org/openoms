@@ -1,8 +1,15 @@
 # API Contracts
-Version: 6 (bump after every endpoint change)
-Updated: 2026-03-01
+Version: 7 (bump after every endpoint change)
+Updated: 2026-03-02
 
 ## Recently Changed
+- 2026-03-02: Billing endpoints added (public, no JWT):
+  - `GET /v1/billing/plans` — list available plans (without Stripe Price IDs), rate limit 60/min
+  - `POST /v1/billing/checkout` — create Stripe Checkout session, rate limit 10/min
+  - `GET /v1/billing/checkout/{session_id}` — get session status (plan, email, limits)
+- 2026-03-02: Stripe webhook endpoint: `POST /v1/webhooks/stripe` — Stripe-Signature verified, handles checkout.session.completed, customer.subscription.updated/deleted, invoice.payment_failed
+- 2026-03-02: Auth register extended — `checkout_session_id` field added to RegisterRequest for Stripe-based registration
+- 2026-03-02: Public config extended — `billing_enabled`, `stripe_public_key` fields added to GET /v1/config response
 - 2026-03-01: Onboarding wizard endpoints finalized (tenant-scoped, JWT required):
   - `GET /v1/onboarding/status` — returns current onboarding state (current_step, completed_steps[], skipped_steps[], completed flag)
   - `PUT /v1/onboarding/step/{step}` — mark step completed or skipped (step 1 non-skippable), idempotent
@@ -34,7 +41,7 @@ Updated: 2026-03-01
 
 ### Auth (no tenant context, rate limited)
 ```
-POST /v1/auth/register     {tenant_name, tenant_slug, name, email, password} → {access_token, refresh_token_cookie, user, tenant}
+POST /v1/auth/register     {tenant_name, tenant_slug, name, email, password, invite_token?, license_token?, checkout_session_id?} → {access_token, refresh_token_cookie, user, tenant}
 POST /v1/auth/login        {tenant_slug, email, password} → {access_token, user, tenant} | {requires_2fa, two_fa_token}
 POST /v1/auth/login/2fa    {two_fa_token, code} → {access_token, user, tenant}
 POST /v1/auth/refresh      (cookie: refresh_token) → {access_token}
@@ -103,6 +110,14 @@ DELETE /v1/message-templates/:id     → 204
 POST   /v1/stock-sync/push/channel/:channel_id → {status: "ok"}
 ```
 
+### Billing (public, no JWT, rate limited)
+```
+GET    /v1/billing/plans                    → PlanInfo[] (name, features, limits, price — no Stripe IDs)
+POST   /v1/billing/checkout                 {plan_id, interval: "month"|"year"} → {checkout_url, session_id}
+GET    /v1/billing/checkout/{session_id}    → {plan, interval, email, status, limits}
+```
+Note: Disabled when STRIPE_SECRET_KEY not set. Plans configured via BILLING_PLANS env var (JSON).
+
 ### Onboarding (tenant-scoped, requires auth)
 ```
 GET    /v1/onboarding/status             → {completed, current_step, completed_steps[], skipped_steps[], completed_at}
@@ -122,6 +137,7 @@ GET    /v1/public/returns/:token     → ReturnStatus
 POST   /v1/webhooks/:provider/:tenant_id   → 200 (generic webhook)
 POST   /v1/webhooks/allegro                 → 200 (HMAC verified)
 POST   /v1/webhooks/inpost                  → 200 (HMAC-SHA256 verified)
+POST   /v1/webhooks/stripe                  → 200 (Stripe-Signature verified)
 ```
 
 ### WebSocket

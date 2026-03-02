@@ -2,6 +2,7 @@
 Last full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PRs #43-56)
 Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixed: SOAP response parsing corrected, GLS model fields aligned, DHL service types validated, DPD COD form added)
 Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vectors, hardcoded values only, React auto-escape, commits 4ef72f9 + 62eef14)
+Billing/Stripe integration security audit: 2026-03-02 (PASS — Stripe webhook signature verification, checkout session anti-replay, SECURITY DEFINER for pre-registration, no Stripe Price IDs exposed to frontend, runtime config only)
 Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend endpoints, Next.js middleware protecting routes, no credential exposure, backward-compatible JSONB migration)
 
 ## Unfixed Findings
@@ -52,6 +53,15 @@ Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend e
    - `go.mod:1` — Go 1.25.0 behind on patches (bump to 1.25.7+ for CVE-2025-47910, CVE-2025-58186, CVE-2025-61726)
 
 ## Recently Fixed
+- 2026-03-02: Billing/Stripe integration security review COMPLETE:
+  - **Stripe webhooks:** Signature verification via stripe.ConstructEvent, raw body parsing, webhook secret from env
+  - **Checkout sessions:** Anti-replay via atomic status transitions (pending→completed→registered), session claimed once per tenant
+  - **Pre-registration ops:** SECURITY DEFINER functions for checkout session CRUD (bypass RLS before tenant exists)
+  - **Credential isolation:** Stripe Price IDs never exposed to frontend (ListPlans strips them), secrets in env vars only
+  - **Registration:** checkout_session_id verified against Stripe, email must match session email
+  - **Verdict:** PASS — no credential exposure, proper isolation, anti-replay protection
+- 2026-03-02: Onboarding status 401 fix — added isAuthenticated guard to prevent unauthenticated API calls (PR #86)
+- 2026-03-02: Shipments NULL scan fix — nullable DB columns now use pointer types in Go structs (PR #83)
 - 2026-03-01: Onboarding wizard security review COMPLETE:
   - **Backend endpoints:** All 3 endpoints (`GET/PUT/POST /v1/onboarding/*`) behind JWT auth middleware, tenant-scoped via RLS context
   - **Frontend routes:** `/onboarding` protected by Next.js middleware (unauthenticated users redirected to `/login`), checked on every request
@@ -102,6 +112,8 @@ Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend e
 - Webhooks outgoing: HMAC-SHA256 signed
 - HSTS: Strict-Transport-Security in production
 - K8s: PSS enforce:restricted, NetworkPolicies default-deny
+- Stripe: webhook signature verification (Stripe-Signature header), checkout session anti-replay (atomic DB status transitions)
+- License tokens: Ed25519 signed JWTs with JTI replay protection (used_license_tokens table)
 - Headers: CSP, X-Frame-Options:DENY, X-Content-Type-Options:nosniff, Referrer-Policy:strict-origin-when-cross-origin
 - DB connection safety: three-phase pattern for external API calls (no DB held during HTTP), deferred KSeF session cleanup
 - Concurrency: per-tenant mutex on ImportOffers, unique index on product_listings(external_id, integration_id)
