@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -97,9 +98,18 @@ func (m *Manager) safeRun(ctx context.Context, w Worker) {
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("worker panicked", "worker", w.Name(), "error", r, "stack", string(debug.Stack()))
+			sentry.WithScope(func(scope *sentry.Scope) {
+				scope.SetTag("worker", w.Name())
+				sentry.CurrentHub().RecoverWithContext(ctx, r)
+			})
 		}
 	}()
 	if err := w.Run(ctx); err != nil {
 		m.logger.Error("worker run failed", "name", w.Name(), "error", err)
+		sentry.WithScope(func(scope *sentry.Scope) {
+			scope.SetTag("worker", w.Name())
+			scope.SetLevel(sentry.LevelError)
+			sentry.CaptureException(err)
+		})
 	}
 }
