@@ -57,7 +57,7 @@ func (w *ExchangeRateWorker) Run(ctx context.Context) error {
 
 	totalFetched := 0
 	for _, tenantID := range tenantIDs {
-		count, err := w.exchangeRateService.FetchNBPRates(ctx, tenantID, uuid.Nil, "worker")
+		count, err := w.exchangeRateService.FetchNBPRates(ctx, tenantID, uuid.Nil, "0.0.0.0")
 		if err != nil {
 			w.logger.Error("exchange rate worker: fetch NBP rates", "tenant_id", tenantID, "error", err)
 			continue
