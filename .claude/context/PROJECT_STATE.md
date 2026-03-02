@@ -1,14 +1,14 @@
 # Project State
-Updated: 2026-02-25
+Updated: 2026-03-02
 
 ## Target
 Open production for paying customers: **May 2026** (~11 weeks remaining)
 
 ## Pricing Model
-Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
+Subscription tiers based on order volume. Plan names and pricing configured at runtime via BILLING_PLANS env var.
 
 ## Current Focus (P0 — must do next)
-- [ ] Billing/Subscription integration (Stripe + Przelewy24?) — **0% done, #1 blocker**
+- [x] Billing/Subscription integration (Stripe) — **DONE** (PR #67+: Stripe Checkout, webhooks, billing tables, runtime plan config via BILLING_PLANS env)
 - [ ] Monitoring/Alerting (Grafana/Sentry) — **10% done, SaaS requirement**
 - [x] Allegro competitive parity — **DONE** (PR #58: offer import, stock sync, messaging, KSeF auto-send)
 - [x] Onboarding wizard (first-time user flow) — **DONE** (PR #80+: backend endpoints, JSONB state tracking, frontend stepper UI)
@@ -19,6 +19,14 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-03-02: Billing/Stripe integration COMPLETE — full payment flow:
+  - **Backend**: Stripe Checkout sessions, webhook handling (checkout.session.completed, subscription updates, payment failures), billing tables (customers, subscriptions, checkout_sessions), SECURITY DEFINER functions for pre-registration ops
+  - **Frontend**: Plan selection page at /register (dynamic from API), /register/complete (post-Stripe form), invite flow preserved at /register/invite
+  - **Auth**: Register with checkout_session_id, session claim with anti-replay, email verification
+  - **Config**: Runtime via BILLING_PLANS env var (JSON), no hardcoded plans/prices in source
+  - **Status**: All code merged, Stripe account setup pending (enterprise config)
+- 2026-03-02: Onboarding status 401 fix (PR #86) — added isAuthenticated guard to useOnboardingStatus query
+- 2026-03-02: Shipments NULL scan fix (PR #83) — nullable columns properly handled with pointer types
 - 2026-03-01: Onboarding wizard COMPLETE — full multi-step setup flow for new tenants:
   - **Backend**: 3 new endpoints (`GET /v1/onboarding/status`, `PUT /v1/onboarding/step/{step}`, `POST /v1/onboarding/complete`), extended `OnboardingSettings` model (current_step, completed_steps, skipped_steps tracking in JSONB)
   - **Frontend**: Dedicated `/onboarding` route with 4-step stepper (Company details, Warehouse, Integration, Team invite), form-based flows reusing existing API endpoints, completion screen with redirect
@@ -53,6 +61,8 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 - 2026-02-17: Gap analysis vs competitors (BaseLinker, Sellasist, Apilo)
 
 ## Recent Deploys
+- 2026-03-02: PRs #83-86 merged — shipments NULL fix, billing tests, onboarding 401 fix
+- 2026-03-01: PRs #76-82 merged — carrier SDK fixes (DHL, DPD, GLS, Erli), onboarding wizard, carrier fields
 - 2026-02-25: PR #58 merged — Allegro competitive parity (offer import, stock sync, messaging, KSeF auto-send, audit fixes)
 - 2026-02-25: PRs #40-56 merged — Allegro hardening, weight propagation, audit v3, test coverage expansion
 - 2026-02-24: PR #38 merged — audit remediation v2
@@ -65,9 +75,9 @@ Subscription: Standard / Plus / Pro tiers based on order volume. Details TBD.
 
 ## MVP Critical Path
 ```
-Billing → Monitoring → Onboarding → BaseLinker import → Landing page → 3 carriers
+Monitoring → BaseLinker import → Landing page → 3 carriers
 ```
-Note: Allegro polish, stock sync, listing sync, KSeF — all done in PR #58.
+Note: Billing done (PR #67+), onboarding done (PR #80+), Allegro done (PR #58).
 
 ## Estimated Hours Remaining to MVP
-~400h (tight fit in 600h capacity over 11 weeks)
+~350h (tight fit in 600h capacity over 11 weeks)

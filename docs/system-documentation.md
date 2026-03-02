@@ -33,7 +33,7 @@
 - **Powiadomienia** -- Email (SMTP) + SMS (Twilio/SMSAPI)
 - **RBAC** -- role z granularnymi uprawnieniami
 - **2FA/TOTP** -- dwuskladnikowe uwierzytelnianie (Google Authenticator)
-- **API REST** -- 453 endpointy z OpenAPI 3.1
+- **API REST** -- 463 endpointy z OpenAPI 3.1
 - **Dashboard** -- Next.js 16 + React 19, 131 stron, dark mode, PWA
 - **AI** -- auto-kategoryzacja, opis, ulepszanie i tlumaczenie produktow (OpenAI)
 - **Inwentaryzacja** -- pelny cykl zycia stocktake z liczeniem pozycji
@@ -45,6 +45,9 @@
 - **Dostawcy (dropship)** -- import katalogow XML/IOF, hybrid sync (XML+API), auto-submit zamowien, wizardy konfiguracji
 - **Hierarchiczne kategorie** -- drzewo kategorii produktow z mapowaniem kategorii dostawcow
 - **Token refresh rotation** -- rotacja refresh tokenow z detekcja ponownego uzycia
+- **Billing/Stripe** -- integracja platnosci (Stripe Checkout, subskrypcje, webhooks), plany konfigurowane runtime
+- **Onboarding wizard** -- 4-krokowy kreator konfiguracji dla nowych firm
+- **License tokens** -- Ed25519 JWT z ochrona przed powtorzeniem (enterprise)
 
 ### Licencja
 
@@ -174,7 +177,7 @@ Domyslna liczba replik: 1 (API, Dashboard, Worker). Skalowanie przez `replicaCou
 
 | Komponent | Technologia | Wersja |
 |-----------|------------|--------|
-| Jezyk | Go | 1.24 |
+| Jezyk | Go | 1.25 |
 | Router HTTP | chi/v5 | 5.x |
 | Baza danych | PostgreSQL | 16 |
 | Driver DB | pgx/v5 | 5.x |
@@ -210,20 +213,20 @@ OpenOMS/
 +-- apps/
 |   +-- api-server/          <- Go backend (ELv2)
 |   |   +-- cmd/server/      <- punkt wejscia
-|   |   +-- internal/        <- logika aplikacji (386 plikow Go, 71 testow)
-|   |   +-- migrations/      <- 94 migracji SQL (000001-000094)
+|   |   +-- internal/        <- logika aplikacji (345 plikow Go, 121 testow)
+|   |   +-- migrations/      <- 12 migracji SQL (000001-000012)
 |   +-- dashboard/           <- Next.js frontend (ELv2)
-|       +-- src/app/         <- 124 strony (App Router)
-|       +-- src/components/  <- 81 komponentow React
-|       +-- src/hooks/       <- 45 custom hooks
+|       +-- src/app/         <- 141 stron (App Router)
+|       +-- src/components/  <- 96 komponentow React
+|       +-- src/hooks/       <- 73 custom hooks
 |       +-- src/lib/         <- utils, API client, auth
-|       +-- e2e/             <- 21 specow E2E Playwright (119 testow)
+|       +-- e2e/             <- 22 specow E2E Playwright (124 testow)
 +-- packages/                <- SDK-i (MIT)
 |   +-- order-engine/        <- maszyna stanow zamowien
 |   +-- allegro-go-sdk/      <- Allegro REST API
 |   +-- inpost-go-sdk/       <- InPost ShipX API
 |   +-- ksef-go-sdk/         <- KSeF e-Faktur API
-|   +-- ...                  <- 21 pakietow SDK
+|   +-- ...                  <- 27 pakietow SDK
 +-- docs/                    <- dokumentacja
 ```
 
@@ -304,7 +307,7 @@ OpenOMS/
         +--------------+   +----------------+
 ```
 
-### Wszystkie tabele (59)
+### Wszystkie tabele (64)
 
 | Tabela | Cel | Kluczowe kolumny |
 |--------|-----|-----------------|
@@ -367,6 +370,11 @@ OpenOMS/
 | `stock_sync_events` | Eventy sync stanow | channel_id, product_id, quantity_change |
 | `invitations` | Zaproszenia uzytkownikow | email, role_id, token, expires_at |
 | `schema_migrations` | Wersja migracji DB | version, dirty |
+| `billing_customers` | Klienci Stripe | tenant_id (UNIQUE), stripe_customer_id (UNIQUE) |
+| `billing_subscriptions` | Subskrypcje | stripe_subscription_id (UNIQUE), plan, billing_interval, status, trial_end |
+| `billing_checkout_sessions` | Sesje checkout | stripe_session_id (UNIQUE), plan, billing_interval, email, status, tenant_id |
+| `used_license_tokens` | Uzyte tokeny licencji | jti (UNIQUE), email, plan, used_at |
+| `listing_description_html` | Opisy HTML listingow | listing_id, html_content |
 
 ### Funkcje SECURITY DEFINER (bypass RLS)
 
@@ -376,6 +384,11 @@ OpenOMS/
 | `find_user_for_auth(email, tenant_id)` | Login: pobranie usera z haslem + TOTP |
 | `find_order_tenant_id(order_id)` | Publiczny formularz zwrotu |
 | `find_return_by_token(token)` | Status zwrotu po tokenie |
+| `create_checkout_session(...)` | Billing: tworzenie sesji checkout (pre-rejestracja) |
+| `complete_checkout_session(...)` | Billing: oznaczenie sesji jako zakonczonej |
+| `get_checkout_session(...)` | Billing: pobranie statusu sesji |
+| `claim_checkout_session(...)` | Billing: przypisanie sesji do tenanta |
+| `validate_license_token(...)` | Walidacja tokena licencji |
 
 ---
 
@@ -389,13 +402,13 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
     -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
 
-### Wszystkie endpointy (430)
+### Wszystkie endpointy (463)
 
 #### Autentykacja (publiczne, rate limit 10/min login, 60/min refresh)
 
 | Metoda | Sciezka | Opis |
 |--------|---------|------|
-| POST | `/v1/auth/register` | Rejestracja (nowy tenant + owner) |
+| POST | `/v1/auth/register` | Rejestracja (nowy tenant + owner, opcjonalnie: invite_token, license_token, checkout_session_id) |
 | POST | `/v1/auth/login` | Logowanie -> access + refresh token |
 | POST | `/v1/auth/refresh` | Odswiezenie access tokena |
 | POST | `/v1/auth/logout` | Wylogowanie (blacklist tokena) |
@@ -858,10 +871,33 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | POST | `/v1/webhooks/{provider}/{tenant_id}` | Webhook przychodzacy |
 | POST | `/v1/webhooks/allegro` | Webhook Allegro (HMAC) |
 | POST | `/v1/webhooks/inpost` | Webhook InPost (HMAC-SHA256) |
+| POST | `/v1/webhooks/stripe` | Webhook Stripe (Stripe-Signature) |
 | GET | `/health` | Health check (no version disclosed) |
 | GET | `/metrics` | Prometheus metrics (requires Bearer token) |
 | GET | `/v1/openapi.yaml` | Specyfikacja OpenAPI |
 | GET | `/v1/docs` | Swagger UI |
+
+#### Billing (publiczne, bez auth)
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/billing/plans` | Lista planow (bez Stripe Price IDs) |
+| POST | `/v1/billing/checkout` | Tworzenie sesji Stripe Checkout |
+| GET | `/v1/billing/checkout/{session_id}` | Status sesji checkout |
+
+#### Onboarding (wymaga JWT)
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/onboarding/status` | Status onboardingu tenanta |
+| PUT | `/v1/onboarding/step/{step}` | Oznaczenie kroku jako ukonczony/pominiety |
+| POST | `/v1/onboarding/complete` | Zakonczenie onboardingu |
+
+#### Konfiguracja publiczna
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/config` | Konfiguracja publiczna (registration_mode, billing_enabled, stripe_public_key) |
 
 ---
 
@@ -877,6 +913,9 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | `/register` | Rejestracja firmy |
 | `/return-request` | Formularz zwrotu (klient) |
 | `/return-request/[token]` | Status zwrotu (klient) |
+| `/register/complete` | Formularz po platnosci Stripe |
+| `/register/invite` | Rejestracja z tokenem zaproszenia |
+| `/onboarding` | Wizard onboardingu (4 kroki) |
 
 #### Pulpit
 
