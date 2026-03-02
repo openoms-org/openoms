@@ -68,7 +68,6 @@ function CompleteRegistrationForm() {
         try {
           const res = await fetch(`${API_URL}/v1/billing/checkout/${sessionId}`, {
             signal: controller.signal,
-            credentials: "include",
           });
           if (!res.ok) {
             if (res.status === 404) {
@@ -269,10 +268,8 @@ function CompleteRegistrationForm() {
 
 export default function CompleteRegistrationPage() {
   return (
-    <div className="max-w-md mx-auto">
-      <Suspense>
-        <CompleteRegistrationForm />
-      </Suspense>
-    </div>
+    <Suspense>
+      <CompleteRegistrationForm />
+    </Suspense>
   );
 }
