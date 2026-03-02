@@ -17,7 +17,7 @@ func TestSentryMiddleware_NormalRequest(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	handler := middleware.SentryMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := middleware.SentryMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -34,7 +34,7 @@ func TestSentryMiddleware_PanicRecovery(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	handler := middleware.SentryMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := middleware.SentryMiddleware(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		panic("test panic")
 	}))
 

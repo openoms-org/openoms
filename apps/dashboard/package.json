@@ -45,7 +45,8 @@
     "zustand": "^5.0.11"
   },
   "overrides": {
-    "minimatch": ">=10.2.1"
+    "minimatch": ">=10.2.1",
+    "serialize-javascript": ">=7.0.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
