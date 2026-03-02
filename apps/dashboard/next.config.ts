@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -39,11 +40,21 @@ const nextConfig: NextConfig = {
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
         {
           key: "Content-Security-Policy",
-          value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://geowidget.inpost.pl https://static.cloudflareinsights.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl https://cloudflareinsights.com https://api.stripe.com ${getWsDirectives()}; font-src 'self' data:; frame-src https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
+          value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://geowidget.inpost.pl https://static.cloudflareinsights.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl https://cloudflareinsights.com https://api.stripe.com https://*.sentry.io ${getWsDirectives()}; font-src 'self' data:; frame-src https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
         },
       ],
     },
   ],
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Upload source maps only when SENTRY_AUTH_TOKEN is set (CI only)
+  silent: !process.env.CI,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+    deleteSourcemapsAfterUpload: true,
+  },
+  telemetry: false,
+});

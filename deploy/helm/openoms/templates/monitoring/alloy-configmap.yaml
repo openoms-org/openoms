@@ -1,0 +1,30 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openoms.fullname" . }}-alloy-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+data:
+  config.alloy: |
+    prometheus.scrape "openoms_api" {
+      targets = [{
+        __address__ = "{{ include "openoms.fullname" . }}-api.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.apiServer.port }}",
+      }]
+      forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+      scrape_interval = "15s"
+      metrics_path = "/metrics"
+      bearer_token = env("METRICS_TOKEN")
+    }
+
+    prometheus.remote_write "grafana_cloud" {
+      endpoint {
+        url = env("GRAFANA_REMOTE_WRITE_URL")
+        basic_auth {
+          username = env("GRAFANA_USER")
+          password = env("GRAFANA_TOKEN")
+        }
+      }
+    }
+{{- end }}

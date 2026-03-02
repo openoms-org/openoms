@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -117,6 +118,9 @@ func New(deps RouterDeps) *chi.Mux {
 	// Global middleware
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
+	if sentry.CurrentHub().Client() != nil {
+		r.Use(middleware.SentryMiddleware)
+	}
 	if deps.MetricsCollector != nil {
 		r.Use(deps.MetricsCollector.Middleware())
 	}
@@ -274,6 +278,9 @@ func New(deps RouterDeps) *chi.Mux {
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {
 		r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+		if sentry.CurrentHub().Client() != nil {
+			r.Use(middleware.SentryContext)
+		}
 
 		// Plan enforcement — blocks suspended/past_due tenants
 		if deps.PlanCache != nil {

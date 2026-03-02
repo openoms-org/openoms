@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -30,9 +31,10 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	}
 }
 
-// writeServerError logs the underlying error and returns a generic message to the client.
+// writeServerError logs the underlying error, reports it to Sentry, and returns a generic message to the client.
 func writeServerError(w http.ResponseWriter, message string, err error) {
 	slog.Error(message, "error", err)
+	sentry.CaptureException(err)
 	writeError(w, http.StatusInternalServerError, message)
 }
 

@@ -27,3 +27,7 @@ data:
   STRIPE_PUBLIC_KEY: {{ .Values.apiServer.billing.stripePublicKey | default "" | quote }}
   BILLING_PLANS: {{ .Values.apiServer.billing.plans | default "" | quote }}
   {{- end }}
+  {{- if .Values.apiServer.sentry }}
+  SENTRY_ENVIRONMENT: {{ .Values.apiServer.sentry.environment | default "production" | quote }}
+  SENTRY_TRACES_SAMPLE_RATE: {{ .Values.apiServer.sentry.tracesSampleRate | default "0.1" | quote }}
+  {{- end }}
