@@ -86,13 +86,13 @@ describe("OnboardingPage", () => {
       setupOnboardingHandlers();
       renderWithProviders(<OnboardingPage />);
 
-      // All 4 step labels should be visible
+      // All 4 step labels should be visible (some may appear in both stepper and card title)
       await waitFor(() => {
-        expect(screen.getByText(/dane firmy/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/dane firmy/i).length).toBeGreaterThanOrEqual(1);
       });
-      expect(screen.getByText(/magazyn/i)).toBeInTheDocument();
-      expect(screen.getByText(/integracj/i)).toBeInTheDocument();
-      expect(screen.getByText(/zesp/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/magazyn/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/integracj/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/zesp/i).length).toBeGreaterThanOrEqual(1);
     });
 
     it("shows step 1 as active by default", async () => {
@@ -101,7 +101,7 @@ describe("OnboardingPage", () => {
 
       // Step 1 form fields should be visible
       await waitFor(() => {
-        expect(screen.getByText(/dane firmy/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/dane firmy/i).length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -120,7 +120,7 @@ describe("OnboardingPage", () => {
 
       // Should show step 3 content (integration)
       await waitFor(() => {
-        expect(screen.getByText(/integracj/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/integracj/i).length).toBeGreaterThanOrEqual(1);
       });
     });
   });
@@ -144,7 +144,7 @@ describe("OnboardingPage", () => {
       renderWithProviders(<OnboardingPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/dane firmy/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/dane firmy/i).length).toBeGreaterThanOrEqual(1);
       });
 
       // Step 1 is required — no "Pomiń" (skip) button

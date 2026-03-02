@@ -12,6 +12,7 @@ import {
   useOnboardingStatus,
   useUpdateOnboardingStep,
   useCompleteOnboarding,
+  useDismissOnboarding,
 } from "@/hooks/use-onboarding-wizard";
 import { apiClient } from "@/lib/api-client";
 
@@ -309,19 +310,32 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
 // Step 3: Integration
 // ---------------------------------------------------------------------------
 function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const router = useRouter();
   const updateStep = useUpdateOnboardingStep();
   const [provider, setProvider] = useState("");
   const [apiKey, setApiKey] = useState("");
 
   const PROVIDERS = [
-    { value: "amazon", label: "Amazon" },
-    { value: "woocommerce", label: "WooCommerce" },
+    { value: "allegro", label: "Allegro", oauth: true },
+    { value: "amazon", label: "Amazon", oauth: false },
+    { value: "shopify", label: "Shopify", oauth: false },
+    { value: "woocommerce", label: "WooCommerce", oauth: false },
+    { value: "shoper", label: "Shoper", oauth: false },
+    { value: "prestashop", label: "PrestaShop", oauth: false },
   ];
+
+  const selectedProvider = PROVIDERS.find((p) => p.value === provider);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!provider) {
       toast.error("Wybierz dostawcę");
+      return;
+    }
+    if (selectedProvider?.oauth) {
+      // OAuth providers need full integration flow — mark step and redirect
+      await updateStep.mutateAsync({ step: 3, action: "completed" });
+      router.push("/integrations");
       return;
     }
     try {
@@ -351,10 +365,18 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
             }`}
           >
             {p.label}
+            {p.oauth && (
+              <span className="block text-xs text-muted-foreground font-normal mt-1">OAuth</span>
+            )}
           </button>
         ))}
       </div>
-      {provider && (
+      {provider && selectedProvider?.oauth && (
+        <p className="text-sm text-muted-foreground">
+          Allegro wymaga autoryzacji OAuth. Po kliknięciu &quot;Dalej&quot; zostaniesz przekierowany do strony integracji.
+        </p>
+      )}
+      {provider && !selectedProvider?.oauth && (
         <div className="space-y-2">
           <Label htmlFor="api_key">Klucz API</Label>
           <Input
@@ -502,6 +524,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { data: status, isLoading, isError } = useOnboardingStatus();
   const updateStep = useUpdateOnboardingStep();
+  const dismissOnboarding = useDismissOnboarding();
   const [localStep, setLocalStep] = useState<number | null>(null);
   const [showCompletion, setShowCompletion] = useState(false);
 
@@ -567,7 +590,12 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleFinishLater = () => {
+  const handleFinishLater = async () => {
+    try {
+      await dismissOnboarding.mutateAsync();
+    } catch {
+      // Still redirect even if dismiss fails — user wants to leave
+    }
     router.replace("/");
   };
 

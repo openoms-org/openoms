@@ -28,10 +28,10 @@ func onboardingCtx(ctx context.Context, tenantID, userID uuid.UUID) context.Cont
 	return ctx
 }
 
-// onboardingRouteCtx adds a chi URL param to the context.
-func onboardingRouteCtx(ctx context.Context, key, value string) context.Context {
+// onboardingRouteCtx adds the "step" chi URL param to the context.
+func onboardingRouteCtx(ctx context.Context, stepValue string) context.Context {
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add(key, value)
+	rctx.URLParams.Add("step", stepValue)
 	return context.WithValue(ctx, chi.RouteCtxKey, rctx)
 }
 
@@ -57,7 +57,9 @@ func decodeErrorResponse(t *testing.T, rr *httptest.ResponseRecorder) string {
 // GET /v1/onboarding/status — returns current onboarding state
 // ---------------------------------------------------------------------------
 
-func TestGetOnboardingStatus_NewTenant_ReturnsDefaults(t *testing.T) {
+func TestGetOnboardingStatus_ExistingTenant_NoOnboardingKey_ReturnsCompleted(t *testing.T) {
+	// When database pool is nil (or onboarding key missing), existing tenants
+	// should be treated as completed so they aren't redirected to the wizard.
 	h := NewSettingsHandler(nil, nil, nil, nil, nil, nil)
 
 	tenantID := uuid.New()
@@ -69,16 +71,13 @@ func TestGetOnboardingStatus_NewTenant_ReturnsDefaults(t *testing.T) {
 
 	h.GetOnboardingStatus(rr, req)
 
-	// New handler method must exist and return proper defaults:
-	// completed=false, current_step=1, empty slices, no completed_at
 	require.Equal(t, http.StatusOK, rr.Code)
 
 	status := decodeOnboardingStatus(t, rr)
-	assert.False(t, status.Completed, "new tenant should not be completed")
-	assert.Equal(t, 1, status.CurrentStep, "new tenant should start at step 1")
-	assert.Empty(t, status.CompletedSteps, "no steps completed yet")
-	assert.Empty(t, status.SkippedSteps, "no steps skipped yet")
-	assert.Empty(t, status.CompletedAt, "no completion timestamp")
+	assert.True(t, status.Completed, "existing tenant without onboarding key should be treated as completed")
+	assert.Equal(t, 4, status.CurrentStep)
+	assert.Equal(t, []int{1, 2, 3, 4}, status.CompletedSteps)
+	assert.Empty(t, status.SkippedSteps)
 }
 
 func TestGetOnboardingStatus_ResponseIsJSON_200(t *testing.T) {
@@ -106,7 +105,7 @@ func TestUpdateOnboardingStep_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/1", strings.NewReader("not json"))
 	ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-	ctx = onboardingRouteCtx(ctx, "step", "1")
+	ctx = onboardingRouteCtx(ctx, "1")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -136,7 +135,7 @@ func TestUpdateOnboardingStep_StepOutOfRange(t *testing.T) {
 			body := `{"action":"completed"}`
 			req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/"+tt.step, strings.NewReader(body))
 			ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-			ctx = onboardingRouteCtx(ctx, "step", tt.step)
+			ctx = onboardingRouteCtx(ctx, tt.step)
 			req = req.WithContext(ctx)
 			rr := httptest.NewRecorder()
 
@@ -153,7 +152,7 @@ func TestUpdateOnboardingStep_Step1CannotBeSkipped(t *testing.T) {
 	body := `{"action":"skipped"}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/1", strings.NewReader(body))
 	ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-	ctx = onboardingRouteCtx(ctx, "step", "1")
+	ctx = onboardingRouteCtx(ctx, "1")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -181,7 +180,7 @@ func TestUpdateOnboardingStep_InvalidAction(t *testing.T) {
 			body := `{"action":"` + tt.action + `"}`
 			req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/2", strings.NewReader(body))
 			ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-			ctx = onboardingRouteCtx(ctx, "step", "2")
+			ctx = onboardingRouteCtx(ctx, "2")
 			req = req.WithContext(ctx)
 			rr := httptest.NewRecorder()
 
@@ -216,7 +215,7 @@ func TestUpdateOnboardingStep_ValidStepsRange(t *testing.T) {
 			body := `{"action":"` + tt.action + `"}`
 			req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/"+tt.step, strings.NewReader(body))
 			ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-			ctx = onboardingRouteCtx(ctx, "step", tt.step)
+			ctx = onboardingRouteCtx(ctx, tt.step)
 			req = req.WithContext(ctx)
 			rr := httptest.NewRecorder()
 
@@ -235,7 +234,7 @@ func TestUpdateOnboardingStep_EmptyBody(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/2", strings.NewReader(""))
 	ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-	ctx = onboardingRouteCtx(ctx, "step", "2")
+	ctx = onboardingRouteCtx(ctx, "2")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -368,7 +367,7 @@ func TestUpdateOnboardingStep_Step1Completed_AcceptsValidAction(t *testing.T) {
 	body := `{"action":"completed"}`
 	req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/1", strings.NewReader(body))
 	ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-	ctx = onboardingRouteCtx(ctx, "step", "1")
+	ctx = onboardingRouteCtx(ctx, "1")
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -387,7 +386,7 @@ func TestUpdateOnboardingStep_Steps2to4_CanBeSkipped(t *testing.T) {
 			body := `{"action":"skipped"}`
 			req := httptest.NewRequest(http.MethodPut, "/v1/onboarding/step/"+step, strings.NewReader(body))
 			ctx := onboardingCtx(req.Context(), uuid.New(), uuid.New())
-			ctx = onboardingRouteCtx(ctx, "step", step)
+			ctx = onboardingRouteCtx(ctx, step)
 			req = req.WithContext(ctx)
 			rr := httptest.NewRecorder()
 

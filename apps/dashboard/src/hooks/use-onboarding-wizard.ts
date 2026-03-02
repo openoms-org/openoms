@@ -41,3 +41,17 @@ export function useCompleteOnboarding() {
     },
   });
 }
+
+export function useDismissOnboarding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient<OnboardingStatus>("/v1/settings/onboarding", {
+        method: "PUT",
+        body: JSON.stringify({ dismissed: true }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding"] });
+    },
+  });
+}

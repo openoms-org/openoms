@@ -2964,11 +2964,11 @@ export interface UpdateOnboardingStepRequest {
 }
 
 export interface CompanySettingsRequest {
-  name: string;
+  company_name: string;
   nip: string;
-  street: string;
+  address: string;
   city: string;
-  postal_code: string;
+  post_code: string;
   phone: string;
   email: string;
 }

@@ -40,29 +40,35 @@ func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.A
 // getSettingsSection reads a specific section from the tenant's JSON settings blob.
 // If the section or settings don't exist, dest is left at its zero value.
 func (h *SettingsHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, dest any) error {
+	_, err := h.getSettingsSectionExists(ctx, tx, tenantID, key, dest)
+	return err
+}
+
+// getSettingsSectionExists reads a specific section and returns whether the key existed.
+func (h *SettingsHandler) getSettingsSectionExists(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, dest any) (bool, error) {
 	settings, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if settings == nil {
-		return nil
+		return false, nil
 	}
 
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return nil // settings is empty or not a map
+		return false, nil // settings is empty or not a map
 	}
 
 	raw, ok := allSettings[key]
 	if !ok {
-		return nil
+		return false, nil
 	}
 
 	if err := json.Unmarshal(raw, dest); err != nil {
 		slog.Warn("failed to unmarshal settings section", "key", key, "error", err)
 	}
-	return nil
+	return true, nil
 }
 
 // updateSettingsSection merges a value into the tenant's JSON settings blob under the given key,
@@ -595,6 +601,24 @@ func (h *SettingsHandler) UpdateOnboardingSettings(w http.ResponseWriter, r *htt
 		return
 	}
 
+	// Validate step ranges.
+	if cfg.CurrentStep < 0 || cfg.CurrentStep > 4 {
+		writeError(w, http.StatusBadRequest, "current_step must be between 0 and 4")
+		return
+	}
+	for _, s := range cfg.CompletedSteps {
+		if s < 1 || s > 4 {
+			writeError(w, http.StatusBadRequest, "completed_steps values must be between 1 and 4")
+			return
+		}
+	}
+	for _, s := range cfg.SkippedSteps {
+		if s < 1 || s > 4 {
+			writeError(w, http.StatusBadRequest, "skipped_steps values must be between 1 and 4")
+			return
+		}
+	}
+
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "onboarding", cfg); err != nil {
 			return err
@@ -617,26 +641,41 @@ func (h *SettingsHandler) UpdateOnboardingSettings(w http.ResponseWriter, r *htt
 }
 
 // GetOnboardingStatus returns the current onboarding wizard state for the tenant.
-// For new tenants with no data, it returns sensible defaults (current_step=1, empty slices).
+// Existing tenants without an "onboarding" key are treated as completed (backward compat).
+// New tenants (created after the wizard feature) will have the key set during registration.
 func (h *SettingsHandler) GetOnboardingStatus(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	cfg := model.OnboardingSettings{
-		CurrentStep:    1,
-		CompletedSteps: []int{},
-		SkippedSteps:   []int{},
-	}
+	var cfg model.OnboardingSettings
+	keyExists := false
 
 	if h.pool == nil {
 		slog.Error("GetOnboardingStatus: database pool is nil, returning defaults")
 	} else {
 		err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-			return h.getSettingsSection(r.Context(), tx, tenantID, "onboarding", &cfg)
+			var exists bool
+			var err error
+			exists, err = h.getSettingsSectionExists(r.Context(), tx, tenantID, "onboarding", &cfg)
+			keyExists = exists
+			return err
 		})
 		if err != nil {
 			writeServerError(w, "failed to load onboarding status", err)
 			return
 		}
+	}
+
+	// Existing tenants have no "onboarding" key — treat as completed so they
+	// are not redirected to the wizard.
+	if !keyExists {
+		cfg = model.OnboardingSettings{
+			Completed:      true,
+			CurrentStep:    4,
+			CompletedSteps: []int{1, 2, 3, 4},
+			SkippedSteps:   []int{},
+		}
+		writeJSON(w, http.StatusOK, cfg)
+		return
 	}
 
 	// Apply defaults for new tenants (zero value from missing/empty JSON).
