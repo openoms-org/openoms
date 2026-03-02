@@ -278,6 +278,9 @@ func New(deps RouterDeps) *chi.Mux {
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {
 		r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+		if sentry.CurrentHub().Client() != nil {
+			r.Use(middleware.SentryContext)
+		}
 
 		// Plan enforcement — blocks suspended/past_due tenants
 		if deps.PlanCache != nil {
