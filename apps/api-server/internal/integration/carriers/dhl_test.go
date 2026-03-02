@@ -106,7 +106,6 @@ func TestDHL_FactoryRegistration(t *testing.T) {
 		"username":       "test-user",
 		"password":       "test-pass",
 		"account_number": "ACC123",
-		"sandbox":        true,
 	})
 	provider, err := integration.NewCarrierProvider("dhl", creds, nil)
 	if err != nil {
@@ -114,6 +113,19 @@ func TestDHL_FactoryRegistration(t *testing.T) {
 	}
 	if provider.ProviderName() != "dhl" {
 		t.Errorf("ProviderName() = %q, want %q", provider.ProviderName(), "dhl")
+	}
+}
+
+func TestDHL_FactoryRegistration_SandboxReturnsError(t *testing.T) {
+	creds, _ := json.Marshal(map[string]any{
+		"username":       "test-user",
+		"password":       "test-pass",
+		"account_number": "ACC123",
+		"sandbox":        true,
+	})
+	_, err := integration.NewCarrierProvider("dhl", creds, nil)
+	if err == nil {
+		t.Fatal("expected error when sandbox is true — DHL24 has no sandbox mode")
 	}
 }
 

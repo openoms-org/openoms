@@ -77,6 +77,34 @@ func TestDHL_CreateShipment_ServiceTypeMapping(t *testing.T) {
 	}
 }
 
+func TestDHL_CreateShipment_UnknownServiceTypeReturnsError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("SOAP request should not be sent for unknown service type")
+	}))
+	defer srv.Close()
+
+	provider := newTestDHLProvider(t, srv.URL)
+
+	req := integration.CarrierShipmentRequest{
+		ServiceType: "invalid_type",
+		Shipper:     testShipperAddr,
+		Receiver: integration.CarrierReceiver{
+			Name: "Test", Phone: "500100200",
+			Street: "Testowa 1", City: "Warszawa",
+			PostalCode: "00-001", Country: "PL",
+		},
+		Parcel: integration.CarrierParcel{WeightKg: 1.0},
+	}
+
+	_, err := provider.CreateShipment(context.Background(), req)
+	if err == nil {
+		t.Fatal("CreateShipment() should return error for unknown service type")
+	}
+	if !strings.Contains(err.Error(), "unknown service type") {
+		t.Errorf("error should mention 'unknown service type', got: %v", err)
+	}
+}
+
 // --- Street / House Number Splitting ---
 
 func TestDHL_CreateShipment_ReceiverStreetSplit(t *testing.T) {

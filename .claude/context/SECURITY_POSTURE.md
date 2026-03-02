@@ -15,24 +15,15 @@ DHL carrier production-ready security audit: 2026-03-02 (PASS — no CRITICAL fi
    - Fix: Add `<CODAndInsuranceFields values={values} onChange={onChange} />` to `DPDFields` render
    - Effort: S
 
-2. **`label_service.go:588` — Hardcoded country "PL" in CompanySettings fallback** — When shipper address cannot be resolved from warehouse, `resolveShipper` falls back to tenant CompanySettings but hardcodes `Country: "PL"`. If this code is reused by international carriers (DPD/GLS/FedEx extending beyond Poland), it silently forces `"PL"` for all tenants without explicit country setting in CompanySettings.
-   - Risk: Low today (DHL24 is Poland-only), but HIGH for future international carriers — shipper country would be wrong
-   - Files: `apps/api-server/internal/service/label_service.go:588` (resolveShipper method)
-   - Fix: Add inline comment explaining DHL24 scope, or add `Country` field to `model.CompanySettings` with default "PL" → explicit when internationalizing
-   - Effort: S (comment) or M (add field + migration)
+2. ~~**`label_service.go` — Hardcoded country "PL" in CompanySettings fallback**~~ — MITIGATED: inline comment added explaining DHL24-only scope. Country field in CompanySettings deferred to internationalization milestone.
 
-3. **`carriers/dhl.go:146-148` — Unknown service type passthrough without validation** — `mapDHLServiceType` logs warning for unknown types but passes them unchanged to DHL24 SOAP API. User-provided strings (from `carrier_data` JSON in DB) flow directly to SOAP `<serviceType>` element.
-   - Risk: Not exploitable (encoding/xml auto-escapes values), but sends arbitrary strings to external API causing confusing error responses. Wastes API calls and poor UX.
-   - Files: `apps/api-server/internal/carriers/dhl.go:146-150` (mapDHLServiceType function)
-   - Fix: Return error for unknown service types instead of passthrough, or validate against allowlist {AH, 09, 12, EK, PI}
-   - Effort: S
+3. ~~**`carriers/dhl.go` — Unknown service type passthrough**~~ — FIXED: `mapDHLServiceType` now returns error for unknown types instead of passthrough. Test added.
 
 ### BACKLOG (low priority, separate PRs)
 1. **Carrier SDK MEDIUM findings** (deferred to follow-up)
    - `dhl-go-sdk/client.go:119`, `dpd-go-sdk/client.go:122`, `gls-go-sdk/client.go:113` — Unbounded `io.ReadAll` in response parsing. A compromised/malicious carrier API endpoint could cause OOM. Typical carrier responses <1MB.
      - Fix: Use `io.LimitReader(resp.Body, 10*1024*1024)` (10MB cap) on all response body reads
-   - `dhl-go-sdk/client.go:14` — Sandbox no-op. `WithSandbox()` is silently ignored. A developer setting `sandbox: true` in credentials expects safety but gets production. Documented in comment but could surprise.
-     - Fix: Return error or log warning when sandbox is requested but not fully supported
+   - ~~`dhl-go-sdk/client.go:14` — Sandbox no-op.~~ FIXED: `NewDHLProvider` now returns error when `Sandbox: true` in credentials.
    - `dhl.go:159-233`, `dpd.go:157-177`, `gls.go:193-213` — Hardcoded placeholder rates. All 3 carriers return hardcoded PLN prices from `GetRates()`. Marked as TODO but if reachable in production, users see fabricated pricing.
      - Fix: Ensure UI/API layer gates these behind a "rates_configured" flag, or return empty until real API integration
    - `dhl-go-sdk/models.go` — Dual serialization concern. Models have JSON tags but SDK uses SOAP/XML transport. JSON tags serve integration layer API but confusing and could cause issues if SDK used directly with JSON.

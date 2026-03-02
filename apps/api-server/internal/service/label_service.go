@@ -554,7 +554,9 @@ func (s *LabelService) resolveShipper(ctx context.Context, tx pgx.Tx, tenantID u
 			slog.Warn("resolve shipper: warehouse lookup failed", "error", err)
 		} else if wh != nil && len(wh.Address) > 0 {
 			var addr model.ShippingAddress
-			if err := json.Unmarshal(wh.Address, &addr); err == nil && addr.Street != "" {
+			if err := json.Unmarshal(wh.Address, &addr); err != nil {
+				slog.Warn("resolve shipper: warehouse address unmarshal failed", "error", err, "warehouse_id", wh.ID)
+			} else if addr.Street != "" {
 				return &integration.CarrierSender{
 					Name:       wh.Name,
 					Phone:      addr.Phone,
@@ -568,7 +570,10 @@ func (s *LabelService) resolveShipper(ctx context.Context, tx pgx.Tx, tenantID u
 		}
 	}
 
-	// Fallback to tenant CompanySettings
+	// Fallback to tenant CompanySettings.
+	// Note: CompanySettings.Address is a freeform string (e.g. "ul. Warszawska 10").
+	// Carrier providers (e.g. DHL) split it into street+houseNo via splitStreetHouseNo().
+	// Country is hardcoded to "PL" — DHL24 is Poland-only; update when adding international carriers.
 	if s.tenantRepo != nil {
 		settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 		if err != nil {

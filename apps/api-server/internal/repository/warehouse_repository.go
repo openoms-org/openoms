@@ -96,7 +96,7 @@ func (r *WarehouseRepository) FindDefault(ctx context.Context, tx pgx.Tx) (*mode
 	var w model.Warehouse
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, name, code, address, is_default, active, created_at, updated_at
-		 FROM warehouses WHERE is_default = true AND active = true ORDER BY created_at ASC LIMIT 1`,
+		 FROM warehouses WHERE is_default = true AND active = true ORDER BY created_at ASC, id ASC LIMIT 1`,
 	).Scan(
 		&w.ID, &w.TenantID, &w.Name, &w.Code, &w.Address,
 		&w.IsDefault, &w.Active, &w.CreatedAt, &w.UpdatedAt,

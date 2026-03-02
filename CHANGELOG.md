@@ -78,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FedEx: Removed `FEDEX_GROUND` option (only available in Canada, not EU/Poland)
 - UPS: Corrected label for service code 65 from "Express Saver" to "Worldwide Saver"
 - GLS: Added service type selector with options (Standard, Express 10:00, Express 12:00) and wired through backend
-- Poczta Polska: Extended service type options with POCKTEX_2_0, PACZKA_POCZTOWA, and EMS (Express Mail Service)
+- Poczta Polska: Extended service type options with POCZTEX_2_0, PACZKA_POCZTOWA, and EMS (Express Mail Service)
 - DHL: Implemented service type selector mapping to DHL24 codes (AH for domestic parcel, DR for domestic courier)
 
 ### Changed

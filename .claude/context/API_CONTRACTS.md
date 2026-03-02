@@ -6,8 +6,8 @@ Updated: 2026-03-02
 - 2026-03-02: Internal carrier integration contract extended (no public API endpoint changes):
   - `CarrierShipmentRequest` struct now includes optional `Shipper *CarrierSender` field (internal, not exposed in public API)
   - `WarehouseRepo.FindDefault()` method added (returns tenant's default active warehouse by is_default flag)
-  - `CarrierSender` struct added with fields: Name, Street, HouseNo, City, PostalCode, Phone, Country (all optional, resolved from warehouse.Address JSONB or tenant CompanySettings fallback)
-  - All 3 carriers (DHL, DPD, GLS) now map shipper address correctly to respective SOAP/REST APIs
+  - `CarrierSender` struct added with fields: Name, Street, City, PostalCode, Phone, Email, Country (resolved from warehouse.Address JSONB or tenant CompanySettings fallback)
+  - DHL provider maps shipper address to SOAP (DHL24 requires it); DPD and GLS ignore `Shipper` for now
   - This is internal refactoring, public API endpoints unchanged
 - 2026-03-02: Billing endpoints added (public, no JWT):
   - `GET /v1/billing/plans` — list available plans (without Stripe Price IDs), rate limit 60/min

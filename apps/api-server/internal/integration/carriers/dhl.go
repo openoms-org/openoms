@@ -40,12 +40,11 @@ func NewDHLProvider(credentials json.RawMessage, settings json.RawMessage) (*DHL
 		return nil, fmt.Errorf("dhl: parse credentials: %w", err)
 	}
 
-	var opts []dhlsdk.Option
 	if creds.Sandbox {
-		opts = append(opts, dhlsdk.WithSandbox())
+		return nil, fmt.Errorf("dhl: DHL24 WebAPI2 does not support sandbox mode — remove the sandbox flag from credentials or use DHL test account numbers")
 	}
 
-	client := dhlsdk.NewClient(creds.Username, creds.Password, creds.AccountNumber, opts...)
+	client := dhlsdk.NewClient(creds.Username, creds.Password, creds.AccountNumber)
 
 	return &DHLProvider{
 		client: client,
@@ -56,7 +55,10 @@ func NewDHLProvider(credentials json.RawMessage, settings json.RawMessage) (*DHL
 func (p *DHLProvider) ProviderName() string { return "dhl" }
 
 func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
-	svcType := mapDHLServiceType(req.ServiceType)
+	svcType, err := mapDHLServiceType(req.ServiceType)
+	if err != nil {
+		return nil, err
+	}
 
 	recvStreet, recvHouseNo := splitStreetHouseNo(req.Receiver.Street)
 
@@ -110,9 +112,13 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}
 
 	if req.InsuredValue > 0 {
+		insureCurrency := req.CODCurrency
+		if insureCurrency == "" {
+			insureCurrency = "PLN"
+		}
 		dhlReq.Insurance = &dhlsdk.Money{
 			Amount:   req.InsuredValue,
-			Currency: "PLN",
+			Currency: insureCurrency,
 		}
 	}
 
@@ -133,19 +139,18 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 // Codes sourced from DHL24 WebAPI2 (dhl24.com.pl/webapi2):
 //   - AH: Domestic parcel (standard DHL Parcel)
 //   - DR: Domestic courier (DHL Courier / next-day delivery)
-func mapDHLServiceType(serviceType string) string {
+//
+// Returns error for unknown service types to prevent sending arbitrary strings to DHL24 SOAP API.
+func mapDHLServiceType(serviceType string) (string, error) {
 	switch serviceType {
-	case "dhl_parcel":
-		return "AH"
-	case "dhl_courier":
-		// DR = domestic courier service in DHL24 WebAPI2.
-		// Verify against the DHL24 WSDL or sandbox before enabling courier shipments.
-		return "DR"
+	case "dhl_parcel", "AH":
+		return "AH", nil
+	case "dhl_courier", "DR":
+		return "DR", nil
 	case "":
-		return "AH"
+		return "AH", nil
 	default:
-		slog.Warn("dhl: unknown service type, passing through unchanged", "serviceType", serviceType)
-		return serviceType
+		return "", fmt.Errorf("dhl: unknown service type %q — valid types: dhl_parcel, dhl_courier", serviceType)
 	}
 }
 
