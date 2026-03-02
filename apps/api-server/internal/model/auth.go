@@ -131,6 +131,9 @@ type CreateUserRequest struct {
 	Email string `json:"email"`
 	Name  string `json:"name"`
 	Role  string `json:"role"`
+
+	// Transient: plan limit injected by handler, not from JSON
+	MaxUsers int `json:"-"`
 }
 
 func (r *CreateUserRequest) Validate() error {

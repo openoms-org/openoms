@@ -19,9 +19,10 @@ import (
 )
 
 var (
-	ErrOrderNotFound     = errors.New("order not found")
-	ErrInvalidTransition = errors.New("invalid status transition")
-	ErrUnknownStatus     = errors.New("unknown status")
+	ErrOrderNotFound       = errors.New("order not found")
+	ErrInvalidTransition   = errors.New("invalid status transition")
+	ErrUnknownStatus       = errors.New("unknown status")
+	ErrOrderLimitExceeded  = errors.New("monthly order limit exceeded")
 )
 
 type OrderService struct {
@@ -244,6 +245,17 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		// Atomic plan limit check — inside same transaction as insert to prevent TOCTOU race
+		if req.MaxOrdersMonthly > 0 {
+			count, err := s.orderRepo.CountThisMonth(ctx, tx)
+			if err != nil {
+				return fmt.Errorf("count orders for limit check: %w", err)
+			}
+			if count >= req.MaxOrdersMonthly {
+				return ErrOrderLimitExceeded
+			}
+		}
+
 		if err := s.orderRepo.Create(ctx, tx, order); err != nil {
 			return err
 		}

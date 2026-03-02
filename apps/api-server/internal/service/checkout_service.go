@@ -321,11 +321,15 @@ func (s *CheckoutService) GetSubscription(ctx context.Context, tenantID uuid.UUI
 
 // PlanLimitsJSON returns the plan limits as a JSON-encoded settings map,
 // suitable for storing in tenant.settings.
+// Output: {"limits": {"max_users": N, ...}} — must be nested under "limits"
+// because PlanGuard middleware unmarshals settings as PlanSettings{Limits: ...}.
 func PlanLimitsJSON(plan *config.PlanConfig) json.RawMessage {
 	settings := map[string]any{
-		"max_users":          plan.Limits.MaxUsers,
-		"max_orders_monthly": plan.Limits.MaxOrdersMonthly,
-		"max_integrations":   plan.Limits.MaxIntegrations,
+		"limits": map[string]any{
+			"max_users":          plan.Limits.MaxUsers,
+			"max_orders_monthly": plan.Limits.MaxOrdersMonthly,
+			"max_integrations":   plan.Limits.MaxIntegrations,
+		},
 	}
 	b, _ := json.Marshal(settings)
 	return b

@@ -57,19 +57,17 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check plan limit: max users
+	// Inject plan limit for atomic check inside service transaction
 	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxUsers > 0 {
-		users, err := h.userService.ListUsers(r.Context(), tenantID)
-		if err == nil && len(users) >= limits.MaxUsers {
-			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto limit użytkowników w planie (max: %d). Zmień plan aby dodać więcej użytkowników.", limits.MaxUsers))
-			return
-		}
+		req.MaxUsers = limits.MaxUsers
 	}
 
 	user, err := h.userService.CreateUser(r.Context(), tenantID, req, actorID, clientIP(r))
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrUserLimitExceeded):
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto limit użytkowników w planie (max: %d). Zmień plan aby dodać więcej użytkowników.", req.MaxUsers))
 		case errors.Is(err, service.ErrDuplicateEmail):
 			writeError(w, http.StatusConflict, "email already exists in this tenant")
 		default:

@@ -527,3 +527,14 @@ func parseFlexibleTime(s string) (time.Time, error) {
 	}
 	return time.Time{}, fmt.Errorf("unrecognized date format: %s", s)
 }
+
+// CountOrdersThisMonth returns the number of orders created this month for the given tenant.
+func (s *ImportService) CountOrdersThisMonth(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	var count int
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var e error
+		count, e = s.orderRepo.CountThisMonth(ctx, tx)
+		return e
+	})
+	return count, err
+}

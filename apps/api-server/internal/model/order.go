@@ -71,6 +71,9 @@ type CreateOrderRequest struct {
 	// Transient: trigger shipment auto-creation (not persisted on order)
 	ShipmentProvider   *string `json:"shipment_provider,omitempty"`
 	AutoCreateShipment bool    `json:"auto_create_shipment,omitempty"`
+
+	// Transient: plan limit injected by handler, not from JSON
+	MaxOrdersMonthly int `json:"-"`
 }
 
 var validPriorities = map[string]bool{

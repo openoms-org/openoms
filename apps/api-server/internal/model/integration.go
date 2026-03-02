@@ -34,6 +34,9 @@ type CreateIntegrationRequest struct {
 	Label       *string         `json:"label,omitempty"`
 	Credentials json.RawMessage `json:"credentials"`
 	Settings    json.RawMessage `json:"settings,omitempty"`
+
+	// Transient: plan limit injected by handler, not from JSON
+	MaxIntegrations int `json:"-"`
 }
 
 func (r *CreateIntegrationRequest) Validate() error {

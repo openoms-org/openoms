@@ -66,7 +66,8 @@ test.describe('Subscription Status', () => {
 
   test('subscription API returns valid response', async ({ page }) => {
     await gotoWithAuth(page, '/');
-    const response = await page.request.get('/api/v1/billing/subscription');
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+    const response = await page.request.get(`${apiBase}/v1/billing/subscription`);
     // The endpoint may not exist for all tenants, but shouldn't 500
     expect([200, 401, 404]).toContain(response.status());
   });

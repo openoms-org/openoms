@@ -18,6 +18,15 @@ func NewIntegrationRepository() *IntegrationRepository {
 	return &IntegrationRepository{}
 }
 
+func (r *IntegrationRepository) Count(ctx context.Context, tx pgx.Tx) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM integrations`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count integrations: %w", err)
+	}
+	return count, nil
+}
+
 func (r *IntegrationRepository) List(ctx context.Context, tx pgx.Tx) ([]model.IntegrationWithCreds, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, provider, label, status, credentials, settings, sync_cursor, error_message, last_sync_at, created_at, updated_at

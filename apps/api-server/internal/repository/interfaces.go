@@ -53,6 +53,7 @@ type UserRepo interface {
 	FindForAuth(ctx context.Context, email string, tenantID uuid.UUID) (*UserWithPassword, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.User, error)
 	List(ctx context.Context, tx pgx.Tx) ([]model.User, error)
+	Count(ctx context.Context, tx pgx.Tx) (int, error)
 	Create(ctx context.Context, tx pgx.Tx, user *model.User, passwordHash string) error
 	UpdateRole(ctx context.Context, tx pgx.Tx, id uuid.UUID, role string) error
 	UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UUID, roleID *uuid.UUID) error
@@ -113,6 +114,7 @@ type ProductRepo interface {
 // IntegrationRepo defines the interface for integration persistence operations.
 type IntegrationRepo interface {
 	List(ctx context.Context, tx pgx.Tx) ([]model.IntegrationWithCreds, error)
+	Count(ctx context.Context, tx pgx.Tx) (int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.IntegrationWithCreds, error)
 	FindByProvider(ctx context.Context, tx pgx.Tx, provider string) (*model.IntegrationWithCreds, error)
 	Create(ctx context.Context, tx pgx.Tx, integration *model.Integration, encryptedCreds string) error

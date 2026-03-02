@@ -11,8 +11,7 @@ export function SubscriptionBanner() {
 
   if (!tenant) return null;
 
-  // Suspended — hard block (from tenant.plan or subscription status)
-  const status = subscription?.status ?? tenant.plan;
+  const status = subscription?.status;
 
   if (status === "suspended") {
     return (

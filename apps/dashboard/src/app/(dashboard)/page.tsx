@@ -19,13 +19,14 @@ const QUICKSTART_DISMISSED_KEY = "openoms_quickstart_dismissed";
 
 function QuickStartCard() {
   const { allCompleted } = useOnboarding();
-  const [dismissed, setDismissed] = useState(true);
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
 
   useEffect(() => {
     setDismissed(localStorage.getItem(QUICKSTART_DISMISSED_KEY) === "true");
   }, []);
 
-  if (!allCompleted || dismissed) return null;
+  // null = not yet hydrated from localStorage, avoid layout shift
+  if (dismissed === null || !allCompleted || dismissed) return null;
 
   const handleDismiss = () => {
     localStorage.setItem(QUICKSTART_DISMISSED_KEY, "true");
