@@ -82,24 +82,20 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 		Reference:   req.Reference,
 	}
 
-	// Map shipper address — from explicit request or fallback to account holder
-	if req.Shipper != nil {
-		shipStreet, shipHouseNo := splitStreetHouseNo(req.Shipper.Street)
-		dhlReq.Shipper = dhlsdk.Shipper{
-			Name:       req.Shipper.Name,
-			Phone:      req.Shipper.Phone,
-			Street:     shipStreet,
-			HouseNo:    shipHouseNo,
-			City:       req.Shipper.City,
-			PostalCode: req.Shipper.PostalCode,
-			Country:    req.Shipper.Country,
-		}
-	} else {
-		// Fallback: use DHL account holder as minimal shipper identity
-		dhlReq.Shipper = dhlsdk.Shipper{
-			Name:    p.client.AccountNumber(),
-			Country: "PL",
-		}
+	// Map shipper address — required by DHL24 SOAP API.
+	if req.Shipper == nil {
+		return nil, fmt.Errorf("dhl: shipper address is required (configure warehouse address or company settings)")
+	}
+	shipStreet, shipHouseNo := splitStreetHouseNo(req.Shipper.Street)
+	dhlReq.Shipper = dhlsdk.Shipper{
+		Name:       req.Shipper.Name,
+		Email:      req.Shipper.Email,
+		Phone:      req.Shipper.Phone,
+		Street:     shipStreet,
+		HouseNo:    shipHouseNo,
+		City:       req.Shipper.City,
+		PostalCode: req.Shipper.PostalCode,
+		Country:    req.Shipper.Country,
 	}
 
 	if req.CODAmount > 0 {
@@ -133,16 +129,22 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}, nil
 }
 
-// mapDHLServiceType translates frontend service type names to DHL24 SOAP codes.
+// mapDHLServiceType translates frontend service type names to DHL24 SOAP serviceType codes.
+// Codes sourced from DHL24 WebAPI2 (dhl24.com.pl/webapi2):
+//   - AH: Domestic parcel (standard DHL Parcel)
+//   - DR: Domestic courier (DHL Courier / next-day delivery)
 func mapDHLServiceType(serviceType string) string {
 	switch serviceType {
 	case "dhl_parcel":
 		return "AH"
 	case "dhl_courier":
+		// DR = domestic courier service in DHL24 WebAPI2.
+		// Verify against the DHL24 WSDL or sandbox before enabling courier shipments.
 		return "DR"
 	case "":
 		return "AH"
 	default:
+		slog.Warn("dhl: unknown service type, passing through unchanged", "serviceType", serviceType)
 		return serviceType
 	}
 }

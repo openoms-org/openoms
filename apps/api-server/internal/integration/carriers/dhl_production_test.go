@@ -55,6 +55,7 @@ func TestDHL_CreateShipment_ServiceTypeMapping(t *testing.T) {
 
 			req := integration.CarrierShipmentRequest{
 				ServiceType: tc.inputType,
+				Shipper:     testShipperAddr,
 				Receiver: integration.CarrierReceiver{
 					Name: "Test Receiver", Phone: "500100200",
 					Street: "Testowa 1", City: "Warszawa",
@@ -111,6 +112,7 @@ func TestDHL_CreateShipment_ReceiverStreetSplit(t *testing.T) {
 			provider := newTestDHLProvider(t, srv.URL)
 
 			req := integration.CarrierShipmentRequest{
+				Shipper: testShipperAddr,
 				Receiver: integration.CarrierReceiver{
 					Name: "Test Receiver", Phone: "500100200",
 					Street: tc.input, City: "Warszawa",
@@ -151,9 +153,9 @@ func TestDHL_CreateShipment_ReceiverStreetSplit(t *testing.T) {
 
 func TestDHL_CreateShipment_SOAPMustContainShipperAddress(t *testing.T) {
 	// DHL24 SOAP API requires shipper address in every createShipments request.
-	// Without shipper data, DHL either rejects the request or uses account
-	// defaults which may be incorrect. The provider must populate the shipper
-	// section with actual address data (resolved from warehouse or tenant settings).
+	// The provider returns an error when no shipper is provided, and maps all
+	// shipper fields (name, street, city, postalCode, country, phone, email)
+	// into the SOAP <shipper> section when provided.
 	var requestXML string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -167,7 +169,8 @@ func TestDHL_CreateShipment_SOAPMustContainShipperAddress(t *testing.T) {
 
 	provider := newTestDHLProvider(t, srv.URL)
 
-	req := integration.CarrierShipmentRequest{
+	// Verify: nil shipper returns a clear error (not a silent DHL API failure).
+	reqNoShipper := integration.CarrierShipmentRequest{
 		ServiceType: "AH",
 		Receiver: integration.CarrierReceiver{
 			Name: "Jan Kowalski", Phone: "500100200",
@@ -176,14 +179,39 @@ func TestDHL_CreateShipment_SOAPMustContainShipperAddress(t *testing.T) {
 		},
 		Parcel: integration.CarrierParcel{WeightKg: 2.0},
 	}
+	_, err := provider.CreateShipment(context.Background(), reqNoShipper)
+	if err == nil {
+		t.Fatal("CreateShipment() should return error when Shipper is nil")
+	}
+	if !strings.Contains(err.Error(), "shipper address is required") {
+		t.Errorf("error should mention 'shipper address is required', got: %v", err)
+	}
 
-	_, err := provider.CreateShipment(context.Background(), req)
+	// Verify: provided shipper is correctly mapped into SOAP XML.
+	req := integration.CarrierShipmentRequest{
+		ServiceType: "AH",
+		Shipper: &integration.CarrierSender{
+			Name:       "Firma Nadawcza Sp. z o.o.",
+			Phone:      "221234567",
+			Email:      "wysylki@firma.pl",
+			Street:     "Przemyslowa 5",
+			City:       "Warszawa",
+			PostalCode: "00-950",
+			Country:    "PL",
+		},
+		Receiver: integration.CarrierReceiver{
+			Name: "Jan Kowalski", Phone: "500100200",
+			Street: "Marszalkowska 1", City: "Warszawa",
+			PostalCode: "00-001", Country: "PL",
+		},
+		Parcel: integration.CarrierParcel{WeightKg: 2.0},
+	}
+
+	_, err = provider.CreateShipment(context.Background(), req)
 	if err != nil {
 		t.Fatalf("CreateShipment() error: %v", err)
 	}
 
-	// The SOAP XML must have a <shipper> section with actual address data.
-	// An empty shipper (no <name>) means no shipper address was provided.
 	shipperStart := strings.Index(requestXML, "<shipper>")
 	shipperEnd := strings.Index(requestXML, "</shipper>")
 	if shipperStart == -1 || shipperEnd == -1 {
@@ -191,7 +219,16 @@ func TestDHL_CreateShipment_SOAPMustContainShipperAddress(t *testing.T) {
 	}
 	shipperSection := requestXML[shipperStart:shipperEnd]
 
-	if !strings.Contains(shipperSection, "<name>") {
-		t.Error("shipper section must contain <name> — DHL24 requires shipper address in createShipments")
+	if !strings.Contains(shipperSection, "<name>Firma Nadawcza Sp. z o.o.</name>") {
+		t.Errorf("shipper section should contain sender name, got:\n%s", shipperSection)
+	}
+	if !strings.Contains(shipperSection, "<city>Warszawa</city>") {
+		t.Errorf("shipper section should contain sender city, got:\n%s", shipperSection)
+	}
+	if !strings.Contains(shipperSection, "<postalCode>00-950</postalCode>") {
+		t.Errorf("shipper section should contain sender postalCode, got:\n%s", shipperSection)
+	}
+	if !strings.Contains(shipperSection, "<email>wysylki@firma.pl</email>") {
+		t.Errorf("shipper section should contain sender email, got:\n%s", shipperSection)
 	}
 }

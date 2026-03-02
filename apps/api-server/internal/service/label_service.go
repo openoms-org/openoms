@@ -550,7 +550,9 @@ func (s *LabelService) resolveShipper(ctx context.Context, tx pgx.Tx, tenantID u
 	// Try default warehouse first
 	if s.warehouseRepo != nil {
 		wh, err := s.warehouseRepo.FindDefault(ctx, tx)
-		if err == nil && wh != nil && len(wh.Address) > 0 {
+		if err != nil {
+			slog.Warn("resolve shipper: warehouse lookup failed", "error", err)
+		} else if wh != nil && len(wh.Address) > 0 {
 			var addr model.ShippingAddress
 			if err := json.Unmarshal(wh.Address, &addr); err == nil && addr.Street != "" {
 				return &integration.CarrierSender{
@@ -569,7 +571,9 @@ func (s *LabelService) resolveShipper(ctx context.Context, tx pgx.Tx, tenantID u
 	// Fallback to tenant CompanySettings
 	if s.tenantRepo != nil {
 		settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
-		if err == nil && len(settings) > 0 {
+		if err != nil {
+			slog.Warn("resolve shipper: tenant settings lookup failed", "error", err)
+		} else if len(settings) > 0 {
 			var allSettings struct {
 				Company model.CompanySettings `json:"company"`
 			}

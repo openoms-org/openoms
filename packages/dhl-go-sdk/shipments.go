@@ -90,6 +90,7 @@ func (s *ShipmentService) Create(ctx context.Context, req *CreateShipmentRequest
 		},
 		Shipper: soapParty{
 			Name:       req.Shipper.Name,
+			Email:      req.Shipper.Email,
 			Phone:      req.Shipper.Phone,
 			Street:     req.Shipper.Street,
 			HouseNo:    req.Shipper.HouseNo,

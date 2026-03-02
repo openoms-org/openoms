@@ -28,6 +28,17 @@ import (
 //   - Returns ExternalID, TrackingNumber, Status from SOAP response
 // =============================================================================
 
+// testShipperAddr is a minimal CarrierSender used in tests that don't specifically
+// test shipper mapping (requires a non-nil Shipper since DHL24 mandates it).
+var testShipperAddr = &integration.CarrierSender{
+	Name:       "Test Sender",
+	Phone:      "123456789",
+	Street:     "Nadawcza 1",
+	City:       "Warszawa",
+	PostalCode: "00-001",
+	Country:    "PL",
+}
+
 func newTestDHLProvider(t *testing.T, serverURL string) *DHLProvider {
 	t.Helper()
 	client := dhlsdk.NewClient(
@@ -132,6 +143,7 @@ func TestDHL_CreateShipment_MapsAllFields(t *testing.T) {
 	req := integration.CarrierShipmentRequest{
 		OrderID:     "ORD-001",
 		ServiceType: "AH",
+		Shipper:     testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name:       "Jan Kowalski",
 			Email:      "jan@test.pl",
@@ -198,6 +210,7 @@ func TestDHL_CreateShipment_DefaultsServiceTypeToAH(t *testing.T) {
 
 	req := integration.CarrierShipmentRequest{
 		ServiceType: "", // empty — should default to AH
+		Shipper:     testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
@@ -229,6 +242,7 @@ func TestDHL_CreateShipment_CODMappedCorrectly(t *testing.T) {
 	provider := newTestDHLProvider(t, srv.URL)
 
 	req := integration.CarrierShipmentRequest{
+		Shipper: testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
@@ -268,6 +282,7 @@ func TestDHL_CreateShipment_InsuranceMappedCorrectly(t *testing.T) {
 	provider := newTestDHLProvider(t, srv.URL)
 
 	req := integration.CarrierShipmentRequest{
+		Shipper: testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
@@ -303,6 +318,7 @@ func TestDHL_CreateShipment_AccountNumberInRequest(t *testing.T) {
 	provider := newTestDHLProvider(t, srv.URL)
 
 	req := integration.CarrierShipmentRequest{
+		Shipper: testShipperAddr,
 		Receiver: integration.CarrierReceiver{
 			Name: "Test", Street: "S", City: "C", PostalCode: "00-001", Country: "PL",
 		},
