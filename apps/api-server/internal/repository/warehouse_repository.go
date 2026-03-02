@@ -91,6 +91,7 @@ func (r *WarehouseRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.U
 	return &w, nil
 }
 
+// FindDefault returns the default active warehouse for the current tenant.
 func (r *WarehouseRepository) FindDefault(ctx context.Context, tx pgx.Tx) (*model.Warehouse, error) {
 	var w model.Warehouse
 	err := tx.QueryRow(ctx,
