@@ -80,6 +80,7 @@ func (r *UserRepository) List(ctx context.Context, tx pgx.Tx) ([]model.User, err
 	return users, rows.Err()
 }
 
+// Count returns the number of users for the current tenant.
 func (r *UserRepository) Count(ctx context.Context, tx pgx.Tx) (int, error) {
 	var count int
 	err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&count)

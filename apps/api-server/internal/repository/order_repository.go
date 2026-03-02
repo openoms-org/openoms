@@ -310,6 +310,7 @@ func (r *OrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) e
 	return nil
 }
 
+// CountThisMonth returns the number of orders created in the current calendar month.
 func (r *OrderRepository) CountThisMonth(ctx context.Context, tx pgx.Tx) (int, error) {
 	var count int
 	err := tx.QueryRow(ctx,

@@ -14,6 +14,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// Integration service sentinel errors.
 var (
 	ErrIntegrationNotFound      = errors.New("integration not found")
 	ErrDuplicateProvider        = errors.New("integration for this provider already exists in this tenant")

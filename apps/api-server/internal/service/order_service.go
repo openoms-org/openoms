@@ -18,6 +18,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// Order service sentinel errors.
 var (
 	ErrOrderNotFound      = errors.New("order not found")
 	ErrInvalidTransition  = errors.New("invalid status transition")
