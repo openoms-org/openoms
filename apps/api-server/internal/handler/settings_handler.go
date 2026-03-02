@@ -56,8 +56,9 @@ func (h *SettingsHandler) getSettingsSectionExists(ctx context.Context, tx pgx.T
 	}
 
 	var allSettings map[string]json.RawMessage
-	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return false, nil // settings is empty or not a map
+	if unmarshalErr := json.Unmarshal(settings, &allSettings); unmarshalErr != nil {
+		slog.Warn("failed to unmarshal tenant settings", "error", unmarshalErr)
+		return false, nil //nolint:nilerr // treat unparseable settings as empty
 	}
 
 	raw, ok := allSettings[key]
@@ -65,8 +66,8 @@ func (h *SettingsHandler) getSettingsSectionExists(ctx context.Context, tx pgx.T
 		return false, nil
 	}
 
-	if err := json.Unmarshal(raw, dest); err != nil {
-		slog.Warn("failed to unmarshal settings section", "key", key, "error", err)
+	if unmarshalErr := json.Unmarshal(raw, dest); unmarshalErr != nil {
+		slog.Warn("failed to unmarshal settings section", "key", key, "error", unmarshalErr)
 	}
 	return true, nil
 }
