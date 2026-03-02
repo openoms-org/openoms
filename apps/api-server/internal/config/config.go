@@ -65,6 +65,11 @@ type Config struct {
 	// BillingPlansJSON is a JSON array of plan configs. Parsed at startup via ParseBillingPlans().
 	// Empty = billing disabled. Plan names, prices, limits are all defined here, never hardcoded.
 	BillingPlansJSON string `env:"BILLING_PLANS" envDefault:""`
+
+	// Sentry error tracking. Empty DSN = Sentry disabled (self-hosted mode).
+	SentryDSN              string  `env:"SENTRY_DSN" envDefault:""`
+	SentryEnvironment      string  `env:"SENTRY_ENVIRONMENT" envDefault:""`
+	SentryTracesSampleRate float64 `env:"SENTRY_TRACES_SAMPLE_RATE" envDefault:"0"`
 }
 
 func Load() (*Config, error) {
@@ -114,6 +119,19 @@ func (c *Config) Validate() error {
 // BillingEnabled returns true when Stripe billing is configured.
 func (c *Config) BillingEnabled() bool {
 	return c.StripeSecretKey != "" && c.BillingPlansJSON != ""
+}
+
+// SentryEnabled returns true when Sentry error tracking is configured.
+func (c *Config) SentryEnabled() bool {
+	return c.SentryDSN != ""
+}
+
+// SentryEnv returns the Sentry environment, defaulting to ENV value.
+func (c *Config) SentryEnv() string {
+	if c.SentryEnvironment != "" {
+		return c.SentryEnvironment
+	}
+	return c.Env
 }
 
 // PlanConfig defines a billing plan loaded from BILLING_PLANS env var.
