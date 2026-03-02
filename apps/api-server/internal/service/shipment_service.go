@@ -159,7 +159,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		Length:         req.Length,
 		Width:          req.Width,
 		Height:         req.Height,
-		Notes:          req.Notes,
+		Notes:          &req.Notes,
 	}
 
 	var associatedOrder *model.Order
@@ -617,5 +617,6 @@ func (s *ShipmentService) estimateCarbon(ctx context.Context, tx pgx.Tx, tenantI
 
 	shipment.DistanceKm = &distanceKm
 	shipment.CarbonKg = &carbonKg
-	shipment.CarbonMethod = "estimate"
+	method := "estimate"
+	shipment.CarbonMethod = &method
 }
