@@ -67,12 +67,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Provider integration**: `PushOffer` now requires product SKU passed as `externalId` in URL path, not request body
 - **Security**: Fixed sandbox URL configuration to prevent silent fallback to production endpoint
 
+#### DHL Carrier Integration — Production Ready
+- **Shipper Address Support**: Added optional `Shipper` field to `CarrierShipmentRequest` with automatic resolution from warehouse address or tenant CompanySettings fallback
+- **SDK Corrections**: Fixed DHL-go-sdk documentation (corrected SOAP/XML vs REST), added missing `Phone` field to Shipper struct, removed duplicate Service/ServiceType fields in shipments
+- **Service Type Mapping**: Implemented proper DHL24 service type mapping (dhl_parcel→AH, dhl_courier→DR) with street/house number parsing for Polish addresses
+- **Timestamp Error Handling**: Resolved silent parse failures in shipments timestamp processing
+
 #### Carrier Service Types
 - FedEx: Fixed `INTERNATIONAL_ECONOMY` to use proper `FEDEX_INTERNATIONAL_ECONOMY` prefix per REST API 2024+ requirements
 - FedEx: Removed `FEDEX_GROUND` option (only available in Canada, not EU/Poland)
 - UPS: Corrected label for service code 65 from "Express Saver" to "Worldwide Saver"
 - GLS: Added service type selector with options (Standard, Express 10:00, Express 12:00) and wired through backend
-- Poczta Polska: Extended service type options with POCZTEX_2_0, PACZKA_POCZTOWA, and EMS (Express Mail Service)
+- Poczta Polska: Extended service type options with POCKTEX_2_0, PACZKA_POCZTOWA, and EMS (Express Mail Service)
+- DHL: Implemented service type selector mapping to DHL24 codes (AH for domestic parcel, DR for domestic courier)
 
 ### Changed
 - **SDK method signatures**: `Create()`, `UpdateStock()`, `UpdatePrice()` now require `externalID` (seller SKU) as explicit parameter

@@ -1610,7 +1610,7 @@ Oferta opublikowana na Allegro
 | | Mirakl/Empik | REST API |
 | | Erli | REST API |
 | **Carrier** | InPost | Paczkomaty, kurier, Geowidget, webhook, dispatch orders |
-| | DHL | Miedzynarodowe |
+| | DHL | Krajowe i miedzynarodowe, adres nadawcy (shipper), DHL24 SOAP WebAPI2 |
 | | DPD | Polska |
 | | GLS | Europa |
 | | UPS | Miedzynarodowe |
