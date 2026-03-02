@@ -129,6 +129,12 @@ spec:
                   name: {{ include "openoms.secretName" . }}
                   key: STRIPE_WEBHOOK_SECRET
                   optional: true
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: SENTRY_DSN
+                  optional: true
             - name: STRIPE_PUBLIC_KEY
               valueFrom:
                 configMapKeyRef:
