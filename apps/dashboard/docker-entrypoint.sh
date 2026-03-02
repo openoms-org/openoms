@@ -11,4 +11,13 @@ if [ -n "$NEXT_PUBLIC_API_URL" ] && [ "$NEXT_PUBLIC_API_URL" != "NEXT_PUBLIC_API
   done
 fi
 
+# Replace Sentry DSN placeholder with runtime value.
+if [ -n "$NEXT_PUBLIC_SENTRY_DSN" ] && [ "$NEXT_PUBLIC_SENTRY_DSN" != "SENTRY_DSN_PLACEHOLDER" ]; then
+  find /app/.next/static /app/server.js -type f -name '*.js' 2>/dev/null | while read -r file; do
+    if grep -q 'SENTRY_DSN_PLACEHOLDER' "$file" 2>/dev/null; then
+      sed -i "s|SENTRY_DSN_PLACEHOLDER|${NEXT_PUBLIC_SENTRY_DSN}|g" "$file"
+    fi
+  done
+fi
+
 exec "$@"
