@@ -1,0 +1,86 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openoms.fullname" . }}-alloy
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: alloy
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/monitoring/alloy-configmap.yaml") . | sha256sum }}
+      labels:
+        app.kubernetes.io/component: alloy
+    spec:
+      serviceAccountName: {{ include "openoms.fullname" . }}-alloy
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.8.2
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --storage.path=/tmp/alloy
+          ports:
+            - name: http
+              containerPort: 12345
+              protocol: TCP
+          env:
+            - name: METRICS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: METRICS_TOKEN
+                  optional: true
+            - name: GRAFANA_REMOTE_WRITE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.fullname" . }}-monitoring
+                  key: GRAFANA_REMOTE_WRITE_URL
+            - name: GRAFANA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.fullname" . }}-monitoring
+                  key: GRAFANA_USER
+            - name: GRAFANA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.fullname" . }}-monitoring
+                  key: GRAFANA_TOKEN
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "openoms.fullname" . }}-alloy-config
+        - name: tmp
+          emptyDir:
+            sizeLimit: 50Mi
+{{- end }}
