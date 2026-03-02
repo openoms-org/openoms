@@ -37,9 +37,10 @@ spec:
               cp -a /app/.next/. /next-out/
               cp /app/server.js /server-out/server.js
               if [ -n "$NEXT_PUBLIC_API_URL" ] && [ "$NEXT_PUBLIC_API_URL" != "NEXT_PUBLIC_API_URL_PLACEHOLDER" ]; then
+                WS_HOST=$(echo "$NEXT_PUBLIC_API_URL" | sed 's|https\?://||' | sed 's|/.*||')
                 find /next-out /server-out -type f \( -name '*.js' -o -name '*.json' \) | while read -r file; do
-                  if grep -q 'NEXT_PUBLIC_API_URL_PLACEHOLDER' "$file" 2>/dev/null; then
-                    sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g" "$file"
+                  if grep -q 'NEXT_PUBLIC_API_URL_PLACEHOLDER\|WS_CSP_HOST_PLACEHOLDER' "$file" 2>/dev/null; then
+                    sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g; s|WS_CSP_HOST_PLACEHOLDER|${WS_HOST}|g" "$file"
                   fi
                 done
               fi

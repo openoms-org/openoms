@@ -2,12 +2,15 @@ import type { NextConfig } from "next";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// WebSocket CSP directives. At build time NEXT_PUBLIC_API_URL is a placeholder,
+// so we fall back to localhost. The Helm initContainer sed replaces
+// "WS_CSP_HOST_PLACEHOLDER" with the real hostname at deploy time.
 function getWsDirectives(): string {
   try {
     const { hostname } = new URL(apiUrl);
     return `wss://${hostname} ws://${hostname}`;
   } catch {
-    return "wss://localhost ws://localhost";
+    return "wss://WS_CSP_HOST_PLACEHOLDER ws://WS_CSP_HOST_PLACEHOLDER";
   }
 }
 
