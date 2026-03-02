@@ -44,9 +44,22 @@ spec:
                   fi
                 done
               fi
+              if [ -n "$NEXT_PUBLIC_SENTRY_DSN" ] && [ "$NEXT_PUBLIC_SENTRY_DSN" != "SENTRY_DSN_PLACEHOLDER" ]; then
+                find /next-out /server-out -type f \( -name '*.js' -o -name '*.json' \) | while read -r file; do
+                  if grep -q 'SENTRY_DSN_PLACEHOLDER' "$file" 2>/dev/null; then
+                    sed -i "s|SENTRY_DSN_PLACEHOLDER|${NEXT_PUBLIC_SENTRY_DSN}|g" "$file"
+                  fi
+                done
+              fi
           env:
             - name: NEXT_PUBLIC_API_URL
               value: {{ .Values.apiServer.baseUrl | quote }}
+            - name: NEXT_PUBLIC_SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: DASHBOARD_SENTRY_DSN
+                  optional: true
           volumeMounts:
             - name: next-build
               mountPath: /next-out
