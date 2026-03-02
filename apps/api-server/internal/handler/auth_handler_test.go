@@ -123,3 +123,55 @@ func TestIsValidationError(t *testing.T) {
 	assert.False(t, isValidationError(nil))
 	assert.False(t, isValidationError(errors.New("short")))
 }
+
+// --- Checkout Session Registration Tests ---
+
+func TestAuthHandler_Register_Disabled(t *testing.T) {
+	h := &AuthHandler{registrationMode: "disabled"}
+
+	body := `{"email":"jan@test.pl","password":"test1234","name":"Jan","tenant_name":"Test","tenant_slug":"test"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	h.Register(rr, req)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "registration is disabled", resp["error"])
+}
+
+func TestAuthHandler_Register_InviteMode_CheckoutSessionWithoutService(t *testing.T) {
+	// When in invite mode with checkout_session_id but no checkout service configured,
+	// it should fall through to the default case requiring a valid token.
+	h := &AuthHandler{registrationMode: "invite"}
+	// checkoutSvc is nil
+
+	body := `{"email":"jan@test.pl","password":"test1234","name":"Jan","tenant_name":"Test","tenant_slug":"test","checkout_session_id":"cs_test_123"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	h.Register(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "invite_token, license_token, or checkout_session_id is required")
+}
+
+func TestAuthHandler_Register_InviteMode_OnlyCheckoutSessionID(t *testing.T) {
+	// When only checkout_session_id is provided but checkoutSvc is nil,
+	// registration should fail with the generic token-required error.
+	h := &AuthHandler{registrationMode: "invite"}
+
+	body := `{"email":"jan@test.pl","password":"test1234","name":"Jan","tenant_name":"Test","tenant_slug":"test","checkout_session_id":"cs_test_abc"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	h.Register(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Contains(t, resp["error"], "invite_token, license_token, or checkout_session_id is required")
+}
