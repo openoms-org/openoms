@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
@@ -100,6 +101,22 @@ func main() {
 		logHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
 	}
 	slog.SetDefault(slog.New(logHandler))
+
+	// Initialize Sentry error tracking (optional — disabled when DSN is empty)
+	if cfg.SentryEnabled() {
+		err := sentry.Init(sentry.ClientOptions{
+			Dsn:              cfg.SentryDSN,
+			Environment:      cfg.SentryEnv(),
+			TracesSampleRate: cfg.SentryTracesSampleRate,
+			EnableTracing:    cfg.SentryTracesSampleRate > 0,
+		})
+		if err != nil {
+			slog.Error("failed to initialize Sentry", "error", err)
+		} else {
+			slog.Info("Sentry initialized", "environment", cfg.SentryEnv())
+		}
+		defer sentry.Flush(2 * time.Second)
+	}
 
 	slog.Info("starting OpenOMS API server", "port", cfg.Port, "env", cfg.Env)
 
