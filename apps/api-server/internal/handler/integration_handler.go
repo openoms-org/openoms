@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -73,6 +74,16 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+
+	// Check plan limit: max integrations
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxIntegrations > 0 {
+		integrations, err := h.integrationService.List(r.Context(), tenantID)
+		if err == nil && len(integrations) >= limits.MaxIntegrations {
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto limit integracji w planie (max: %d). Zmień plan aby dodać więcej integracji.", limits.MaxIntegrations))
+			return
+		}
 	}
 
 	integration, err := h.integrationService.Create(r.Context(), tenantID, req, actorID, clientIP(r))

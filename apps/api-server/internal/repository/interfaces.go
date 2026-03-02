@@ -45,6 +45,7 @@ type OrderRepo interface {
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, shippedAt, deliveredAt *time.Time) error
 	FindByExternalID(ctx context.Context, tx pgx.Tx, source, externalID string) (*model.Order, error)
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	CountThisMonth(ctx context.Context, tx pgx.Tx) (int, error)
 }
 
 // UserRepo defines the interface for user persistence operations.

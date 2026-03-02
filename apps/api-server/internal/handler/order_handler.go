@@ -103,6 +103,16 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check plan limit: max orders per month
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxOrdersMonthly > 0 {
+		count, err := h.orderService.CountOrdersThisMonth(r.Context(), tenantID)
+		if err == nil && count >= limits.MaxOrdersMonthly {
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto miesięczny limit zamówień w planie (max: %d). Zmień plan aby zwiększyć limit.", limits.MaxOrdersMonthly))
+			return
+		}
+	}
+
 	order, err := h.orderService.Create(r.Context(), tenantID, req, actorID, clientIP(r))
 	if err != nil {
 		if isValidationError(err) {

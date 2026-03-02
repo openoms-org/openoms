@@ -309,3 +309,13 @@ func (r *OrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) e
 	}
 	return nil
 }
+
+func (r *OrderRepository) CountThisMonth(ctx context.Context, tx pgx.Tx) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx,
+		`SELECT COUNT(*) FROM orders WHERE created_at >= date_trunc('month', now())`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count orders this month: %w", err)
+	}
+	return count, nil
+}

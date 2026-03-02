@@ -776,6 +776,17 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 	s.triggerStockSync(tenantID, productQtys, "order_cancelled")
 }
 
+// CountOrdersThisMonth returns the number of orders created in the current calendar month.
+func (s *OrderService) CountOrdersThisMonth(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	var count int
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var e error
+		count, e = s.orderRepo.CountThisMonth(ctx, tx)
+		return e
+	})
+	return count, err
+}
+
 func stringOrEmpty(s *string) string {
 	if s == nil {
 		return ""

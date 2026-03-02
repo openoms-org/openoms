@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -54,6 +55,16 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+
+	// Check plan limit: max users
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxUsers > 0 {
+		users, err := h.userService.ListUsers(r.Context(), tenantID)
+		if err == nil && len(users) >= limits.MaxUsers {
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto limit użytkowników w planie (max: %d). Zmień plan aby dodać więcej użytkowników.", limits.MaxUsers))
+			return
+		}
 	}
 
 	user, err := h.userService.CreateUser(r.Context(), tenantID, req, actorID, clientIP(r))
