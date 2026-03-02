@@ -157,6 +157,7 @@ export const navItems: NavItem[] = [
   { href: "/customers/segments", label: "Segmenty klientów", icon: UsersRound, group: "Narzędzia" },
 
   // ── Ustawienia ──
+  { href: "/settings/billing", label: "Subskrypcja", icon: CreditCard, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Ustawienia" },
   { href: "/settings/roles", label: "Role", icon: Shield, adminOnly: true, group: "Ustawienia" },
