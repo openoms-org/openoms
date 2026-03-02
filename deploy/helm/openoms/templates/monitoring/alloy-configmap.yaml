@@ -65,15 +65,18 @@ data:
         regex         = "container_cpu_usage_seconds_total|container_memory_working_set_bytes|container_memory_rss|container_network_receive_bytes_total|container_network_transmit_bytes_total|container_fs_reads_bytes_total|container_fs_writes_bytes_total|machine_memory_bytes|machine_cpu_cores"
         action        = "keep"
       }
-      // Drop metrics for pause containers
+      // Drop pause/empty containers only for CPU, memory, and filesystem metrics.
+      // Network metrics are pod-scoped (container="") and machine_* has no container label.
       rule {
-        source_labels = ["container"]
-        regex         = ""
+        source_labels = ["__name__", "container"]
+        separator     = ";"
+        regex         = "container_(cpu|memory|fs)_.*;"
         action        = "drop"
       }
       rule {
-        source_labels = ["container"]
-        regex         = "POD"
+        source_labels = ["__name__", "container"]
+        separator     = ";"
+        regex         = "container_(cpu|memory|fs)_.*;POD"
         action        = "drop"
       }
     }
