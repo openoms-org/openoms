@@ -1,15 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import type {
   OnboardingStatus,
   UpdateOnboardingStepRequest,
 } from "@/types/api";
 
 export function useOnboardingStatus() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["onboarding", "status"],
     queryFn: () => apiClient<OnboardingStatus>("/v1/onboarding/status"),
     staleTime: 5 * 60 * 1000,
+    enabled: isAuthenticated,
   });
 }
 
