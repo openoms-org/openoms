@@ -18,6 +18,7 @@ func NewIntegrationRepository() *IntegrationRepository {
 	return &IntegrationRepository{}
 }
 
+// Count returns the number of active integrations for the current tenant.
 func (r *IntegrationRepository) Count(ctx context.Context, tx pgx.Tx) (int, error) {
 	var count int
 	err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM integrations`).Scan(&count)
