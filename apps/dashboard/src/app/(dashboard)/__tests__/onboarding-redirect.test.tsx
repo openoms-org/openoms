@@ -55,7 +55,11 @@ afterAll(() => server.close());
 
 describe("dashboard layout — onboarding redirect", () => {
   it("redirects to /onboarding when onboarding is not completed", async () => {
-    useAuthStore.getState().setLoading(false);
+    useAuthStore.getState().setAuth(
+      "test-token",
+      { id: "1", name: "Test User", email: "test@test.pl", role: "admin" } as never,
+      { id: "1", name: "Test", slug: "test" } as never,
+    );
 
     server.use(
       http.get(`${API_URL}/v1/onboarding/status`, () => {
@@ -82,7 +86,11 @@ describe("dashboard layout — onboarding redirect", () => {
   });
 
   it("does NOT redirect when onboarding is completed", async () => {
-    useAuthStore.getState().setLoading(false);
+    useAuthStore.getState().setAuth(
+      "test-token",
+      { id: "1", name: "Test User", email: "test@test.pl", role: "admin" } as never,
+      { id: "1", name: "Test", slug: "test" } as never,
+    );
 
     server.use(
       http.get(`${API_URL}/v1/onboarding/status`, () => {
@@ -115,7 +123,11 @@ describe("dashboard layout — onboarding redirect", () => {
   });
 
   it("does NOT redirect when onboarding is dismissed", async () => {
-    useAuthStore.getState().setLoading(false);
+    useAuthStore.getState().setAuth(
+      "test-token",
+      { id: "1", name: "Test User", email: "test@test.pl", role: "admin" } as never,
+      { id: "1", name: "Test", slug: "test" } as never,
+    );
 
     server.use(
       http.get(`${API_URL}/v1/onboarding/status`, () => {
