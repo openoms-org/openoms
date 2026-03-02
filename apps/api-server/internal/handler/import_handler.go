@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
@@ -52,6 +53,16 @@ func (h *ImportHandler) Preview(w http.ResponseWriter, r *http.Request) {
 func (h *ImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	userID := middleware.UserIDFromContext(r.Context())
+
+	// Check plan limit before import
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxOrdersMonthly > 0 {
+		count, err := h.importService.CountOrdersThisMonth(r.Context(), tenantID)
+		if err == nil && count >= limits.MaxOrdersMonthly {
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto miesięczny limit zamówień w planie (max: %d). Zmień plan aby zwiększyć limit.", limits.MaxOrdersMonthly))
+			return
+		}
+	}
 
 	// 10MB limit
 	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)

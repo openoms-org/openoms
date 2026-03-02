@@ -76,6 +76,17 @@ type BillingSubscription struct {
 	UpdatedAt            time.Time  `json:"updated_at"`
 }
 
+// SubscriptionStatus is the response for GET /v1/billing/subscription.
+type SubscriptionStatus struct {
+	Plan             string         `json:"plan"`
+	Status           string         `json:"status"`
+	BillingInterval  string         `json:"billing_interval,omitempty"`
+	TrialEnd         *time.Time     `json:"trial_end,omitempty"`
+	CurrentPeriodEnd *time.Time     `json:"current_period_end,omitempty"`
+	CanceledAt       *time.Time     `json:"canceled_at,omitempty"`
+	Limits           *LicenseLimits `json:"limits,omitempty"`
+}
+
 // PublicPlanInfo is the frontend-safe view of a plan (no Stripe Price IDs).
 type PublicPlanInfo struct {
 	ID            string        `json:"id"`

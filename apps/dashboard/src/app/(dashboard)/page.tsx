@@ -1,14 +1,81 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { useAuthStore } from "@/lib/auth";
+import { useOnboarding } from "@/hooks/use-onboarding";
 import { StatCards } from "@/components/dashboard/stat-cards";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
 import { OrderSourceChart } from "@/components/dashboard/order-source-chart";
 import { RecentOrdersTable } from "@/components/dashboard/recent-orders-table";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
+import Link from "next/link";
+import { ShoppingCart, Package, Settings, X } from "lucide-react";
+
+const QUICKSTART_DISMISSED_KEY = "openoms_quickstart_dismissed";
+
+function QuickStartCard() {
+  const { allCompleted } = useOnboarding();
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setDismissed(localStorage.getItem(QUICKSTART_DISMISSED_KEY) === "true");
+  }, []);
+
+  // null = not yet hydrated from localStorage, avoid layout shift
+  if (dismissed === null || !allCompleted || dismissed) return null;
+
+  const handleDismiss = () => {
+    localStorage.setItem(QUICKSTART_DISMISSED_KEY, "true");
+    setDismissed(true);
+  };
+
+  return (
+    <Card className="border-primary/20 bg-primary/5">
+      <CardContent className="py-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-semibold">Twoje konto jest gotowe!</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Oto co możesz zrobić dalej:
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDismiss}
+            className="shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/orders/new">
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Dodaj zamówienie
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/products/new">
+              <Package className="mr-2 h-4 w-4" />
+              Dodaj produkt
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/integrations">
+              <Settings className="mr-2 h-4 w-4" />
+              Połącz Allegro
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function DashboardPage() {
   const { data: stats, isLoading, isError, refetch } = useDashboardStats();
@@ -40,6 +107,7 @@ export default function DashboardPage() {
       )}
 
       <OnboardingWizard />
+      <QuickStartCard />
 
       <StatCards orderCounts={stats?.order_counts} isLoading={isLoading} />
 

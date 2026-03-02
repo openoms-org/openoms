@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	stripe "github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/checkout/session"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
+	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -273,13 +275,61 @@ func (s *CheckoutService) FinalizeCheckoutClaim(ctx context.Context, stripeSessi
 	}
 }
 
+// GetSubscription returns the current subscription status for a tenant.
+// Falls back to tenant plan info for tenants without a Stripe subscription (license/free).
+func (s *CheckoutService) GetSubscription(ctx context.Context, tenantID uuid.UUID, tenantPlan string, tenantSettings json.RawMessage) (*model.SubscriptionStatus, error) {
+	var sub *model.BillingSubscription
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var e error
+		sub, e = s.billingRepo.GetSubscriptionByTenant(ctx, tx)
+		return e
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get subscription: %w", err)
+	}
+
+	// Parse limits from tenant settings
+	var limits *model.LicenseLimits
+	if tenantSettings != nil {
+		var ps struct {
+			Limits *model.LicenseLimits `json:"limits,omitempty"`
+		}
+		if json.Unmarshal(tenantSettings, &ps) == nil {
+			limits = ps.Limits
+		}
+	}
+
+	if sub != nil {
+		return &model.SubscriptionStatus{
+			Plan:             sub.Plan,
+			Status:           sub.Status,
+			BillingInterval:  sub.BillingInterval,
+			TrialEnd:         sub.TrialEnd,
+			CurrentPeriodEnd: sub.CurrentPeriodEnd,
+			CanceledAt:       sub.CanceledAt,
+			Limits:           limits,
+		}, nil
+	}
+
+	// No Stripe subscription — return status from tenant plan
+	return &model.SubscriptionStatus{
+		Plan:   tenantPlan,
+		Status: "active",
+		Limits: limits,
+	}, nil
+}
+
 // PlanLimitsJSON returns the plan limits as a JSON-encoded settings map,
 // suitable for storing in tenant.settings.
+// Output: {"limits": {"max_users": N, ...}} — must be nested under "limits"
+// because PlanGuard middleware unmarshals settings as PlanSettings{Limits: ...}.
 func PlanLimitsJSON(plan *config.PlanConfig) json.RawMessage {
 	settings := map[string]any{
-		"max_users":          plan.Limits.MaxUsers,
-		"max_orders_monthly": plan.Limits.MaxOrdersMonthly,
-		"max_integrations":   plan.Limits.MaxIntegrations,
+		"limits": map[string]any{
+			"max_users":          plan.Limits.MaxUsers,
+			"max_orders_monthly": plan.Limits.MaxOrdersMonthly,
+			"max_integrations":   plan.Limits.MaxIntegrations,
+		},
 	}
 	b, _ := json.Marshal(settings)
 	return b

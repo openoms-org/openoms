@@ -103,12 +103,23 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Inject plan limit into request for atomic check inside service transaction
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxOrdersMonthly > 0 {
+		req.MaxOrdersMonthly = limits.MaxOrdersMonthly
+	}
+
 	order, err := h.orderService.Create(r.Context(), tenantID, req, actorID, clientIP(r))
 	if err != nil {
-		if isValidationError(err) {
-			writeError(w, http.StatusBadRequest, err.Error())
-		} else {
-			writeServerError(w, "failed to create order", err)
+		switch {
+		case errors.Is(err, service.ErrOrderLimitExceeded):
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto miesięczny limit zamówień w planie (max: %d). Zmień plan aby zwiększyć limit.", req.MaxOrdersMonthly))
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeServerError(w, "failed to create order", err)
+			}
 		}
 		return
 	}
@@ -255,8 +266,25 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check plan limit for duplicate (atomic, inside transaction)
+	var maxOrdersMonthly int
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxOrdersMonthly > 0 {
+		maxOrdersMonthly = limits.MaxOrdersMonthly
+	}
+
 	var newOrder *model.Order
 	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		// Atomic plan limit check inside transaction
+		if maxOrdersMonthly > 0 {
+			count, err := h.orderService.OrderRepo().CountThisMonth(r.Context(), tx)
+			if err != nil {
+				return fmt.Errorf("count orders for limit check: %w", err)
+			}
+			if count >= maxOrdersMonthly {
+				return service.ErrOrderLimitExceeded
+			}
+		}
+
 		existing, err := h.orderService.OrderRepo().FindByID(r.Context(), tx, orderID)
 		if err != nil {
 			return err
@@ -316,11 +344,15 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 		})
 	})
 	if err != nil {
-		if err.Error() == "order not found" {
+		switch {
+		case errors.Is(err, service.ErrOrderLimitExceeded):
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto miesięczny limit zamówień w planie (max: %d). Zmień plan aby zwiększyć limit.", maxOrdersMonthly))
+		case err.Error() == "order not found":
 			writeError(w, http.StatusNotFound, "order not found")
-			return
+		default:
+			writeServerError(w, "failed to duplicate order", err)
 		}
-		writeServerError(w, "failed to duplicate order", err)
 		return
 	}
 

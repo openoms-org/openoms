@@ -34,7 +34,7 @@ func TestCheckoutHandler_ListPlans(t *testing.T) {
 		},
 	}
 	svc := testCheckoutService(plans)
-	h := NewCheckoutHandler(svc, "https://app.example.com")
+	h := NewCheckoutHandler(svc, nil, nil, "https://app.example.com")
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/billing/plans", nil)
 	rr := httptest.NewRecorder()
@@ -56,7 +56,7 @@ func TestCheckoutHandler_ListPlans(t *testing.T) {
 
 func TestCheckoutHandler_ListPlans_Empty(t *testing.T) {
 	svc := testCheckoutService(nil)
-	h := NewCheckoutHandler(svc, "https://app.example.com")
+	h := NewCheckoutHandler(svc, nil, nil, "https://app.example.com")
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/billing/plans", nil)
 	rr := httptest.NewRecorder()
@@ -73,7 +73,7 @@ func TestCheckoutHandler_ListPlans_Empty(t *testing.T) {
 
 func TestCheckoutHandler_CreateCheckoutSession_InvalidJSON(t *testing.T) {
 	svc := testCheckoutService(nil)
-	h := NewCheckoutHandler(svc, "https://app.example.com")
+	h := NewCheckoutHandler(svc, nil, nil, "https://app.example.com")
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/billing/checkout", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -89,7 +89,7 @@ func TestCheckoutHandler_CreateCheckoutSession_InvalidJSON(t *testing.T) {
 
 func TestCheckoutHandler_CreateCheckoutSession_MissingPlanID(t *testing.T) {
 	svc := testCheckoutService(nil)
-	h := NewCheckoutHandler(svc, "https://app.example.com")
+	h := NewCheckoutHandler(svc, nil, nil, "https://app.example.com")
 
 	body := `{"interval":"month"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/billing/checkout", strings.NewReader(body))
@@ -106,7 +106,7 @@ func TestCheckoutHandler_CreateCheckoutSession_MissingPlanID(t *testing.T) {
 
 func TestCheckoutHandler_CreateCheckoutSession_InvalidInterval(t *testing.T) {
 	svc := testCheckoutService(nil)
-	h := NewCheckoutHandler(svc, "https://app.example.com")
+	h := NewCheckoutHandler(svc, nil, nil, "https://app.example.com")
 
 	body := `{"plan_id":"standard","interval":"weekly"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/billing/checkout", strings.NewReader(body))
@@ -123,7 +123,7 @@ func TestCheckoutHandler_CreateCheckoutSession_InvalidInterval(t *testing.T) {
 
 func TestCheckoutHandler_CreateCheckoutSession_PlanNotFound(t *testing.T) {
 	svc := testCheckoutService(nil)
-	h := NewCheckoutHandler(svc, "https://app.example.com")
+	h := NewCheckoutHandler(svc, nil, nil, "https://app.example.com")
 
 	body := `{"plan_id":"nonexistent","interval":"month"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/billing/checkout", strings.NewReader(body))
@@ -140,7 +140,7 @@ func TestCheckoutHandler_CreateCheckoutSession_PlanNotFound(t *testing.T) {
 
 func TestCheckoutHandler_GetCheckoutSessionStatus_EmptySessionID(t *testing.T) {
 	svc := testCheckoutService(nil)
-	h := NewCheckoutHandler(svc, "https://app.example.com")
+	h := NewCheckoutHandler(svc, nil, nil, "https://app.example.com")
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/billing/checkout/", nil)
 	rctx := chi.NewRouteContext()

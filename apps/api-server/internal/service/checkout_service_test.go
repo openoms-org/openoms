@@ -96,7 +96,14 @@ func TestPlanLimitsJSON(t *testing.T) {
 	var m map[string]any
 	err := json.Unmarshal(raw, &m)
 	require.NoError(t, err)
-	assert.Equal(t, float64(5), m["max_users"])
-	assert.Equal(t, float64(1000), m["max_orders_monthly"])
-	assert.Equal(t, float64(2), m["max_integrations"])
+
+	// PlanLimitsJSON must produce nested structure: {"limits": {"max_users": ...}}
+	// to match PlanGuard middleware's PlanSettings{Limits: ...} unmarshaling.
+	limitsRaw, ok := m["limits"]
+	require.True(t, ok, "expected nested 'limits' key")
+	limits, ok := limitsRaw.(map[string]any)
+	require.True(t, ok, "expected 'limits' to be a map")
+	assert.Equal(t, float64(5), limits["max_users"])
+	assert.Equal(t, float64(1000), limits["max_orders_monthly"])
+	assert.Equal(t, float64(2), limits["max_integrations"])
 }

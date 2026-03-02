@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -75,9 +76,17 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Inject plan limit for atomic check inside service transaction
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxIntegrations > 0 {
+		req.MaxIntegrations = limits.MaxIntegrations
+	}
+
 	integration, err := h.integrationService.Create(r.Context(), tenantID, req, actorID, clientIP(r))
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrIntegrationLimitExceeded):
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto limit integracji w planie (max: %d). Zmień plan aby dodać więcej integracji.", req.MaxIntegrations))
 		case errors.Is(err, service.ErrDuplicateProvider):
 			writeError(w, http.StatusConflict, "integration for this provider already exists")
 		default:

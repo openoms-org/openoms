@@ -50,6 +50,12 @@ export const NEW_CUSTOMER = {
   nip: '1234567890',
 };
 
+export const TRIAL_USER = {
+  tenant_slug: 'testflow',
+  email: 'trial@testflow.pl',
+  password: 'password123',
+};
+
 export const SEED = {
   ORDER_CUSTOMER: 'Marek Jabłoński',
   PRODUCT_NAME: 'Klocki hamulcowe przód Audi A4 B8',

@@ -5,7 +5,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
@@ -13,12 +15,14 @@ import (
 // CheckoutHandler handles billing checkout endpoints.
 type CheckoutHandler struct {
 	checkoutSvc *service.CheckoutService
+	planCache   *service.PlanCache
+	pool        *pgxpool.Pool
 	frontendURL string
 }
 
 // NewCheckoutHandler creates a new CheckoutHandler.
-func NewCheckoutHandler(checkoutSvc *service.CheckoutService, frontendURL string) *CheckoutHandler {
-	return &CheckoutHandler{checkoutSvc: checkoutSvc, frontendURL: frontendURL}
+func NewCheckoutHandler(checkoutSvc *service.CheckoutService, planCache *service.PlanCache, pool *pgxpool.Pool, frontendURL string) *CheckoutHandler {
+	return &CheckoutHandler{checkoutSvc: checkoutSvc, planCache: planCache, pool: pool, frontendURL: frontendURL}
 }
 
 // ListPlans returns available plans without Stripe-sensitive data.
@@ -78,4 +82,27 @@ func (h *CheckoutHandler) GetCheckoutSessionStatus(w http.ResponseWriter, r *htt
 	}
 
 	writeJSON(w, http.StatusOK, status)
+}
+
+// GetSubscription returns the current subscription status for the authenticated tenant.
+// GET /v1/billing/subscription
+func (h *CheckoutHandler) GetSubscription(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	var tenantPlan string
+	var tenantSettings json.RawMessage
+	if h.planCache != nil && h.pool != nil {
+		tenantPlan, tenantSettings, _ = h.planCache.GetOrLoad(r.Context(), h.pool, tenantID)
+	}
+	if tenantPlan == "" {
+		tenantPlan = "free"
+	}
+
+	sub, err := h.checkoutSvc.GetSubscription(r.Context(), tenantID, tenantPlan, tenantSettings)
+	if err != nil {
+		writeServerError(w, "failed to get subscription", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, sub)
 }

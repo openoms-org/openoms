@@ -21,6 +21,7 @@ var (
 	ErrCannotDeleteLastOwner = errors.New("cannot delete the last owner of the tenant")
 	ErrDuplicateEmail        = errors.New("email already exists in this tenant")
 	ErrOwnerRoleEscalation   = errors.New("only owners can assign the owner role")
+	ErrUserLimitExceeded     = errors.New("user limit exceeded")
 )
 
 type UserService struct {
@@ -96,6 +97,17 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 	}
 
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		// Atomic plan limit check inside transaction to prevent TOCTOU race
+		if req.MaxUsers > 0 {
+			count, err := s.userRepo.Count(ctx, tx)
+			if err != nil {
+				return fmt.Errorf("count users for limit check: %w", err)
+			}
+			if count >= req.MaxUsers {
+				return ErrUserLimitExceeded
+			}
+		}
+
 		if err := s.userRepo.Create(ctx, tx, user, hash); err != nil {
 			return err
 		}

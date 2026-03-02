@@ -80,6 +80,15 @@ func (r *UserRepository) List(ctx context.Context, tx pgx.Tx) ([]model.User, err
 	return users, rows.Err()
 }
 
+func (r *UserRepository) Count(ctx context.Context, tx pgx.Tx) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count users: %w", err)
+	}
+	return count, nil
+}
+
 // Create inserts a new user with password hash.
 func (r *UserRepository) Create(ctx context.Context, tx pgx.Tx, user *model.User, passwordHash string) error {
 	return tx.QueryRow(ctx,

@@ -52,6 +52,16 @@ export interface CheckoutSessionStatus {
   limits: PlanLimits;
 }
 
+export interface SubscriptionStatus {
+  plan: string;
+  status: "trialing" | "active" | "past_due" | "canceled" | "suspended";
+  billing_interval?: "month" | "year";
+  trial_end?: string;
+  current_period_end?: string;
+  canceled_at?: string;
+  limits?: PlanLimits;
+}
+
 export interface TokenResponse {
   access_token: string;
   expires_in: number;

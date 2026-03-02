@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -56,9 +57,17 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Inject plan limit for atomic check inside service transaction
+	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxUsers > 0 {
+		req.MaxUsers = limits.MaxUsers
+	}
+
 	user, err := h.userService.CreateUser(r.Context(), tenantID, req, actorID, clientIP(r))
 	if err != nil {
 		switch {
+		case errors.Is(err, service.ErrUserLimitExceeded):
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Osiągnięto limit użytkowników w planie (max: %d). Zmień plan aby dodać więcej użytkowników.", req.MaxUsers))
 		case errors.Is(err, service.ErrDuplicateEmail):
 			writeError(w, http.StatusConflict, "email already exists in this tenant")
 		default:

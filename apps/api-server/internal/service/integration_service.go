@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	ErrIntegrationNotFound = errors.New("integration not found")
-	ErrDuplicateProvider   = errors.New("integration for this provider already exists in this tenant")
+	ErrIntegrationNotFound      = errors.New("integration not found")
+	ErrDuplicateProvider        = errors.New("integration for this provider already exists in this tenant")
+	ErrIntegrationLimitExceeded = errors.New("integration limit exceeded")
 )
 
 type IntegrationService struct {
@@ -152,6 +153,17 @@ func (s *IntegrationService) Create(ctx context.Context, tenantID uuid.UUID, req
 	}
 
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		// Atomic plan limit check inside transaction to prevent TOCTOU race
+		if req.MaxIntegrations > 0 {
+			count, err := s.integrationRepo.Count(ctx, tx)
+			if err != nil {
+				return fmt.Errorf("count integrations for limit check: %w", err)
+			}
+			if count >= req.MaxIntegrations {
+				return ErrIntegrationLimitExceeded
+			}
+		}
+
 		if err := s.integrationRepo.Create(ctx, tx, integration, encrypted); err != nil {
 			return err
 		}
