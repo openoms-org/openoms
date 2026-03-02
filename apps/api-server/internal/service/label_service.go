@@ -32,6 +32,8 @@ type LabelService struct {
 	orderRepo       repository.OrderRepo
 	integrationRepo repository.IntegrationRepo
 	auditRepo       repository.AuditRepo
+	warehouseRepo   repository.WarehouseRepo
+	tenantRepo      repository.TenantRepo
 	pool            *pgxpool.Pool
 	encryptionKey   []byte
 	uploadDir       string
@@ -43,6 +45,8 @@ func NewLabelService(
 	orderRepo repository.OrderRepo,
 	integrationRepo repository.IntegrationRepo,
 	auditRepo repository.AuditRepo,
+	warehouseRepo repository.WarehouseRepo,
+	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
 	encryptionKey []byte,
 	uploadDir string,
@@ -53,6 +57,8 @@ func NewLabelService(
 		orderRepo:       orderRepo,
 		integrationRepo: integrationRepo,
 		auditRepo:       auditRepo,
+		warehouseRepo:   warehouseRepo,
+		tenantRepo:      tenantRepo,
 		pool:            pool,
 		encryptionKey:   encryptionKey,
 		uploadDir:       uploadDir,
@@ -66,6 +72,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 	var order *model.Order
 	var credJSON []byte
 	var integrationSettings json.RawMessage
+	var shipper *integration.CarrierSender
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error
@@ -170,6 +177,9 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 			return fmt.Errorf("decrypting integration credentials: %w", err)
 		}
 
+		// Resolve shipper address from default warehouse or tenant company settings
+		shipper = s.resolveShipper(ctx, tx, tenantID)
+
 		return nil
 	})
 	if err != nil {
@@ -223,6 +233,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		CODAmount:     req.CODAmount,
 		InsuredValue:  req.InsuredValue,
 		Reference:     shipment.OrderID.String(),
+		Shipper:       shipper,
 	}
 
 	resp, err := carrier.CreateShipment(ctx, carrierReq)
@@ -531,4 +542,50 @@ func (s *LabelService) CreateDispatchOrder(ctx context.Context, tenantID uuid.UU
 		ID:     orderID,
 		Status: "created",
 	}, nil
+}
+
+// resolveShipper attempts to build a CarrierSender from the default warehouse address,
+// falling back to tenant CompanySettings if no warehouse is configured.
+func (s *LabelService) resolveShipper(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) *integration.CarrierSender {
+	// Try default warehouse first
+	if s.warehouseRepo != nil {
+		wh, err := s.warehouseRepo.FindDefault(ctx, tx)
+		if err == nil && wh != nil && len(wh.Address) > 0 {
+			var addr model.ShippingAddress
+			if err := json.Unmarshal(wh.Address, &addr); err == nil && addr.Street != "" {
+				return &integration.CarrierSender{
+					Name:       wh.Name,
+					Phone:      addr.Phone,
+					Email:      addr.Email,
+					Street:     addr.Street,
+					City:       addr.City,
+					PostalCode: addr.PostalCode,
+					Country:    addr.Country,
+				}
+			}
+		}
+	}
+
+	// Fallback to tenant CompanySettings
+	if s.tenantRepo != nil {
+		settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
+		if err == nil && len(settings) > 0 {
+			var allSettings struct {
+				Company model.CompanySettings `json:"company"`
+			}
+			if err := json.Unmarshal(settings, &allSettings); err == nil && allSettings.Company.CompanyName != "" {
+				return &integration.CarrierSender{
+					Name:       allSettings.Company.CompanyName,
+					Phone:      allSettings.Company.Phone,
+					Email:      allSettings.Company.Email,
+					Street:     allSettings.Company.Address,
+					City:       allSettings.Company.City,
+					PostalCode: allSettings.Company.PostCode,
+					Country:    "PL",
+				}
+			}
+		}
+	}
+
+	return nil
 }

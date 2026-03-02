@@ -266,6 +266,7 @@ func main() {
 	integrationService := service.NewIntegrationService(integrationRepo, auditRepo, pool, encryptionKey)
 	labelService := service.NewLabelService(
 		shipmentRepo, orderRepo, integrationRepo, auditRepo,
+		warehouseRepo, tenantRepo,
 		pool, encryptionKey, cfg.UploadDir, cfg.BaseURL,
 	)
 	webhookService := service.NewWebhookService(webhookRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)

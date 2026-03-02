@@ -26,7 +26,6 @@ type soapShipment struct {
 	Shipper     soapParty   `xml:"shipper"`
 	Receiver    soapParty   `xml:"receiver"`
 	PieceList   []soapPiece `xml:"pieceList>Piece"`
-	Service     string      `xml:"service,omitempty"`
 	ServiceType string      `xml:"serviceType,omitempty"`
 	Reference   string      `xml:"reference,omitempty"`
 	Content     string      `xml:"content,omitempty"`
@@ -76,7 +75,6 @@ func (s *ShipmentService) Create(ctx context.Context, req *CreateShipmentRequest
 
 	shipment := soapShipment{
 		ShipperRef:  req.ShipperAccount,
-		Service:     svcType,
 		ServiceType: svcType,
 		Reference:   req.Reference,
 		Content:     req.Content,
@@ -92,6 +90,7 @@ func (s *ShipmentService) Create(ctx context.Context, req *CreateShipmentRequest
 		},
 		Shipper: soapParty{
 			Name:       req.Shipper.Name,
+			Phone:      req.Shipper.Phone,
 			Street:     req.Shipper.Street,
 			HouseNo:    req.Shipper.HouseNo,
 			City:       req.Shipper.City,
@@ -225,7 +224,10 @@ func (s *ShipmentService) GetTracking(ctx context.Context, trackingNumber string
 
 	events := make([]TrackingEvent, 0, len(resp.Events))
 	for _, ev := range resp.Events {
-		ts, _ := time.Parse(time.RFC3339, ev.Timestamp)
+		ts, err := time.Parse(time.RFC3339, ev.Timestamp)
+		if err != nil {
+			return nil, fmt.Errorf("dhl: parse tracking event timestamp %q: %w", ev.Timestamp, err)
+		}
 		events = append(events, TrackingEvent{
 			Status:    ev.Status,
 			Location:  ev.Location,

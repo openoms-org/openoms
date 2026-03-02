@@ -1013,7 +1013,7 @@ func TestShipmentHandler_GenerateLabel_InPostLockerRequiresTargetPoint(t *testin
 	// This validation happens inside the service, not the handler. The service first
 	// loads the shipment from DB before validation. With nil pool, it panics.
 	// We catch the panic to confirm the handler correctly passed the request to the service.
-	labelSvc := service.NewLabelService(nil, nil, nil, nil, nil, nil, "", "")
+	labelSvc := service.NewLabelService(nil, nil, nil, nil, nil, nil, nil, nil, "", "")
 	h := NewShipmentHandler(nil, labelSvc)
 
 	id := uuid.New()

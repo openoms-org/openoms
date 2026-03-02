@@ -45,10 +45,22 @@ type PickupPoint struct {
 	Type       string  `json:"type,omitempty"` // e.g. "parcel_locker", "pop"
 }
 
+// CarrierSender represents the shipper/sender of a shipment.
+type CarrierSender struct {
+	Name       string `json:"name"`
+	Phone      string `json:"phone,omitempty"`
+	Email      string `json:"email,omitempty"`
+	Street     string `json:"street"`
+	City       string `json:"city"`
+	PostalCode string `json:"postal_code"`
+	Country    string `json:"country"`
+}
+
 // CarrierShipmentRequest contains all data needed to create a shipment with a carrier.
 type CarrierShipmentRequest struct {
 	OrderID       string          `json:"order_id"`
 	ServiceType   string          `json:"service_type"`
+	Shipper       *CarrierSender  `json:"shipper,omitempty"`
 	Receiver      CarrierReceiver `json:"receiver"`
 	Parcel        CarrierParcel   `json:"parcel"`
 	TargetPoint   string          `json:"target_point,omitempty"`   // locker ID for InPost

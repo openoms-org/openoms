@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
+	"unicode"
 
 	dhlsdk "github.com/openoms-org/openoms/packages/dhl-go-sdk"
 
@@ -54,10 +56,9 @@ func NewDHLProvider(credentials json.RawMessage, settings json.RawMessage) (*DHL
 func (p *DHLProvider) ProviderName() string { return "dhl" }
 
 func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
-	svcType := req.ServiceType
-	if svcType == "" {
-		svcType = "AH" // DHL Parcel domestic
-	}
+	svcType := mapDHLServiceType(req.ServiceType)
+
+	recvStreet, recvHouseNo := splitStreetHouseNo(req.Receiver.Street)
 
 	dhlReq := &dhlsdk.CreateShipmentRequest{
 		ShipperAccount: p.client.AccountNumber(),
@@ -65,7 +66,8 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 			Name:       req.Receiver.Name,
 			Email:      req.Receiver.Email,
 			Phone:      req.Receiver.Phone,
-			Street:     req.Receiver.Street,
+			Street:     recvStreet,
+			HouseNo:    recvHouseNo,
 			City:       req.Receiver.City,
 			PostalCode: req.Receiver.PostalCode,
 			Country:    req.Receiver.Country,
@@ -78,6 +80,26 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 		},
 		ServiceType: svcType,
 		Reference:   req.Reference,
+	}
+
+	// Map shipper address — from explicit request or fallback to account holder
+	if req.Shipper != nil {
+		shipStreet, shipHouseNo := splitStreetHouseNo(req.Shipper.Street)
+		dhlReq.Shipper = dhlsdk.Shipper{
+			Name:       req.Shipper.Name,
+			Phone:      req.Shipper.Phone,
+			Street:     shipStreet,
+			HouseNo:    shipHouseNo,
+			City:       req.Shipper.City,
+			PostalCode: req.Shipper.PostalCode,
+			Country:    req.Shipper.Country,
+		}
+	} else {
+		// Fallback: use DHL account holder as minimal shipper identity
+		dhlReq.Shipper = dhlsdk.Shipper{
+			Name:    p.client.AccountNumber(),
+			Country: "PL",
+		}
 	}
 
 	if req.CODAmount > 0 {
@@ -109,6 +131,49 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 		Status:         resp.Status,
 		LabelURL:       resp.LabelURL,
 	}, nil
+}
+
+// mapDHLServiceType translates frontend service type names to DHL24 SOAP codes.
+func mapDHLServiceType(serviceType string) string {
+	switch serviceType {
+	case "dhl_parcel":
+		return "AH"
+	case "dhl_courier":
+		return "DR"
+	case "":
+		return "AH"
+	default:
+		return serviceType
+	}
+}
+
+// splitStreetHouseNo splits a Polish address string into street name and house number.
+// DHL24 SOAP API requires separate <street> and <houseNo> fields.
+// Examples:
+//
+//	"Marszalkowska 10"         → ("Marszalkowska", "10")
+//	"ul. Krakowska 15A"        → ("ul. Krakowska", "15A")
+//	"Aleje Jerozolimskie 100/2" → ("Aleje Jerozolimskie", "100/2")
+//	"Krakowska"                → ("Krakowska", "")
+func splitStreetHouseNo(address string) (street, houseNo string) {
+	address = strings.TrimSpace(address)
+	if address == "" {
+		return "", ""
+	}
+
+	// Find the last space-separated token that starts with a digit.
+	// Polish addresses put the house number at the end.
+	parts := strings.Fields(address)
+	if len(parts) <= 1 {
+		return address, ""
+	}
+
+	last := parts[len(parts)-1]
+	if len(last) > 0 && unicode.IsDigit(rune(last[0])) {
+		return strings.Join(parts[:len(parts)-1], " "), last
+	}
+
+	return address, ""
 }
 
 func (p *DHLProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {

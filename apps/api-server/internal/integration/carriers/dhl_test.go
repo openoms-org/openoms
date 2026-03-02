@@ -346,8 +346,8 @@ func TestDHL_GetTracking_MapsEventsCorrectly(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/xml")
 		events := `
-        <event><status>PICKED_UP</status><location>Warszawa</location><details>Collected</details></event>
-        <event><status>DELIVERED</status><location>Krakow</location><details>Delivered</details></event>`
+        <event><status>PICKED_UP</status><location>Warszawa</location><timestamp>2025-01-15T10:30:00Z</timestamp><details>Collected</details></event>
+        <event><status>DELIVERED</status><location>Krakow</location><timestamp>2025-01-16T14:00:00Z</timestamp><details>Delivered</details></event>`
 		fmt.Fprint(w, dhlTrackingSOAPResponse(events))
 	}))
 	defer srv.Close()

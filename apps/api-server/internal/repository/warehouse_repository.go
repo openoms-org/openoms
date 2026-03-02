@@ -91,6 +91,24 @@ func (r *WarehouseRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.U
 	return &w, nil
 }
 
+func (r *WarehouseRepository) FindDefault(ctx context.Context, tx pgx.Tx) (*model.Warehouse, error) {
+	var w model.Warehouse
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, name, code, address, is_default, active, created_at, updated_at
+		 FROM warehouses WHERE is_default = true AND active = true LIMIT 1`,
+	).Scan(
+		&w.ID, &w.TenantID, &w.Name, &w.Code, &w.Address,
+		&w.IsDefault, &w.Active, &w.CreatedAt, &w.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find default warehouse: %w", err)
+	}
+	return &w, nil
+}
+
 func (r *WarehouseRepository) Create(ctx context.Context, tx pgx.Tx, warehouse *model.Warehouse) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO warehouses (id, tenant_id, name, code, address, is_default, active)
