@@ -26,7 +26,6 @@ import (
 // =============================================================================
 
 // newTestDPDProvider creates a DPDProvider backed by a test server.
-// The mock handles the session auth flow that current code requires.
 func newTestDPDProvider(t *testing.T, serverURL string) *DPDProvider {
 	t.Helper()
 	client := dpdsdk.NewClient(
@@ -41,18 +40,11 @@ func newTestDPDProvider(t *testing.T, serverURL string) *DPDProvider {
 	}
 }
 
-// newMockDPDServer creates a test server that handles auth and API routes.
+// newMockDPDServer creates a test server that delegates to the given handler.
+// DPD SDK uses Basic Auth + x-dpd-fid headers (no session tokens).
 func newMockDPDServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Handle auth endpoint for current session-based code
-		if r.URL.Path == "/auth/login" {
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]string{"token": "test-token"})
-			return
-		}
-		handler(w, r)
-	}))
+	return httptest.NewServer(handler)
 }
 
 // --- Factory Registration ---
