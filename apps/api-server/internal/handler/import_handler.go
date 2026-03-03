@@ -12,14 +12,14 @@ import (
 
 // ImportHandler handles CSV import endpoints for orders.
 type ImportHandler struct {
-	importService          *service.ImportService
+	importService           *service.ImportService
 	baseLinkerImportService *service.BaseLinkerImportService
 }
 
 // NewImportHandler creates a new ImportHandler.
 func NewImportHandler(importService *service.ImportService, blImportService *service.BaseLinkerImportService) *ImportHandler {
 	return &ImportHandler{
-		importService:          importService,
+		importService:           importService,
 		baseLinkerImportService: blImportService,
 	}
 }

@@ -18,11 +18,11 @@ import (
 )
 
 type ProductHandler struct {
-	productService              *service.ProductService
-	productImportService        *service.ProductImportService
-	blProductImportService      *service.BaseLinkerProductImportService
-	categorySvc                 *service.ProductCategoryService
-	imageDownloadService        *service.ImageDownloadService
+	productService         *service.ProductService
+	productImportService   *service.ProductImportService
+	blProductImportService *service.BaseLinkerProductImportService
+	categorySvc            *service.ProductCategoryService
+	imageDownloadService   *service.ImageDownloadService
 }
 
 func NewProductHandler(
@@ -33,11 +33,11 @@ func NewProductHandler(
 	imageDownloadService *service.ImageDownloadService,
 ) *ProductHandler {
 	return &ProductHandler{
-		productService:              productService,
-		productImportService:        productImportService,
-		blProductImportService:      blProductImportService,
-		categorySvc:                 categorySvc,
-		imageDownloadService:        imageDownloadService,
+		productService:         productService,
+		productImportService:   productImportService,
+		blProductImportService: blProductImportService,
+		categorySvc:            categorySvc,
+		imageDownloadService:   imageDownloadService,
 	}
 }
 

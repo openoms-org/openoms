@@ -36,7 +36,7 @@ func NewImageDownloadService(productRepo repository.ProductRepo, pool *pgxpool.P
 		productRepo: productRepo,
 		pool:        pool,
 		storage:     st,
-		httpClient: netutil.SafeHTTPClient(30 * time.Second),
+		httpClient:  netutil.SafeHTTPClient(30 * time.Second),
 	}
 }
 

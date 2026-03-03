@@ -68,9 +68,9 @@ type BLOrderImportPreview struct {
 
 // BLOrderImportResult is the summary returned after a BL order import.
 type BLOrderImportResult struct {
-	OrdersCreated    int                `json:"orders_created"`
-	CustomersCreated int                `json:"customers_created"`
-	Skipped          int                `json:"skipped"`
+	OrdersCreated    int                 `json:"orders_created"`
+	CustomersCreated int                 `json:"customers_created"`
+	Skipped          int                 `json:"skipped"`
 	Errors           []model.ImportError `json:"errors"`
 }
 

@@ -83,10 +83,10 @@ type BLProductImportPreview struct {
 
 // BLProductImportResult is the summary returned after a BL product import.
 type BLProductImportResult struct {
-	ProductsCreated   int                `json:"products_created"`
-	ProductsUpdated   int                `json:"products_updated"`
-	VariantsCreated   int                `json:"variants_created"`
-	CategoriesCreated int                `json:"categories_created"`
+	ProductsCreated   int                 `json:"products_created"`
+	ProductsUpdated   int                 `json:"products_updated"`
+	VariantsCreated   int                 `json:"variants_created"`
+	CategoriesCreated int                 `json:"categories_created"`
 	Errors            []model.ImportError `json:"errors"`
 }
 
@@ -155,7 +155,7 @@ func parseBLImages(raw string) json.RawMessage {
 		return json.RawMessage("[]")
 	}
 	var urls []string
-	for _, u := range strings.Split(raw, ";") {
+	for u := range strings.SplitSeq(raw, ";") {
 		u = strings.TrimSpace(u)
 		if u != "" {
 			urls = append(urls, u)

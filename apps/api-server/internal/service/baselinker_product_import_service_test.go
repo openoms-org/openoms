@@ -268,12 +268,12 @@ func TestBLProductImport_VariantGrouping(t *testing.T) {
 	// Rows with variant_id are classified as variants; rows without are parents.
 	headers := []string{"product_id", "name", "sku", "variant_id", "variant_name", "price_brutto", "quantity"}
 	rows := [][]string{
-		{"100", "T-Shirt", "TSHIRT-MAIN", "", "", "59.99", "50"},          // parent
-		{"100", "T-Shirt", "TSHIRT-S", "V1", "Size S", "59.99", "20"},    // variant
-		{"100", "T-Shirt", "TSHIRT-M", "V2", "Size M", "59.99", "15"},    // variant
-		{"100", "T-Shirt", "TSHIRT-L", "V3", "Size L", "59.99", "15"},    // variant
-		{"200", "Hoodie", "HOODIE-MAIN", "", "", "99.99", "30"},           // parent
-		{"200", "Hoodie", "HOODIE-RED", "V4", "Red", "99.99", "10"},      // variant
+		{"100", "T-Shirt", "TSHIRT-MAIN", "", "", "59.99", "50"},      // parent
+		{"100", "T-Shirt", "TSHIRT-S", "V1", "Size S", "59.99", "20"}, // variant
+		{"100", "T-Shirt", "TSHIRT-M", "V2", "Size M", "59.99", "15"}, // variant
+		{"100", "T-Shirt", "TSHIRT-L", "V3", "Size L", "59.99", "15"}, // variant
+		{"200", "Hoodie", "HOODIE-MAIN", "", "", "99.99", "30"},       // parent
+		{"200", "Hoodie", "HOODIE-RED", "V4", "Red", "99.99", "10"},   // variant
 	}
 	csvData := buildBLProductCSV(headers, rows)
 
