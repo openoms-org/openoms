@@ -154,6 +154,8 @@
           <span>PostgreSQL</span>
           <span class="hidden sm:inline h-3 w-px bg-white/10"></span>
           <span>Self-hosted lub SaaS</span>
+          <span class="hidden sm:inline h-3 w-px bg-white/10"></span>
+          <span class="text-emerald-400/70">Plany od 99 PLN/mies.</span>
         </div>
       </div>
     </div>
@@ -420,7 +422,7 @@
     }
 
     const mp = [['Allegro',1],['Amazon',0],['WooCommerce',0],['eBay',0],['Kaufland',0],['OLX',0],['Empik / Mirakl',0],['Erli',0],['Shoper',0],['PrestaShop',0],['Shopify',0]];
-    const cr = [['InPost',1],['DHL',0],['DPD',0],['GLS',0],['UPS',0],['Poczta Polska',0],['Orlen Paczka',0],['FedEx',0]];
+    const cr = [['InPost',1],['DHL',1],['DPD',1],['GLS',1],['UPS',0],['Poczta Polska',0],['Orlen Paczka',0],['FedEx',0]];
     const ot = [['Fakturownia / inFakt / wFirma','Faktury'],['KSeF','E-faktury'],['SMSAPI / Twilio','SMS'],['OpenAI','AI']];
 
     document.getElementById('marketplaces').innerHTML = mp.map(m => row(m[0],m[1])).join('');
@@ -431,15 +433,21 @@
     const done = [
       'Integracja Allegro (oferty, zamówienia, Wysyłam z Allegro)',
       'Integracja InPost (paczkomaty, kurier, etykiety, tracking)',
+      'DHL, DPD, GLS (etykiety, tracking, anulowanie)',
       'Dashboard z kanbanem, ciemnym motywem i PWA',
       'Zarządzanie zamówieniami, produktami, klientami',
       'Silnik automatyzacji (reguły, warunki, akcje)',
       'Stacja pakowania ze skanerem kodów kreskowych',
+      'Billing i płatności (Stripe)',
+      'Onboarding wizard (4-krokowy setup)',
+      'Zwroty i reklamacje (RMA)',
+      'Portal dostawcy',
       'Raporty i eksport CSV',
       '2FA/TOTP, role i uprawnienia',
     ];
     const progress = [
-      'Kolejne 7 kurierów (DHL, DPD, GLS, UPS, Poczta Polska, Orlen, FedEx)',
+      'Publiczny SaaS (hosted wersja)',
+      'Kolejne 4 kurierów (UPS, Poczta Polska, Orlen Paczka, FedEx)',
       '10 marketplace\'ów (Amazon, eBay, WooCommerce, Kaufland, OLX...)',
       'Repricing (4 strategie cenowe)',
       'Multi-magazyn z dokumentami PZ/WZ/MM',
@@ -448,7 +456,6 @@
       'Wielowalutowość (kursy NBP)',
     ];
     const next = [
-      'Publiczny SaaS (hosted wersja)',
       'Aplikacja mobilna',
       'Marketplace dla wtyczek',
       'Panel klienta (self-service zwroty)',
