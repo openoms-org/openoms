@@ -118,13 +118,9 @@ func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.Carrie
 		if dpdReq.Services == nil {
 			dpdReq.Services = &dpdsdk.Services{}
 		}
-		insuranceCurrency := req.CODCurrency
-		if insuranceCurrency == "" {
-			insuranceCurrency = "PLN"
-		}
 		dpdReq.Services.DeclaredValue = &dpdsdk.Money{
 			Amount:   req.InsuredValue,
-			Currency: insuranceCurrency,
+			Currency: "PLN",
 		}
 	}
 

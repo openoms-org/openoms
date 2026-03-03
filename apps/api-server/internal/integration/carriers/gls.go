@@ -215,10 +215,10 @@ func (p *GLSProvider) GetRates(_ context.Context, req integration.RateRequest) (
 	return rates, nil
 }
 
-func (p *GLSProvider) SupportsPickupPoints() bool { return true }
+// SupportsPickupPoints returns false as GLS pickup point search API is not yet integrated.
+func (p *GLSProvider) SupportsPickupPoints() bool { return false }
 
-func (p *GLSProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
-	// GLS Szybka Paczka pickup points — requires separate API endpoint.
-	// TODO: implement when GLS pickup points API is available.
-	return nil, nil
+// SearchPickupPoints is not yet implemented for GLS.
+func (p *GLSProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
+	return nil, fmt.Errorf("gls: pickup point search not yet implemented")
 }
