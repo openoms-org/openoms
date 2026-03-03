@@ -485,6 +485,8 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/export", deps.Product.ExportCSV)
 				r.Post("/import/preview", deps.Product.ImportPreview)
 				r.Post("/import", deps.Product.ImportCSV)
+				r.Post("/import/baselinker/preview", deps.Product.BLImportPreview)
+				r.Post("/import/baselinker", deps.Product.BLImportCSV)
 				r.Get("/{id}", deps.Product.Get)
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)

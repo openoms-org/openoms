@@ -105,7 +105,7 @@ func TestInPostWebhookHandler_ValidSignature(t *testing.T) {
 // ===========================================================================
 
 func TestImportHandler_Preview_InvalidMultipartForm(t *testing.T) {
-	h := NewImportHandler(nil)
+	h := NewImportHandler(nil, nil)
 
 	// Send a non-multipart body
 	req := httptest.NewRequest(http.MethodPost, "/v1/orders/import/preview", strings.NewReader("not multipart"))
@@ -122,7 +122,7 @@ func TestImportHandler_Preview_InvalidMultipartForm(t *testing.T) {
 }
 
 func TestImportHandler_Import_InvalidMultipartForm(t *testing.T) {
-	h := NewImportHandler(nil)
+	h := NewImportHandler(nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/orders/import", strings.NewReader("not multipart"))
 	req.Header.Set("Content-Type", "application/json")

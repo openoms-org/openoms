@@ -21,7 +21,7 @@ import (
 // ===========================================================================
 
 func TestCustomerHandler_Create_InvalidJSON(t *testing.T) {
-	h := NewCustomerHandler(nil)
+	h := NewCustomerHandler(nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/customers", strings.NewReader("bad json"))
 	rr := httptest.NewRecorder()
@@ -37,7 +37,7 @@ func TestCustomerHandler_Create_InvalidJSON(t *testing.T) {
 
 func TestCustomerHandler_Create_ValidationError(t *testing.T) {
 	svc := service.NewCustomerService(nil, nil, nil, nil, nil)
-	h := NewCustomerHandler(svc)
+	h := NewCustomerHandler(svc, nil)
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -58,7 +58,7 @@ func TestCustomerHandler_Create_ValidationError(t *testing.T) {
 }
 
 func TestCustomerHandler_Get_InvalidID(t *testing.T) {
-	h := NewCustomerHandler(nil)
+	h := NewCustomerHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -77,7 +77,7 @@ func TestCustomerHandler_Get_InvalidID(t *testing.T) {
 }
 
 func TestCustomerHandler_Update_InvalidID(t *testing.T) {
-	h := NewCustomerHandler(nil)
+	h := NewCustomerHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -96,7 +96,7 @@ func TestCustomerHandler_Update_InvalidID(t *testing.T) {
 }
 
 func TestCustomerHandler_Update_InvalidJSON(t *testing.T) {
-	h := NewCustomerHandler(nil)
+	h := NewCustomerHandler(nil, nil)
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -116,7 +116,7 @@ func TestCustomerHandler_Update_InvalidJSON(t *testing.T) {
 }
 
 func TestCustomerHandler_Delete_InvalidID(t *testing.T) {
-	h := NewCustomerHandler(nil)
+	h := NewCustomerHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -135,7 +135,7 @@ func TestCustomerHandler_Delete_InvalidID(t *testing.T) {
 }
 
 func TestCustomerHandler_ListOrders_InvalidID(t *testing.T) {
-	h := NewCustomerHandler(nil)
+	h := NewCustomerHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "not-a-uuid")

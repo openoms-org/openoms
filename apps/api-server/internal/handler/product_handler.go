@@ -18,16 +18,23 @@ import (
 )
 
 type ProductHandler struct {
-	productService       *service.ProductService
-	productImportService *service.ProductImportService
-	categorySvc          *service.ProductCategoryService
+	productService              *service.ProductService
+	productImportService        *service.ProductImportService
+	blProductImportService      *service.BaseLinkerProductImportService
+	categorySvc                 *service.ProductCategoryService
 }
 
-func NewProductHandler(productService *service.ProductService, productImportService *service.ProductImportService, categorySvc *service.ProductCategoryService) *ProductHandler {
+func NewProductHandler(
+	productService *service.ProductService,
+	productImportService *service.ProductImportService,
+	blProductImportService *service.BaseLinkerProductImportService,
+	categorySvc *service.ProductCategoryService,
+) *ProductHandler {
 	return &ProductHandler{
-		productService:       productService,
-		productImportService: productImportService,
-		categorySvc:          categorySvc,
+		productService:              productService,
+		productImportService:        productImportService,
+		blProductImportService:      blProductImportService,
+		categorySvc:                 categorySvc,
 	}
 }
 
@@ -374,5 +381,59 @@ func (h *ProductHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeJSON(w, http.StatusOK, result)
+}
+
+// BLImportPreview handles POST /v1/products/import/baselinker/preview
+func (h *ProductHandler) BLImportPreview(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer file.Close()
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	preview, err := h.blProductImportService.PreviewCSV(r.Context(), tenantID, file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, preview)
+}
+
+// BLImportCSV handles POST /v1/products/import/baselinker
+func (h *ProductHandler) BLImportCSV(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	userID := middleware.UserIDFromContext(r.Context())
+
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer file.Close()
+
+	result, err := h.blProductImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
+	if err != nil {
+		writeServerError(w, "failed to import BaseLinker products", err)
+		return
+	}
 	writeJSON(w, http.StatusOK, result)
 }
