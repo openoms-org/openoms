@@ -22,6 +22,7 @@ type ProductHandler struct {
 	productImportService        *service.ProductImportService
 	blProductImportService      *service.BaseLinkerProductImportService
 	categorySvc                 *service.ProductCategoryService
+	imageDownloadService        *service.ImageDownloadService
 }
 
 func NewProductHandler(
@@ -29,12 +30,14 @@ func NewProductHandler(
 	productImportService *service.ProductImportService,
 	blProductImportService *service.BaseLinkerProductImportService,
 	categorySvc *service.ProductCategoryService,
+	imageDownloadService *service.ImageDownloadService,
 ) *ProductHandler {
 	return &ProductHandler{
 		productService:              productService,
 		productImportService:        productImportService,
 		blProductImportService:      blProductImportService,
 		categorySvc:                 categorySvc,
+		imageDownloadService:        imageDownloadService,
 	}
 }
 
@@ -433,6 +436,22 @@ func (h *ProductHandler) BLImportCSV(w http.ResponseWriter, r *http.Request) {
 	result, err := h.blProductImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
 	if err != nil {
 		writeServerError(w, "failed to import BaseLinker products", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+// RedownloadImages downloads external product images and re-uploads them to storage.
+func (h *ProductHandler) RedownloadImages(w http.ResponseWriter, r *http.Request) {
+	if h.imageDownloadService == nil {
+		writeError(w, http.StatusNotImplemented, "image storage not configured")
+		return
+	}
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	result, err := h.imageDownloadService.RedownloadImages(r.Context(), tenantID)
+	if err != nil {
+		writeServerError(w, "failed to redownload images", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
