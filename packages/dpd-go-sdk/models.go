@@ -4,11 +4,13 @@ import "time"
 
 // CreateParcelRequest is the payload sent to POST /public/shipment/v1/generatePackagesNumbers.
 type CreateParcelRequest struct {
-	Sender    Address      `json:"sender,omitempty"`
-	Receiver  Address      `json:"receiver"`
-	Parcels   []ParcelSpec `json:"parcels"`
-	Services  *Services    `json:"services,omitempty"`
-	Reference string       `json:"reference,omitempty"`
+	Sender      Address      `json:"sender,omitempty"`
+	Receiver    Address      `json:"receiver"`
+	Parcels     []ParcelSpec `json:"parcels"`
+	Services    *Services    `json:"services,omitempty"`
+	Reference   string       `json:"reference,omitempty"`
+	ServiceType string       `json:"serviceType,omitempty"`
+	TargetPoint string       `json:"targetPoint,omitempty"`
 }
 
 // Address contains address details for sender or receiver.

@@ -54,6 +54,15 @@ func NewDPDProvider(credentials json.RawMessage, settings json.RawMessage) (*DPD
 func (p *DPDProvider) ProviderName() string { return "dpd" }
 
 func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
+	svcType, err := mapDPDServiceType(req.ServiceType)
+	if err != nil {
+		return nil, err
+	}
+
+	if svcType == "PICKUP" && req.TargetPoint == "" {
+		return nil, fmt.Errorf("dpd: target point is required for dpd_pickup service type")
+	}
+
 	dpdReq := &dpdsdk.CreateParcelRequest{
 		Receiver: dpdsdk.Address{
 			Name:        req.Receiver.Name,
@@ -72,7 +81,24 @@ func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.Carrie
 				SizeZ:  req.Parcel.DepthCm,
 			},
 		},
-		Reference: req.Reference,
+		Reference:   req.Reference,
+		ServiceType: svcType,
+	}
+
+	if req.TargetPoint != "" {
+		dpdReq.TargetPoint = req.TargetPoint
+	}
+
+	if req.Shipper != nil {
+		dpdReq.Sender = dpdsdk.Address{
+			Name:        req.Shipper.Name,
+			Phone:       req.Shipper.Phone,
+			Email:       req.Shipper.Email,
+			Street:      req.Shipper.Street,
+			City:        req.Shipper.City,
+			PostalCode:  req.Shipper.PostalCode,
+			CountryCode: req.Shipper.Country,
+		}
 	}
 
 	if req.CODAmount > 0 {
@@ -185,4 +211,15 @@ func (p *DPDProvider) SearchPickupPoints(ctx context.Context, query string) ([]i
 	// DPD Pickup points — requires separate API endpoint.
 	// TODO: implement when DPD pickup points API is available.
 	return nil, nil
+}
+
+func mapDPDServiceType(serviceType string) (string, error) {
+	switch serviceType {
+	case "dpd_classic", "":
+		return "STANDARD", nil
+	case "dpd_pickup":
+		return "PICKUP", nil
+	default:
+		return "", fmt.Errorf("dpd: unknown service type %q — valid types: dpd_classic, dpd_pickup", serviceType)
+	}
 }
