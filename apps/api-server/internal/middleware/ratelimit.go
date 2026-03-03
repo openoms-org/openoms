@@ -35,7 +35,7 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 			key := fmt.Sprintf("rl:%s:%s:%d", ip, route, maxRequests)
 			allowed, err := limiter.Allow(r.Context(), key, maxRequests, window)
 			if err != nil {
-				slog.Warn("rate limiter error, failing open", "error", err, "ip", ip)
+				slog.Error("rate limiter error, failing open", "error", err, "ip", ip)
 				next.ServeHTTP(w, r)
 				return
 			}

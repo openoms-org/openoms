@@ -18,7 +18,7 @@ export interface AllegroOffer {
   primaryImage?: { url: string };
 }
 
-export interface AllegroOfferList {
+interface AllegroOfferList {
   offers: AllegroOffer[];
   count: number;
   totalCount: number;
@@ -26,7 +26,7 @@ export interface AllegroOfferList {
 
 // --- Listing Search Types ---
 
-export interface AllegroListingSearchItem {
+interface AllegroListingSearchItem {
   id: string;
   name: string;
   category?: { id: string };
@@ -38,7 +38,7 @@ export interface AllegroListingSearchItem {
   }[];
 }
 
-export interface AllegroListingSearchResult {
+interface AllegroListingSearchResult {
   items: {
     promoted: AllegroListingSearchItem[];
     regular: AllegroListingSearchItem[];
@@ -66,7 +66,7 @@ export interface CreateProductListingRequest {
   };
 }
 
-export interface CreateWooCommerceListingRequest {
+interface CreateWooCommerceListingRequest {
   integration_id: string;
   price_override?: number;
   stock_override?: number;

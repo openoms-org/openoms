@@ -13,9 +13,9 @@ import (
 type WorkflowNodeType string
 
 const (
-	WorkflowNodeTrigger   WorkflowNodeType = "trigger"
-	WorkflowNodeCondition WorkflowNodeType = "condition"
-	WorkflowNodeAction    WorkflowNodeType = "action"
+	workflowNodeTrigger   WorkflowNodeType = "trigger"
+	workflowNodeCondition WorkflowNodeType = "condition"
+	workflowNodeAction    WorkflowNodeType = "action"
 )
 
 // WorkflowPosition represents x/y coordinates on the canvas.
@@ -108,12 +108,12 @@ func ValidateWorkflowDefinition(def WorkflowDefinition) []string {
 		}
 		nodeIDs[n.ID] = true
 
-		if n.Type == WorkflowNodeTrigger {
+		if n.Type == workflowNodeTrigger {
 			triggerCount++
 		}
 
 		switch n.Type {
-		case WorkflowNodeTrigger, WorkflowNodeCondition, WorkflowNodeAction:
+		case workflowNodeTrigger, workflowNodeCondition, workflowNodeAction:
 			// valid
 		default:
 			errs = append(errs, fmt.Sprintf("Nieznany typ wezla: %s", n.Type))
@@ -139,7 +139,7 @@ func ValidateWorkflowDefinition(def WorkflowDefinition) []string {
 
 	// Check that trigger node has valid event
 	for _, n := range def.Nodes {
-		if n.Type == WorkflowNodeTrigger {
+		if n.Type == workflowNodeTrigger {
 			event, _ := n.Data["event"].(string)
 			if event == "" {
 				errs = append(errs, "Wezel wyzwalajacy musi miec przypisane zdarzenie (event)")
@@ -147,13 +147,13 @@ func ValidateWorkflowDefinition(def WorkflowDefinition) []string {
 				errs = append(errs, fmt.Sprintf("Nieprawidlowe zdarzenie wyzwalajace: %s", event))
 			}
 		}
-		if n.Type == WorkflowNodeCondition {
+		if n.Type == workflowNodeCondition {
 			field, _ := n.Data["field"].(string)
 			if field == "" {
 				errs = append(errs, fmt.Sprintf("Wezel warunku '%s' musi miec przypisane pole (field)", n.ID))
 			}
 		}
-		if n.Type == WorkflowNodeAction {
+		if n.Type == workflowNodeAction {
 			actionType, _ := n.Data["actionType"].(string)
 			if actionType == "" {
 				errs = append(errs, fmt.Sprintf("Wezel akcji '%s' musi miec przypisany typ akcji (actionType)", n.ID))
@@ -178,7 +178,7 @@ func WorkflowToAutomationRule(def WorkflowDefinition) (*ConvertWorkflowResponse,
 	var triggerNode *WorkflowNode
 	for i, n := range def.Nodes {
 		nodeMap[n.ID] = n
-		if n.Type == WorkflowNodeTrigger {
+		if n.Type == workflowNodeTrigger {
 			triggerNode = &def.Nodes[i]
 		}
 	}
@@ -209,7 +209,7 @@ func WorkflowToAutomationRule(def WorkflowDefinition) (*ConvertWorkflowResponse,
 		node := nodeMap[current]
 
 		switch node.Type {
-		case WorkflowNodeCondition:
+		case workflowNodeCondition:
 			field, _ := node.Data["field"].(string)
 			operator, _ := node.Data["operator"].(string)
 			if operator == "" {
@@ -222,7 +222,7 @@ func WorkflowToAutomationRule(def WorkflowDefinition) (*ConvertWorkflowResponse,
 				Value:    value,
 			})
 
-		case WorkflowNodeAction:
+		case workflowNodeAction:
 			actionType, _ := node.Data["actionType"].(string)
 			config := make(map[string]any)
 			for k, v := range node.Data {
@@ -290,7 +290,7 @@ func AutomationRuleToWorkflow(rule AutomationRule) (*WorkflowDefinition, error) 
 	triggerID := uuid.New().String()
 	nodes = append(nodes, WorkflowNode{
 		ID:       triggerID,
-		Type:     WorkflowNodeTrigger,
+		Type:     workflowNodeTrigger,
 		Position: WorkflowPosition{X: 250, Y: 50},
 		Data: map[string]any{
 			"event": rule.TriggerEvent,
@@ -306,7 +306,7 @@ func AutomationRuleToWorkflow(rule AutomationRule) (*WorkflowDefinition, error) 
 		condID := uuid.New().String()
 		nodes = append(nodes, WorkflowNode{
 			ID:       condID,
-			Type:     WorkflowNodeCondition,
+			Type:     workflowNodeCondition,
 			Position: WorkflowPosition{X: 250, Y: yPos},
 			Data: map[string]any{
 				"field":    c.Field,
@@ -337,7 +337,7 @@ func AutomationRuleToWorkflow(rule AutomationRule) (*WorkflowDefinition, error) 
 		}
 		nodes = append(nodes, WorkflowNode{
 			ID:       actionID,
-			Type:     WorkflowNodeAction,
+			Type:     workflowNodeAction,
 			Position: WorkflowPosition{X: 250, Y: yPos},
 			Data:     data,
 		})
@@ -372,19 +372,19 @@ func GetWorkflowTemplates() []WorkflowTemplate {
 				Nodes: []WorkflowNode{
 					{
 						ID:       "trigger-1",
-						Type:     WorkflowNodeTrigger,
+						Type:     workflowNodeTrigger,
 						Position: WorkflowPosition{X: 250, Y: 50},
 						Data:     map[string]any{"event": "order.status_changed", "label": "Zmiana statusu zamowienia"},
 					},
 					{
 						ID:       "condition-1",
-						Type:     WorkflowNodeCondition,
+						Type:     workflowNodeCondition,
 						Position: WorkflowPosition{X: 250, Y: 200},
 						Data:     map[string]any{"field": "status", "operator": "eq", "value": "shipped", "label": "Status = Wyslane"},
 					},
 					{
 						ID:       "action-1",
-						Type:     WorkflowNodeAction,
+						Type:     workflowNodeAction,
 						Position: WorkflowPosition{X: 250, Y: 350},
 						Data:     map[string]any{"actionType": "create_invoice", "invoice_type": "vat", "label": "Utworz fakture"},
 					},
@@ -404,13 +404,13 @@ func GetWorkflowTemplates() []WorkflowTemplate {
 				Nodes: []WorkflowNode{
 					{
 						ID:       "trigger-1",
-						Type:     WorkflowNodeTrigger,
+						Type:     workflowNodeTrigger,
 						Position: WorkflowPosition{X: 250, Y: 50},
 						Data:     map[string]any{"event": "order.created", "label": "Zamowienie utworzone"},
 					},
 					{
 						ID:       "action-1",
-						Type:     WorkflowNodeAction,
+						Type:     workflowNodeAction,
 						Position: WorkflowPosition{X: 250, Y: 200},
 						Data:     map[string]any{"actionType": "send_email", "to": "admin@firma.pl", "label": "Wyslij email"},
 					},
@@ -429,19 +429,19 @@ func GetWorkflowTemplates() []WorkflowTemplate {
 				Nodes: []WorkflowNode{
 					{
 						ID:       "trigger-1",
-						Type:     WorkflowNodeTrigger,
+						Type:     workflowNodeTrigger,
 						Position: WorkflowPosition{X: 250, Y: 50},
 						Data:     map[string]any{"event": "order.created", "label": "Zamowienie utworzone"},
 					},
 					{
 						ID:       "condition-1",
-						Type:     WorkflowNodeCondition,
+						Type:     workflowNodeCondition,
 						Position: WorkflowPosition{X: 250, Y: 200},
 						Data:     map[string]any{"field": "payment_status", "operator": "eq", "value": "paid", "label": "Platnosc = Oplacone"},
 					},
 					{
 						ID:       "action-1",
-						Type:     WorkflowNodeAction,
+						Type:     workflowNodeAction,
 						Position: WorkflowPosition{X: 250, Y: 350},
 						Data:     map[string]any{"actionType": "set_status", "status": "processing", "label": "Ustaw status: Przetwarzane"},
 					},
@@ -461,19 +461,19 @@ func GetWorkflowTemplates() []WorkflowTemplate {
 				Nodes: []WorkflowNode{
 					{
 						ID:       "trigger-1",
-						Type:     WorkflowNodeTrigger,
+						Type:     workflowNodeTrigger,
 						Position: WorkflowPosition{X: 250, Y: 50},
 						Data:     map[string]any{"event": "order.created", "label": "Zamowienie utworzone"},
 					},
 					{
 						ID:       "condition-1",
-						Type:     WorkflowNodeCondition,
+						Type:     workflowNodeCondition,
 						Position: WorkflowPosition{X: 250, Y: 200},
 						Data:     map[string]any{"field": "total_amount", "operator": "gt", "value": 500, "label": "Kwota > 500 zl"},
 					},
 					{
 						ID:       "action-1",
-						Type:     WorkflowNodeAction,
+						Type:     workflowNodeAction,
 						Position: WorkflowPosition{X: 250, Y: 350},
 						Data:     map[string]any{"actionType": "add_tag", "tag": "VIP", "label": "Dodaj tag: VIP"},
 					},

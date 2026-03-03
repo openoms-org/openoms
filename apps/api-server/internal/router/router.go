@@ -403,21 +403,14 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 			}
 
-			// Orders — any authenticated user
+			// Orders — any authenticated user (destructive ops admin-only)
 			r.Route("/orders", func(r chi.Router) {
 				r.Get("/", deps.Order.List)
 				r.Post("/", deps.Order.Create)
 				r.Get("/export", deps.Order.ExportCSV)
-				r.Post("/bulk-status", deps.Order.BulkTransitionStatus)
-				r.Post("/merge", deps.OrderGroup.MergeOrders)
-				r.Post("/import/preview", deps.Import.Preview)
-				r.Post("/import", deps.Import.Import)
 				r.Get("/{id}", deps.Order.Get)
 				r.Patch("/{id}", deps.Order.Update)
-				r.Delete("/{id}", deps.Order.Delete)
 				r.Post("/{id}/status", deps.Order.TransitionStatus)
-				r.Post("/{id}/duplicate", deps.Order.DuplicateOrder)
-				r.Post("/{id}/split", deps.OrderGroup.SplitOrder)
 				r.Get("/{id}/groups", deps.OrderGroup.ListByOrder)
 				r.Get("/{id}/audit", deps.Order.GetAudit)
 				r.Get("/{id}/invoices", deps.Invoice.ListByOrder)
@@ -428,6 +421,18 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/tickets", deps.Helpdesk.CreateOrderTicket)
 				r.Get("/{id}/shipments", deps.Shipment.ListByOrder)
 				r.Post("/{id}/shipments", deps.Shipment.CreateForOrder)
+
+				// Admin-only: delete, bulk ops, import, merge, split, duplicate
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Delete("/{id}", deps.Order.Delete)
+					r.Post("/bulk-status", deps.Order.BulkTransitionStatus)
+					r.Post("/merge", deps.OrderGroup.MergeOrders)
+					r.Post("/import/preview", deps.Import.Preview)
+					r.Post("/import", deps.Import.Import)
+					r.Post("/{id}/duplicate", deps.Order.DuplicateOrder)
+					r.Post("/{id}/split", deps.OrderGroup.SplitOrder)
+				})
 			})
 
 			// BaseLinker import
@@ -436,22 +441,32 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/orders", deps.Import.BaseLinkerImport)
 			})
 
-			// Invoices — any authenticated user
+			// Invoices — any authenticated user (cancel + KSeF send admin-only)
 			r.Route("/invoices", func(r chi.Router) {
 				r.Get("/", deps.Invoice.List)
 				r.Post("/", deps.Invoice.Create)
-				r.Post("/ksef/bulk-send", deps.KSeF.BulkSendToKSeF)
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", deps.Invoice.Get)
 					r.Get("/pdf", deps.Invoice.GetPDF)
-					r.Delete("/", deps.Invoice.Cancel)
-					r.Post("/ksef/send", deps.KSeF.SendToKSeF)
 					r.Get("/ksef/status", deps.KSeF.CheckKSeFStatus)
 					r.Get("/ksef/upo", deps.KSeF.GetUPO)
+
+					// Admin-only: cancel invoice, send to KSeF (tax/legal implications)
+					r.Group(func(r chi.Router) {
+						r.Use(middleware.RequireRole("admin"))
+						r.Delete("/", deps.Invoice.Cancel)
+						r.Post("/ksef/send", deps.KSeF.SendToKSeF)
+					})
+				})
+
+				// Admin-only: bulk KSeF send
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Post("/ksef/bulk-send", deps.KSeF.BulkSendToKSeF)
 				})
 			})
 
-			// Shipments — any authenticated user
+			// Shipments — any authenticated user (delete admin-only)
 			r.Route("/shipments", func(r chi.Router) {
 				r.Get("/", deps.Shipment.List)
 				r.Post("/", deps.Shipment.Create)
@@ -459,40 +474,55 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/dispatch-order", deps.Shipment.CreateDispatchOrder)
 				r.Get("/{id}", deps.Shipment.Get)
 				r.Patch("/{id}", deps.Shipment.Update)
-				r.Delete("/{id}", deps.Shipment.Delete)
 				r.Post("/{id}/status", deps.Shipment.TransitionStatus)
 				r.Post("/{id}/label", deps.Shipment.GenerateLabel)
 				r.Get("/{id}/tracking", deps.Shipment.GetTracking)
+
+				// Admin-only: delete shipment
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Delete("/{id}", deps.Shipment.Delete)
+				})
 			})
 
-			// Returns — any authenticated user
+			// Returns — any authenticated user (delete admin-only)
 			r.Route("/returns", func(r chi.Router) {
 				r.Get("/", deps.Return.List)
 				r.Post("/", deps.Return.Create)
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", deps.Return.Get)
 					r.Patch("/", deps.Return.Update)
-					r.Delete("/", deps.Return.Delete)
 					r.Post("/status", deps.Return.TransitionStatus)
 					r.Get("/print", deps.Print.GetReturnSlip)
+
+					// Admin-only: delete return
+					r.Group(func(r chi.Router) {
+						r.Use(middleware.RequireRole("admin"))
+						r.Delete("/", deps.Return.Delete)
+					})
 				})
 			})
 
-			// Products — any authenticated user
+			// Products — any authenticated user (delete + import admin-only)
 			r.Route("/products", func(r chi.Router) {
 				r.Get("/", deps.Product.List)
 				r.Post("/", deps.Product.Create)
 				r.Get("/export", deps.Product.ExportCSV)
-				r.Post("/import/preview", deps.Product.ImportPreview)
-				r.Post("/import", deps.Product.ImportCSV)
-				r.Post("/import/baselinker/preview", deps.Product.BLImportPreview)
-				r.Post("/import/baselinker", deps.Product.BLImportCSV)
-				r.Post("/redownload-images", deps.Product.RedownloadImages)
 				r.Get("/{id}", deps.Product.Get)
 				r.Patch("/{id}", deps.Product.Update)
-				r.Delete("/{id}", deps.Product.Delete)
 				r.Get("/{id}/stock", deps.Warehouse.ListProductStock)
 				r.Get("/{id}/supplier-link", deps.Supplier.SupplierLink)
+
+				// Admin-only: delete, import, redownload
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Delete("/{id}", deps.Product.Delete)
+					r.Post("/import/preview", deps.Product.ImportPreview)
+					r.Post("/import", deps.Product.ImportCSV)
+					r.Post("/import/baselinker/preview", deps.Product.BLImportPreview)
+					r.Post("/import/baselinker", deps.Product.BLImportCSV)
+					r.Post("/redownload-images", deps.Product.RedownloadImages)
+				})
 
 				// Background removal for product images
 				if deps.BGRemoval != nil {
@@ -799,61 +829,81 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Put("/{id}/stock", deps.Warehouse.UpsertStock)
 			})
 
-			// Customers — any authenticated user
+			// Customers — any authenticated user (delete + import admin-only)
 			r.Route("/customers", func(r chi.Router) {
 				r.Get("/", deps.Customer.List)
 				r.Post("/", deps.Customer.Create)
-				r.Post("/import/preview", deps.Customer.ImportPreview)
-				r.Post("/import", deps.Customer.ImportCSV)
 				r.Get("/{id}", deps.Customer.Get)
 				r.Patch("/{id}", deps.Customer.Update)
-				r.Delete("/{id}", deps.Customer.Delete)
 				r.Get("/{id}/orders", deps.Customer.ListOrders)
+
+				// Admin-only: delete (GDPR), import
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Delete("/{id}", deps.Customer.Delete)
+					r.Post("/import/preview", deps.Customer.ImportPreview)
+					r.Post("/import", deps.Customer.ImportCSV)
+				})
 			})
 
-			// Customer segments — any authenticated user
+			// Customer segments — read any user, write admin-only
 			if deps.Segment != nil {
 				r.Route("/segments", func(r chi.Router) {
 					r.Get("/", deps.Segment.List)
-					r.Post("/", deps.Segment.Create)
-					r.Post("/rfm-analysis", deps.Segment.RunRFMAnalysis)
 					r.Get("/customer/{customer_id}", deps.Segment.GetCustomerSegments)
 					r.Get("/{id}", deps.Segment.Get)
-					r.Put("/{id}", deps.Segment.Update)
-					r.Delete("/{id}", deps.Segment.Delete)
 					r.Get("/{id}/members", deps.Segment.ListMembers)
-					r.Post("/{id}/members", deps.Segment.AddMember)
-					r.Delete("/{id}/members/{customer_id}", deps.Segment.RemoveMember)
+
+					// Admin-only: create, update, delete, RFM analysis, member management
+					r.Group(func(r chi.Router) {
+						r.Use(middleware.RequireRole("admin"))
+						r.Post("/", deps.Segment.Create)
+						r.Post("/rfm-analysis", deps.Segment.RunRFMAnalysis)
+						r.Put("/{id}", deps.Segment.Update)
+						r.Delete("/{id}", deps.Segment.Delete)
+						r.Post("/{id}/members", deps.Segment.AddMember)
+						r.Delete("/{id}/members/{customer_id}", deps.Segment.RemoveMember)
+					})
 				})
 			}
 
-			// Loyalty programs — any authenticated user
+			// Loyalty programs — read any user, write admin-only
 			if deps.Loyalty != nil {
 				r.Route("/loyalty", func(r chi.Router) {
 					r.Route("/programs", func(r chi.Router) {
 						r.Get("/", deps.Loyalty.ListPrograms)
-						r.Post("/", deps.Loyalty.CreateProgram)
 						r.Get("/{id}", deps.Loyalty.GetProgram)
-						r.Put("/{id}", deps.Loyalty.UpdateProgram)
-						r.Delete("/{id}", deps.Loyalty.DeleteProgram)
-						r.Post("/{id}/award", deps.Loyalty.AwardPoints)
-						r.Post("/{id}/redeem", deps.Loyalty.RedeemPoints)
 						r.Get("/{id}/leaderboard", deps.Loyalty.GetLeaderboard)
+
+						// Admin-only: create, update, delete programs, award/redeem points
+						r.Group(func(r chi.Router) {
+							r.Use(middleware.RequireRole("admin"))
+							r.Post("/", deps.Loyalty.CreateProgram)
+							r.Put("/{id}", deps.Loyalty.UpdateProgram)
+							r.Delete("/{id}", deps.Loyalty.DeleteProgram)
+							r.Post("/{id}/award", deps.Loyalty.AwardPoints)
+							r.Post("/{id}/redeem", deps.Loyalty.RedeemPoints)
+						})
 					})
 					r.Get("/customers/{customer_id}", deps.Loyalty.GetCustomerLoyaltyStatus)
 				})
 			}
 
-			// Recurring orders (subscriptions) — any authenticated user
+			// Recurring orders (subscriptions) — read any user, write admin-only
 			r.Route("/recurring-orders", func(r chi.Router) {
 				r.Get("/", deps.RecurringOrder.List)
-				r.Post("/", deps.RecurringOrder.Create)
 				r.Get("/{id}", deps.RecurringOrder.Get)
-				r.Put("/{id}", deps.RecurringOrder.Update)
-				r.Delete("/{id}", deps.RecurringOrder.Delete)
-				r.Post("/{id}/pause", deps.RecurringOrder.Pause)
-				r.Post("/{id}/resume", deps.RecurringOrder.Resume)
-				r.Post("/{id}/cancel", deps.RecurringOrder.Cancel)
+
+				// Admin-only: create, update, delete, pause, resume, cancel
+				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					r.Post("/", deps.RecurringOrder.Create)
+					r.Put("/{id}", deps.RecurringOrder.Update)
+					r.Delete("/{id}", deps.RecurringOrder.Delete)
+					r.Post("/{id}/pause", deps.RecurringOrder.Pause)
+					r.Post("/{id}/resume", deps.RecurringOrder.Resume)
+					r.Post("/{id}/cancel", deps.RecurringOrder.Cancel)
+				})
 			})
 
 			// Automation rules — admin only
@@ -982,8 +1032,10 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/items", deps.Stocktake.ListItems)
 			})
 
-			// AI auto-categorization — any authenticated user
+			// AI auto-categorization — admin-only, rate limited (calls external APIs)
 			r.Route("/ai", func(r chi.Router) {
+				r.Use(middleware.RequireRole("admin"))
+				r.Use(middleware.RateLimitWith(deps.RateLimiter, 20, 1*time.Minute))
 				r.Post("/categorize", deps.AI.Categorize)
 				r.Post("/describe", deps.AI.Describe)
 				r.Post("/bulk-categorize", deps.AI.BulkCategorize)

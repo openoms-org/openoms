@@ -55,10 +55,10 @@ type RegisterRequest struct {
 }
 
 func (r *RegisterRequest) Validate() error {
-	if err := ValidateEmail(r.Email); err != nil {
+	if err := validateEmail(r.Email); err != nil {
 		return err
 	}
-	if err := ValidatePassword(r.Password); err != nil {
+	if err := validatePassword(r.Password); err != nil {
 		return err
 	}
 	if strings.TrimSpace(r.Name) == "" {
@@ -73,7 +73,7 @@ func (r *RegisterRequest) Validate() error {
 	if err := validateMaxLength("tenant_name", r.TenantName, MaxNameLength); err != nil {
 		return err
 	}
-	return ValidateSlug(r.TenantSlug)
+	return validateSlug(r.TenantSlug)
 }
 
 // TokenResponse is returned by login and register endpoints.
@@ -137,7 +137,7 @@ type CreateUserRequest struct {
 }
 
 func (r *CreateUserRequest) Validate() error {
-	if err := ValidateEmail(r.Email); err != nil {
+	if err := validateEmail(r.Email); err != nil {
 		return err
 	}
 	if strings.TrimSpace(r.Name) == "" {

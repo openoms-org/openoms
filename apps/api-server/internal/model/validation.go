@@ -33,8 +33,8 @@ func validateMaxLengthPtr(field string, value *string, max int) error {
 	return nil
 }
 
-// ValidateEmail checks email format using net/mail (RFC 5322) and length.
-func ValidateEmail(email string) error {
+// validateEmail checks email format using net/mail (RFC 5322) and length.
+func validateEmail(email string) error {
 	email = strings.TrimSpace(email)
 	if email == "" {
 		return fmt.Errorf("email is required")
@@ -48,16 +48,16 @@ func ValidateEmail(email string) error {
 	return nil
 }
 
-// ValidateSlug checks that slug is 3-63 chars, lowercase alphanumeric + hyphens.
-func ValidateSlug(slug string) error {
+// validateSlug checks that slug is 3-63 chars, lowercase alphanumeric + hyphens.
+func validateSlug(slug string) error {
 	if !slugPattern.MatchString(slug) {
 		return fmt.Errorf("slug must be 3-63 characters, lowercase alphanumeric and hyphens")
 	}
 	return nil
 }
 
-// ValidatePassword enforces minimum security requirements.
-func ValidatePassword(password string) error {
+// validatePassword enforces minimum security requirements.
+func validatePassword(password string) error {
 	if len(password) < MinPasswordLen {
 		return fmt.Errorf("password must be at least %d characters", MinPasswordLen)
 	}
