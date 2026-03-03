@@ -167,7 +167,7 @@ func (s *WebhookDispatchService) trySendWebhook(ctx context.Context, tenantID uu
 		return false
 	}
 	defer resp.Body.Close()
-	io.ReadAll(resp.Body) // drain body
+	io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20)) // drain body (max 1MB)
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		s.logDelivery(ctx, tenantID, ep.URL, eventType, payload, "success", &resp.StatusCode, "")

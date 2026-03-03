@@ -11,6 +11,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -45,7 +46,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 		return nil, fmt.Errorf("mirakl: api_key is required")
 	}
 
-	client := miraklsdk.NewClient(creds.BaseURL, creds.APIKey)
+	client := miraklsdk.NewClient(creds.BaseURL, creds.APIKey,
+		miraklsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 
 	return &Provider{
 		client: client,

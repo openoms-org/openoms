@@ -13,6 +13,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -47,7 +48,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 		return nil, fmt.Errorf("prestashop: api_key is required")
 	}
 
-	client := prestashopsdk.NewClient(creds.ShopURL, creds.APIKey)
+	client := prestashopsdk.NewClient(creds.ShopURL, creds.APIKey,
+		prestashopsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 
 	return &Provider{
 		client: client,

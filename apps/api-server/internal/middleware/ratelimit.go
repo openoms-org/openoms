@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // RateLimiter defines the interface for rate limiting backends.
@@ -24,9 +26,13 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 				ip = r.RemoteAddr
 			}
 
-			// Include maxRequests in the key so endpoints with different limits
-			// get separate counters (e.g., login at 10/min vs refresh at 60/min).
-			key := fmt.Sprintf("%s:%d", ip, maxRequests)
+			// Include route pattern in the key so endpoints with the same limit
+			// get separate counters (e.g., login and register both at 10/min).
+			route := r.URL.Path
+			if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.RoutePattern() != "" {
+				route = rctx.RoutePattern()
+			}
+			key := fmt.Sprintf("rl:%s:%s:%d", ip, route, maxRequests)
 			allowed, err := limiter.Allow(r.Context(), key, maxRequests, window)
 			if err != nil {
 				slog.Warn("rate limiter error, failing open", "error", err, "ip", ip)

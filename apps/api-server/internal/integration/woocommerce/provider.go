@@ -13,6 +13,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -51,7 +52,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 		return nil, fmt.Errorf("woocommerce: consumer_secret is required")
 	}
 
-	client := woocommercesdk.NewClient(creds.StoreURL, creds.ConsumerKey, creds.ConsumerSecret)
+	client := woocommercesdk.NewClient(creds.StoreURL, creds.ConsumerKey, creds.ConsumerSecret,
+		woocommercesdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 
 	return &Provider{
 		client: client,

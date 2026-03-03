@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	prestashopsdk "github.com/openoms-org/openoms/packages/prestashop-go-sdk"
 	shopersdk "github.com/openoms-org/openoms/packages/shoper-go-sdk"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -47,8 +49,10 @@ func (h *StoreAuthHandler) SetupShoper(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify credentials by making a test API call
-	client := shopersdk.NewClient(body.ShopURL, body.ClientID, body.ClientSecret)
+	// Verify credentials by making a test API call (SafeHTTPClient blocks private IPs / SSRF)
+	client := shopersdk.NewClient(body.ShopURL, body.ClientID, body.ClientSecret,
+		shopersdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 	_, err := client.Orders.List(r.Context(), shopersdk.OrderListParams{Limit: 1})
 	if err != nil {
 		slog.Error("failed to verify Shoper credentials", "error", err)
@@ -81,8 +85,10 @@ func (h *StoreAuthHandler) SetupPrestaShop(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Verify credentials by making a test API call
-	client := prestashopsdk.NewClient(body.ShopURL, body.APIKey)
+	// Verify credentials by making a test API call (SafeHTTPClient blocks private IPs / SSRF)
+	client := prestashopsdk.NewClient(body.ShopURL, body.APIKey,
+		prestashopsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 	_, err := client.Orders.List(r.Context(), prestashopsdk.OrderListParams{Limit: 1})
 	if err != nil {
 		slog.Error("failed to verify PrestaShop credentials", "error", err)
@@ -114,8 +120,10 @@ func (h *StoreAuthHandler) SetupShopify(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Verify credentials by making a test API call
-	client := shopifysdk.NewClient(body.ShopDomain, body.AccessToken)
+	// Verify credentials by making a test API call (SafeHTTPClient blocks private IPs / SSRF)
+	client := shopifysdk.NewClient(body.ShopDomain, body.AccessToken,
+		shopifysdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 	_, err := client.Orders.List(r.Context(), shopifysdk.OrderListParams{Limit: 1, Status: "any"})
 	if err != nil {
 		slog.Error("failed to verify Shopify credentials", "error", err)
