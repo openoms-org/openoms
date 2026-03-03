@@ -287,6 +287,7 @@ func main() {
 	orderGroupService := service.NewOrderGroupService(orderGroupRepo, orderRepo, auditRepo, pool)
 	bundleService := service.NewBundleService(bundleRepo, productRepo, auditRepo, pool)
 	customerService := service.NewCustomerService(customerRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	customerImportService := service.NewCustomerImportService(customerRepo, auditRepo, pool)
 	barcodeService := service.NewBarcodeService(productRepo, variantRepo, orderRepo, auditRepo, pool)
 	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
 	messageTemplateService := service.NewMessageTemplateService(messageTemplateRepo, pool)
@@ -538,7 +539,7 @@ func main() {
 	warehouseHandler := handler.NewWarehouseHandler(warehouseService)
 
 	// Customer handler
-	customerHandler := handler.NewCustomerHandler(customerService)
+	customerHandler := handler.NewCustomerHandler(customerService, customerImportService)
 
 	// Order group handler
 	orderGroupHandler := handler.NewOrderGroupHandler(orderGroupService)

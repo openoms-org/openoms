@@ -13,11 +13,15 @@ import (
 )
 
 type CustomerHandler struct {
-	customerService *service.CustomerService
+	customerService       *service.CustomerService
+	customerImportService *service.CustomerImportService
 }
 
-func NewCustomerHandler(customerService *service.CustomerService) *CustomerHandler {
-	return &CustomerHandler{customerService: customerService}
+func NewCustomerHandler(customerService *service.CustomerService, customerImportService *service.CustomerImportService) *CustomerHandler {
+	return &CustomerHandler{
+		customerService:       customerService,
+		customerImportService: customerImportService,
+	}
 }
 
 func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -168,4 +172,60 @@ func (h *CustomerHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// ImportPreview handles POST /v1/customers/import/preview
+func (h *CustomerHandler) ImportPreview(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer file.Close()
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	preview, err := h.customerImportService.PreviewCSV(r.Context(), tenantID, file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, preview)
+}
+
+// ImportCSV handles POST /v1/customers/import
+func (h *CustomerHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	userID := middleware.UserIDFromContext(r.Context())
+
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer file.Close()
+
+	result, err := h.customerImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
+	if err != nil {
+		writeServerError(w, "failed to import customers", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }

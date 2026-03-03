@@ -794,6 +794,8 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Route("/customers", func(r chi.Router) {
 				r.Get("/", deps.Customer.List)
 				r.Post("/", deps.Customer.Create)
+				r.Post("/import/preview", deps.Customer.ImportPreview)
+				r.Post("/import", deps.Customer.ImportCSV)
 				r.Get("/{id}", deps.Customer.Get)
 				r.Patch("/{id}", deps.Customer.Update)
 				r.Delete("/{id}", deps.Customer.Delete)
