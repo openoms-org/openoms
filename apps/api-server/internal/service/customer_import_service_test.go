@@ -345,7 +345,7 @@ func TestImportCustomerRow_SkipsEmptyName(t *testing.T) {
 	assert.Equal(t, 1, rowErr.Row)
 	assert.Equal(t, "name", rowErr.Field)
 	assert.Contains(t, rowErr.Message, "name is required")
-	assert.Equal(t, 1, result.Skipped)
+	assert.Equal(t, 0, result.Skipped)
 	assert.Equal(t, 0, result.Created)
 	assert.Equal(t, 0, result.Updated)
 

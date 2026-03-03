@@ -301,7 +301,6 @@ func (s *CustomerImportService) importCustomerRow(
 ) *model.ImportError {
 	name := extractField(row, fieldIdx, "name")
 	if name == "" {
-		result.Skipped++
 		return &model.ImportError{Row: rowNum, Field: "name", Message: "name is required"}
 	}
 
