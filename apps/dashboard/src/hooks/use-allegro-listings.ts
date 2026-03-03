@@ -252,7 +252,7 @@ export function useUpdateListingSyncMode(productId: string) {
     mutationFn: ({ listingId, mode }: { listingId: string; mode: 'auto' | 'manual' }) =>
       apiClient(
         `/v1/products/${productId}/listings/${listingId}`,
-        { method: "PUT", body: JSON.stringify({ stock_sync_mode: mode }) }
+        { method: "PATCH", body: JSON.stringify({ stock_sync_mode: mode }) }
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products", productId, "listings"] });
