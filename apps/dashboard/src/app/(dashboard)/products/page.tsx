@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { getErrorMessage } from "@/lib/api-client";
 import { useCategoryTree } from "@/hooks/use-categories";
+import { useRedownloadImages } from "@/hooks/use-image-redownload";
 import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_SOURCE_LABELS } from "@/lib/constants";
@@ -117,6 +118,7 @@ function MyProductsTab() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const bulkCategorize = useBulkCategorize();
   const deleteProduct = useDeleteProduct();
+  const redownloadImages = useRedownloadImages();
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -480,6 +482,29 @@ function MyProductsTab() {
               </Button>
             </>
           )}
+          <Button
+            variant="outline"
+            onClick={() => {
+              redownloadImages.mutate(undefined, {
+                onSuccess: (data) => {
+                  toast.success(
+                    `Pobrano ${data.downloaded} zdjęć, pominięto ${data.skipped}, błędy: ${data.failed}`
+                  );
+                },
+                onError: (error) => {
+                  toast.error(getErrorMessage(error));
+                },
+              });
+            }}
+            disabled={redownloadImages.isPending}
+          >
+            {redownloadImages.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="h-4 w-4" />
+            )}
+            Pobierz zdjęcia
+          </Button>
           <Button
             variant="outline"
             onClick={async () => {
