@@ -100,7 +100,7 @@ func TestMemoryLoginLockoutStore_ResetFailures(t *testing.T) {
 	ctx := context.Background()
 
 	// Accumulate failures
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		_, err := store.IncrFailures(ctx, "reset-key", 5*time.Minute)
 		require.NoError(t, err)
 	}
@@ -135,7 +135,7 @@ func TestLoginLockout_RecordFailure_TriggersLockout(t *testing.T) {
 	ctx := context.Background()
 
 	// Record 4 failures — should NOT trigger lockout (threshold is 5)
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		err := lockout.RecordFailure(ctx, "tenant1", "user@example.com")
 		require.NoError(t, err)
 	}
@@ -167,7 +167,7 @@ func TestLoginLockout_RecordFailure_EscalatingDurations(t *testing.T) {
 	//   failures > 15  -> 30m
 
 	// Record 5 failures -> lockout at 30s
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		err := lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
 		require.NoError(t, err)
 	}
@@ -177,7 +177,7 @@ func TestLoginLockout_RecordFailure_EscalatingDurations(t *testing.T) {
 	assert.True(t, remaining1 <= 30*time.Second, "5 failures -> 30s lockout, got %v", remaining1)
 
 	// Record failures 6 and 7 -> lockout escalates to 1m
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		err := lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
 		require.NoError(t, err)
 	}
@@ -187,7 +187,7 @@ func TestLoginLockout_RecordFailure_EscalatingDurations(t *testing.T) {
 	assert.True(t, remaining2 <= 1*time.Minute, "7 failures -> 1m lockout, got %v", remaining2)
 
 	// Record failures 8, 9, 10 -> lockout escalates to 5m
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		err := lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
 		require.NoError(t, err)
 	}
@@ -197,7 +197,7 @@ func TestLoginLockout_RecordFailure_EscalatingDurations(t *testing.T) {
 	assert.True(t, remaining3 <= 5*time.Minute, "10 failures -> 5m lockout, got %v", remaining3)
 
 	// Record failures 11-15 -> lockout escalates to 15m
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		err := lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
 		require.NoError(t, err)
 	}
@@ -259,7 +259,7 @@ func TestLoginLockout_RecordSuccess_ClearsState(t *testing.T) {
 	ctx := context.Background()
 
 	// Record 3 failures (below threshold, no lockout yet)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		err := lockout.RecordFailure(ctx, "tenant1", "user@example.com")
 		require.NoError(t, err)
 	}
@@ -273,7 +273,7 @@ func TestLoginLockout_RecordSuccess_ClearsState(t *testing.T) {
 	assert.Equal(t, time.Duration(0), remaining)
 
 	// Failure counter should have been reset — need 5 more failures to trigger lockout
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		err := lockout.RecordFailure(ctx, "tenant1", "user@example.com")
 		require.NoError(t, err)
 	}
@@ -290,7 +290,7 @@ func TestLoginLockout_RecordSuccess_ClearsLockout(t *testing.T) {
 	ctx := context.Background()
 
 	// Trigger a lockout with 5 failures
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		err := lockout.RecordFailure(ctx, "tenant1", "locked@example.com")
 		require.NoError(t, err)
 	}
@@ -314,7 +314,7 @@ func TestLoginLockout_TenantIsolation(t *testing.T) {
 	ctx := context.Background()
 
 	// Record 5 failures for tenant1 — should lock tenant1
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		err := lockout.RecordFailure(ctx, "tenant1", "user@example.com")
 		require.NoError(t, err)
 	}
