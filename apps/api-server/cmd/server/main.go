@@ -524,7 +524,8 @@ func main() {
 
 	// Import service & handler
 	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool)
-	importHandler := handler.NewImportHandler(importService)
+	baseLinkerImportService := service.NewBaseLinkerImportService(orderRepo, customerRepo, auditRepo, tenantRepo, pool)
+	importHandler := handler.NewImportHandler(importService, baseLinkerImportService)
 
 	// Automation handler
 	automationHandler := handler.NewAutomationHandler(automationService)

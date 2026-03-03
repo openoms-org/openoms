@@ -430,6 +430,12 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/shipments", deps.Shipment.CreateForOrder)
 			})
 
+			// BaseLinker import
+			r.Route("/import/baselinker", func(r chi.Router) {
+				r.Post("/orders/preview", deps.Import.BaseLinkerPreview)
+				r.Post("/orders", deps.Import.BaseLinkerImport)
+			})
+
 			// Invoices — any authenticated user
 			r.Route("/invoices", func(r chi.Router) {
 				r.Get("/", deps.Invoice.List)

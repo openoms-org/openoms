@@ -12,12 +12,16 @@ import (
 
 // ImportHandler handles CSV import endpoints for orders.
 type ImportHandler struct {
-	importService *service.ImportService
+	importService          *service.ImportService
+	baseLinkerImportService *service.BaseLinkerImportService
 }
 
 // NewImportHandler creates a new ImportHandler.
-func NewImportHandler(importService *service.ImportService) *ImportHandler {
-	return &ImportHandler{importService: importService}
+func NewImportHandler(importService *service.ImportService, blImportService *service.BaseLinkerImportService) *ImportHandler {
+	return &ImportHandler{
+		importService:          importService,
+		baseLinkerImportService: blImportService,
+	}
 }
 
 // Preview handles POST /v1/orders/import/preview
@@ -99,5 +103,60 @@ func (h *ImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeJSON(w, http.StatusOK, result)
+}
+
+// BaseLinkerPreview handles POST /v1/import/baselinker/orders/preview
+func (h *ImportHandler) BaseLinkerPreview(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer file.Close()
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	preview, err := h.baseLinkerImportService.PreviewOrders(r.Context(), tenantID, file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, preview)
+}
+
+// BaseLinkerImport handles POST /v1/import/baselinker/orders
+func (h *ImportHandler) BaseLinkerImport(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	userID := middleware.UserIDFromContext(r.Context())
+
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer file.Close()
+
+	// Check optional "import_customers" form field
+	importCustomers := r.FormValue("import_customers") == "true"
+
+	result, err := h.baseLinkerImportService.ImportOrders(r.Context(), tenantID, file, userID, clientIP(r), importCustomers)
+	if err != nil {
+		writeServerError(w, "failed to import BaseLinker orders", err)
+		return
+	}
 	writeJSON(w, http.StatusOK, result)
 }
