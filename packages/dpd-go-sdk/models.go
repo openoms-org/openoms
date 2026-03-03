@@ -4,7 +4,7 @@ import "time"
 
 // CreateParcelRequest is the payload sent to POST /public/shipment/v1/generatePackagesNumbers.
 type CreateParcelRequest struct {
-	Sender      Address      `json:"sender,omitempty"`
+	Sender      *Address     `json:"sender,omitempty"`
 	Receiver    Address      `json:"receiver"`
 	Parcels     []ParcelSpec `json:"parcels"`
 	Services    *Services    `json:"services,omitempty"`
@@ -60,14 +60,14 @@ type createParcelRawResponse struct {
 
 type responsePackage struct {
 	StatusInfo packageStatus   `json:"statusInfo"`
-	Parcels    []responseParce `json:"parcels"`
+	Parcels    []responseParcel `json:"parcels"`
 }
 
 type packageStatus struct {
 	Status string `json:"status"`
 }
 
-type responseParce struct {
+type responseParcel struct {
 	Status    string `json:"status"`
 	Reference string `json:"reference,omitempty"`
 	Waybill   string `json:"waybill"`

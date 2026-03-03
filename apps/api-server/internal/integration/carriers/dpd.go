@@ -90,7 +90,7 @@ func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}
 
 	if req.Shipper != nil {
-		dpdReq.Sender = dpdsdk.Address{
+		dpdReq.Sender = &dpdsdk.Address{
 			Name:        req.Shipper.Name,
 			Phone:       req.Shipper.Phone,
 			Email:       req.Shipper.Email,
