@@ -209,8 +209,10 @@ func (p *DPDProvider) GetRates(_ context.Context, req integration.RateRequest) (
 	return rates, nil
 }
 
+// SupportsPickupPoints returns false as DPD does not support pickup point search via REST API.
 func (p *DPDProvider) SupportsPickupPoints() bool { return false }
 
+// SearchPickupPoints is not supported by DPD REST API and always returns an error.
 func (p *DPDProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
 	return nil, fmt.Errorf("dpd: pickup point search not yet implemented")
 }
