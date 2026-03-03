@@ -14,6 +14,7 @@ const hooks = createCrudHooks<
 >({
   resourceKey: "message-templates",
   basePath: "/v1/message-templates",
+  updateMethod: "PUT",
 });
 
 export const useMessageTemplates = hooks.useList;
