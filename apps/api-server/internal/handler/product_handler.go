@@ -396,14 +396,14 @@ func (h *ProductHandler) BLImportPreview(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	preview, err := h.blProductImportService.PreviewCSV(r.Context(), tenantID, file)
@@ -425,14 +425,14 @@ func (h *ProductHandler) BLImportCSV(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	result, err := h.blProductImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
 	if err != nil {

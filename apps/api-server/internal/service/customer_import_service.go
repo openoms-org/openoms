@@ -83,9 +83,6 @@ var customerFieldAliases = map[string]string{
 	"notes":             "notes",
 }
 
-// canonicalCustomerFields lists all canonical field names the importer understands.
-var canonicalCustomerFields = []string{"name", "email", "phone", "company_name", "nip", "tags", "notes"}
-
 // parseCustomerCSV reads raw CSV bytes and returns headers, records, and the header-to-index map
 // with alias resolution applied.
 func parseCustomerCSV(raw []byte) (headers []string, records [][]string, fieldIdx map[string]int, err error) {
