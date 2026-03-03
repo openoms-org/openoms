@@ -19,6 +19,14 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-03-03: GLS carrier production-ready COMPLETE — SDK hardening + label retrieval + service type mapping:
+  - **SDK fixes:** Added `io.LimitReader(resp.Body, 10*1024*1024)` (10MB cap) on response body reads; removed "In Development" status from doc.go
+  - **Label retrieval:** `CreateShipment` response contains inline PrintData base64. Adapter decodes and caches per-provider instance. `GetLabel()` returns cached PDF bytes or clear error explaining labels are embedded, not separate API
+  - **Service type mapping:** Added `mapGLSServiceType()` function mapping frontend `standard` → GLS PARCEL, `express_10` → EXPRESS_10, `express_12` → EXPRESS_12, with proper allowlist validation and error on unknown types
+  - **Shipper/ContactID mapping:** Documented GLS limitation — GLS uses pre-registered ContactID (carrier-specific), not inline shipper address. Adapter ignores `Shipper` field; users configure default account/ContactID in integration settings
+  - **COD/Insurance support:** Service objects mapped correctly (`service_cash` for COD, `service_addonliability` for insurance)
+  - **Production tests:** Added 7 new test cases in `gls_production_test.go` covering service type mapping, unknown type error handling, label retrieval error semantics, COD/insurance mapping, shipper isolation, reference field propagation
+  - **Security audit:** PASS (no CRITICAL/HIGH findings; 1 MEDIUM: hardcoded placeholder rates in GetRates, tracked in SECURITY_POSTURE backlog)
 - 2026-03-03: DPD carrier production-ready COMPLETE — SDK alignment + service type mapping:
   - **SDK fixes:** Added `ServiceType` and `TargetPoint` fields to `CreateParcelRequest` in `packages/dpd-go-sdk/models.go`; removed "In Development" status from SDK doc.go
   - **Service type mapping:** Added `mapDPDServiceType()` function mapping frontend `dpd_classic` → DPD REST code, `dpd_pickup` → DPD pickup service, with proper validation

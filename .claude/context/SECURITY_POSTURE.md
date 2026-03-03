@@ -6,7 +6,7 @@ Billing/Stripe integration security audit: 2026-03-02 (PASS — Stripe webhook s
 Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend endpoints, Next.js middleware protecting routes, no credential exposure, backward-compatible JSONB migration)
 DHL carrier production-ready security audit: 2026-03-02 (PASS — no CRITICAL findings; 2 new HIGH items identified (hardcoded country "PL", service type passthrough) but not exploitable; resolves existing HIGH finding about invalid DHL service types via mapDHLServiceType mapping; commits 6656870, 199cba1, 3d5fc39)
 DPD carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HIGH findings. SDK matches official REST API contract (Basic Auth + x-dpd-fid header, two-phase label flow). Hardcoded placeholder rates in GetRates tracked in SECURITY_POSTURE backlog (MEDIUM, already identified in carrier SDK audit). Service type validation prevents invalid API calls via mapDPDServiceType allowlist. Shipper resolution follows established pattern (ADR-022). Tests verify tracking/cancel error handling (DPD REST API does not support these endpoints))
-GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HIGH findings. SDK uses Basic Auth + io.LimitReader(10MB) on all responses. Label data from CreateShipment is decoded and cached per-provider-instance so GetLabel returns real PDF bytes. Service type validation prevents invalid API calls via mapGLSServiceType allowlist. Shipper/ContactID limitation documented (GLS uses pre-registered ContactID, not inline address). Hardcoded placeholder rates in GetRates tracked in backlog (MEDIUM). Production tests verify service type mapping, unknown type rejection, label retrieval, COD/insurance mapping, shipper handling, and reference propagation)
+GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HIGH findings. SDK uses Basic Auth + io.LimitReader(10MB) on all responses. Label data from CreateShipment is decoded and cached per-provider-instance so GetLabel returns real PDF bytes. Service type validation prevents invalid API calls via mapGLSServiceType allowlist. Shipper/ContactID limitation documented (GLS uses pre-registered ContactID, not inline address). Hardcoded placeholder rates in GetRates tracked in backlog (MEDIUM). Production tests verify service type mapping, unknown type rejection, label retrieval, COD/insurance mapping, shipper handling, and reference propagation. Commits: 9b05da4)
 
 ## Unfixed Findings
 
@@ -54,7 +54,7 @@ GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
    - `go.mod:1` — Go 1.25.0 behind on patches (bump to 1.25.7+ for CVE-2025-47910, CVE-2025-58186, CVE-2025-61726)
 
 ## Recently Fixed
-- 2026-03-03: GLS carrier production-ready security review COMPLETE:
+- 2026-03-03: GLS carrier production-ready security review COMPLETE (ADR-025):
   - **SDK hardening:** `io.LimitReader(10MB)` in `gls-go-sdk/client.go`; removed "In Development" status
   - **Label retrieval:** `CreateShipment` decodes and caches inline PrintData per provider instance; `GetLabel` returns cached bytes (no separate API needed)
   - **Service type mapping:** `mapGLSServiceType()` implements allowlist validation (standard/express_10/express_12), returns error for unknown types

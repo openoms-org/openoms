@@ -1612,7 +1612,7 @@ Oferta opublikowana na Allegro
 | **Carrier** | InPost | Paczkomaty, kurier, Geowidget, webhook, dispatch orders |
 | | DHL | Krajowe i miedzynarodowe, adres nadawcy (shipper), DHL24 SOAP WebAPI2 |
 | | DPD | Polska |
-| | GLS | Europa |
+| | GLS | Europa, adres nadawcy (shipper), ShipIT REST API with Basic Auth |
 | | UPS | Miedzynarodowe |
 | | Poczta Polska | Paczki |
 | | Orlen Paczka | Paczkomaty |

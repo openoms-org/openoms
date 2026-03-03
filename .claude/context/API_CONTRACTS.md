@@ -1,8 +1,16 @@
 # API Contracts
-Version: 7 (bump after every endpoint change)
+Version: 8 (bump after every endpoint change)
 Updated: 2026-03-03
 
 ## Recently Changed
+- 2026-03-03: GLS REST API integration finalized (internal SDK contract, no public API endpoint changes):
+  - `packages/gls-go-sdk/client.go`: Added `io.LimitReader(resp.Body, 10*1024*1024)` (10MB cap) on response body reads to prevent OOM
+  - `packages/gls-go-sdk/doc.go`: Removed "In Development" status marking SDK as production-verified
+  - `CarrierShipmentRequest` (internal): GLS adapter resolves shipper from warehouse address or uses account default; GLS API requires pre-registered ContactID (not inline address mapping like DHL/DPD)
+  - Service type codes verified: `standard` → GLS PARCEL, `express_10` → EXPRESS_10, `express_12` → EXPRESS_12
+  - Label retrieval: PrintData base64 from `CreateShipment` response is decoded and cached per provider instance; `GetLabel` returns cached bytes or error
+  - This is internal refactoring, public API endpoints unchanged
+- 2026-03-03: DPD REST API integration finalized (internal SDK contract, no public API endpoint changes):
 - 2026-03-03: DPD REST API integration finalized (internal SDK contract, no public API endpoint changes):
   - `packages/dpd-go-sdk/models.go`: Added `ServiceType` and `TargetPoint` fields to `CreateParcelRequest`
   - `packages/dpd-go-sdk/doc.go`: Removed "In Development" status marking SDK as production-verified
