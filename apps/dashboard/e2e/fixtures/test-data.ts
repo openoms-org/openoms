@@ -1,6 +1,6 @@
 export const TEST_CREDENTIALS = {
-  tenant_slug: 'mercpart',
-  email: 'rafal@mercpart.pl',
+  tenant_slug: 'dev',
+  email: 'admin@dev.local',
   password: 'password123',
 };
 

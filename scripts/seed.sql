@@ -15,10 +15,12 @@ VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa001', '11111111-1111-1111-1111-1111111
 ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Trial flow test tenant (onboarding incomplete — for E2E tests)
+-- Uses DO UPDATE SET to reset onboarding state on re-seed (tests are destructive)
 INSERT INTO tenants (id, name, slug, plan, settings)
 VALUES ('22222222-2222-2222-2222-222222222222', 'Test Flow Sp. z o.o.', 'testflow', 'starter',
         '{"default_currency": "PLN", "vat_rate": 23, "onboarding": {"completed": false, "current_step": 1, "completed_steps": [], "skipped_steps": []}}')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  settings = '{"default_currency": "PLN", "vat_rate": 23, "onboarding": {"completed": false, "current_step": 1, "completed_steps": [], "skipped_steps": []}}';
 
 INSERT INTO users (id, tenant_id, email, name, password_hash, role)
 VALUES ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', '22222222-2222-2222-2222-222222222222',
