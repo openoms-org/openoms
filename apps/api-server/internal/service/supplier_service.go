@@ -122,6 +122,13 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	// Sanitize user-facing text fields to prevent stored XSS
 	req.Name = model.StripHTMLTags(req.Name)
 
+	// Block private/internal URLs to prevent SSRF when feed is fetched
+	if req.FeedURL != nil && *req.FeedURL != "" {
+		if netutil.IsPrivateURL(*req.FeedURL) {
+			return nil, NewValidationError(fmt.Errorf("feed_url must not point to a private/internal address"))
+		}
+	}
+
 	settings := req.Settings
 	if settings == nil {
 		settings = json.RawMessage("{}")

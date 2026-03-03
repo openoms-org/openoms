@@ -57,6 +57,10 @@ export function getErrorMessage(error: unknown): string {
     switch (error.status) {
       case 401:
         return "Sesja wygasła. Zaloguj się ponownie.";
+      case 402:
+        return error.message || "Brak aktywnej subskrypcji.";
+      case 403:
+        return error.message || "Brak uprawnień do wykonania tej operacji.";
       case 429:
         return "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.";
       case 500:

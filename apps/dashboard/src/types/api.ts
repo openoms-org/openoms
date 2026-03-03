@@ -172,7 +172,7 @@ export interface OrderItem {
   weight?: number;
 }
 
-export interface ReturnItem {
+interface ReturnItem {
   name: string;
   quantity: number;
 }
@@ -361,7 +361,7 @@ export interface GenerateLabelRequest {
 }
 
 // === Products ===
-export interface ProductImage {
+interface ProductImage {
   url: string;
   alt?: string;
   position: number;
@@ -677,7 +677,7 @@ export interface AuditListParams extends PaginationParams {
 }
 
 // === Bulk Status ===
-export interface BulkStatusResult {
+interface BulkStatusResult {
   order_id: string;
   success: boolean;
   error?: string;
@@ -742,7 +742,7 @@ export interface CustomFieldsConfig {
 }
 
 // === Product Categories Config (legacy flat) ===
-export interface CategoryDef {
+interface CategoryDef {
   key: string;
   label: string;
   color: string;
@@ -845,12 +845,12 @@ export interface BulkUpsertAllegroMappingsRequest {
 }
 
 // === InPost Points ===
-export interface InPostPointAddress {
+interface InPostPointAddress {
   line1: string;
   line2: string;
 }
 
-export interface InPostPointAddressDetails {
+interface InPostPointAddressDetails {
   city: string;
   province: string;
   post_code: string;
@@ -953,7 +953,7 @@ export interface SupplierPortalPO {
   updated_at: string;
 }
 
-export interface SupplierPortalOrdersResponse {
+interface SupplierPortalOrdersResponse {
   supplier: { id: string; name: string };
   orders: SupplierPortalPO[];
 }
@@ -1264,7 +1264,7 @@ export interface TestAutomationRuleResponse {
   actions_to_execute: AutomationAction[];
 }
 
-export interface ConditionResult {
+interface ConditionResult {
   condition: AutomationCondition;
   met: boolean;
 }
@@ -1327,7 +1327,7 @@ export interface ImportColumnMapping {
   order_field: string;
 }
 
-export interface ImportPreviewRow {
+interface ImportPreviewRow {
   row: number;
   data: Record<string, unknown>;
   errors?: string[];
@@ -1347,7 +1347,7 @@ export interface ImportResult {
   errors: ImportError[];
 }
 
-export interface ImportError {
+interface ImportError {
   row: number;
   field?: string;
   message: string;
@@ -1581,7 +1581,7 @@ export interface MergeOrdersRequest {
   notes?: string;
 }
 
-export interface SplitSpec {
+interface SplitSpec {
   items: OrderItem[];
   customer_name?: string;
   shipping_address?: Address;
@@ -1729,7 +1729,7 @@ export interface WarehouseDocument {
   updated_at: string;
 }
 
-export interface WarehouseDocItem {
+interface WarehouseDocItem {
   id: string;
   tenant_id: string;
   document_id: string;
@@ -1883,7 +1883,7 @@ export interface AISuggestion {
   long_description?: string;
 }
 
-export interface AIBulkCategorizeResult {
+interface AIBulkCategorizeResult {
   product_id: string;
   categories: string[];
   tags: string[];
@@ -2261,7 +2261,7 @@ export interface ReconciliationSummary {
   unmatched_amount: number;
 }
 
-export interface MatchResult {
+interface MatchResult {
   transaction_id: string;
   order_id?: string;
   status: string;
@@ -2990,7 +2990,7 @@ export interface UpdateOnboardingStepRequest {
   action: "completed" | "skipped";
 }
 
-export interface CompanySettingsRequest {
+interface CompanySettingsRequest {
   company_name: string;
   nip: string;
   address: string;

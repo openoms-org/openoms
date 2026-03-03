@@ -104,3 +104,23 @@ export function useUpdateInventorySettings() {
     },
   });
 }
+
+export function useExportSettings() {
+  return useMutation({
+    mutationFn: () => apiClient<Blob>("/v1/settings/export"),
+  });
+}
+
+export function useImportSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      apiClient("/v1/settings/import", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+    },
+  });
+}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -48,7 +49,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 		return nil, fmt.Errorf("shopify: access_token is required")
 	}
 
-	var opts []shopifysdk.Option
+	opts := []shopifysdk.Option{
+		shopifysdk.WithHTTPClient(netutil.SafeHTTPClient(30 * time.Second)),
+	}
 	if creds.APIVersion != "" {
 		opts = append(opts, shopifysdk.WithAPIVersion(creds.APIVersion))
 	}

@@ -35,6 +35,23 @@ const EVENT_INVALIDATION_MAP: Record<string, string[][]> = {
   "warehouse_document.cancelled": [["warehouse-documents"]],
   "customer.created": [["customers"]],
   "customer.updated": [["customers"]],
+  "customer.deleted": [["customers"]],
+  "supplier.created": [["suppliers"]],
+  "supplier.updated": [["suppliers"]],
+  "supplier.deleted": [["suppliers"]],
+  "recurring_order.created": [["recurring-orders"]],
+  "recurring_order.updated": [["recurring-orders"]],
+  "recurring_order.deleted": [["recurring-orders"]],
+  "purchase_order.created": [["purchase-orders"]],
+  "purchase_order.updated": [["purchase-orders"]],
+  "purchase_order.deleted": [["purchase-orders"]],
+  "purchase_order.sent": [["purchase-orders"]],
+  "purchase_order.cancelled": [["purchase-orders"]],
+  "purchase_order.items_received": [["purchase-orders"], ["warehouse-stock"]],
+  "dropship_order.created": [["dropship-orders"]],
+  "dropship_order.status_updated": [["dropship-orders"]],
+  "dropship_order.cancelled": [["dropship-orders"]],
+  "stocktake.completed": [["stocktakes"], ["warehouse-stock"]],
 };
 
 interface UseWebSocketReturn {

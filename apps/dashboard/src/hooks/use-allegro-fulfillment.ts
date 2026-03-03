@@ -26,7 +26,7 @@ export interface AllegroCreateShipmentCommand {
   order_id?: string;
 }
 
-export interface AllegroShipmentAddress {
+interface AllegroShipmentAddress {
   name?: string;
   company?: string;
   street: string;
@@ -37,7 +37,7 @@ export interface AllegroShipmentAddress {
   email?: string;
 }
 
-export interface AllegroShipmentPackage {
+interface AllegroShipmentPackage {
   type?: string;
   length?: { value: number; unit: string };
   width?: { value: number; unit: string };

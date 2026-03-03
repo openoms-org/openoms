@@ -42,7 +42,9 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 		`SELECT id, tenant_id FROM suppliers
 		 WHERE status = 'active'
 		   AND ((feed_url IS NOT NULL AND feed_url != '') OR integration_id IS NOT NULL)
-		   AND (last_sync_at IS NULL OR last_sync_at + (sync_interval_minutes || ' minutes')::interval < NOW())`,
+		   AND (last_sync_at IS NULL OR last_sync_at + (sync_interval_minutes || ' minutes')::interval < NOW())
+		 ORDER BY last_sync_at ASC NULLS FIRST
+		 LIMIT 100`,
 	)
 	if err != nil {
 		return err
