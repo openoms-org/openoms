@@ -212,7 +212,7 @@ func classifyBLRows(records [][]string, canonIdx map[string]int) (
 }
 
 // PreviewCSV parses a BaseLinker product CSV and returns a preview with stats.
-func (s *BaseLinkerProductImportService) PreviewCSV(ctx context.Context, tenantID uuid.UUID, file io.Reader) (*BLProductImportPreview, error) {
+func (s *BaseLinkerProductImportService) PreviewCSV(_ context.Context, _ uuid.UUID, file io.Reader) (*BLProductImportPreview, error) {
 	raw, err := io.ReadAll(file)
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)

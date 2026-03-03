@@ -169,7 +169,7 @@ func (s *ImageDownloadService) downloadAndUpload(ctx context.Context, tenantID, 
 	if err != nil {
 		return "", fmt.Errorf("downloading %s: %w", imgURL, err)
 	}
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 
 	filename := filenameFromURL(imgURL)
 	key := fmt.Sprintf("%s/products/%s/%s", tenantID, productID, filename)
@@ -200,7 +200,7 @@ func (s *ImageDownloadService) downloadImage(ctx context.Context, rawURL string)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		cancel()
 		return nil, "", fmt.Errorf("HTTP %d", resp.StatusCode)
 	}

@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -67,37 +66,6 @@ func (m *mockOrderRepo) CountThisMonth(_ context.Context, _ pgx.Tx) (int, error)
 	return 0, nil
 }
 
-// mockTenantRepo implements repository.TenantRepo for unit tests.
-type mockTenantRepo struct{}
-
-func (m *mockTenantRepo) FindBySlug(_ context.Context, _ string) (*model.Tenant, error) {
-	return nil, nil
-}
-
-func (m *mockTenantRepo) FindByID(_ context.Context, _ pgx.Tx, _ uuid.UUID) (*model.Tenant, error) {
-	return nil, nil
-}
-
-func (m *mockTenantRepo) SlugExists(_ context.Context, _ string) (bool, error) {
-	return false, nil
-}
-
-func (m *mockTenantRepo) Create(_ context.Context, _ pgx.Tx, _ *model.Tenant) error {
-	return nil
-}
-
-func (m *mockTenantRepo) GetSettings(_ context.Context, _ pgx.Tx, _ uuid.UUID) (json.RawMessage, error) {
-	return nil, nil
-}
-
-func (m *mockTenantRepo) ListAllTenantIDs(_ context.Context, _ *pgxpool.Pool) ([]uuid.UUID, error) {
-	return nil, nil
-}
-
-func (m *mockTenantRepo) UpdateSettings(_ context.Context, _ pgx.Tx, _ uuid.UUID, _ json.RawMessage) error {
-	return nil
-}
-
 // --- Helper to build CSV bytes ---
 
 func buildBLCSV(headers []string, rows [][]string) []byte {
@@ -128,7 +96,7 @@ func TestBLImport_GroupsByOrderID(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, len(groups))
@@ -149,7 +117,7 @@ func TestBLImport_AggregatesItems(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(groups))
 
@@ -187,7 +155,7 @@ func TestBLImport_ExtractsCustomerFromFirstRow(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(groups))
 
@@ -221,7 +189,7 @@ func TestBLImport_ExtractsAddresses(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(groups))
 
@@ -270,7 +238,7 @@ func TestBLImport_ComputesTotalAmount(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(groups))
 
@@ -290,7 +258,7 @@ func TestBLImport_ParsesDate(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(groups))
 
@@ -373,7 +341,7 @@ func TestBLImport_ImportOrderGroup_CreatesOrder(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(groups))
 
@@ -444,7 +412,7 @@ func TestBLImport_ImportOrderGroup_SkipsDuplicate(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 
 	result := &BLOrderImportResult{Errors: []model.ImportError{}}
@@ -481,7 +449,7 @@ func TestBLImport_ImportOrderGroup_CreatesCustomer(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 
 	result := &BLOrderImportResult{Errors: []model.ImportError{}}
@@ -519,7 +487,7 @@ func TestBLImport_GroupsByOrderID_MissingColumn(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	_, _, err = groupByOrderID(records, headerIdx)
+	_, err = groupByOrderID(records, headerIdx)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "order_id column")
 }
@@ -539,7 +507,7 @@ func TestBLImport_GroupsByOrderID_Aliases(t *testing.T) {
 			_, records, headerIdx, err := parseBLOrderCSV(csvData)
 			require.NoError(t, err)
 
-			groups, _, err := groupByOrderID(records, headerIdx)
+			groups, err := groupByOrderID(records, headerIdx)
 			require.NoError(t, err)
 			assert.Equal(t, 2, len(groups))
 		})
@@ -557,7 +525,7 @@ func TestBLImport_BuyerNameFallback(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 
 	firstRow := groups[0].Rows[0]
@@ -602,7 +570,7 @@ func TestBLImport_DefaultCurrencyPLN(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 
 	// No currency column → should default to PLN in importOrderGroup.
@@ -632,7 +600,7 @@ func TestBLImport_EuropeanDecimalFormat(t *testing.T) {
 	_, records, headerIdx, err := parseBLOrderCSV(csvData)
 	require.NoError(t, err)
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	require.NoError(t, err)
 
 	_, totalAmount := extractBLItems(groups[0].Rows, headerIdx)

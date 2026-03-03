@@ -25,6 +25,7 @@ type ProductHandler struct {
 	imageDownloadService   *service.ImageDownloadService
 }
 
+// NewProductHandler creates a new ProductHandler.
 func NewProductHandler(
 	productService *service.ProductService,
 	productImportService *service.ProductImportService,

@@ -134,11 +134,11 @@ func findOrderIDColumnIndex(headerIdx map[string]int) (int, bool) {
 }
 
 // groupByOrderID groups CSV data rows by order_id value.
-// Returns groups in insertion order and the order_id column index.
-func groupByOrderID(records [][]string, headerIdx map[string]int) ([]*blOrderGroup, int, error) {
+// Returns groups in insertion order.
+func groupByOrderID(records [][]string, headerIdx map[string]int) ([]*blOrderGroup, error) {
 	orderIDIdx, found := findOrderIDColumnIndex(headerIdx)
 	if !found {
-		return nil, -1, fmt.Errorf("CSV must have an order_id column (recognized: %s)", strings.Join(blOrderIDAliases, ", "))
+		return nil, fmt.Errorf("CSV must have an order_id column (recognized: %s)", strings.Join(blOrderIDAliases, ", "))
 	}
 
 	groupMap := make(map[string]*blOrderGroup)
@@ -172,7 +172,7 @@ func groupByOrderID(records [][]string, headerIdx map[string]int) ([]*blOrderGro
 		groups = append(groups, groupMap[id])
 	}
 
-	return groups, orderIDIdx, nil
+	return groups, nil
 }
 
 // extractBLShippingAddress builds a shipping address JSON from the first row of a group.
@@ -287,7 +287,7 @@ func extractBLItems(rows [][]string, headerIdx map[string]int) (json.RawMessage,
 }
 
 // PreviewOrders parses a BaseLinker CSV and returns a preview with order count.
-func (s *BaseLinkerImportService) PreviewOrders(ctx context.Context, tenantID uuid.UUID, file io.Reader) (*BLOrderImportPreview, error) {
+func (s *BaseLinkerImportService) PreviewOrders(_ context.Context, _ uuid.UUID, file io.Reader) (*BLOrderImportPreview, error) {
 	raw, err := io.ReadAll(file)
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)
@@ -298,7 +298,7 @@ func (s *BaseLinkerImportService) PreviewOrders(ctx context.Context, tenantID uu
 		return nil, err
 	}
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +357,7 @@ func (s *BaseLinkerImportService) ImportOrders(
 		return nil, fmt.Errorf("csv file must have a header row and at least one data row")
 	}
 
-	groups, _, err := groupByOrderID(records, headerIdx)
+	groups, err := groupByOrderID(records, headerIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -531,11 +531,12 @@ func (s *BaseLinkerImportService) importOrderGroup(
 	var customerID *uuid.UUID
 	if importCustomers && customerEmail != "" {
 		existingCustomer, findErr := s.customerRepo.FindByEmail(ctx, tx, customerEmail)
-		if findErr != nil {
+		switch {
+		case findErr != nil:
 			slog.Warn("bl-import: error looking up customer by email", "email", customerEmail, "error", findErr)
-		} else if existingCustomer != nil {
+		case existingCustomer != nil:
 			customerID = &existingCustomer.ID
-		} else {
+		default:
 			newCustomer := &model.Customer{
 				ID:       uuid.New(),
 				TenantID: tenantID,

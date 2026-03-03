@@ -17,6 +17,7 @@ type CustomerHandler struct {
 	customerImportService *service.CustomerImportService
 }
 
+// NewCustomerHandler creates a new CustomerHandler.
 func NewCustomerHandler(customerService *service.CustomerService, customerImportService *service.CustomerImportService) *CustomerHandler {
 	return &CustomerHandler{
 		customerService:       customerService,
@@ -182,14 +183,14 @@ func (h *CustomerHandler) ImportPreview(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	preview, err := h.customerImportService.PreviewCSV(r.Context(), tenantID, file)
@@ -212,14 +213,14 @@ func (h *CustomerHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	result, err := h.customerImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
 	if err != nil {

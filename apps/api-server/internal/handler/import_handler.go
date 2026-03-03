@@ -34,14 +34,14 @@ func (h *ImportHandler) Preview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	preview, err := h.importService.ParseCSV(file)
 	if err != nil {
@@ -75,14 +75,14 @@ func (h *ImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Parse mappings from form field
 	mappingsStr := r.FormValue("mappings")
@@ -113,14 +113,14 @@ func (h *ImportHandler) BaseLinkerPreview(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	preview, err := h.baseLinkerImportService.PreviewOrders(r.Context(), tenantID, file)
@@ -141,14 +141,14 @@ func (h *ImportHandler) BaseLinkerImport(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Check optional "import_customers" form field
 	importCustomers := r.FormValue("import_customers") == "true"

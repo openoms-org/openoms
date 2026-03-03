@@ -111,10 +111,10 @@ func TestIsLocalURL(t *testing.T) {
 
 func TestImageDownload_DownloadsExternalURLs(t *testing.T) {
 	imgData := []byte("fake-image-data-png")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		w.WriteHeader(http.StatusOK)
-		w.Write(imgData)
+		_, _ = w.Write(imgData)
 	}))
 	defer server.Close()
 
@@ -143,7 +143,7 @@ func TestImageDownload_SkipsLocalURLs(t *testing.T) {
 }
 
 func TestImageDownload_HandlesFailedDownloads(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer server.Close()
@@ -159,11 +159,11 @@ func TestImageDownload_HandlesFailedDownloads(t *testing.T) {
 }
 
 func TestImageDownload_DefaultContentType(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Write raw bytes without setting Content-Type explicitly
 		w.Header().Set("Content-Type", "")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("image-bytes"))
+		_, _ = w.Write([]byte("image-bytes"))
 	}))
 	defer server.Close()
 
@@ -182,10 +182,10 @@ func TestImageDownload_DefaultContentType(t *testing.T) {
 
 func TestImageDownload_DownloadAndUpload(t *testing.T) {
 	imgData := []byte("test-image-content")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "image/webp")
 		w.WriteHeader(http.StatusOK)
-		w.Write(imgData)
+		_, _ = w.Write(imgData)
 	}))
 	defer server.Close()
 
@@ -219,7 +219,7 @@ type mockObjectStorage struct {
 func (m *mockObjectStorage) Upload(_ context.Context, key string, reader io.Reader, contentType string) (string, error) {
 	m.lastKey = key
 	m.lastContentType = contentType
-	io.ReadAll(reader)
+	_, _ = io.ReadAll(reader)
 	return m.uploadURL, nil
 }
 
