@@ -1490,6 +1490,23 @@ export interface ProductImportResult {
   errors: ImportError[];
 }
 
+// === Customer Import ===
+export interface CustomerImportPreview {
+  headers: string[];
+  total_rows: number;
+  sample_rows: ImportPreviewRow[];
+  new_count: number;
+  update_count: number;
+  mappings?: ImportColumnMapping[];
+}
+
+export interface CustomerImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: ImportError[];
+}
+
 // === Customers ===
 export interface Customer {
   id: string;
