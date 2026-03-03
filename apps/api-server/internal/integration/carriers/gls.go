@@ -47,8 +47,9 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{
-		client: client,
-		logger: slog.Default().With("provider", "gls"),
+		client:    client,
+		logger:    slog.Default().With("provider", "gls"),
+		labelData: make(map[string][]byte),
 	}, nil
 }
 
@@ -147,10 +148,9 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	// Decode and cache the label so GetLabel can return it for this provider instance.
 	if externalID != "" && len(resp.PrintData) > 0 {
 		decoded, err := base64.StdEncoding.DecodeString(resp.PrintData[0])
-		if err == nil && len(decoded) > 0 {
-			if p.labelData == nil {
-				p.labelData = make(map[string][]byte)
-			}
+		if err != nil {
+			p.logger.Error("failed to decode label from create response", "externalID", externalID, "error", err)
+		} else if len(decoded) > 0 {
 			p.labelData[externalID] = decoded
 		}
 	}
