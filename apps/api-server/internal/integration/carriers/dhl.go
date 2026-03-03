@@ -112,13 +112,9 @@ func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}
 
 	if req.InsuredValue > 0 {
-		insureCurrency := req.CODCurrency
-		if insureCurrency == "" {
-			insureCurrency = "PLN"
-		}
 		dhlReq.Insurance = &dhlsdk.Money{
 			Amount:   req.InsuredValue,
-			Currency: insureCurrency,
+			Currency: "PLN",
 		}
 	}
 

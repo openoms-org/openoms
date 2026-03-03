@@ -1,8 +1,14 @@
 # API Contracts
 Version: 7 (bump after every endpoint change)
-Updated: 2026-03-02
+Updated: 2026-03-03
 
 ## Recently Changed
+- 2026-03-03: DPD REST API integration finalized (internal SDK contract, no public API endpoint changes):
+  - `packages/dpd-go-sdk/models.go`: Added `ServiceType` and `TargetPoint` fields to `CreateParcelRequest`
+  - `packages/dpd-go-sdk/doc.go`: Removed "In Development" status marking SDK as production-verified
+  - `CarrierShipmentRequest` (internal): DPD adapter now supports optional shipper mapping via `Shipper *CarrierSender` field
+  - Service type codes verified: `dpd_classic` → standard parcel, `dpd_pickup` → pickup point delivery (requires `TargetPoint`)
+  - This is internal refactoring, public API endpoints unchanged
 - 2026-03-02: Internal carrier integration contract extended (no public API endpoint changes):
   - `CarrierShipmentRequest` struct now includes optional `Shipper *CarrierSender` field (internal, not exposed in public API)
   - `WarehouseRepo.FindDefault()` method added (returns tenant's default active warehouse by is_default flag)

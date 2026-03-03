@@ -135,7 +135,7 @@ func TestCreateParcel(t *testing.T) {
 	)
 
 	resp, err := c.Shipments.Create(context.Background(), &CreateParcelRequest{
-		Sender: Address{
+		Sender: &Address{
 			Name:        "Sklep Online",
 			Street:      "Krakowska 10",
 			City:        "Krakow",

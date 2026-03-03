@@ -5,6 +5,7 @@ Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vecto
 Billing/Stripe integration security audit: 2026-03-02 (PASS — Stripe webhook signature verification, checkout session anti-replay, SECURITY DEFINER for pre-registration, no Stripe Price IDs exposed to frontend, runtime config only)
 Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend endpoints, Next.js middleware protecting routes, no credential exposure, backward-compatible JSONB migration)
 DHL carrier production-ready security audit: 2026-03-02 (PASS — no CRITICAL findings; 2 new HIGH items identified (hardcoded country "PL", service type passthrough) but not exploitable; resolves existing HIGH finding about invalid DHL service types via mapDHLServiceType mapping; commits 6656870, 199cba1, 3d5fc39)
+DPD carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HIGH findings. SDK matches official REST API contract (Basic Auth + x-dpd-fid header, two-phase label flow). Hardcoded placeholder rates in GetRates tracked in SECURITY_POSTURE backlog (MEDIUM, already identified in carrier SDK audit). Service type validation prevents invalid API calls via mapDPDServiceType allowlist. Shipper resolution follows established pattern (ADR-022). Tests verify tracking/cancel error handling (DPD REST API does not support these endpoints))
 
 ## Unfixed Findings
 
@@ -51,6 +52,14 @@ DHL carrier production-ready security audit: 2026-03-02 (PASS — no CRITICAL fi
    - `go.mod:1` — Go 1.25.0 behind on patches (bump to 1.25.7+ for CVE-2025-47910, CVE-2025-58186, CVE-2025-61726)
 
 ## Recently Fixed
+- 2026-03-03: DPD carrier production-ready security review COMPLETE:
+  - **SDK alignment:** `ServiceType` and `TargetPoint` fields added to `CreateParcelRequest` model
+  - **Service type mapping:** `mapDPDServiceType()` implements allowlist validation (dpd_classic, dpd_pickup), returns error for unknown types
+  - **Shipper integration:** Optional shipper mapping follows established pattern (warehouse address preferred, CompanySettings fallback)
+  - **Pickup validation:** `dpd_pickup` service requires valid `TargetPoint` field
+  - **Production tests:** 7 new test cases verify service type mapping, shipper resolution, proper error handling for unsupported operations (tracking/cancel via REST)
+  - **REST API contract:** Verified against official dpdservices.dpd.com.pl documentation (Basic Auth + x-dpd-fid header, two-phase label flow: generatePackagesNumbers → generateSpedLabels)
+  - **Verdict:** PASS — no CRITICAL/HIGH findings. 1 MEDIUM item (hardcoded placeholder rates) already tracked in backlog from carrier SDK audit.
 - 2026-03-02: Billing/Stripe integration security review COMPLETE:
   - **Stripe webhooks:** Signature verification via stripe.ConstructEvent, raw body parsing, webhook secret from env
   - **Checkout sessions:** Anti-replay via atomic status transitions (pending→completed→registered), session claimed once per tenant
