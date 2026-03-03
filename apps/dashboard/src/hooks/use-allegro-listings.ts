@@ -221,6 +221,26 @@ export function useCreateWooCommerceListing(productId: string) {
   });
 }
 
+interface CreateErliListingRequest {
+  integration_id: string;
+  price_override?: number;
+  stock_override?: number;
+}
+
+export function useCreateErliListing(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateErliListingRequest) =>
+      apiClient<ProductListing>(
+        `/v1/products/${productId}/listings/erli`,
+        { method: "POST", body: JSON.stringify(data) }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", productId, "listings"] });
+    },
+  });
+}
+
 export function useDeleteProductListing(productId: string) {
   const queryClient = useQueryClient();
   return useMutation({

@@ -76,7 +76,8 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 				 LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
 				 WHERE pl.integration_id = $1 AND pl.status = 'active'
 				   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
-				 GROUP BY pl.id, pl.external_id, pl.stock_override`,
+				 GROUP BY pl.id, pl.external_id, pl.stock_override
+				 LIMIT 5000`,
 				ti.IntegrationID,
 			)
 			if err != nil {
