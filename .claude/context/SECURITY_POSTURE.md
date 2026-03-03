@@ -6,6 +6,7 @@ Billing/Stripe integration security audit: 2026-03-02 (PASS — Stripe webhook s
 Onboarding wizard security audit: 2026-03-01 (PASS — JWT auth on all backend endpoints, Next.js middleware protecting routes, no credential exposure, backward-compatible JSONB migration)
 DHL carrier production-ready security audit: 2026-03-02 (PASS — no CRITICAL findings; 2 new HIGH items identified (hardcoded country "PL", service type passthrough) but not exploitable; resolves existing HIGH finding about invalid DHL service types via mapDHLServiceType mapping; commits 6656870, 199cba1, 3d5fc39)
 DPD carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HIGH findings. SDK matches official REST API contract (Basic Auth + x-dpd-fid header, two-phase label flow). Hardcoded placeholder rates in GetRates tracked in SECURITY_POSTURE backlog (MEDIUM, already identified in carrier SDK audit). Service type validation prevents invalid API calls via mapDPDServiceType allowlist. Shipper resolution follows established pattern (ADR-022). Tests verify tracking/cancel error handling (DPD REST API does not support these endpoints))
+GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HIGH findings. SDK uses Basic Auth + io.LimitReader(10MB) on all responses. Label data from CreateShipment is decoded and cached per-provider-instance so GetLabel returns real PDF bytes. Service type validation prevents invalid API calls via mapGLSServiceType allowlist. Shipper/ContactID limitation documented (GLS uses pre-registered ContactID, not inline address). Hardcoded placeholder rates in GetRates tracked in backlog (MEDIUM). Production tests verify service type mapping, unknown type rejection, label retrieval, COD/insurance mapping, shipper handling, and reference propagation. Commits: 9b05da4)
 
 ## Unfixed Findings
 
@@ -22,8 +23,9 @@ DPD carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
 
 ### BACKLOG (low priority, separate PRs)
 1. **Carrier SDK MEDIUM findings** (deferred to follow-up)
-   - `dhl-go-sdk/client.go:119`, `dpd-go-sdk/client.go:122`, `gls-go-sdk/client.go:113` — Unbounded `io.ReadAll` in response parsing. A compromised/malicious carrier API endpoint could cause OOM. Typical carrier responses <1MB.
+   - `dhl-go-sdk/client.go:119`, `dpd-go-sdk/client.go:122` — Unbounded `io.ReadAll` in response parsing. A compromised/malicious carrier API endpoint could cause OOM. Typical carrier responses <1MB.
      - Fix: Use `io.LimitReader(resp.Body, 10*1024*1024)` (10MB cap) on all response body reads
+   - ~~`gls-go-sdk/client.go:113` — Unbounded `io.ReadAll`.~~ FIXED: `io.LimitReader(resp.Body, 10*1024*1024)` added.
    - ~~`dhl-go-sdk/client.go:14` — Sandbox no-op.~~ FIXED: `NewDHLProvider` now returns error when `Sandbox: true` in credentials.
    - `dhl.go:159-233`, `dpd.go:157-177`, `gls.go:193-213` — Hardcoded placeholder rates. All 3 carriers return hardcoded PLN prices from `GetRates()`. Marked as TODO but if reachable in production, users see fabricated pricing.
      - Fix: Ensure UI/API layer gates these behind a "rates_configured" flag, or return empty until real API integration
@@ -52,6 +54,13 @@ DPD carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
    - `go.mod:1` — Go 1.25.0 behind on patches (bump to 1.25.7+ for CVE-2025-47910, CVE-2025-58186, CVE-2025-61726)
 
 ## Recently Fixed
+- 2026-03-03: GLS carrier production-ready security review COMPLETE (ADR-025):
+  - **SDK hardening:** `io.LimitReader(10MB)` in `gls-go-sdk/client.go`; removed "In Development" status
+  - **Label retrieval:** `CreateShipment` decodes and caches inline PrintData per provider instance; `GetLabel` returns cached bytes (no separate API needed)
+  - **Service type mapping:** `mapGLSServiceType()` implements allowlist validation (standard/express_10/express_12), returns error for unknown types
+  - **Shipper/ContactID:** documented that GLS uses pre-registered ContactID (not inline address), default account shipper used when no ContactID configured
+  - **Production tests:** 7 new test cases verify service type mapping, unknown type rejection, label error semantics, COD/insurance mapping, shipper address isolation, reference propagation
+  - **Verdict:** PASS — no CRITICAL/HIGH findings after fixes. 1 MEDIUM item (hardcoded placeholder rates) already tracked in backlog.
 - 2026-03-03: DPD carrier production-ready security review COMPLETE:
   - **SDK alignment:** `ServiceType` and `TargetPoint` fields added to `CreateParcelRequest` model
   - **Service type mapping:** `mapDPDServiceType()` implements allowlist validation (dpd_classic, dpd_pickup), returns error for unknown types

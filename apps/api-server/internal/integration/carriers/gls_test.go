@@ -33,8 +33,9 @@ func newTestGLSProvider(t *testing.T, serverURL string) *GLSProvider {
 		glssdk.WithBaseURL(serverURL),
 	)
 	return &GLSProvider{
-		client: client,
-		logger: slog.Default().With("provider", "gls-test"),
+		client:    client,
+		logger:    slog.Default().With("provider", "gls-test"),
+		labelData: make(map[string][]byte),
 	}
 }
 

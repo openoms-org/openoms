@@ -110,9 +110,13 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	const maxResponseBody = 10 * 1024 * 1024
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBody+1))
 	if err != nil {
 		return nil, fmt.Errorf("gls: failed to read response: %w", err)
+	}
+	if int64(len(respBody)) > maxResponseBody {
+		return nil, fmt.Errorf("gls: response body exceeds %d bytes limit", maxResponseBody)
 	}
 
 	if resp.StatusCode >= 400 {
