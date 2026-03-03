@@ -2,6 +2,7 @@ package carriers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -26,8 +27,9 @@ type GLSCredentials struct {
 
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
 type GLSProvider struct {
-	client *glssdk.Client
-	logger *slog.Logger
+	client    *glssdk.Client
+	logger    *slog.Logger
+	labelData map[string][]byte // externalID → decoded PDF label from CreateShipment
 }
 
 // NewGLSProvider creates a GLS CarrierProvider from encrypted credentials.
@@ -53,15 +55,15 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 func (p *GLSProvider) ProviderName() string { return "gls" }
 
 func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
-	// Map OMS service type to GLS product code.
-	product := "PARCEL"
-	switch req.ServiceType {
-	case "express_10":
-		product = "EXPRESS_10"
-	case "express_12":
-		product = "EXPRESS_12"
+	product, err := mapGLSServiceType(req.ServiceType)
+	if err != nil {
+		return nil, err
 	}
 
+	// NOTE: GLS uses ContactID (a pre-registered shipper reference) instead of
+	// inline shipper address fields like DHL/DPD. The req.Shipper address is
+	// intentionally not mapped — the default GLS account shipper is used.
+	// To use a specific ContactID, configure it via GLS integration settings.
 	glsReq := &glssdk.CreateParcelRequest{
 		Product: product,
 		Consignee: glssdk.Consignee{
@@ -141,6 +143,18 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 		trackingNumber = resp.TrackIDs[0]
 	}
 
+	// GLS returns labels inline in the create response (no separate label API).
+	// Decode and cache the label so GetLabel can return it for this provider instance.
+	if externalID != "" && len(resp.PrintData) > 0 {
+		decoded, err := base64.StdEncoding.DecodeString(resp.PrintData[0])
+		if err == nil && len(decoded) > 0 {
+			if p.labelData == nil {
+				p.labelData = make(map[string][]byte)
+			}
+			p.labelData[externalID] = decoded
+		}
+	}
+
 	return &integration.CarrierShipmentResponse{
 		ExternalID:     externalID,
 		TrackingNumber: trackingNumber,
@@ -148,8 +162,15 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}, nil
 }
 
-func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
-	return p.client.Shipments.GetLabel(ctx, externalID)
+// GetLabel returns the label for a shipment created in this session. GLS returns
+// labels inline during CreateShipment (CreatedShipment.PrintData[].Data as base64)
+// and has no separate label retrieval endpoint. The decoded label is cached by
+// CreateShipment and returned here by externalID.
+func (p *GLSProvider) GetLabel(_ context.Context, externalID string, _ string) ([]byte, error) {
+	if data, ok := p.labelData[externalID]; ok {
+		return data, nil
+	}
+	return nil, fmt.Errorf("gls: labels are embedded in the create shipment response — use PrintData from CreateShipment")
 }
 
 func (p *GLSProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
@@ -221,4 +242,19 @@ func (p *GLSProvider) SupportsPickupPoints() bool { return false }
 // SearchPickupPoints is not yet implemented for GLS.
 func (p *GLSProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
 	return nil, fmt.Errorf("gls: pickup point search not yet implemented")
+}
+
+// mapGLSServiceType maps OMS service types to GLS product codes.
+// GLS ShipIT API accepts: PARCEL, EXPRESS_10, EXPRESS_12.
+func mapGLSServiceType(serviceType string) (string, error) {
+	switch serviceType {
+	case "standard", "":
+		return "PARCEL", nil
+	case "express_10":
+		return "EXPRESS_10", nil
+	case "express_12":
+		return "EXPRESS_12", nil
+	default:
+		return "", fmt.Errorf("gls: unknown service type %q — valid types: standard, express_10, express_12", serviceType)
+	}
 }
