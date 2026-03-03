@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Contact, Trash2, Search } from "lucide-react";
+import Link from "next/link";
+import { Contact, Trash2, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useCustomers, useDeleteCustomer } from "@/hooks/use-customers";
-import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -63,11 +63,23 @@ export default function CustomersPage() {
 
   return (
     <>
-      <PageHeader
-        title="Klienci"
-        description="Baza klientów i historia zamówień"
-        action={{ label: "Nowy klient", href: "/customers/new" }}
-      />
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Klienci</h1>
+          <p className="text-muted-foreground">Baza klientów i historia zamówień</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/customers/import">
+              <Upload className="h-4 w-4" />
+              Importuj CSV
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/customers/new">Nowy klient</Link>
+          </Button>
+        </div>
+      </div>
 
       <form onSubmit={handleSearch} className="flex items-center gap-2 mb-4">
         <div className="relative flex-1 max-w-sm">

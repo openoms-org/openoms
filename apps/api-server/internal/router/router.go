@@ -430,6 +430,12 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/shipments", deps.Shipment.CreateForOrder)
 			})
 
+			// BaseLinker import
+			r.Route("/import/baselinker", func(r chi.Router) {
+				r.Post("/orders/preview", deps.Import.BaseLinkerPreview)
+				r.Post("/orders", deps.Import.BaseLinkerImport)
+			})
+
 			// Invoices — any authenticated user
 			r.Route("/invoices", func(r chi.Router) {
 				r.Get("/", deps.Invoice.List)
@@ -479,6 +485,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/export", deps.Product.ExportCSV)
 				r.Post("/import/preview", deps.Product.ImportPreview)
 				r.Post("/import", deps.Product.ImportCSV)
+				r.Post("/import/baselinker/preview", deps.Product.BLImportPreview)
+				r.Post("/import/baselinker", deps.Product.BLImportCSV)
+				r.Post("/redownload-images", deps.Product.RedownloadImages)
 				r.Get("/{id}", deps.Product.Get)
 				r.Patch("/{id}", deps.Product.Update)
 				r.Delete("/{id}", deps.Product.Delete)
@@ -794,6 +803,8 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Route("/customers", func(r chi.Router) {
 				r.Get("/", deps.Customer.List)
 				r.Post("/", deps.Customer.Create)
+				r.Post("/import/preview", deps.Customer.ImportPreview)
+				r.Post("/import", deps.Customer.ImportCSV)
 				r.Get("/{id}", deps.Customer.Get)
 				r.Patch("/{id}", deps.Customer.Update)
 				r.Delete("/{id}", deps.Customer.Delete)

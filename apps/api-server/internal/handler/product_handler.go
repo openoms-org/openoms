@@ -18,16 +18,27 @@ import (
 )
 
 type ProductHandler struct {
-	productService       *service.ProductService
-	productImportService *service.ProductImportService
-	categorySvc          *service.ProductCategoryService
+	productService         *service.ProductService
+	productImportService   *service.ProductImportService
+	blProductImportService *service.BaseLinkerProductImportService
+	categorySvc            *service.ProductCategoryService
+	imageDownloadService   *service.ImageDownloadService
 }
 
-func NewProductHandler(productService *service.ProductService, productImportService *service.ProductImportService, categorySvc *service.ProductCategoryService) *ProductHandler {
+// NewProductHandler creates a new ProductHandler.
+func NewProductHandler(
+	productService *service.ProductService,
+	productImportService *service.ProductImportService,
+	blProductImportService *service.BaseLinkerProductImportService,
+	categorySvc *service.ProductCategoryService,
+	imageDownloadService *service.ImageDownloadService,
+) *ProductHandler {
 	return &ProductHandler{
-		productService:       productService,
-		productImportService: productImportService,
-		categorySvc:          categorySvc,
+		productService:         productService,
+		productImportService:   productImportService,
+		blProductImportService: blProductImportService,
+		categorySvc:            categorySvc,
+		imageDownloadService:   imageDownloadService,
 	}
 }
 
@@ -374,5 +385,75 @@ func (h *ProductHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeJSON(w, http.StatusOK, result)
+}
+
+// BLImportPreview handles POST /v1/products/import/baselinker/preview
+func (h *ProductHandler) BLImportPreview(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	preview, err := h.blProductImportService.PreviewCSV(r.Context(), tenantID, file)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, preview)
+}
+
+// BLImportCSV handles POST /v1/products/import/baselinker
+func (h *ProductHandler) BLImportCSV(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	userID := middleware.UserIDFromContext(r.Context())
+
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
+		return
+	}
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "missing file field")
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	result, err := h.blProductImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
+	if err != nil {
+		writeServerError(w, "failed to import BaseLinker products", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
+}
+
+// RedownloadImages downloads external product images and re-uploads them to storage.
+func (h *ProductHandler) RedownloadImages(w http.ResponseWriter, r *http.Request) {
+	if h.imageDownloadService == nil {
+		writeError(w, http.StatusNotImplemented, "image storage not configured")
+		return
+	}
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	result, err := h.imageDownloadService.RedownloadImages(r.Context(), tenantID)
+	if err != nil {
+		writeServerError(w, "failed to redownload images", err)
+		return
+	}
 	writeJSON(w, http.StatusOK, result)
 }

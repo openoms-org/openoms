@@ -287,6 +287,7 @@ func main() {
 	orderGroupService := service.NewOrderGroupService(orderGroupRepo, orderRepo, auditRepo, pool)
 	bundleService := service.NewBundleService(bundleRepo, productRepo, auditRepo, pool)
 	customerService := service.NewCustomerService(customerRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	customerImportService := service.NewCustomerImportService(customerRepo, auditRepo, pool)
 	barcodeService := service.NewBarcodeService(productRepo, variantRepo, orderRepo, auditRepo, pool)
 	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
 	messageTemplateService := service.NewMessageTemplateService(messageTemplateRepo, pool)
@@ -424,7 +425,9 @@ func main() {
 	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
 	productImportService := service.NewProductImportService(productRepo, auditRepo, pool)
 	productImportService.SetStockSyncService(stockSyncService)
-	productHandler := handler.NewProductHandler(productService, productImportService, productCategoryService)
+	blProductImportService := service.NewBaseLinkerProductImportService(productRepo, variantRepo, productCategoryRepo, auditRepo, pool)
+	imageDownloadService := service.NewImageDownloadService(productRepo, pool, objectStorage)
+	productHandler := handler.NewProductHandler(productService, productImportService, blProductImportService, productCategoryService, imageDownloadService)
 	integrationHandler := handler.NewIntegrationHandler(integrationService, integrationRepo, pool)
 	returnHandler := handler.NewReturnHandler(returnService)
 	webhookHandler := handler.NewWebhookHandler(webhookService)
@@ -523,7 +526,8 @@ func main() {
 
 	// Import service & handler
 	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool)
-	importHandler := handler.NewImportHandler(importService)
+	baseLinkerImportService := service.NewBaseLinkerImportService(orderRepo, customerRepo, auditRepo, tenantRepo, pool)
+	importHandler := handler.NewImportHandler(importService, baseLinkerImportService)
 
 	// Automation handler
 	automationHandler := handler.NewAutomationHandler(automationService)
@@ -538,7 +542,7 @@ func main() {
 	warehouseHandler := handler.NewWarehouseHandler(warehouseService)
 
 	// Customer handler
-	customerHandler := handler.NewCustomerHandler(customerService)
+	customerHandler := handler.NewCustomerHandler(customerService, customerImportService)
 
 	// Order group handler
 	orderGroupHandler := handler.NewOrderGroupHandler(orderGroupService)
