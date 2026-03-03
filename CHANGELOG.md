@@ -73,6 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Service Type Mapping**: Implemented proper DHL24 service type mapping (dhl_parcel→AH, dhl_courier→DR) with street/house number parsing for Polish addresses
 - **Timestamp Error Handling**: Resolved silent parse failures in shipments timestamp processing
 
+#### DPD Carrier Integration — Production Ready
+- **Service Type Mapping**: Implemented dpd_classic→STANDARD and dpd_pickup→PICKUP service type mapping
+- **Pickup Point Support**: Added target point validation for PICKUP service type (required field)
+- **Shipper Address Support**: Added optional `Shipper` field mapping to DPD Sender in shipment requests
+- **SDK Models**: Added `ServiceType` and `TargetPoint` fields to `CreateParcelRequest` in dpd-go-sdk
+- **Production Tests**: Comprehensive specification tests verifying service type mapping, shipper resolution, and error handling for unsupported operations (tracking/cancel)
+
 #### Carrier Service Types
 - FedEx: Fixed `INTERNATIONAL_ECONOMY` to use proper `FEDEX_INTERNATIONAL_ECONOMY` prefix per REST API 2024+ requirements
 - FedEx: Removed `FEDEX_GROUND` option (only available in Canada, not EU/Poland)

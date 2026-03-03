@@ -118,9 +118,13 @@ func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.Carrie
 		if dpdReq.Services == nil {
 			dpdReq.Services = &dpdsdk.Services{}
 		}
+		insuranceCurrency := req.CODCurrency
+		if insuranceCurrency == "" {
+			insuranceCurrency = "PLN"
+		}
 		dpdReq.Services.DeclaredValue = &dpdsdk.Money{
 			Amount:   req.InsuredValue,
-			Currency: "PLN",
+			Currency: insuranceCurrency,
 		}
 	}
 
@@ -205,12 +209,10 @@ func (p *DPDProvider) GetRates(_ context.Context, req integration.RateRequest) (
 	return rates, nil
 }
 
-func (p *DPDProvider) SupportsPickupPoints() bool { return true }
+func (p *DPDProvider) SupportsPickupPoints() bool { return false }
 
-func (p *DPDProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
-	// DPD Pickup points — requires separate API endpoint.
-	// TODO: implement when DPD pickup points API is available.
-	return nil, nil
+func (p *DPDProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
+	return nil, fmt.Errorf("dpd: pickup point search not yet implemented")
 }
 
 func mapDPDServiceType(serviceType string) (string, error) {

@@ -1,5 +1,5 @@
 # Project State
-Updated: 2026-03-02
+Updated: 2026-03-03
 
 ## Target
 Open production for paying customers: **May 2026** (~11 weeks remaining)
@@ -19,6 +19,15 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
 
 ## Recently Completed
+- 2026-03-03: DPD carrier production-ready COMPLETE — SDK alignment + service type mapping:
+  - **SDK fixes:** Added `ServiceType` and `TargetPoint` fields to `CreateParcelRequest` in `packages/dpd-go-sdk/models.go`; removed "In Development" status from SDK doc.go
+  - **Service type mapping:** Added `mapDPDServiceType()` function mapping frontend `dpd_classic` → DPD REST code, `dpd_pickup` → DPD pickup service, with proper validation
+  - **Shipper support:** Integrated shipper mapping (follows DHL pattern), optional `Shipper *CarrierSender` field in adapter
+  - **Pickup point validation:** Added validation for `dpd_pickup` service type requiring valid `TargetPoint`
+  - **Production tests:** Added 7 new test cases in `dpd_production_test.go` covering service type mapping, shipper resolution, tracking/cancel error handling (DPD REST API does not support these via REST)
+  - **Test cleanup:** Removed dead `/auth/login` mock handler from `dpd_test.go`
+  - **API contract:** DPD REST API verified against official dpdservices.dpd.com.pl documentation (Basic Auth + x-dpd-fid header, two-phase label flow)
+  - **Status:** Code merged, security audit PASS (no CRITICAL/HIGH findings; 1 MEDIUM item: hardcoded placeholder rates in GetRates, tracked in SECURITY_POSTURE backlog)
 - 2026-03-02: DHL carrier production-ready COMPLETE — shipper address + SDK fixes:
   - **Shipper address support:** Added `CarrierSender` struct to `CarrierShipmentRequest`, resolved shipper from warehouse address or tenant `CompanySettings` fallback
   - **SDK fixes:** Corrected DHL24 doc.go (SOAP not REST), added missing Phone field to Shipper SOAP mapping, fixed duplicate Service/ServiceType in shipments.go, fixed silent timestamp parse errors
