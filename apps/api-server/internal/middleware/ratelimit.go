@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -23,7 +24,10 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 				ip = r.RemoteAddr
 			}
 
-			allowed, err := limiter.Allow(r.Context(), ip, maxRequests, window)
+			// Include maxRequests in the key so endpoints with different limits
+			// get separate counters (e.g., login at 10/min vs refresh at 60/min).
+			key := fmt.Sprintf("%s:%d", ip, maxRequests)
+			allowed, err := limiter.Allow(r.Context(), key, maxRequests, window)
 			if err != nil {
 				slog.Warn("rate limiter error, failing open", "error", err, "ip", ip)
 				next.ServeHTTP(w, r)

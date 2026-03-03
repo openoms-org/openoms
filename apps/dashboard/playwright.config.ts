@@ -23,13 +23,18 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
     {
+      name: 'trial',
+      testMatch: ['trial-flow.spec.ts'],
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/user.json',
       },
       dependencies: ['setup'],
-      testIgnore: ['auth.spec.ts', 'public-return.spec.ts'],
+      testIgnore: ['auth.spec.ts', 'public-return.spec.ts', 'trial-flow.spec.ts'],
     },
   ],
   webServer: {

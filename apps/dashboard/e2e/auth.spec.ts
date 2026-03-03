@@ -21,7 +21,7 @@ test.describe('Authentication', () => {
 
   test('shows error for invalid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Organizacja').fill('mercpart');
+    await page.getByLabel('Organizacja').fill('dev');
     await page.getByLabel('Email').fill('wrong@example.com');
     await page.locator('#password').fill('wrongpassword');
     await page.getByRole('button', { name: 'Zaloguj się' }).click();
@@ -31,11 +31,19 @@ test.describe('Authentication', () => {
 
   test('successfully logs in with valid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel('Organizacja').fill('mercpart');
-    await page.getByLabel('Email').fill('rafal@mercpart.pl');
+    await page.getByLabel('Organizacja').fill('dev');
+    await page.getByLabel('Email').fill('admin@dev.local');
     await page.locator('#password').fill('password123');
-    await page.getByRole('button', { name: 'Zaloguj się' }).click();
-    // After login, app redirects to /orders (default landing page)
+
+    // Use Promise.all to click and wait for API response simultaneously
+    const [response] = await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/v1/auth/login'), {
+        timeout: 10000,
+      }),
+      page.getByRole('button', { name: 'Zaloguj się' }).click(),
+    ]);
+
+    expect(response.status()).toBe(200);
     await expect(page).toHaveURL(/\/(orders)?$/, { timeout: 15000 });
   });
 
@@ -52,6 +60,7 @@ test.describe('Authentication', () => {
   test('register link navigates to registration page', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('link', { name: 'Zarejestruj się' }).click();
-    await expect(page).toHaveURL('/register', { timeout: 10000 });
+    // Registration mode may route to /register, /register/invite, etc.
+    await expect(page).toHaveURL(/\/register/, { timeout: 10000 });
   });
 });
