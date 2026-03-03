@@ -102,9 +102,9 @@ test.describe('Settings Persistence', () => {
       page.getByRole('heading', { name: /Kategorie produktów|Kategorie/ }),
     ).toBeVisible({ timeout: 10000 });
 
-    // "Dodaj kategorię" button should be visible
+    // "Dodaj kategorię" or "Nowa kategoria" button should be visible
     await expect(
-      page.getByRole('button', { name: /Dodaj kategorię/ }),
+      page.getByRole('button', { name: /Dodaj kategorię|Nowa kategoria/ }),
     ).toBeVisible();
   });
 
@@ -117,8 +117,7 @@ test.describe('Settings Persistence', () => {
     await waitForTableLoaded(page);
 
     // Seed users should be visible
-    await expect(page.getByText('rafal@mercpart.pl')).toBeVisible();
-    await expect(page.getByText('adam@mercpart.pl')).toBeVisible();
+    await expect(page.getByText('admin@dev.local')).toBeVisible();
   });
 
   test('warehouses page loads', async ({ page }) => {

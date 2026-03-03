@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 import { gotoWithAuth } from './helpers/actions';
 
 // Use a DIFFERENT user for logout tests to avoid invalidating the shared auth state.
-// The main auth setup uses rafal@mercpart.pl — logout updates last_logout_at which
+// The main auth setup uses admin@dev.local — logout updates last_logout_at which
 // invalidates all tokens issued before that time.
 const LOGOUT_USER = {
-  tenant_slug: 'mercpart',
-  email: 'adam@mercpart.pl',
+  tenant_slug: 'dev',
+  email: 'e2e-logout@dev.local',
   password: 'password123',
 };
 

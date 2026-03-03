@@ -27,8 +27,8 @@ test.describe('Order Status Change', () => {
     await clickFirstOrderRow(page);
     await expect(page).toHaveURL(/\/orders\/[a-f0-9-]+/, { timeout: 10000 });
 
-    // Should show some customer-related content
-    await expect(page.getByText(/Klient|Dane klienta/)).toBeVisible({ timeout: 5000 });
+    // Should show customer data card
+    await expect(page.getByText('Dane klienta')).toBeVisible({ timeout: 5000 });
   });
 
   test('order detail page shows audit timeline', async ({ page }) => {
