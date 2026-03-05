@@ -10,16 +10,16 @@ import (
 // Suitable for single-pod deployments and local development.
 type MemoryOAuthStateStore struct {
 	mu      sync.Mutex
-	entries map[string]*allegroOAuthState
+	entries map[string]*OAuthState
 }
 
 // NewMemoryOAuthStateStore creates a new in-memory OAuth state store.
 func NewMemoryOAuthStateStore() *MemoryOAuthStateStore {
-	return &MemoryOAuthStateStore{entries: make(map[string]*allegroOAuthState)}
+	return &MemoryOAuthStateStore{entries: make(map[string]*OAuthState)}
 }
 
 // Save stores the OAuth state data in memory with expiration based on data.ExpiresAt.
-func (m *MemoryOAuthStateStore) Save(_ context.Context, state string, data *allegroOAuthState, _ time.Duration) error {
+func (m *MemoryOAuthStateStore) Save(_ context.Context, state string, data *OAuthState, _ time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -36,7 +36,7 @@ func (m *MemoryOAuthStateStore) Save(_ context.Context, state string, data *alle
 }
 
 // Load retrieves and deletes the OAuth state data for the given state key.
-func (m *MemoryOAuthStateStore) Load(_ context.Context, state string) (*allegroOAuthState, error) { //nolint:revive // returns interface-defined type using unexported struct
+func (m *MemoryOAuthStateStore) Load(_ context.Context, state string) (*OAuthState, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
+	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
@@ -17,59 +17,45 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
-// OAuthState holds the state + credentials needed to complete an OAuth flow.
-// Shared by all OAuth providers (Allegro, OLX, etc.).
-type OAuthState struct {
-	ExpiresAt    time.Time
-	ClientID     string
-	ClientSecret string
-	Sandbox      bool
-}
-
-// AllegroAuthHandler handles the Allegro OAuth2 authorization flow.
-type AllegroAuthHandler struct {
+// OlxAuthHandler handles the OLX OAuth2 authorization flow.
+type OlxAuthHandler struct {
 	cfg                *config.Config
 	integrationService *service.IntegrationService
-	encryptionKey      []byte
 	stateStore         OAuthStateStore
 }
 
-// NewAllegroAuthHandler creates a new AllegroAuthHandler with the given dependencies.
-func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte, stateStore OAuthStateStore) *AllegroAuthHandler {
-	return &AllegroAuthHandler{
+// NewOlxAuthHandler creates a new OlxAuthHandler with the given dependencies.
+func NewOlxAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, stateStore OAuthStateStore) *OlxAuthHandler {
+	return &OlxAuthHandler{
 		cfg:                cfg,
 		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
 		stateStore:         stateStore,
 	}
 }
 
-// redirectURI computes the OAuth redirect URI from the frontend URL.
-func (h *AllegroAuthHandler) redirectURI() string {
-	return h.cfg.FrontendURL + "/marketplaces/allegro"
+func (h *OlxAuthHandler) redirectURI() string {
+	return h.cfg.FrontendURL + "/marketplaces/olx"
 }
 
-// GetAuthURL generates an Allegro OAuth2 authorization URL.
-// Credentials (client_id, client_secret, sandbox) are read from the existing integration.
-func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
+// GetAuthURL generates an OLX OAuth2 authorization URL.
+// Credentials (client_id, client_secret) are read from the existing integration.
+func (h *OlxAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	// Read credentials from existing integration
-	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
+	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "olx")
 	if err != nil {
-		slog.Error("allegro OAuth: failed to get credentials", "error", err)
-		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji Allegro (Client ID i Client Secret)")
+		slog.Error("olx OAuth: failed to get credentials", "error", err)
+		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji OLX (Client ID i Client Secret)")
 		return
 	}
 
 	var creds struct {
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
-		Sandbox      bool   `json:"sandbox"`
 	}
 	if err := json.Unmarshal(credJSON, &creds); err != nil || creds.ClientID == "" || creds.ClientSecret == "" {
-		slog.Error("allegro OAuth: credential unmarshal failed", "error", err, "json_length", len(credJSON))
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie ma poprawnych danych Client ID / Client Secret")
+		slog.Error("olx OAuth: credential unmarshal failed", "error", err, "json_length", len(credJSON))
+		writeError(w, http.StatusBadRequest, "Integracja OLX nie ma poprawnych danych Client ID / Client Secret")
 		return
 	}
 
@@ -80,31 +66,23 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	}
 	state := hex.EncodeToString(stateBytes)
 
-	// Store state + credentials for the callback
 	stateData := &OAuthState{
 		ExpiresAt:    time.Now().Add(10 * time.Minute),
 		ClientID:     creds.ClientID,
 		ClientSecret: creds.ClientSecret,
-		Sandbox:      creds.Sandbox,
 	}
 	if err := h.stateStore.Save(r.Context(), state, stateData, 10*time.Minute); err != nil {
 		writeServerError(w, "failed to store OAuth state", err)
 		return
 	}
 
-	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.redirectURI())}
-	if creds.Sandbox {
-		opts = append(opts, allegrosdk.WithSandbox())
-	}
-	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
-	defer client.Close()
-
+	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, "",
+		olxsdk.WithRedirectURI(h.redirectURI()),
+	)
 	authURL := client.AuthorizationURL(state)
 
-	slog.Info("allegro OAuth: generated auth URL",
-		"auth_url", authURL,
+	slog.Info("olx OAuth: generated auth URL",
 		"redirect_uri", h.redirectURI(),
-		"sandbox", creds.Sandbox,
 		"client_id_prefix", creds.ClientID[:min(8, len(creds.ClientID))]+"...",
 	)
 
@@ -115,8 +93,8 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// HandleCallback exchanges an OAuth2 authorization code for tokens and updates the integration.
-func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
+// HandleCallback exchanges an OLX OAuth2 authorization code for tokens and updates the integration.
+func (h *OlxAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Code  string `json:"code"`
 		State string `json:"state"`
@@ -134,7 +112,6 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Validate state and retrieve stored credentials (atomic load + delete)
 	oauthState, err := h.stateStore.Load(r.Context(), body.State)
 	if err != nil {
 		writeServerError(w, "failed to validate OAuth state", err)
@@ -145,16 +122,13 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.redirectURI())}
-	if oauthState.Sandbox {
-		opts = append(opts, allegrosdk.WithSandbox())
-	}
-	client := allegrosdk.NewClient(oauthState.ClientID, oauthState.ClientSecret, opts...)
-	defer client.Close()
-
+	client := olxsdk.NewClient(oauthState.ClientID, oauthState.ClientSecret, "",
+		olxsdk.WithRedirectURI(h.redirectURI()),
+	)
 	tok, err := client.ExchangeCode(r.Context(), body.Code)
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "failed to exchange authorization code")
+		slog.Error("olx OAuth: code exchange failed", "error", err)
+		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wymienić kodu autoryzacji na tokeny")
 		return
 	}
 
@@ -166,7 +140,6 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		"access_token":  tok.AccessToken,
 		"refresh_token": tok.RefreshToken,
 		"token_expiry":  tokenExpiry.Format(time.RFC3339),
-		"sandbox":       oauthState.Sandbox,
 	}
 	credJSON, err := json.Marshal(credentials)
 	if err != nil {
@@ -178,14 +151,13 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	actorID := middleware.UserIDFromContext(r.Context())
 	ip := clientIP(r)
 
-	// Update existing allegro integration with OAuth tokens
 	integrations, listErr := h.integrationService.List(r.Context(), tenantID)
 	if listErr != nil {
 		writeServerError(w, "failed to find integration", listErr)
 		return
 	}
 	for _, integ := range integrations {
-		if integ.Provider == "allegro" {
+		if integ.Provider == "olx" {
 			rawCreds := json.RawMessage(credJSON)
 			activeStatus := "active"
 			updateReq := model.UpdateIntegrationRequest{
@@ -202,17 +174,17 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// Fallback: create if somehow doesn't exist (shouldn't happen in normal flow)
-	label := "Allegro"
+	// Fallback: create if doesn't exist
+	label := "OLX"
 	req := model.CreateIntegrationRequest{
-		Provider:    "allegro",
+		Provider:    "olx",
 		Label:       &label,
 		Credentials: credJSON,
 	}
 	result, err := h.integrationService.Create(r.Context(), tenantID, req, actorID, ip)
 	if err != nil {
 		if errors.Is(err, service.ErrDuplicateProvider) {
-			writeError(w, http.StatusConflict, "allegro integration already exists")
+			writeError(w, http.StatusConflict, "Integracja OLX już istnieje")
 			return
 		}
 		writeServerError(w, "failed to create integration", err)

@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	productionBaseURL = "https://www.olx.pl/api/partner"
-	productionAuthURL = "https://www.olx.pl/api/open/oauth/token"
+	productionBaseURL      = "https://www.olx.pl/api/partner"
+	productionAuthURL      = "https://www.olx.pl/api/open/oauth/token"
+	productionAuthorizeURL = "https://www.olx.pl/api/open/oauth/authorize"
 )
 
 const (
@@ -24,17 +25,22 @@ const (
 )
 
 // Client is the OLX Partner API client.
-// Authentication uses OAuth2 client credentials with an access token.
+// Supports both client_credentials and authorization_code OAuth2 flows.
 type Client struct {
 	httpClient   *http.Client
 	baseURL      string
 	authURL      string
+	authorizeURL string
 	clientID     string
 	clientSecret string
 	accessToken  string
+	refreshToken string
+	redirectURI  string
 
 	tokenExpiresAt time.Time
 	tokenMu        sync.Mutex
+
+	onTokenRefresh func(accessToken, refreshToken string, expiry time.Time)
 
 	Adverts      *AdvertService
 	Categories   *CategoryService
@@ -56,7 +62,27 @@ func WithBaseURL(u string) Option {
 	return func(c *Client) {
 		c.baseURL = strings.TrimRight(u, "/")
 		c.authURL = strings.TrimRight(u, "/") + "/oauth/token"
+		c.authorizeURL = strings.TrimRight(u, "/") + "/oauth/authorize"
 	}
+}
+
+// WithRedirectURI sets the OAuth redirect URI for the authorization code flow.
+func WithRedirectURI(uri string) Option {
+	return func(c *Client) { c.redirectURI = uri }
+}
+
+// WithTokens sets initial OAuth tokens (access token, refresh token, and expiry).
+func WithTokens(accessToken, refreshToken string, expiry time.Time) Option {
+	return func(c *Client) {
+		c.accessToken = accessToken
+		c.refreshToken = refreshToken
+		c.tokenExpiresAt = expiry
+	}
+}
+
+// WithOnTokenRefresh registers a callback invoked when tokens are refreshed.
+func WithOnTokenRefresh(fn func(string, string, time.Time)) Option {
+	return func(c *Client) { c.onTokenRefresh = fn }
 }
 
 // WithAccessToken sets a pre-existing access token (useful for testing, bypasses OAuth refresh).
@@ -73,6 +99,7 @@ func NewClient(clientID, clientSecret, accessToken string, opts ...Option) *Clie
 		httpClient:   http.DefaultClient,
 		baseURL:      productionBaseURL,
 		authURL:      productionAuthURL,
+		authorizeURL: productionAuthorizeURL,
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
@@ -93,15 +120,8 @@ func NewClient(clientID, clientSecret, accessToken string, opts ...Option) *Clie
 	return c
 }
 
-// tokenResponse represents the OAuth2 token endpoint response.
-type tokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-}
-
 // ensureAccessToken refreshes the OAuth2 access token if it is expired or missing.
+// Uses client_credentials grant for backward compatibility with API-key-only setups.
 func (c *Client) ensureAccessToken(ctx context.Context) error {
 	c.tokenMu.Lock()
 	defer c.tokenMu.Unlock()
@@ -132,13 +152,13 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 		return fmt.Errorf("olx: token refresh failed (HTTP %d): %s", resp.StatusCode, string(body))
 	}
 
-	var tokenResp tokenResponse
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(&tokenResp); err != nil {
+	var tok TokenResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(&tok); err != nil {
 		return fmt.Errorf("olx: decode token response: %w", err)
 	}
 
-	c.accessToken = tokenResp.AccessToken
-	c.tokenExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	c.accessToken = tok.AccessToken
+	c.tokenExpiresAt = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
 
 	return nil
 }

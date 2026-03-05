@@ -26,6 +26,8 @@ type OLXCredentials struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	TokenExpiry  string `json:"token_expiry,omitempty"`
 	Sandbox      bool   `json:"sandbox,omitempty"`
 }
 
@@ -54,9 +56,17 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 		return nil, fmt.Errorf("olx: sandbox mode is not supported — OLX does not provide a sandbox environment")
 	}
 
-	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccessToken,
-		olxsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
-	)
+	opts := []olxsdk.Option{
+		olxsdk.WithHTTPClient(netutil.SafeHTTPClient(30 * time.Second)),
+	}
+
+	// If OAuth tokens are available (from authorization code flow), use them.
+	if creds.RefreshToken != "" && creds.TokenExpiry != "" {
+		expiry, _ := time.Parse(time.RFC3339, creds.TokenExpiry)
+		opts = append(opts, olxsdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry))
+	}
+
+	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccessToken, opts...)
 
 	return &Provider{
 		client: client,

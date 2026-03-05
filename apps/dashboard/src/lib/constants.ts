@@ -296,6 +296,7 @@ export const PROVIDER_CATEGORIES: Record<string, { label: string; providers: str
 export const PROVIDERS_WITH_DEDICATED_PAGES: Record<string, string> = {
   allegro: "/marketplaces/allegro",
   amazon: "/marketplaces/amazon",
+  olx: "/marketplaces/olx",
 };
 
 export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
@@ -333,8 +334,8 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   olx: [
     { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z OLX API", helpText: "Zarejestruj aplikację na developer.olx.pl", type: "text", required: true },
     { key: "client_secret", label: "Client Secret", placeholder: "", type: "password", required: true },
-    { key: "access_token", label: "Access Token", placeholder: "", helpText: "Wygenerowany po autoryzacji OAuth2", type: "password", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "access_token", label: "Access Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
+    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
   ],
   erli: [
     { key: "api_token", label: "Token API", placeholder: "Twój token API Erli", helpText: "Panel sprzedawcy Erli > Ustawienia > API", type: "password", required: true },

@@ -42,6 +42,7 @@ type RouterDeps struct {
 	Allegro                    *handler.AllegroHandler
 	AllegroShipment            *handler.AllegroShipmentHandler
 	AmazonAuth                 *handler.AmazonAuthHandler
+	OlxAuth                    *handler.OlxAuthHandler
 	Supplier                   *handler.SupplierHandler
 	Invoice                    *handler.InvoiceHandler
 	Automation                 *handler.AutomationHandler
@@ -700,6 +701,12 @@ func New(deps RouterDeps) *chi.Mux {
 
 				// Amazon SP-API setup
 				r.Post("/amazon/setup", deps.AmazonAuth.Setup)
+
+				// OLX OAuth2
+				r.Route("/olx", func(r chi.Router) {
+					r.Get("/auth-url", deps.OlxAuth.GetAuthURL)
+					r.Post("/callback", deps.OlxAuth.HandleCallback)
+				})
 
 				// Store platform integrations (Shoper, PrestaShop, Shopify)
 				if deps.StoreAuth != nil {
