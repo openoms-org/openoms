@@ -34,6 +34,8 @@ type Provider struct {
 	logger *slog.Logger
 }
 
+var _ integration.ListingActivator = (*Provider)(nil)
+
 // NewProvider creates an OLX MarketplaceProvider from encrypted credentials.
 func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
 	var creds OLXCredentials
@@ -196,9 +198,70 @@ func (p *Provider) UpdateStock(_ context.Context, _ string, _ int) error {
 	return fmt.Errorf("olx: UpdateStock not applicable for classifieds")
 }
 
-// UpdatePrice is not yet supported for OLX.
-func (p *Provider) UpdatePrice(_ context.Context, _ string, _ float64) error {
-	return fmt.Errorf("olx: UpdatePrice not yet implemented")
+// UpdatePrice updates the price of an existing OLX advert.
+// OLX PUT requires the full advert body, so we fetch-then-update.
+func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, newPrice float64) error {
+	advertID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("olx: invalid advert ID %q: %w", externalOfferID, err)
+	}
+
+	advert, err := p.client.Adverts.GetAdvert(ctx, advertID)
+	if err != nil {
+		return fmt.Errorf("olx: get advert %d: %w", advertID, err)
+	}
+
+	req := p.advertToUpdateRequest(advert)
+	if req.Price == nil {
+		req.Price = &olxsdk.AdvertPrice{Currency: "PLN"}
+	}
+	req.Price.Value = newPrice
+
+	_, err = p.client.Adverts.UpdateAdvert(ctx, advertID, req)
+	if err != nil {
+		return fmt.Errorf("olx: update price for advert %d: %w", advertID, err)
+	}
+	return nil
+}
+
+// advertToUpdateRequest converts a fetched Advert to a CreateAdvertRequest suitable for PUT.
+func (p *Provider) advertToUpdateRequest(a *olxsdk.Advert) olxsdk.CreateAdvertRequest {
+	req := olxsdk.CreateAdvertRequest{
+		Title:       a.Title,
+		Description: a.Description,
+		ExternalID:  a.ExternalID,
+	}
+	if a.Price != nil {
+		req.Price = &olxsdk.AdvertPrice{
+			Value:      a.Price.Value,
+			Currency:   a.Price.Currency,
+			Negotiable: a.Price.Negotiable,
+		}
+	}
+	if a.Category != nil {
+		req.CategoryID = a.Category.ID
+	}
+	if a.Contact != nil {
+		req.Contact = a.Contact
+	}
+	for _, param := range a.Params {
+		req.Attributes = append(req.Attributes, olxsdk.AdvertAttribute{
+			Code:  param.Key,
+			Value: param.Value,
+		})
+	}
+	return req
+}
+
+// ActivateOffer activates (or re-lists) an OLX advert.
+func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) error {
+	advertID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("olx: invalid advert ID %q: %w", externalOfferID, err)
+	}
+	return p.client.Adverts.RunCommand(ctx, advertID, olxsdk.AdvertCommandRequest{
+		Command: "activate",
+	})
 }
 
 // mapOLXTransaction converts an OLX transaction to the normalized MarketplaceOrder.
