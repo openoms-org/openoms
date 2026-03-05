@@ -203,7 +203,7 @@ func (w *OAuthRefresher) refreshOLX(ctx context.Context, credJSON []byte, expiry
 		return nil, err
 	}
 
-	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccessToken,
+	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, "",
 		olxsdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry),
 	)
 	tok, err := client.RefreshAccessToken(ctx)

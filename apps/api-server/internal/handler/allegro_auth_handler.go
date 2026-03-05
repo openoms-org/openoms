@@ -181,7 +181,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	// Update existing allegro integration with OAuth tokens
 	integrations, listErr := h.integrationService.List(r.Context(), tenantID)
 	if listErr != nil {
-		writeServerError(w, "failed to find integration", err)
+		writeServerError(w, "failed to find integration", listErr)
 		return
 	}
 	for _, integ := range integrations {
@@ -194,7 +194,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 			}
 			updated, updateErr := h.integrationService.Update(r.Context(), tenantID, integ.ID, updateReq, actorID, ip)
 			if updateErr != nil {
-				writeServerError(w, "failed to update integration", err)
+				writeServerError(w, "failed to update integration", updateErr)
 				return
 			}
 			writeJSON(w, http.StatusOK, updated)
