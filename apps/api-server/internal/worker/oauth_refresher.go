@@ -9,9 +9,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
+	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	allegroIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
+	olxIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/olx"
 )
 
 // OAuthRefresher periodically checks for expiring OAuth tokens and refreshes them.
@@ -44,7 +46,7 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 	rows, err := w.pool.Query(ctx,
 		`SELECT id, tenant_id, credentials, provider
 		 FROM integrations
-		 WHERE status = 'active' AND provider IN ('allegro')`,
+		 WHERE status = 'active' AND provider IN ('allegro', 'olx')`,
 	)
 	if err != nil {
 		return err
@@ -78,14 +80,31 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			continue
 		}
 
-		var creds allegroIntegration.AllegroCredentials
-		if err := json.Unmarshal(credJSON, &creds); err != nil {
-			w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
+		var tokenExpiry string
+		switch ir.provider {
+		case "allegro":
+			var creds allegroIntegration.AllegroCredentials
+			if err := json.Unmarshal(credJSON, &creds); err != nil {
+				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
+				continue
+			}
+			tokenExpiry = creds.TokenExpiry
+		case "olx":
+			var creds olxIntegration.OLXCredentials
+			if err := json.Unmarshal(credJSON, &creds); err != nil {
+				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
+				continue
+			}
+			tokenExpiry = creds.TokenExpiry
+			if creds.RefreshToken == "" {
+				continue // no refresh token, skip (client_credentials flow)
+			}
+		default:
 			continue
 		}
 
 		// Check if token expires within 2 hours
-		expiry, err := time.Parse(time.RFC3339, creds.TokenExpiry)
+		expiry, err := time.Parse(time.RFC3339, tokenExpiry)
 		if err != nil {
 			w.logger.Error("oauth refresh: parse token expiry", "integration_id", ir.id, "error", err)
 			continue
@@ -99,38 +118,18 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			"operation", "integration.oauth_refresh",
 			"tenant_id", ir.tenantID,
 			"entity_id", ir.id,
-			"provider", ir.provider, "expires_at", creds.TokenExpiry)
+			"provider", ir.provider, "expires_at", tokenExpiry)
 
-		// Create SDK client and refresh
-		var opts []allegrosdk.Option
-		opts = append(opts, allegrosdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry))
-		if creds.Sandbox {
-			opts = append(opts, allegrosdk.WithSandbox())
+		var newCredJSON []byte
+
+		switch ir.provider {
+		case "allegro":
+			newCredJSON, err = w.refreshAllegro(ctx, credJSON, expiry)
+		case "olx":
+			newCredJSON, err = w.refreshOLX(ctx, credJSON, expiry)
 		}
-
-		client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
-
-		tok, err := client.RefreshAccessToken(ctx)
-		client.Close()
 		if err != nil {
 			w.logger.Error("oauth refresh: refresh failed", "integration_id", ir.id, "error", err)
-			continue
-		}
-
-		// Build new credentials
-		newExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
-		newCreds := allegroIntegration.AllegroCredentials{
-			ClientID:     creds.ClientID,
-			ClientSecret: creds.ClientSecret,
-			AccessToken:  tok.AccessToken,
-			RefreshToken: tok.RefreshToken,
-			TokenExpiry:  newExpiry.Format(time.RFC3339),
-			Sandbox:      creds.Sandbox,
-		}
-
-		newCredJSON, err := json.Marshal(newCreds)
-		if err != nil {
-			w.logger.Error("oauth refresh: marshal credentials", "integration_id", ir.id, "error", err)
 			continue
 		}
 
@@ -160,10 +159,65 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			"operation", "integration.oauth_refresh",
 			"provider", ir.provider,
 			"tenant_id", ir.tenantID,
-			"entity_id", ir.id,
-			"new_expiry", newExpiry.Format(time.RFC3339))
+			"entity_id", ir.id)
 	}
 
 	w.logger.Info("oauth refresh completed", "checked", len(integrations), "refreshed", refreshed)
 	return nil
+}
+
+func (w *OAuthRefresher) refreshAllegro(ctx context.Context, credJSON []byte, expiry time.Time) ([]byte, error) {
+	var creds allegroIntegration.AllegroCredentials
+	if err := json.Unmarshal(credJSON, &creds); err != nil {
+		return nil, err
+	}
+
+	var opts []allegrosdk.Option
+	opts = append(opts, allegrosdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry))
+	if creds.Sandbox {
+		opts = append(opts, allegrosdk.WithSandbox())
+	}
+
+	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
+	tok, err := client.RefreshAccessToken(ctx)
+	client.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	newExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
+	newCreds := allegroIntegration.AllegroCredentials{
+		ClientID:     creds.ClientID,
+		ClientSecret: creds.ClientSecret,
+		AccessToken:  tok.AccessToken,
+		RefreshToken: tok.RefreshToken,
+		TokenExpiry:  newExpiry.Format(time.RFC3339),
+		Sandbox:      creds.Sandbox,
+	}
+	return json.Marshal(newCreds)
+}
+
+func (w *OAuthRefresher) refreshOLX(ctx context.Context, credJSON []byte, expiry time.Time) ([]byte, error) {
+	var creds olxIntegration.OLXCredentials
+	if err := json.Unmarshal(credJSON, &creds); err != nil {
+		return nil, err
+	}
+
+	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccessToken,
+		olxsdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry),
+	)
+	tok, err := client.RefreshAccessToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	newExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
+	newCreds := olxIntegration.OLXCredentials{
+		ClientID:     creds.ClientID,
+		ClientSecret: creds.ClientSecret,
+		AccessToken:  tok.AccessToken,
+		RefreshToken: tok.RefreshToken,
+		TokenExpiry:  newExpiry.Format(time.RFC3339),
+	}
+	return json.Marshal(newCreds)
 }
