@@ -57,7 +57,7 @@ func TestNewProviderMissingClientID(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNewProviderMissingSecret(t *testing.T) {
-	creds := `{"client_id":"x"}`
+	creds := `{"client_id":"x"}` //nolint:gosec // test credentials
 	_, err := NewProvider(json.RawMessage(creds), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "client_secret")
