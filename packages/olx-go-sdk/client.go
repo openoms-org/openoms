@@ -32,6 +32,7 @@ type Client struct {
 	tokenMu        sync.Mutex
 
 	Adverts      *AdvertService
+	Categories   *CategoryService
 	Transactions *TransactionService
 }
 
@@ -81,6 +82,7 @@ func NewClient(clientID, clientSecret, accessToken string, opts ...Option) *Clie
 	}
 
 	c.Adverts = &AdvertService{client: c}
+	c.Categories = &CategoryService{client: c}
 	c.Transactions = &TransactionService{client: c}
 
 	return c
