@@ -17,8 +17,9 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
-// allegroOAuthState holds the state + credentials needed to complete the OAuth flow.
-type allegroOAuthState struct {
+// OAuthState holds the state + credentials needed to complete an OAuth flow.
+// Shared by all OAuth providers (Allegro, OLX, etc.).
+type OAuthState struct {
 	ExpiresAt    time.Time
 	ClientID     string
 	ClientSecret string
@@ -80,7 +81,7 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	state := hex.EncodeToString(stateBytes)
 
 	// Store state + credentials for the callback
-	stateData := &allegroOAuthState{
+	stateData := &OAuthState{
 		ExpiresAt:    time.Now().Add(10 * time.Minute),
 		ClientID:     creds.ClientID,
 		ClientSecret: creds.ClientSecret,
