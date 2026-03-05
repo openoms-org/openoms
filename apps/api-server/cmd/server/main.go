@@ -451,6 +451,7 @@ func main() {
 		slog.Info("using in-memory OAuth state store")
 	}
 	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
+	olxAuthHandler := handler.NewOlxAuthHandler(cfg, integrationService, oauthStateStore)
 
 	// Allegro import service (import Allegro offers as products + listings)
 	allegroImportService := service.NewAllegroImportService(integrationService, productRepo, productListingRepo, productCategoryService, pool)
@@ -746,6 +747,7 @@ func main() {
 		Allegro:                    allegroHandler,
 		AllegroShipment:            allegroShipmentHandler,
 		AmazonAuth:                 amazonAuthHandler,
+		OlxAuth:                    olxAuthHandler,
 		StoreAuth:                  storeAuthHandler,
 		Supplier:                   supplierHandler,
 		Category:                   productCategoryHandler,
