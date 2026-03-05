@@ -115,7 +115,80 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 
 // PushOffer creates an OLX advert from a product.
 func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
-	return "", fmt.Errorf("olx: PushOffer not yet implemented")
+	req := olxsdk.CreateAdvertRequest{
+		Title:          product.Name,
+		Description:    model.StripHTMLTags(product.DescriptionLong),
+		AdvertiserType: "business",
+		Price:          &olxsdk.AdvertPrice{Value: product.Price, Currency: "PLN"},
+	}
+
+	// Extract image URLs from product.Images JSON array of objects with "url" key.
+	if product.Images != nil {
+		var imgs []map[string]any
+		if err := json.Unmarshal(product.Images, &imgs); err == nil {
+			for _, img := range imgs {
+				if u, ok := img["url"].(string); ok && u != "" {
+					req.Images = append(req.Images, olxsdk.AdvertImage{URL: u})
+				}
+			}
+		}
+	}
+
+	// Set external ID from SKU if available.
+	if product.SKU != nil && *product.SKU != "" {
+		req.ExternalID = *product.SKU
+	}
+
+	// Apply listingData overrides.
+	if v, ok := listingData["title"].(string); ok {
+		req.Title = v
+	}
+	if v, ok := listingData["description"].(string); ok {
+		req.Description = v
+	}
+	if v, ok := listingData["price"].(float64); ok {
+		if req.Price == nil {
+			req.Price = &olxsdk.AdvertPrice{Currency: "PLN"}
+		}
+		req.Price.Value = v
+	}
+	if v, ok := listingData["currency"].(string); ok {
+		if req.Price == nil {
+			req.Price = &olxsdk.AdvertPrice{}
+		}
+		req.Price.Currency = v
+	}
+	if v, ok := listingData["category_id"].(float64); ok {
+		req.CategoryID = int(v)
+	}
+	if v, ok := listingData["city_id"].(float64); ok {
+		req.Location = &olxsdk.Location{CityID: int(v)}
+	}
+	if v, ok := listingData["contact_name"].(string); ok {
+		contact := &olxsdk.Contact{Name: v}
+		if phone, ok := listingData["contact_phone"].(string); ok {
+			contact.Phone = phone
+		}
+		req.Contact = contact
+	}
+
+	// Validate required fields.
+	if req.CategoryID <= 0 {
+		return "", fmt.Errorf("olx: category_id is required in listingData")
+	}
+	if req.Location == nil || req.Location.CityID <= 0 {
+		return "", fmt.Errorf("olx: city_id is required in listingData")
+	}
+	if req.Contact == nil || req.Contact.Name == "" {
+		return "", fmt.Errorf("olx: contact_name is required in listingData")
+	}
+
+	advert, err := p.client.Adverts.CreateAdvert(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("olx: create advert: %w", err)
+	}
+
+	return strconv.FormatInt(advert.ID, 10), nil
 }
 
 // UpdateStock is not applicable for OLX classifieds.
