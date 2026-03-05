@@ -50,6 +50,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	if creds.ClientSecret == "" {
 		return nil, fmt.Errorf("olx: client_secret is required")
 	}
+	if creds.Sandbox {
+		return nil, fmt.Errorf("olx: sandbox mode is not supported — OLX does not provide a sandbox environment")
+	}
 
 	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccessToken,
 		olxsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
@@ -149,7 +152,7 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 		req.Title = v
 	}
 	if v, ok := listingData["description"].(string); ok {
-		req.Description = v
+		req.Description = model.StripHTMLTags(v)
 	}
 	if v, ok := listingData["price"].(float64); ok {
 		if req.Price == nil {
@@ -175,6 +178,19 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 			contact.Phone = phone
 		}
 		req.Contact = contact
+	}
+
+	// Validate price is positive.
+	if req.Price != nil && req.Price.Value <= 0 {
+		return "", fmt.Errorf("olx: price must be positive")
+	}
+
+	// Truncate to OLX API limits (70 chars title, 9000 chars description).
+	if titleRunes := []rune(req.Title); len(titleRunes) > 70 {
+		req.Title = string(titleRunes[:70])
+	}
+	if descRunes := []rune(req.Description); len(descRunes) > 9000 {
+		req.Description = string(descRunes[:9000])
 	}
 
 	// Validate required fields.
