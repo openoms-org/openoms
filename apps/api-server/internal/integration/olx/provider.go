@@ -12,6 +12,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -50,7 +51,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 		return nil, fmt.Errorf("olx: client_secret is required")
 	}
 
-	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccessToken)
+	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccessToken,
+		olxsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 
 	return &Provider{
 		client: client,
@@ -328,6 +331,12 @@ func (p *Provider) mapOLXTransaction(tx *olxsdk.Transaction) integration.Marketp
 		"olx_transaction_id": tx.ID,
 		"olx_advert_id":      tx.AdvertID,
 		"olx_status":         tx.Status,
+	}
+
+	if omsStatus, ok := olxsdk.MapTransactionStatus(tx.Status); ok {
+		mo.RawData["oms_status"] = omsStatus
+	} else {
+		p.logger.Warn("olx: unknown transaction status", "status", tx.Status, "transaction_id", tx.ID)
 	}
 
 	return mo
