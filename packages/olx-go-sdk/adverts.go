@@ -55,6 +55,38 @@ func (s *AdvertService) GetAdvert(ctx context.Context, id int64) (*Advert, error
 	return &wrapper.Data, nil
 }
 
+// CreateAdvert creates a new advert.
+func (s *AdvertService) CreateAdvert(ctx context.Context, req CreateAdvertRequest) (*Advert, error) {
+	var wrapper struct {
+		Data Advert `json:"data"`
+	}
+	if err := s.client.do(ctx, "POST", "/adverts", req, &wrapper); err != nil {
+		return nil, err
+	}
+	return &wrapper.Data, nil
+}
+
+// UpdateAdvert replaces an existing advert (PUT, full payload required).
+func (s *AdvertService) UpdateAdvert(ctx context.Context, id int64, req CreateAdvertRequest) (*Advert, error) {
+	var wrapper struct {
+		Data Advert `json:"data"`
+	}
+	if err := s.client.do(ctx, "PUT", fmt.Sprintf("/adverts/%d", id), req, &wrapper); err != nil {
+		return nil, err
+	}
+	return &wrapper.Data, nil
+}
+
+// DeleteAdvert deletes an advert. The advert must be deactivated first.
+func (s *AdvertService) DeleteAdvert(ctx context.Context, id int64) error {
+	return s.client.do(ctx, "DELETE", fmt.Sprintf("/adverts/%d", id), nil, nil)
+}
+
+// RunCommand sends a command to an advert (activate, deactivate, finish, extend).
+func (s *AdvertService) RunCommand(ctx context.Context, id int64, cmd AdvertCommandRequest) error {
+	return s.client.do(ctx, "POST", fmt.Sprintf("/adverts/%d/commands", id), cmd, nil)
+}
+
 // TransactionService handles communication with the OLX transactions endpoints.
 type TransactionService struct {
 	client *Client

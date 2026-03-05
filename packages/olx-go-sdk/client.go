@@ -18,6 +18,11 @@ const (
 	productionAuthURL = "https://www.olx.pl/api/open/oauth/token"
 )
 
+const (
+	maxResponseBody = 10 << 20 // 10 MB
+	maxErrorBody    = 1 << 20  // 1 MB
+)
+
 // Client is the OLX Partner API client.
 // Authentication uses OAuth2 client credentials with an access token.
 type Client struct {
@@ -32,6 +37,7 @@ type Client struct {
 	tokenMu        sync.Mutex
 
 	Adverts      *AdvertService
+	Categories   *CategoryService
 	Transactions *TransactionService
 }
 
@@ -81,6 +87,7 @@ func NewClient(clientID, clientSecret, accessToken string, opts ...Option) *Clie
 	}
 
 	c.Adverts = &AdvertService{client: c}
+	c.Categories = &CategoryService{client: c}
 	c.Transactions = &TransactionService{client: c}
 
 	return c
@@ -121,12 +128,12 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
 		return fmt.Errorf("olx: token refresh failed (HTTP %d): %s", resp.StatusCode, string(body))
 	}
 
 	var tokenResp tokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(&tokenResp); err != nil {
 		return fmt.Errorf("olx: decode token response: %w", err)
 	}
 
@@ -171,14 +178,14 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		if err := json.NewDecoder(resp.Body).Decode(apiErr); err != nil {
+		if err := json.NewDecoder(io.LimitReader(resp.Body, maxErrorBody)).Decode(apiErr); err != nil {
 			apiErr.Message = http.StatusText(resp.StatusCode)
 		}
 		return apiErr
 	}
 
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(result); err != nil {
 			return fmt.Errorf("olx: decode response: %w", err)
 		}
 	}
