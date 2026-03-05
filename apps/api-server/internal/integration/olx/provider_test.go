@@ -34,7 +34,7 @@ func newTestProvider(t *testing.T, srvURL string) *Provider {
 // ---------------------------------------------------------------------------
 
 func TestNewProvider(t *testing.T) {
-	creds := `{"client_id":"my_id","client_secret":"my_secret","access_token":"tok"}`
+	creds := `{"client_id":"my_id","client_secret":"my_secret","access_token":"tok"}` //nolint:gosec // test credentials
 	p, err := NewProvider(json.RawMessage(creds), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
@@ -46,7 +46,7 @@ func TestNewProvider(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNewProviderMissingClientID(t *testing.T) {
-	creds := `{"client_secret":"x"}`
+	creds := `{"client_secret":"x"}` //nolint:gosec // test credentials
 	_, err := NewProvider(json.RawMessage(creds), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "client_id")
@@ -139,7 +139,7 @@ func TestPollOrders(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPollOrdersEmpty(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"data":[],"links":{"self":"/transactions"}}`)
 	}))
@@ -158,7 +158,7 @@ func TestPollOrdersEmpty(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGetOrder(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{
 			"data": [
@@ -208,7 +208,7 @@ func TestGetOrder(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestGetOrderNotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{
 			"data": [
@@ -305,7 +305,7 @@ func TestPushOffer(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPushOfferMissingCategory(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("should not reach server when validation fails")
 	}))
 	defer srv.Close()
@@ -331,7 +331,7 @@ func TestPushOfferMissingCategory(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestPushOfferMissingCity(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Fatal("should not reach server when validation fails")
 	}))
 	defer srv.Close()
