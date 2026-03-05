@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const KNOWN_PROVIDERS = ["allegro", "amazon", "shoper", "prestashop", "shopify"];
+const KNOWN_PROVIDERS = ["allegro", "amazon", "olx", "shoper", "prestashop", "shopify"];
 
 export default function MarketplacesPage() {
   const router = useRouter();

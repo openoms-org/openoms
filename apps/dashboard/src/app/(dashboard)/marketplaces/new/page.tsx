@@ -30,7 +30,7 @@ import {
 type Step = "select" | "configure";
 
 /** Providers that have dedicated setup pages with custom OAuth or forms */
-const DEDICATED_PROVIDERS = ["allegro", "amazon", "shoper", "prestashop", "shopify"];
+const DEDICATED_PROVIDERS = ["allegro", "amazon", "olx", "shoper", "prestashop", "shopify"];
 
 export default function NewMarketplacePage() {
   const router = useRouter();
