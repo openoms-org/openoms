@@ -9,7 +9,7 @@ export const INTEGRATION_STATUS: Record<string, IntegrationMaturity> = {
   woocommerce: "in_development",
   ebay: "in_development",
   kaufland: "in_development",
-  olx: "in_development",
+  olx: "verified",
   mirakl: "in_development",
   erli: "in_development",
   empik: "in_development",

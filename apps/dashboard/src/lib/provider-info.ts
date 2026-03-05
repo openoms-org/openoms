@@ -26,7 +26,7 @@ export const PROVIDERS: ProviderInfo[] = [
   { key: "shoper", name: "Shoper", description: "Polska platforma sklepowa", icon: Store, category: "marketplace", beta: true },
   { key: "ebay", name: "eBay", description: "Globalny marketplace aukcyjny", icon: Store, category: "marketplace", beta: true },
   { key: "kaufland", name: "Kaufland", description: "Marketplace Kaufland (PL, DE, CZ)", icon: Store, category: "marketplace", beta: true },
-  { key: "olx", name: "OLX", description: "Polska platforma ogłoszeniowa", icon: Store, category: "marketplace", beta: true },
+  { key: "olx", name: "OLX", description: "Polska platforma ogłoszeniowa", icon: Store, category: "marketplace" },
   { key: "erli", name: "Erli", description: "Polski marketplace", icon: Store, category: "marketplace", beta: true },
   { key: "empik", name: "Empik (Mirakl)", description: "Empik Marketplace na platformie Mirakl", icon: Store, category: "marketplace", beta: true },
 
