@@ -44,6 +44,7 @@ type Client struct {
 
 	Adverts      *AdvertService
 	Categories   *CategoryService
+	Cities       *CityService
 	Transactions *TransactionService
 }
 
@@ -115,6 +116,7 @@ func NewClient(clientID, clientSecret, accessToken string, opts ...Option) *Clie
 
 	c.Adverts = &AdvertService{client: c}
 	c.Categories = &CategoryService{client: c}
+	c.Cities = &CityService{client: c}
 	c.Transactions = &TransactionService{client: c}
 
 	return c
