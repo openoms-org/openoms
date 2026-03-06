@@ -142,6 +142,11 @@ func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) er
 	return p.client.Offers.Activate(ctx, externalOfferID)
 }
 
+// DeactivateOffer implements integration.ListingDeactivator using Allegro publication commands.
+func (p *Provider) DeactivateOffer(ctx context.Context, externalOfferID string) error {
+	return p.client.Offers.Deactivate(ctx, externalOfferID)
+}
+
 // BulkUpdateStock implements integration.BulkStockUpdater using Allegro command API.
 func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.StockUpdate) error {
 	if len(updates) == 0 {

@@ -55,6 +55,12 @@ type ListingActivator interface {
 	ActivateOffer(ctx context.Context, externalOfferID string) error
 }
 
+// ListingDeactivator is optionally implemented by providers that support deactivating/ending
+// marketplace offers when stock reaches zero.
+type ListingDeactivator interface {
+	DeactivateOffer(ctx context.Context, externalOfferID string) error
+}
+
 // BulkStockUpdater is optionally implemented by providers that support batch stock updates.
 type BulkStockUpdater interface {
 	BulkUpdateStock(ctx context.Context, updates []StockUpdate) error

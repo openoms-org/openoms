@@ -293,6 +293,17 @@ func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) er
 	})
 }
 
+// DeactivateOffer deactivates an OLX advert (e.g. when stock reaches zero).
+func (p *Provider) DeactivateOffer(ctx context.Context, externalOfferID string) error {
+	advertID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("olx: invalid advert ID %q: %w", externalOfferID, err)
+	}
+	return p.client.Adverts.RunCommand(ctx, advertID, olxsdk.AdvertCommandRequest{
+		Command: "deactivate",
+	})
+}
+
 // mapOLXTransaction converts an OLX transaction to the normalized MarketplaceOrder.
 func (p *Provider) mapOLXTransaction(tx *olxsdk.Transaction) integration.MarketplaceOrder {
 	mo := integration.MarketplaceOrder{
