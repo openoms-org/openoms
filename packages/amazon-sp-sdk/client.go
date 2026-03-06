@@ -34,6 +34,7 @@ type Client struct {
 
 	Orders  *OrderService
 	Catalog *CatalogService
+	Feeds   *FeedService
 }
 
 // Option configures a Client.
@@ -113,6 +114,7 @@ func NewClient(clientID, clientSecret string, opts ...Option) *Client {
 
 	c.Orders = &OrderService{client: c}
 	c.Catalog = &CatalogService{client: c}
+	c.Feeds = &FeedService{client: c}
 
 	return c
 }

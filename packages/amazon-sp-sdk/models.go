@@ -98,6 +98,39 @@ type TokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 }
 
+// --- Feeds API models ---
+
+// CreateFeedDocumentRequest is the request body for POST /feeds/2021-06-30/documents.
+type CreateFeedDocumentRequest struct {
+	ContentType string `json:"contentType"`
+}
+
+// CreateFeedDocumentResponse is the response from POST /feeds/2021-06-30/documents.
+type CreateFeedDocumentResponse struct {
+	FeedDocumentID string `json:"feedDocumentId"`
+	URL            string `json:"url"`
+}
+
+// CreateFeedRequest is the request body for POST /feeds/2021-06-30/feeds.
+type CreateFeedRequest struct {
+	FeedType            string   `json:"feedType"`
+	MarketplaceIDs      []string `json:"marketplaceIds"`
+	InputFeedDocumentID string   `json:"inputFeedDocumentId"`
+}
+
+// CreateFeedResponse is the response from POST /feeds/2021-06-30/feeds.
+type CreateFeedResponse struct {
+	FeedID string `json:"feedId"`
+}
+
+// Feed represents a feed status from GET /feeds/2021-06-30/feeds/{feedId}.
+type Feed struct {
+	FeedID           string `json:"feedId"`
+	FeedType         string `json:"feedType"`
+	ProcessingStatus string `json:"processingStatus"` // IN_QUEUE, IN_PROGRESS, DONE, CANCELLED, FATAL
+	ResultFeedDocID  string `json:"resultFeedDocumentId,omitempty"`
+}
+
 // APIError represents an error response from the Amazon SP-API.
 type APIError struct {
 	StatusCode int      `json:"-"`
