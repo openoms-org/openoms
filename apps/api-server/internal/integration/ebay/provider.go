@@ -116,14 +116,14 @@ func (p *Provider) PushOffer(_ context.Context, _ *model.Product, _ map[string]a
 	return "", fmt.Errorf("ebay: PushOffer not supported (use eBay Trading API or Inventory API)")
 }
 
-// UpdateStock is not supported for eBay via the Fulfillment API.
-func (p *Provider) UpdateStock(_ context.Context, _ string, _ int) error {
-	return fmt.Errorf("ebay: UpdateStock not supported (use eBay Inventory API)")
+// UpdateStock updates the available quantity for an eBay offer via the Inventory API.
+func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
+	return p.client.Inventory.UpdateStock(ctx, externalOfferID, quantity)
 }
 
-// UpdatePrice is not supported for eBay via the Fulfillment API.
-func (p *Provider) UpdatePrice(_ context.Context, _ string, _ float64) error {
-	return fmt.Errorf("ebay: UpdatePrice not supported (use eBay Inventory API)")
+// UpdatePrice updates the price for an eBay offer via the Inventory API.
+func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
+	return p.client.Inventory.UpdatePrice(ctx, externalOfferID, price, "PLN")
 }
 
 // mapEbayOrder converts an eBay SDK Order to the normalized MarketplaceOrder.
