@@ -368,7 +368,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 	// Skip when stock goes from >0 to 0 — deactivation is already handled above
 	// (via automation event or direct deactivateListings fallback), and PropagateStockToMarketplaces
 	// would redundantly deactivate the same listings.
-	if !(oldQty > 0 && newQty == 0) {
+	if oldQty <= 0 || newQty != 0 {
 		asyncutil.SafeGo(func() { s.PropagateStockToMarketplaces(context.Background(), tenantID, productID) })
 	}
 }
