@@ -112,12 +112,27 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 				return err
 			}
 
-			// Try bulk path if provider supports it
+			// Deactivate zero-stock listings via ListingDeactivator if supported
+			deactivator, hasDeactivator := provider.(integration.ListingDeactivator)
+			var nonZeroStock []listingStock
+			if hasDeactivator {
+				for _, l := range listings {
+					if l.StockQty == 0 {
+						totalSynced += w.deactivateListing(ctx, tx, ti, deactivator, l)
+					} else {
+						nonZeroStock = append(nonZeroStock, l)
+					}
+				}
+			} else {
+				nonZeroStock = listings
+			}
+
+			// Sync non-zero stock listings (and zero-stock if no deactivator)
 			bulkProvider, hasBulk := provider.(integration.BulkStockUpdater)
 			if hasBulk {
-				totalSynced += w.syncBulk(ctx, tx, ti, bulkProvider, listings)
+				totalSynced += w.syncBulk(ctx, tx, ti, bulkProvider, nonZeroStock)
 			} else {
-				totalSynced += w.syncOneByOne(ctx, tx, ti, provider, listings)
+				totalSynced += w.syncOneByOne(ctx, tx, ti, provider, nonZeroStock)
 			}
 
 			return nil
@@ -243,6 +258,46 @@ func (w *StockSyncWorker) syncOneByOne(
 	}
 
 	return synced
+}
+
+// deactivateListing deactivates a single listing via ListingDeactivator and updates its status.
+func (w *StockSyncWorker) deactivateListing(
+	ctx context.Context,
+	tx pgx.Tx,
+	ti TenantIntegration,
+	deactivator integration.ListingDeactivator,
+	l listingStock,
+) int {
+	if err := deactivator.DeactivateOffer(ctx, l.ExternalID); err != nil {
+		w.logger.Error("stock sync: deactivate listing failed",
+			"operation", "listing.deactivate",
+			"tenant_id", ti.TenantID,
+			"entity_id", l.ListingID,
+			"external_id", l.ExternalID,
+			"error", err,
+		)
+		if _, execErr := tx.Exec(ctx,
+			`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+			l.ListingID, truncateErrorMessage(err.Error()),
+		); execErr != nil {
+			w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+		}
+		return 0
+	}
+
+	if _, execErr := tx.Exec(ctx,
+		`UPDATE product_listings SET status = 'inactive', sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+		l.ListingID,
+	); execErr != nil {
+		w.logger.Error("stock sync: failed to update listing status", "listing_id", l.ListingID, "error", execErr)
+	}
+	w.logger.Info("worker: listing deactivated (stock=0)",
+		"operation", "listing.deactivate",
+		"tenant_id", ti.TenantID,
+		"entity_id", l.ListingID,
+		"external_id", l.ExternalID,
+	)
+	return 1
 }
 
 // chunkStockUpdates splits a slice of StockUpdate into chunks of the given size.

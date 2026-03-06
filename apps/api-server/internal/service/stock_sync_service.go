@@ -317,6 +317,25 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 		}
 	}
 
+	// Detect stock depleted: stock was > 0, now 0.
+	if oldQty > 0 && newQty == 0 {
+		s.logger.Info("stock sync: stock depleted to zero",
+			"tenant_id", tenantID,
+			"product_id", productID,
+		)
+
+		if s.automationSvc != nil {
+			FireAutomationEvent(s.automationSvc, tenantID, "product", "product.out_of_stock", productID, map[string]any{
+				"old_quantity": oldQty,
+				"new_quantity": newQty,
+				"trigger_type": triggerType,
+			})
+		} else {
+			// Fallback: direct deactivation when automation engine is not wired
+			asyncutil.SafeGo(func() { s.deactivateListings(context.Background(), tenantID, productID) })
+		}
+	}
+
 	s.logger.Info("stock sync: stock change recorded",
 		"tenant_id", tenantID,
 		"product_id", productID,
@@ -443,6 +462,110 @@ func (s *StockSyncService) reactivateListings(ctx context.Context, tenantID, pro
 	s.logger.Info("auto-relist: completed",
 		"tenant_id", tenantID, "product_id", productID,
 		"activated", activated, "failed", failed)
+}
+
+// deactivateListings finds active marketplace listings for a product and
+// deactivates them via the marketplace provider's DeactivateOffer API.
+// This is the direct fallback called when stock drops to zero and the
+// automation engine is not wired. Mirrors reactivateListings above.
+func (s *StockSyncService) deactivateListings(ctx context.Context, tenantID, productID uuid.UUID) {
+	type deactivateJob struct {
+		listingID   uuid.UUID
+		externalID  string
+		integration *model.IntegrationWithCreds
+	}
+
+	var jobs []deactivateJob
+
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		listings, err := s.listingRepo.ListByProduct(ctx, tx, productID)
+		if err != nil {
+			return err
+		}
+
+		for _, listing := range listings {
+			if listing.Status != "active" {
+				continue
+			}
+			if listing.ExternalID == nil || *listing.ExternalID == "" {
+				continue
+			}
+
+			integ, err := s.integrationRepo.FindByID(ctx, tx, listing.IntegrationID)
+			if err != nil || integ == nil {
+				s.logger.Warn("auto-deactivate: integration not found for listing",
+					"listing_id", listing.ID, "integration_id", listing.IntegrationID)
+				continue
+			}
+
+			jobs = append(jobs, deactivateJob{
+				listingID:   listing.ID,
+				externalID:  *listing.ExternalID,
+				integration: integ,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		s.logger.Error("auto-deactivate: failed to gather listings",
+			"tenant_id", tenantID, "product_id", productID, "error", err)
+		return
+	}
+
+	if len(jobs) == 0 {
+		return
+	}
+
+	deactivated, failed := 0, 0
+	for _, job := range jobs {
+		if job.integration.EncryptedCredentials == "" {
+			failed++
+			continue
+		}
+
+		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, s.encryptionKey)
+		if err != nil {
+			s.logger.Error("auto-deactivate: decrypt credentials failed",
+				"integration_id", job.integration.ID, "error", err)
+			failed++
+			continue
+		}
+
+		provider, err := integration.NewMarketplaceProvider(job.integration.Provider, credJSON, job.integration.Settings)
+		if err != nil {
+			s.logger.Error("auto-deactivate: create provider failed",
+				"provider", job.integration.Provider, "error", err)
+			failed++
+			continue
+		}
+
+		deactivator, ok := provider.(integration.ListingDeactivator)
+		if !ok {
+			continue
+		}
+
+		if err := deactivator.DeactivateOffer(ctx, job.externalID); err != nil {
+			s.logger.Error("auto-deactivate: deactivation failed",
+				"listing_id", job.listingID, "external_id", job.externalID,
+				"provider", job.integration.Provider, "error", err)
+			failed++
+			continue
+		}
+
+		inactiveStatus := "inactive"
+		syncOK := "synced"
+		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			return s.listingRepo.Update(ctx, tx, job.listingID, &model.UpdateProductListingRequest{
+				Status:     &inactiveStatus,
+				SyncStatus: &syncOK,
+			})
+		})
+		deactivated++
+	}
+
+	s.logger.Info("auto-deactivate: completed",
+		"tenant_id", tenantID, "product_id", productID,
+		"deactivated", deactivated, "failed", failed)
 }
 
 // CalculateAvailableStock returns stock allocation per channel for a product.
@@ -608,6 +731,38 @@ func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, ten
 				"provider", job.integration.Provider, "error", err)
 			failed++
 			continue
+		}
+
+		// Deactivate listing if stock is 0 and provider supports it
+		if job.availableQty == 0 {
+			if deactivator, ok := provider.(integration.ListingDeactivator); ok {
+				if err := deactivator.DeactivateOffer(ctx, *job.listing.ExternalID); err != nil {
+					s.logger.Error("stock sync: deactivate listing failed",
+						"listing_id", job.listing.ID, "external_id", *job.listing.ExternalID,
+						"provider", job.integration.Provider, "error", err)
+					errMsg := err.Error()
+					syncErr := "error"
+					_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+						return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
+							SyncStatus:   &syncErr,
+							ErrorMessage: &errMsg,
+						})
+					})
+					failed++
+					continue
+				}
+				inactiveStatus := "inactive"
+				syncOK := "synced"
+				_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+					return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
+						Status:     &inactiveStatus,
+						SyncStatus: &syncOK,
+					})
+				})
+				pushed++
+				continue
+			}
+			// Provider doesn't support deactivation — fall through to UpdateStock(0)
 		}
 
 		if err := provider.UpdateStock(ctx, *job.listing.ExternalID, job.availableQty); err != nil {
