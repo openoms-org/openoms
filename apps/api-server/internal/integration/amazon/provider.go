@@ -33,6 +33,8 @@ type AmazonCredentials struct {
 	Sandbox          bool   `json:"sandbox,omitempty"`
 }
 
+var _ integration.AsyncStockUpdater = (*Provider)(nil)
+
 // Provider implements integration.MarketplaceProvider for Amazon SP-API.
 type Provider struct {
 	client           *amazonsdk.Client
@@ -203,6 +205,9 @@ func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.St
 	}
 	return nil
 }
+
+// IsAsyncStockUpdate marks Amazon as an async stock updater (Feeds API is asynchronous).
+func (p *Provider) IsAsyncStockUpdate() {}
 
 // UpdatePrice is not implemented for Amazon (requires Feeds API).
 func (p *Provider) UpdatePrice(_ context.Context, _ string, _ float64) error {

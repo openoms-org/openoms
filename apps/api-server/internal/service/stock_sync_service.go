@@ -809,11 +809,14 @@ func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, ten
 			continue
 		}
 
-		// Update listing sync status to synced (best-effort)
-		syncOK := "synced"
+		// Use 'pending' for async providers (e.g. Amazon Feeds API), 'synced' otherwise.
+		syncStatus := "synced"
+		if _, ok := provider.(integration.AsyncStockUpdater); ok {
+			syncStatus = "pending"
+		}
 		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 			return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
-				SyncStatus: &syncOK,
+				SyncStatus: &syncStatus,
 			})
 		})
 		pushed++

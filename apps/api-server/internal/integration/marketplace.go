@@ -61,6 +61,13 @@ type ListingDeactivator interface {
 	DeactivateOffer(ctx context.Context, externalOfferID string) error
 }
 
+// AsyncStockUpdater is a marker interface implemented by providers whose stock updates
+// are asynchronous (e.g., Amazon Feeds API submits a feed that takes minutes to process).
+// Callers should set sync_status='pending' instead of 'synced' after a successful update.
+type AsyncStockUpdater interface {
+	IsAsyncStockUpdate()
+}
+
 // BulkStockUpdater is optionally implemented by providers that support batch stock updates.
 type BulkStockUpdater interface {
 	BulkUpdateStock(ctx context.Context, updates []StockUpdate) error

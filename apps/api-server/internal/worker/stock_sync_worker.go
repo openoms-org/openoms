@@ -188,11 +188,16 @@ func (w *StockSyncWorker) syncBulk(
 			continue
 		}
 
-		w.updateListingsStatus(ctx, ti.TenantID, batchListings, "synced", nil)
+		syncStatus := "synced"
+		if _, ok := provider.(integration.AsyncStockUpdater); ok {
+			syncStatus = "pending"
+		}
+		w.updateListingsStatus(ctx, ti.TenantID, batchListings, syncStatus, nil)
 		w.logger.Info("worker: stock batch synced",
 			"operation", "listing.stock_bulk_update",
 			"tenant_id", ti.TenantID,
 			"batch_size", len(chunk),
+			"sync_status", syncStatus,
 		)
 		synced += len(chunk)
 	}
@@ -223,13 +228,18 @@ func (w *StockSyncWorker) syncOneByOne(
 			continue
 		}
 
-		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "synced", nil)
+		syncStatus := "synced"
+		if _, ok := provider.(integration.AsyncStockUpdater); ok {
+			syncStatus = "pending"
+		}
+		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, syncStatus, nil)
 		w.logger.Info("worker: stock synced",
 			"operation", "listing.stock_update",
 			"tenant_id", ti.TenantID,
 			"entity_id", l.ListingID,
 			"external_id", l.ExternalID,
 			"stock_quantity", l.StockQty,
+			"sync_status", syncStatus,
 		)
 		synced++
 	}
@@ -279,12 +289,18 @@ func (w *StockSyncWorker) updateListingsStatus(ctx context.Context, tenantID uui
 	_ = database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
 		for _, l := range listings {
 			var execErr error
-			if status == "synced" {
+			switch status {
+			case "synced":
 				_, execErr = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 					l.ListingID,
 				)
-			} else {
+			case "pending":
+				_, execErr = tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
+					l.ListingID,
+				)
+			default: // "error"
 				msg := ""
 				if errMsg != nil {
 					msg = *errMsg
