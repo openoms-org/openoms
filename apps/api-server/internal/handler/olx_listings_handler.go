@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
+
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	olxintegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/olx"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
@@ -166,6 +168,15 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 	externalID, err := provider.PushOffer(ctx, product, listingData)
 	if err != nil {
 		slog.Error("olx listings: failed to push offer", "error", err, "tenant_id", tenantID)
+		var apiErr *olxsdk.APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode < 500 {
+			msg := "OLX: " + apiErr.Message
+			if msg == "OLX: " {
+				msg = "OLX: " + apiErr.Error()
+			}
+			writeError(w, http.StatusUnprocessableEntity, msg)
+			return
+		}
 		writeError(w, http.StatusBadGateway, "failed to publish listing on OLX")
 		return
 	}
@@ -330,6 +341,45 @@ func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) 
 	result, err := provider.Client().Cities.ListCities(ctx, query, 0, limit)
 	if err != nil {
 		writeServerError(w, "failed to list OLX cities", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+// SuggestCategory proxies OLX category suggestion based on a query string.
+func (h *OLXListingsHandler) SuggestCategory(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID := middleware.TenantIDFromContext(ctx)
+
+	integrationID := r.URL.Query().Get("integration_id")
+	if integrationID == "" {
+		writeError(w, http.StatusBadRequest, "integration_id is required")
+		return
+	}
+
+	iid, err := uuid.Parse(integrationID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid integration_id")
+		return
+	}
+
+	query := r.URL.Query().Get("query")
+	if query == "" {
+		writeError(w, http.StatusBadRequest, "query is required")
+		return
+	}
+
+	provider, err := h.createProvider(ctx, tenantID, iid)
+	if err != nil {
+		slog.Error("olx listings: failed to create provider", "error", err)
+		writeError(w, http.StatusBadRequest, "OLX integration not configured")
+		return
+	}
+
+	result, err := provider.Client().Categories.SuggestCategory(ctx, query)
+	if err != nil {
+		writeServerError(w, "failed to suggest OLX category", err)
 		return
 	}
 

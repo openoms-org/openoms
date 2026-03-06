@@ -714,6 +714,7 @@ func New(deps RouterDeps) *chi.Mux {
 					if deps.OLXListings != nil {
 						r.Get("/categories", deps.OLXListings.ListCategories)
 						r.Get("/categories/{categoryId}/attributes", deps.OLXListings.GetCategoryAttributes)
+						r.Get("/categories/suggest", deps.OLXListings.SuggestCategory)
 						r.Get("/cities", deps.OLXListings.ListCities)
 					}
 				})

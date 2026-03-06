@@ -48,6 +48,7 @@ import {
   useAllegroListingSearch,
   useOLXCategories,
   useOLXCities,
+  useOLXCategorySuggest,
   useCreateOLXListing,
 } from "@/hooks/use-allegro";
 import type {
@@ -117,7 +118,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { AlertTriangle, Check, ChevronsUpDown } from "lucide-react";
+import { AlertTriangle, Check, ChevronsUpDown, Sparkles } from "lucide-react";
 import { sanitizeUrl } from "@/lib/utils";
 import { PROVIDER_CATEGORIES } from "@/lib/constants";
 
@@ -942,9 +943,17 @@ function CreateOLXListingDialog({
     return () => clearTimeout(timer);
   }, [cityQuery]);
 
+  // Category suggestion state
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestQuery = product.name || "";
+  const { data: suggestions, isLoading: suggestionsLoading } = useOLXCategorySuggest(
+    integrationId,
+    showSuggestions ? suggestQuery : ""
+  );
+
   // Hooks
   const { data: categories, isLoading: categoriesLoading, isError: categoriesError, error: categoriesErrorObj } = useOLXCategories(integrationId, currentParentId);
-  const { data: citiesResult, isError: citiesError, error: citiesErrorObj } = useOLXCities(integrationId, debouncedCityQuery);
+  const { data: citiesResult, isLoading: citiesLoading, isError: citiesError, error: citiesErrorObj } = useOLXCities(integrationId, debouncedCityQuery);
   const createListing = useCreateOLXListing(product.id);
 
   const cities = citiesResult?.data ?? [];
@@ -967,6 +976,17 @@ function CreateOLXListingDialog({
   const handleBreadcrumbRoot = () => {
     setCategoryPath([]);
     setSelectedCategoryId(null);
+  };
+
+  const handleSuggestionSelect = (suggestion: { id: number; name: string; path: string[] }) => {
+    setSelectedCategoryId(suggestion.id);
+    setCategoryPath(
+      suggestion.path.map((name, i) => ({
+        id: i === suggestion.path.length - 1 ? suggestion.id : 0,
+        name,
+      }))
+    );
+    setShowSuggestions(false);
   };
 
   const handleSubmit = () => {
@@ -1012,7 +1032,50 @@ function CreateOLXListingDialog({
         <div className="space-y-4 py-2">
           {/* Category selection */}
           <div className="space-y-2">
-            <Label>Kategoria OLX *</Label>
+            <div className="flex items-center justify-between">
+              <Label>Kategoria OLX *</Label>
+              {!isLeafCategory && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setShowSuggestions(!showSuggestions)}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Sugeruj kategorię
+                </Button>
+              )}
+            </div>
+            {/* Category suggestions */}
+            {showSuggestions && !isLeafCategory && (
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-2 space-y-1">
+                <p className="text-xs text-muted-foreground mb-1">
+                  Sugestie dla &quot;{product.name}&quot;:
+                </p>
+                {suggestionsLoading ? (
+                  <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Szukam...
+                  </div>
+                ) : suggestions && suggestions.length > 0 ? (
+                  suggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-primary/10 text-left"
+                      onClick={() => handleSuggestionSelect(s)}
+                    >
+                      <Check className="h-3 w-3 text-primary shrink-0" />
+                      <span>
+                        {s.path.join(" > ")}
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground p-2">Brak sugestii</p>
+                )}
+              </div>
+            )}
             {/* Breadcrumb */}
             <div className="flex items-center gap-1 text-sm flex-wrap">
               <button
@@ -1098,7 +1161,7 @@ function CreateOLXListingDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-full p-0" align="start">
-                <Command>
+                <Command shouldFilter={false}>
                   <CommandInput
                     placeholder="Wpisz nazwę miasta..."
                     value={cityQuery}
@@ -1106,7 +1169,9 @@ function CreateOLXListingDialog({
                   />
                   <CommandList>
                     <CommandEmpty>
-                      {citiesError
+                      {citiesLoading
+                        ? "Szukam..."
+                        : citiesError
                         ? (citiesErrorObj instanceof Error ? citiesErrorObj.message : "Błąd pobierania miast")
                         : cityQuery.length < 2 ? "Wpisz min. 2 znaki" : "Nie znaleziono miast"}
                     </CommandEmpty>
