@@ -194,6 +194,10 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 		req.Contact = contact
 	}
 
+	if attrs, ok := listingData["attributes"].([]olxsdk.AdvertAttribute); ok {
+		req.Attributes = attrs
+	}
+
 	// Validate price is positive.
 	if req.Price != nil && req.Price.Value <= 0 {
 		return "", fmt.Errorf("olx: price must be positive")

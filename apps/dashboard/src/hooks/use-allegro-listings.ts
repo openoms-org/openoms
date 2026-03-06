@@ -303,6 +303,35 @@ export interface OLXCity {
   municipality?: string;
 }
 
+export interface OLXCategoryAttribute {
+  code: string;
+  label: string;
+  unit?: string;
+  validation: {
+    type: string;
+    required: boolean;
+    numeric: boolean;
+    min?: number;
+    max?: number;
+    allow_multiple_values: boolean;
+  };
+  values?: { code: string; label: string }[];
+}
+
+export function useOLXCategoryAttributes(integrationId: string, categoryId: number | null) {
+  const params = new URLSearchParams({ integration_id: integrationId });
+  return useQuery({
+    queryKey: ["olx", "categories", categoryId, "attributes", integrationId],
+    queryFn: async () => {
+      const resp = await apiClient<{ data: OLXCategoryAttribute[] }>(
+        `/v1/integrations/olx/categories/${categoryId}/attributes?${params}`
+      );
+      return resp.data;
+    },
+    enabled: !!integrationId && categoryId != null && categoryId > 0,
+  });
+}
+
 export function useOLXCategories(integrationId: string, parentId?: number) {
   const params = new URLSearchParams({ integration_id: integrationId });
   if (parentId) params.set("parent_id", String(parentId));
@@ -355,6 +384,7 @@ interface CreateOLXListingRequest {
   description?: string;
   price_override?: number;
   stock_override?: number;
+  attributes?: { code: string; value: string }[];
 }
 
 export function useCreateOLXListing(productId: string) {

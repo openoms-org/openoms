@@ -77,16 +77,22 @@ func NewOLXListingsHandler(
 	}
 }
 
+type olxAttributeValue struct {
+	Code  string `json:"code"`
+	Value any    `json:"value,omitempty"`
+}
+
 type createOLXListingRequest struct {
-	IntegrationID string   `json:"integration_id"`
-	CategoryID    int      `json:"category_id"`
-	CityID        int      `json:"city_id"`
-	ContactName   string   `json:"contact_name"`
-	ContactPhone  string   `json:"contact_phone,omitempty"`
-	Title         string   `json:"title,omitempty"`
-	Description   string   `json:"description,omitempty"`
-	PriceOverride *float64 `json:"price_override,omitempty"`
-	StockOverride *int     `json:"stock_override,omitempty"`
+	IntegrationID string              `json:"integration_id"`
+	CategoryID    int                 `json:"category_id"`
+	CityID        int                 `json:"city_id"`
+	ContactName   string              `json:"contact_name"`
+	ContactPhone  string              `json:"contact_phone,omitempty"`
+	Title         string              `json:"title,omitempty"`
+	Description   string              `json:"description,omitempty"`
+	PriceOverride *float64            `json:"price_override,omitempty"`
+	StockOverride *int                `json:"stock_override,omitempty"`
+	Attributes    []olxAttributeValue `json:"attributes,omitempty"`
 }
 
 // CreateListing creates an OLX advert from a product and saves the listing record.
@@ -192,6 +198,13 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 	}
 	if req.PriceOverride != nil {
 		listingData["price"] = *req.PriceOverride
+	}
+	if len(req.Attributes) > 0 {
+		var attrs []olxsdk.AdvertAttribute
+		for _, a := range req.Attributes {
+			attrs = append(attrs, olxsdk.AdvertAttribute{Code: a.Code, Value: a.Value})
+		}
+		listingData["attributes"] = attrs
 	}
 
 	externalID, err := provider.PushOffer(ctx, product, listingData)

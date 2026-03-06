@@ -49,6 +49,7 @@ import {
   useOLXCategories,
   useOLXCities,
   useOLXCategorySuggest,
+  useOLXCategoryAttributes,
   useCreateOLXListing,
 } from "@/hooks/use-allegro";
 import type {
@@ -951,10 +952,16 @@ function CreateOLXListingDialog({
     showSuggestions ? suggestQuery : ""
   );
 
+  // Category attributes state
+  const [attributeValues, setAttributeValues] = useState<Record<string, string>>({});
+
   // Hooks
   const { data: categories, isLoading: categoriesLoading, isError: categoriesError, error: categoriesErrorObj } = useOLXCategories(integrationId, currentParentId);
   const { data: citiesResult, isLoading: citiesLoading, isError: citiesError, error: citiesErrorObj } = useOLXCities(integrationId, debouncedCityQuery);
+  const { data: categoryAttributes, isLoading: attrsLoading } = useOLXCategoryAttributes(integrationId, selectedCategoryId);
   const createListing = useCreateOLXListing(product.id);
+
+  const requiredAttributes = categoryAttributes?.filter((a) => a.validation.required) ?? [];
 
   const cities = citiesResult?.data ?? [];
 
@@ -966,6 +973,7 @@ function CreateOLXListingDialog({
   const handleCategorySelect = (cat: OLXCategory) => {
     setSelectedCategoryId(cat.id);
     setCategoryPath((prev) => [...prev, { id: cat.id, name: cat.name }]);
+    setAttributeValues({});
   };
 
   const handleBreadcrumbClick = (index: number) => {
@@ -988,6 +996,7 @@ function CreateOLXListingDialog({
       }))
     );
     setShowSuggestions(false);
+    setAttributeValues({});
   };
 
   const effectiveTitle = title || product.name;
@@ -998,6 +1007,15 @@ function CreateOLXListingDialog({
       toast.error("Tytuł ogłoszenia musi mieć min. 16 znaków");
       return;
     }
+    const missingAttrs = requiredAttributes.filter((a) => !attributeValues[a.code]);
+    if (missingAttrs.length > 0) {
+      toast.error(`Uzupełnij wymagane atrybuty: ${missingAttrs.map((a) => a.label).join(", ")}`);
+      return;
+    }
+
+    const attributes = Object.entries(attributeValues)
+      .filter(([, v]) => v !== "")
+      .map(([code, value]) => ({ code, value }));
 
     createListing.mutate(
       {
@@ -1009,6 +1027,7 @@ function CreateOLXListingDialog({
         title: effectiveTitle,
         description: description || undefined,
         price_override: priceOverride ? parseFloat(priceOverride) : undefined,
+        attributes: attributes.length > 0 ? attributes : undefined,
       },
       {
         onSuccess: () => {
@@ -1151,6 +1170,46 @@ function CreateOLXListingDialog({
               </p>
             )}
           </div>
+
+          {/* Category required attributes */}
+          {isLeafCategory && attrsLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> Pobieranie atrybutów kategorii...
+            </div>
+          )}
+          {isLeafCategory && requiredAttributes.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Atrybuty kategorii *</Label>
+              {requiredAttributes.map((attr) => (
+                <div key={attr.code} className="space-y-1">
+                  <Label className="text-xs">{attr.label}{attr.unit ? ` (${attr.unit})` : ""}</Label>
+                  {attr.values && attr.values.length > 0 ? (
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={attributeValues[attr.code] ?? ""}
+                      onChange={(e) =>
+                        setAttributeValues((prev) => ({ ...prev, [attr.code]: e.target.value }))
+                      }
+                    >
+                      <option value="">Wybierz...</option>
+                      {attr.values.map((v) => (
+                        <option key={v.code} value={v.code}>{v.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      type={attr.validation.numeric ? "number" : "text"}
+                      value={attributeValues[attr.code] ?? ""}
+                      onChange={(e) =>
+                        setAttributeValues((prev) => ({ ...prev, [attr.code]: e.target.value }))
+                      }
+                      placeholder={attr.label}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* City search */}
           <div className="space-y-2">
