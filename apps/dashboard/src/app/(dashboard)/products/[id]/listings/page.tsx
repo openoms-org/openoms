@@ -978,11 +978,12 @@ function CreateOLXListingDialog({
     setSelectedCategoryId(null);
   };
 
-  const handleSuggestionSelect = (suggestion: { id: number; name: string; path: string[] }) => {
-    setSelectedCategoryId(suggestion.id);
+  const handleSuggestionSelect = (suggestion: { id: number | string; name: string; path: string[] }) => {
+    const catId = typeof suggestion.id === "string" ? parseInt(suggestion.id, 10) : suggestion.id;
+    setSelectedCategoryId(catId);
     setCategoryPath(
       suggestion.path.map((name, i) => ({
-        id: i === suggestion.path.length - 1 ? suggestion.id : 0,
+        id: i === suggestion.path.length - 1 ? catId : 0,
         name,
       }))
     );

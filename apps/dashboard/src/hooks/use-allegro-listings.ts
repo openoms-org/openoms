@@ -328,7 +328,7 @@ export function useOLXCities(integrationId: string, query: string) {
 }
 
 export interface OLXCategorySuggestion {
-  id: number;
+  id: number | string;
   name: string;
   path: string[];
 }

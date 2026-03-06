@@ -192,8 +192,9 @@ type CategoryAttributeListResponse struct {
 }
 
 // CategorySuggestion is returned by GET /categories/suggestion.
+// Note: OLX returns id as a string in the suggestion response.
 type CategorySuggestion struct {
-	ID   int      `json:"id"`
+	ID   any      `json:"id"`
 	Name string   `json:"name"`
 	Path []string `json:"path"`
 }
