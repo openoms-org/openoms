@@ -115,6 +115,7 @@ import {
 } from "@/components/ui/command";
 import { AlertTriangle, Check, ChevronsUpDown } from "lucide-react";
 import { sanitizeUrl } from "@/lib/utils";
+import { PROVIDER_CATEGORIES } from "@/lib/constants";
 
 // ===================== Constants =====================
 
@@ -618,10 +619,16 @@ function ListingRow({
 
 // ===================== Marketplace Picker =====================
 
-const MARKETPLACE_PROVIDERS = [
-  { key: "allegro", name: "Allegro", logo: "/logos/allegro.svg", description: "Wystawianie ofert na Allegro.pl" },
-  { key: "woocommerce", name: "WooCommerce", logo: "/logos/woocommerce.svg", description: "Publikacja produktu w sklepie WooCommerce" },
-] as const;
+const MARKETPLACE_PROVIDER_INFO: Record<string, { name: string; logo: string; description: string }> = {
+  allegro: { name: "Allegro", logo: "/logos/allegro.svg", description: "Wystawianie ofert na Allegro.pl" },
+  woocommerce: { name: "WooCommerce", logo: "/logos/woocommerce.svg", description: "Publikacja produktu w sklepie WooCommerce" },
+  olx: { name: "OLX", logo: "/logos/olx.svg", description: "Wystawianie ogłoszeń na OLX.pl" },
+  erli: { name: "Erli", logo: "/logos/erli.svg", description: "Wystawianie ofert na Erli.pl" },
+  amazon: { name: "Amazon", logo: "/logos/amazon.svg", description: "Publikacja oferty na Amazon" },
+  ebay: { name: "eBay", logo: "/logos/ebay.svg", description: "Wystawianie ofert na eBay" },
+  kaufland: { name: "Kaufland", logo: "/logos/kaufland.svg", description: "Publikacja oferty na Kaufland.de" },
+  empik: { name: "Empik Marketplace", logo: "/logos/empik.svg", description: "Wystawianie ofert na Empik Marketplace" },
+};
 
 function CreateListingWizard({
   product,
@@ -633,14 +640,26 @@ function CreateListingWizard({
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const { data: integrations } = useIntegrations();
 
-  // Filter to only providers that have active integrations
+  // Filter to only marketplace providers that have active integrations
   const availableProviders = useMemo(() => {
     if (!integrations) return [];
-    const providerSet = new Set(integrations.map((i) => i.provider));
-    return MARKETPLACE_PROVIDERS.filter((mp) => providerSet.has(mp.key));
+    const marketplaceProviders = PROVIDER_CATEGORIES.marketplace.providers;
+    return integrations
+      .filter((i) => i.status === "active" && marketplaceProviders.includes(i.provider))
+      .map((i) => ({
+        key: i.provider,
+        integrationId: i.id,
+        ...(MARKETPLACE_PROVIDER_INFO[i.provider] ?? {
+          name: i.provider,
+          logo: `/logos/${i.provider}.svg`,
+          description: `Integracja ${i.provider}`,
+        }),
+      }));
   }, [integrations]);
 
   // Show picker always — user should explicitly choose the marketplace
+
+  const selectedIntegration = availableProviders.find((p) => p.key === selectedProvider);
 
   if (selectedProvider === "allegro") {
     return <CreateAllegroListingDialog product={product} onClose={onClose} />;
@@ -648,6 +667,26 @@ function CreateListingWizard({
 
   if (selectedProvider === "woocommerce") {
     return <CreateWooCommerceListingDialog product={product} onClose={onClose} />;
+  }
+
+  if (selectedProvider && selectedIntegration && !["allegro", "woocommerce"].includes(selectedProvider)) {
+    // Providers without dedicated dialogs yet — show coming soon
+    return (
+      <Dialog open onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{MARKETPLACE_PROVIDER_INFO[selectedProvider]?.name ?? selectedProvider}</DialogTitle>
+            <DialogDescription>
+              Wystawianie na tym marketplace będzie wkrótce dostępne.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedProvider(null)}>Wróć</Button>
+            <Button variant="outline" onClick={onClose}>Zamknij</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   // Marketplace picker step
