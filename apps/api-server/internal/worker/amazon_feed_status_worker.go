@@ -35,7 +35,7 @@ func NewAmazonFeedStatusWorker(pool *pgxpool.Pool, encryptionKey []byte, logger 
 	return &AmazonFeedStatusWorker{pool: pool, encryptionKey: encryptionKey, logger: logger}
 }
 
-func (w *AmazonFeedStatusWorker) Name() string           { return "amazon_feed_status" }
+func (w *AmazonFeedStatusWorker) Name() string            { return "amazon_feed_status" }
 func (w *AmazonFeedStatusWorker) Interval() time.Duration { return 2 * time.Minute }
 
 func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
