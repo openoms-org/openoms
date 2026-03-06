@@ -18,12 +18,14 @@ import (
 )
 
 // OAuthState holds the state + credentials needed to complete an OAuth flow.
-// Shared by all OAuth providers (Allegro, OLX, etc.).
+// Shared by all OAuth providers (Allegro, OLX, Amazon, etc.).
 type OAuthState struct {
-	ExpiresAt    time.Time
-	ClientID     string
-	ClientSecret string
-	Sandbox      bool
+	ExpiresAt     time.Time
+	ClientID      string
+	ClientSecret  string
+	Sandbox       bool
+	ApplicationID string // Amazon SP-API: application_id (separate from LWA client_id)
+	MarketplaceID string // Amazon SP-API: marketplace_id for Seller Central URL
 }
 
 // AllegroAuthHandler handles the Allegro OAuth2 authorization flow.

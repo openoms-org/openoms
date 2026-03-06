@@ -699,8 +699,12 @@ func New(deps RouterDeps) *chi.Mux {
 
 				})
 
-				// Amazon SP-API setup
-				r.Post("/amazon/setup", deps.AmazonAuth.Setup)
+				// Amazon SP-API
+				r.Route("/amazon", func(r chi.Router) {
+					r.Post("/setup", deps.AmazonAuth.Setup)
+					r.Get("/auth-url", deps.AmazonAuth.GetAuthURL)
+					r.Post("/callback", deps.AmazonAuth.HandleCallback)
+				})
 
 				// OLX OAuth2
 				r.Route("/olx", func(r chi.Router) {
