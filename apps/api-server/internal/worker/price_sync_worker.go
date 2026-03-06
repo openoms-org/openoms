@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -181,11 +182,31 @@ func (w *PriceSyncWorker) syncBulk(
 			continue
 		}
 
+		syncStatus := "synced"
+		if _, ok := provider.(integration.AsyncPriceUpdater); ok {
+			syncStatus = "pending"
+		}
+		feedMeta := buildFeedMeta(provider)
 		for _, l := range batchListings {
-			if _, execErr := tx.Exec(ctx,
-				`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-				l.ListingID,
-			); execErr != nil {
+			var execErr error
+			switch {
+			case syncStatus == "pending" && feedMeta != nil:
+				_, execErr = tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
+					l.ListingID, feedMeta,
+				)
+			case syncStatus == "pending":
+				_, execErr = tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
+					l.ListingID,
+				)
+			default:
+				_, execErr = tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+					l.ListingID,
+				)
+			}
+			if execErr != nil {
 				w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
 			}
 		}
@@ -193,6 +214,7 @@ func (w *PriceSyncWorker) syncBulk(
 			"operation", "listing.price_bulk_update",
 			"tenant_id", ti.TenantID,
 			"batch_size", len(chunk),
+			"sync_status", syncStatus,
 		)
 		synced += len(chunk)
 	}
@@ -228,11 +250,36 @@ func (w *PriceSyncWorker) syncOneByOne(
 			continue
 		}
 
-		if _, execErr := tx.Exec(ctx,
-			`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-			l.ListingID,
-		); execErr != nil {
-			w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+		syncStatus := "synced"
+		if _, ok := provider.(integration.AsyncPriceUpdater); ok {
+			syncStatus = "pending"
+		}
+		if syncStatus == "pending" {
+			feedMeta := buildFeedMeta(provider)
+			if feedMeta != nil {
+				_, execErr := tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
+					l.ListingID, feedMeta,
+				)
+				if execErr != nil {
+					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+				}
+			} else {
+				_, execErr := tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
+					l.ListingID,
+				)
+				if execErr != nil {
+					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+				}
+			}
+		} else {
+			if _, execErr := tx.Exec(ctx,
+				`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+				l.ListingID,
+			); execErr != nil {
+				w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+			}
 		}
 		w.logger.Info("worker: price synced",
 			"operation", "listing.price_update",
@@ -240,11 +287,26 @@ func (w *PriceSyncWorker) syncOneByOne(
 			"entity_id", l.ListingID,
 			"external_id", l.ExternalID,
 			"price", l.Price,
+			"sync_status", syncStatus,
 		)
 		synced++
 	}
 
 	return synced
+}
+
+// buildFeedMeta extracts feed metadata from an AsyncFeedResult provider, if available.
+func buildFeedMeta(provider any) []byte {
+	if fr, ok := provider.(integration.AsyncFeedResult); ok {
+		if result := fr.FeedResult(); result != nil {
+			data, _ := json.Marshal(map[string]string{
+				"amazon_feed_id":   result.FeedID,
+				"amazon_feed_type": result.FeedType,
+			})
+			return data
+		}
+	}
+	return nil
 }
 
 // chunkPriceUpdates splits a slice of PriceUpdate into chunks of the given size.

@@ -194,3 +194,92 @@ func buildInventoryXML(merchantID string, skuQuantities map[string]int) []byte {
 	data, _ := xml.MarshalIndent(env, "", "  ")
 	return append([]byte(xml.Header), data...)
 }
+
+// XML structures for the pricing feed envelope.
+
+type pricingEnvelope struct {
+	XMLName     xml.Name       `xml:"AmazonEnvelope"`
+	XSI         string         `xml:"xmlns:xsi,attr"`
+	Schema      string         `xml:"xsi:noNamespaceSchemaLocation,attr"`
+	Header      envelopeHeader `xml:"Header"`
+	MessageType string         `xml:"MessageType"`
+	Messages    []pricingMsg   `xml:"Message"`
+}
+
+type pricingMsg struct {
+	MessageID int          `xml:"MessageID"`
+	Price     pricingEntry `xml:"Price"`
+}
+
+type pricingEntry struct {
+	SKU           string        `xml:"SKU"`
+	StandardPrice standardPrice `xml:"StandardPrice"`
+}
+
+type standardPrice struct {
+	Currency string  `xml:"currency,attr"`
+	Value    float64 `xml:",chardata"`
+}
+
+// SubmitPricingFeed creates, uploads, and submits a POST_PRODUCT_PRICING_DATA feed.
+// skuPrices maps seller SKU to price. currency is e.g. "PLN".
+// Returns the feed ID for optional status polling.
+func (s *FeedService) SubmitPricingFeed(ctx context.Context, marketplaceID, merchantID string, skuPrices map[string]float64, currency string) (string, error) {
+	for sku := range skuPrices {
+		if len(sku) > maxSKULength {
+			return "", fmt.Errorf("amazon: SKU %q exceeds max length of %d characters", sku, maxSKULength)
+		}
+	}
+
+	xmlContent := buildPricingXML(merchantID, skuPrices, currency)
+
+	contentType := "text/xml; charset=UTF-8"
+	doc, err := s.CreateDocument(ctx, contentType)
+	if err != nil {
+		return "", err
+	}
+
+	if err := s.Upload(ctx, doc.URL, xmlContent, contentType); err != nil {
+		return "", err
+	}
+
+	resp, err := s.SubmitFeed(ctx, "POST_PRODUCT_PRICING_DATA", []string{marketplaceID}, doc.FeedDocumentID)
+	if err != nil {
+		return "", err
+	}
+	return resp.FeedID, nil
+}
+
+func buildPricingXML(merchantID string, skuPrices map[string]float64, currency string) []byte {
+	env := pricingEnvelope{
+		XSI:    "http://www.w3.org/2001/XMLSchema-instance",
+		Schema: "amzn-envelope.xsd",
+		Header: envelopeHeader{
+			DocumentVersion:    "1.01",
+			MerchantIdentifier: merchantID,
+		},
+		MessageType: "Price",
+	}
+
+	skus := make([]string, 0, len(skuPrices))
+	for sku := range skuPrices {
+		skus = append(skus, sku)
+	}
+	sort.Strings(skus)
+
+	for i, sku := range skus {
+		env.Messages = append(env.Messages, pricingMsg{
+			MessageID: i + 1,
+			Price: pricingEntry{
+				SKU: sku,
+				StandardPrice: standardPrice{
+					Currency: currency,
+					Value:    skuPrices[sku],
+				},
+			},
+		})
+	}
+
+	data, _ := xml.MarshalIndent(env, "", "  ")
+	return append([]byte(xml.Header), data...)
+}

@@ -190,3 +190,70 @@ func TestBuildInventoryXML(t *testing.T) {
 	assert.Equal(t, "B-SKU", env.Messages[1].Inventory.SKU)
 	assert.Equal(t, 5, env.Messages[1].Inventory.Quantity)
 }
+
+func TestSubmitPricingFeed(t *testing.T) {
+	var uploadedXML string
+
+	uploadSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		uploadedXML = string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer uploadSrv.Close()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/feeds/2021-06-30/documents", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"feedDocumentId":"doc-price","url":"%s"}`, uploadSrv.URL)
+	})
+	mux.HandleFunc("/feeds/2021-06-30/feeds", func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		assert.Contains(t, string(body), `"feedType":"POST_PRODUCT_PRICING_DATA"`)
+		assert.Contains(t, string(body), `"inputFeedDocumentId":"doc-price"`)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"feedId":"feed-price-001"}`)
+	})
+
+	client, srv := newTestClientWithAPI(mux)
+	defer srv.Close()
+
+	feedID, err := client.Feeds.SubmitPricingFeed(context.Background(), "A1C3SOZRARQ6R3", "MERCHANT_001",
+		map[string]float64{"SKU-X": 29.99, "SKU-Y": 149.00}, "PLN")
+	require.NoError(t, err)
+	assert.Equal(t, "feed-price-001", feedID)
+
+	// Verify XML structure
+	assert.True(t, strings.HasPrefix(uploadedXML, `<?xml version="1.0" encoding="UTF-8"?>`))
+	assert.Contains(t, uploadedXML, "<MerchantIdentifier>MERCHANT_001</MerchantIdentifier>")
+	assert.Contains(t, uploadedXML, "<MessageType>Price</MessageType>")
+	assert.Contains(t, uploadedXML, "<SKU>SKU-X</SKU>")
+	assert.Contains(t, uploadedXML, `currency="PLN"`)
+	assert.Contains(t, uploadedXML, "<SKU>SKU-Y</SKU>")
+}
+
+func TestBuildPricingXML(t *testing.T) {
+	data := buildPricingXML("MERCH_456", map[string]float64{
+		"B-SKU": 9.99,
+		"A-SKU": 49.50,
+	}, "PLN")
+
+	xmlStr := string(data)
+	assert.Contains(t, xmlStr, `<?xml version="1.0" encoding="UTF-8"?>`)
+	assert.Contains(t, xmlStr, "<MerchantIdentifier>MERCH_456</MerchantIdentifier>")
+	assert.Contains(t, xmlStr, "<MessageType>Price</MessageType>")
+
+	// Verify sorted order
+	var env pricingEnvelope
+	xmlBody := xmlStr[strings.Index(xmlStr, "<AmazonEnvelope"):]
+	err := xml.Unmarshal([]byte(xmlBody), &env)
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, len(env.Messages))
+	assert.Equal(t, 1, env.Messages[0].MessageID)
+	assert.Equal(t, "A-SKU", env.Messages[0].Price.SKU)
+	assert.Equal(t, 49.50, env.Messages[0].Price.StandardPrice.Value)
+	assert.Equal(t, "PLN", env.Messages[0].Price.StandardPrice.Currency)
+	assert.Equal(t, 2, env.Messages[1].MessageID)
+	assert.Equal(t, "B-SKU", env.Messages[1].Price.SKU)
+	assert.Equal(t, 9.99, env.Messages[1].Price.StandardPrice.Value)
+}

@@ -814,6 +814,26 @@ func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, ten
 		if _, ok := provider.(integration.AsyncStockUpdater); ok {
 			syncStatus = "pending"
 		}
+		if syncStatus == "pending" {
+			// Store feed metadata for async polling (e.g. Amazon feed ID)
+			if fr, ok := provider.(integration.AsyncFeedResult); ok {
+				if result := fr.FeedResult(); result != nil {
+					feedMeta, _ := json.Marshal(map[string]string{
+						"amazon_feed_id":   result.FeedID,
+						"amazon_feed_type": result.FeedType,
+					})
+					_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+						_, err := tx.Exec(ctx,
+							`UPDATE product_listings SET sync_status = 'pending', error_message = NULL,
+							 metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
+							job.listing.ID, feedMeta)
+						return err
+					})
+					pushed++
+					continue
+				}
+			}
+		}
 		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 			return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
 				SyncStatus: &syncStatus,

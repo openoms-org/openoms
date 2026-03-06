@@ -33,7 +33,11 @@ type AmazonCredentials struct {
 	Sandbox          bool   `json:"sandbox,omitempty"`
 }
 
-var _ integration.AsyncStockUpdater = (*Provider)(nil)
+var (
+	_ integration.AsyncStockUpdater = (*Provider)(nil)
+	_ integration.AsyncPriceUpdater = (*Provider)(nil)
+	_ integration.AsyncFeedResult   = (*Provider)(nil)
+)
 
 // Provider implements integration.MarketplaceProvider for Amazon SP-API.
 type Provider struct {
@@ -41,6 +45,7 @@ type Provider struct {
 	marketplaceID    string
 	sellingPartnerID string
 	logger           *slog.Logger
+	lastFeedResult   *integration.FeedSubmission
 }
 
 // NewProvider creates an Amazon MarketplaceProvider from encrypted credentials.
@@ -172,22 +177,25 @@ func (p *Provider) PushOffer(_ context.Context, _ *model.Product, _ map[string]a
 
 // UpdateStock updates stock for a single SKU via Amazon Feeds API.
 // NOTE: Amazon Feeds API is asynchronous — the feed is submitted but not yet processed.
-// sync_status is set to 'synced' optimistically by the caller; actual processing may take minutes.
+// The feed ID is exposed via FeedResult() for status polling.
 func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
 	if p.sellingPartnerID == "" {
 		return fmt.Errorf("amazon: selling_partner_id not configured — cannot submit inventory feed")
 	}
-	_, err := p.client.Feeds.SubmitInventoryFeed(ctx, p.marketplaceID, p.sellingPartnerID, map[string]int{
+	p.lastFeedResult = nil
+	feedID, err := p.client.Feeds.SubmitInventoryFeed(ctx, p.marketplaceID, p.sellingPartnerID, map[string]int{
 		externalOfferID: quantity,
 	})
 	if err != nil {
 		return fmt.Errorf("amazon: update stock for %s: %w", externalOfferID, err)
 	}
+	p.lastFeedResult = &integration.FeedSubmission{FeedID: feedID, FeedType: "inventory"}
 	return nil
 }
 
 // BulkUpdateStock implements integration.BulkStockUpdater via a single inventory feed.
 // NOTE: Amazon Feeds API is asynchronous — the feed is submitted but not yet processed.
+// The feed ID is exposed via FeedResult() for status polling.
 func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.StockUpdate) error {
 	if len(updates) == 0 {
 		return nil
@@ -195,23 +203,51 @@ func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.St
 	if p.sellingPartnerID == "" {
 		return fmt.Errorf("amazon: selling_partner_id not configured — cannot submit inventory feed")
 	}
+	p.lastFeedResult = nil
 	skuQty := make(map[string]int, len(updates))
 	for _, u := range updates {
 		skuQty[u.ExternalOfferID] = u.Quantity
 	}
-	_, err := p.client.Feeds.SubmitInventoryFeed(ctx, p.marketplaceID, p.sellingPartnerID, skuQty)
+	feedID, err := p.client.Feeds.SubmitInventoryFeed(ctx, p.marketplaceID, p.sellingPartnerID, skuQty)
 	if err != nil {
 		return fmt.Errorf("amazon: bulk update stock: %w", err)
 	}
+	p.lastFeedResult = &integration.FeedSubmission{FeedID: feedID, FeedType: "inventory"}
 	return nil
 }
 
 // IsAsyncStockUpdate marks Amazon as an async stock updater (Feeds API is asynchronous).
 func (p *Provider) IsAsyncStockUpdate() {}
 
-// UpdatePrice is not implemented for Amazon (requires Feeds API).
-func (p *Provider) UpdatePrice(_ context.Context, _ string, _ float64) error {
-	return fmt.Errorf("amazon: UpdatePrice not implemented (use Amazon Feeds API)")
+// IsAsyncPriceUpdate marks Amazon as an async price updater (Feeds API is asynchronous).
+func (p *Provider) IsAsyncPriceUpdate() {}
+
+// FeedResult returns the feed ID from the last successful async operation.
+func (p *Provider) FeedResult() *integration.FeedSubmission {
+	return p.lastFeedResult
+}
+
+// GetFeedStatus retrieves the processing status of an Amazon feed.
+// Used by AmazonFeedStatusWorker to poll pending feeds.
+func (p *Provider) GetFeedStatus(ctx context.Context, feedID string) (*amazonsdk.Feed, error) {
+	return p.client.Feeds.GetFeed(ctx, feedID)
+}
+
+// UpdatePrice updates price for a single SKU via Amazon Feeds API.
+// NOTE: Amazon Feeds API is asynchronous — the feed is submitted but not yet processed.
+// The feed ID is exposed via FeedResult() for status polling.
+func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
+	if p.sellingPartnerID == "" {
+		return fmt.Errorf("amazon: selling_partner_id not configured — cannot submit pricing feed")
+	}
+	p.lastFeedResult = nil
+	feedID, err := p.client.Feeds.SubmitPricingFeed(ctx, p.marketplaceID, p.sellingPartnerID,
+		map[string]float64{externalOfferID: price}, "PLN")
+	if err != nil {
+		return fmt.Errorf("amazon: update price for %s: %w", externalOfferID, err)
+	}
+	p.lastFeedResult = &integration.FeedSubmission{FeedID: feedID, FeedType: "pricing"}
+	return nil
 }
 
 // mapAmazonOrder converts Amazon order + items to the normalized MarketplaceOrder.
