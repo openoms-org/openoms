@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -184,7 +185,7 @@ func (w *StockSyncWorker) syncBulk(
 				"error", err,
 			)
 			errMsg := truncateErrorMessage(err.Error())
-			w.updateListingsStatus(ctx, ti.TenantID, batchListings, "error", &errMsg)
+			w.updateListingsStatus(ctx, ti.TenantID, batchListings, "error", &errMsg, nil)
 			continue
 		}
 
@@ -192,7 +193,18 @@ func (w *StockSyncWorker) syncBulk(
 		if _, ok := provider.(integration.AsyncStockUpdater); ok {
 			syncStatus = "pending"
 		}
-		w.updateListingsStatus(ctx, ti.TenantID, batchListings, syncStatus, nil)
+		var feedMeta []byte
+		if syncStatus == "pending" {
+			if fr, ok := provider.(integration.AsyncFeedResult); ok {
+				if result := fr.FeedResult(); result != nil {
+					feedMeta, _ = json.Marshal(map[string]string{
+						"amazon_feed_id":   result.FeedID,
+						"amazon_feed_type": result.FeedType,
+					})
+				}
+			}
+		}
+		w.updateListingsStatus(ctx, ti.TenantID, batchListings, syncStatus, nil, feedMeta)
 		w.logger.Info("worker: stock batch synced",
 			"operation", "listing.stock_bulk_update",
 			"tenant_id", ti.TenantID,
@@ -224,7 +236,7 @@ func (w *StockSyncWorker) syncOneByOne(
 				"error", err,
 			)
 			errMsg := truncateErrorMessage(err.Error())
-			w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "error", &errMsg)
+			w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "error", &errMsg, nil)
 			continue
 		}
 
@@ -232,7 +244,18 @@ func (w *StockSyncWorker) syncOneByOne(
 		if _, ok := provider.(integration.AsyncStockUpdater); ok {
 			syncStatus = "pending"
 		}
-		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, syncStatus, nil)
+		var feedMeta []byte
+		if syncStatus == "pending" {
+			if fr, ok := provider.(integration.AsyncFeedResult); ok {
+				if result := fr.FeedResult(); result != nil {
+					feedMeta, _ = json.Marshal(map[string]string{
+						"amazon_feed_id":   result.FeedID,
+						"amazon_feed_type": result.FeedType,
+					})
+				}
+			}
+		}
+		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, syncStatus, nil, feedMeta)
 		w.logger.Info("worker: stock synced",
 			"operation", "listing.stock_update",
 			"tenant_id", ti.TenantID,
@@ -263,7 +286,7 @@ func (w *StockSyncWorker) deactivateListing(
 			"error", err,
 		)
 		errMsg := truncateErrorMessage(err.Error())
-		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "error", &errMsg)
+		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "error", &errMsg, nil)
 		return 0
 	}
 
@@ -285,7 +308,8 @@ func (w *StockSyncWorker) deactivateListing(
 }
 
 // updateListingsStatus updates sync_status for listings in a short transaction (Phase 2 DB writes).
-func (w *StockSyncWorker) updateListingsStatus(ctx context.Context, tenantID uuid.UUID, listings []listingStock, status string, errMsg *string) {
+// feedMeta is optional JSONB to merge into metadata (used for Amazon feed IDs on "pending" status).
+func (w *StockSyncWorker) updateListingsStatus(ctx context.Context, tenantID uuid.UUID, listings []listingStock, status string, errMsg *string, feedMeta []byte) {
 	_ = database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
 		for _, l := range listings {
 			var execErr error
@@ -296,10 +320,17 @@ func (w *StockSyncWorker) updateListingsStatus(ctx context.Context, tenantID uui
 					l.ListingID,
 				)
 			case "pending":
-				_, execErr = tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
-					l.ListingID,
-				)
+				if feedMeta != nil {
+					_, execErr = tx.Exec(ctx,
+						`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
+						l.ListingID, feedMeta,
+					)
+				} else {
+					_, execErr = tx.Exec(ctx,
+						`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
+						l.ListingID,
+					)
+				}
 			default: // "error"
 				msg := ""
 				if errMsg != nil {
