@@ -674,6 +674,9 @@ func (e *DefaultActionExecutor) executeDeactivateListing(_ context.Context, tena
 		"deactivated", deactivated,
 		"failed", failed,
 	)
+	if deactivated == 0 && failed > 0 {
+		return fmt.Errorf("deactivate_listing: all %d listing(s) failed to deactivate", failed)
+	}
 	return nil
 }
 

@@ -896,6 +896,7 @@ func newListingActivatorFactory() func(provider string, credentials json.RawMess
 		}
 		activator, ok := mp.(automation.ListingActivatorProvider)
 		if !ok {
+			closeProviderIfNeeded(mp)
 			return nil, fmt.Errorf("provider %q does not support offer activation", providerName)
 		}
 		return activator, nil
@@ -912,8 +913,17 @@ func newListingDeactivatorFactory() func(provider string, credentials json.RawMe
 		}
 		deactivator, ok := mp.(automation.ListingDeactivatorProvider)
 		if !ok {
+			closeProviderIfNeeded(mp)
 			return nil, fmt.Errorf("provider %q does not support offer deactivation", providerName)
 		}
 		return deactivator, nil
+	}
+}
+
+// closeProviderIfNeeded closes a provider that implements Close() to prevent goroutine leaks.
+func closeProviderIfNeeded(p any) {
+	type closer interface{ Close() }
+	if c, ok := p.(closer); ok {
+		c.Close()
 	}
 }

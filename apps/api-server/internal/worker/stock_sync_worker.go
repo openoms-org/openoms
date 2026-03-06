@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -66,9 +67,9 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			continue
 		}
 
-		tenantErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
-			// Query auto-sync product_listings with warehouse-based available stock.
-			// stock_sync_mode = 'auto' gates both stock and price sync (single toggle per listing).
+		// Phase 1: Gather listings inside a short transaction.
+		var listings []listingStock
+		gatherErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
 			rows, err := tx.Query(ctx,
 				`SELECT pl.id, pl.external_id, pl.stock_override,
 				        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
@@ -85,8 +86,6 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			}
 			defer rows.Close()
 
-			// Collect all listings into a slice
-			var listings []listingStock
 			for rows.Next() {
 				var listingID, externalID string
 				var stockOverride *int
@@ -96,7 +95,6 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 					continue
 				}
 
-				// Use stock_override if set
 				stockQty := availableQty
 				if stockOverride != nil {
 					stockQty = *stockOverride
@@ -108,35 +106,39 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 					StockQty:   stockQty,
 				})
 			}
-			if err := rows.Err(); err != nil {
-				return err
-			}
-
-			// Deactivate zero-stock listings via ListingDeactivator if supported
-			deactivator, hasDeactivator := provider.(integration.ListingDeactivator)
-			var nonZeroStock []listingStock
-			if hasDeactivator {
-				for _, l := range listings {
-					if l.StockQty == 0 {
-						totalSynced += w.deactivateListing(ctx, tx, ti, deactivator, l)
-					} else {
-						nonZeroStock = append(nonZeroStock, l)
-					}
-				}
-			} else {
-				nonZeroStock = listings
-			}
-
-			// Sync non-zero stock listings (and zero-stock if no deactivator)
-			bulkProvider, hasBulk := provider.(integration.BulkStockUpdater)
-			if hasBulk {
-				totalSynced += w.syncBulk(ctx, tx, ti, bulkProvider, nonZeroStock)
-			} else {
-				totalSynced += w.syncOneByOne(ctx, tx, ti, provider, nonZeroStock)
-			}
-
-			return nil
+			return rows.Err()
 		})
+		if gatherErr != nil {
+			w.logger.Error("stock sync: gather listings failed", "tenant_id", ti.TenantID, "error", gatherErr)
+			closeProvider(provider)
+			continue
+		}
+
+		// Phase 2: Call marketplace APIs outside the transaction.
+		// Deactivate zero-stock listings via ListingDeactivator if supported.
+		deactivator, hasDeactivator := provider.(integration.ListingDeactivator)
+		var nonZeroStock []listingStock
+		if hasDeactivator {
+			for _, l := range listings {
+				if l.StockQty == 0 {
+					totalSynced += w.deactivateListing(ctx, ti, deactivator, l)
+				} else {
+					nonZeroStock = append(nonZeroStock, l)
+				}
+			}
+		} else {
+			nonZeroStock = listings
+		}
+
+		// Sync non-zero stock listings (and zero-stock if no deactivator).
+		bulkProvider, hasBulk := provider.(integration.BulkStockUpdater)
+		if hasBulk {
+			totalSynced += w.syncBulk(ctx, ti, bulkProvider, nonZeroStock)
+		} else {
+			totalSynced += w.syncOneByOne(ctx, ti, provider, nonZeroStock)
+		}
+
+		tenantErr := gatherErr
 		closeProvider(provider)
 		if tenantErr != nil {
 			w.logger.Error("stock sync: tenant error", "tenant_id", ti.TenantID, "error", tenantErr)
@@ -151,7 +153,6 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 // syncBulk sends stock updates in batches of stockBulkBatchSize.
 func (w *StockSyncWorker) syncBulk(
 	ctx context.Context,
-	tx pgx.Tx,
 	ti TenantIntegration,
 	provider integration.BulkStockUpdater,
 	listings []listingStock,
@@ -183,25 +184,11 @@ func (w *StockSyncWorker) syncBulk(
 				"error", err,
 			)
 			errMsg := truncateErrorMessage(err.Error())
-			for _, l := range batchListings {
-				if _, execErr := tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-					l.ListingID, errMsg,
-				); execErr != nil {
-					w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-				}
-			}
+			w.updateListingsStatus(ctx, ti.TenantID, batchListings, "error", &errMsg)
 			continue
 		}
 
-		for _, l := range batchListings {
-			if _, execErr := tx.Exec(ctx,
-				`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-				l.ListingID,
-			); execErr != nil {
-				w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-			}
-		}
+		w.updateListingsStatus(ctx, ti.TenantID, batchListings, "synced", nil)
 		w.logger.Info("worker: stock batch synced",
 			"operation", "listing.stock_bulk_update",
 			"tenant_id", ti.TenantID,
@@ -216,7 +203,6 @@ func (w *StockSyncWorker) syncBulk(
 // syncOneByOne updates stock one listing at a time (fallback for providers without bulk support).
 func (w *StockSyncWorker) syncOneByOne(
 	ctx context.Context,
-	tx pgx.Tx,
 	ti TenantIntegration,
 	provider integration.MarketplaceProvider,
 	listings []listingStock,
@@ -232,21 +218,12 @@ func (w *StockSyncWorker) syncOneByOne(
 				"external_id", l.ExternalID,
 				"error", err,
 			)
-			if _, execErr := tx.Exec(ctx,
-				`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-				l.ListingID, truncateErrorMessage(err.Error()),
-			); execErr != nil {
-				w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-			}
+			errMsg := truncateErrorMessage(err.Error())
+			w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "error", &errMsg)
 			continue
 		}
 
-		if _, execErr := tx.Exec(ctx,
-			`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-			l.ListingID,
-		); execErr != nil {
-			w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-		}
+		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "synced", nil)
 		w.logger.Info("worker: stock synced",
 			"operation", "listing.stock_update",
 			"tenant_id", ti.TenantID,
@@ -263,7 +240,6 @@ func (w *StockSyncWorker) syncOneByOne(
 // deactivateListing deactivates a single listing via ListingDeactivator and updates its status.
 func (w *StockSyncWorker) deactivateListing(
 	ctx context.Context,
-	tx pgx.Tx,
 	ti TenantIntegration,
 	deactivator integration.ListingDeactivator,
 	l listingStock,
@@ -276,21 +252,19 @@ func (w *StockSyncWorker) deactivateListing(
 			"external_id", l.ExternalID,
 			"error", err,
 		)
-		if _, execErr := tx.Exec(ctx,
-			`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-			l.ListingID, truncateErrorMessage(err.Error()),
-		); execErr != nil {
-			w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-		}
+		errMsg := truncateErrorMessage(err.Error())
+		w.updateListingsStatus(ctx, ti.TenantID, []listingStock{l}, "error", &errMsg)
 		return 0
 	}
 
-	if _, execErr := tx.Exec(ctx,
-		`UPDATE product_listings SET status = 'inactive', sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-		l.ListingID,
-	); execErr != nil {
-		w.logger.Error("stock sync: failed to update listing status", "listing_id", l.ListingID, "error", execErr)
-	}
+	// Mark listing as inactive + synced
+	_ = database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			`UPDATE product_listings SET status = 'inactive', sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+			l.ListingID,
+		)
+		return err
+	})
 	w.logger.Info("worker: listing deactivated (stock=0)",
 		"operation", "listing.deactivate",
 		"tenant_id", ti.TenantID,
@@ -298,6 +272,34 @@ func (w *StockSyncWorker) deactivateListing(
 		"external_id", l.ExternalID,
 	)
 	return 1
+}
+
+// updateListingsStatus updates sync_status for listings in a short transaction (Phase 2 DB writes).
+func (w *StockSyncWorker) updateListingsStatus(ctx context.Context, tenantID uuid.UUID, listings []listingStock, status string, errMsg *string) {
+	_ = database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
+		for _, l := range listings {
+			var execErr error
+			if status == "synced" {
+				_, execErr = tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+					l.ListingID,
+				)
+			} else {
+				msg := ""
+				if errMsg != nil {
+					msg = *errMsg
+				}
+				_, execErr = tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+					l.ListingID, msg,
+				)
+			}
+			if execErr != nil {
+				w.logger.Error("stock sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+			}
+		}
+		return nil
+	})
 }
 
 // chunkStockUpdates splits a slice of StockUpdate into chunks of the given size.

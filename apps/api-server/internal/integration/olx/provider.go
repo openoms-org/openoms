@@ -38,6 +38,7 @@ type Provider struct {
 }
 
 var _ integration.ListingActivator = (*Provider)(nil)
+var _ integration.ListingDeactivator = (*Provider)(nil)
 
 // NewProvider creates an OLX MarketplaceProvider from encrypted credentials.
 func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {

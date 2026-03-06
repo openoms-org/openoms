@@ -30,6 +30,8 @@ type AllegroCredentials struct {
 	Sandbox      bool   `json:"sandbox,omitempty"`
 }
 
+var _ integration.ListingDeactivator = (*Provider)(nil)
+
 // Provider implements integration.MarketplaceProvider for Allegro.
 type Provider struct {
 	client *allegrosdk.Client

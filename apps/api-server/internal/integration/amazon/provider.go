@@ -169,7 +169,12 @@ func (p *Provider) PushOffer(_ context.Context, _ *model.Product, _ map[string]a
 }
 
 // UpdateStock updates stock for a single SKU via Amazon Feeds API.
+// NOTE: Amazon Feeds API is asynchronous — the feed is submitted but not yet processed.
+// sync_status is set to 'synced' optimistically by the caller; actual processing may take minutes.
 func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
+	if p.sellingPartnerID == "" {
+		return fmt.Errorf("amazon: selling_partner_id not configured — cannot submit inventory feed")
+	}
 	_, err := p.client.Feeds.SubmitInventoryFeed(ctx, p.marketplaceID, p.sellingPartnerID, map[string]int{
 		externalOfferID: quantity,
 	})
@@ -180,9 +185,13 @@ func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quan
 }
 
 // BulkUpdateStock implements integration.BulkStockUpdater via a single inventory feed.
+// NOTE: Amazon Feeds API is asynchronous — the feed is submitted but not yet processed.
 func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.StockUpdate) error {
 	if len(updates) == 0 {
 		return nil
+	}
+	if p.sellingPartnerID == "" {
+		return fmt.Errorf("amazon: selling_partner_id not configured — cannot submit inventory feed")
 	}
 	skuQty := make(map[string]int, len(updates))
 	for _, u := range updates {

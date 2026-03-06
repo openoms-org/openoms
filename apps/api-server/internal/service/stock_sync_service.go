@@ -24,6 +24,25 @@ var (
 	ErrStockSyncChannelNotFound = errors.New("stock sync channel not found")
 )
 
+// closeMarketplaceProvider closes providers that implement io.Closer (e.g. Allegro token refresh goroutine).
+func closeMarketplaceProvider(provider any) {
+	type closer interface{ Close() }
+	if c, ok := provider.(closer); ok {
+		c.Close()
+	}
+}
+
+const maxServiceErrorMsgLen = 500
+
+// truncateServiceErrorMsg limits error messages stored in the database to avoid storing
+// verbose API responses that may contain presigned URLs or other sensitive data.
+func truncateServiceErrorMsg(msg string) string {
+	if len(msg) <= maxServiceErrorMsgLen {
+		return msg
+	}
+	return msg[:maxServiceErrorMsgLen]
+}
+
 // StockSyncService provides business logic for real-time stock synchronization.
 type StockSyncService struct {
 	channelRepo     repository.StockSyncChannelRepo
@@ -345,8 +364,13 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 		"available", event.AvailableQuantity,
 	)
 
-	// Propagate stock to marketplaces asynchronously
-	asyncutil.SafeGo(func() { s.PropagateStockToMarketplaces(context.Background(), tenantID, productID) })
+	// Propagate stock to marketplaces asynchronously.
+	// Skip when stock goes from >0 to 0 — deactivation is already handled above
+	// (via automation event or direct deactivateListings fallback), and PropagateStockToMarketplaces
+	// would redundantly deactivate the same listings.
+	if !(oldQty > 0 && newQty == 0) {
+		asyncutil.SafeGo(func() { s.PropagateStockToMarketplaces(context.Background(), tenantID, productID) })
+	}
 }
 
 // reactivateListings finds inactive/ended marketplace listings for a product and
@@ -436,6 +460,7 @@ func (s *StockSyncService) reactivateListings(ctx context.Context, tenantID, pro
 		if !ok {
 			s.logger.Info("auto-relist: provider does not support activation, skipping",
 				"provider", job.integration.Provider)
+			closeMarketplaceProvider(provider)
 			continue
 		}
 
@@ -443,9 +468,11 @@ func (s *StockSyncService) reactivateListings(ctx context.Context, tenantID, pro
 			s.logger.Error("auto-relist: activation failed",
 				"listing_id", job.listingID, "external_id", job.externalID,
 				"provider", job.integration.Provider, "error", err)
+			closeMarketplaceProvider(provider)
 			failed++
 			continue
 		}
+		closeMarketplaceProvider(provider)
 
 		// Update listing status to active (best-effort)
 		activeStatus := "active"
@@ -478,19 +505,13 @@ func (s *StockSyncService) deactivateListings(ctx context.Context, tenantID, pro
 	var jobs []deactivateJob
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		listings, err := s.listingRepo.ListByProduct(ctx, tx, productID)
+		// ListAutoSyncByProduct filters: status='active', stock_sync_mode='auto', external_id IS NOT NULL.
+		listings, err := s.listingRepo.ListAutoSyncByProduct(ctx, tx, productID)
 		if err != nil {
 			return err
 		}
 
 		for _, listing := range listings {
-			if listing.Status != "active" {
-				continue
-			}
-			if listing.ExternalID == nil || *listing.ExternalID == "" {
-				continue
-			}
-
 			integ, err := s.integrationRepo.FindByID(ctx, tx, listing.IntegrationID)
 			if err != nil || integ == nil {
 				s.logger.Warn("auto-deactivate: integration not found for listing",
@@ -519,6 +540,8 @@ func (s *StockSyncService) deactivateListings(ctx context.Context, tenantID, pro
 	deactivated, failed := 0, 0
 	for _, job := range jobs {
 		if job.integration.EncryptedCredentials == "" {
+			s.logger.Warn("auto-deactivate: no credentials for integration",
+				"integration_id", job.integration.ID, "listing_id", job.listingID)
 			failed++
 			continue
 		}
@@ -541,6 +564,7 @@ func (s *StockSyncService) deactivateListings(ctx context.Context, tenantID, pro
 
 		deactivator, ok := provider.(integration.ListingDeactivator)
 		if !ok {
+			closeMarketplaceProvider(provider)
 			continue
 		}
 
@@ -548,9 +572,11 @@ func (s *StockSyncService) deactivateListings(ctx context.Context, tenantID, pro
 			s.logger.Error("auto-deactivate: deactivation failed",
 				"listing_id", job.listingID, "external_id", job.externalID,
 				"provider", job.integration.Provider, "error", err)
+			closeMarketplaceProvider(provider)
 			failed++
 			continue
 		}
+		closeMarketplaceProvider(provider)
 
 		inactiveStatus := "inactive"
 		syncOK := "synced"
@@ -740,7 +766,7 @@ func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, ten
 					s.logger.Error("stock sync: deactivate listing failed",
 						"listing_id", job.listing.ID, "external_id", *job.listing.ExternalID,
 						"provider", job.integration.Provider, "error", err)
-					errMsg := err.Error()
+					errMsg := truncateServiceErrorMsg(err.Error())
 					syncErr := "error"
 					_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 						return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
@@ -771,7 +797,7 @@ func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, ten
 				"provider", job.integration.Provider, "error", err)
 
 			// Update listing sync status to error (best-effort)
-			errMsg := err.Error()
+			errMsg := truncateServiceErrorMsg(err.Error())
 			syncErr := "error"
 			_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 				return s.listingRepo.Update(ctx, tx, job.listing.ID, &model.UpdateProductListingRequest{
