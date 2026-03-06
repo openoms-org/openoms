@@ -30,6 +30,8 @@ type AllegroCredentials struct {
 	Sandbox      bool   `json:"sandbox,omitempty"`
 }
 
+var _ integration.ListingDeactivator = (*Provider)(nil)
+
 // Provider implements integration.MarketplaceProvider for Allegro.
 type Provider struct {
 	client *allegrosdk.Client
@@ -140,6 +142,11 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, pric
 // ActivateOffer implements integration.ListingActivator using Allegro publication commands.
 func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) error {
 	return p.client.Offers.Activate(ctx, externalOfferID)
+}
+
+// DeactivateOffer implements integration.ListingDeactivator using Allegro publication commands.
+func (p *Provider) DeactivateOffer(ctx context.Context, externalOfferID string) error {
+	return p.client.Offers.Deactivate(ctx, externalOfferID)
 }
 
 // BulkUpdateStock implements integration.BulkStockUpdater using Allegro command API.

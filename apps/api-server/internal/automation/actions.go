@@ -66,22 +66,22 @@ type InvoiceCreator interface {
 
 // ListingActivatorDeps holds the dependencies needed by the activate_listing action.
 type ListingActivatorDeps struct {
-	ListingRepo     ListingRepoForActivation
-	IntegrationRepo IntegrationRepoForActivation
+	ListingRepo     ListingActionRepo
+	IntegrationRepo IntegrationActionRepo
 	EncryptionKey   []byte
 	// ProviderFactory creates a marketplace provider from decrypted credentials.
 	// Returns (provider, needsClose, error). The caller must close the provider if needsClose is true.
 	ProviderFactory func(provider string, credentials json.RawMessage, settings json.RawMessage) (ListingActivatorProvider, error)
 }
 
-// ListingRepoForActivation is the subset of repository.ProductListingRepo needed here.
-type ListingRepoForActivation interface {
+// ListingActionRepo is the subset of repository.ProductListingRepo needed here.
+type ListingActionRepo interface {
 	ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error)
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req *model.UpdateProductListingRequest) error
 }
 
-// IntegrationRepoForActivation is the subset of repository.IntegrationRepo needed here.
-type IntegrationRepoForActivation interface {
+// IntegrationActionRepo is the subset of repository.IntegrationRepo needed here.
+type IntegrationActionRepo interface {
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.IntegrationWithCreds, error)
 }
 
@@ -89,6 +89,20 @@ type IntegrationRepoForActivation interface {
 // to support offer activation/relisting.
 type ListingActivatorProvider interface {
 	ActivateOffer(ctx context.Context, externalOfferID string) error
+}
+
+// ListingDeactivatorProvider is the interface a marketplace provider must implement
+// to support offer deactivation.
+type ListingDeactivatorProvider interface {
+	DeactivateOffer(ctx context.Context, externalOfferID string) error
+}
+
+// ListingDeactivatorDeps holds the dependencies needed by the deactivate_listing action.
+type ListingDeactivatorDeps struct {
+	ListingRepo     ListingActionRepo
+	IntegrationRepo IntegrationActionRepo
+	EncryptionKey   []byte
+	ProviderFactory func(provider string, credentials json.RawMessage, settings json.RawMessage) (ListingDeactivatorProvider, error)
 }
 
 // MarketplaceMessageDeps holds the dependencies needed by the send_marketplace_message action.
@@ -119,6 +133,7 @@ type DefaultActionExecutor struct {
 	emailSender            EmailSender
 	invoiceCreator         InvoiceCreator
 	listingDeps            *ListingActivatorDeps
+	listingDeactivatorDeps *ListingDeactivatorDeps
 	marketplaceMessageDeps *MarketplaceMessageDeps
 	pool                   *pgxpool.Pool
 }
@@ -153,6 +168,11 @@ func (e *DefaultActionExecutor) SetListingActivatorDeps(deps *ListingActivatorDe
 	e.listingDeps = deps
 }
 
+// SetListingDeactivatorDeps wires the dependencies needed by the deactivate_listing action.
+func (e *DefaultActionExecutor) SetListingDeactivatorDeps(deps *ListingDeactivatorDeps) {
+	e.listingDeactivatorDeps = deps
+}
+
 // SetMarketplaceMessageDeps wires the dependencies needed by the send_marketplace_message action.
 func (e *DefaultActionExecutor) SetMarketplaceMessageDeps(deps *MarketplaceMessageDeps) {
 	e.marketplaceMessageDeps = deps
@@ -172,6 +192,8 @@ func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid
 		return e.executeCreateInvoice(ctx, tenantID, action, event)
 	case "activate_listing":
 		return e.executeActivateListing(ctx, tenantID, action, event)
+	case "deactivate_listing":
+		return e.executeDeactivateListing(ctx, tenantID, action, event)
 	case "send_marketplace_message":
 		return e.executeSendMarketplaceMessage(ctx, tenantID, action, event)
 	default:
@@ -389,23 +411,12 @@ func (e *DefaultActionExecutor) executeCreateInvoice(ctx context.Context, tenant
 }
 
 // executeActivateListing reactivates marketplace listings for a product.
-// This is typically triggered by the product.stock_restored event when stock goes from 0 → >0.
-// It finds all inactive/ended listings for the product and calls the marketplace
-// provider's ActivateOffer method to relist them.
+// Triggered by product.stock_restored when stock goes from 0 → >0.
 //
-// The caller context is intentionally discarded: marketplace API calls (ActivateOffer)
-// are fire-and-forget and must complete even if the original HTTP request or automation
-// engine context is cancelled.
-//
-// The Action parameter is unused because activate_listing requires no action-level
-// parameters — the product is identified via event.EntityID.
-//
-// NOTE: Similar listing-reactivation logic exists in StockSyncService.reactivateListings
-// (service package). That method serves as a direct fallback when the automation engine
-// is not wired, while this one is the automation-rule-driven path. They are kept separate
-// to avoid a circular dependency between the automation and service packages, and because
-// they differ in provider creation (injected factory vs integration.NewMarketplaceProvider)
-// and interface widths (narrow interfaces here vs full repository interfaces there).
+// NOTE: Similar logic exists in StockSyncService.reactivateListings (service package).
+// That method serves as a direct fallback when the automation engine is not wired,
+// while this one is the automation-rule-driven path. They are kept separate to avoid
+// a circular dependency and because they differ in provider creation and interface widths.
 func (e *DefaultActionExecutor) executeActivateListing(_ context.Context, tenantID uuid.UUID, _ Action, event Event) error {
 	e.logger.Info("automation action: activate_listing",
 		"tenant_id", tenantID,
@@ -422,40 +433,95 @@ func (e *DefaultActionExecutor) executeActivateListing(_ context.Context, tenant
 		return nil
 	}
 
+	return e.executeListingToggle(tenantID, event, "activate_listing",
+		[]string{"inactive", "ended"}, "active",
+		e.listingDeps.ListingRepo, e.listingDeps.IntegrationRepo, e.listingDeps.EncryptionKey,
+		func(credJSON json.RawMessage, settings json.RawMessage, providerName, externalID string) error {
+			provider, err := e.listingDeps.ProviderFactory(providerName, credJSON, settings)
+			if err != nil {
+				return err
+			}
+			return provider.ActivateOffer(context.Background(), externalID)
+		},
+	)
+}
+
+// executeDeactivateListing deactivates active marketplace listings for a product.
+// Triggered by product.out_of_stock when stock goes from >0 → 0.
+func (e *DefaultActionExecutor) executeDeactivateListing(_ context.Context, tenantID uuid.UUID, _ Action, event Event) error {
+	e.logger.Info("automation action: deactivate_listing",
+		"tenant_id", tenantID,
+		"entity_type", event.EntityType,
+		"entity_id", event.EntityID,
+	)
+
+	if event.EntityType != "product" {
+		return fmt.Errorf("deactivate_listing action only supports product entities, got %q", event.EntityType)
+	}
+
+	if e.listingDeactivatorDeps == nil || e.pool == nil {
+		e.logger.Warn("automation action deactivate_listing: listing dependencies not wired, skipping")
+		return nil
+	}
+
+	return e.executeListingToggle(tenantID, event, "deactivate_listing",
+		[]string{"active"}, "inactive",
+		e.listingDeactivatorDeps.ListingRepo, e.listingDeactivatorDeps.IntegrationRepo, e.listingDeactivatorDeps.EncryptionKey,
+		func(credJSON json.RawMessage, settings json.RawMessage, providerName, externalID string) error {
+			provider, err := e.listingDeactivatorDeps.ProviderFactory(providerName, credJSON, settings)
+			if err != nil {
+				return err
+			}
+			return provider.DeactivateOffer(context.Background(), externalID)
+		},
+	)
+}
+
+// executeListingToggle is the shared implementation for activate_listing and deactivate_listing.
+// It gathers eligible listings in a DB transaction, then calls the provider action outside the tx.
+func (e *DefaultActionExecutor) executeListingToggle(
+	tenantID uuid.UUID,
+	event Event,
+	actionName string,
+	sourceStatuses []string,
+	targetStatus string,
+	repo ListingActionRepo,
+	integRepo IntegrationActionRepo,
+	encryptionKey []byte,
+	providerAction func(credJSON json.RawMessage, settings json.RawMessage, providerName, externalID string) error,
+) error {
 	productID := event.EntityID
 	bgCtx := context.Background()
 
-	// Phase 1: Gather listings and integrations inside a DB transaction.
-	type activateJob struct {
+	type toggleJob struct {
 		listingID   uuid.UUID
 		externalID  string
 		integration *model.IntegrationWithCreds
 	}
-	var jobs []activateJob
+	var jobs []toggleJob
 
 	err := database.WithTenant(bgCtx, e.pool, tenantID, func(tx pgx.Tx) error {
-		listings, err := e.listingDeps.ListingRepo.ListByProduct(bgCtx, tx, productID)
+		listings, err := repo.ListByProduct(bgCtx, tx, productID)
 		if err != nil {
 			return fmt.Errorf("list listings: %w", err)
 		}
 
 		for _, listing := range listings {
-			// Only activate listings that are inactive or ended
-			if listing.Status != "inactive" && listing.Status != "ended" {
+			if !slices.Contains(sourceStatuses, listing.Status) {
 				continue
 			}
 			if listing.ExternalID == nil || *listing.ExternalID == "" {
 				continue
 			}
 
-			integ, err := e.listingDeps.IntegrationRepo.FindByID(bgCtx, tx, listing.IntegrationID)
+			integ, err := integRepo.FindByID(bgCtx, tx, listing.IntegrationID)
 			if err != nil || integ == nil {
-				e.logger.Warn("activate_listing: integration not found",
+				e.logger.Warn(actionName+": integration not found",
 					"listing_id", listing.ID, "integration_id", listing.IntegrationID)
 				continue
 			}
 
-			jobs = append(jobs, activateJob{
+			jobs = append(jobs, toggleJob{
 				listingID:   listing.ID,
 				externalID:  *listing.ExternalID,
 				integration: integ,
@@ -464,70 +530,63 @@ func (e *DefaultActionExecutor) executeActivateListing(_ context.Context, tenant
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("activate_listing: gather data: %w", err)
+		return fmt.Errorf("%s: gather data: %w", actionName, err)
 	}
 
 	if len(jobs) == 0 {
-		e.logger.Info("automation action activate_listing: no inactive listings to activate",
+		e.logger.Info("automation action "+actionName+": no eligible listings",
 			"product_id", productID)
 		return nil
 	}
 
-	// Phase 2: Activate via marketplace APIs outside the transaction.
-	activated, failed := 0, 0
+	succeeded, failed := 0, 0
 	for _, job := range jobs {
 		if job.integration.EncryptedCredentials == "" {
-			e.logger.Warn("activate_listing: no credentials for integration",
+			e.logger.Warn(actionName+": no credentials for integration",
 				"integration_id", job.integration.ID)
 			failed++
 			continue
 		}
 
-		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, e.listingDeps.EncryptionKey)
+		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, encryptionKey)
 		if err != nil {
-			e.logger.Error("activate_listing: decrypt credentials failed",
+			e.logger.Error(actionName+": decrypt credentials failed",
 				"integration_id", job.integration.ID, "error", err)
 			failed++
 			continue
 		}
 
-		provider, err := e.listingDeps.ProviderFactory(job.integration.Provider, credJSON, job.integration.Settings)
-		if err != nil {
-			e.logger.Error("activate_listing: create provider failed",
-				"provider", job.integration.Provider, "error", err)
-			failed++
-			continue
-		}
-
-		if err := provider.ActivateOffer(bgCtx, job.externalID); err != nil {
-			e.logger.Error("activate_listing: activation failed",
+		if err := providerAction(credJSON, job.integration.Settings, job.integration.Provider, job.externalID); err != nil {
+			e.logger.Error(actionName+": provider action failed",
 				"listing_id", job.listingID, "external_id", job.externalID,
 				"provider", job.integration.Provider, "error", err)
 			failed++
 			continue
 		}
 
-		// Update listing status to active (best-effort)
-		activeStatus := "active"
+		statusStr := targetStatus
 		syncOK := "synced"
 		if err := database.WithTenant(bgCtx, e.pool, tenantID, func(tx pgx.Tx) error {
-			return e.listingDeps.ListingRepo.Update(bgCtx, tx, job.listingID, &model.UpdateProductListingRequest{
-				Status:     &activeStatus,
+			return repo.Update(bgCtx, tx, job.listingID, &model.UpdateProductListingRequest{
+				Status:     &statusStr,
 				SyncStatus: &syncOK,
 			})
 		}); err != nil {
-			e.logger.Warn("activate_listing: failed to update listing status in DB",
+			e.logger.Warn(actionName+": failed to update listing status in DB",
 				"listing_id", job.listingID, "error", err)
 		}
-		activated++
+		succeeded++
 	}
 
-	e.logger.Info("automation action activate_listing completed",
+	e.logger.Info("automation action "+actionName+" completed",
 		"tenant_id", tenantID,
 		"product_id", productID,
-		"activated", activated,
+		"succeeded", succeeded,
 		"failed", failed,
 	)
+	if succeeded == 0 && failed > 0 {
+		return fmt.Errorf("%s: all %d listing(s) failed", actionName, failed)
+	}
 	return nil
 }
 

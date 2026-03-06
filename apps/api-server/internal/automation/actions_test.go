@@ -36,6 +36,32 @@ func TestDefaultActionExecutor_ActivateListing_WrongEntityType(t *testing.T) {
 	assert.Contains(t, err.Error(), "only supports product entities")
 }
 
+func TestDefaultActionExecutor_DeactivateListing_NilDeps(t *testing.T) {
+	executor := NewDefaultActionExecutor(slog.Default())
+	// No listing deactivator deps wired — should return nil (skip gracefully)
+	err := executor.ExecuteAction(context.Background(), uuid.New(), Action{Type: "deactivate_listing"}, Event{
+		Type:       "product.out_of_stock",
+		TenantID:   uuid.New(),
+		EntityType: "product",
+		EntityID:   uuid.New(),
+	})
+	assert.NoError(t, err, "deactivate_listing with nil deps should not error")
+}
+
+func TestDefaultActionExecutor_DeactivateListing_WrongEntityType(t *testing.T) {
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetListingDeactivatorDeps(&ListingDeactivatorDeps{})
+
+	err := executor.ExecuteAction(context.Background(), uuid.New(), Action{Type: "deactivate_listing"}, Event{
+		Type:       "order.status_changed",
+		TenantID:   uuid.New(),
+		EntityType: "order",
+		EntityID:   uuid.New(),
+	})
+	assert.Error(t, err, "deactivate_listing with order entity should error")
+	assert.Contains(t, err.Error(), "only supports product entities")
+}
+
 func TestDefaultActionExecutor_UnknownAction(t *testing.T) {
 	executor := NewDefaultActionExecutor(slog.Default())
 	err := executor.ExecuteAction(context.Background(), uuid.New(), Action{Type: "nonexistent"}, Event{})

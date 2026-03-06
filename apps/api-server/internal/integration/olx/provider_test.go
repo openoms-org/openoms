@@ -441,3 +441,31 @@ func TestActivateOffer(t *testing.T) {
 	assert.Equal(t, "/adverts/77777/commands", receivedPath)
 	assert.Equal(t, "activate", receivedBody["command"])
 }
+
+// ---------------------------------------------------------------------------
+// TestDeactivateOffer — sends deactivate command
+// ---------------------------------------------------------------------------
+
+func TestDeactivateOffer(t *testing.T) {
+	var receivedBody map[string]any
+	var receivedPath string
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.Path
+		assert.Equal(t, http.MethodPost, r.Method)
+
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &receivedBody)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	p := newTestProvider(t, srv.URL)
+	err := p.DeactivateOffer(context.Background(), "88888")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "/adverts/88888/commands", receivedPath)
+	assert.Equal(t, "deactivate", receivedBody["command"])
+}

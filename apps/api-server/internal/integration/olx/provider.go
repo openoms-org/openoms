@@ -38,6 +38,7 @@ type Provider struct {
 }
 
 var _ integration.ListingActivator = (*Provider)(nil)
+var _ integration.ListingDeactivator = (*Provider)(nil)
 
 // NewProvider creates an OLX MarketplaceProvider from encrypted credentials.
 func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
@@ -290,6 +291,17 @@ func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) er
 	}
 	return p.client.Adverts.RunCommand(ctx, advertID, olxsdk.AdvertCommandRequest{
 		Command: "activate",
+	})
+}
+
+// DeactivateOffer deactivates an OLX advert (e.g. when stock reaches zero).
+func (p *Provider) DeactivateOffer(ctx context.Context, externalOfferID string) error {
+	advertID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("olx: invalid advert ID %q: %w", externalOfferID, err)
+	}
+	return p.client.Adverts.RunCommand(ctx, advertID, olxsdk.AdvertCommandRequest{
+		Command: "deactivate",
 	})
 }
 

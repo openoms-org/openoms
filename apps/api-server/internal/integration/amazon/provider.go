@@ -33,11 +33,14 @@ type AmazonCredentials struct {
 	Sandbox          bool   `json:"sandbox,omitempty"`
 }
 
+var _ integration.AsyncStockUpdater = (*Provider)(nil)
+
 // Provider implements integration.MarketplaceProvider for Amazon SP-API.
 type Provider struct {
-	client        *amazonsdk.Client
-	marketplaceID string
-	logger        *slog.Logger
+	client           *amazonsdk.Client
+	marketplaceID    string
+	sellingPartnerID string
+	logger           *slog.Logger
 }
 
 // NewProvider creates an Amazon MarketplaceProvider from encrypted credentials.
@@ -62,9 +65,10 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	client := amazonsdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
 
 	return &Provider{
-		client:        client,
-		marketplaceID: creds.MarketplaceID,
-		logger:        slog.Default().With("provider", "amazon"),
+		client:           client,
+		marketplaceID:    creds.MarketplaceID,
+		sellingPartnerID: creds.SellingPartnerID,
+		logger:           slog.Default().With("provider", "amazon"),
 	}, nil
 }
 
@@ -166,10 +170,44 @@ func (p *Provider) PushOffer(_ context.Context, _ *model.Product, _ map[string]a
 	return "", fmt.Errorf("amazon: PushOffer not implemented (use Amazon Feeds API)")
 }
 
-// UpdateStock is not implemented for Amazon (requires Feeds API).
-func (p *Provider) UpdateStock(_ context.Context, _ string, _ int) error {
-	return fmt.Errorf("amazon: UpdateStock not implemented (use Amazon Feeds API)")
+// UpdateStock updates stock for a single SKU via Amazon Feeds API.
+// NOTE: Amazon Feeds API is asynchronous — the feed is submitted but not yet processed.
+// sync_status is set to 'synced' optimistically by the caller; actual processing may take minutes.
+func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
+	if p.sellingPartnerID == "" {
+		return fmt.Errorf("amazon: selling_partner_id not configured — cannot submit inventory feed")
+	}
+	_, err := p.client.Feeds.SubmitInventoryFeed(ctx, p.marketplaceID, p.sellingPartnerID, map[string]int{
+		externalOfferID: quantity,
+	})
+	if err != nil {
+		return fmt.Errorf("amazon: update stock for %s: %w", externalOfferID, err)
+	}
+	return nil
 }
+
+// BulkUpdateStock implements integration.BulkStockUpdater via a single inventory feed.
+// NOTE: Amazon Feeds API is asynchronous — the feed is submitted but not yet processed.
+func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.StockUpdate) error {
+	if len(updates) == 0 {
+		return nil
+	}
+	if p.sellingPartnerID == "" {
+		return fmt.Errorf("amazon: selling_partner_id not configured — cannot submit inventory feed")
+	}
+	skuQty := make(map[string]int, len(updates))
+	for _, u := range updates {
+		skuQty[u.ExternalOfferID] = u.Quantity
+	}
+	_, err := p.client.Feeds.SubmitInventoryFeed(ctx, p.marketplaceID, p.sellingPartnerID, skuQty)
+	if err != nil {
+		return fmt.Errorf("amazon: bulk update stock: %w", err)
+	}
+	return nil
+}
+
+// IsAsyncStockUpdate marks Amazon as an async stock updater (Feeds API is asynchronous).
+func (p *Provider) IsAsyncStockUpdate() {}
 
 // UpdatePrice is not implemented for Amazon (requires Feeds API).
 func (p *Provider) UpdatePrice(_ context.Context, _ string, _ float64) error {
