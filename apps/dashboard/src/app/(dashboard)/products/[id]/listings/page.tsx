@@ -943,8 +943,8 @@ function CreateOLXListingDialog({
   }, [cityQuery]);
 
   // Hooks
-  const { data: categories, isLoading: categoriesLoading, isError: categoriesError } = useOLXCategories(integrationId, currentParentId);
-  const { data: citiesResult, isError: citiesError } = useOLXCities(integrationId, debouncedCityQuery);
+  const { data: categories, isLoading: categoriesLoading, isError: categoriesError, error: categoriesErrorObj } = useOLXCategories(integrationId, currentParentId);
+  const { data: citiesResult, isError: citiesError, error: citiesErrorObj } = useOLXCities(integrationId, debouncedCityQuery);
   const createListing = useCreateOLXListing(product.id);
 
   const cities = citiesResult?.data ?? [];
@@ -1048,7 +1048,7 @@ function CreateOLXListingDialog({
                   </div>
                 ) : categoriesError ? (
                   <p className="p-3 text-sm text-destructive">
-                    Nie udało się pobrać kategorii OLX. Sprawdź konfigurację integracji.
+                    Błąd: {categoriesErrorObj instanceof Error ? categoriesErrorObj.message : "Nie udało się pobrać kategorii OLX"}
                   </p>
                 ) : categories && categories.length > 0 ? (
                   categories.map((cat) => (
@@ -1107,7 +1107,7 @@ function CreateOLXListingDialog({
                   <CommandList>
                     <CommandEmpty>
                       {citiesError
-                        ? "Błąd pobierania miast. Sprawdź konfigurację integracji."
+                        ? (citiesErrorObj instanceof Error ? citiesErrorObj.message : "Błąd pobierania miast")
                         : cityQuery.length < 2 ? "Wpisz min. 2 znaki" : "Nie znaleziono miast"}
                     </CommandEmpty>
                     <CommandGroup>
