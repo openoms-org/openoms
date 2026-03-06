@@ -31,13 +31,18 @@ type AmazonFeedStatusWorker struct {
 	logger        *slog.Logger
 }
 
+// NewAmazonFeedStatusWorker creates a worker that polls Amazon feed statuses.
 func NewAmazonFeedStatusWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.Logger) *AmazonFeedStatusWorker {
 	return &AmazonFeedStatusWorker{pool: pool, encryptionKey: encryptionKey, logger: logger}
 }
 
-func (w *AmazonFeedStatusWorker) Name() string            { return "amazon_feed_status" }
+// Name returns the worker identifier.
+func (w *AmazonFeedStatusWorker) Name() string { return "amazon_feed_status" }
+
+// Interval returns how often the worker runs.
 func (w *AmazonFeedStatusWorker) Interval() time.Duration { return 2 * time.Minute }
 
+// Run executes one feed-status polling cycle across all Amazon integrations.
 func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 	tis, err := ListActiveIntegrations(ctx, w.pool, "amazon")
 	if err != nil {

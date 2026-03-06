@@ -189,17 +189,18 @@ func (w *PriceSyncWorker) syncBulk(
 		feedMeta := buildFeedMeta(provider)
 		for _, l := range batchListings {
 			var execErr error
-			if syncStatus == "pending" && feedMeta != nil {
+			switch {
+			case syncStatus == "pending" && feedMeta != nil:
 				_, execErr = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
 					l.ListingID, feedMeta,
 				)
-			} else if syncStatus == "pending" {
+			case syncStatus == "pending":
 				_, execErr = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
 					l.ListingID,
 				)
-			} else {
+			default:
 				_, execErr = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
 					l.ListingID,
