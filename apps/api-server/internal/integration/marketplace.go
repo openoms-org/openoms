@@ -68,6 +68,24 @@ type AsyncStockUpdater interface {
 	IsAsyncStockUpdate()
 }
 
+// AsyncPriceUpdater is a marker interface for providers whose price updates are asynchronous.
+type AsyncPriceUpdater interface {
+	IsAsyncPriceUpdate()
+}
+
+// FeedSubmission holds the result of an async feed submission.
+type FeedSubmission struct {
+	FeedID   string
+	FeedType string // "inventory" or "pricing"
+}
+
+// AsyncFeedResult is implemented by providers that return feed IDs from async operations.
+// After a successful UpdateStock/BulkUpdateStock/UpdatePrice call, the caller can
+// retrieve the feed ID for status polling.
+type AsyncFeedResult interface {
+	FeedResult() *FeedSubmission
+}
+
 // BulkStockUpdater is optionally implemented by providers that support batch stock updates.
 type BulkStockUpdater interface {
 	BulkUpdateStock(ctx context.Context, updates []StockUpdate) error
