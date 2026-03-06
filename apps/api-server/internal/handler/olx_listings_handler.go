@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -24,6 +26,33 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
+
+// olxCityCache caches OLX cities in memory (OLX API does not support search).
+type olxCityCache struct {
+	mu        sync.RWMutex
+	cities    []olxsdk.City
+	fetchedAt time.Time
+}
+
+var globalOLXCityCache = &olxCityCache{}
+
+const olxCityCacheTTL = 24 * time.Hour
+
+func (c *olxCityCache) get() ([]olxsdk.City, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if len(c.cities) == 0 || time.Since(c.fetchedAt) > olxCityCacheTTL {
+		return nil, false
+	}
+	return c.cities, true
+}
+
+func (c *olxCityCache) set(cities []olxsdk.City) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.cities = cities
+	c.fetchedAt = time.Now()
+}
 
 // OLXListingsHandler handles OLX product listing operations.
 type OLXListingsHandler struct {
@@ -306,7 +335,9 @@ func (h *OLXListingsHandler) GetCategoryAttributes(w http.ResponseWriter, r *htt
 	writeJSON(w, http.StatusOK, result)
 }
 
-// ListCities proxies OLX city search for the frontend.
+// ListCities returns OLX cities filtered by query.
+// OLX Partner API does not support search on /cities, so we fetch all cities,
+// cache them in memory (24h TTL), and filter server-side.
 func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID := middleware.TenantIDFromContext(ctx)
@@ -323,14 +354,7 @@ func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	provider, err := h.createProvider(ctx, tenantID, iid)
-	if err != nil {
-		slog.Error("olx listings: failed to create provider", "error", err)
-		writeError(w, http.StatusBadRequest, "OLX integration not configured")
-		return
-	}
-
-	query := r.URL.Query().Get("query")
+	query := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("query")))
 	limit := 50
 	if v := r.URL.Query().Get("limit"); v != "" {
 		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 && parsed <= 200 {
@@ -338,13 +362,59 @@ func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	result, err := provider.Client().Cities.ListCities(ctx, query, 0, limit)
-	if err != nil {
-		writeServerError(w, "failed to list OLX cities", err)
-		return
+	allCities, ok := globalOLXCityCache.get()
+	if !ok {
+		provider, err := h.createProvider(ctx, tenantID, iid)
+		if err != nil {
+			slog.Error("olx listings: failed to create provider", "error", err)
+			writeError(w, http.StatusBadRequest, "OLX integration not configured")
+			return
+		}
+
+		// Fetch all cities from OLX (paginate through all results).
+		var fetched []olxsdk.City
+		offset := 0
+		batchSize := 1000
+		for {
+			batch, err := provider.Client().Cities.ListCities(ctx, "", offset, batchSize)
+			if err != nil {
+				writeServerError(w, "failed to list OLX cities", err)
+				return
+			}
+			fetched = append(fetched, batch.Data...)
+			if len(batch.Data) < batchSize {
+				break
+			}
+			offset += batchSize
+		}
+		slog.Info("olx: cached cities from OLX API", "count", len(fetched))
+		globalOLXCityCache.set(fetched)
+		allCities = fetched
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	// Filter by query.
+	var filtered []olxsdk.City
+	if query == "" {
+		filtered = allCities
+	} else {
+		for _, c := range allCities {
+			if strings.Contains(strings.ToLower(c.Name), query) {
+				filtered = append(filtered, c)
+				if len(filtered) >= limit {
+					break
+				}
+			}
+		}
+	}
+
+	if len(filtered) > limit {
+		filtered = filtered[:limit]
+	}
+
+	writeJSON(w, http.StatusOK, &olxsdk.CityListResponse{
+		Data:  filtered,
+		Total: len(filtered),
+	})
 }
 
 // SuggestCategory proxies OLX category suggestion based on a query string.
