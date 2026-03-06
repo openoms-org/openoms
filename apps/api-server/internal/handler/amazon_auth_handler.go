@@ -24,6 +24,7 @@ type AmazonAuthHandler struct {
 	stateStore         OAuthStateStore
 }
 
+// NewAmazonAuthHandler creates a handler for Amazon SP-API OAuth2 authorization and manual setup.
 func NewAmazonAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte, stateStore OAuthStateStore) *AmazonAuthHandler {
 	return &AmazonAuthHandler{
 		cfg:                cfg,
