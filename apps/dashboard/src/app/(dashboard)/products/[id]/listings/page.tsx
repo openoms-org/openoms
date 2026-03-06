@@ -1149,57 +1149,51 @@ function CreateOLXListingDialog({
           {/* City search */}
           <div className="space-y-2">
             <Label>Miasto *</Label>
-            <Popover open={cityOpen} onOpenChange={setCityOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={cityOpen}
-                  className="w-full justify-between font-normal"
-                >
-                  {selectedCity ? selectedCity.name : "Wyszukaj miasto..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <Command shouldFilter={false}>
-                  <CommandInput
-                    placeholder="Wpisz nazwę miasta..."
-                    value={cityQuery}
-                    onValueChange={setCityQuery}
-                  />
-                  <CommandList>
-                    <CommandEmpty>
-                      {citiesLoading
-                        ? "Szukam..."
-                        : citiesError
-                        ? (citiesErrorObj instanceof Error ? citiesErrorObj.message : "Błąd pobierania miast")
-                        : cityQuery.length < 2 ? "Wpisz min. 2 znaki" : "Nie znaleziono miast"}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {cities.map((city) => (
-                        <CommandItem
-                          key={city.id}
-                          value={`${city.name} ${city.county ?? ""}`}
-                          onSelect={() => {
-                            setSelectedCity({ id: city.id, name: city.name });
-                            setCityOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={`mr-2 h-4 w-4 ${selectedCity?.id === city.id ? "opacity-100" : "opacity-0"}`}
-                          />
-                          {city.name}
-                          {city.county && (
-                            <span className="ml-1 text-muted-foreground">({city.county})</span>
-                          )}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <div className="relative">
+              <Input
+                placeholder="Wpisz nazwę miasta (min. 2 znaki)..."
+                value={selectedCity ? selectedCity.name : cityQuery}
+                onChange={(e) => {
+                  setCityQuery(e.target.value);
+                  if (selectedCity) setSelectedCity(null);
+                }}
+                onFocus={() => setCityOpen(true)}
+                onBlur={() => setTimeout(() => setCityOpen(false), 200)}
+              />
+              {cityOpen && debouncedCityQuery.length >= 2 && (
+                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md max-h-48 overflow-y-auto">
+                  {citiesLoading ? (
+                    <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Szukam...
+                    </div>
+                  ) : citiesError ? (
+                    <p className="p-3 text-sm text-destructive">
+                      {citiesErrorObj instanceof Error ? citiesErrorObj.message : "Błąd pobierania miast"}
+                    </p>
+                  ) : cities.length > 0 ? (
+                    cities.map((city) => (
+                      <button
+                        key={city.id}
+                        type="button"
+                        className="flex w-full items-center px-3 py-2 text-sm hover:bg-muted/50 text-left"
+                        onClick={() => {
+                          setSelectedCity({ id: city.id, name: city.name });
+                          setCityQuery("");
+                          setCityOpen(false);
+                        }}
+                      >
+                        {city.name}
+                        {city.county && (
+                          <span className="ml-1 text-muted-foreground">({city.county})</span>
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="p-3 text-sm text-muted-foreground">Nie znaleziono miast</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Contact details */}
