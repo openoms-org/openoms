@@ -826,7 +826,7 @@ func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, ten
 						_, err := tx.Exec(ctx,
 							`UPDATE product_listings SET sync_status = 'pending', error_message = NULL,
 							 metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
-							job.listing.ID, feedMeta)
+							job.listing.ID, string(feedMeta))
 						return err
 					})
 					pushed++

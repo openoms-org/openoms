@@ -193,7 +193,7 @@ func (w *PriceSyncWorker) syncBulk(
 			case syncStatus == "pending" && feedMeta != nil:
 				_, execErr = tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
-					l.ListingID, feedMeta,
+					l.ListingID, string(feedMeta),
 				)
 			case syncStatus == "pending":
 				_, execErr = tx.Exec(ctx,
@@ -259,7 +259,7 @@ func (w *PriceSyncWorker) syncOneByOne(
 			if feedMeta != nil {
 				_, execErr := tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
-					l.ListingID, feedMeta,
+					l.ListingID, string(feedMeta),
 				)
 				if execErr != nil {
 					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)

@@ -323,7 +323,7 @@ func (w *StockSyncWorker) updateListingsStatus(ctx context.Context, tenantID uui
 				if feedMeta != nil {
 					_, execErr = tx.Exec(ctx,
 						`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
-						l.ListingID, feedMeta,
+						l.ListingID, string(feedMeta),
 					)
 				} else {
 					_, execErr = tx.Exec(ctx,

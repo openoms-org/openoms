@@ -229,7 +229,7 @@ func (r *SupplierRepository) UpdateSettingsKeys(ctx context.Context, tx pgx.Tx, 
 	}
 	ct, err := tx.Exec(ctx,
 		`UPDATE suppliers SET settings = COALESCE(settings, '{}'::jsonb) || $1::jsonb, updated_at = NOW() WHERE id = $2`,
-		keysJSON, id,
+		string(keysJSON), id,
 	)
 	if err != nil {
 		return fmt.Errorf("update supplier settings keys: %w", err)
