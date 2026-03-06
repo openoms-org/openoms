@@ -338,6 +338,12 @@ func main() {
 		EncryptionKey:   encryptionKey,
 		ProviderFactory: newListingActivatorFactory(),
 	})
+	automationExecutor.SetListingDeactivatorDeps(&automation.ListingDeactivatorDeps{
+		ListingRepo:     productListingRepo,
+		IntegrationRepo: integrationRepo,
+		EncryptionKey:   encryptionKey,
+		ProviderFactory: newListingDeactivatorFactory(),
+	})
 	automationExecutor.SetMarketplaceMessageDeps(&automation.MarketplaceMessageDeps{
 		TemplateRepo:   messageTemplateRepo,
 		OrderRepo:      orderRepo,
@@ -893,5 +899,21 @@ func newListingActivatorFactory() func(provider string, credentials json.RawMess
 			return nil, fmt.Errorf("provider %q does not support offer activation", providerName)
 		}
 		return activator, nil
+	}
+}
+
+// newListingDeactivatorFactory returns a factory function that creates ListingDeactivatorProvider
+// instances from marketplace provider credentials.
+func newListingDeactivatorFactory() func(provider string, credentials json.RawMessage, settings json.RawMessage) (automation.ListingDeactivatorProvider, error) {
+	return func(providerName string, credentials json.RawMessage, settings json.RawMessage) (automation.ListingDeactivatorProvider, error) {
+		mp, err := integration.NewMarketplaceProvider(providerName, credentials, settings)
+		if err != nil {
+			return nil, err
+		}
+		deactivator, ok := mp.(automation.ListingDeactivatorProvider)
+		if !ok {
+			return nil, fmt.Errorf("provider %q does not support offer deactivation", providerName)
+		}
+		return deactivator, nil
 	}
 }

@@ -91,6 +91,20 @@ type ListingActivatorProvider interface {
 	ActivateOffer(ctx context.Context, externalOfferID string) error
 }
 
+// ListingDeactivatorProvider is the interface a marketplace provider must implement
+// to support offer deactivation.
+type ListingDeactivatorProvider interface {
+	DeactivateOffer(ctx context.Context, externalOfferID string) error
+}
+
+// ListingDeactivatorDeps holds the dependencies needed by the deactivate_listing action.
+type ListingDeactivatorDeps struct {
+	ListingRepo     ListingRepoForActivation
+	IntegrationRepo IntegrationRepoForActivation
+	EncryptionKey   []byte
+	ProviderFactory func(provider string, credentials json.RawMessage, settings json.RawMessage) (ListingDeactivatorProvider, error)
+}
+
 // MarketplaceMessageDeps holds the dependencies needed by the send_marketplace_message action.
 type MarketplaceMessageDeps struct {
 	TemplateRepo interface {
@@ -119,6 +133,7 @@ type DefaultActionExecutor struct {
 	emailSender            EmailSender
 	invoiceCreator         InvoiceCreator
 	listingDeps            *ListingActivatorDeps
+	listingDeactivatorDeps *ListingDeactivatorDeps
 	marketplaceMessageDeps *MarketplaceMessageDeps
 	pool                   *pgxpool.Pool
 }
@@ -153,6 +168,11 @@ func (e *DefaultActionExecutor) SetListingActivatorDeps(deps *ListingActivatorDe
 	e.listingDeps = deps
 }
 
+// SetListingDeactivatorDeps wires the dependencies needed by the deactivate_listing action.
+func (e *DefaultActionExecutor) SetListingDeactivatorDeps(deps *ListingDeactivatorDeps) {
+	e.listingDeactivatorDeps = deps
+}
+
 // SetMarketplaceMessageDeps wires the dependencies needed by the send_marketplace_message action.
 func (e *DefaultActionExecutor) SetMarketplaceMessageDeps(deps *MarketplaceMessageDeps) {
 	e.marketplaceMessageDeps = deps
@@ -172,6 +192,8 @@ func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid
 		return e.executeCreateInvoice(ctx, tenantID, action, event)
 	case "activate_listing":
 		return e.executeActivateListing(ctx, tenantID, action, event)
+	case "deactivate_listing":
+		return e.executeDeactivateListing(ctx, tenantID, action, event)
 	case "send_marketplace_message":
 		return e.executeSendMarketplaceMessage(ctx, tenantID, action, event)
 	default:
@@ -526,6 +548,130 @@ func (e *DefaultActionExecutor) executeActivateListing(_ context.Context, tenant
 		"tenant_id", tenantID,
 		"product_id", productID,
 		"activated", activated,
+		"failed", failed,
+	)
+	return nil
+}
+
+// executeDeactivateListing deactivates active marketplace listings for a product.
+// This is typically triggered by the product.out_of_stock event when stock goes from >0 → 0.
+// Mirrors executeActivateListing but for the reverse direction.
+func (e *DefaultActionExecutor) executeDeactivateListing(_ context.Context, tenantID uuid.UUID, _ Action, event Event) error {
+	e.logger.Info("automation action: deactivate_listing",
+		"tenant_id", tenantID,
+		"entity_type", event.EntityType,
+		"entity_id", event.EntityID,
+	)
+
+	if event.EntityType != "product" {
+		return fmt.Errorf("deactivate_listing action only supports product entities, got %q", event.EntityType)
+	}
+
+	if e.listingDeactivatorDeps == nil || e.pool == nil {
+		e.logger.Warn("automation action deactivate_listing: listing dependencies not wired, skipping")
+		return nil
+	}
+
+	productID := event.EntityID
+	bgCtx := context.Background()
+
+	type deactivateJob struct {
+		listingID   uuid.UUID
+		externalID  string
+		integration *model.IntegrationWithCreds
+	}
+	var jobs []deactivateJob
+
+	err := database.WithTenant(bgCtx, e.pool, tenantID, func(tx pgx.Tx) error {
+		listings, err := e.listingDeactivatorDeps.ListingRepo.ListByProduct(bgCtx, tx, productID)
+		if err != nil {
+			return fmt.Errorf("list listings: %w", err)
+		}
+
+		for _, listing := range listings {
+			if listing.Status != "active" {
+				continue
+			}
+			if listing.ExternalID == nil || *listing.ExternalID == "" {
+				continue
+			}
+
+			integ, err := e.listingDeactivatorDeps.IntegrationRepo.FindByID(bgCtx, tx, listing.IntegrationID)
+			if err != nil || integ == nil {
+				e.logger.Warn("deactivate_listing: integration not found",
+					"listing_id", listing.ID, "integration_id", listing.IntegrationID)
+				continue
+			}
+
+			jobs = append(jobs, deactivateJob{
+				listingID:   listing.ID,
+				externalID:  *listing.ExternalID,
+				integration: integ,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("deactivate_listing: gather data: %w", err)
+	}
+
+	if len(jobs) == 0 {
+		e.logger.Info("automation action deactivate_listing: no active listings to deactivate",
+			"product_id", productID)
+		return nil
+	}
+
+	deactivated, failed := 0, 0
+	for _, job := range jobs {
+		if job.integration.EncryptedCredentials == "" {
+			e.logger.Warn("deactivate_listing: no credentials for integration",
+				"integration_id", job.integration.ID)
+			failed++
+			continue
+		}
+
+		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, e.listingDeactivatorDeps.EncryptionKey)
+		if err != nil {
+			e.logger.Error("deactivate_listing: decrypt credentials failed",
+				"integration_id", job.integration.ID, "error", err)
+			failed++
+			continue
+		}
+
+		provider, err := e.listingDeactivatorDeps.ProviderFactory(job.integration.Provider, credJSON, job.integration.Settings)
+		if err != nil {
+			e.logger.Error("deactivate_listing: create provider failed",
+				"provider", job.integration.Provider, "error", err)
+			failed++
+			continue
+		}
+
+		if err := provider.DeactivateOffer(bgCtx, job.externalID); err != nil {
+			e.logger.Error("deactivate_listing: deactivation failed",
+				"listing_id", job.listingID, "external_id", job.externalID,
+				"provider", job.integration.Provider, "error", err)
+			failed++
+			continue
+		}
+
+		inactiveStatus := "inactive"
+		syncOK := "synced"
+		if err := database.WithTenant(bgCtx, e.pool, tenantID, func(tx pgx.Tx) error {
+			return e.listingDeactivatorDeps.ListingRepo.Update(bgCtx, tx, job.listingID, &model.UpdateProductListingRequest{
+				Status:     &inactiveStatus,
+				SyncStatus: &syncOK,
+			})
+		}); err != nil {
+			e.logger.Warn("deactivate_listing: failed to update listing status in DB",
+				"listing_id", job.listingID, "error", err)
+		}
+		deactivated++
+	}
+
+	e.logger.Info("automation action deactivate_listing completed",
+		"tenant_id", tenantID,
+		"product_id", productID,
+		"deactivated", deactivated,
 		"failed", failed,
 	)
 	return nil
