@@ -22,11 +22,15 @@ func init() {
 
 // AmazonCredentials is the JSON structure stored in encrypted integration credentials.
 type AmazonCredentials struct {
-	ClientID      string `json:"client_id"`
-	ClientSecret  string `json:"client_secret"`
-	RefreshToken  string `json:"refresh_token"`
-	MarketplaceID string `json:"marketplace_id"` // e.g. "A1C3SOZRARQ6R3" for Amazon.pl
-	Sandbox       bool   `json:"sandbox,omitempty"`
+	ClientID         string `json:"client_id"`
+	ClientSecret     string `json:"client_secret"`
+	RefreshToken     string `json:"refresh_token"`
+	AccessToken      string `json:"access_token,omitempty"`
+	TokenExpiry      string `json:"token_expiry,omitempty"`
+	ApplicationID    string `json:"application_id,omitempty"`
+	MarketplaceID    string `json:"marketplace_id"` // e.g. "A1C3SOZRARQ6R3" for Amazon.pl
+	SellingPartnerID string `json:"selling_partner_id,omitempty"`
+	Sandbox          bool   `json:"sandbox,omitempty"`
 }
 
 // Provider implements integration.MarketplaceProvider for Amazon SP-API.
@@ -44,7 +48,12 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}
 
 	var opts []amazonsdk.Option
-	opts = append(opts, amazonsdk.WithRefreshToken(creds.RefreshToken))
+	if creds.AccessToken != "" && creds.TokenExpiry != "" {
+		expiry, _ := time.Parse(time.RFC3339, creds.TokenExpiry)
+		opts = append(opts, amazonsdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry))
+	} else if creds.RefreshToken != "" {
+		opts = append(opts, amazonsdk.WithRefreshToken(creds.RefreshToken))
+	}
 
 	if creds.Sandbox {
 		opts = append(opts, amazonsdk.WithSandbox())
