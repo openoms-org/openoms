@@ -293,7 +293,7 @@ export interface OLXCategory {
   id: number;
   name: string;
   parent_id?: number;
-  children?: OLXCategory[];
+  is_leaf: boolean;
 }
 
 export interface OLXCity {
@@ -308,8 +308,10 @@ export function useOLXCategories(integrationId: string, parentId?: number) {
   if (parentId) params.set("parent_id", String(parentId));
   return useQuery({
     queryKey: ["olx", "categories", integrationId, parentId ?? "root"],
-    queryFn: () =>
-      apiClient<OLXCategory[]>(`/v1/integrations/olx/categories?${params}`),
+    queryFn: async () => {
+      const resp = await apiClient<{ data: OLXCategory[] }>(`/v1/integrations/olx/categories?${params}`);
+      return resp.data;
+    },
     enabled: !!integrationId,
   });
 }

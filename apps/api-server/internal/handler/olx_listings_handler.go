@@ -91,6 +91,14 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "contact_name is required")
 		return
 	}
+	if req.PriceOverride != nil && *req.PriceOverride <= 0 {
+		writeError(w, http.StatusBadRequest, "price_override must be greater than zero")
+		return
+	}
+	if req.StockOverride != nil && *req.StockOverride < 0 {
+		writeError(w, http.StatusBadRequest, "stock_override must be non-negative")
+		return
+	}
 
 	integrationID, err := uuid.Parse(req.IntegrationID)
 	if err != nil {
@@ -208,7 +216,8 @@ func (h *OLXListingsHandler) ListCategories(w http.ResponseWriter, r *http.Reque
 
 	provider, err := h.createProvider(ctx, tenantID, iid)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		slog.Error("olx listings: failed to create provider", "error", err)
+		writeError(w, http.StatusBadRequest, "OLX integration not configured")
 		return
 	}
 
@@ -251,7 +260,8 @@ func (h *OLXListingsHandler) GetCategoryAttributes(w http.ResponseWriter, r *htt
 
 	provider, err := h.createProvider(ctx, tenantID, iid)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		slog.Error("olx listings: failed to create provider", "error", err)
+		writeError(w, http.StatusBadRequest, "OLX integration not configured")
 		return
 	}
 
@@ -283,7 +293,8 @@ func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) 
 
 	provider, err := h.createProvider(ctx, tenantID, iid)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		slog.Error("olx listings: failed to create provider", "error", err)
+		writeError(w, http.StatusBadRequest, "OLX integration not configured")
 		return
 	}
 

@@ -128,6 +128,10 @@ const PROVIDER_LABELS: Record<string, string> = {
   woocommerce: "WooCommerce",
   amazon: "Amazon",
   ebay: "eBay",
+  olx: "OLX",
+  erli: "Erli",
+  kaufland: "Kaufland",
+  empik: "Empik Marketplace",
 };
 
 function providerLabel(provider: string): string {
@@ -993,7 +997,7 @@ function CreateOLXListingDialog({
     );
   };
 
-  const isLeafCategory = selectedCategoryId != null && (!categories || categories.length === 0);
+  const isLeafCategory = selectedCategoryId != null;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -1049,15 +1053,15 @@ function CreateOLXListingDialog({
                       type="button"
                       className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 text-left"
                       onClick={() => {
-                        if (cat.children && cat.children.length > 0) {
-                          handleCategoryClick(cat);
-                        } else {
+                        if (cat.is_leaf) {
                           handleCategorySelect(cat);
+                        } else {
+                          handleCategoryClick(cat);
                         }
                       }}
                     >
                       <span>{cat.name}</span>
-                      {cat.children && cat.children.length > 0 && (
+                      {!cat.is_leaf && (
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                     </button>
