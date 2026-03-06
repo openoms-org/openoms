@@ -191,7 +191,8 @@ func (h *AmazonAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	)
 	authURL, err := client.AuthorizationURL(creds.ApplicationID, state, creds.MarketplaceID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		slog.Error("amazon OAuth: failed to build auth URL", "error", err)
+		writeError(w, http.StatusBadRequest, "Nie udalo sie wygenerowac adresu autoryzacji dla wybranego marketplace")
 		return
 	}
 
@@ -206,6 +207,75 @@ func (h *AmazonAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 		"state":        state,
 		"redirect_uri": h.redirectURI(),
 	})
+}
+
+// UpdateCredentials updates only the app-level credential fields (client_id, client_secret, application_id, marketplace_id)
+// while preserving existing OAuth tokens. After updating app credentials, OAuth re-authorization is required.
+func (h *AmazonAuthHandler) UpdateCredentials(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ApplicationID string `json:"application_id"`
+		ClientID      string `json:"client_id"`
+		ClientSecret  string `json:"client_secret"`
+		MarketplaceID string `json:"marketplace_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.ClientID == "" || body.ClientSecret == "" {
+		writeError(w, http.StatusBadRequest, "client_id and client_secret are required")
+		return
+	}
+
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
+	ip := clientIP(r)
+
+	// Read existing credentials to preserve OAuth tokens
+	existingJSON, integ, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "amazon")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Nie znaleziono integracji Amazon")
+		return
+	}
+
+	var existing map[string]any
+	if err := json.Unmarshal(existingJSON, &existing); err != nil {
+		writeServerError(w, "failed to parse existing credentials", err)
+		return
+	}
+
+	// Update only app-level fields
+	existing["client_id"] = body.ClientID
+	existing["client_secret"] = body.ClientSecret
+	if body.ApplicationID != "" {
+		existing["application_id"] = body.ApplicationID
+	}
+	if body.MarketplaceID != "" {
+		existing["marketplace_id"] = body.MarketplaceID
+	}
+
+	// Clear OAuth tokens since app credentials changed — re-auth required
+	delete(existing, "access_token")
+	delete(existing, "token_expiry")
+
+	mergedJSON, err := json.Marshal(existing)
+	if err != nil {
+		writeServerError(w, "failed to encode credentials", err)
+		return
+	}
+
+	rawCreds := json.RawMessage(mergedJSON)
+	pendingStatus := "pending"
+	updateReq := model.UpdateIntegrationRequest{
+		Credentials: &rawCreds,
+		Status:      &pendingStatus,
+	}
+	updated, err := h.integrationService.Update(r.Context(), tenantID, integ.ID, updateReq, actorID, ip)
+	if err != nil {
+		writeServerError(w, "failed to update credentials", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 // HandleCallback exchanges an Amazon SP-API OAuth2 authorization code for tokens and updates the integration.

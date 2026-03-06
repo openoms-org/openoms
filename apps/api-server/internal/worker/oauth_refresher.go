@@ -107,10 +107,10 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
 				continue
 			}
-			tokenExpiry = creds.TokenExpiry
-			if creds.RefreshToken == "" {
-				continue
+			if creds.RefreshToken == "" || creds.TokenExpiry == "" {
+				continue // manual setup or no OAuth tokens yet
 			}
+			tokenExpiry = creds.TokenExpiry
 		default:
 			continue
 		}

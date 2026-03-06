@@ -150,7 +150,11 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 		return fmt.Errorf("amazon: create request: %w", err)
 	}
 
-	req.Header.Set("x-amz-access-token", c.accessToken)
+	c.mu.Lock()
+	token := c.accessToken
+	c.mu.Unlock()
+
+	req.Header.Set("x-amz-access-token", token)
 	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -162,7 +166,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if err != nil {
 		return fmt.Errorf("amazon: read response: %w", err)
 	}

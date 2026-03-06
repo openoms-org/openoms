@@ -704,6 +704,7 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Post("/setup", deps.AmazonAuth.Setup)
 					r.Get("/auth-url", deps.AmazonAuth.GetAuthURL)
 					r.Post("/callback", deps.AmazonAuth.HandleCallback)
+					r.Put("/credentials", deps.AmazonAuth.UpdateCredentials)
 				})
 
 				// OLX OAuth2

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -74,6 +74,20 @@ function getMarketplaceLabel(id: string) {
 }
 
 export default function AmazonIntegrationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <AmazonIntegrationPageInner />
+    </Suspense>
+  );
+}
+
+function AmazonIntegrationPageInner() {
   const searchParams = useSearchParams();
   const code = searchParams.get("spapi_oauth_code");
   const state = searchParams.get("state");
@@ -674,8 +688,7 @@ function ConnectedState({
     doAuth();
   }, [onRefetch]);
 
-  const needsOAuth =
-    integration.status !== "active" || !integration.last_sync_at;
+  const needsOAuth = integration.status !== "active";
 
   return (
     <div className="space-y-6">
@@ -830,7 +843,6 @@ function ConnectedState({
         </Card>
 
         <CredentialsCard
-          integrationId={integration.id}
           onUpdated={onRefetch}
         />
       </div>
@@ -838,59 +850,55 @@ function ConnectedState({
   );
 }
 
-function CredentialsCard({
-  integrationId,
-  onUpdated,
-}: {
-  integrationId: string;
-  onUpdated: () => void;
-}) {
-  const updateIntegration = useUpdateIntegration(integrationId);
+function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
   const [applicationId, setApplicationId] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [marketplaceId, setMarketplaceId] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleUpdateCredentials = () => {
+  const handleUpdateCredentials = async () => {
     if (!clientId.trim() || !clientSecret.trim()) {
       toast.error("Client ID i Client Secret sa wymagane");
       return;
     }
 
-    const credentials: Record<string, string> = {
-      client_id: clientId.trim(),
-      client_secret: clientSecret.trim(),
-    };
-    if (applicationId.trim()) {
-      credentials.application_id = applicationId.trim();
-    }
-    if (marketplaceId) {
-      credentials.marketplace_id = marketplaceId;
-    }
-
-    updateIntegration.mutate(
-      { credentials },
-      {
-        onSuccess: () => {
-          toast.success(
-            "Dane zaktualizowane. Kliknij 'Polacz z Amazon' aby ponownie autoryzowac."
-          );
-          setApplicationId("");
-          setClientId("");
-          setClientSecret("");
-          setMarketplaceId("");
-          onUpdated();
-        },
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Blad podczas aktualizacji danych"
-          );
-        },
+    setIsSaving(true);
+    try {
+      const body: Record<string, string> = {
+        client_id: clientId.trim(),
+        client_secret: clientSecret.trim(),
+      };
+      if (applicationId.trim()) {
+        body.application_id = applicationId.trim();
       }
-    );
+      if (marketplaceId) {
+        body.marketplace_id = marketplaceId;
+      }
+
+      await apiClient("/v1/integrations/amazon/credentials", {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+
+      toast.success(
+        "Dane zaktualizowane. Kliknij 'Polacz z Amazon' aby ponownie autoryzowac."
+      );
+      setApplicationId("");
+      setClientId("");
+      setClientSecret("");
+      setMarketplaceId("");
+      onUpdated();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Blad podczas aktualizacji danych"
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -965,16 +973,10 @@ function CredentialsCard({
 
         <Button
           onClick={handleUpdateCredentials}
-          disabled={
-            updateIntegration.isPending ||
-            !clientId.trim() ||
-            !clientSecret.trim()
-          }
+          disabled={isSaving || !clientId.trim() || !clientSecret.trim()}
           variant="outline"
         >
-          {updateIntegration.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
+          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <Save className="mr-2 h-4 w-4" />
           Zaktualizuj dane
         </Button>
