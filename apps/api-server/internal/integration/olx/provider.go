@@ -77,6 +77,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 
 func (p *Provider) ProviderName() string { return "olx" }
 
+// Client returns the underlying OLX SDK client for direct API access.
+func (p *Provider) Client() *olxsdk.Client { return p.client }
+
 // PollOrders polls OLX transactions (since OLX is classifieds, transactions map to orders).
 func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration.MarketplaceOrder, string, error) {
 	params := olxsdk.TransactionListParams{

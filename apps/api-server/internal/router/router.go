@@ -111,6 +111,7 @@ type RouterDeps struct {
 	Checkout                   *handler.CheckoutHandler
 	StripeWebhook              *handler.StripeWebhookHandler
 	ErliListings               *handler.ErliListingsHandler
+	OLXListings                *handler.OLXListingsHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -560,6 +561,9 @@ func New(deps RouterDeps) *chi.Mux {
 						if deps.ErliListings != nil {
 							r.Post("/erli", deps.ErliListings.CreateListing)
 						}
+						if deps.OLXListings != nil {
+							r.Post("/olx", deps.OLXListings.CreateListing)
+						}
 						// TODO: The entire listings group is gated by AllegroListings != nil.
 						// Erli/WooCommerce listing creation is inaccessible if AllegroListings is nil.
 						// These routes also use AllegroListings for all providers (Erli, WooCommerce).
@@ -707,10 +711,15 @@ func New(deps RouterDeps) *chi.Mux {
 					r.Put("/credentials", deps.AmazonAuth.UpdateCredentials)
 				})
 
-				// OLX OAuth2
+				// OLX OAuth2 + listings proxy
 				r.Route("/olx", func(r chi.Router) {
 					r.Get("/auth-url", deps.OlxAuth.GetAuthURL)
 					r.Post("/callback", deps.OlxAuth.HandleCallback)
+					if deps.OLXListings != nil {
+						r.Get("/categories", deps.OLXListings.ListCategories)
+						r.Get("/categories/{categoryId}/attributes", deps.OLXListings.GetCategoryAttributes)
+						r.Get("/cities", deps.OLXListings.ListCities)
+					}
 				})
 
 				// Store platform integrations (Shoper, PrestaShop, Shopify)
