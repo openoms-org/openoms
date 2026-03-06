@@ -9,10 +9,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
+	amazonsdk "github.com/openoms-org/openoms/packages/amazon-sp-sdk"
 	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	allegroIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
+	amazonIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/amazon"
 	olxIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/olx"
 )
 
@@ -46,7 +48,7 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 	rows, err := w.pool.Query(ctx,
 		`SELECT id, tenant_id, credentials, provider
 		 FROM integrations
-		 WHERE status = 'active' AND provider IN ('allegro', 'olx')`,
+		 WHERE status = 'active' AND provider IN ('allegro', 'olx', 'amazon')`,
 	)
 	if err != nil {
 		return err
@@ -99,6 +101,16 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			if creds.RefreshToken == "" {
 				continue // no refresh token, skip (client_credentials flow)
 			}
+		case "amazon":
+			var creds amazonIntegration.AmazonCredentials
+			if err := json.Unmarshal(credJSON, &creds); err != nil {
+				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
+				continue
+			}
+			if creds.RefreshToken == "" || creds.TokenExpiry == "" {
+				continue // manual setup or no OAuth tokens yet
+			}
+			tokenExpiry = creds.TokenExpiry
 		default:
 			continue
 		}
@@ -127,6 +139,8 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			newCredJSON, err = w.refreshAllegro(ctx, credJSON, expiry)
 		case "olx":
 			newCredJSON, err = w.refreshOLX(ctx, credJSON, expiry)
+		case "amazon":
+			newCredJSON, err = w.refreshAmazon(ctx, credJSON, expiry)
 		}
 		if err != nil {
 			w.logger.Error("oauth refresh: refresh failed", "integration_id", ir.id, "error", err)
@@ -220,4 +234,27 @@ func (w *OAuthRefresher) refreshOLX(ctx context.Context, credJSON []byte, expiry
 		TokenExpiry:  newExpiry.Format(time.RFC3339),
 	}
 	return json.Marshal(newCreds)
+}
+
+func (w *OAuthRefresher) refreshAmazon(ctx context.Context, credJSON []byte, expiry time.Time) ([]byte, error) {
+	var creds amazonIntegration.AmazonCredentials
+	if err := json.Unmarshal(credJSON, &creds); err != nil {
+		return nil, err
+	}
+
+	client := amazonsdk.NewClient(creds.ClientID, creds.ClientSecret,
+		amazonsdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry),
+	)
+	tok, err := client.RefreshAccessToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	newExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
+	creds.AccessToken = tok.AccessToken
+	if tok.RefreshToken != "" {
+		creds.RefreshToken = tok.RefreshToken
+	}
+	creds.TokenExpiry = newExpiry.Format(time.RFC3339)
+	return json.Marshal(creds)
 }

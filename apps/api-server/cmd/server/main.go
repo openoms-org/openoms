@@ -506,7 +506,7 @@ func main() {
 	allegroRatingsHandler := handler.NewAllegroRatingsHandler(integrationService, encryptionKey)
 
 	// Amazon auth handler
-	amazonAuthHandler := handler.NewAmazonAuthHandler(integrationService, encryptionKey)
+	amazonAuthHandler := handler.NewAmazonAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
 
 	// Store platform auth handler (Shoper, PrestaShop, Shopify)
 	storeAuthHandler := handler.NewStoreAuthHandler(integrationService, encryptionKey)

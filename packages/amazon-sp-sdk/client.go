@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"strings"
 	"sync"
 	"time"
 )
@@ -21,15 +19,18 @@ const (
 
 // Client is an Amazon SP-API client with LWA (Login with Amazon) OAuth2 auth.
 type Client struct {
-	httpClient   *http.Client
-	baseURL      string
-	clientID     string
-	clientSecret string
-	refreshToken string
+	httpClient    *http.Client
+	baseURL       string
+	tokenEndpoint string
+	clientID      string
+	clientSecret  string
+	refreshToken  string
+	redirectURI   string
 
-	mu          sync.Mutex
-	accessToken string
-	tokenExpiry time.Time
+	mu             sync.Mutex
+	accessToken    string
+	tokenExpiry    time.Time
+	onTokenRefresh func(accessToken, refreshToken string, expiry time.Time)
 
 	Orders  *OrderService
 	Catalog *CatalogService
@@ -75,13 +76,35 @@ func WithTokens(accessToken, refreshToken string, expiry time.Time) Option {
 	}
 }
 
+// WithRedirectURI sets the OAuth redirect URI for authorization code flow.
+func WithRedirectURI(uri string) Option {
+	return func(cl *Client) {
+		cl.redirectURI = uri
+	}
+}
+
+// WithOnTokenRefresh sets a callback invoked after a token refresh.
+func WithOnTokenRefresh(fn func(accessToken, refreshToken string, expiry time.Time)) Option {
+	return func(cl *Client) {
+		cl.onTokenRefresh = fn
+	}
+}
+
+// WithTokenEndpoint overrides the LWA token endpoint (useful for testing).
+func WithTokenEndpoint(u string) Option {
+	return func(cl *Client) {
+		cl.tokenEndpoint = u
+	}
+}
+
 // NewClient creates a new Amazon SP-API client.
 func NewClient(clientID, clientSecret string, opts ...Option) *Client {
 	c := &Client{
-		httpClient:   http.DefaultClient,
-		baseURL:      productionBaseURL,
-		clientID:     clientID,
-		clientSecret: clientSecret,
+		httpClient:    http.DefaultClient,
+		baseURL:       productionBaseURL,
+		tokenEndpoint: lwaTokenEndpoint,
+		clientID:      clientID,
+		clientSecret:  clientSecret,
 	}
 
 	for _, opt := range opts {
@@ -94,51 +117,15 @@ func NewClient(clientID, clientSecret string, opts ...Option) *Client {
 	return c
 }
 
-// refreshAccessToken obtains a new access token using the LWA refresh token.
-func (c *Client) refreshAccessToken(ctx context.Context) error {
-	data := url.Values{
-		"grant_type":    {"refresh_token"},
-		"refresh_token": {c.refreshToken},
-		"client_id":     {c.clientID},
-		"client_secret": {c.clientSecret},
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, lwaTokenEndpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		return fmt.Errorf("amazon: create token request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("amazon: execute token request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("amazon: token refresh failed (status %d): %s", resp.StatusCode, string(body))
-	}
-
-	var tok TokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tok); err != nil {
-		return fmt.Errorf("amazon: decode token response: %w", err)
-	}
-
-	c.accessToken = tok.AccessToken
-	c.tokenExpiry = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
-
-	return nil
-}
-
 // ensureToken refreshes the access token if it is expired or near expiry.
 func (c *Client) ensureToken(ctx context.Context) error {
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	needsRefresh := c.accessToken == "" || time.Until(c.tokenExpiry) < 60*time.Second
+	c.mu.Unlock()
 
-	// Refresh if token expires within 60 seconds.
-	if c.accessToken == "" || time.Now().Add(60*time.Second).After(c.tokenExpiry) {
-		return c.refreshAccessToken(ctx)
+	if needsRefresh {
+		_, err := c.RefreshAccessToken(ctx)
+		return err
 	}
 	return nil
 }
@@ -163,7 +150,11 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 		return fmt.Errorf("amazon: create request: %w", err)
 	}
 
-	req.Header.Set("x-amz-access-token", c.accessToken)
+	c.mu.Lock()
+	token := c.accessToken
+	c.mu.Unlock()
+
+	req.Header.Set("x-amz-access-token", token)
 	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
@@ -175,7 +166,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if err != nil {
 		return fmt.Errorf("amazon: read response: %w", err)
 	}

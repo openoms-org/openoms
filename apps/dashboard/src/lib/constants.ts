@@ -308,9 +308,10 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
     { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
   ],
   amazon: [
-    { key: "client_id", label: "Client ID (LWA)", placeholder: "amzn1.application-oa2-client.xxx", helpText: "Login with Amazon (LWA) credentials z Seller Central > Develop Apps", type: "text", required: true },
+    { key: "application_id", label: "Application ID", placeholder: "amzn1.sellerapps.app.xxx", helpText: "ID aplikacji z Amazon Developer Console (wymagane do OAuth)", type: "text", required: true },
+    { key: "client_id", label: "Client ID (LWA)", placeholder: "amzn1.application-oa2-client.xxx", helpText: "Login with Amazon credentials z Seller Central > Develop Apps", type: "text", required: true },
     { key: "client_secret", label: "Client Secret (LWA)", placeholder: "", type: "password", required: true },
-    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Wygeneruj w Seller Central > Develop Apps > Authorize", type: "password", required: true },
+    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
     { key: "marketplace_id", label: "Marketplace ID", placeholder: "A1C3SOZRARQ6R3", helpText: "Amazon.pl: A1C3SOZRARQ6R3, Amazon.de: A1PA6795UKMFR9", type: "text", required: true },
     { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
   ],

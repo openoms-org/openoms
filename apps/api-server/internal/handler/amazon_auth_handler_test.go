@@ -12,7 +12,7 @@ import (
 )
 
 func TestAmazonAuthHandler_Setup_InvalidJSON(t *testing.T) {
-	h := NewAmazonAuthHandler(nil, nil)
+	h := NewAmazonAuthHandler(nil, nil, nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/amazon/setup", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -27,7 +27,7 @@ func TestAmazonAuthHandler_Setup_InvalidJSON(t *testing.T) {
 }
 
 func TestAmazonAuthHandler_Setup_MissingFields(t *testing.T) {
-	h := NewAmazonAuthHandler(nil, nil)
+	h := NewAmazonAuthHandler(nil, nil, nil, nil)
 
 	// Missing all required fields
 	body := `{"client_id":"","client_secret":"","refresh_token":"","marketplace_id":""}`
@@ -44,7 +44,7 @@ func TestAmazonAuthHandler_Setup_MissingFields(t *testing.T) {
 }
 
 func TestAmazonAuthHandler_Setup_MissingClientSecret(t *testing.T) {
-	h := NewAmazonAuthHandler(nil, nil)
+	h := NewAmazonAuthHandler(nil, nil, nil, nil)
 
 	body := `{"client_id":"cid","client_secret":"","refresh_token":"rt","marketplace_id":"mp"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/amazon/setup", strings.NewReader(body))
