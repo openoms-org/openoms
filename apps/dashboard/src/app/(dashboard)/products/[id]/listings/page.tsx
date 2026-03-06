@@ -990,8 +990,14 @@ function CreateOLXListingDialog({
     setShowSuggestions(false);
   };
 
+  const effectiveTitle = title || product.name;
+
   const handleSubmit = () => {
     if (!selectedCategoryId || !selectedCity || !contactName) return;
+    if (effectiveTitle.length < 16) {
+      toast.error("Tytuł ogłoszenia musi mieć min. 16 znaków");
+      return;
+    }
 
     createListing.mutate(
       {
@@ -1000,7 +1006,7 @@ function CreateOLXListingDialog({
         city_id: selectedCity.id,
         contact_name: contactName,
         contact_phone: contactPhone || undefined,
-        title: title || undefined,
+        title: effectiveTitle,
         description: description || undefined,
         price_override: priceOverride ? parseFloat(priceOverride) : undefined,
       },
@@ -1220,14 +1226,17 @@ function CreateOLXListingDialog({
 
           {/* Optional overrides */}
           <div className="space-y-2">
-            <Label>Tytuł ogłoszenia</Label>
+            <Label>Tytuł ogłoszenia *</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={product.name}
               maxLength={70}
             />
-            <p className="text-xs text-muted-foreground">Maks. 70 znaków. Domyślnie: nazwa produktu.</p>
+            {(title || product.name).length < 16 && (
+              <p className="text-xs text-destructive">Min. 16 znaków (obecnie {(title || product.name).length})</p>
+            )}
+            <p className="text-xs text-muted-foreground">16–70 znaków. Domyślnie: nazwa produktu.</p>
           </div>
 
           <div className="space-y-2">
@@ -1265,7 +1274,7 @@ function CreateOLXListingDialog({
           <Button variant="outline" onClick={onClose}>Anuluj</Button>
           <Button
             onClick={handleSubmit}
-            disabled={createListing.isPending || !selectedCategoryId || !selectedCity || !contactName}
+            disabled={createListing.isPending || !selectedCategoryId || !selectedCity || !contactName || effectiveTitle.length < 16}
           >
             {createListing.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Wystaw na OLX
