@@ -125,14 +125,22 @@ func (p *Provider) PushOffer(_ context.Context, _ *model.Product, _ map[string]a
 	return "", fmt.Errorf("kaufland: PushOffer not yet implemented")
 }
 
-// UpdateStock is not yet supported for Kaufland.
-func (p *Provider) UpdateStock(_ context.Context, _ string, _ int) error {
-	return fmt.Errorf("kaufland: UpdateStock not yet implemented")
+// UpdateStock updates the stock quantity for a Kaufland unit.
+func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
+	unitID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("kaufland: invalid unit ID %q: %w", externalOfferID, err)
+	}
+	return p.client.Units.UpdateStock(ctx, unitID, quantity)
 }
 
-// UpdatePrice is not yet supported for Kaufland.
-func (p *Provider) UpdatePrice(_ context.Context, _ string, _ float64) error {
-	return fmt.Errorf("kaufland: UpdatePrice not yet implemented")
+// UpdatePrice updates the price for a Kaufland unit.
+func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
+	unitID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("kaufland: invalid unit ID %q: %w", externalOfferID, err)
+	}
+	return p.client.Units.UpdatePrice(ctx, unitID, price)
 }
 
 // mapKauflandOrder converts Kaufland order units to the normalized MarketplaceOrder.
