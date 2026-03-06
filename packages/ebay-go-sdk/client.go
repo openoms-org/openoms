@@ -36,7 +36,8 @@ type Client struct {
 	tokenExpiresAt time.Time
 	tokenMu        sync.Mutex
 
-	Orders *OrderService
+	Orders    *OrderService
+	Inventory *InventoryService
 }
 
 // Option configures a Client.
@@ -90,6 +91,7 @@ func NewClient(appID, certID, devID, refreshToken string, opts ...Option) *Clien
 	}
 
 	c.Orders = &OrderService{client: c}
+	c.Inventory = &InventoryService{client: c}
 
 	return c
 }
@@ -114,7 +116,7 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 	data := url.Values{}
 	data.Set("grant_type", "refresh_token")
 	data.Set("refresh_token", c.refreshToken)
-	data.Set("scope", "https://api.ebay.com/oauth/api_scope/sell.fulfillment")
+	data.Set("scope", "https://api.ebay.com/oauth/api_scope/sell.fulfillment https://api.ebay.com/oauth/api_scope/sell.inventory")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL, strings.NewReader(data.Encode()))
 	if err != nil {
