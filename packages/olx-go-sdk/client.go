@@ -123,7 +123,8 @@ func NewClient(clientID, clientSecret, accessToken string, opts ...Option) *Clie
 }
 
 // ensureAccessToken refreshes the OAuth2 access token if it is expired or missing.
-// Uses client_credentials grant for backward compatibility with API-key-only setups.
+// Prefers refresh_token grant when available (preserves user-level scopes from
+// authorization_code flow). Falls back to client_credentials for API-key-only setups.
 func (c *Client) ensureAccessToken(ctx context.Context) error {
 	c.tokenMu.Lock()
 	defer c.tokenMu.Unlock()
@@ -133,9 +134,15 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 	}
 
 	data := url.Values{}
-	data.Set("grant_type", "client_credentials")
 	data.Set("client_id", c.clientID)
 	data.Set("client_secret", c.clientSecret)
+
+	if c.refreshToken != "" {
+		data.Set("grant_type", "refresh_token")
+		data.Set("refresh_token", c.refreshToken)
+	} else {
+		data.Set("grant_type", "client_credentials")
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -160,13 +167,25 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 	}
 
 	c.accessToken = tok.AccessToken
+	if tok.RefreshToken != "" {
+		c.refreshToken = tok.RefreshToken
+	}
 	c.tokenExpiresAt = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
+
+	if c.onTokenRefresh != nil {
+		c.onTokenRefresh(c.accessToken, c.refreshToken, c.tokenExpiresAt)
+	}
 
 	return nil
 }
 
 // do executes an authenticated API request.
+// On 401, it invalidates the cached token, refreshes, and retries once.
 func (c *Client) do(ctx context.Context, method, path string, body any, result any) error {
+	return c.doInternal(ctx, method, path, body, result, true)
+}
+
+func (c *Client) doInternal(ctx context.Context, method, path string, body any, result any, canRetry bool) error {
 	if err := c.ensureAccessToken(ctx); err != nil {
 		return err
 	}
@@ -197,6 +216,14 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 		return fmt.Errorf("olx: execute request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// On 401 with a stale token, force refresh and retry once.
+	if resp.StatusCode == 401 && canRetry {
+		c.tokenMu.Lock()
+		c.tokenExpiresAt = time.Time{}
+		c.tokenMu.Unlock()
+		return c.doInternal(ctx, method, path, body, result, false)
+	}
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
