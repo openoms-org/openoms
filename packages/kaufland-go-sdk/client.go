@@ -29,6 +29,7 @@ type Client struct {
 	sandbox    bool
 
 	Orders *OrderService
+	Units  *UnitService
 }
 
 // Option configures a Client.
@@ -69,6 +70,7 @@ func NewClient(apiKey, secretKey string, opts ...Option) *Client {
 	}
 
 	c.Orders = &OrderService{client: c}
+	c.Units = &UnitService{client: c}
 
 	return c
 }
