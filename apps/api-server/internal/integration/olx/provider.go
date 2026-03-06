@@ -186,6 +186,12 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 	if v, ok := listingData["city_id"].(float64); ok {
 		req.Location = &olxsdk.Location{CityID: int(v)}
 	}
+	if v, ok := listingData["district_id"].(float64); ok {
+		if req.Location == nil {
+			req.Location = &olxsdk.Location{}
+		}
+		req.Location.DistrictID = int(v)
+	}
 	if v, ok := listingData["contact_name"].(string); ok {
 		contact := &olxsdk.Contact{Name: v}
 		if phone, ok := listingData["contact_phone"].(string); ok {

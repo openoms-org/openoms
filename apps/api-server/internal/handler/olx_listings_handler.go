@@ -86,6 +86,7 @@ type createOLXListingRequest struct {
 	IntegrationID string              `json:"integration_id"`
 	CategoryID    int                 `json:"category_id"`
 	CityID        int                 `json:"city_id"`
+	DistrictID    int                 `json:"district_id,omitempty"`
 	ContactName   string              `json:"contact_name"`
 	ContactPhone  string              `json:"contact_phone,omitempty"`
 	Title         string              `json:"title,omitempty"`
@@ -186,6 +187,9 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 		"category_id":  float64(req.CategoryID),
 		"city_id":      float64(req.CityID),
 		"contact_name": req.ContactName,
+	}
+	if req.DistrictID > 0 {
+		listingData["district_id"] = float64(req.DistrictID)
 	}
 	if req.ContactPhone != "" {
 		listingData["contact_phone"] = req.ContactPhone
@@ -428,6 +432,45 @@ func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) 
 		Data:  filtered,
 		Total: len(filtered),
 	})
+}
+
+// ListDistricts returns districts for a city.
+func (h *OLXListingsHandler) ListDistricts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID := middleware.TenantIDFromContext(ctx)
+
+	integrationID := r.URL.Query().Get("integration_id")
+	if integrationID == "" {
+		writeError(w, http.StatusBadRequest, "integration_id is required")
+		return
+	}
+
+	iid, err := uuid.Parse(integrationID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid integration_id")
+		return
+	}
+
+	cityID, err := strconv.Atoi(chi.URLParam(r, "cityId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid city ID")
+		return
+	}
+
+	provider, err := h.createProvider(ctx, tenantID, iid)
+	if err != nil {
+		slog.Error("olx listings: failed to create provider", "error", err)
+		writeError(w, http.StatusBadRequest, "OLX integration not configured")
+		return
+	}
+
+	result, err := provider.Client().Cities.ListDistricts(ctx, cityID)
+	if err != nil {
+		writeServerError(w, "failed to list OLX districts", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 // SuggestCategory proxies OLX category suggestion based on a query string.

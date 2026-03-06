@@ -38,3 +38,12 @@ func (s *CityService) GetCity(ctx context.Context, cityID int) (*City, error) {
 	}
 	return &wrapper.Data, nil
 }
+
+// ListDistricts returns districts for a given city.
+func (s *CityService) ListDistricts(ctx context.Context, cityID int) (*DistrictListResponse, error) {
+	var result DistrictListResponse
+	if err := s.client.do(ctx, "GET", fmt.Sprintf("/cities/%d/districts", cityID), nil, &result); err != nil {
+		return nil, fmt.Errorf("olx: list districts for city %d: %w", cityID, err)
+	}
+	return &result, nil
+}

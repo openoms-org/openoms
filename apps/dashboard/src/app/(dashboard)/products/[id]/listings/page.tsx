@@ -48,6 +48,7 @@ import {
   useAllegroListingSearch,
   useOLXCategories,
   useOLXCities,
+  useOLXDistricts,
   useOLXCategorySuggest,
   useOLXCategoryAttributes,
   useCreateOLXListing,
@@ -927,6 +928,7 @@ function CreateOLXListingDialog({
   const [cityQuery, setCityQuery] = useState("");
   const [debouncedCityQuery, setDebouncedCityQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<{ id: number; name: string } | null>(null);
+  const [selectedDistrictId, setSelectedDistrictId] = useState<number | null>(null);
   const [cityOpen, setCityOpen] = useState(false);
 
   // Contact fields
@@ -959,6 +961,7 @@ function CreateOLXListingDialog({
   const { data: categories, isLoading: categoriesLoading, isError: categoriesError, error: categoriesErrorObj } = useOLXCategories(integrationId, currentParentId);
   const { data: citiesResult, isLoading: citiesLoading, isError: citiesError, error: citiesErrorObj } = useOLXCities(integrationId, debouncedCityQuery);
   const { data: categoryAttributes, isLoading: attrsLoading } = useOLXCategoryAttributes(integrationId, selectedCategoryId);
+  const { data: districts } = useOLXDistricts(integrationId, selectedCity?.id ?? null);
   const createListing = useCreateOLXListing(product.id);
 
   const requiredAttributes = categoryAttributes?.filter((a) => a.validation.required) ?? [];
@@ -1003,6 +1006,10 @@ function CreateOLXListingDialog({
 
   const handleSubmit = () => {
     if (!selectedCategoryId || !selectedCity || !contactName) return;
+    if (districts && districts.length > 0 && !selectedDistrictId) {
+      toast.error("Wybierz dzielnicę");
+      return;
+    }
     if (effectiveTitle.length < 16) {
       toast.error("Tytuł ogłoszenia musi mieć min. 16 znaków");
       return;
@@ -1022,6 +1029,7 @@ function CreateOLXListingDialog({
         integration_id: integrationId,
         category_id: selectedCategoryId,
         city_id: selectedCity.id,
+        district_id: selectedDistrictId ?? undefined,
         contact_name: contactName,
         contact_phone: contactPhone || undefined,
         title: effectiveTitle,
@@ -1243,6 +1251,7 @@ function CreateOLXListingDialog({
                         className="flex w-full items-center px-3 py-2 text-sm hover:bg-muted/50 text-left"
                         onClick={() => {
                           setSelectedCity({ id: city.id, name: city.name });
+                          setSelectedDistrictId(null);
                           setCityQuery("");
                           setCityOpen(false);
                         }}
@@ -1260,6 +1269,23 @@ function CreateOLXListingDialog({
               )}
             </div>
           </div>
+
+          {/* District select (shown when city has districts) */}
+          {selectedCity && districts && districts.length > 0 && (
+            <div className="space-y-2">
+              <Label>Dzielnica *</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={selectedDistrictId ?? ""}
+                onChange={(e) => setSelectedDistrictId(e.target.value ? parseInt(e.target.value, 10) : null)}
+              >
+                <option value="">Wybierz dzielnicę...</option>
+                {districts.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Contact details */}
           <div className="grid grid-cols-2 gap-4">

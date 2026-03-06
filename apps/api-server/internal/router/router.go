@@ -716,6 +716,7 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Get("/categories/{categoryId}/attributes", deps.OLXListings.GetCategoryAttributes)
 						r.Get("/categories/suggest", deps.OLXListings.SuggestCategory)
 						r.Get("/cities", deps.OLXListings.ListCities)
+						r.Get("/cities/{cityId}/districts", deps.OLXListings.ListDistricts)
 					}
 				})
 

@@ -356,6 +356,25 @@ export function useOLXCities(integrationId: string, query: string) {
   });
 }
 
+export interface OLXDistrict {
+  id: number;
+  name: string;
+}
+
+export function useOLXDistricts(integrationId: string, cityId: number | null) {
+  const params = new URLSearchParams({ integration_id: integrationId });
+  return useQuery({
+    queryKey: ["olx", "districts", integrationId, cityId],
+    queryFn: async () => {
+      const resp = await apiClient<{ data: OLXDistrict[] }>(
+        `/v1/integrations/olx/cities/${cityId}/districts?${params}`
+      );
+      return resp.data;
+    },
+    enabled: !!integrationId && cityId != null && cityId > 0,
+  });
+}
+
 export interface OLXCategorySuggestion {
   id: number | string;
   name: string;
@@ -378,6 +397,7 @@ interface CreateOLXListingRequest {
   integration_id: string;
   category_id: number;
   city_id: number;
+  district_id?: number;
   contact_name: string;
   contact_phone?: string;
   title?: string;

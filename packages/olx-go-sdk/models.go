@@ -219,3 +219,14 @@ type CityListResponse struct {
 	Data  []City `json:"data"`
 	Total int    `json:"total"`
 }
+
+// District represents an OLX city district.
+type District struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+// DistrictListResponse is the response from GET /cities/{id}/districts.
+type DistrictListResponse struct {
+	Data []District `json:"data"`
+}
