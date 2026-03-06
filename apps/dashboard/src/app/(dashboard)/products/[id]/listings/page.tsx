@@ -46,12 +46,16 @@ import {
   useAutoGenerateShippingRate,
   useAllegroProductSearch,
   useAllegroListingSearch,
+  useOLXCategories,
+  useOLXCities,
+  useCreateOLXListing,
 } from "@/hooks/use-allegro";
 import type {
   AllegroCategory,
   AllegroCategoryParameter,
   AllegroMatchingCategory,
   CreateProductListingRequest,
+  OLXCategory,
 } from "@/hooks/use-allegro";
 import Image from "next/image";
 import type { Product, ProductListing, Integration } from "@/types/api";
@@ -669,7 +673,11 @@ function CreateListingWizard({
     return <CreateWooCommerceListingDialog product={product} onClose={onClose} />;
   }
 
-  if (selectedProvider && selectedIntegration && !["allegro", "woocommerce"].includes(selectedProvider)) {
+  if (selectedProvider === "olx" && selectedIntegration) {
+    return <CreateOLXListingDialog product={product} integrationId={selectedIntegration.integrationId} onClose={onClose} />;
+  }
+
+  if (selectedProvider && selectedIntegration && !["allegro", "woocommerce", "olx"].includes(selectedProvider)) {
     // Providers without dedicated dialogs yet — show coming soon
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -886,6 +894,311 @@ function CreateWooCommerceListingDialog({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             Wystaw na WooCommerce
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ===================== OLX Create Dialog =====================
+
+function CreateOLXListingDialog({
+  product,
+  integrationId,
+  onClose,
+}: {
+  product: Product;
+  integrationId: string;
+  onClose: () => void;
+}) {
+  // Category navigation state
+  const [categoryPath, setCategoryPath] = useState<{ id: number; name: string }[]>([]);
+  const currentParentId = categoryPath.length > 0 ? categoryPath[categoryPath.length - 1].id : undefined;
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+
+  // City search state
+  const [cityQuery, setCityQuery] = useState("");
+  const [debouncedCityQuery, setDebouncedCityQuery] = useState("");
+  const [selectedCity, setSelectedCity] = useState<{ id: number; name: string } | null>(null);
+  const [cityOpen, setCityOpen] = useState(false);
+
+  // Contact fields
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+
+  // Optional overrides
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priceOverride, setPriceOverride] = useState("");
+
+  // Debounce city query
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedCityQuery(cityQuery), 300);
+    return () => clearTimeout(timer);
+  }, [cityQuery]);
+
+  // Hooks
+  const { data: categories, isLoading: categoriesLoading } = useOLXCategories(integrationId, currentParentId);
+  const { data: citiesResult } = useOLXCities(integrationId, debouncedCityQuery);
+  const createListing = useCreateOLXListing(product.id);
+
+  const cities = citiesResult?.data ?? [];
+
+  const handleCategoryClick = (cat: OLXCategory) => {
+    setCategoryPath((prev) => [...prev, { id: cat.id, name: cat.name }]);
+    setSelectedCategoryId(null);
+  };
+
+  const handleCategorySelect = (cat: OLXCategory) => {
+    setSelectedCategoryId(cat.id);
+    setCategoryPath((prev) => [...prev, { id: cat.id, name: cat.name }]);
+  };
+
+  const handleBreadcrumbClick = (index: number) => {
+    setCategoryPath((prev) => prev.slice(0, index + 1));
+    setSelectedCategoryId(null);
+  };
+
+  const handleBreadcrumbRoot = () => {
+    setCategoryPath([]);
+    setSelectedCategoryId(null);
+  };
+
+  const handleSubmit = () => {
+    if (!selectedCategoryId || !selectedCity || !contactName) return;
+
+    createListing.mutate(
+      {
+        integration_id: integrationId,
+        category_id: selectedCategoryId,
+        city_id: selectedCity.id,
+        contact_name: contactName,
+        contact_phone: contactPhone || undefined,
+        title: title || undefined,
+        description: description || undefined,
+        price_override: priceOverride ? parseFloat(priceOverride) : undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Ogłoszenie wystawione na OLX");
+          onClose();
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error ? error.message : "Nie udało się wystawić ogłoszenia na OLX"
+          );
+        },
+      }
+    );
+  };
+
+  const isLeafCategory = selectedCategoryId != null && (!categories || categories.length === 0);
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Wystaw na OLX</DialogTitle>
+          <DialogDescription>
+            Wystawianie ogłoszenia &quot;{product.name}&quot; na OLX.pl
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Category selection */}
+          <div className="space-y-2">
+            <Label>Kategoria OLX *</Label>
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-1 text-sm flex-wrap">
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={handleBreadcrumbRoot}
+              >
+                Kategorie
+              </button>
+              {categoryPath.map((crumb, idx) => (
+                <span key={crumb.id} className="flex items-center gap-1">
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  {idx < categoryPath.length - 1 ? (
+                    <button
+                      type="button"
+                      className="text-primary hover:underline"
+                      onClick={() => handleBreadcrumbClick(idx)}
+                    >
+                      {crumb.name}
+                    </button>
+                  ) : (
+                    <span className="font-medium">{crumb.name}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+            {/* Category list */}
+            {!isLeafCategory && (
+              <div className="max-h-48 overflow-y-auto rounded-md border">
+                {categoriesLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                ) : categories && categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 text-left"
+                      onClick={() => {
+                        if (cat.children && cat.children.length > 0) {
+                          handleCategoryClick(cat);
+                        } else {
+                          handleCategorySelect(cat);
+                        }
+                      }}
+                    >
+                      <span>{cat.name}</span>
+                      {cat.children && cat.children.length > 0 && (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <p className="p-3 text-sm text-muted-foreground">Brak podkategorii</p>
+                )}
+              </div>
+            )}
+            {isLeafCategory && (
+              <p className="text-sm text-green-600 flex items-center gap-1">
+                <Check className="h-4 w-4" /> Kategoria wybrana
+              </p>
+            )}
+          </div>
+
+          {/* City search */}
+          <div className="space-y-2">
+            <Label>Miasto *</Label>
+            <Popover open={cityOpen} onOpenChange={setCityOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={cityOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedCity ? selectedCity.name : "Wyszukaj miasto..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0" align="start">
+                <Command>
+                  <CommandInput
+                    placeholder="Wpisz nazwę miasta..."
+                    value={cityQuery}
+                    onValueChange={setCityQuery}
+                  />
+                  <CommandList>
+                    <CommandEmpty>
+                      {cityQuery.length < 2 ? "Wpisz min. 2 znaki" : "Nie znaleziono miast"}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {cities.map((city) => (
+                        <CommandItem
+                          key={city.id}
+                          value={`${city.name} ${city.county ?? ""}`}
+                          onSelect={() => {
+                            setSelectedCity({ id: city.id, name: city.name });
+                            setCityOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${selectedCity?.id === city.id ? "opacity-100" : "opacity-0"}`}
+                          />
+                          {city.name}
+                          {city.county && (
+                            <span className="ml-1 text-muted-foreground">({city.county})</span>
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Contact details */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Imię kontaktowe *</Label>
+              <Input
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                placeholder="Jan Kowalski"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefon kontaktowy</Label>
+              <Input
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="+48 123 456 789"
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Optional overrides */}
+          <div className="space-y-2">
+            <Label>Tytuł ogłoszenia</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={product.name}
+              maxLength={70}
+            />
+            <p className="text-xs text-muted-foreground">Maks. 70 znaków. Domyślnie: nazwa produktu.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Opis</Label>
+            <textarea
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Opcjonalny opis ogłoszenia (maks. 9000 znaków)"
+              maxLength={9000}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cena (PLN)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={priceOverride}
+              onChange={(e) => setPriceOverride(e.target.value)}
+              placeholder={String(product.price)}
+            />
+            <p className="text-xs text-muted-foreground">Domyślnie: {product.price} PLN</p>
+          </div>
+
+          {/* Product info summary */}
+          <div className="rounded-md border bg-muted/50 p-3 space-y-1 text-sm">
+            <p><span className="text-muted-foreground">SKU/EAN:</span> {product.ean || product.sku || "---"}</p>
+            <p><span className="text-muted-foreground">Zdjęcia:</span> {(product.images?.length ?? 0) > 0 ? `${product.images!.length} zdjęć` : "Brak"}</p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Anuluj</Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={createListing.isPending || !selectedCategoryId || !selectedCity || !contactName}
+          >
+            {createListing.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Wystaw na OLX
           </Button>
         </DialogFooter>
       </DialogContent>
