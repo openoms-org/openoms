@@ -202,3 +202,19 @@ type CategorySuggestion struct {
 type CategorySuggestionResponse struct {
 	Data []CategorySuggestion `json:"data"`
 }
+
+// City represents an OLX city.
+type City struct {
+	ID           int     `json:"id"`
+	Name         string  `json:"name"`
+	County       string  `json:"county,omitempty"`
+	Municipality string  `json:"municipality,omitempty"`
+	Latitude     float64 `json:"latitude,omitempty"`
+	Longitude    float64 `json:"longitude,omitempty"`
+}
+
+// CityListResponse is the response from GET /cities.
+type CityListResponse struct {
+	Data  []City `json:"data"`
+	Total int    `json:"total"`
+}

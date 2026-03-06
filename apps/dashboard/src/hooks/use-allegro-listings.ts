@@ -286,3 +286,69 @@ export function useForcePushListing() {
       apiClient(`/v1/stock-sync/push/listing/${listingId}`, { method: "POST" }),
   });
 }
+
+// --- OLX Hooks ---
+
+export interface OLXCategory {
+  id: number;
+  name: string;
+  parent_id?: number;
+  is_leaf: boolean;
+}
+
+export interface OLXCity {
+  id: number;
+  name: string;
+  county?: string;
+  municipality?: string;
+}
+
+export function useOLXCategories(integrationId: string, parentId?: number) {
+  const params = new URLSearchParams({ integration_id: integrationId });
+  if (parentId) params.set("parent_id", String(parentId));
+  return useQuery({
+    queryKey: ["olx", "categories", integrationId, parentId ?? "root"],
+    queryFn: async () => {
+      const resp = await apiClient<{ data: OLXCategory[] }>(`/v1/integrations/olx/categories?${params}`);
+      return resp.data;
+    },
+    enabled: !!integrationId,
+  });
+}
+
+export function useOLXCities(integrationId: string, query: string) {
+  const params = new URLSearchParams({ integration_id: integrationId, limit: "50" });
+  if (query) params.set("query", query);
+  return useQuery({
+    queryKey: ["olx", "cities", integrationId, query],
+    queryFn: () =>
+      apiClient<{ data: OLXCity[]; total: number }>(`/v1/integrations/olx/cities?${params}`),
+    enabled: !!integrationId && query.length >= 2,
+  });
+}
+
+interface CreateOLXListingRequest {
+  integration_id: string;
+  category_id: number;
+  city_id: number;
+  contact_name: string;
+  contact_phone?: string;
+  title?: string;
+  description?: string;
+  price_override?: number;
+  stock_override?: number;
+}
+
+export function useCreateOLXListing(productId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateOLXListingRequest) =>
+      apiClient<ProductListing>(
+        `/v1/products/${productId}/listings/olx`,
+        { method: "POST", body: JSON.stringify(data) }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products", productId, "listings"] });
+    },
+  });
+}
