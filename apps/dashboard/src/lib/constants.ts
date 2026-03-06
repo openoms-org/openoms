@@ -215,6 +215,8 @@ export const AUTOMATION_TRIGGER_EVENTS = [
   "return.status_changed",
   "product.created",
   "product.updated",
+  "product.stock_restored",
+  "product.out_of_stock",
 ] as const;
 
 export const AUTOMATION_TRIGGER_LABELS: Record<string, string> = {
@@ -227,6 +229,8 @@ export const AUTOMATION_TRIGGER_LABELS: Record<string, string> = {
   "return.status_changed": "Zmiana statusu zwrotu",
   "product.created": "Produkt utworzony",
   "product.updated": "Produkt zaktualizowany",
+  "product.stock_restored": "Stan magazynowy przywrócony",
+  "product.out_of_stock": "Produkt niedostępny (stan = 0)",
 };
 
 export const AUTOMATION_OPERATORS = [
@@ -263,6 +267,8 @@ export const AUTOMATION_ACTION_TYPES = [
   "send_email",
   "create_invoice",
   "webhook",
+  "activate_listing",
+  "deactivate_listing",
 ] as const;
 
 export const AUTOMATION_ACTION_LABELS: Record<string, string> = {
@@ -271,6 +277,8 @@ export const AUTOMATION_ACTION_LABELS: Record<string, string> = {
   send_email: "Wyślij e-mail",
   create_invoice: "Utwórz fakturę",
   webhook: "Wywołaj webhook",
+  activate_listing: "Aktywuj listing",
+  deactivate_listing: "Dezaktywuj listing",
 };
 
 // === Integration Provider Credential Fields ===
