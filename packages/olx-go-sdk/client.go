@@ -16,7 +16,7 @@ import (
 const (
 	productionBaseURL      = "https://www.olx.pl/api/partner"
 	productionAuthURL      = "https://www.olx.pl/api/open/oauth/token"
-	productionAuthorizeURL = "https://www.olx.pl/api/open/oauth/authorize"
+	productionAuthorizeURL = "https://www.olx.pl/oauth/authorize"
 )
 
 const (
