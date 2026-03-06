@@ -141,7 +141,7 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 		Title:          product.Name,
 		Description:    model.StripHTMLTags(product.DescriptionLong),
 		AdvertiserType: "business",
-		Price:          &olxsdk.AdvertPrice{Value: product.Price, Currency: "PLN"},
+		Price:          &olxsdk.AdvertPrice{Value: olxsdk.FlexFloat(product.Price), Currency: "PLN"},
 	}
 
 	// Extract image URLs from product.Images JSON array of objects with "url" key.
@@ -172,7 +172,7 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 		if req.Price == nil {
 			req.Price = &olxsdk.AdvertPrice{Currency: "PLN"}
 		}
-		req.Price.Value = v
+		req.Price.Value = olxsdk.FlexFloat(v)
 	}
 	if v, ok := listingData["currency"].(string); ok {
 		if req.Price == nil {
@@ -258,7 +258,7 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, newP
 	if req.Price == nil {
 		req.Price = &olxsdk.AdvertPrice{Currency: "PLN"}
 	}
-	req.Price.Value = newPrice
+	req.Price.Value = olxsdk.FlexFloat(newPrice)
 
 	_, err = p.client.Adverts.UpdateAdvert(ctx, advertID, req)
 	if err != nil {

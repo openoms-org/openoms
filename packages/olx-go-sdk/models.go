@@ -1,5 +1,10 @@
 package olx
 
+import (
+	"encoding/json"
+	"strconv"
+)
+
 // AdvertListResponse is the response from the OLX adverts endpoint.
 type AdvertListResponse struct {
 	Data   []Advert   `json:"data"`
@@ -29,12 +34,37 @@ type Advert struct {
 	ExternalID  string          `json:"external_id,omitempty"`
 }
 
+// FlexFloat handles JSON values that may be either a number or a string.
+type FlexFloat float64
+
+func (f *FlexFloat) UnmarshalJSON(data []byte) error {
+	var num float64
+	if err := json.Unmarshal(data, &num); err == nil {
+		*f = FlexFloat(num)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return err
+	}
+	*f = FlexFloat(v)
+	return nil
+}
+
+func (f FlexFloat) MarshalJSON() ([]byte, error) {
+	return json.Marshal(float64(f))
+}
+
 // AdvertPrice represents the pricing of an advert.
 type AdvertPrice struct {
-	Value        float64 `json:"value"`
-	Currency     string  `json:"currency"`
-	Negotiable   bool    `json:"negotiable"`
-	DisplayValue string  `json:"displayValue,omitempty"`
+	Value        FlexFloat `json:"value"`
+	Currency     string    `json:"currency"`
+	Negotiable   bool      `json:"negotiable"`
+	DisplayValue string    `json:"displayValue,omitempty"`
 }
 
 // AdvertCategory represents the category of an advert.
