@@ -226,9 +226,13 @@ func (c *Client) doInternal(ctx context.Context, method, path string, body any, 
 	}
 
 	if resp.StatusCode >= 400 {
+		rawBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		if err := json.NewDecoder(io.LimitReader(resp.Body, maxErrorBody)).Decode(apiErr); err != nil {
-			apiErr.Message = http.StatusText(resp.StatusCode)
+		if err := json.Unmarshal(rawBody, apiErr); err != nil {
+			apiErr.Message = string(rawBody)
+			if apiErr.Message == "" {
+				apiErr.Message = http.StatusText(resp.StatusCode)
+			}
 		}
 		return apiErr
 	}

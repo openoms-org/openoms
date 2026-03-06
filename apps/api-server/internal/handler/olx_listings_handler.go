@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
+
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	olxintegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/olx"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
@@ -166,6 +168,15 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 	externalID, err := provider.PushOffer(ctx, product, listingData)
 	if err != nil {
 		slog.Error("olx listings: failed to push offer", "error", err, "tenant_id", tenantID)
+		var apiErr *olxsdk.APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode < 500 {
+			msg := "OLX: " + apiErr.Message
+			if msg == "OLX: " {
+				msg = "OLX: " + apiErr.Error()
+			}
+			writeError(w, http.StatusUnprocessableEntity, msg)
+			return
+		}
 		writeError(w, http.StatusBadGateway, "failed to publish listing on OLX")
 		return
 	}
