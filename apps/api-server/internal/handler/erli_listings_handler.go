@@ -98,6 +98,22 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Pre-check for duplicate listing before calling Erli API.
+	var existingListing *model.ProductListing
+	err = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+		var findErr error
+		existingListing, findErr = h.listingRepo.FindByProductAndIntegration(ctx, tx, productID, integrationID)
+		return findErr
+	})
+	if err != nil {
+		writeServerError(w, "failed to check existing listing", err)
+		return
+	}
+	if existingListing != nil {
+		writeError(w, http.StatusConflict, "listing already exists for this product and integration")
+		return
+	}
+
 	credJSON, err := h.integrationService.GetDecryptedCredentialsByID(ctx, tenantID, integrationID)
 	if err != nil {
 		slog.Error("erli listings: failed to get credentials", "error", err)
@@ -156,14 +172,19 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 		return h.listingRepo.Create(ctx, tx, listing)
 	})
 	if err != nil {
+		// Best-effort cleanup: set stock to 0 to hide the Erli offer.
+		if stockErr := provider.UpdateStock(ctx, externalID, 0); stockErr != nil {
+			slog.Error("erli listings: failed to zero-stock orphaned offer", "external_id", externalID, "error", stockErr)
+		} else {
+			slog.Info("erli listings: zeroed stock on orphaned offer after DB failure", "external_id", externalID)
+		}
+
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			slog.Warn("erli listings: duplicate listing conflict; newly created Erli offer is orphaned",
-				"orphaned_external_id", externalID, "tenant_id", tenantID)
 			writeError(w, http.StatusConflict, "listing already exists for this product and integration")
 			return
 		}
-		slog.Error("erli listings: offer created on Erli but DB save failed", "external_id", externalID, "tenant_id", tenantID, "error", err)
+		slog.Error("erli listings: DB save failed after offer creation", "external_id", externalID, "tenant_id", tenantID, "error", err)
 		writeServerError(w, "failed to save listing record", err)
 		return
 	}

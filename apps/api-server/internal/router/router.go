@@ -550,30 +550,26 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 
 				// Marketplace listings
-				if deps.AllegroListings != nil {
-					r.Route("/{productId}/listings", func(r chi.Router) {
-						r.Use(middleware.RequireRole("admin"))
+				r.Route("/{productId}/listings", func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin"))
+					if deps.AllegroListings != nil {
 						r.Get("/", deps.AllegroListings.ListByProduct)
 						r.Post("/allegro", deps.AllegroListings.CreateListing)
-						if deps.WooCommerceListings != nil {
-							r.Post("/woocommerce", deps.WooCommerceListings.CreateListing)
-						}
-						if deps.ErliListings != nil {
-							r.Post("/erli", deps.ErliListings.CreateListing)
-						}
-						if deps.OLXListings != nil {
-							r.Post("/olx", deps.OLXListings.CreateListing)
-						}
-						// TODO: The entire listings group is gated by AllegroListings != nil.
-						// Erli/WooCommerce listing creation is inaccessible if AllegroListings is nil.
-						// These routes also use AllegroListings for all providers (Erli, WooCommerce).
-						// A future refactor should register unconditionally and dispatch by provider.
 						r.Get("/{listingId}", deps.AllegroListings.GetListing)
 						r.Patch("/{listingId}", deps.AllegroListings.UpdateListing)
 						r.Delete("/{listingId}", deps.AllegroListings.DeleteListing)
 						r.Post("/{listingId}/sync", deps.AllegroListings.SyncListing)
-					})
-				}
+					}
+					if deps.WooCommerceListings != nil {
+						r.Post("/woocommerce", deps.WooCommerceListings.CreateListing)
+					}
+					if deps.ErliListings != nil {
+						r.Post("/erli", deps.ErliListings.CreateListing)
+					}
+					if deps.OLXListings != nil {
+						r.Post("/olx", deps.OLXListings.CreateListing)
+					}
+				})
 			})
 
 			// Integrations — admin only

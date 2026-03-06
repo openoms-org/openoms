@@ -116,6 +116,22 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Pre-check for duplicate listing before calling OLX API.
+	var existingListing *model.ProductListing
+	err = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+		var findErr error
+		existingListing, findErr = h.listingRepo.FindByProductAndIntegration(ctx, tx, productID, integrationID)
+		return findErr
+	})
+	if err != nil {
+		writeServerError(w, "failed to check existing listing", err)
+		return
+	}
+	if existingListing != nil {
+		writeError(w, http.StatusConflict, "listing already exists for this product and integration")
+		return
+	}
+
 	credJSON, err := h.integrationService.GetDecryptedCredentialsByID(ctx, tenantID, integrationID)
 	if err != nil {
 		slog.Error("olx listings: failed to get credentials", "error", err)
@@ -182,14 +198,19 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 		return h.listingRepo.Create(ctx, tx, listing)
 	})
 	if err != nil {
+		// Best-effort cleanup: deactivate the OLX advert we just created.
+		if deactErr := provider.DeactivateOffer(ctx, externalID); deactErr != nil {
+			slog.Error("olx listings: failed to deactivate orphaned advert", "external_id", externalID, "error", deactErr)
+		} else {
+			slog.Info("olx listings: deactivated orphaned advert after DB failure", "external_id", externalID)
+		}
+
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			slog.Warn("olx listings: duplicate listing conflict; newly created OLX advert is orphaned",
-				"orphaned_external_id", externalID, "tenant_id", tenantID)
 			writeError(w, http.StatusConflict, "listing already exists for this product and integration")
 			return
 		}
-		slog.Error("olx listings: advert created on OLX but DB save failed", "external_id", externalID, "tenant_id", tenantID, "error", err)
+		slog.Error("olx listings: DB save failed after advert creation", "external_id", externalID, "tenant_id", tenantID, "error", err)
 		writeServerError(w, "failed to save listing record", err)
 		return
 	}
