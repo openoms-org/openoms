@@ -336,6 +336,45 @@ func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, result)
 }
 
+// SuggestCategory proxies OLX category suggestion based on a query string.
+func (h *OLXListingsHandler) SuggestCategory(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID := middleware.TenantIDFromContext(ctx)
+
+	integrationID := r.URL.Query().Get("integration_id")
+	if integrationID == "" {
+		writeError(w, http.StatusBadRequest, "integration_id is required")
+		return
+	}
+
+	iid, err := uuid.Parse(integrationID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid integration_id")
+		return
+	}
+
+	query := r.URL.Query().Get("query")
+	if query == "" {
+		writeError(w, http.StatusBadRequest, "query is required")
+		return
+	}
+
+	provider, err := h.createProvider(ctx, tenantID, iid)
+	if err != nil {
+		slog.Error("olx listings: failed to create provider", "error", err)
+		writeError(w, http.StatusBadRequest, "OLX integration not configured")
+		return
+	}
+
+	result, err := provider.Client().Categories.SuggestCategory(ctx, query)
+	if err != nil {
+		writeServerError(w, "failed to suggest OLX category", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
 // createProvider creates an OLX provider from integration credentials.
 func (h *OLXListingsHandler) createProvider(ctx context.Context, tenantID, integrationID uuid.UUID) (*olxintegration.Provider, error) {
 	credJSON, err := h.integrationService.GetDecryptedCredentialsByID(ctx, tenantID, integrationID)

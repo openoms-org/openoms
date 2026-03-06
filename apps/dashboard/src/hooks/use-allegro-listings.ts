@@ -327,6 +327,24 @@ export function useOLXCities(integrationId: string, query: string) {
   });
 }
 
+export interface OLXCategorySuggestion {
+  id: number;
+  name: string;
+  path: string[];
+}
+
+export function useOLXCategorySuggest(integrationId: string, query: string) {
+  const params = new URLSearchParams({ integration_id: integrationId, query });
+  return useQuery({
+    queryKey: ["olx", "categories", "suggest", integrationId, query],
+    queryFn: async () => {
+      const resp = await apiClient<{ data: OLXCategorySuggestion[] }>(`/v1/integrations/olx/categories/suggest?${params}`);
+      return resp.data;
+    },
+    enabled: !!integrationId && query.length >= 3,
+  });
+}
+
 interface CreateOLXListingRequest {
   integration_id: string;
   category_id: number;
