@@ -1,6 +1,6 @@
-{{- if not .Values.blueGreen.enabled }}
-apiVersion: apps/v1
-kind: Deployment
+{{- if .Values.blueGreen.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "openoms.fullname" . }}-dashboard
   namespace: {{ .Values.namespace }}
@@ -9,11 +9,18 @@ metadata:
     {{- include "openoms.dashboard.selectorLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.dashboard.replicaCount }}
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       {{- include "openoms.dashboard.selectorLabels" . | nindent 6 }}
   strategy:
-    {{- toYaml .Values.dashboard.strategy | nindent 4 }}
+    blueGreen:
+      activeService: {{ include "openoms.fullname" . }}-dashboard
+      previewService: {{ include "openoms.fullname" . }}-dashboard-preview
+      autoPromotionEnabled: {{ .Values.blueGreen.autoPromotionEnabled }}
+      autoPromotionSeconds: {{ .Values.blueGreen.autoPromotionSeconds }}
+      scaleDownDelaySeconds: {{ .Values.blueGreen.scaleDownDelaySeconds }}
+      abortScaleDownDelaySeconds: {{ .Values.blueGreen.abortScaleDownDelaySeconds }}
   template:
     metadata:
       labels:
@@ -103,10 +110,8 @@ spec:
             {{- toYaml .Values.dashboard.livenessProbe | nindent 12 }}
           readinessProbe:
             {{- toYaml .Values.dashboard.readinessProbe | nindent 12 }}
-          {{- with .Values.dashboard.startupProbe }}
           startupProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- toYaml .Values.dashboard.startupProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}
           securityContext:

@@ -1,0 +1,51 @@
+{{- if and .Values.blueGreen.enabled .Values.blueGreen.prePromotionAnalysis }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "openoms.fullname" . }}-api-smoke
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    {{- include "openoms.apiServer.selectorLabels" . | nindent 4 }}
+spec:
+  metrics:
+    - name: smoke-test
+      count: 1
+      failureLimit: 0
+      provider:
+        job:
+          spec:
+            backoffLimit: 2
+            template:
+              spec:
+                restartPolicy: Never
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 65534
+                containers:
+                  - name: smoke
+                    image: curlimages/curl:8.11.1
+                    command:
+                      - /bin/sh
+                      - -c
+                      - |
+                        set -e
+                        echo "Checking health endpoint..."
+                        curl -sf --max-time 10 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/health
+                        echo ""
+                        echo "Checking config endpoint..."
+                        curl -sf --max-time 10 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/v1/config/public > /dev/null
+                        echo "Smoke tests passed"
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities:
+                        drop: ['ALL']
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 16Mi
+                      limits:
+                        cpu: 50m
+                        memory: 32Mi
+{{- end }}

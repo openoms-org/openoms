@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  GO_VERSION: "1.25.7"
+  GO_VERSION: "1.25.8"
 
 jobs:
   auto-format:
@@ -303,6 +303,43 @@ jobs:
       - name: Vet erli-go-sdk
         working-directory: packages/erli-go-sdk
         run: go vet ./...
+
+  migration-safety:
+    name: Migration Safety
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'migration:destructive')
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check migration backward-compatibility
+        run: |
+          DANGEROUS_OPS="DROP COLUMN|DROP TABLE|RENAME COLUMN|ALTER.*TYPE|DROP INDEX"
+          NEW_MIGRATIONS=$(git diff --name-only origin/main... -- apps/api-server/migrations/ 2>/dev/null || true)
+          if [ -z "$NEW_MIGRATIONS" ]; then
+            echo "No new migrations found — skipping"
+            exit 0
+          fi
+          BLOCKED=0
+          for f in $NEW_MIGRATIONS; do
+            if [ ! -f "$f" ]; then continue; fi
+            if grep -iEq "$DANGEROUS_OPS" "$f"; then
+              echo "BLOCKED: $f contains destructive operation"
+              grep -inE "$DANGEROUS_OPS" "$f"
+              BLOCKED=1
+            fi
+          done
+          if [ "$BLOCKED" = "1" ]; then
+            echo ""
+            echo "Blue-green deployment requires backward-compatible migrations."
+            echo "Split destructive changes into 2 deploys."
+            echo "Override: add 'migration:destructive' label to the PR."
+            exit 1
+          fi
+          echo "All migrations are backward-compatible"
 
   frontend:
     name: Frontend

@@ -1,6 +1,6 @@
-{{- if not .Values.blueGreen.enabled }}
-apiVersion: apps/v1
-kind: Deployment
+{{- if .Values.blueGreen.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "openoms.fullname" . }}-api
   namespace: {{ .Values.namespace }}
@@ -9,11 +9,23 @@ metadata:
     {{- include "openoms.apiServer.selectorLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.apiServer.replicaCount }}
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       {{- include "openoms.apiServer.selectorLabels" . | nindent 6 }}
   strategy:
-    {{- toYaml .Values.apiServer.strategy | nindent 4 }}
+    blueGreen:
+      activeService: {{ include "openoms.fullname" . }}-api
+      previewService: {{ include "openoms.fullname" . }}-api-preview
+      autoPromotionEnabled: {{ .Values.blueGreen.autoPromotionEnabled }}
+      autoPromotionSeconds: {{ .Values.blueGreen.autoPromotionSeconds }}
+      scaleDownDelaySeconds: {{ .Values.blueGreen.scaleDownDelaySeconds }}
+      abortScaleDownDelaySeconds: {{ .Values.blueGreen.abortScaleDownDelaySeconds }}
+      {{- if .Values.blueGreen.prePromotionAnalysis }}
+      prePromotionAnalysis:
+        templates:
+          - templateName: {{ include "openoms.fullname" . }}-api-smoke
+      {{- end }}
   template:
     metadata:
       annotations:
@@ -156,10 +168,8 @@ spec:
             {{- toYaml .Values.apiServer.livenessProbe | nindent 12 }}
           readinessProbe:
             {{- toYaml .Values.apiServer.readinessProbe | nindent 12 }}
-          {{- with .Values.apiServer.startupProbe }}
           startupProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- toYaml .Values.apiServer.startupProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.apiServer.resources | nindent 12 }}
           securityContext:

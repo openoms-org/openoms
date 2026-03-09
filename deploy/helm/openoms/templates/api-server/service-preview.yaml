@@ -1,0 +1,19 @@
+{{- if .Values.blueGreen.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openoms.fullname" . }}-api-preview
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    {{- include "openoms.apiServer.selectorLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.apiServer.service.port | default 8080 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "openoms.apiServer.selectorLabels" . | nindent 4 }}
+{{- end }}
