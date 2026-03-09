@@ -77,7 +77,7 @@ func (s *EbayImportService) ImportOffers(ctx context.Context, tenantID uuid.UUID
 	const maxPages = 50
 	offset := 0
 
-	for page := 0; page < maxPages; page++ {
+	for range maxPages {
 		resp, err := client.Offers.GetOffers(ctx, "", pageSize, offset)
 		if err != nil {
 			return nil, fmt.Errorf("list ebay offers: %w", err)
