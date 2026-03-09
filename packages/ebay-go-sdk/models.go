@@ -234,3 +234,45 @@ type PublishResponse struct {
 type CreateOfferResponse struct {
 	OfferID string `json:"offerId"`
 }
+
+// FulfillmentPolicy represents an eBay fulfillment (shipping) policy.
+type FulfillmentPolicy struct {
+	FulfillmentPolicyID string `json:"fulfillmentPolicyId"`
+	Name                string `json:"name"`
+	MarketplaceID       string `json:"marketplaceId"`
+	Description         string `json:"description,omitempty"`
+}
+
+// FulfillmentPoliciesResponse is the response from listing fulfillment policies.
+type FulfillmentPoliciesResponse struct {
+	FulfillmentPolicies []FulfillmentPolicy `json:"fulfillmentPolicies"`
+	Total               int                 `json:"total"`
+}
+
+// ReturnPolicy represents an eBay return policy.
+type ReturnPolicy struct {
+	ReturnPolicyID string `json:"returnPolicyId"`
+	Name           string `json:"name"`
+	MarketplaceID  string `json:"marketplaceId"`
+	Description    string `json:"description,omitempty"`
+}
+
+// ReturnPoliciesResponse is the response from listing return policies.
+type ReturnPoliciesResponse struct {
+	ReturnPolicies []ReturnPolicy `json:"returnPolicies"`
+	Total          int            `json:"total"`
+}
+
+// PaymentPolicy represents an eBay payment policy.
+type PaymentPolicy struct {
+	PaymentPolicyID string `json:"paymentPolicyId"`
+	Name            string `json:"name"`
+	MarketplaceID   string `json:"marketplaceId"`
+	Description     string `json:"description,omitempty"`
+}
+
+// PaymentPoliciesResponse is the response from listing payment policies.
+type PaymentPoliciesResponse struct {
+	PaymentPolicies []PaymentPolicy `json:"paymentPolicies"`
+	Total           int             `json:"total"`
+}
