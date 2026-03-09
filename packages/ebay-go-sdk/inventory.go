@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 // InventoryService handles eBay Inventory API v1 operations.
@@ -101,6 +102,59 @@ func (s *InventoryService) DeleteInventoryItem(ctx context.Context, sku string) 
 		return fmt.Errorf("ebay: delete inventory item %s: %w", sku, err)
 	}
 	return nil
+}
+
+// BulkPriceQuantityRequest is a single item in a bulk update request.
+type BulkPriceQuantityRequest struct {
+	OfferID           string  `json:"offerId"`
+	AvailableQuantity *int    `json:"availableQuantity,omitempty"`
+	Price             *Amount `json:"price,omitempty"`
+}
+
+// BulkUpdatePriceQuantity updates stock and/or price for multiple offers in one call.
+// eBay allows up to 25 offers per request.
+// POST /sell/inventory/v1/bulk_update_price_quantity
+func (s *InventoryService) BulkUpdatePriceQuantity(ctx context.Context, requests []BulkPriceQuantityRequest) ([]bulkUpdateItemResponse, error) {
+	apiRequests := make([]map[string]any, len(requests))
+	for i, r := range requests {
+		item := map[string]any{
+			"offerId": r.OfferID,
+		}
+		if r.AvailableQuantity != nil {
+			item["availableQuantity"] = *r.AvailableQuantity
+		}
+		if r.Price != nil {
+			item["pricingSummary"] = map[string]any{
+				"price": map[string]string{
+					"value":    r.Price.Value,
+					"currency": r.Price.Currency,
+				},
+			}
+		}
+		apiRequests[i] = item
+	}
+
+	body := map[string]any{"requests": apiRequests}
+	var result bulkUpdateResponse
+	if err := s.client.do(ctx, "POST", "/sell/inventory/v1/bulk_update_price_quantity", body, &result); err != nil {
+		return nil, fmt.Errorf("ebay: bulk update price/quantity: %w", err)
+	}
+
+	var errs []string
+	for _, r := range result.Responses {
+		if r.StatusCode >= 400 {
+			msg := fmt.Sprintf("offer %s: HTTP %d", r.OfferID, r.StatusCode)
+			if len(r.Errors) > 0 {
+				msg = fmt.Sprintf("offer %s: %s", r.OfferID, r.Errors[0].Message)
+			}
+			errs = append(errs, msg)
+		}
+	}
+	if len(errs) > 0 {
+		return result.Responses, fmt.Errorf("ebay: bulk update errors: %s", strings.Join(errs, "; "))
+	}
+
+	return result.Responses, nil
 }
 
 // checkBulkErrors inspects the per-item responses for errors.
