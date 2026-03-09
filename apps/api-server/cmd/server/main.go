@@ -843,6 +843,7 @@ func main() {
 	workerMgr.Register(worker.NewPrestaShopOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewShopifyOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewOLXOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewEbayOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewSupplierSyncWorker(workerPool, supplierService, slog.Default()))
 	workerMgr.Register(worker.NewExchangeRateWorker(workerPool, exchangeRateService, slog.Default()))
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
