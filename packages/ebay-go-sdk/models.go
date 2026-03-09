@@ -115,3 +115,32 @@ type CancelStatus struct {
 	CancelState     string `json:"cancelState"`
 	CancelRequests  []any  `json:"cancelRequests,omitempty"`
 }
+
+// ShippingFulfillmentRequest is the request body for creating a shipping fulfillment.
+type ShippingFulfillmentRequest struct {
+	LineItems           []FulfillmentLineItem `json:"lineItems"`
+	ShippedDate         string                `json:"shippedDate,omitempty"`
+	ShippingCarrierCode string                `json:"shippingCarrierCode"`
+	TrackingNumber      string                `json:"trackingNumber"`
+}
+
+// FulfillmentLineItem identifies a line item in a fulfillment request.
+type FulfillmentLineItem struct {
+	LineItemID string `json:"lineItemId"`
+	Quantity   int    `json:"quantity"`
+}
+
+// ShippingFulfillment is the response from creating or getting a shipping fulfillment.
+type ShippingFulfillment struct {
+	FulfillmentID          string                `json:"fulfillmentId"`
+	ShipmentTrackingNumber string                `json:"shipmentTrackingNumber"`
+	ShippingCarrierCode    string                `json:"shippingCarrierCode"`
+	ShippedDate            string                `json:"shippedDate"`
+	LineItems              []FulfillmentLineItem `json:"lineItems"`
+}
+
+// ShippingFulfillmentPagedCollection is the response for listing shipping fulfillments.
+type ShippingFulfillmentPagedCollection struct {
+	Fulfillments []ShippingFulfillment `json:"fulfillments"`
+	Total        int                   `json:"total"`
+}
