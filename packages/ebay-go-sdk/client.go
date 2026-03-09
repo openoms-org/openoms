@@ -43,6 +43,7 @@ type Client struct {
 	Orders      *OrderService
 	Inventory   *InventoryService
 	Fulfillment *FulfillmentService
+	Offers      *OfferService
 }
 
 // Option configures a Client.
@@ -107,6 +108,7 @@ func NewClient(appID, certID, devID, refreshToken string, opts ...Option) *Clien
 	c.Orders = &OrderService{client: c}
 	c.Inventory = &InventoryService{client: c}
 	c.Fulfillment = &FulfillmentService{client: c}
+	c.Offers = &OfferService{client: c}
 
 	return c
 }

@@ -144,3 +144,93 @@ type ShippingFulfillmentPagedCollection struct {
 	Fulfillments []ShippingFulfillment `json:"fulfillments"`
 	Total        int                   `json:"total"`
 }
+
+// InventoryItem represents an eBay inventory item.
+type InventoryItem struct {
+	SKU                  string            `json:"sku,omitempty"`
+	Locale               string            `json:"locale,omitempty"`
+	Product              InventoryProduct  `json:"product"`
+	Condition            string            `json:"condition,omitempty"`
+	ConditionDescription string            `json:"conditionDescription,omitempty"`
+	Availability         *Availability     `json:"availability,omitempty"`
+}
+
+// InventoryProduct holds the product details for an inventory item.
+type InventoryProduct struct {
+	Title       string              `json:"title"`
+	Description string              `json:"description,omitempty"`
+	Aspects     map[string][]string `json:"aspects,omitempty"`
+	Brand       string              `json:"brand,omitempty"`
+	MPN         string              `json:"mpn,omitempty"`
+	EAN         []string            `json:"ean,omitempty"`
+	ImageURLs   []string            `json:"imageUrls,omitempty"`
+}
+
+// Availability holds stock information.
+type Availability struct {
+	ShipToLocationAvailability *ShipToLocationAvailability `json:"shipToLocationAvailability,omitempty"`
+}
+
+// ShipToLocationAvailability holds the available quantity.
+type ShipToLocationAvailability struct {
+	Quantity int `json:"quantity"`
+}
+
+// InventoryItemsResponse is the response from listing inventory items.
+type InventoryItemsResponse struct {
+	InventoryItems []InventoryItem `json:"inventoryItems"`
+	Total          int             `json:"total"`
+	Size           int             `json:"size"`
+	Href           string          `json:"href"`
+	Next           string          `json:"next,omitempty"`
+}
+
+// Offer represents an eBay offer.
+type Offer struct {
+	OfferID            string           `json:"offerId,omitempty"`
+	SKU                string           `json:"sku"`
+	MarketplaceID      string           `json:"marketplaceId"`
+	Format             string           `json:"format"`
+	ListingDescription string           `json:"listingDescription,omitempty"`
+	AvailableQuantity  int              `json:"availableQuantity,omitempty"`
+	CategoryID         string           `json:"categoryId"`
+	PricingSummary     *OfferPricing    `json:"pricingSummary,omitempty"`
+	ListingPolicies    *ListingPolicies `json:"listingPolicies,omitempty"`
+	Status             string           `json:"status,omitempty"`
+	Listing            *OfferListing    `json:"listing,omitempty"`
+}
+
+// OfferPricing holds offer pricing.
+type OfferPricing struct {
+	Price Amount `json:"price"`
+}
+
+// ListingPolicies holds the business policy IDs for an offer.
+type ListingPolicies struct {
+	FulfillmentPolicyID string `json:"fulfillmentPolicyId"`
+	ReturnPolicyID      string `json:"returnPolicyId"`
+	PaymentPolicyID     string `json:"paymentPolicyId,omitempty"`
+}
+
+// OfferListing holds published listing info.
+type OfferListing struct {
+	ListingID string `json:"listingId,omitempty"`
+}
+
+// OffersResponse is the response from listing offers.
+type OffersResponse struct {
+	Offers []Offer `json:"offers"`
+	Total  int     `json:"total"`
+	Size   int     `json:"size"`
+	Next   string  `json:"next,omitempty"`
+}
+
+// PublishResponse is the response from publishing an offer.
+type PublishResponse struct {
+	ListingID string `json:"listingId"`
+}
+
+// CreateOfferResponse is returned when creating an offer.
+type CreateOfferResponse struct {
+	OfferID string `json:"offerId"`
+}
