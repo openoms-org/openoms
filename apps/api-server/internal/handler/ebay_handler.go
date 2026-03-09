@@ -88,6 +88,7 @@ func (h *EbayHandler) AddTracking(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var body struct {
 		CarrierCode    string `json:"carrier_code"`
 		TrackingNumber string `json:"tracking_number"`
@@ -205,6 +206,7 @@ func (h *EbayHandler) IssueRefund(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var body struct {
 		Reason  string               `json:"reason"`
 		Comment string               `json:"comment,omitempty"`

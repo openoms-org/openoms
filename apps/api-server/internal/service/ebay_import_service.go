@@ -71,12 +71,13 @@ func (s *EbayImportService) ImportOffers(ctx context.Context, tenantID uuid.UUID
 	integrationID := integration.ID
 	client := provider.Client()
 
-	// Fetch all seller offers via pagination.
+	// Fetch all seller offers via pagination (capped at 50 pages as safety limit).
 	var allOffers []ebaysdk.Offer
 	const pageSize = 100
+	const maxPages = 50
 	offset := 0
 
-	for {
+	for range maxPages {
 		resp, err := client.Offers.GetOffers(ctx, "", pageSize, offset)
 		if err != nil {
 			return nil, fmt.Errorf("list ebay offers: %w", err)
