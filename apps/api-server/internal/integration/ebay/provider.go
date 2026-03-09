@@ -20,6 +20,14 @@ func init() {
 	})
 }
 
+// Compile-time interface checks.
+var (
+	_ integration.BulkStockUpdater   = (*Provider)(nil)
+	_ integration.BulkPriceUpdater   = (*Provider)(nil)
+	_ integration.ListingDeactivator = (*Provider)(nil)
+	_ integration.ListingActivator   = (*Provider)(nil)
+)
+
 // EbayCredentials is the JSON structure stored in encrypted integration credentials.
 type EbayCredentials struct {
 	AppID        string `json:"app_id"`
@@ -225,6 +233,51 @@ func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quan
 // UpdatePrice updates the price for an eBay offer via the Inventory API.
 func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
 	return p.client.Inventory.UpdatePrice(ctx, externalOfferID, price, p.currency)
+}
+
+// BulkUpdateStock updates stock for multiple eBay offers in a single API call.
+// Implements integration.BulkStockUpdater.
+func (p *Provider) BulkUpdateStock(ctx context.Context, updates []integration.StockUpdate) error {
+	requests := make([]ebaysdk.BulkPriceQuantityRequest, len(updates))
+	for i, u := range updates {
+		qty := u.Quantity
+		requests[i] = ebaysdk.BulkPriceQuantityRequest{
+			OfferID:           u.ExternalOfferID,
+			AvailableQuantity: &qty,
+		}
+	}
+	_, err := p.client.Inventory.BulkUpdatePriceQuantity(ctx, requests)
+	return err
+}
+
+// BulkUpdatePrice updates prices for multiple eBay offers in a single API call.
+// Implements integration.BulkPriceUpdater.
+func (p *Provider) BulkUpdatePrice(ctx context.Context, updates []integration.PriceUpdate) error {
+	requests := make([]ebaysdk.BulkPriceQuantityRequest, len(updates))
+	for i, u := range updates {
+		requests[i] = ebaysdk.BulkPriceQuantityRequest{
+			OfferID: u.ExternalOfferID,
+			Price: &ebaysdk.Amount{
+				Value:    fmt.Sprintf("%.2f", u.Amount),
+				Currency: u.Currency,
+			},
+		}
+	}
+	_, err := p.client.Inventory.BulkUpdatePriceQuantity(ctx, requests)
+	return err
+}
+
+// DeactivateOffer withdraws a published offer from eBay.
+// Implements integration.ListingDeactivator.
+func (p *Provider) DeactivateOffer(ctx context.Context, externalOfferID string) error {
+	return p.client.Offers.WithdrawOffer(ctx, externalOfferID)
+}
+
+// ActivateOffer re-publishes a withdrawn offer on eBay.
+// Implements integration.ListingActivator.
+func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) error {
+	_, err := p.client.Offers.PublishOffer(ctx, externalOfferID)
+	return err
 }
 
 // mapEbayOrder converts an eBay SDK Order to the normalized MarketplaceOrder.
