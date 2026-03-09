@@ -145,6 +145,26 @@ type ShippingFulfillmentPagedCollection struct {
 	Total        int                   `json:"total"`
 }
 
+// IssueRefundRequest is the request body for issuing a refund on an eBay order.
+type IssueRefundRequest struct {
+	ReasonForRefund        string       `json:"reasonForRefund"`
+	Comment                string       `json:"comment,omitempty"`
+	RefundItems            []RefundItem `json:"refundItems,omitempty"`
+	OrderLevelRefundAmount *Amount      `json:"orderLevelRefundAmount,omitempty"`
+}
+
+// RefundItem identifies a line item and amount to refund.
+type RefundItem struct {
+	RefundAmount Amount `json:"refundAmount"`
+	LineItemID   string `json:"lineItemId"`
+}
+
+// IssueRefundResponse is the response from issuing a refund.
+type IssueRefundResponse struct {
+	RefundID     string `json:"refundId"`
+	RefundStatus string `json:"refundStatus"`
+}
+
 // InventoryItem represents an eBay inventory item.
 type InventoryItem struct {
 	SKU                  string           `json:"sku,omitempty"`

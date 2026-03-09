@@ -31,3 +31,14 @@ func (s *FulfillmentService) GetShippingFulfillments(ctx context.Context, orderI
 	}
 	return &result, nil
 }
+
+// IssueRefund issues a refund for an order.
+// POST /sell/fulfillment/v1/order/{orderId}/issue_refund
+func (s *FulfillmentService) IssueRefund(ctx context.Context, orderID string, req IssueRefundRequest) (*IssueRefundResponse, error) {
+	path := fmt.Sprintf("/sell/fulfillment/v1/order/%s/issue_refund", orderID)
+	var result IssueRefundResponse
+	if err := s.client.do(ctx, "POST", path, req, &result); err != nil {
+		return nil, fmt.Errorf("ebay: issue refund for order %s: %w", orderID, err)
+	}
+	return &result, nil
+}
