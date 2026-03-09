@@ -22,7 +22,7 @@ func (s *InventoryService) UpdateStock(ctx context.Context, offerID string, quan
 			},
 		},
 	}
-	var result bulkUpdateResponse
+	var result BulkUpdateResponse
 	if err := s.client.do(ctx, "POST", "/sell/inventory/v1/bulk_update_price_quantity", body, &result); err != nil {
 		return fmt.Errorf("ebay: update stock for %s: %w", offerID, err)
 	}
@@ -44,19 +44,20 @@ func (s *InventoryService) UpdatePrice(ctx context.Context, offerID string, pric
 			},
 		},
 	}
-	var result bulkUpdateResponse
+	var result BulkUpdateResponse
 	if err := s.client.do(ctx, "POST", "/sell/inventory/v1/bulk_update_price_quantity", body, &result); err != nil {
 		return fmt.Errorf("ebay: update price for %s: %w", offerID, err)
 	}
 	return checkBulkErrors(result, offerID)
 }
 
-// bulkUpdateResponse is the response from the bulk_update_price_quantity endpoint.
-type bulkUpdateResponse struct {
-	Responses []bulkUpdateItemResponse `json:"responses"`
+// BulkUpdateResponse is the response from the bulk_update_price_quantity endpoint.
+type BulkUpdateResponse struct {
+	Responses []BulkUpdateItemResponse `json:"responses"`
 }
 
-type bulkUpdateItemResponse struct {
+// BulkUpdateItemResponse is a single item in a bulk update response.
+type BulkUpdateItemResponse struct {
 	OfferID    string  `json:"offerId"`
 	StatusCode int     `json:"statusCode"`
 	Errors     []EbErr `json:"errors,omitempty"`
@@ -114,7 +115,7 @@ type BulkPriceQuantityRequest struct {
 // BulkUpdatePriceQuantity updates stock and/or price for multiple offers in one call.
 // eBay allows up to 25 offers per request.
 // POST /sell/inventory/v1/bulk_update_price_quantity
-func (s *InventoryService) BulkUpdatePriceQuantity(ctx context.Context, requests []BulkPriceQuantityRequest) ([]bulkUpdateItemResponse, error) {
+func (s *InventoryService) BulkUpdatePriceQuantity(ctx context.Context, requests []BulkPriceQuantityRequest) ([]BulkUpdateItemResponse, error) {
 	apiRequests := make([]map[string]any, len(requests))
 	for i, r := range requests {
 		item := map[string]any{
@@ -135,7 +136,7 @@ func (s *InventoryService) BulkUpdatePriceQuantity(ctx context.Context, requests
 	}
 
 	body := map[string]any{"requests": apiRequests}
-	var result bulkUpdateResponse
+	var result BulkUpdateResponse
 	if err := s.client.do(ctx, "POST", "/sell/inventory/v1/bulk_update_price_quantity", body, &result); err != nil {
 		return nil, fmt.Errorf("ebay: bulk update price/quantity: %w", err)
 	}
@@ -158,7 +159,7 @@ func (s *InventoryService) BulkUpdatePriceQuantity(ctx context.Context, requests
 }
 
 // checkBulkErrors inspects the per-item responses for errors.
-func checkBulkErrors(resp bulkUpdateResponse, targetOfferID string) error {
+func checkBulkErrors(resp BulkUpdateResponse, targetOfferID string) error {
 	for _, r := range resp.Responses {
 		if r.OfferID == targetOfferID && r.StatusCode >= 400 {
 			msg := fmt.Sprintf("HTTP %d", r.StatusCode)

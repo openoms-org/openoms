@@ -50,8 +50,8 @@ func TestBulkUpdatePriceQuantity(t *testing.T) {
 			t.Errorf("requests[2].offerId = %v, want OFFER-3", requests[2]["offerId"])
 		}
 
-		resp := bulkUpdateResponse{
-			Responses: []bulkUpdateItemResponse{
+		resp := BulkUpdateResponse{
+			Responses: []BulkUpdateItemResponse{
 				{OfferID: "OFFER-1", StatusCode: 200},
 				{OfferID: "OFFER-2", StatusCode: 200},
 				{OfferID: "OFFER-3", StatusCode: 200},
@@ -89,8 +89,8 @@ func TestBulkUpdatePriceQuantity(t *testing.T) {
 
 func TestBulkUpdatePriceQuantity_PartialError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		resp := bulkUpdateResponse{
-			Responses: []bulkUpdateItemResponse{
+		resp := BulkUpdateResponse{
+			Responses: []BulkUpdateItemResponse{
 				{OfferID: "OFFER-1", StatusCode: 200},
 				{OfferID: "OFFER-2", StatusCode: 400, Errors: []EbErr{{Message: "Invalid offer"}}},
 			},
