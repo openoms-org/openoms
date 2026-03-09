@@ -739,6 +739,7 @@ func New(deps RouterDeps) *chi.Mux {
 					if deps.EbayListings != nil {
 						r.Get("/policies", deps.EbayListings.ListPolicies)
 						r.Get("/offers", deps.EbayListings.ListOffers)
+						r.Post("/import-offers", deps.EbayListings.ImportOffers)
 					}
 				})
 

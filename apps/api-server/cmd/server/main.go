@@ -498,8 +498,11 @@ func main() {
 	// OLX listings handler (publish products to OLX.pl)
 	olxListingsHandler := handler.NewOLXListingsHandler(integrationService, productService, productListingRepo, pool)
 
+	// eBay import service (import eBay offers as products + listings)
+	ebayImportService := service.NewEbayImportService(integrationService, productRepo, productListingRepo, pool)
+
 	// eBay listings handler (publish products to eBay)
-	ebayListingsHandler := handler.NewEbayListingsHandler(integrationService, productService, productListingRepo, pool)
+	ebayListingsHandler := handler.NewEbayListingsHandler(integrationService, productService, productListingRepo, pool, ebayImportService)
 
 	// Allegro catalog + finance handler
 	allegroCatalogHandler := handler.NewAllegroCatalogHandler(integrationService, encryptionKey)
