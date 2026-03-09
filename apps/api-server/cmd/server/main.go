@@ -498,6 +498,9 @@ func main() {
 	// OLX listings handler (publish products to OLX.pl)
 	olxListingsHandler := handler.NewOLXListingsHandler(integrationService, productService, productListingRepo, pool)
 
+	// eBay listings handler (publish products to eBay)
+	ebayListingsHandler := handler.NewEbayListingsHandler(integrationService, productService, productListingRepo, pool)
+
 	// Allegro catalog + finance handler
 	allegroCatalogHandler := handler.NewAllegroCatalogHandler(integrationService, encryptionKey)
 
@@ -830,6 +833,7 @@ func main() {
 		StripeWebhook:              stripeWebhookHandler,
 		ErliListings:               erliListingsHandler,
 		OLXListings:                olxListingsHandler,
+		EbayListings:               ebayListingsHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)

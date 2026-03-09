@@ -82,6 +82,9 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 
 func (p *Provider) ProviderName() string { return "ebay" }
 
+// Client returns the underlying eBay SDK client for direct API calls.
+func (p *Provider) Client() *ebaysdk.Client { return p.client }
+
 // PollOrders polls eBay for orders created after the given cursor (ISO8601 timestamp).
 func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration.MarketplaceOrder, string, error) {
 	filter := ""

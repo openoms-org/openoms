@@ -114,6 +114,7 @@ type RouterDeps struct {
 	StripeWebhook              *handler.StripeWebhookHandler
 	ErliListings               *handler.ErliListingsHandler
 	OLXListings                *handler.OLXListingsHandler
+	EbayListings               *handler.EbayListingsHandler
 }
 
 func New(deps RouterDeps) *chi.Mux {
@@ -571,6 +572,9 @@ func New(deps RouterDeps) *chi.Mux {
 					if deps.OLXListings != nil {
 						r.Post("/olx", deps.OLXListings.CreateListing)
 					}
+					if deps.EbayListings != nil {
+						r.Post("/ebay", deps.EbayListings.CreateListing)
+					}
 				})
 			})
 
@@ -731,6 +735,10 @@ func New(deps RouterDeps) *chi.Mux {
 					if deps.Ebay != nil {
 						r.Get("/carriers", deps.Ebay.ListCarriers)
 						r.Post("/orders/{orderId}/tracking", deps.Ebay.AddTracking)
+					}
+					if deps.EbayListings != nil {
+						r.Get("/policies", deps.EbayListings.ListPolicies)
+						r.Get("/offers", deps.EbayListings.ListOffers)
 					}
 				})
 
