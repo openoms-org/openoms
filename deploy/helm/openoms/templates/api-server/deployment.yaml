@@ -1,3 +1,4 @@
+{{- if not .Values.blueGreen.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -155,6 +156,10 @@ spec:
             {{- toYaml .Values.apiServer.livenessProbe | nindent 12 }}
           readinessProbe:
             {{- toYaml .Values.apiServer.readinessProbe | nindent 12 }}
+          {{- with .Values.apiServer.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.apiServer.resources | nindent 12 }}
           securityContext:
@@ -166,3 +171,4 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
+{{- end }}
