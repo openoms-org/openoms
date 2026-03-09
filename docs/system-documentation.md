@@ -33,12 +33,12 @@
 - **Powiadomienia** -- Email (SMTP) + SMS (Twilio/SMSAPI)
 - **RBAC** -- role z granularnymi uprawnieniami
 - **2FA/TOTP** -- dwuskladnikowe uwierzytelnianie (Google Authenticator)
-- **API REST** -- 463 endpointy z OpenAPI 3.1
-- **Dashboard** -- Next.js 16 + React 19, 131 stron, dark mode, PWA
+- **API REST** -- 500 endpointow z OpenAPI 3.1
+- **Dashboard** -- Next.js 16 + React 19, 141 stron, dark mode, PWA
 - **AI** -- auto-kategoryzacja, opis, ulepszanie i tlumaczenie produktow (OpenAI)
 - **Inwentaryzacja** -- pelny cykl zycia stocktake z liczeniem pozycji
 - **Rate shopping** -- porownywanie stawek przewoznikow
-- **Marketplace Listings** -- kreator ofert z wizardem per marketplace (Allegro 4-krokowy, WooCommerce)
+- **Marketplace Listings** -- dynamiczny picker marketplace'ow + wizardy per marketplace (Allegro 4-krokowy, eBay 3-krokowy, OLX z drzewem kategorii, WooCommerce, Erli)
 - **Kanban board** -- widok zamowien w formie tablicy Kanban
 - **Import CSV** -- import produktow i zamowien z podgladem
 - **Command Palette** -- Cmd+K do szybkiej nawigacji i wyszukiwania
@@ -141,10 +141,14 @@ CREATE POLICY tenant_isolation ON orders
    - Skanuje obrazy (Trivy, CRITICAL+HIGH)
    - Opcjonalnie: wysyla `repository_dispatch` do prywatnego repo deploymentu (patrz komentarz w `release.yml`)
 
-2. Deployment:
+2. Deployment (blue-green z Argo Rollouts):
    - Uzyj Helm chart z `deploy/helm/openoms/` + wlasny `values-production.yaml`
    - `helm upgrade --install openoms ./deploy/helm/openoms -f values-production.yaml`
-   - Albo uzyj `docker-compose.prod.yml` dla prostszych setupow
+   - API i Dashboard deploya sa jako Argo Rollouts z blue-green strategia
+   - Pre-promotion: `AnalysisTemplate` uruchamia smoke tests (health check + 5 kluczowych endpointow)
+   - Preview service (`openoms-api-preview`, `openoms-dashboard-preview`) do weryfikacji przed przelaczeniem
+   - Automatyczny rollback jesli smoke tests nie przejda
+   - Albo uzyj `docker-compose.prod.yml` dla prostszych setupow (bez Argo)
 
 #### Helm Chart
 
@@ -213,12 +217,12 @@ OpenOMS/
 +-- apps/
 |   +-- api-server/          <- Go backend (ELv2)
 |   |   +-- cmd/server/      <- punkt wejscia
-|   |   +-- internal/        <- logika aplikacji (345 plikow Go, 121 testow)
-|   |   +-- migrations/      <- 12 migracji SQL (000001-000012)
+|   |   +-- internal/        <- logika aplikacji (95 handlerow, 78 serwisow, 48 repozytoriow)
+|   |   +-- migrations/      <- 28 migracji SQL
 |   +-- dashboard/           <- Next.js frontend (ELv2)
 |       +-- src/app/         <- 141 stron (App Router)
-|       +-- src/components/  <- 96 komponentow React
-|       +-- src/hooks/       <- 73 custom hooks
+|       +-- src/components/  <- 93 komponenty React
+|       +-- src/hooks/       <- 77 custom hooks
 |       +-- src/lib/         <- utils, API client, auth
 |       +-- e2e/             <- 22 specow E2E Playwright (124 testow)
 +-- packages/                <- SDK-i (MIT)
@@ -402,7 +406,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
     -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
 
-### Wszystkie endpointy (463)
+### Wszystkie endpointy (500)
 
 #### Autentykacja (publiczne, rate limit 10/min login, 60/min refresh)
 
@@ -466,12 +470,16 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | GET | `/v1/products/{id}/bundle/stock` | Dostepnosc zestawu |
 | GET/POST/PATCH/DELETE | `/v1/products/{pid}/variants/...` | Warianty |
 
-#### Oferty Allegro (admin)
+#### Oferty marketplace (admin)
 
 | Metoda | Sciezka | Opis |
 |--------|---------|------|
-| GET | `/v1/products/{pid}/listings` | Lista ofert produktu |
+| GET | `/v1/products/{pid}/listings` | Lista ofert produktu (wszystkie marketplace'y) |
 | POST | `/v1/products/{pid}/listings/allegro` | Tworzenie oferty Allegro |
+| POST | `/v1/products/{pid}/listings/ebay` | Tworzenie oferty eBay (3-step: inventory item -> offer -> publish) |
+| POST | `/v1/products/{pid}/listings/olx` | Tworzenie ogloszenia OLX |
+| POST | `/v1/products/{pid}/listings/woocommerce` | Tworzenie produktu WooCommerce |
+| POST | `/v1/products/{pid}/listings/erli` | Tworzenie oferty Erli |
 | GET | `/v1/products/{pid}/listings/{lid}` | Szczegoly oferty |
 | PATCH | `/v1/products/{pid}/listings/{lid}` | Aktualizacja oferty |
 | DELETE | `/v1/products/{pid}/listings/{lid}` | Usuniecie oferty |
@@ -548,6 +556,10 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | DELETE | `/v1/integrations/{id}` | Usuniecie |
 | GET | `/v1/integrations/allegro/auth-url` | URL OAuth Allegro |
 | POST | `/v1/integrations/allegro/callback` | Callback OAuth |
+| GET | `/v1/integrations/ebay/auth-url` | URL OAuth eBay |
+| POST | `/v1/integrations/ebay/callback` | Callback OAuth eBay |
+| GET | `/v1/integrations/olx/auth-url` | URL OAuth OLX |
+| POST | `/v1/integrations/olx/callback` | Callback OAuth OLX |
 | POST | `/v1/integrations/amazon/setup` | Setup Amazon SP-API |
 
 #### Allegro -- Fulfillment i sledzenie (admin)
@@ -662,6 +674,27 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | PUT | `/v1/integrations/allegro/ratings/{rid}/answer` | Tworzenie odpowiedzi |
 | DELETE | `/v1/integrations/allegro/ratings/{rid}/answer` | Usuniecie odpowiedzi |
 | POST | `/v1/integrations/allegro/ratings/{rid}/removal` | Wniosek o usuniecie |
+
+#### eBay -- Fulfillment, tracking, refunds (admin)
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/integrations/ebay/carriers` | Lista przewoznikow eBay |
+| POST | `/v1/integrations/ebay/orders/{oid}/tracking` | Dodanie trackingu (carrier + tracking number) |
+| POST | `/v1/integrations/ebay/orders/{oid}/refund` | Wydanie refundu (reason, items, amount) |
+| GET | `/v1/integrations/ebay/policies` | Polityki sprzedawcy (fulfillment, return, payment) |
+| GET | `/v1/integrations/ebay/offers` | Lista ofert eBay (filtr po SKU, paginacja) |
+| POST | `/v1/integrations/ebay/import-offers` | Import ofert eBay do OpenOMS (match SKU -> link/create) |
+
+#### OLX -- Kategorie, miasta, listingi (admin)
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/integrations/olx/categories` | Lista kategorii OLX (z parent_id dla sub-kategorii) |
+| GET | `/v1/integrations/olx/categories/{cid}/attributes` | Wymagane atrybuty kategorii |
+| GET | `/v1/integrations/olx/categories/suggest` | Sugestia kategorii na podstawie tytulu |
+| GET | `/v1/integrations/olx/cities` | Wyszukiwanie miast OLX (autocomplete) |
+| GET | `/v1/integrations/olx/cities/{cid}/districts` | Dzielnice miasta |
 
 #### Dostawcy (admin)
 
@@ -903,7 +936,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 
 ## 6. Frontend Dashboard
 
-### Mapa stron (124 strony)
+### Mapa stron (141 stron)
 
 #### Publiczne (bez logowania)
 
@@ -953,7 +986,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | `/products/new` | Nowy produkt |
 | `/products/[id]` | Szczegoly + bundles + AI opis/ulepszanie |
 | `/products/[id]/variants` | Warianty produktu |
-| `/products/[id]/listings` | Oferty na marketplace'ach (Allegro wizard) |
+| `/products/[id]/listings` | Oferty na marketplace'ach (dynamiczny picker + wizardy per marketplace) |
 | `/products/import` | Import produktow CSV |
 
 #### Inwentaryzacja
@@ -983,6 +1016,8 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | `/integrations/allegro/policies` | Polityki po-sprzedazowe |
 | `/integrations/allegro/delivery` | Ustawienia dostawy Allegro |
 | `/integrations/amazon` | Setup Amazon |
+| `/marketplaces/ebay` | Setup eBay (OAuth2) |
+| `/marketplaces/olx` | Setup OLX (OAuth2) |
 | `/suppliers` | Dostawcy |
 | `/suppliers/new` | Nowy dostawca (wizard) |
 | `/suppliers/[id]` | Szczegoly dostawcy |
@@ -1077,6 +1112,9 @@ Pulpit (Dashboard)
 --- Integracje (admin) ---
   Integracje
   Allegro (podstrony: dashboard, oferty, wiadomosci, zwroty, dostawa, spory, finanse, polityki, promocje, oceny, katalog, wysylam z allegro)
+  eBay (setup OAuth2)
+  OLX (setup OAuth2)
+  Amazon (setup SP-API)
   Automatyzacja
   Waluty
   Marketing
@@ -1089,7 +1127,7 @@ Pulpit (Dashboard)
   Dziennik aktywnosci
 ```
 
-### Kluczowe komponenty (81)
+### Kluczowe komponenty (93)
 
 | Komponent | Opis |
 |-----------|------|
@@ -1100,6 +1138,10 @@ Pulpit (Dashboard)
 | `OrderForm` | Formularz zamowienia (klient, pozycje, adres, custom fields) |
 | `OrderKanbanBoard` | Widok Kanban zamowien z drag & drop |
 | `AllegroListingWizard` | 4-krokowy kreator oferty Allegro |
+| `CreateEbayListingDialog` | Dialog tworzenia oferty eBay (polityki, kategoria, condition) |
+| `CreateOLXListingDialog` | Dialog tworzenia OLX (drzewo kategorii, miasto, atrybuty, kontakt) |
+| `CreateListingWizard` | Dynamiczny picker marketplace'ow (z aktywnych integracji) |
+| `CategoryTreePicker` | Picker drzewa kategorii (Allegro, OLX) |
 | `StocktakeCounter` | Interfejs liczenia pozycji inwentaryzacji |
 | `RateShoppingCard` | Porownywanie stawek przewoznikow |
 | `ProductImportPreview` | Podglad importu CSV z mapowaniem kolumn |
@@ -1125,7 +1167,7 @@ Pulpit (Dashboard)
 | token        |     | useOrders()  |---->| GET /orders  |
 | user         |     | useProducts()|---->| GET /products|
 | tenant       |     | useDashboard |---->| GET /stats   |
-| isAuth       |     | ...45 hooks  |     |              |
+| isAuth       |     | ...77 hooks  |     |              |
 +-------------+     +--------------+     +------+-------+
                                                  |
                                           Auto-refresh
@@ -1186,9 +1228,9 @@ Standalone maszyna stanow zamowien i przesylek:
 | allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog |
 | amazon-sp-sdk | Amazon | AWS Signing | Zamowienia, inventory, pricing |
 | woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks |
-| ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia, inventory |
+| ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService) |
 | kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML |
-| olx-go-sdk | OLX | REST | Ogloszenia |
+| olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService) |
 | mirakl-go-sdk | Mirakl/Empik | REST | Seller network |
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
 | shoper-go-sdk | Shoper | REST | Zamowienia, produkty |
@@ -1535,6 +1577,69 @@ Krok 4: Podsumowanie i publikacja
 Oferta opublikowana na Allegro
 ```
 
+### Flow 8: Tworzenie oferty eBay (3-step)
+
+```
+Krok 1: Wybor polityk i kategorii
+    |  GET /v1/integrations/ebay/policies?marketplace_id=EBAY_PL
+    |  -> fulfillment, return, payment policies
+    v
+Krok 2: Konfiguracja oferty
+    |  Kategoria eBay, condition, tytul, opis, cena
+    v
+Krok 3: Publikacja
+    |  POST /v1/products/{pid}/listings/ebay
+    |  -> Backend: PUT inventory_item/{sku}   (Inventory API)
+    |  -> Backend: POST offer                  (Offer API)
+    |  -> Backend: POST offer/{id}/publish     (Offer API)
+    v
+Oferta opublikowana na eBay (3 wywolania API w jednej transakcji)
+```
+
+### Flow 9: Tworzenie ogloszenia OLX
+
+```
+Krok 1: Wybor kategorii (drzewo)
+    |  GET /v1/integrations/olx/categories
+    |  -> Nawigacja: top-level -> sub -> leaf (wymagana kategoria koncowa)
+    v
+Krok 2: Atrybuty kategorii
+    |  GET /v1/integrations/olx/categories/{cid}/attributes
+    |  -> Formularz z wymaganymi atrybutami (typ, walidacja, wartosci)
+    v
+Krok 3: Lokalizacja i kontakt
+    |  GET /v1/integrations/olx/cities?query=Warsz (autocomplete)
+    |  GET /v1/integrations/olx/cities/{cid}/districts
+    |  -> city_id, district_id, contact_name, contact_phone
+    v
+Krok 4: Publikacja
+    |  POST /v1/products/{pid}/listings/olx
+    |  -> Backend: POST /adverts (OLX Partner API)
+    v
+Ogloszenie opublikowane na OLX
+```
+
+### Flow 10: Import ofert eBay
+
+```
+POST /v1/integrations/ebay/import-offers
+    |
+    v
+EbayImportService.ImportOffers()
+    |
+    +- Per-tenant mutex (TryLock, jedna operacja na raz)
+    +- Odszyfruj credentials -> eBay provider
+    +- Fetch ofert z eBay (paginacja 100/strone, max 50 stron)
+    |
+    +- Dla kazdej oferty:
+    |     +- Sprawdz czy listing istnieje (skip jesli tak)
+    |     +- Szukaj produktu po SKU
+    |     +- Jesli znaleziony -> linkuj (ProductListing)
+    |     +- Jesli nie -> utworz produkt z danych oferty + linkuj
+    |
+    +- Wynik: { total, created, linked, skipped, errors, details[] }
+```
+
 ---
 
 ## 10. Integracje
@@ -1555,12 +1660,22 @@ Oferta opublikowana na Allegro
 |            MarketplaceProvider                |
 |                                              |
 |  interface {                                 |
+|    ProviderName() -> string                  |
 |    PollOrders(ctx, cursor) -> orders         |
 |    GetOrder(ctx, externalID) -> order        |
 |    PushOffer(ctx, product) -> externalID     |
 |    UpdateStock(ctx, offerID, qty)            |
 |    UpdatePrice(ctx, offerID, price)          |
 |  }                                           |
+|                                              |
+|  Opcjonalne interfejsy (mixin pattern):      |
+|  +- BulkStockUpdater   (batch stock update)  |
+|  +- BulkPriceUpdater   (batch price update)  |
+|  +- ListingActivator   (publish offer)       |
+|  +- ListingDeactivator (withdraw offer)      |
+|  +- AsyncStockUpdater  (Amazon feeds)        |
+|  +- AsyncPriceUpdater  (Amazon feeds)        |
+|  +- AsyncFeedResult    (feed submission ID)  |
 +----------------------------------------------+
                            |
                            v
@@ -1602,13 +1717,13 @@ Oferta opublikowana na Allegro
 | Kategoria | Provider | Status |
 |-----------|----------|--------|
 | **Marketplace** | Allegro | OAuth 2.0, polling, oferty, katalog, messaging, zwroty, spory, oceny, promocje, dostawa |
-| | Amazon | SP-API, polling |
-| | WooCommerce | REST API, webhooks |
-| | eBay | OAuth 2.0 |
-| | Kaufland | Feed API |
-| | OLX | REST API |
+| | Amazon | SP-API, OAuth2, polling, async feeds (stock/price), feed status polling |
+| | WooCommerce | REST API, webhooks, listings, stock sync |
+| | eBay | OAuth 2.0, polling, fulfillment, tracking, refundy, 3-step listings, bulk stock/price, import ofert, activate/deactivate |
+| | Kaufland | Feed API, stock sync |
+| | OLX | OAuth 2.0, listings (kategorie, miasta, dzielnice, atrybuty), activate/deactivate |
 | | Mirakl/Empik | REST API |
-| | Erli | REST API |
+| | Erli | REST API, listings |
 | **Carrier** | InPost | Paczkomaty, kurier, Geowidget, webhook, dispatch orders |
 | | DHL | Krajowe i miedzynarodowe, adres nadawcy (shipper), DHL24 SOAP WebAPI2 |
 | | DPD | Polska |
@@ -1626,6 +1741,22 @@ Oferta opublikowana na Allegro
 | **AI** | OpenAI | Kategoryzacja, opisy, ulepszanie, tlumaczenie |
 | **Kursy walut** | NBP | Narodowy Bank Polski |
 
+### Macierz interfejsow marketplace
+
+| Provider | MarketplaceProvider | BulkStock | BulkPrice | Activator | Deactivator | AsyncStock | AsyncPrice |
+|----------|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| Allegro | + | + | + | + | + | — | — |
+| eBay | + | + | + | + | + | — | — |
+| Amazon | + | — | — | — | — | + | + |
+| OLX | + | — | — | + | + | — | — |
+| WooCommerce | + | — | — | — | — | — | — |
+| Kaufland | + | — | — | — | — | — | — |
+| Shoper | + | — | — | — | — | — | — |
+| Shopify | + | — | — | — | — | — | — |
+| PrestaShop | + | — | — | — | — | — | — |
+| Mirakl/Empik | + | — | — | — | — | — | — |
+| Erli | + | — | — | — | — | — | — |
+
 ---
 
 ## 11. Background Workers (19 plikow)
@@ -1641,10 +1772,10 @@ Oferta opublikowana na Allegro
 | PrestaShopOrderPoller | 45s | Polling zamowien z PrestaShop |
 | ShopifyOrderPoller | 45s | Polling zamowien z Shopify |
 | TrackingPoller | 5min | Aktualizacja statusu przesylek |
-| StockSyncWorker | konfigurowalny | Sync stanow magazynowych do marketplace'ow |
+| StockSyncWorker | konfigurowalny | Sync stanow magazynowych do marketplace'ow (BulkStockUpdater: batch 100, AsyncStockUpdater: feeds) |
 | SupplierSyncWorker | konfigurowalny | Sync katalogow dostawcow (XML/IOF/CSV/API) |
 | ExchangeRateWorker | 1/dzien | Pobranie kursow z NBP |
-| OAuthRefresher | 1/dzien | Odswiezenie tokenow OAuth (Allegro, Amazon) |
+| OAuthRefresher | 1/dzien | Odswiezenie tokenow OAuth (Allegro, Amazon, eBay) |
 | KSeFStatusWorker | 5min | Sprawdzanie statusu faktur wyslanych do KSeF |
 | DelayedActionWorker | 30s | Wykonywanie opoznionych akcji automatyzacji |
 | RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
@@ -1656,7 +1787,7 @@ Oferta opublikowana na Allegro
 | Plik | Cel |
 |------|-----|
 | `manager.go` | Menedzer workerow (rejestracja, start, stop, graceful shutdown) |
-| `marketplace_order_poller.go` | Bazowy poller zamowien (wspolna logika dla Allegro/Amazon/WooCommerce) |
+| `marketplace_order_poller.go` | Bazowy poller zamowien (wspolna logika dla Allegro/Amazon/WooCommerce/eBay/Shoper/PrestaShop/Shopify) |
 | `tenant_iterator.go` | Iterator tenantow -- wykonuje logike per-tenant |
 | `distributed_lock.go` | Blokada rozproszona (SETNX) dla multi-instance |
 
@@ -1812,22 +1943,18 @@ Haslo testowe: `password123`
 
 | Metryka | Wartosc |
 |---------|--------|
-| **Pliki Go** | 384 (w tym 61 testow) |
-| **Pliki TypeScript/TSX** | 322 |
-| **Tabele DB** | 59 |
-| **Migracje SQL** | 5 (skonsolidowane, 10 plikow up/down) |
-| **Endpointy API** | 453 |
-| **Strony frontend** | 131 |
-| **Komponenty React** | 95 |
-| **Custom hooks** | 63 |
-| **Handlery Go** | 84 plikow |
-| **Serwisy Go** | 67 plikow |
-| **Repozytoria Go** | 43 plikow |
-| **Background workers** | 16 zarejestrowanych (19 plikow) |
-| **Middleware** | 15 |
+| **Tabele DB** | 64 |
+| **Migracje SQL** | 28 plikow |
+| **Endpointy API** | 500 |
+| **Strony frontend** | 141 |
+| **Komponenty React** | 93 |
+| **Custom hooks** | 77 |
+| **Handlery Go** | 95 plikow |
+| **Serwisy Go** | 78 plikow |
+| **Repozytoria Go** | 48 plikow |
+| **Background workers** | 16 zarejestrowanych (23 pliki) |
+| **Middleware** | 19 plikow |
 | **Pakiety SDK** | 27 |
-| **Testy Go** | 751 (go test ./...) |
-| **Testy E2E** | 22 specow Playwright (124 testow) |
 | **Jezyki** | Go, TypeScript, SQL |
 | **Licencja** | Elastic License 2.0 (apps) + MIT (packages) |
 
@@ -1835,8 +1962,7 @@ Haslo testowe: `password123`
 
 | Typ testu | Status |
 |-----------|--------|
-| Backend Go tests (751 testow) | PASS |
-| E2E Playwright (22 specow, 124 testow) | PASS |
+| Backend Go tests | PASS |
 | API contract (TS <-> Go) | PASS |
 | Load testing | 0 bledow, 1000-1800 req/s |
 | RLS isolation | PASS |
@@ -1844,5 +1970,5 @@ Haslo testowe: `password123`
 
 ---
 
-*Dokument zaktualizowany: 2026-02-24*
-*Wersja: OpenOMS v3.4*
+*Dokument zaktualizowany: 2026-03-09*
+*Wersja: OpenOMS v3.5*
