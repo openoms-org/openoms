@@ -126,9 +126,92 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 	return &mo, nil
 }
 
-// PushOffer is not supported for eBay (Trading API is complex and requires separate implementation).
-func (p *Provider) PushOffer(_ context.Context, _ *model.Product, _ map[string]any) (string, error) {
-	return "", fmt.Errorf("ebay: PushOffer not supported (use eBay Trading API or Inventory API)")
+// PushOffer creates an eBay listing via the 3-step flow: inventory item → offer → publish.
+// Required listingData keys: category_id, fulfillment_policy_id, return_policy_id.
+// Optional: title, description, condition, marketplace_id, payment_policy_id, price_override, stock_override, image_urls.
+func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
+	if product.SKU == nil || *product.SKU == "" {
+		return "", fmt.Errorf("ebay: product SKU is required for listing")
+	}
+	sku := *product.SKU
+
+	// Step 1: Create/replace inventory item
+	item := ebaysdk.InventoryItem{
+		Product: ebaysdk.InventoryProduct{
+			Title:       getStringOr(listingData, "title", product.Name),
+			Description: getStringOr(listingData, "description", ""),
+			ImageURLs:   getStringSlice(listingData, "image_urls"),
+		},
+		Condition: getStringOr(listingData, "condition", "NEW"),
+		Availability: &ebaysdk.Availability{
+			ShipToLocationAvailability: &ebaysdk.ShipToLocationAvailability{
+				Quantity: getIntOr(listingData, "stock_override", product.StockQuantity),
+			},
+		},
+	}
+
+	if product.EAN != nil && *product.EAN != "" {
+		item.Product.EAN = []string{*product.EAN}
+	}
+
+	if err := p.client.Inventory.CreateOrReplaceInventoryItem(ctx, sku, item); err != nil {
+		return "", fmt.Errorf("ebay: create inventory item: %w", err)
+	}
+
+	// Step 2: Create offer
+	price := product.Price
+	if v, ok := listingData["price_override"].(float64); ok && v > 0 {
+		price = v
+	}
+
+	categoryID := getStringOr(listingData, "category_id", "")
+	if categoryID == "" {
+		return "", fmt.Errorf("ebay: category_id is required")
+	}
+
+	fulfillmentPolicyID := getStringOr(listingData, "fulfillment_policy_id", "")
+	returnPolicyID := getStringOr(listingData, "return_policy_id", "")
+	if fulfillmentPolicyID == "" || returnPolicyID == "" {
+		return "", fmt.Errorf("ebay: fulfillment_policy_id and return_policy_id are required")
+	}
+
+	offer := ebaysdk.Offer{
+		SKU:           sku,
+		MarketplaceID: getStringOr(listingData, "marketplace_id", "EBAY_PL"),
+		Format:        "FIXED_PRICE",
+		CategoryID:    categoryID,
+		PricingSummary: &ebaysdk.OfferPricing{
+			Price: ebaysdk.Amount{
+				Value:    fmt.Sprintf("%.2f", price),
+				Currency: p.currency,
+			},
+		},
+		ListingPolicies: &ebaysdk.ListingPolicies{
+			FulfillmentPolicyID: fulfillmentPolicyID,
+			ReturnPolicyID:      returnPolicyID,
+			PaymentPolicyID:     getStringOr(listingData, "payment_policy_id", ""),
+		},
+		AvailableQuantity:  getIntOr(listingData, "stock_override", product.StockQuantity),
+		ListingDescription: getStringOr(listingData, "description", ""),
+	}
+
+	createResp, err := p.client.Offers.CreateOffer(ctx, offer)
+	if err != nil {
+		return "", fmt.Errorf("ebay: create offer: %w", err)
+	}
+
+	// Step 3: Publish
+	_, err = p.client.Offers.PublishOffer(ctx, createResp.OfferID)
+	if err != nil {
+		return "", fmt.Errorf("ebay: publish offer %s: %w", createResp.OfferID, err)
+	}
+
+	p.logger.Info("ebay: listing published",
+		"sku", sku,
+		"offer_id", createResp.OfferID,
+	)
+
+	return createResp.OfferID, nil
 }
 
 // UpdateStock updates the available quantity for an eBay offer via the Inventory API.
@@ -224,4 +307,37 @@ func (p *Provider) mapEbayOrder(o *ebaysdk.Order) integration.MarketplaceOrder {
 	}
 
 	return mo
+}
+
+func getStringOr(data map[string]any, key, fallback string) string {
+	if v, ok := data[key].(string); ok && v != "" {
+		return v
+	}
+	return fallback
+}
+
+func getIntOr(data map[string]any, key string, fallback int) int {
+	switch v := data[key].(type) {
+	case int:
+		return v
+	case float64:
+		return int(v)
+	}
+	return fallback
+}
+
+func getStringSlice(data map[string]any, key string) []string {
+	if v, ok := data[key].([]string); ok {
+		return v
+	}
+	if v, ok := data[key].([]any); ok {
+		result := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				result = append(result, s)
+			}
+		}
+		return result
+	}
+	return nil
 }
