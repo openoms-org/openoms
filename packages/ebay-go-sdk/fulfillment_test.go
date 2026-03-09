@@ -55,7 +55,7 @@ func TestCreateShippingFulfillment(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -122,7 +122,7 @@ func TestGetShippingFulfillments(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -151,9 +151,9 @@ func TestGetShippingFulfillments(t *testing.T) {
 }
 
 func TestCreateShippingFulfillment_Error(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"errors":[{"errorId":35000,"domain":"API_FULFILLMENT","category":"REQUEST","message":"Invalid shipping carrier code"}]}`))
+		_, _ = w.Write([]byte(`{"errors":[{"errorId":35000,"domain":"API_FULFILLMENT","category":"REQUEST","message":"Invalid shipping carrier code"}]}`))
 	}))
 	defer srv.Close()
 
