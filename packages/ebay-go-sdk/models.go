@@ -147,12 +147,12 @@ type ShippingFulfillmentPagedCollection struct {
 
 // InventoryItem represents an eBay inventory item.
 type InventoryItem struct {
-	SKU                  string            `json:"sku,omitempty"`
-	Locale               string            `json:"locale,omitempty"`
-	Product              InventoryProduct  `json:"product"`
-	Condition            string            `json:"condition,omitempty"`
-	ConditionDescription string            `json:"conditionDescription,omitempty"`
-	Availability         *Availability     `json:"availability,omitempty"`
+	SKU                  string           `json:"sku,omitempty"`
+	Locale               string           `json:"locale,omitempty"`
+	Product              InventoryProduct `json:"product"`
+	Condition            string           `json:"condition,omitempty"`
+	ConditionDescription string           `json:"conditionDescription,omitempty"`
+	Availability         *Availability    `json:"availability,omitempty"`
 }
 
 // InventoryProduct holds the product details for an inventory item.
