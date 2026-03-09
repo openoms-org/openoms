@@ -31,8 +31,9 @@ type EbayCredentials struct {
 
 // Provider implements integration.MarketplaceProvider for eBay.
 type Provider struct {
-	client *ebaysdk.Client
-	logger *slog.Logger
+	client   *ebaysdk.Client
+	logger   *slog.Logger
+	currency string
 }
 
 // NewProvider creates an eBay MarketplaceProvider from encrypted credentials.
@@ -59,9 +60,23 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 
 	client := ebaysdk.NewClient(creds.AppID, creds.CertID, creds.DevID, creds.RefreshToken, opts...)
 
+	type providerSettings struct {
+		Currency      string `json:"currency"`
+		MarketplaceID string `json:"marketplace_id"`
+	}
+
+	var provSettings providerSettings
+	if settings != nil {
+		_ = json.Unmarshal(settings, &provSettings)
+	}
+	if provSettings.Currency == "" {
+		provSettings.Currency = "PLN"
+	}
+
 	return &Provider{
-		client: client,
-		logger: slog.Default().With("provider", "ebay"),
+		client:   client,
+		logger:   slog.Default().With("provider", "ebay"),
+		currency: provSettings.Currency,
 	}, nil
 }
 
@@ -123,7 +138,7 @@ func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quan
 
 // UpdatePrice updates the price for an eBay offer via the Inventory API.
 func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
-	return p.client.Inventory.UpdatePrice(ctx, externalOfferID, price, "PLN")
+	return p.client.Inventory.UpdatePrice(ctx, externalOfferID, price, p.currency)
 }
 
 // mapEbayOrder converts an eBay SDK Order to the normalized MarketplaceOrder.
