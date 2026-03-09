@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
+	ebaysdk "github.com/openoms-org/openoms/packages/ebay-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
@@ -17,62 +17,47 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
-// OAuthState holds the state + credentials needed to complete an OAuth flow.
-// Shared by all OAuth providers (Allegro, OLX, Amazon, eBay, etc.).
-type OAuthState struct {
-	ExpiresAt     time.Time
-	ClientID      string
-	ClientSecret  string
-	Sandbox       bool
-	ApplicationID string // Amazon SP-API: application_id (separate from LWA client_id)
-	MarketplaceID string // Amazon SP-API: marketplace_id for Seller Central URL
-	DevID         string // eBay: developer ID (optional)
-}
-
-// AllegroAuthHandler handles the Allegro OAuth2 authorization flow.
-type AllegroAuthHandler struct {
+// EbayAuthHandler handles the eBay OAuth2 authorization flow.
+type EbayAuthHandler struct {
 	cfg                *config.Config
 	integrationService *service.IntegrationService
-	encryptionKey      []byte
 	stateStore         OAuthStateStore
 }
 
-// NewAllegroAuthHandler creates a new AllegroAuthHandler with the given dependencies.
-func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte, stateStore OAuthStateStore) *AllegroAuthHandler {
-	return &AllegroAuthHandler{
+// NewEbayAuthHandler creates a new EbayAuthHandler with the given dependencies.
+func NewEbayAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, stateStore OAuthStateStore) *EbayAuthHandler {
+	return &EbayAuthHandler{
 		cfg:                cfg,
 		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
 		stateStore:         stateStore,
 	}
 }
 
-// redirectURI computes the OAuth redirect URI from the frontend URL.
-func (h *AllegroAuthHandler) redirectURI() string {
-	return h.cfg.FrontendURL + "/marketplaces/allegro"
+func (h *EbayAuthHandler) redirectURI() string {
+	return h.cfg.FrontendURL + "/marketplaces/ebay"
 }
 
-// GetAuthURL generates an Allegro OAuth2 authorization URL.
-// Credentials (client_id, client_secret, sandbox) are read from the existing integration.
-func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
+// GetAuthURL generates an eBay OAuth2 authorization URL.
+// Credentials (app_id, cert_id, dev_id, sandbox) are read from the existing integration.
+func (h *EbayAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
-	// Read credentials from existing integration
-	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
+	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "ebay")
 	if err != nil {
-		slog.Error("allegro OAuth: failed to get credentials", "error", err)
-		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji Allegro (Client ID i Client Secret)")
+		slog.Error("ebay OAuth: failed to get credentials", "error", err)
+		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji eBay (App ID i Cert ID)")
 		return
 	}
 
 	var creds struct {
-		ClientID     string `json:"client_id"`
-		ClientSecret string `json:"client_secret"`
-		Sandbox      bool   `json:"sandbox"`
+		AppID   string `json:"app_id"`
+		CertID  string `json:"cert_id"`
+		DevID   string `json:"dev_id"`
+		Sandbox bool   `json:"sandbox"`
 	}
-	if err := json.Unmarshal(credJSON, &creds); err != nil || creds.ClientID == "" || creds.ClientSecret == "" {
-		slog.Error("allegro OAuth: credential unmarshal failed", "error", err, "json_length", len(credJSON))
-		writeError(w, http.StatusBadRequest, "Integracja Allegro nie ma poprawnych danych Client ID / Client Secret")
+	if err := json.Unmarshal(credJSON, &creds); err != nil || creds.AppID == "" || creds.CertID == "" {
+		slog.Error("ebay OAuth: credential unmarshal failed", "error", err, "json_length", len(credJSON))
+		writeError(w, http.StatusBadRequest, "Integracja eBay nie ma poprawnych danych App ID / Cert ID")
 		return
 	}
 
@@ -86,8 +71,9 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	// Store state + credentials for the callback
 	stateData := &OAuthState{
 		ExpiresAt:    time.Now().Add(10 * time.Minute),
-		ClientID:     creds.ClientID,
-		ClientSecret: creds.ClientSecret,
+		ClientID:     creds.AppID,
+		ClientSecret: creds.CertID,
+		DevID:        creds.DevID,
 		Sandbox:      creds.Sandbox,
 	}
 	if err := h.stateStore.Save(r.Context(), state, stateData, 10*time.Minute); err != nil {
@@ -95,20 +81,19 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.redirectURI())}
+	opts := []ebaysdk.Option{ebaysdk.WithRedirectURI(h.redirectURI())}
 	if creds.Sandbox {
-		opts = append(opts, allegrosdk.WithSandbox())
+		opts = append(opts, ebaysdk.WithSandbox())
 	}
-	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
-	defer client.Close()
+	client := ebaysdk.NewClient(creds.AppID, creds.CertID, creds.DevID, "", opts...)
 
 	authURL := client.AuthorizationURL(state)
 
-	slog.Info("allegro OAuth: generated auth URL",
+	slog.Info("ebay OAuth: generated auth URL",
 		"auth_url", authURL,
 		"redirect_uri", h.redirectURI(),
 		"sandbox", creds.Sandbox,
-		"client_id_prefix", creds.ClientID[:min(8, len(creds.ClientID))]+"...",
+		"app_id_prefix", creds.AppID[:min(8, len(creds.AppID))]+"...",
 	)
 
 	writeJSON(w, http.StatusOK, map[string]string{
@@ -118,8 +103,8 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// HandleCallback exchanges an OAuth2 authorization code for tokens and updates the integration.
-func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
+// HandleCallback exchanges an eBay OAuth2 authorization code for tokens and updates the integration.
+func (h *EbayAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Code  string `json:"code"`
 		State string `json:"state"`
@@ -148,24 +133,25 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.redirectURI())}
+	opts := []ebaysdk.Option{ebaysdk.WithRedirectURI(h.redirectURI())}
 	if oauthState.Sandbox {
-		opts = append(opts, allegrosdk.WithSandbox())
+		opts = append(opts, ebaysdk.WithSandbox())
 	}
-	client := allegrosdk.NewClient(oauthState.ClientID, oauthState.ClientSecret, opts...)
-	defer client.Close()
+	client := ebaysdk.NewClient(oauthState.ClientID, oauthState.ClientSecret, oauthState.DevID, "", opts...)
 
 	tok, err := client.ExchangeCode(r.Context(), body.Code)
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "failed to exchange authorization code")
+		slog.Error("ebay OAuth: code exchange failed", "error", err)
+		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wymienić kodu autoryzacji na tokeny")
 		return
 	}
 
 	tokenExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
 
 	credentials := map[string]any{
-		"client_id":     oauthState.ClientID,
-		"client_secret": oauthState.ClientSecret,
+		"app_id":        oauthState.ClientID,
+		"cert_id":       oauthState.ClientSecret,
+		"dev_id":        oauthState.DevID,
 		"access_token":  tok.AccessToken,
 		"refresh_token": tok.RefreshToken,
 		"token_expiry":  tokenExpiry.Format(time.RFC3339),
@@ -181,14 +167,14 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	actorID := middleware.UserIDFromContext(r.Context())
 	ip := clientIP(r)
 
-	// Update existing allegro integration with OAuth tokens
+	// Update existing ebay integration with OAuth tokens
 	integrations, listErr := h.integrationService.List(r.Context(), tenantID)
 	if listErr != nil {
 		writeServerError(w, "failed to find integration", listErr)
 		return
 	}
 	for _, integ := range integrations {
-		if integ.Provider == "allegro" {
+		if integ.Provider == "ebay" {
 			rawCreds := json.RawMessage(credJSON)
 			activeStatus := "active"
 			updateReq := model.UpdateIntegrationRequest{
@@ -206,16 +192,16 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Fallback: create if somehow doesn't exist (shouldn't happen in normal flow)
-	label := "Allegro"
+	label := "eBay"
 	req := model.CreateIntegrationRequest{
-		Provider:    "allegro",
+		Provider:    "ebay",
 		Label:       &label,
 		Credentials: credJSON,
 	}
 	result, err := h.integrationService.Create(r.Context(), tenantID, req, actorID, ip)
 	if err != nil {
 		if errors.Is(err, service.ErrDuplicateProvider) {
-			writeError(w, http.StatusConflict, "allegro integration already exists")
+			writeError(w, http.StatusConflict, "Integracja eBay już istnieje")
 			return
 		}
 		writeServerError(w, "failed to create integration", err)

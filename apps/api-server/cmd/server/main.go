@@ -458,6 +458,8 @@ func main() {
 	}
 	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
 	olxAuthHandler := handler.NewOlxAuthHandler(cfg, integrationService, oauthStateStore)
+	ebayAuthHandler := handler.NewEbayAuthHandler(cfg, integrationService, oauthStateStore)
+	ebayHandler := handler.NewEbayHandler(integrationService, orderService, encryptionKey)
 
 	// Allegro import service (import Allegro offers as products + listings)
 	allegroImportService := service.NewAllegroImportService(integrationService, productRepo, productListingRepo, productCategoryService, pool)
@@ -757,6 +759,8 @@ func main() {
 		AllegroShipment:            allegroShipmentHandler,
 		AmazonAuth:                 amazonAuthHandler,
 		OlxAuth:                    olxAuthHandler,
+		EbayAuth:                   ebayAuthHandler,
+		Ebay:                       ebayHandler,
 		StoreAuth:                  storeAuthHandler,
 		Supplier:                   supplierHandler,
 		Category:                   productCategoryHandler,

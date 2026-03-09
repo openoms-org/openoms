@@ -43,6 +43,8 @@ type RouterDeps struct {
 	AllegroShipment            *handler.AllegroShipmentHandler
 	AmazonAuth                 *handler.AmazonAuthHandler
 	OlxAuth                    *handler.OlxAuthHandler
+	EbayAuth                   *handler.EbayAuthHandler
+	Ebay                       *handler.EbayHandler
 	Supplier                   *handler.SupplierHandler
 	Invoice                    *handler.InvoiceHandler
 	Automation                 *handler.AutomationHandler
@@ -717,6 +719,18 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Get("/categories/suggest", deps.OLXListings.SuggestCategory)
 						r.Get("/cities", deps.OLXListings.ListCities)
 						r.Get("/cities/{cityId}/districts", deps.OLXListings.ListDistricts)
+					}
+				})
+
+				// eBay OAuth2 + fulfillment + tracking
+				r.Route("/ebay", func(r chi.Router) {
+					if deps.EbayAuth != nil {
+						r.Get("/auth-url", deps.EbayAuth.GetAuthURL)
+						r.Post("/callback", deps.EbayAuth.HandleCallback)
+					}
+					if deps.Ebay != nil {
+						r.Get("/carriers", deps.Ebay.ListCarriers)
+						r.Post("/orders/{orderId}/tracking", deps.Ebay.AddTracking)
 					}
 				})
 
