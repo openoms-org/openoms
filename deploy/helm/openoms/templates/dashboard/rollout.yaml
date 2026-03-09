@@ -1,0 +1,137 @@
+{{- if .Values.blueGreen.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "openoms.fullname" . }}-dashboard
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    {{- include "openoms.dashboard.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.dashboard.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "openoms.dashboard.selectorLabels" . | nindent 6 }}
+  strategy:
+    blueGreen:
+      activeService: {{ include "openoms.fullname" . }}-dashboard
+      previewService: {{ include "openoms.fullname" . }}-dashboard-preview
+      autoPromotionEnabled: {{ .Values.blueGreen.autoPromotionEnabled }}
+      autoPromotionSeconds: {{ .Values.blueGreen.autoPromotionSeconds }}
+      scaleDownDelaySeconds: {{ .Values.blueGreen.scaleDownDelaySeconds }}
+      abortScaleDownDelaySeconds: {{ .Values.blueGreen.abortScaleDownDelaySeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "openoms.labels" . | nindent 8 }}
+        {{- include "openoms.dashboard.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.dashboard.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 15
+      initContainers:
+        - name: env-replace
+          image: {{ include "openoms.dashboard.image" . }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              cp -a /app/.next/. /next-out/
+              cp /app/server.js /server-out/server.js
+              if [ -n "$NEXT_PUBLIC_API_URL" ] && [ "$NEXT_PUBLIC_API_URL" != "NEXT_PUBLIC_API_URL_PLACEHOLDER" ]; then
+                WS_HOST=$(echo "$NEXT_PUBLIC_API_URL" | sed 's|https\?://||' | sed 's|/.*||')
+                find /next-out /server-out -type f \( -name '*.js' -o -name '*.json' \) | while read -r file; do
+                  if grep -q 'NEXT_PUBLIC_API_URL_PLACEHOLDER\|WS_CSP_HOST_PLACEHOLDER' "$file" 2>/dev/null; then
+                    sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g; s|WS_CSP_HOST_PLACEHOLDER|${WS_HOST}|g" "$file"
+                  fi
+                done
+              fi
+              if [ -n "$NEXT_PUBLIC_SENTRY_DSN" ] && [ "$NEXT_PUBLIC_SENTRY_DSN" != "SENTRY_DSN_PLACEHOLDER" ]; then
+                find /next-out /server-out -type f \( -name '*.js' -o -name '*.json' \) | while read -r file; do
+                  if grep -q 'SENTRY_DSN_PLACEHOLDER' "$file" 2>/dev/null; then
+                    sed -i "s|SENTRY_DSN_PLACEHOLDER|${NEXT_PUBLIC_SENTRY_DSN}|g" "$file"
+                  fi
+                done
+              fi
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.apiServer.baseUrl | quote }}
+            - name: NEXT_PUBLIC_SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: DASHBOARD_SENTRY_DSN
+                  optional: true
+          volumeMounts:
+            - name: next-build
+              mountPath: /next-out
+            - name: server-js
+              mountPath: /server-out
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      containers:
+        - name: dashboard
+          image: {{ include "openoms.dashboard.image" . }}
+          imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
+          command: ["node", "server.js"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.dashboard.port }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOSTNAME
+              value: "0.0.0.0"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+          livenessProbe:
+            {{- toYaml .Values.dashboard.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.dashboard.readinessProbe | nindent 12 }}
+          startupProbe:
+            {{- toYaml .Values.dashboard.startupProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.dashboard.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.dashboard.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: next-build
+              mountPath: /app/.next
+            - name: server-js
+              mountPath: /app/server.js
+              subPath: server.js
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: next-build
+          emptyDir:
+            sizeLimit: 300Mi
+        - name: server-js
+          emptyDir:
+            sizeLimit: 10Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+{{- end }}
