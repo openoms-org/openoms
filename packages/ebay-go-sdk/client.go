@@ -15,10 +15,12 @@ import (
 )
 
 const (
-	productionAPIURL  = "https://api.ebay.com"
-	sandboxAPIURL     = "https://api.sandbox.ebay.com"
-	productionAuthURL = "https://api.ebay.com/identity/v1/oauth2/token"
-	sandboxAuthURL    = "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
+	productionAPIURL     = "https://api.ebay.com"
+	sandboxAPIURL        = "https://api.sandbox.ebay.com"
+	productionAuthURL    = "https://api.ebay.com/identity/v1/oauth2/token"
+	sandboxAuthURL       = "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
+	productionConsentURL = "https://auth.ebay.com/oauth2/authorize"
+	sandboxConsentURL    = "https://auth.sandbox.ebay.com/oauth2/authorize"
 )
 
 // Client is the eBay RESTful API client.
@@ -27,17 +29,22 @@ type Client struct {
 	httpClient   *http.Client
 	apiURL       string
 	authURL      string
+	consentURL   string
 	appID        string
 	certID       string
 	devID        string
 	refreshToken string
+	redirectURI  string
 
 	accessToken    string
 	tokenExpiresAt time.Time
 	tokenMu        sync.Mutex
 
-	Orders    *OrderService
-	Inventory *InventoryService
+	Orders      *OrderService
+	Inventory   *InventoryService
+	Fulfillment *FulfillmentService
+	Offers      *OfferService
+	Account     *AccountService
 }
 
 // Option configures a Client.
@@ -48,6 +55,14 @@ func WithSandbox() Option {
 	return func(c *Client) {
 		c.apiURL = sandboxAPIURL
 		c.authURL = sandboxAuthURL
+		c.consentURL = sandboxConsentURL
+	}
+}
+
+// WithRedirectURI sets the OAuth2 redirect URI for the authorization code flow.
+func WithRedirectURI(uri string) Option {
+	return func(c *Client) {
+		c.redirectURI = uri
 	}
 }
 
@@ -80,6 +95,7 @@ func NewClient(appID, certID, devID, refreshToken string, opts ...Option) *Clien
 		httpClient:   http.DefaultClient,
 		apiURL:       productionAPIURL,
 		authURL:      productionAuthURL,
+		consentURL:   productionConsentURL,
 		appID:        appID,
 		certID:       certID,
 		devID:        devID,
@@ -92,8 +108,66 @@ func NewClient(appID, certID, devID, refreshToken string, opts ...Option) *Clien
 
 	c.Orders = &OrderService{client: c}
 	c.Inventory = &InventoryService{client: c}
+	c.Fulfillment = &FulfillmentService{client: c}
+	c.Offers = &OfferService{client: c}
+	c.Account = &AccountService{client: c}
 
 	return c
+}
+
+// AuthorizationURL builds the eBay OAuth2 consent URL for user authorization.
+func (c *Client) AuthorizationURL(state string) string {
+	v := url.Values{}
+	v.Set("client_id", c.appID)
+	v.Set("response_type", "code")
+	v.Set("redirect_uri", c.redirectURI)
+	v.Set("scope", "https://api.ebay.com/oauth/api_scope/sell.fulfillment https://api.ebay.com/oauth/api_scope/sell.inventory https://api.ebay.com/oauth/api_scope/sell.account")
+	v.Set("state", state)
+	return c.consentURL + "?" + v.Encode()
+}
+
+// ExchangeCodeResponse holds the tokens returned by the OAuth2 token exchange.
+type ExchangeCodeResponse struct {
+	AccessToken           string `json:"access_token"`
+	ExpiresIn             int    `json:"expires_in"`
+	RefreshToken          string `json:"refresh_token"`
+	RefreshTokenExpiresIn int    `json:"refresh_token_expires_in"`
+	TokenType             string `json:"token_type"`
+}
+
+// ExchangeCode exchanges an authorization code for access + refresh tokens.
+func (c *Client) ExchangeCode(ctx context.Context, code string) (*ExchangeCodeResponse, error) {
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("code", code)
+	data.Set("redirect_uri", c.redirectURI)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("ebay: create exchange request: %w", err)
+	}
+
+	auth := base64.StdEncoding.EncodeToString([]byte(c.appID + ":" + c.certID))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ebay: exchange code request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ebay: exchange code failed (HTTP %d): %s", resp.StatusCode, string(body))
+	}
+
+	var result ExchangeCodeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("ebay: decode exchange response: %w", err)
+	}
+
+	return &result, nil
 }
 
 // tokenResponse represents the OAuth2 token endpoint response.
@@ -201,18 +275,18 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 // APIError represents an error response from the eBay API.
 type APIError struct {
-	StatusCode int      `json:"-"`
-	Errors     []EbErr  `json:"errors"`
-	Message    string   `json:"-"`
+	StatusCode int     `json:"-"`
+	Errors     []EbErr `json:"errors"`
+	Message    string  `json:"-"`
 }
 
 // EbErr represents a single error in an eBay error response.
 type EbErr struct {
-	ErrorID   int    `json:"errorId"`
-	Domain    string `json:"domain"`
-	Category  string `json:"category"`
-	Message   string `json:"message"`
-	LongMsg   string `json:"longMessage"`
+	ErrorID  int    `json:"errorId"`
+	Domain   string `json:"domain"`
+	Category string `json:"category"`
+	Message  string `json:"message"`
+	LongMsg  string `json:"longMessage"`
 }
 
 func (e *APIError) Error() string {

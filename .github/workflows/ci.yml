@@ -32,7 +32,7 @@ jobs:
 
       - name: Auto-fix Go code
         run: |
-          for dir in apps/api-server packages/allegro-go-sdk packages/inpost-go-sdk packages/order-engine packages/erli-go-sdk; do
+          for dir in apps/api-server packages/allegro-go-sdk packages/inpost-go-sdk packages/order-engine packages/erli-go-sdk packages/ebay-go-sdk; do
             echo "Fixing $dir..."
             golangci-lint run --fix --timeout=5m "./$dir/..." || true
           done
@@ -108,6 +108,14 @@ jobs:
           args: --timeout=5m
           only-new-issues: true
 
+      - name: Lint ebay-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          working-directory: packages/ebay-go-sdk
+          args: --timeout=5m
+          only-new-issues: true
+
   security:
     name: Security
     runs-on: ubuntu-latest
@@ -141,6 +149,10 @@ jobs:
 
       - name: Scan erli-go-sdk
         working-directory: packages/erli-go-sdk
+        run: govulncheck ./...
+
+      - name: Scan ebay-go-sdk
+        working-directory: packages/ebay-go-sdk
         run: govulncheck ./...
 
       - uses: actions/setup-node@v4
@@ -245,6 +257,10 @@ jobs:
         working-directory: packages/btp-go-sdk
         run: go test ./...
 
+      - name: Test ebay-go-sdk
+        working-directory: packages/ebay-go-sdk
+        run: go test ./...
+
   security-tests:
     name: Security Tests
     needs: [test]
@@ -302,6 +318,10 @@ jobs:
 
       - name: Vet erli-go-sdk
         working-directory: packages/erli-go-sdk
+        run: go vet ./...
+
+      - name: Vet ebay-go-sdk
+        working-directory: packages/ebay-go-sdk
         run: go vet ./...
 
   migration-safety:

@@ -3,6 +3,7 @@ package ebay
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // InventoryService handles eBay Inventory API v1 operations.
@@ -58,6 +59,48 @@ type bulkUpdateItemResponse struct {
 	OfferID    string  `json:"offerId"`
 	StatusCode int     `json:"statusCode"`
 	Errors     []EbErr `json:"errors,omitempty"`
+}
+
+// CreateOrReplaceInventoryItem creates or replaces an inventory item by SKU.
+// PUT /sell/inventory/v1/inventory_item/{sku}
+func (s *InventoryService) CreateOrReplaceInventoryItem(ctx context.Context, sku string, item InventoryItem) error {
+	path := fmt.Sprintf("/sell/inventory/v1/inventory_item/%s", url.PathEscape(sku))
+	if err := s.client.do(ctx, "PUT", path, item, nil); err != nil {
+		return fmt.Errorf("ebay: create inventory item %s: %w", sku, err)
+	}
+	return nil
+}
+
+// GetInventoryItem returns an inventory item by SKU.
+// GET /sell/inventory/v1/inventory_item/{sku}
+func (s *InventoryService) GetInventoryItem(ctx context.Context, sku string) (*InventoryItem, error) {
+	path := fmt.Sprintf("/sell/inventory/v1/inventory_item/%s", url.PathEscape(sku))
+	var result InventoryItem
+	if err := s.client.do(ctx, "GET", path, nil, &result); err != nil {
+		return nil, fmt.Errorf("ebay: get inventory item %s: %w", sku, err)
+	}
+	return &result, nil
+}
+
+// ListInventoryItems returns a paginated list of inventory items.
+// GET /sell/inventory/v1/inventory_item?limit=N&offset=N
+func (s *InventoryService) ListInventoryItems(ctx context.Context, limit, offset int) (*InventoryItemsResponse, error) {
+	path := fmt.Sprintf("/sell/inventory/v1/inventory_item?limit=%d&offset=%d", limit, offset)
+	var result InventoryItemsResponse
+	if err := s.client.do(ctx, "GET", path, nil, &result); err != nil {
+		return nil, fmt.Errorf("ebay: list inventory items: %w", err)
+	}
+	return &result, nil
+}
+
+// DeleteInventoryItem deletes an inventory item by SKU.
+// DELETE /sell/inventory/v1/inventory_item/{sku}
+func (s *InventoryService) DeleteInventoryItem(ctx context.Context, sku string) error {
+	path := fmt.Sprintf("/sell/inventory/v1/inventory_item/%s", url.PathEscape(sku))
+	if err := s.client.do(ctx, "DELETE", path, nil, nil); err != nil {
+		return fmt.Errorf("ebay: delete inventory item %s: %w", sku, err)
+	}
+	return nil
 }
 
 // checkBulkErrors inspects the per-item responses for errors.

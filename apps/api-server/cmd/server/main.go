@@ -458,6 +458,8 @@ func main() {
 	}
 	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
 	olxAuthHandler := handler.NewOlxAuthHandler(cfg, integrationService, oauthStateStore)
+	ebayAuthHandler := handler.NewEbayAuthHandler(cfg, integrationService, oauthStateStore)
+	ebayHandler := handler.NewEbayHandler(integrationService, orderService, encryptionKey)
 
 	// Allegro import service (import Allegro offers as products + listings)
 	allegroImportService := service.NewAllegroImportService(integrationService, productRepo, productListingRepo, productCategoryService, pool)
@@ -495,6 +497,9 @@ func main() {
 
 	// OLX listings handler (publish products to OLX.pl)
 	olxListingsHandler := handler.NewOLXListingsHandler(integrationService, productService, productListingRepo, pool)
+
+	// eBay listings handler (publish products to eBay)
+	ebayListingsHandler := handler.NewEbayListingsHandler(integrationService, productService, productListingRepo, pool)
 
 	// Allegro catalog + finance handler
 	allegroCatalogHandler := handler.NewAllegroCatalogHandler(integrationService, encryptionKey)
@@ -757,6 +762,8 @@ func main() {
 		AllegroShipment:            allegroShipmentHandler,
 		AmazonAuth:                 amazonAuthHandler,
 		OlxAuth:                    olxAuthHandler,
+		EbayAuth:                   ebayAuthHandler,
+		Ebay:                       ebayHandler,
 		StoreAuth:                  storeAuthHandler,
 		Supplier:                   supplierHandler,
 		Category:                   productCategoryHandler,
@@ -826,6 +833,7 @@ func main() {
 		StripeWebhook:              stripeWebhookHandler,
 		ErliListings:               erliListingsHandler,
 		OLXListings:                olxListingsHandler,
+		EbayListings:               ebayListingsHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries)
@@ -843,6 +851,7 @@ func main() {
 	workerMgr.Register(worker.NewPrestaShopOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewShopifyOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewOLXOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewEbayOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewSupplierSyncWorker(workerPool, supplierService, slog.Default()))
 	workerMgr.Register(worker.NewExchangeRateWorker(workerPool, exchangeRateService, slog.Default()))
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))

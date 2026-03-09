@@ -53,6 +53,7 @@ import {
   useOLXCategoryAttributes,
   useCreateOLXListing,
 } from "@/hooks/use-allegro";
+import { useEbayPolicies, useCreateEbayListing } from "@/hooks/use-ebay-listings";
 import type {
   AllegroCategory,
   AllegroCategoryParameter,
@@ -65,6 +66,7 @@ import type { Product, ProductListing, Integration } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -684,7 +686,11 @@ function CreateListingWizard({
     return <CreateOLXListingDialog product={product} integrationId={selectedIntegration.integrationId} onClose={onClose} />;
   }
 
-  if (selectedProvider && selectedIntegration && !["allegro", "woocommerce", "olx"].includes(selectedProvider)) {
+  if (selectedProvider === "ebay" && selectedIntegration) {
+    return <CreateEbayListingDialog product={product} integrationId={selectedIntegration.integrationId} onClose={onClose} />;
+  }
+
+  if (selectedProvider && selectedIntegration && !["allegro", "woocommerce", "olx", "ebay"].includes(selectedProvider)) {
     // Providers without dedicated dialogs yet — show coming soon
     return (
       <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -901,6 +907,291 @@ function CreateWooCommerceListingDialog({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             Wystaw na WooCommerce
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ===================== eBay Create Dialog =====================
+
+const EBAY_MARKETPLACES = [
+  { value: "EBAY_PL", label: "eBay Polska" },
+  { value: "EBAY_DE", label: "eBay Niemcy" },
+  { value: "EBAY_US", label: "eBay USA" },
+  { value: "EBAY_GB", label: "eBay UK" },
+] as const;
+
+const EBAY_CONDITIONS = [
+  { value: "NEW", label: "Nowy" },
+  { value: "LIKE_NEW", label: "Jak nowy" },
+  { value: "VERY_GOOD", label: "Bardzo dobry" },
+  { value: "GOOD", label: "Dobry" },
+  { value: "ACCEPTABLE", label: "Akceptowalny" },
+] as const;
+
+function CreateEbayListingDialog({
+  product,
+  integrationId,
+  onClose,
+}: {
+  product: Product;
+  integrationId: string;
+  onClose: () => void;
+}) {
+  const [categoryId, setCategoryId] = useState("");
+  const [marketplaceId, setMarketplaceId] = useState("EBAY_PL");
+  const [condition, setCondition] = useState("NEW");
+  const [fulfillmentPolicyId, setFulfillmentPolicyId] = useState("");
+  const [returnPolicyId, setReturnPolicyId] = useState("");
+  const [paymentPolicyId, setPaymentPolicyId] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priceOverride, setPriceOverride] = useState("");
+  const [stockOverride, setStockOverride] = useState("");
+
+  const { data: policies, isLoading: policiesLoading } = useEbayPolicies(integrationId, marketplaceId);
+  const createListing = useCreateEbayListing(product.id);
+
+  const canSubmit =
+    !!categoryId &&
+    !!fulfillmentPolicyId &&
+    !!returnPolicyId &&
+    !createListing.isPending;
+
+  const handleSubmit = () => {
+    createListing.mutate(
+      {
+        integration_id: integrationId,
+        category_id: categoryId,
+        marketplace_id: marketplaceId,
+        fulfillment_policy_id: fulfillmentPolicyId,
+        return_policy_id: returnPolicyId,
+        payment_policy_id: paymentPolicyId || undefined,
+        condition,
+        title: title || undefined,
+        description: description || undefined,
+        price_override: priceOverride ? parseFloat(priceOverride) : undefined,
+        stock_override: stockOverride ? parseInt(stockOverride) : undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Produkt wystawiony na eBay");
+          onClose();
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Nie udalo sie wystawic produktu na eBay"
+          );
+        },
+      }
+    );
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Wystaw na eBay</DialogTitle>
+          <DialogDescription>
+            Publikacja produktu &quot;{product.name}&quot; na eBay
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Category ID */}
+          <div className="space-y-2">
+            <Label>Kategoria eBay *</Label>
+            <Input
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              placeholder="np. 9355"
+            />
+            <p className="text-xs text-muted-foreground">
+              Numer kategorii eBay (np. 9355 dla czesci samochodowych)
+            </p>
+          </div>
+
+          {/* Marketplace + Condition */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Marketplace</Label>
+              <Select value={marketplaceId} onValueChange={setMarketplaceId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EBAY_MARKETPLACES.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Stan</Label>
+              <Select value={condition} onValueChange={setCondition}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EBAY_CONDITIONS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Policies */}
+          {policiesLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Ladowanie polityk eBay...
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Fulfillment Policy */}
+              <div className="space-y-2">
+                <Label>Polityka wysylki *</Label>
+                <Select value={fulfillmentPolicyId} onValueChange={setFulfillmentPolicyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wybierz polityke wysylki" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {policies?.fulfillment?.map((p) => (
+                      <SelectItem key={p.fulfillmentPolicyId!} value={p.fulfillmentPolicyId!}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Return Policy */}
+              <div className="space-y-2">
+                <Label>Polityka zwrotow *</Label>
+                <Select value={returnPolicyId} onValueChange={setReturnPolicyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wybierz polityke zwrotow" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {policies?.return?.map((p) => (
+                      <SelectItem key={p.returnPolicyId!} value={p.returnPolicyId!}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Payment Policy */}
+              <div className="space-y-2">
+                <Label>Polityka platnosci</Label>
+                <Select value={paymentPolicyId} onValueChange={setPaymentPolicyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Opcjonalnie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {policies?.payment?.map((p) => (
+                      <SelectItem key={p.paymentPolicyId!} value={p.paymentPolicyId!}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Title */}
+          <div className="space-y-2">
+            <Label>Tytul oferty</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={product.name}
+            />
+            <p className="text-xs text-muted-foreground">
+              Domyslnie nazwa produktu: {product.name}
+            </p>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label>Opis</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Opcjonalny opis oferty..."
+              rows={3}
+            />
+          </div>
+
+          {/* Price + Stock */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Cena</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={priceOverride}
+                onChange={(e) => setPriceOverride(e.target.value)}
+                placeholder={String(product.price)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Cena produktu: {product.price} PLN
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Stan magazynowy</Label>
+              <Input
+                type="number"
+                min="0"
+                value={stockOverride}
+                onChange={(e) => setStockOverride(e.target.value)}
+                placeholder={String(product.stock_quantity)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Aktualny stan: {product.stock_quantity}
+              </p>
+            </div>
+          </div>
+
+          {/* Product info summary */}
+          <div className="rounded-md border bg-muted/50 p-3 space-y-1 text-sm">
+            <p>
+              <span className="text-muted-foreground">SKU/EAN:</span>{" "}
+              {product.ean || product.sku || "---"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Zdjecia:</span>{" "}
+              {(product.images?.length ?? 0) > 0
+                ? `${product.images!.length} zdjec`
+                : "Brak"}
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Anuluj
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+          >
+            {createListing.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Wystaw na eBay
           </Button>
         </DialogFooter>
       </DialogContent>
