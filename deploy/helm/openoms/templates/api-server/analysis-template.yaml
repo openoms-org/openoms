@@ -34,7 +34,7 @@ spec:
                         curl -sf --max-time 10 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/health
                         echo ""
                         echo "Checking config endpoint..."
-                        curl -sf --max-time 10 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/v1/openapi.yaml > /dev/null
+                        curl -sf --max-time 10 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/v1/config/public > /dev/null
                         echo "Smoke tests passed"
                     securityContext:
                       allowPrivilegeEscalation: false
