@@ -90,10 +90,8 @@ func (h *EbayAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	authURL := client.AuthorizationURL(state)
 
 	slog.Info("ebay OAuth: generated auth URL",
-		"auth_url", authURL,
 		"redirect_uri", h.redirectURI(),
 		"sandbox", creds.Sandbox,
-		"app_id_prefix", creds.AppID[:min(8, len(creds.AppID))]+"...",
 	)
 
 	writeJSON(w, http.StatusOK, map[string]string{
@@ -105,6 +103,7 @@ func (h *EbayAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 
 // HandleCallback exchanges an eBay OAuth2 authorization code for tokens and updates the integration.
 func (h *EbayAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	var body struct {
 		Code  string `json:"code"`
 		State string `json:"state"`
