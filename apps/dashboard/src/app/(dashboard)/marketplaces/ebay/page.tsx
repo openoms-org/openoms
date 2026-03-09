@@ -49,6 +49,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Integration } from "@/types/api";
+import { EbayTabNav } from "./_components/ebay-tab-nav";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -184,6 +185,8 @@ function EbayMainPage() {
             </p>
           </div>
         </div>
+
+        <EbayTabNav />
 
         {ebay ? (
           <ConnectedState integration={ebay} onRefetch={refetch} />
