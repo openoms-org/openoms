@@ -271,18 +271,18 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 // APIError represents an error response from the eBay API.
 type APIError struct {
-	StatusCode int      `json:"-"`
-	Errors     []EbErr  `json:"errors"`
-	Message    string   `json:"-"`
+	StatusCode int     `json:"-"`
+	Errors     []EbErr `json:"errors"`
+	Message    string  `json:"-"`
 }
 
 // EbErr represents a single error in an eBay error response.
 type EbErr struct {
-	ErrorID   int    `json:"errorId"`
-	Domain    string `json:"domain"`
-	Category  string `json:"category"`
-	Message   string `json:"message"`
-	LongMsg   string `json:"longMessage"`
+	ErrorID  int    `json:"errorId"`
+	Domain   string `json:"domain"`
+	Category string `json:"category"`
+	Message  string `json:"message"`
+	LongMsg  string `json:"longMessage"`
 }
 
 func (e *APIError) Error() string {

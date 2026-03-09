@@ -12,18 +12,18 @@ type OrderSearchResponse struct {
 
 // Order represents an eBay order from the Fulfillment API v1.
 type Order struct {
-	OrderID          string           `json:"orderId"`
-	LegacyOrderID    string           `json:"legacyOrderId"`
-	CreationDate     string           `json:"creationDate"`
-	LastModifiedDate string           `json:"lastModifiedDate"`
-	OrderFulfStatus  string           `json:"orderFulfillmentStatus"`
-	OrderPaymentStat string           `json:"orderPaymentStatus"`
-	PricingSummary   PricingSummary   `json:"pricingSummary"`
-	Buyer            BuyerInfo        `json:"buyer"`
-	FulfillmentSOs   []FulfillmentSO  `json:"fulfillmentStartInstructions"`
-	LineItems        []LineItem       `json:"lineItems"`
-	SalesRecordRef   string           `json:"salesRecordReference,omitempty"`
-	CancelStatus     *CancelStatus    `json:"cancelStatus,omitempty"`
+	OrderID          string          `json:"orderId"`
+	LegacyOrderID    string          `json:"legacyOrderId"`
+	CreationDate     string          `json:"creationDate"`
+	LastModifiedDate string          `json:"lastModifiedDate"`
+	OrderFulfStatus  string          `json:"orderFulfillmentStatus"`
+	OrderPaymentStat string          `json:"orderPaymentStatus"`
+	PricingSummary   PricingSummary  `json:"pricingSummary"`
+	Buyer            BuyerInfo       `json:"buyer"`
+	FulfillmentSOs   []FulfillmentSO `json:"fulfillmentStartInstructions"`
+	LineItems        []LineItem      `json:"lineItems"`
+	SalesRecordRef   string          `json:"salesRecordReference,omitempty"`
+	CancelStatus     *CancelStatus   `json:"cancelStatus,omitempty"`
 }
 
 // PricingSummary contains order-level price totals.
@@ -46,9 +46,9 @@ type Amount struct {
 
 // BuyerInfo holds the buyer details.
 type BuyerInfo struct {
-	Username      string         `json:"username"`
-	TaxAddress    *TaxAddress    `json:"taxAddress,omitempty"`
-	BuyerRegInfo  *BuyerRegInfo  `json:"buyerRegistrationAddress,omitempty"`
+	Username     string        `json:"username"`
+	TaxAddress   *TaxAddress   `json:"taxAddress,omitempty"`
+	BuyerRegInfo *BuyerRegInfo `json:"buyerRegistrationAddress,omitempty"`
 }
 
 // TaxAddress is a simplified address used for tax purposes.
@@ -60,10 +60,10 @@ type TaxAddress struct {
 
 // BuyerRegInfo holds the buyer's registration address.
 type BuyerRegInfo struct {
-	FullName        string          `json:"fullName"`
-	ContactAddress  *ContactAddress `json:"contactAddress,omitempty"`
-	Email           string          `json:"email,omitempty"`
-	PrimaryPhone    *Phone          `json:"primaryPhone,omitempty"`
+	FullName       string          `json:"fullName"`
+	ContactAddress *ContactAddress `json:"contactAddress,omitempty"`
+	Email          string          `json:"email,omitempty"`
+	PrimaryPhone   *Phone          `json:"primaryPhone,omitempty"`
 }
 
 // ContactAddress holds structured address fields.
@@ -101,19 +101,19 @@ type ShipTo struct {
 
 // LineItem represents a single line item in an eBay order.
 type LineItem struct {
-	LineItemID    string `json:"lineItemId"`
+	LineItemID   string `json:"lineItemId"`
 	LegacyItemID string `json:"legacyItemId"`
-	Title         string `json:"title"`
-	SKU           string `json:"sku,omitempty"`
-	Quantity      int    `json:"quantity"`
-	LineItemCost  Amount `json:"lineItemCost"`
-	Total         Amount `json:"total"`
+	Title        string `json:"title"`
+	SKU          string `json:"sku,omitempty"`
+	Quantity     int    `json:"quantity"`
+	LineItemCost Amount `json:"lineItemCost"`
+	Total        Amount `json:"total"`
 }
 
 // CancelStatus contains cancellation information.
 type CancelStatus struct {
-	CancelState     string `json:"cancelState"`
-	CancelRequests  []any  `json:"cancelRequests,omitempty"`
+	CancelState    string `json:"cancelState"`
+	CancelRequests []any  `json:"cancelRequests,omitempty"`
 }
 
 // ShippingFulfillmentRequest is the request body for creating a shipping fulfillment.
