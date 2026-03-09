@@ -192,6 +192,68 @@ func (h *EbayHandler) buildLineItems(ctx context.Context, client *ebaysdk.Client
 	return lineItems, nil
 }
 
+// IssueRefund handles POST /v1/integrations/ebay/orders/{orderId}/refund.
+// It issues a refund on eBay for the given order.
+func (h *EbayHandler) IssueRefund(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	tenantID := middleware.TenantIDFromContext(ctx)
+	orderIDStr := chi.URLParam(r, "orderId")
+
+	orderID, err := uuid.Parse(orderIDStr)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid order ID")
+		return
+	}
+
+	var body struct {
+		Reason  string               `json:"reason"`
+		Comment string               `json:"comment,omitempty"`
+		Items   []ebaysdk.RefundItem `json:"items,omitempty"`
+		Amount  *ebaysdk.Amount      `json:"amount,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if body.Reason == "" {
+		writeError(w, http.StatusBadRequest, "reason is required")
+		return
+	}
+
+	order, err := h.orderService.Get(ctx, tenantID, orderID)
+	if err != nil {
+		slog.Error("ebay refund: get order failed", "error", err)
+		writeError(w, http.StatusNotFound, "order not found")
+		return
+	}
+	if order.ExternalID == nil || *order.ExternalID == "" {
+		writeError(w, http.StatusBadRequest, "order has no external eBay ID")
+		return
+	}
+
+	client, err := h.getClient(ctx, tenantID)
+	if err != nil {
+		writeServerError(w, "failed to connect to eBay", err)
+		return
+	}
+
+	refundReq := ebaysdk.IssueRefundRequest{
+		ReasonForRefund:        body.Reason,
+		Comment:                body.Comment,
+		RefundItems:            body.Items,
+		OrderLevelRefundAmount: body.Amount,
+	}
+
+	result, err := client.Fulfillment.IssueRefund(ctx, *order.ExternalID, refundReq)
+	if err != nil {
+		slog.Error("ebay refund: issue refund failed", "order_id", orderIDStr, "error", err)
+		writeServerError(w, "failed to issue refund on eBay", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
 // ListCarriers handles GET /v1/integrations/ebay/carriers.
 // It returns the list of available eBay shipping carrier codes.
 func (h *EbayHandler) ListCarriers(w http.ResponseWriter, _ *http.Request) {

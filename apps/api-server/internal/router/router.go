@@ -735,6 +735,7 @@ func New(deps RouterDeps) *chi.Mux {
 					if deps.Ebay != nil {
 						r.Get("/carriers", deps.Ebay.ListCarriers)
 						r.Post("/orders/{orderId}/tracking", deps.Ebay.AddTracking)
+						r.Post("/orders/{orderId}/refund", deps.Ebay.IssueRefund)
 					}
 					if deps.EbayListings != nil {
 						r.Get("/policies", deps.EbayListings.ListPolicies)
