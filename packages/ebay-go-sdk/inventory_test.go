@@ -39,8 +39,8 @@ func TestInventoryUpdateStock(t *testing.T) {
 			t.Errorf("availableQuantity = %v, want 15", req["availableQuantity"])
 		}
 
-		resp := bulkUpdateResponse{
-			Responses: []bulkUpdateItemResponse{
+		resp := BulkUpdateResponse{
+			Responses: []BulkUpdateItemResponse{
 				{OfferID: "OFFER-123", StatusCode: 200},
 			},
 		}
@@ -87,8 +87,8 @@ func TestInventoryUpdatePrice(t *testing.T) {
 			t.Errorf("price.currency = %v, want PLN", price["currency"])
 		}
 
-		resp := bulkUpdateResponse{
-			Responses: []bulkUpdateItemResponse{
+		resp := BulkUpdateResponse{
+			Responses: []BulkUpdateItemResponse{
 				{OfferID: "OFFER-456", StatusCode: 200},
 			},
 		}
@@ -111,8 +111,8 @@ func TestInventoryUpdatePrice(t *testing.T) {
 
 func TestInventoryUpdateStock_BulkError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		resp := bulkUpdateResponse{
-			Responses: []bulkUpdateItemResponse{
+		resp := BulkUpdateResponse{
+			Responses: []BulkUpdateItemResponse{
 				{
 					OfferID:    "OFFER-789",
 					StatusCode: 400,

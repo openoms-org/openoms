@@ -28,6 +28,7 @@ type EbayListingsHandler struct {
 	productService     *service.ProductService
 	listingRepo        *repository.ProductListingRepository
 	pool               *pgxpool.Pool
+	ebayImportService  *service.EbayImportService
 }
 
 // NewEbayListingsHandler creates a new EbayListingsHandler.
@@ -36,12 +37,14 @@ func NewEbayListingsHandler(
 	productService *service.ProductService,
 	listingRepo *repository.ProductListingRepository,
 	pool *pgxpool.Pool,
+	ebayImportService *service.EbayImportService,
 ) *EbayListingsHandler {
 	return &EbayListingsHandler{
 		integrationService: integrationService,
 		productService:     productService,
 		listingRepo:        listingRepo,
 		pool:               pool,
+		ebayImportService:  ebayImportService,
 	}
 }
 
@@ -334,6 +337,23 @@ func (h *EbayListingsHandler) ListOffers(w http.ResponseWriter, r *http.Request)
 	result, err := provider.Client().Offers.GetOffers(ctx, sku, limit, offset)
 	if err != nil {
 		writeServerError(w, "failed to get eBay offers", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
+}
+
+// ImportOffers handles POST /v1/integrations/ebay/import-offers.
+func (h *EbayListingsHandler) ImportOffers(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	if tenantID == uuid.Nil {
+		writeError(w, http.StatusUnauthorized, "missing tenant context")
+		return
+	}
+
+	result, err := h.ebayImportService.ImportOffers(r.Context(), tenantID)
+	if err != nil {
+		writeServerError(w, "failed to import offers from eBay", err)
 		return
 	}
 
