@@ -163,6 +163,9 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 		Name:     req.Name,
 		Role:     "owner",
 	}
+	if req.Language != "" {
+		user.Language = &req.Language
+	}
 
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := s.tenantRepo.Create(ctx, tx, tenant); err != nil {

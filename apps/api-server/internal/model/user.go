@@ -16,6 +16,7 @@ type User struct {
 	Name         string     `json:"name"`
 	Role         string     `json:"role"`
 	RoleID       *uuid.UUID `json:"role_id,omitempty"`
+	Language     *string    `json:"language,omitempty"`
 	LastLoginAt  *time.Time `json:"last_login_at,omitempty"`
 	LastLogoutAt *time.Time `json:"last_logout_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`

@@ -44,6 +44,7 @@ type RegisterRequest struct {
 	Email                   string         `json:"email"`
 	Password                string         `json:"password"`
 	Name                    string         `json:"name"`
+	Language                string         `json:"language,omitempty"`
 	TenantName              string         `json:"tenant_name"`
 	TenantSlug              string         `json:"tenant_slug"`
 	InviteToken             string         `json:"invite_token,omitempty"`
@@ -154,14 +155,15 @@ func (r *CreateUserRequest) Validate() error {
 
 // UpdateUserRequest is the body of PATCH /v1/users/{id}.
 type UpdateUserRequest struct {
-	Name   *string    `json:"name,omitempty"`
-	Role   *string    `json:"role,omitempty"`
-	RoleID *uuid.UUID `json:"role_id,omitempty"`
+	Name     *string    `json:"name,omitempty"`
+	Role     *string    `json:"role,omitempty"`
+	RoleID   *uuid.UUID `json:"role_id,omitempty"`
+	Language *string    `json:"language,omitempty"`
 }
 
 func (r *UpdateUserRequest) Validate() error {
-	if r.Name == nil && r.Role == nil && r.RoleID == nil {
-		return errors.New("at least one field (name, role, or role_id) must be provided")
+	if r.Name == nil && r.Role == nil && r.RoleID == nil && r.Language == nil {
+		return errors.New("at least one field (name, role, role_id, or language) must be provided")
 	}
 	if r.Role != nil {
 		switch *r.Role {
@@ -169,6 +171,14 @@ func (r *UpdateUserRequest) Validate() error {
 			// valid
 		default:
 			return errors.New("role must be one of: owner, admin, member")
+		}
+	}
+	if r.Language != nil && *r.Language != "" {
+		switch *r.Language {
+		case "pl", "en":
+			// valid
+		default:
+			return errors.New("language must be one of: pl, en")
 		}
 	}
 	return nil

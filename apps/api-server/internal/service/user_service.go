@@ -179,6 +179,13 @@ func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID
 			}
 			user.RoleID = req.RoleID
 		}
+		if req.Language != nil {
+			changes["language"] = map[string]any{"old": user.Language, "new": *req.Language}
+			if err := s.userRepo.UpdateLanguage(ctx, tx, userID, req.Language); err != nil {
+				return fmt.Errorf("update language: %w", err)
+			}
+			user.Language = req.Language
+		}
 
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,

@@ -58,6 +58,7 @@ type UserRepo interface {
 	UpdateRole(ctx context.Context, tx pgx.Tx, id uuid.UUID, role string) error
 	UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UUID, roleID *uuid.UUID) error
 	UpdateName(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string) error
+	UpdateLanguage(ctx context.Context, tx pgx.Tx, id uuid.UUID, language *string) error
 	UpdateLastLogin(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	UpdateLastLogout(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error

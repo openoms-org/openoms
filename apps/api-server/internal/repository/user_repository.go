@@ -30,9 +30,9 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) FindForAuth(ctx context.Context, email string, tenantID uuid.UUID) (*UserWithPassword, error) {
 	var u UserWithPassword
 	err := r.pool.QueryRow(ctx,
-		"SELECT id, tenant_id, email, name, password_hash, role, role_id, created_at, updated_at, totp_secret, totp_enabled FROM find_user_for_auth($1, $2)",
+		"SELECT id, tenant_id, email, name, password_hash, role, role_id, created_at, updated_at, totp_secret, totp_enabled, language FROM find_user_for_auth($1, $2)",
 		email, tenantID,
-	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.PasswordHash, &u.Role, &u.RoleID, &u.CreatedAt, &u.UpdatedAt, &u.TOTPSecret, &u.TOTPEnabled)
+	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.PasswordHash, &u.Role, &u.RoleID, &u.CreatedAt, &u.UpdatedAt, &u.TOTPSecret, &u.TOTPEnabled, &u.Language)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -47,9 +47,9 @@ func (r *UserRepository) FindForAuth(ctx context.Context, email string, tenantID
 func (r *UserRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.User, error) {
 	var u model.User
 	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, email, name, role, role_id, last_login_at, last_logout_at, created_at, updated_at
+		`SELECT id, tenant_id, email, name, role, role_id, language, last_login_at, last_logout_at, created_at, updated_at
 		 FROM users WHERE id = $1`, id,
-	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.RoleID, &u.LastLoginAt, &u.LastLogoutAt, &u.CreatedAt, &u.UpdatedAt)
+	).Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.RoleID, &u.Language, &u.LastLoginAt, &u.LastLogoutAt, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -62,7 +62,7 @@ func (r *UserRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) 
 // List returns all users for the current tenant.
 func (r *UserRepository) List(ctx context.Context, tx pgx.Tx) ([]model.User, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, tenant_id, email, name, role, role_id, last_login_at, last_logout_at, created_at, updated_at
+		`SELECT id, tenant_id, email, name, role, role_id, language, last_login_at, last_logout_at, created_at, updated_at
 		 FROM users ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
@@ -72,7 +72,7 @@ func (r *UserRepository) List(ctx context.Context, tx pgx.Tx) ([]model.User, err
 	var users []model.User
 	for rows.Next() {
 		var u model.User
-		if err := rows.Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.RoleID, &u.LastLoginAt, &u.LastLogoutAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.TenantID, &u.Email, &u.Name, &u.Role, &u.RoleID, &u.Language, &u.LastLoginAt, &u.LastLogoutAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		users = append(users, u)
@@ -93,10 +93,10 @@ func (r *UserRepository) Count(ctx context.Context, tx pgx.Tx) (int, error) {
 // Create inserts a new user with password hash.
 func (r *UserRepository) Create(ctx context.Context, tx pgx.Tx, user *model.User, passwordHash string) error {
 	return tx.QueryRow(ctx,
-		`INSERT INTO users (id, tenant_id, email, name, password_hash, role)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO users (id, tenant_id, email, name, password_hash, role, language)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
 		 RETURNING created_at, updated_at`,
-		user.ID, user.TenantID, user.Email, user.Name, passwordHash, user.Role,
+		user.ID, user.TenantID, user.Email, user.Name, passwordHash, user.Role, user.Language,
 	).Scan(&user.CreatedAt, &user.UpdatedAt)
 }
 
@@ -134,6 +134,12 @@ func (r *UserRepository) UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UU
 		return fmt.Errorf("user not found")
 	}
 	return nil
+}
+
+// UpdateLanguage updates a user's language preference.
+func (r *UserRepository) UpdateLanguage(ctx context.Context, tx pgx.Tx, id uuid.UUID, language *string) error {
+	_, err := tx.Exec(ctx, "UPDATE users SET language = $1, updated_at = NOW() WHERE id = $2", language, id)
+	return err
 }
 
 // UpdateLastLogin sets last_login_at to now.
