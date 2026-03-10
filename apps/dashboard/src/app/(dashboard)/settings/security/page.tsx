@@ -28,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import QRCode from "qrcode";
 import type { TwoFASetupResponse, TwoFAStatusResponse } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { LanguageSelector } from "@/components/language-selector";
 
 function QRCodeCanvas({ data, size }: { data: string; size: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -210,6 +211,19 @@ export default function SecuritySettingsPage() {
               <li>{t("przyKazdymLogowaniuBedzieszProszonyOKodZAplikacji")}</li>
             </ol>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Language */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("language")}</CardTitle>
+          <CardDescription>
+            {t("languageDescription")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LanguageSelector />
         </CardContent>
       </Card>
 

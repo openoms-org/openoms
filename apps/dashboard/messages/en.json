@@ -1892,7 +1892,10 @@
     "błedy1": "Błedy",
     "szczegołysynchronizacji": "Szczegołysynchronizacji",
     "komunikatbłedu": "Komunikatbłedu",
-    "przegladWszystkichZadanSynchronizacjiZZewnetrznymi": "Przeglad wszystkich zadan synchronizacji zzewnetrznymi"
+    "przegladWszystkichZadanSynchronizacjiZZewnetrznymi": "Przeglad wszystkich zadan synchronizacji zzewnetrznymi",
+    "language": "Language",
+    "languageDescription": "Choose your preferred language",
+    "languageSaveFailed": "Failed to save language preference"
   },
   "shared": {
     "sidebar": {

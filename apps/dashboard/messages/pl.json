@@ -1892,7 +1892,10 @@
     "błedy1": "błedy",
     "szczegołysynchronizacji": "szczegołySynchronizacji",
     "komunikatbłedu": "komunikatBłedu",
-    "przegladWszystkichZadanSynchronizacjiZZewnetrznymi": "Przegląd wszystkich zadań synchronizacji z zewnętrznymi integracjami"
+    "przegladWszystkichZadanSynchronizacjiZZewnetrznymi": "Przegląd wszystkich zadań synchronizacji z zewnętrznymi integracjami",
+    "language": "Język",
+    "languageDescription": "Wybierz preferowany język",
+    "languageSaveFailed": "Nie udało się zapisać preferencji języka"
   },
   "shared": {
     "sidebar": {
