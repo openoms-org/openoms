@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useOrders, exportOrdersCSV } from "@/hooks/use-orders";
 import { DataTable, type ColumnDef, type EditableColumnConfig } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -62,6 +63,8 @@ function useViewMode(): [ViewMode, (mode: ViewMode) => void] {
 export default function OrdersPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
   const [filters, setFilters] = useState<{ status?: string; source?: string; search?: string; payment_status?: string; tag?: string; priority?: string }>({});
@@ -133,32 +136,32 @@ export default function OrdersPage() {
 
   const columns: ColumnDef<Order>[] = [
     {
-      header: "ID",
+      header: t("columns.id"),
       accessorKey: "id",
       cell: (row) => (
         <span className="font-mono text-xs">{shortId(row.id)}</span>
       ),
     },
     {
-      header: "Klient",
+      header: t("columns.customer"),
       accessorKey: "customer_name",
       sortable: true,
     },
     {
-      header: "Źródło",
+      header: t("columns.source"),
       accessorKey: "source",
       cell: (row) => ORDER_SOURCE_LABELS[row.source] || row.source,
       sortable: true,
       className: "hidden lg:table-cell",
     },
     {
-      header: "Status",
+      header: t("columns.status"),
       accessorKey: "status",
       cell: (row) => <StatusBadge status={row.status} statusMap={orderStatuses} />,
       sortable: true,
     },
     {
-      header: "Priorytet",
+      header: t("columns.priority"),
       accessorKey: "priority",
       cell: (row) => {
         const priority = row.priority || "normal";
@@ -174,20 +177,20 @@ export default function OrdersPage() {
       className: "hidden lg:table-cell",
     },
     {
-      header: "Kwota",
+      header: t("columns.amount"),
       accessorKey: "total_amount",
       cell: (row) => formatCurrency(row.total_amount, row.currency),
       sortable: true,
     },
     {
-      header: "Płatność",
+      header: t("columns.payment"),
       accessorKey: "payment_status",
       cell: (row) => <StatusBadge status={row.payment_status} statusMap={PAYMENT_STATUSES} />,
       sortable: true,
       className: "hidden lg:table-cell",
     },
     {
-      header: "Notatki",
+      header: t("columns.notes"),
       accessorKey: "notes",
       cell: (row) => (
         <span className="text-sm text-muted-foreground truncate max-w-[200px] inline-block">
@@ -197,7 +200,7 @@ export default function OrdersPage() {
       className: "hidden md:table-cell",
     },
     {
-      header: "Tagi",
+      header: t("columns.tags"),
       accessorKey: "tags" as const,
       cell: (row: Order) => (
         <div className="flex flex-wrap gap-1">
@@ -211,7 +214,7 @@ export default function OrdersPage() {
       className: "hidden lg:table-cell",
     },
     {
-      header: "Data",
+      header: t("columns.date"),
       accessorKey: "created_at",
       cell: (row) => formatDate(row.created_at),
       sortable: true,
@@ -240,9 +243,9 @@ export default function OrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Zamówienia</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Zarządzaj zamówieniami w systemie
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -264,7 +267,7 @@ export default function OrdersPage() {
                     <LayoutGrid className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Widok tabeli</TooltipContent>
+                <TooltipContent>{tc("tableView")}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -280,17 +283,17 @@ export default function OrdersPage() {
                     <Columns3 className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Widok Kanban</TooltipContent>
+                <TooltipContent>{tc("kanbanView")}</TooltipContent>
               </Tooltip>
             </div>
           </TooltipProvider>
 
           <Button variant="outline" onClick={() => exportOrdersCSV({ ...filters, limit: 10000, offset: 0 })}>
             <Download className="mr-2 h-4 w-4" />
-            Eksportuj CSV
+            {tc("exportCsv")}
           </Button>
           <Button asChild>
-            <Link href="/orders/new">Nowe zamówienie</Link>
+            <Link href="/orders/new">{t("newOrder")}</Link>
           </Button>
         </div>
       </div>
@@ -300,7 +303,7 @@ export default function OrdersPage() {
       {isError && viewMode === "table" && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {tc("loadError")}
           </p>
           <Button
             variant="outline"
@@ -308,7 +311,7 @@ export default function OrdersPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {tc("retry")}
           </Button>
         </div>
       )}
@@ -327,7 +330,7 @@ export default function OrdersPage() {
                 onClick={() => setShowMergeDialog(true)}
               >
                 <Merge className="mr-2 h-4 w-4" />
-                Scal zamówienia ({selectedIds.size})
+                {t("merge.button", { count: selectedIds.size })}
               </Button>
             )}
             <Button
@@ -350,12 +353,12 @@ export default function OrdersPage() {
                     .map((s) => s.id);
 
                   if (shipmentIds.length === 0) {
-                    toast.error("Brak przesylek z etykietami dla wybranych zamowien");
+                    toast.error(t("labels.noLabels"));
                     return;
                   }
 
                   await batchLabels.mutateAsync({ shipment_ids: shipmentIds });
-                  toast.success(`Pobrano etykiety (${shipmentIds.length})`);
+                  toast.success(t("labels.downloaded", { count: shipmentIds.length }));
                 } catch (error) {
                   toast.error(getErrorMessage(error));
                 }
@@ -363,7 +366,7 @@ export default function OrdersPage() {
               disabled={batchLabels.isPending}
             >
               <Printer className="mr-2 h-4 w-4" />
-              Generuj etykiety ({selectedIds.size})
+              {t("labels.generate", { count: selectedIds.size })}
             </Button>
           </div>
         </div>
@@ -385,10 +388,10 @@ export default function OrdersPage() {
               emptyState={
                 <EmptyState
                   icon={ShoppingCart}
-                  title="Brak zamówień"
-                  description="Połącz Allegro, aby automatycznie importować zamówienia, lub dodaj je ręcznie."
-                  action={{ label: "Połącz Allegro", href: "/integrations" }}
-                  secondaryAction={{ label: "Dodaj zamówienie", href: "/orders/new" }}
+                  title={t("empty.title")}
+                  description={t("empty.description")}
+                  action={{ label: t("empty.connectAllegro"), href: "/integrations" }}
+                  secondaryAction={{ label: t("empty.addOrder"), href: "/orders/new" }}
                 />
               }
               onRowClick={(row) => router.push(`/orders/${row.id}`)}
@@ -418,16 +421,13 @@ export default function OrdersPage() {
       <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Scal zamówienia</DialogTitle>
+            <DialogTitle>{t("merge.title")}</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz scalić {selectedIds.size} zamówień w jedno?
-              Pozycje ze wszystkich zamówień zostaną połączone, a kwoty
-              zsumowane. Oryginalne zamówienia otrzymają status
-              &quot;merged&quot;.
+              {t("merge.description", { count: selectedIds.size })}
             </DialogDescription>
           </DialogHeader>
           <div className="text-sm text-muted-foreground">
-            <p className="font-medium mb-1">Wybrane zamówienia:</p>
+            <p className="font-medium mb-1">{t("merge.selectedOrders")}</p>
             <ul className="list-disc pl-5 space-y-1">
               {selectedOrders.map((o) => (
                 <li key={o.id}>
@@ -438,7 +438,7 @@ export default function OrdersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMergeDialog(false)}>
-              Anuluj
+              {tc("cancel")}
             </Button>
             <Button
               onClick={async () => {
@@ -446,7 +446,7 @@ export default function OrdersPage() {
                   await mergeOrders.mutateAsync({
                     order_ids: Array.from(selectedIds),
                   });
-                  toast.success("Zamówienia zostały scalone");
+                  toast.success(t("merge.success"));
                   setShowMergeDialog(false);
                   setSelectedIds(new Set());
                 } catch (error) {
@@ -455,7 +455,7 @@ export default function OrdersPage() {
               }}
               disabled={mergeOrders.isPending}
             >
-              {mergeOrders.isPending ? "Scalanie..." : "Scal zamówienia"}
+              {mergeOrders.isPending ? t("merge.merging") : t("merge.title")}
             </Button>
           </DialogFooter>
         </DialogContent>

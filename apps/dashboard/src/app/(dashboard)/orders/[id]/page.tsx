@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Package, RotateCcw, Printer, FileText, Scissors, GitBranch, Headphones, Loader2, Plus, ExternalLink, Copy, Check, StickyNote, Save, Tag, Send, ChevronDown, Factory } from "lucide-react";
 import { RateShopping } from "@/components/shipping/rate-shopping";
@@ -106,6 +107,8 @@ function CollapsibleSection({
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSplitDialog, setShowSplitDialog] = useState(false);
@@ -159,7 +162,7 @@ export default function OrderDetailPage() {
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
       await updateOrder.mutateAsync(data as unknown as UpdateOrderRequest);
-      toast.success("Zamówienie zostało zaktualizowane");
+      toast.success(t("detail.orderUpdated"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -169,7 +172,7 @@ export default function OrderDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteOrder.mutateAsync(params.id);
-      toast.success("Zamówienie zostało usunięte");
+      toast.success(t("detail.orderDeleted"));
       router.push("/orders");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -179,7 +182,7 @@ export default function OrderDetailPage() {
   const handleTransition = async (newStatus: string, force?: boolean) => {
     try {
       await transitionStatus.mutateAsync({ status: newStatus, force });
-      toast.success("Status zamówienia został zmieniony");
+      toast.success(t("detail.statusChanged"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -201,9 +204,9 @@ export default function OrderDetailPage() {
   if (!order) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono zamówienia</p>
+        <p className="text-muted-foreground">{t("detail.notFound")}</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/orders")}>
-          Wróć do listy
+          {t("detail.backToList")}
         </Button>
       </div>
     );
@@ -213,9 +216,9 @@ export default function OrderDetailPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Edycja zamówienia</h1>
+          <h1 className="text-2xl font-bold">{t("editOrder")}</h1>
           <p className="text-muted-foreground mt-1">
-            Zamówienie {shortId(order.id)}
+            {t("detail.orderNumber", { id: shortId(order.id) })}
           </p>
         </div>
         <div className="max-w-2xl">
@@ -235,10 +238,10 @@ export default function OrderDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">
-            Zamówienie {shortId(order.id)}
+            {t("detail.orderNumber", { id: shortId(order.id) })}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Utworzone {formatDate(order.created_at)}
+            {t("detail.createdOn", { date: formatDate(order.created_at) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -252,12 +255,12 @@ export default function OrderDetailPage() {
                 window.open(url, "_blank");
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
               } catch {
-                toast.error("Nie udało się pobrać wydruku");
+                toast.error(t("detail.printError"));
               }
             }}
           >
             <Printer className="mr-2 h-4 w-4" />
-            Drukuj
+            {t("detail.print")}
           </Button>
           <Button
             variant="outline"
@@ -269,16 +272,16 @@ export default function OrderDetailPage() {
                 window.open(url, "_blank");
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
               } catch {
-                toast.error("Nie udało się pobrać listu przewozowego");
+                toast.error(t("detail.packingSlipError"));
               }
             }}
           >
             <FileText className="mr-2 h-4 w-4" />
-            List przewozowy
+            {t("detail.packingSlip")}
           </Button>
           <Button variant="outline" onClick={() => setShowAddPackageDialog(true)}>
             <Package className="mr-2 h-4 w-4" />
-            Dodaj paczkę
+            {t("detail.addPackage")}
           </Button>
           {order.source === "allegro" && order.external_id && (
             <>
@@ -295,7 +298,7 @@ export default function OrderDetailPage() {
           <Button variant="outline" asChild>
             <Link href={`/returns/new?order_id=${params.id}`}>
               <RotateCcw className="mr-2 h-4 w-4" />
-              Zgłoś zwrot
+              {t("detail.reportReturn")}
             </Link>
           </Button>
           <Button
@@ -304,7 +307,7 @@ export default function OrderDetailPage() {
               const returnUrl = `${window.location.origin}/return-request?order_id=${params.id}`;
               navigator.clipboard.writeText(returnUrl).then(() => {
                 setReturnLinkCopied(true);
-                toast.success("Link do formularza zwrotu skopiowany do schowka");
+                toast.success(t("detail.returnLinkCopied"));
                 setTimeout(() => setReturnLinkCopied(false), 2000);
               });
             }}
@@ -314,12 +317,12 @@ export default function OrderDetailPage() {
             ) : (
               <ExternalLink className="mr-2 h-4 w-4" />
             )}
-            Link do zwrotu
+            {t("detail.returnLink")}
           </Button>
           {order.status !== "merged" && order.status !== "split" && order.items && order.items.length >= 2 && (
             <Button variant="outline" onClick={() => setShowSplitDialog(true)}>
               <Scissors className="mr-2 h-4 w-4" />
-              Podziel zamówienie
+              {t("detail.splitOrder")}
             </Button>
           )}
           <Button
@@ -327,7 +330,7 @@ export default function OrderDetailPage() {
             onClick={async () => {
               try {
                 const newOrder = await duplicateOrder.mutateAsync(params.id);
-                toast.success("Zamówienie zostało zduplikowane");
+                toast.success(t("detail.duplicated"));
                 router.push(`/orders/${newOrder.id}`);
               } catch (error) {
                 toast.error(getErrorMessage(error));
@@ -340,13 +343,13 @@ export default function OrderDetailPage() {
             ) : (
               <Copy className="mr-2 h-4 w-4" />
             )}
-            Duplikuj zamówienie
+            {t("detail.duplicateOrder")}
           </Button>
           <Button variant="outline" onClick={() => setIsEditing(true)}>
-            Edytuj
+            {tc("edit")}
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            Usuń
+            {tc("delete")}
           </Button>
         </div>
       </div>
@@ -355,25 +358,25 @@ export default function OrderDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Dane zamówienia</CardTitle>
+              <CardTitle>{t("detail.orderData")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
+                  <p className="text-sm text-muted-foreground">{tc("status")}</p>
                   <div className="mt-1">
                     <StatusBadge status={order.status} statusMap={orderStatuses} />
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Priorytet</p>
+                  <p className="text-sm text-muted-foreground">{t("form.priority")}</p>
                   <div className="mt-1">
                     <Select
                       value={order.priority || "normal"}
                       onValueChange={async (value) => {
                         try {
                           await updateOrder.mutateAsync({ priority: value as "urgent" | "high" | "normal" | "low" });
-                          toast.success("Priorytet zamówienia został zmieniony");
+                          toast.success(t("detail.priorityChanged"));
                         } catch (error) {
                           toast.error(getErrorMessage(error));
                         }
@@ -382,7 +385,7 @@ export default function OrderDetailPage() {
                       <SelectTrigger className="w-[140px]" size="sm">
                         <SelectValue>
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${ORDER_PRIORITIES[order.priority || "normal"]?.color || ""}`}>
-                            {ORDER_PRIORITIES[order.priority || "normal"]?.label || "Normalny"}
+                            {ORDER_PRIORITIES[order.priority || "normal"]?.label || t("detail.orderData")}
                           </span>
                         </SelectValue>
                       </SelectTrigger>
@@ -399,40 +402,40 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Źródło</p>
+                  <p className="text-sm text-muted-foreground">{t("columns.source")}</p>
                   <p className="mt-1 font-medium">{order.source}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Kwota</p>
+                  <p className="text-sm text-muted-foreground">{t("columns.amount")}</p>
                   <p className="mt-1 font-medium">
                     {formatCurrency(order.total_amount, order.currency)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Waluta</p>
+                  <p className="text-sm text-muted-foreground">{t("form.currency")}</p>
                   <p className="mt-1 font-medium">{order.currency}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Płatność</p>
+                  <p className="text-sm text-muted-foreground">{t("columns.payment")}</p>
                   <div className="mt-1">
                     <StatusBadge status={order.payment_status} statusMap={PAYMENT_STATUSES} />
                   </div>
                 </div>
                 {order.payment_method && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Metoda płatności</p>
+                    <p className="text-sm text-muted-foreground">{t("form.paymentMethod")}</p>
                     <p className="mt-1 font-medium">{order.payment_method}</p>
                   </div>
                 )}
                 {order.paid_at && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Data opłacenia</p>
+                    <p className="text-sm text-muted-foreground">{t("detail.paidAt")}</p>
                     <p className="mt-1 font-medium">{formatDate(order.paid_at)}</p>
                   </div>
                 )}
                 {order.external_id && (
                   <div>
-                    <p className="text-sm text-muted-foreground">ID zewnętrzne</p>
+                    <p className="text-sm text-muted-foreground">{t("detail.externalId")}</p>
                     <p className="mt-1 font-mono text-sm">{order.external_id}</p>
                   </div>
                 )}
@@ -440,7 +443,7 @@ export default function OrderDetailPage() {
 
               {order.tags && order.tags.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Tagi</p>
+                  <p className="text-sm text-muted-foreground">{t("columns.tags")}</p>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {order.tags.map((tag) => (
                       <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
@@ -455,7 +458,7 @@ export default function OrderDetailPage() {
                 <>
                   <Separator />
                   <div>
-                    <p className="text-sm text-muted-foreground">Notatki</p>
+                    <p className="text-sm text-muted-foreground">{tc("notes")}</p>
                     <p className="mt-1 text-sm">{order.notes}</p>
                   </div>
                 </>
@@ -476,7 +479,7 @@ export default function OrderDetailPage() {
                     <Separator />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground mb-2">
-                        Pola dodatkowe
+                        {t("form.customFields")}
                       </p>
                       <div className="grid grid-cols-2 gap-4">
                         {fieldsWithValues
@@ -485,9 +488,9 @@ export default function OrderDetailPage() {
                             const value = metadata![field.key];
                             let displayValue: string;
                             if (field.type === "checkbox") {
-                              displayValue = value ? "Tak" : "Nie";
+                              displayValue = value ? t("customFieldYes") : t("customFieldNo");
                             } else if (field.type === "date" && typeof value === "string") {
-                              displayValue = new Date(value).toLocaleDateString("pl-PL");
+                              displayValue = new Date(value).toLocaleDateString();
                             } else {
                               displayValue = String(value);
                             }
@@ -508,7 +511,7 @@ export default function OrderDetailPage() {
 
           {order.items && order.items.length > 0 && (
             <CollapsibleSection
-              title="Pozycje zamówienia"
+              title={t("form.orderItems")}
               icon={Package}
               defaultOpen={true}
               badge={
@@ -520,11 +523,11 @@ export default function OrderDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Produkt</TableHead>
+                    <TableHead>{t("detail.product")}</TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead className="text-right">Ilość</TableHead>
-                    <TableHead className="text-right">Cena</TableHead>
-                    <TableHead className="text-right">Wartość</TableHead>
+                    <TableHead className="text-right">{tc("quantity")}</TableHead>
+                    <TableHead className="text-right">{tc("price")}</TableHead>
+                    <TableHead className="text-right">{t("detail.value")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -547,7 +550,7 @@ export default function OrderDetailPage() {
                 <TableFooter>
                   <TableRow>
                     <TableCell colSpan={4} className="font-medium">
-                      Razem
+                      {t("detail.total")}
                     </TableCell>
                     <TableCell className="text-right font-bold">
                       {formatCurrency(order.total_amount, order.currency)}
@@ -560,7 +563,7 @@ export default function OrderDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Zmiana statusu</CardTitle>
+              <CardTitle>{t("detail.statusChange")}</CardTitle>
             </CardHeader>
             <CardContent>
               <OrderStatusActions
@@ -572,7 +575,7 @@ export default function OrderDetailPage() {
           </Card>
 
           <CollapsibleSection
-            title="Paczki / Przesyłki"
+            title={t("detail.packages")}
             icon={Package}
             defaultOpen={!!(orderShipments && orderShipments.length > 0)}
             badge={
@@ -589,7 +592,7 @@ export default function OrderDetailPage() {
                 onClick={() => setShowAddPackageDialog(true)}
               >
                 <Plus className="h-4 w-4" />
-                Dodaj paczkę
+                {t("detail.addPackage")}
               </Button>
             }
           >
@@ -615,7 +618,7 @@ export default function OrderDetailPage() {
                             href={`/shipments/${shipment.id}`}
                             className="font-medium text-primary hover:underline"
                           >
-                            Paczka {shipment.package_number} z {orderShipments.length}
+                            {t("detail.packageOf", { num: shipment.package_number, total: orderShipments.length })}
                           </Link>
                           <p className="text-xs text-muted-foreground">
                             {shipment.provider.toUpperCase()} — {formatDate(shipment.created_at)}
@@ -626,7 +629,7 @@ export default function OrderDetailPage() {
                         <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/shipments/${shipment.id}`}>
-                            Szczegóły
+                            {tc("details")}
                           </Link>
                         </Button>
                       </div>
@@ -634,20 +637,20 @@ export default function OrderDetailPage() {
 
                     <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
                       <div>
-                        <p className="text-muted-foreground">Nr śledzenia</p>
+                        <p className="text-muted-foreground">{t("detail.trackingNumber")}</p>
                         <p className="font-medium">
                           {shipment.tracking_number || "—"}
                         </p>
                       </div>
                       {shipment.weight != null && (
                         <div>
-                          <p className="text-muted-foreground">Waga</p>
+                          <p className="text-muted-foreground">{t("detail.weight")}</p>
                           <p className="font-medium">{shipment.weight} kg</p>
                         </div>
                       )}
                       {(shipment.length != null || shipment.width != null || shipment.height != null) && (
                         <div>
-                          <p className="text-muted-foreground">Wymiary (cm)</p>
+                          <p className="text-muted-foreground">{t("detail.dimensions")}</p>
                           <p className="font-medium">
                             {shipment.length ?? "—"} x {shipment.width ?? "—"} x {shipment.height ?? "—"}
                           </p>
@@ -655,14 +658,14 @@ export default function OrderDetailPage() {
                       )}
                       {shipment.label_url && (
                         <div>
-                          <p className="text-muted-foreground">Etykieta</p>
+                          <p className="text-muted-foreground">{t("detail.label")}</p>
                           <a
                             href={sanitizeUrl(shipment.label_url)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-medium text-primary hover:underline"
                           >
-                            Pobierz
+                            {tc("download")}
                           </a>
                         </div>
                       )}
@@ -678,7 +681,7 @@ export default function OrderDetailPage() {
                     )}
                     {shipment.notes && (
                       <div className="text-sm">
-                        <p className="text-muted-foreground">Notatki</p>
+                        <p className="text-muted-foreground">{tc("notes")}</p>
                         <p className="mt-0.5">{shipment.notes}</p>
                       </div>
                     )}
@@ -688,9 +691,9 @@ export default function OrderDetailPage() {
                 {orderShipments.some((s) => s.carbon_kg != null) && (
                   <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30 mt-2">
                     <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                      Szacunkowy slad weglowy zamowienia: {orderShipments
+                      {t("detail.carbonFootprint", { amount: orderShipments
                         .reduce((sum, s) => sum + (s.carbon_kg ?? 0), 0)
-                        .toFixed(3)} kg CO2
+                        .toFixed(3) })}
                     </p>
                   </div>
                 )}
@@ -698,7 +701,7 @@ export default function OrderDetailPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Brak paczek dla tego zamówienia.</p>
+                <p className="text-sm text-muted-foreground">{t("detail.noPackages")}</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -706,7 +709,7 @@ export default function OrderDetailPage() {
                   onClick={() => setShowAddPackageDialog(true)}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Dodaj pierwszą paczkę
+                  {t("detail.addFirstPackage")}
                 </Button>
               </div>
             )}
@@ -723,7 +726,7 @@ export default function OrderDetailPage() {
           />
 
           <CollapsibleSection
-            title="Zwroty"
+            title={t("detail.returns")}
             icon={RotateCcw}
             defaultOpen={!!(returnsData?.items && returnsData.items.length > 0)}
             badge={
@@ -744,9 +747,9 @@ export default function OrderDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Powód</TableHead>
-                    <TableHead>Kwota zwrotu</TableHead>
+                    <TableHead>{tc("status")}</TableHead>
+                    <TableHead>{t("detail.reason")}</TableHead>
+                    <TableHead>{t("detail.refundAmount")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -769,7 +772,7 @@ export default function OrderDetailPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <RotateCcw className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Brak zwrotów dla tego zamówienia.</p>
+                <p className="text-sm text-muted-foreground">{t("detail.noReturns")}</p>
               </div>
             )}
           </CollapsibleSection>
@@ -795,9 +798,9 @@ export default function OrderDetailPage() {
                   try {
                     const result = await autoRouteDropship.mutateAsync(params.id);
                     if (result.length === 0) {
-                      toast.info("Brak produktów dropship w tym zamówieniu");
+                      toast.info(t("detail.noDropshipProducts"));
                     } else {
-                      toast.success(`Utworzono ${result.length} zamówień dropship`);
+                      toast.success(t("detail.dropshipCreated", { count: result.length }));
                     }
                   } catch (error) {
                     toast.error(getErrorMessage(error));
@@ -809,7 +812,7 @@ export default function OrderDetailPage() {
                 ) : (
                   <Factory className="mr-1 h-4 w-4" />
                 )}
-                Przekaż do dostawców
+                {t("detail.forwardToSuppliers")}
               </Button>
             }
           >
@@ -823,11 +826,11 @@ export default function OrderDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Dostawca</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Koszt</TableHead>
-                    <TableHead>Nr śledzenia</TableHead>
-                    <TableHead>Utworzono</TableHead>
+                    <TableHead>{t("detail.supplier")}</TableHead>
+                    <TableHead>{tc("status")}</TableHead>
+                    <TableHead>{t("detail.cost")}</TableHead>
+                    <TableHead>{t("detail.trackingNumber")}</TableHead>
+                    <TableHead>{tc("createdAt")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -848,12 +851,12 @@ export default function OrderDetailPage() {
                         <StatusBadge
                           status={d.status}
                           statusMap={{
-                            pending: { label: "Oczekujące", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-                            sent: { label: "Wysłane", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-                            confirmed: { label: "Potwierdzone", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
-                            shipped: { label: "W transporcie", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-                            delivered: { label: "Dostarczone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-                            cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+                            pending: { label: t("dropship.pending"), color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+                            sent: { label: t("dropship.sent"), color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
+                            confirmed: { label: t("dropship.confirmed"), color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
+                            shipped: { label: t("dropship.shipped"), color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
+                            delivered: { label: t("dropship.delivered"), color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
+                            cancelled: { label: t("dropship.cancelled"), color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
                           }}
                         />
                       </TableCell>
@@ -872,10 +875,10 @@ export default function OrderDetailPage() {
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Factory className="h-8 w-8 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Brak zamówień dropship dla tego zamówienia.
+                  {t("detail.noDropshipOrders")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Kliknij &quot;Przekaż do dostawców&quot; aby automatycznie utworzyć zamówienia dla produktów dropship.
+                  {t("detail.dropshipHint")}
                 </p>
               </div>
             )}
@@ -883,7 +886,7 @@ export default function OrderDetailPage() {
 
           {/* Helpdesk Tickets */}
           <CollapsibleSection
-            title="Zgłoszenia"
+            title={t("detail.tickets")}
             icon={Headphones}
             defaultOpen={!!(ticketsData?.tickets && ticketsData.tickets.length > 0)}
             badge={
@@ -900,7 +903,7 @@ export default function OrderDetailPage() {
                 onClick={() => setShowCreateTicketDialog(true)}
               >
                 <Plus className="h-4 w-4" />
-                Utwórz zgłoszenie
+                {t("detail.createTicket")}
               </Button>
             }
           >
@@ -914,9 +917,9 @@ export default function OrderDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Temat</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Utworzono</TableHead>
+                    <TableHead>{t("detail.subject")}</TableHead>
+                    <TableHead>{tc("status")}</TableHead>
+                    <TableHead>{tc("createdAt")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -926,7 +929,7 @@ export default function OrderDetailPage() {
                       <TableCell className="font-medium">{ticket.subject}</TableCell>
                       <TableCell>
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
-                          {ticket.status === 2 ? "Otwarty" : ticket.status === 3 ? "Oczekujący" : ticket.status === 4 ? "Rozwiązany" : ticket.status === 5 ? "Zamknięty" : `Status ${ticket.status}`}
+                          {ticket.status === 2 ? t("detail.ticketStatusOpen") : ticket.status === 3 ? t("detail.ticketStatusPending") : ticket.status === 4 ? t("detail.ticketStatusResolved") : ticket.status === 5 ? t("detail.ticketStatusClosed") : `Status ${ticket.status}`}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -939,7 +942,7 @@ export default function OrderDetailPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Headphones className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Brak zgłoszeń dla tego zamówienia.</p>
+                <p className="text-sm text-muted-foreground">{t("detail.noTickets")}</p>
               </div>
             )}
           </CollapsibleSection>
@@ -947,7 +950,7 @@ export default function OrderDetailPage() {
           {/* Merge/Split History */}
           {(order.merged_into || order.split_from || (orderGroups && orderGroups.length > 0)) && (
             <CollapsibleSection
-              title="Historia scalania/podziału"
+              title={t("detail.mergeHistory")}
               icon={GitBranch}
               defaultOpen={true}
               badge={
@@ -962,7 +965,7 @@ export default function OrderDetailPage() {
                 {order.merged_into && (
                   <div className="rounded-md border bg-muted/50 p-3">
                     <p className="text-sm">
-                      To zamówienie zostało scalone do:{" "}
+                      {t("detail.mergedInto")}{" "}
                       <Link href={`/orders/${order.merged_into}`} className="font-medium text-primary hover:underline">
                         {shortId(order.merged_into)}
                       </Link>
@@ -972,7 +975,7 @@ export default function OrderDetailPage() {
                 {order.split_from && (
                   <div className="rounded-md border bg-muted/50 p-3">
                     <p className="text-sm">
-                      To zamówienie powstało z podziału:{" "}
+                      {t("detail.splitFrom")}{" "}
                       <Link href={`/orders/${order.split_from}`} className="font-medium text-primary hover:underline">
                         {shortId(order.split_from)}
                       </Link>
@@ -982,10 +985,10 @@ export default function OrderDetailPage() {
                 {orderGroups && orderGroups.map((group) => (
                   <div key={group.id} className="rounded-md border p-3 text-sm space-y-1">
                     <p className="font-medium">
-                      {group.group_type === "merged" ? "Scalenie" : "Podział"} - {formatDate(group.created_at)}
+                      {group.group_type === "merged" ? t("detail.mergeAction") : t("detail.splitAction")} - {formatDate(group.created_at)}
                     </p>
                     <p className="text-muted-foreground">
-                      {group.group_type === "merged" ? "Zamówienia źródłowe" : "Zamówienie źródłowe"}:{" "}
+                      {group.group_type === "merged" ? t("detail.sourceOrders") : t("detail.sourceOrder")}:{" "}
                       {group.source_order_ids.map((id, i) => (
                         <span key={id}>
                           {i > 0 && ", "}
@@ -996,7 +999,7 @@ export default function OrderDetailPage() {
                       ))}
                     </p>
                     <p className="text-muted-foreground">
-                      {group.group_type === "merged" ? "Zamówienie docelowe" : "Zamówienia docelowe"}:{" "}
+                      {group.group_type === "merged" ? t("detail.targetOrder") : t("detail.targetOrders")}:{" "}
                       {group.target_order_ids.map((id, i) => (
                         <span key={id}>
                           {i > 0 && ", "}
@@ -1007,7 +1010,7 @@ export default function OrderDetailPage() {
                       ))}
                     </p>
                     {group.notes && (
-                      <p className="text-muted-foreground">Notatka: {group.notes}</p>
+                      <p className="text-muted-foreground">{t("detail.note")}: {group.notes}</p>
                     )}
                   </div>
                 ))}
@@ -1019,11 +1022,11 @@ export default function OrderDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Dane klienta</CardTitle>
+              <CardTitle>{t("detail.customerData")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground">Nazwa</p>
+                <p className="text-sm text-muted-foreground">{t("detail.customerName")}</p>
                 <p className="mt-1 font-medium">{order.customer_name}</p>
               </div>
               {order.customer_email && (
@@ -1034,7 +1037,7 @@ export default function OrderDetailPage() {
               )}
               {order.customer_phone && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Telefon</p>
+                  <p className="text-sm text-muted-foreground">{t("form.customerPhone")}</p>
                   <p className="mt-1 text-sm">{order.customer_phone}</p>
                 </div>
               )}
@@ -1044,19 +1047,19 @@ export default function OrderDetailPage() {
                     href={`/customers/${order.customer_id}`}
                     className="text-sm text-primary hover:underline font-medium"
                   >
-                    Zobacz profil klienta
+                    {t("detail.viewCustomerProfile")}
                   </Link>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Notatki wewnętrzne */}
+          
           <Card className="border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
                 <StickyNote className="h-4 w-4" />
-                Notatki wewnętrzne
+                {t("detail.internalNotes")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1066,7 +1069,7 @@ export default function OrderDetailPage() {
                   setInternalNotes(e.target.value);
                   setInternalNotesDirty(true);
                 }}
-                placeholder="Notatki widoczne tylko dla zespołu..."
+                placeholder={t("detail.internalNotesPlaceholder")}
                 rows={4}
                 className="border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-950/30"
               />
@@ -1077,7 +1080,7 @@ export default function OrderDetailPage() {
                   onClick={async () => {
                     try {
                       await updateOrder.mutateAsync({ internal_notes: internalNotes });
-                      toast.success("Notatki wewnętrzne zapisane");
+                      toast.success(t("detail.internalNotesSaved"));
                       setInternalNotesDirty(false);
                     } catch (error) {
                       toast.error(getErrorMessage(error));
@@ -1090,7 +1093,7 @@ export default function OrderDetailPage() {
                   ) : (
                     <Save className="mr-2 h-4 w-4" />
                   )}
-                  Zapisz notatki
+                  {t("detail.saveNotes")}
                 </Button>
               )}
             </CardContent>
@@ -1103,9 +1106,9 @@ export default function OrderDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuwanie zamówienia"
-        description="Czy na pewno chcesz usunąć to zamówienie? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń zamówienie"
+        title={t("detail.deleteTitle")}
+        description={t("detail.deleteDescription")}
+        confirmLabel={t("detail.deleteConfirm")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteOrder.isPending}
@@ -1120,7 +1123,7 @@ export default function OrderDetailPage() {
           onSplit={async (splits) => {
             try {
               await splitOrder.mutateAsync({ splits });
-              toast.success("Zamówienie zostało podzielone");
+              toast.success(t("detail.orderSplit"));
               setShowSplitDialog(false);
             } catch (error) {
               toast.error(getErrorMessage(error));
@@ -1156,7 +1159,7 @@ export default function OrderDetailPage() {
         onSubmit={async (data) => {
           try {
             await createTicket.mutateAsync(data);
-            toast.success("Zgłoszenie utworzone");
+            toast.success(t("detail.ticketCreated"));
             setShowCreateTicketDialog(false);
           } catch (error) {
             toast.error(getErrorMessage(error));
@@ -1172,7 +1175,7 @@ export default function OrderDetailPage() {
         onSubmit={async (data) => {
           try {
             await createOrderShipment.mutateAsync(data);
-            toast.success("Paczka została dodana");
+            toast.success(t("detail.packageAdded"));
             setShowAddPackageDialog(false);
           } catch (error) {
             toast.error(getErrorMessage(error));
@@ -1197,6 +1200,8 @@ function CreateTicketDialog({
   onSubmit: (data: { subject: string; description: string; email: string }) => void;
   isLoading: boolean;
 }) {
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [email, setEmail] = useState(customerEmail);
@@ -1213,14 +1218,14 @@ function CreateTicketDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Utwórz zgłoszenie</DialogTitle>
+          <DialogTitle>{t("createTicket.title")}</DialogTitle>
           <DialogDescription>
-            Utwórz zgłoszenie w systemie Freshdesk dla tego zamówienia.
+            {t("createTicket.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Email klienta</Label>
+            <Label>{t("createTicket.customerEmail")}</Label>
             <Input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -1229,19 +1234,19 @@ function CreateTicketDialog({
             />
           </div>
           <div>
-            <Label>Temat</Label>
+            <Label>{t("createTicket.subject")}</Label>
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Temat zgłoszenia..."
+              placeholder={t("createTicket.subjectPlaceholder")}
             />
           </div>
           <div>
-            <Label>Opis</Label>
+            <Label>{t("createTicket.descriptionLabel")}</Label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Opis problemu..."
+              placeholder={t("createTicket.descriptionPlaceholder")}
               rows={4}
               className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             />
@@ -1249,7 +1254,7 @@ function CreateTicketDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button
             onClick={() => onSubmit({ subject, description, email })}
@@ -1258,7 +1263,7 @@ function CreateTicketDialog({
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : null}
-            Utwórz zgłoszenie
+            {t("detail.createTicket")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1279,6 +1284,8 @@ function SplitOrderDialog({
   onSplit: (splits: { items: { name: string; sku?: string; quantity: number; price: number }[] }[]) => void;
   isLoading: boolean;
 }) {
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const items = order.items || [];
   const [allocation, setAllocation] = useState<number[]>(() => items.map(() => 1));
 
@@ -1310,10 +1317,9 @@ function SplitOrderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Podziel zamówienie</DialogTitle>
+          <DialogTitle>{t("split.title")}</DialogTitle>
           <DialogDescription>
-            Przydziel pozycje do dwóch nowych zamówień. Każda pozycja trafi
-            do zamówienia 1 lub 2.
+            {t("split.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -1326,7 +1332,7 @@ function SplitOrderDialog({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Label className="text-xs">Zamówienie:</Label>
+                <Label className="text-xs">{t("split.orderLabel")}</Label>
                 <select
                   className="rounded border px-2 py-1 text-sm"
                   value={allocation[i]}
@@ -1341,25 +1347,25 @@ function SplitOrderDialog({
         </div>
         <div className="grid grid-cols-2 gap-4 rounded-md bg-muted/50 p-3 text-sm">
           <div>
-            <p className="font-medium">Zamówienie 1</p>
-            <p className="text-muted-foreground">{split1Items.length} pozycji</p>
+            <p className="font-medium">{t("split.orderNum", { num: 1 })}</p>
+            <p className="text-muted-foreground">{t("split.itemCount", { count: split1Items.length })}</p>
             <p className="font-medium">{formatCurrency(split1Total, order.currency)}</p>
           </div>
           <div>
-            <p className="font-medium">Zamówienie 2</p>
-            <p className="text-muted-foreground">{split2Items.length} pozycji</p>
+            <p className="font-medium">{t("split.orderNum", { num: 2 })}</p>
+            <p className="text-muted-foreground">{t("split.itemCount", { count: split2Items.length })}</p>
             <p className="font-medium">{formatCurrency(split2Total, order.currency)}</p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={isLoading || split1Items.length === 0 || split2Items.length === 0}
           >
-            {isLoading ? "Dzielenie..." : "Podziel zamówienie"}
+            {isLoading ? t("split.splitting") : t("split.splitButton")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1389,6 +1395,8 @@ function AddPackageDialog({
   const [provider, setProvider] = useState("manual");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [weight, setWeight] = useState("");
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const [length, setLength] = useState("");
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
@@ -1421,14 +1429,14 @@ function AddPackageDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Dodaj paczkę</DialogTitle>
+          <DialogTitle>{t("addPackage.title")}</DialogTitle>
           <DialogDescription>
-            Dodaj kolejną paczkę do tego zamówienia. Numer paczki zostanie przypisany automatycznie.
+            {t("addPackage.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Dostawca</Label>
+            <Label>{t("addPackage.provider")}</Label>
             <Select value={provider} onValueChange={setProvider}>
               <SelectTrigger>
                 <SelectValue />
@@ -1445,16 +1453,16 @@ function AddPackageDialog({
             </Select>
           </div>
           <div>
-            <Label>Numer śledzenia (opcjonalnie)</Label>
+            <Label>{t("addPackage.trackingNumber")}</Label>
             <Input
               value={trackingNumber}
               onChange={(e) => setTrackingNumber(e.target.value)}
-              placeholder="np. 6280012345678"
+              placeholder={t("addPackage.trackingPlaceholder")}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Waga (kg)</Label>
+              <Label>{t("addPackage.weight")}</Label>
               <Input
                 type="number"
                 step="0.001"
@@ -1465,7 +1473,7 @@ function AddPackageDialog({
               />
             </div>
             <div>
-              <Label>Długość (cm)</Label>
+              <Label>{t("addPackage.length")}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -1476,7 +1484,7 @@ function AddPackageDialog({
               />
             </div>
             <div>
-              <Label>Szerokość (cm)</Label>
+              <Label>{t("addPackage.width")}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -1487,7 +1495,7 @@ function AddPackageDialog({
               />
             </div>
             <div>
-              <Label>Wysokość (cm)</Label>
+              <Label>{t("addPackage.height")}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -1499,18 +1507,18 @@ function AddPackageDialog({
             </div>
           </div>
           <div>
-            <Label>Notatki (opcjonalnie)</Label>
+            <Label>{t("addPackage.notes")}</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="np. Zawiera kruche przedmioty"
+              placeholder={t("addPackage.notesPlaceholder")}
               rows={2}
             />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={!provider || isLoading}>
             {isLoading ? (
@@ -1518,7 +1526,7 @@ function AddPackageDialog({
             ) : (
               <Plus className="mr-2 h-4 w-4" />
             )}
-            Dodaj paczkę
+            {t("detail.addPackage")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1540,6 +1548,8 @@ function AllegroFulfillmentDialog({
   const [waybill, setWaybill] = useState("");
 
   const { data: carriersData } = useAllegroCarriers();
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const fulfillmentMutation = useAllegroFulfillment(orderId);
   const trackingMutation = useAllegroTracking(orderId);
 
@@ -1561,7 +1571,7 @@ function AllegroFulfillmentDialog({
         await trackingMutation.mutateAsync({ carrier_id: carrierId, waybill });
       }
 
-      toast.success("Status realizacji Allegro zaktualizowany");
+      toast.success(t("allegro.fulfillmentUpdated"));
       onOpenChange(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -1575,31 +1585,31 @@ function AllegroFulfillmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Wyslij do Allegro</DialogTitle>
+          <DialogTitle>{t("allegro.sendTitle")}</DialogTitle>
           <DialogDescription>
-            Zaktualizuj status realizacji zamowienia na Allegro i dodaj numer przesylki.
+            {t("allegro.sendDescription")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Status realizacji</Label>
+            <Label>{t("allegro.fulfillmentStatus")}</Label>
             <Select value={fulfillmentStatus} onValueChange={setFulfillmentStatus}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="SENT">Wyslane (SENT)</SelectItem>
-                <SelectItem value="PICKED_UP">Odebrane (PICKED_UP)</SelectItem>
-                <SelectItem value="READY_FOR_SHIPMENT">Gotowe do wysylki</SelectItem>
+                <SelectItem value="SENT">{t("allegro.sent")}</SelectItem>
+                <SelectItem value="PICKED_UP">{t("allegro.pickedUp")}</SelectItem>
+                <SelectItem value="READY_FOR_SHIPMENT">{t("allegro.readyForShipment")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <Separator />
           <div>
-            <Label>Dostawca (opcjonalnie)</Label>
+            <Label>{t("allegro.providerOptional")}</Label>
             <Select value={carrierId} onValueChange={setCarrierId}>
               <SelectTrigger>
-                <SelectValue placeholder="Wybierz dostawce..." />
+                <SelectValue placeholder={t("allegro.selectProvider")} />
               </SelectTrigger>
               <SelectContent>
                 {carriers.map((carrier) => (
@@ -1611,17 +1621,17 @@ function AllegroFulfillmentDialog({
             </Select>
           </div>
           <div>
-            <Label>Numer przesylki (opcjonalnie)</Label>
+            <Label>{t("allegro.trackingOptional")}</Label>
             <Input
               value={waybill}
               onChange={(e) => setWaybill(e.target.value)}
-              placeholder="np. 6280012345678"
+              placeholder="e.g. 6280012345678"
             />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
@@ -1629,7 +1639,7 @@ function AllegroFulfillmentDialog({
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Wyslij
+            {t("allegro.send")}
           </Button>
         </DialogFooter>
       </DialogContent>

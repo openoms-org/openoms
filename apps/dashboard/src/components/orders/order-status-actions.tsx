@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusTransitionDialog } from "@/components/shared/status-transition-dialog";
@@ -25,6 +26,7 @@ export function OrderStatusActions({
   onTransition,
   isLoading = false,
 }: OrderStatusActionsProps) {
+  const t = useTranslations("orders");
   const [confirmDialog, setConfirmDialog] = useState<{
     status: string;
     force: boolean;
@@ -85,7 +87,7 @@ export function OrderStatusActions({
         <>
           {normalTransitions.length > 0 && <Separator className="my-3" />}
           <p className="text-xs text-muted-foreground mb-2">
-            Wymuś zmianę (niezgodne z flow)
+            {t("statusActions.forceChange")}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {forceTransitions.map((status) => {
@@ -112,18 +114,18 @@ export function OrderStatusActions({
         onOpenChange={() => setConfirmDialog(null)}
         title={
           confirmDialog?.force
-            ? "Wymuszona zmiana statusu"
-            : "Potwierdzenie zmiany statusu"
+            ? t("statusActions.forceTitle")
+            : t("statusActions.confirmTitle")
         }
         description={
           confirmDialog?.force
-            ? `Ta zmiana jest niezgodna z normalnym flow zamówienia. Czy na pewno chcesz wymusić zmianę statusu na "${confirmLabel}"?`
-            : `Czy na pewno chcesz zmienić status zamówienia na "${confirmLabel}"? Ta operacja może być nieodwracalna.`
+            ? t("statusActions.forceDescription", { status: confirmLabel })
+            : t("statusActions.confirmDescription", { status: confirmLabel })
         }
         isDestructive={confirmDialog?.force ?? false}
         isPending={isLoading}
         onConfirm={handleConfirm}
-        confirmLabel={confirmDialog?.force ? "Wymuś zmianę" : "Potwierdź"}
+        confirmLabel={confirmDialog?.force ? t("statusActions.forceButton") : t("statusActions.confirmButton")}
       />
     </>
   );

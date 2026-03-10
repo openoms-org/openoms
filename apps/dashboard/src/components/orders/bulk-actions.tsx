@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { useBulkTransitionStatus } from "@/hooks/use-orders";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,16 +23,9 @@ interface BulkActionsProps {
   onClearSelection: () => void;
 }
 
-function pluralOrders(count: number): string {
-  if (count === 1) return "zamówienie";
-  const lastTwo = count % 100;
-  const lastOne = count % 10;
-  if (lastTwo >= 10 && lastTwo <= 20) return "zamówień";
-  if (lastOne >= 2 && lastOne <= 4) return "zamówienia";
-  return "zamówień";
-}
-
 export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsProps) {
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const [targetStatus, setTargetStatus] = useState<string>("");
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const bulkTransition = useBulkTransitionStatus();
@@ -71,17 +65,17 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
         force: isForce,
       });
       if (result.failed === 0) {
-        toast.success(`Zmieniono status ${result.succeeded} zamówień`);
+        toast.success(t("bulk.statusChanged", { count: result.succeeded }));
       } else {
         toast.warning(
-          `Zmieniono: ${result.succeeded}, błędy: ${result.failed}`
+          t("bulk.statusChangedPartial", { succeeded: result.succeeded, failed: result.failed })
         );
       }
       setTargetStatus("");
       onClearSelection();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Błąd podczas zmiany statusu"
+        error instanceof Error ? error.message : t("bulk.statusChangeError")
       );
     }
   };
@@ -90,12 +84,12 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
     <>
       <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
         <span className="text-sm font-medium">
-          Zaznaczono {selectedOrders.length} {pluralOrders(selectedOrders.length)}
+          {t("bulk.selected", { count: selectedOrders.length })}
         </span>
 
         <Select value={targetStatus} onValueChange={setTargetStatus}>
           <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Wybierz status" />
+            <SelectValue placeholder={t("bulk.selectStatus")} />
           </SelectTrigger>
           <SelectContent>
             {commonTransitions.length > 0 && (
@@ -111,7 +105,7 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
               <>
                 {commonTransitions.length > 0 && (
                   <SelectItem value="__separator" disabled>
-                    ── Wymuś zmianę ──
+                    {t("bulk.forceSeparator")}
                   </SelectItem>
                 )}
                 {forceTransitions.map((status) => (
@@ -131,30 +125,30 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
           disabled={!targetStatus || bulkTransition.isPending}
         >
           {bulkTransition.isPending
-            ? "Zmieniam..."
+            ? t("bulk.changing")
             : isForce
-              ? "Wymuś zmianę"
-              : "Zmień status"}
+              ? t("bulk.forceChangeButton")
+              : t("bulk.changeStatus")}
         </Button>
 
         <Button size="sm" variant="ghost" onClick={onClearSelection}>
-          Odznacz
+          {t("bulk.deselect")}
         </Button>
       </div>
 
       <StatusTransitionDialog
         open={showConfirmDialog}
         onOpenChange={setShowConfirmDialog}
-        title={isForce ? "Wymuszona zmiana statusu" : "Potwierdzenie"}
+        title={isForce ? t("bulk.confirmForceTitle") : t("bulk.confirmTitle")}
         description={
           isForce
-            ? `Ta zmiana jest niezgodna z normalnym flow. Czy na pewno chcesz wymusić zmianę statusu ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
-            : `Czy na pewno chcesz zmienić status ${selectedOrders.length} zamówień na "${orderStatuses[targetStatus]?.label || targetStatus}"?`
+            ? t("bulk.confirmForceDescription", { count: selectedOrders.length, status: orderStatuses[targetStatus]?.label || targetStatus })
+            : t("bulk.confirmDescription", { count: selectedOrders.length, status: orderStatuses[targetStatus]?.label || targetStatus })
         }
         isDestructive
         isPending={bulkTransition.isPending}
         onConfirm={executeBulkTransition}
-        confirmLabel={bulkTransition.isPending ? "Zmieniam..." : "Potwierdź"}
+        confirmLabel={bulkTransition.isPending ? t("bulk.changing") : t("bulk.confirmLabel")}
       />
     </>
   );

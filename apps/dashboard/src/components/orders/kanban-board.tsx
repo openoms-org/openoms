@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { apiClient, getErrorMessage } from "@/lib/api-client";
 import { useOrderStatuses, COLOR_PRESETS } from "@/hooks/use-order-statuses";
 import { ORDER_STATUSES } from "@/lib/constants";
@@ -80,6 +81,7 @@ function KanbanColumn({
   activeOrder: Order | null;
   overColumnId: string | null;
 }) {
+  const t = useTranslations("orders");
   const [loadedPages, setLoadedPages] = useState(1);
   const { data, isLoading } = useColumnOrders(statusKey, filters, true);
   const queryClient = useQueryClient();
@@ -128,9 +130,9 @@ function KanbanColumn({
       );
       setLoadedPages(nextPage);
     } catch {
-      toast.error("Nie udało się załadować więcej zamówień");
+      toast.error(t("kanban.loadError"));
     }
-  }, [loadedPages, statusKey, filters, queryClient]);
+  }, [loadedPages, statusKey, filters, queryClient, t]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -175,7 +177,7 @@ function KanbanColumn({
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Package className="h-8 w-8 text-muted-foreground/40 mb-2" />
-            <p className="text-xs text-muted-foreground">Brak zamówień</p>
+            <p className="text-xs text-muted-foreground">{t("kanban.noOrders")}</p>
           </div>
         ) : (
           <SortableContext
@@ -193,7 +195,7 @@ function KanbanColumn({
             onClick={handleLoadMore}
             className="w-full rounded-md border border-dashed py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
           >
-            Pokaż więcej
+            {t("kanban.showMore")}
           </button>
         )}
       </div>
@@ -202,6 +204,7 @@ function KanbanColumn({
 }
 
 export function KanbanBoard({ filters }: KanbanBoardProps) {
+  const t = useTranslations("orders");
   const { data: statusConfig, isLoading: statusLoading } = useOrderStatuses();
   const queryClient = useQueryClient();
 
@@ -339,7 +342,7 @@ export function KanbanBoard({ filters }: KanbanBoardProps) {
 
         const statusLabel =
           statusEntries.find((s) => s.key === targetStatus)?.label || targetStatus;
-        toast.success(`Zmieniono status zamówienia na: ${statusLabel}`);
+        toast.success(t("kanban.statusChanged", { status: statusLabel }));
 
         // Invalidate to get fresh data from server
         queryClient.invalidateQueries({ queryKey: ["orders-kanban", sourceStatus, filters] });
@@ -376,10 +379,10 @@ export function KanbanBoard({ filters }: KanbanBoardProps) {
 
         const statusLabel =
           statusEntries.find((s) => s.key === targetStatus)?.label || targetStatus;
-        toast.error(`Nie udało się zmienić statusu na "${statusLabel}": ${getErrorMessage(error)}`);
+        toast.error(t("kanban.statusChangeError", { status: statusLabel, error: getErrorMessage(error) }));
       }
     },
-    [filters, queryClient, statusEntries]
+    [filters, queryClient, statusEntries, t]
   );
 
   const handleDragCancel = useCallback(() => {

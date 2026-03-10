@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import {
   PieChart,
   Pie,
@@ -52,6 +53,8 @@ function renderCustomLabel(props: {
 
 export function OrderSourceChart({ data, isLoading }: OrderSourceChartProps) {
   const { resolvedTheme } = useTheme();
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   const isDark = resolvedTheme === "dark";
   const tooltipBg = isDark ? "#18181b" : "#ffffff";
   const tooltipBorder = isDark ? "#27272a" : "#e4e4e7";
@@ -69,14 +72,14 @@ export function OrderSourceChart({ data, isLoading }: OrderSourceChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zamówienia według źródła</CardTitle>
+        <CardTitle>{t("ordersBySource")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {tc("noResults")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>

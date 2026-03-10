@@ -6,6 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,17 +50,19 @@ const emptyAddress: AddressFields = {
   country: "PL",
 };
 
-const orderSchema = z.object({
-  source: z.string().min(1, "Źródło jest wymagane"),
-  customer_name: z.string().min(1, "Nazwa klienta jest wymagana"),
-  customer_email: z.string().email("Nieprawidłowy adres email").optional().or(z.literal("")),
-  customer_phone: z.string().optional(),
-  total_amount: z.number().min(0, "Kwota musi być >= 0"),
-  currency: z.string().min(1, "Waluta jest wymagana"),
-  notes: z.string().optional(),
-});
+function createOrderSchema(t: (key: string) => string) {
+  return z.object({
+    source: z.string().min(1, t("validation.sourceRequired")),
+    customer_name: z.string().min(1, t("validation.customerNameRequired")),
+    customer_email: z.string().email(t("validation.invalidEmail")).optional().or(z.literal("")),
+    customer_phone: z.string().optional(),
+    total_amount: z.number().min(0, t("validation.amountMin")),
+    currency: z.string().min(1, t("validation.currencyRequired")),
+    notes: z.string().optional(),
+  });
+}
 
-type OrderFormValues = z.infer<typeof orderSchema>;
+type OrderFormValues = z.infer<ReturnType<typeof createOrderSchema>>;
 
 interface OrderFormProps {
   order?: Order;
@@ -90,6 +93,8 @@ function parseItems(items: Order["items"]): OrderItemRow[] {
 }
 
 export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: OrderFormProps) {
+  const t = useTranslations("orders");
+  const tc = useTranslations("common");
   const { data: customFieldsConfig } = useCustomFields();
   const [customValues, setCustomValues] = useState<Record<string, unknown>>({});
   const [tags, setTags] = useState<string[]>(order?.tags || []);
@@ -123,6 +128,8 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       setCustomValues({ ...order.metadata });
     }
   }, [order?.metadata]);
+
+  const orderSchema = createOrderSchema(t);
 
   const {
     register,
@@ -224,7 +231,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             onValueChange={(v) => handleCustomFieldChange(field.key, v)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Wybierz..." />
+              <SelectValue placeholder={tc("selectPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {(field.options || []).map((opt) => (
@@ -267,7 +274,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       if (field.required) {
         const value = customValues[field.key];
         if (value === undefined || value === null || value === "" || value === false) {
-          toast.error(`Pole "${field.label}" jest wymagane`);
+          toast.error(t("form.fieldRequired", { field: field.label }));
           return;
         }
       }
@@ -318,16 +325,16 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       {/* Basic info */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="source">Źródło <span className="text-destructive">*</span></Label>
+          <Label htmlFor="source">{t("form.source")} <span className="text-destructive">*</span></Label>
           <Select
             value={currentSource}
             onValueChange={(value) => setValue("source", value)}
           >
             <SelectTrigger aria-invalid={!!errors.source}>
-              <SelectValue placeholder="Wybierz źródło" />
+              <SelectValue placeholder={t("form.sourcePlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="manual">Ręczne</SelectItem>
+              <SelectItem value="manual">{t("form.manual")}</SelectItem>
               <SelectItem value="allegro">Allegro</SelectItem>
               <SelectItem value="amazon">Amazon</SelectItem>
               <SelectItem value="ebay">eBay</SelectItem>
@@ -335,7 +342,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
               <SelectItem value="woocommerce">WooCommerce</SelectItem>
               <SelectItem value="shopify">Shopify</SelectItem>
               <SelectItem value="olx">OLX</SelectItem>
-              <SelectItem value="other">Inne</SelectItem>
+              <SelectItem value="other">{t("form.other")}</SelectItem>
             </SelectContent>
           </Select>
           {errors.source && (
@@ -344,10 +351,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="customer_name">Nazwa klienta <span className="text-destructive">*</span></Label>
+          <Label htmlFor="customer_name">{t("form.customerName")} <span className="text-destructive">*</span></Label>
           <Input
             id="customer_name"
-            placeholder="Jan Kowalski"
+            placeholder={t("form.customerNamePlaceholder")}
             aria-invalid={!!errors.customer_name}
             {...register("customer_name")}
           />
@@ -357,7 +364,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="customer_email">Email klienta</Label>
+          <Label htmlFor="customer_email">{t("form.customerEmail")}</Label>
           <Input
             id="customer_email"
             type="email"
@@ -371,7 +378,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="customer_phone">Telefon klienta</Label>
+          <Label htmlFor="customer_phone">{t("form.customerPhone")}</Label>
           <Input
             id="customer_phone"
             placeholder="+48 123 456 789"
@@ -383,7 +390,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="currency">Waluta <span className="text-destructive">*</span></Label>
+          <Label htmlFor="currency">{t("form.currency")} <span className="text-destructive">*</span></Label>
           <Input
             id="currency"
             value={currency}
@@ -398,10 +405,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       <Separator />
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium">Pozycje zamówienia</h3>
+          <h3 className="text-sm font-medium">{t("form.orderItems")}</h3>
           <Button type="button" variant="outline" size="sm" onClick={addItem}>
             <Plus className="h-4 w-4 mr-1" />
-            Dodaj pozycję
+            {t("form.addItem")}
           </Button>
         </div>
         {orderItems.length > 0 ? (
@@ -409,15 +416,15 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             {orderItems.map((item, index) => (
               <div key={index} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 items-end">
                 <div className="space-y-1">
-                  {index === 0 && <Label className="text-xs text-muted-foreground">Nazwa</Label>}
+                  {index === 0 && <Label className="text-xs text-muted-foreground">{t("form.itemName")}</Label>}
                   <Input
-                    placeholder="Nazwa produktu"
+                    placeholder={t("form.itemNamePlaceholder")}
                     value={item.name}
                     onChange={(e) => updateItem(index, "name", e.target.value)}
                   />
                 </div>
                 <div className="space-y-1 w-28">
-                  {index === 0 && <Label className="text-xs text-muted-foreground">SKU</Label>}
+                  {index === 0 && <Label className="text-xs text-muted-foreground">{t("form.itemSku")}</Label>}
                   <Input
                     placeholder="SKU"
                     value={item.sku}
@@ -425,7 +432,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
                   />
                 </div>
                 <div className="space-y-1 w-20">
-                  {index === 0 && <Label className="text-xs text-muted-foreground">Ilość</Label>}
+                  {index === 0 && <Label className="text-xs text-muted-foreground">{t("form.itemQuantity")}</Label>}
                   <Input
                     type="number"
                     min="1"
@@ -435,7 +442,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
                   />
                 </div>
                 <div className="space-y-1 w-28">
-                  {index === 0 && <Label className="text-xs text-muted-foreground">Cena</Label>}
+                  {index === 0 && <Label className="text-xs text-muted-foreground">{t("form.itemPrice")}</Label>}
                   <Input
                     type="number"
                     min="0"
@@ -463,13 +470,13 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             ))}
             <div className="flex items-center justify-end gap-4 pt-2 border-t">
               <span className="text-sm font-medium">
-                Suma pozycji: {formatCurrency(itemsTotal, currency)}
+                {t("form.itemsTotal", { total: formatCurrency(itemsTotal, currency) })}
               </span>
             </div>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Brak pozycji. Kliknij &quot;Dodaj pozycję&quot; aby dodać produkty.
+            {t("form.noItems")}
           </p>
         )}
       </div>
@@ -477,7 +484,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       {/* Total amount */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="total_amount">Kwota całkowita <span className="text-destructive">*</span></Label>
+          <Label htmlFor="total_amount">{t("form.totalAmount")} <span className="text-destructive">*</span></Label>
           {hasItems ? (
             <Input
               id="total_amount"
@@ -502,7 +509,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
           )}
           {hasItems && (
             <p className="text-xs text-muted-foreground">
-              Obliczane automatycznie z pozycji zamówienia
+              {t("form.totalAutoCalculated")}
             </p>
           )}
           {errors.total_amount && (
@@ -514,30 +521,30 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       {/* Payment */}
       <Separator />
       <div>
-        <h3 className="text-sm font-medium mb-4">Płatność</h3>
+        <h3 className="text-sm font-medium mb-4">{t("form.payment")}</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Status płatności</Label>
+            <Label>{t("form.paymentStatus")}</Label>
             <Select value={paymentStatus} onValueChange={setPaymentStatus}>
               <SelectTrigger>
-                <SelectValue placeholder="Wybierz status" />
+                <SelectValue placeholder={t("form.paymentStatusPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Oczekuje</SelectItem>
-                <SelectItem value="paid">Opłacone</SelectItem>
-                <SelectItem value="refunded">Zwrócone</SelectItem>
-                <SelectItem value="failed">Nieudane</SelectItem>
+                <SelectItem value="pending">{t("form.paymentPending")}</SelectItem>
+                <SelectItem value="paid">{t("form.paymentPaid")}</SelectItem>
+                <SelectItem value="refunded">{t("form.paymentRefunded")}</SelectItem>
+                <SelectItem value="failed">{t("form.paymentFailed")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Metoda płatności</Label>
+            <Label>{t("form.paymentMethod")}</Label>
             <Select value={paymentMethod || "__none__"} onValueChange={(v) => setPaymentMethod(v === "__none__" ? "" : v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Wybierz metodę" />
+                <SelectValue placeholder={t("form.paymentMethodPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Nie wybrano</SelectItem>
+                <SelectItem value="__none__">{t("form.notSelected")}</SelectItem>
                 {PAYMENT_METHODS.map((method) => (
                   <SelectItem key={method} value={method}>
                     {method}
@@ -552,42 +559,42 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       {/* Shipping address */}
       <Separator />
       <div>
-        <h3 className="text-sm font-medium mb-4">Adres dostawy</h3>
+        <h3 className="text-sm font-medium mb-4">{t("form.shippingAddress")}</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Imię i nazwisko</Label>
+            <Label>{t("form.fullName")}</Label>
             <Input
-              placeholder="Jan Kowalski"
+              placeholder={t("form.customerNamePlaceholder")}
               value={shippingAddress.name}
               onChange={(e) => updateShipping("name", e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Ulica</Label>
+            <Label>{t("form.street")}</Label>
             <Input
-              placeholder="ul. Przykładowa 1"
+              placeholder={t("form.streetPlaceholder")}
               value={shippingAddress.street}
               onChange={(e) => updateShipping("street", e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Miasto</Label>
+            <Label>{t("form.city")}</Label>
             <Input
-              placeholder="Warszawa"
+              placeholder={t("form.cityPlaceholder")}
               value={shippingAddress.city}
               onChange={(e) => updateShipping("city", e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Kod pocztowy</Label>
+            <Label>{t("form.postalCode")}</Label>
             <Input
-              placeholder="00-001"
+              placeholder={t("form.postalCodePlaceholder")}
               value={shippingAddress.postal_code}
               onChange={(e) => updateShipping("postal_code", e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Kraj</Label>
+            <Label>{t("form.country")}</Label>
             <Input
               placeholder="PL"
               value={shippingAddress.country}
@@ -600,10 +607,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       {/* Delivery method / Carrier selection */}
       <Separator />
       <div>
-        <h3 className="text-sm font-medium mb-4">Metoda dostawy</h3>
+        <h3 className="text-sm font-medium mb-4">{t("form.deliveryMethod")}</h3>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Dostawca przesyłki</Label>
+            <Label>{t("form.shipmentProvider")}</Label>
             <Select
               value={shipmentProvider || "__none__"}
               onValueChange={(v) => {
@@ -612,10 +619,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Wybierz dostawcę" />
+                <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none__">Brak (bez przesyłki)</SelectItem>
+                <SelectItem value="__none__">{t("form.noShipment")}</SelectItem>
                 {SHIPMENT_PROVIDERS.filter(p => p !== "manual").map((p) => (
                   <SelectItem key={p} value={p}>
                     {SHIPMENT_PROVIDER_LABELS[p] ?? p}
@@ -628,7 +635,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
           {shipmentProvider === "inpost" && (
             <>
               <div className="space-y-2">
-                <Label>Typ usługi InPost</Label>
+                <Label>{t("form.inpostServiceType")}</Label>
                 <Select
                   value={inpostServiceType}
                   onValueChange={(v) => {
@@ -640,15 +647,15 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="locker">Paczkomat</SelectItem>
-                    <SelectItem value="courier">Kurier InPost</SelectItem>
+                    <SelectItem value="locker">{t("form.inpostLocker")}</SelectItem>
+                    <SelectItem value="courier">{t("form.inpostCourier")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {inpostServiceType === "locker" && (
                 <div className="space-y-2">
-                  <Label>Paczkomat docelowy</Label>
+                  <Label>{t("form.targetLocker")}</Label>
                   {pickupPointId && (
                     <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 mb-2">
                       <span className="font-medium text-sm">{pickupPointId}</span>
@@ -672,7 +679,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
                 onCheckedChange={(checked) => setAutoCreateShipment(checked === true)}
               />
               <Label htmlFor="auto_create_shipment" className="font-normal cursor-pointer">
-                Utwórz przesyłkę automatycznie
+                {t("form.autoCreateShipment")}
               </Label>
             </div>
           )}
@@ -691,45 +698,45 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
             className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
           />
           <Label htmlFor="billing_same" className="cursor-pointer">
-            Adres rozliczeniowy taki sam jak adres dostawy
+            {t("form.billingSameAsShipping")}
           </Label>
         </div>
         {!billingSameAsShipping && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Imię i nazwisko / Firma</Label>
+              <Label>{t("form.billingNameCompany")}</Label>
               <Input
-                placeholder="Jan Kowalski"
+                placeholder={t("form.customerNamePlaceholder")}
                 value={billingAddress.name}
                 onChange={(e) => updateBilling("name", e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Ulica</Label>
+              <Label>{t("form.street")}</Label>
               <Input
-                placeholder="ul. Przykładowa 1"
+                placeholder={t("form.streetPlaceholder")}
                 value={billingAddress.street}
                 onChange={(e) => updateBilling("street", e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Miasto</Label>
+              <Label>{t("form.city")}</Label>
               <Input
-                placeholder="Warszawa"
+                placeholder={t("form.cityPlaceholder")}
                 value={billingAddress.city}
                 onChange={(e) => updateBilling("city", e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Kod pocztowy</Label>
+              <Label>{t("form.postalCode")}</Label>
               <Input
-                placeholder="00-001"
+                placeholder={t("form.postalCodePlaceholder")}
                 value={billingAddress.postal_code}
                 onChange={(e) => updateBilling("postal_code", e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Kraj</Label>
+              <Label>{t("form.country")}</Label>
               <Input
                 placeholder="PL"
                 value={billingAddress.country}
@@ -742,10 +749,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
 
       {/* Notes */}
       <div className="space-y-2">
-        <Label htmlFor="notes">Notatki</Label>
+        <Label htmlFor="notes">{tc("notes")}</Label>
         <Textarea
           id="notes"
-          placeholder="Dodatkowe uwagi do zamówienia..."
+          placeholder={t("form.notesPlaceholder")}
           rows={3}
           {...register("notes")}
         />
@@ -756,10 +763,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
 
       {/* Priority */}
       <div className="space-y-2">
-        <Label>Priorytet</Label>
+        <Label>{t("form.priority")}</Label>
         <Select value={priority} onValueChange={setPriority}>
           <SelectTrigger>
-            <SelectValue placeholder="Wybierz priorytet" />
+            <SelectValue placeholder={t("form.priorityPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(ORDER_PRIORITIES).map(([key, { label }]) => (
@@ -773,10 +780,10 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
 
       {/* Internal notes */}
       <div className="space-y-2">
-        <Label htmlFor="internal_notes">Notatki wewnętrzne</Label>
+        <Label htmlFor="internal_notes">{t("form.internalNotes")}</Label>
         <Textarea
           id="internal_notes"
-          placeholder="Notatki widoczne tylko dla zespołu..."
+          placeholder={t("form.internalNotesPlaceholder")}
           rows={3}
           value={internalNotes}
           onChange={(e) => setInternalNotes(e.target.value)}
@@ -789,7 +796,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
         <>
           <Separator />
           <div>
-            <h3 className="text-sm font-medium mb-4">Pola dodatkowe</h3>
+            <h3 className="text-sm font-medium mb-4">{t("form.customFields")}</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {[...customFields]
                 .sort((a, b) => a.position - b.position)
@@ -809,7 +816,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
 
       {/* Tags */}
       <div className="space-y-2">
-        <Label>Tagi</Label>
+        <Label>{tc("tags")}</Label>
         <TagInput tags={tags} onChange={setTags} />
       </div>
 
@@ -817,14 +824,14 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
       <div className="flex items-center gap-4">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting
-            ? "Zapisywanie..."
+            ? tc("saving")
             : order
-              ? "Zapisz zmiany"
-              : "Utwórz zamówienie"}
+              ? t("form.submitUpdate")
+              : t("form.submitCreate")}
         </Button>
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Anuluj
+            {tc("cancel")}
           </Button>
         )}
       </div>

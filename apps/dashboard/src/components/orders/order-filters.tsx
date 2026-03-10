@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ interface OrderFiltersProps {
 }
 
 export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
+  const t = useTranslations("orders");
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
 
@@ -80,13 +82,13 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-4">
       <Input
-        placeholder="Szukaj klienta (imię, email, telefon)..."
+        placeholder={t("filters.searchPlaceholder")}
         value={localSearch}
         onChange={(e) => handleSearchChange(e.target.value)}
         className="w-[300px]"
       />
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Status:</span>
+        <span className="text-sm text-muted-foreground">{t("filters.status")}</span>
         <Select
           value={filters.status || "all"}
           onValueChange={(value) =>
@@ -94,10 +96,10 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           }
         >
           <SelectTrigger className="w-[180px]" size="sm">
-            <SelectValue placeholder="Wszystkie" />
+            <SelectValue placeholder={t("filters.allStatuses")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie</SelectItem>
+            <SelectItem value="all">{t("filters.allStatuses")}</SelectItem>
             {Object.entries(orderStatuses).map(([key, config]) => (
               <SelectItem key={key} value={key}>
                 {config.label}
@@ -107,7 +109,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
         </Select>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Źródło:</span>
+        <span className="text-sm text-muted-foreground">{t("filters.source")}</span>
         <Select
           value={filters.source || "all"}
           onValueChange={(value) =>
@@ -115,10 +117,10 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           }
         >
           <SelectTrigger className="w-[180px]" size="sm">
-            <SelectValue placeholder="Wszystkie" />
+            <SelectValue placeholder={t("filters.allSources")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie</SelectItem>
+            <SelectItem value="all">{t("filters.allSources")}</SelectItem>
             {ORDER_SOURCES.map((source) => (
               <SelectItem key={source} value={source}>
                 {ORDER_SOURCE_LABELS[source] || source}
@@ -128,7 +130,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
         </Select>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Płatność:</span>
+        <span className="text-sm text-muted-foreground">{t("filters.payment")}</span>
         <Select
           value={filters.payment_status || "all"}
           onValueChange={(v) =>
@@ -136,10 +138,10 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           }
         >
           <SelectTrigger className="w-[180px]" size="sm">
-            <SelectValue placeholder="Płatność" />
+            <SelectValue placeholder={t("filters.allPayments")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie płatności</SelectItem>
+            <SelectItem value="all">{t("filters.allPayments")}</SelectItem>
             {Object.entries(PAYMENT_STATUSES).map(([key, { label }]) => (
               <SelectItem key={key} value={key}>
                 {label}
@@ -149,7 +151,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
         </Select>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Priorytet:</span>
+        <span className="text-sm text-muted-foreground">{t("filters.priority")}</span>
         <Select
           value={filters.priority || "all"}
           onValueChange={(v) =>
@@ -157,10 +159,10 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           }
         >
           <SelectTrigger className="w-[160px]" size="sm">
-            <SelectValue placeholder="Wszystkie" />
+            <SelectValue placeholder={t("filters.allPriorities")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie</SelectItem>
+            <SelectItem value="all">{t("filters.allPriorities")}</SelectItem>
             {Object.entries(ORDER_PRIORITIES).map(([key, { label }]) => (
               <SelectItem key={key} value={key}>
                 {label}
@@ -170,7 +172,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
         </Select>
       </div>
       <Input
-        placeholder="Filtruj po tagu..."
+        placeholder={t("filters.tagPlaceholder")}
         value={localTag}
         onChange={(e) => handleTagChange(e.target.value)}
         className="w-[180px]"

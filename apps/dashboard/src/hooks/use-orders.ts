@@ -87,5 +87,5 @@ export async function exportOrdersCSV(params: OrderListParams) {
   const response = await apiFetch(`/v1/orders/export?${searchParams}`);
 
   const blob = await response.blob();
-  downloadBlob(blob, `zamówienia-${new Date().toISOString().slice(0, 10)}.csv`);
+  downloadBlob(blob, `orders-${new Date().toISOString().slice(0, 10)}.csv`);
 }
