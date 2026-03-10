@@ -1,10 +1,14 @@
 {
   "common": {
     "save": "Zapisz",
+    "saveChanges": "Zapisz zmiany",
+    "saving": "Zapisywanie...",
     "cancel": "Anuluj",
     "delete": "Usuń",
     "edit": "Edytuj",
     "add": "Dodaj",
+    "create": "Utwórz",
+    "creating": "Tworzenie...",
     "search": "Szukaj",
     "loading": "Ładowanie...",
     "confirm": "Potwierdź",
@@ -34,6 +38,982 @@
     "copy": "Kopiuj",
     "copied": "Skopiowano!",
     "download": "Pobierz",
-    "upload": "Prześlij"
+    "upload": "Prześlij",
+    "all": "Wszystkie",
+    "none": "Brak",
+    "details": "Szczegóły",
+    "status": "Status",
+    "date": "Data",
+    "name": "Nazwa",
+    "description": "Opis",
+    "notes": "Notatki",
+    "tags": "Tagi",
+    "active": "Aktywny",
+    "inactive": "Nieaktywny",
+    "enabled": "Włączone",
+    "disabled": "Wyłączone",
+    "default": "Domyślny",
+    "code": "Kod",
+    "type": "Typ",
+    "amount": "Kwota",
+    "price": "Cena",
+    "quantity": "Ilość",
+    "total": "Suma",
+    "createdAt": "Utworzono",
+    "updatedAt": "Zaktualizowano",
+    "processing": "Przetwarzanie...",
+    "retry": "Spróbuj ponownie",
+    "loadError": "Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.",
+    "deleteConfirm": "Czy na pewno chcesz to usunąć? Ta operacja jest nieodwracalna.",
+    "rowsPerPage": "Na stronie:",
+    "pageOf": "Strona {current} z {total}",
+    "resultsRange": "Wyniki {start}-{end} z {total}",
+    "noResultsFound": "Brak wyników",
+    "selectPlaceholder": "Wybierz...",
+    "notSelected": "Nie wybrano",
+    "tableView": "Widok tabeli",
+    "kanbanView": "Widok Kanban",
+    "exportCsv": "Eksportuj CSV",
+    "printing": "Drukowanie..."
+  },
+  "navigation": {
+    "dashboard": "Pulpit",
+    "orders": "Zamówienia",
+    "customers": "Klienci",
+    "returns": "Zwroty",
+    "invoices": "Faktury",
+    "invoicing": "Fakturowanie",
+    "products": "Produkty",
+    "categories": "Kategorie",
+    "printTemplates": "Szablony druku",
+    "shipments": "Przesyłki",
+    "carriers": "Kurierzy",
+    "packing": "Pakowanie",
+    "pickPack": "Pick & Pack",
+    "warehouses": "Magazyny",
+    "stocktakes": "Inwentaryzacja",
+    "warehouseDocuments": "Dokumenty magazynowe",
+    "stockSync": "Sync magazynu",
+    "marketplace": "Marketplace",
+    "productFeeds": "Feedy produktowe",
+    "listingSync": "Synchronizacja ofert",
+    "reports": "Raporty",
+    "demandForecast": "Prognoza popytu",
+    "carbonFootprint": "Ślad węglowy",
+    "vatOssReport": "Raport VAT OSS",
+    "reconciliation": "Rozliczenia",
+    "repricing": "Repricing",
+    "suppliers": "Dostawcy",
+    "purchaseOrders": "Zamówienia zakupu",
+    "dropshipping": "Dropshipping",
+    "automation": "Automatyzacja",
+    "workflowBuilder": "Workflow Builder",
+    "orderImport": "Import zamówień",
+    "productImport": "Import produktów",
+    "bgRemoval": "Usuwanie tła",
+    "marketing": "Marketing",
+    "helpdesk": "Helpdesk",
+    "currencies": "Waluty",
+    "subscriptions": "Subskrypcje",
+    "loyalty": "Program lojalnościowy",
+    "customerSegments": "Segmenty klientów",
+    "subscription": "Subskrypcja",
+    "company": "Firma",
+    "users": "Użytkownicy",
+    "roles": "Role",
+    "security": "Bezpieczeństwo",
+    "orderStatuses": "Statusy zamówień",
+    "customFields": "Pola niestandardowe",
+    "priceLists": "Cenniki",
+    "accounting": "Księgowość",
+    "ksef": "KSeF",
+    "vatOss": "VAT OSS",
+    "inventoryControl": "Kontrola magazynowa",
+    "notifications": "Powiadomienia",
+    "sms": "SMS",
+    "webhooks": "Webhooki",
+    "webhookDeliveries": "Dostawy webhooków",
+    "sync": "Synchronizacja",
+    "auditLog": "Dziennik aktywności",
+    "help": "Pomoc",
+    "groups": {
+      "sales": "Sprzedaż",
+      "catalog": "Katalog",
+      "logistics": "Logistyka",
+      "salesChannels": "Kanały sprzedaży",
+      "reports": "Raporty",
+      "procurement": "Zaopatrzenie",
+      "tools": "Narzędzia",
+      "settings": "Ustawienia"
+    }
+  },
+  "statuses": {
+    "order": {
+      "new": "Nowe",
+      "confirmed": "Potwierdzone",
+      "processing": "W realizacji",
+      "ready_to_ship": "Gotowe do wysyłki",
+      "shipped": "Wysłane",
+      "in_transit": "W transporcie",
+      "out_for_delivery": "W doręczeniu",
+      "delivered": "Dostarczone",
+      "completed": "Zakończone",
+      "on_hold": "Wstrzymane",
+      "cancelled": "Anulowane",
+      "refunded": "Zwrócone",
+      "merged": "Scalone",
+      "split": "Rozdzielone"
+    },
+    "shipment": {
+      "created": "Utworzona",
+      "label_ready": "Etykieta gotowa",
+      "picked_up": "Odebrana",
+      "in_transit": "W transporcie",
+      "out_for_delivery": "W doręczeniu",
+      "delivered": "Dostarczona",
+      "returned": "Zwrócona",
+      "failed": "Nieudana"
+    },
+    "return": {
+      "requested": "Zgłoszone",
+      "approved": "Zatwierdzone",
+      "received": "Odebrane",
+      "refunded": "Zwrócone",
+      "rejected": "Odrzucone",
+      "cancelled": "Anulowane"
+    },
+    "invoice": {
+      "draft": "Szkic",
+      "issued": "Wystawiona",
+      "sent": "Wysłana",
+      "paid": "Opłacona",
+      "partially_paid": "Częściowo opłacona",
+      "cancelled": "Anulowana",
+      "error": "Błąd"
+    },
+    "payment": {
+      "pending": "Oczekuje",
+      "paid": "Opłacone",
+      "partially_paid": "Częściowo",
+      "refunded": "Zwrócone",
+      "failed": "Nieudane"
+    },
+    "ksef": {
+      "not_sent": "Nie wysłano",
+      "pending": "Oczekuje",
+      "accepted": "Zaakceptowana",
+      "rejected": "Odrzucona"
+    },
+    "purchaseOrder": {
+      "draft": "Szkic",
+      "sent": "Wysłane",
+      "partially_received": "Częściowo odebrane",
+      "received": "Odebrane",
+      "cancelled": "Anulowane"
+    },
+    "supplier": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "error": "Błąd"
+    },
+    "integration": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna",
+      "error": "Błąd"
+    },
+    "warehouseDocument": {
+      "draft": "Szkic",
+      "confirmed": "Zatwierdzony",
+      "cancelled": "Anulowany"
+    },
+    "stocktake": {
+      "draft": "Szkic",
+      "in_progress": "W trakcie",
+      "completed": "Zakończona",
+      "cancelled": "Anulowana"
+    },
+    "syncJob": {
+      "running": "W trakcie",
+      "completed": "Zakończone",
+      "failed": "Nieudane"
+    }
+  },
+  "priorities": {
+    "urgent": "Pilne",
+    "high": "Wysoki",
+    "normal": "Normalny",
+    "low": "Niski"
+  },
+  "roles": {
+    "owner": "Właściciel",
+    "admin": "Administrator",
+    "member": "Członek"
+  },
+  "providers": {
+    "orderSource": {
+      "manual": "Ręczne",
+      "supplier": "Dostawca",
+      "allegro": "Allegro",
+      "amazon": "Amazon",
+      "empik": "Empik",
+      "erli": "Erli",
+      "ebay": "eBay",
+      "kaufland": "Kaufland",
+      "olx": "OLX",
+      "woocommerce": "WooCommerce",
+      "shopify": "Shopify",
+      "other": "Inne"
+    },
+    "shipment": {
+      "inpost": "InPost",
+      "dhl": "DHL",
+      "dpd": "DPD",
+      "gls": "GLS",
+      "ups": "UPS",
+      "poczta_polska": "Poczta Polska",
+      "orlen_paczka": "Orlen Paczka",
+      "fedex": "FedEx",
+      "manual": "Ręczna"
+    },
+    "integration": {
+      "allegro": "Allegro",
+      "amazon": "Amazon",
+      "empik": "Empik",
+      "erli": "Erli",
+      "ebay": "eBay",
+      "kaufland": "Kaufland",
+      "olx": "OLX",
+      "inpost": "InPost",
+      "dhl": "DHL",
+      "dpd": "DPD",
+      "woocommerce": "WooCommerce",
+      "gls": "GLS",
+      "ups": "UPS",
+      "fedex": "FedEx",
+      "poczta_polska": "Poczta Polska",
+      "orlen_paczka": "Orlen Paczka",
+      "fakturownia": "Fakturownia",
+      "btp": "BTP.pro"
+    },
+    "invoicing": {
+      "fakturownia": "Fakturownia",
+      "wfirma": "wFirma",
+      "infakt": "inFakt"
+    },
+    "category": {
+      "marketplace": "Marketplace",
+      "carrier": "Kurierzy",
+      "invoicing": "Fakturowanie",
+      "supplier": "Hurtownie"
+    }
+  },
+  "invoiceTypes": {
+    "standard": "Standardowa",
+    "vat": "Faktura VAT",
+    "proforma": "Proforma",
+    "correction": "Korekta",
+    "receipt": "Paragon"
+  },
+  "paymentMethods": {
+    "przelew": "Przelew",
+    "pobranie": "Pobranie",
+    "karta": "Karta",
+    "PayU": "PayU",
+    "Przelewy24": "Przelewy24",
+    "BLIK": "BLIK"
+  },
+  "credentials": {
+    "allegro": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Twój Client ID z apps.developer.allegro.pl",
+      "clientIdHelp": "Znajdziesz w panelu deweloperskim Allegro: apps.developer.allegro.pl",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Twój Client Secret",
+      "accessToken": "Access Token",
+      "accessTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2",
+      "refreshToken": "Refresh Token",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "amazon": {
+      "applicationId": "Application ID",
+      "applicationIdPlaceholder": "amzn1.sellerapps.app.xxx",
+      "applicationIdHelp": "ID aplikacji z Amazon Developer Console (wymagane do OAuth)",
+      "clientId": "Client ID (LWA)",
+      "clientIdPlaceholder": "amzn1.application-oa2-client.xxx",
+      "clientIdHelp": "Login with Amazon credentials z Seller Central > Develop Apps",
+      "clientSecret": "Client Secret (LWA)",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2",
+      "marketplaceId": "Marketplace ID",
+      "marketplaceIdPlaceholder": "A1C3SOZRARQ6R3",
+      "marketplaceIdHelp": "Amazon.pl: A1C3SOZRARQ6R3, Amazon.de: A1PA6795UKMFR9",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "woocommerce": {
+      "storeUrl": "Adres sklepu",
+      "storeUrlPlaceholder": "https://twoj-sklep.pl",
+      "storeUrlHelp": "Pełny adres URL Twojego sklepu WooCommerce",
+      "consumerKey": "Consumer Key",
+      "consumerKeyPlaceholder": "ck_...",
+      "consumerKeyHelp": "WooCommerce > Ustawienia > Zaawansowane > REST API > Dodaj klucz",
+      "consumerSecret": "Consumer Secret",
+      "consumerSecretPlaceholder": "cs_..."
+    },
+    "ebay": {
+      "appId": "App ID (Client ID)",
+      "appIdPlaceholder": "Twój App ID z developer.ebay.com",
+      "appIdHelp": "Znajdziesz w eBay Developer Program: developer.ebay.com",
+      "certId": "Cert ID (Client Secret)",
+      "devId": "Dev ID",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Wygeneruj przez eBay OAuth flow",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "kaufland": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API Kaufland",
+      "apiKeyHelp": "Seller Portal Kaufland > Ustawienia > API",
+      "secretKey": "Klucz Secret",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "olx": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Twój Client ID z OLX API",
+      "clientIdHelp": "Zarejestruj aplikację na developer.olx.pl",
+      "clientSecret": "Client Secret",
+      "accessToken": "Access Token",
+      "accessTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2"
+    },
+    "erli": {
+      "apiToken": "Token API",
+      "apiTokenPlaceholder": "Twój token API Erli",
+      "apiTokenHelp": "Panel sprzedawcy Erli > Ustawienia > API",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "empik": {
+      "baseUrl": "Adres API Mirakl",
+      "baseUrlPlaceholder": "https://empikplace-prod.mirakl.net",
+      "baseUrlHelp": "URL platformy Mirakl dla Empik Marketplace",
+      "apiKey": "Klucz API",
+      "apiKeyHelp": "Mój Profil > Klucze API w panelu Mirakl"
+    },
+    "inpost": {
+      "apiToken": "Token API",
+      "apiTokenPlaceholder": "Twój token API InPost",
+      "apiTokenHelp": "Manager Paczek InPost > Ustawienia > API",
+      "organizationId": "ID organizacji",
+      "organizationIdPlaceholder": "Twój numer organizacji InPost",
+      "geowidgetToken": "Token GeoWidget (mapa)",
+      "geowidgetTokenPlaceholder": "Twój token GeoWidget InPost",
+      "geowidgetTokenHelp": "Token do wyświetlania mapy paczkomatów. Wygeneruj na manager.paczkomaty.pl > API > GeoWidget. WAŻNE: token jest przypisany do domeny — dla dev wpisz 'localhost', dla produkcji domenę sklepu.",
+      "sandbox": "Tryb testowy (Sandbox)",
+      "defaultSendingMethod": "Domyślna metoda nadania",
+      "defaultSendingMethodHelp": "Metoda nadania używana domyślnie przy generowaniu etykiety InPost",
+      "sendingMethods": {
+        "dispatch_order": "Kurier odbierze (zlecenie odbioru)",
+        "parcel_locker": "Nadam w paczkomacie",
+        "pop": "Nadam w PaczkoPunkcie (POP)",
+        "any_point": "Dowolny punkt (paczkomat/POP)",
+        "pok": "Punkt Obsługi Klienta (POK)",
+        "branch": "Oddział InPost"
+      }
+    },
+    "dhl": {
+      "username": "Nazwa użytkownika",
+      "usernamePlaceholder": "Login do DHL WebAPI",
+      "password": "Hasło",
+      "accountNumber": "Numer konta DHL",
+      "accountNumberPlaceholder": "Twój numer konta nadawczego",
+      "accountNumberHelp": "Numer konta nadawczego DHL (SAP)",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "dpd": {
+      "login": "Login",
+      "loginPlaceholder": "Login do DPD WebAPI",
+      "password": "Hasło",
+      "masterFid": "Master FID",
+      "masterFidPlaceholder": "Numer Master FID",
+      "masterFidHelp": "Numer identyfikacyjny nadawcy DPD",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "gls": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API GLS",
+      "apiKeyHelp": "GLS Poland > Konto firmowe > API",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "ups": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Twój Client ID z developer.ups.com",
+      "clientIdHelp": "UPS Developer Kit: developer.ups.com",
+      "clientSecret": "Client Secret",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "fedex": {
+      "clientId": "Client ID (API Key)",
+      "clientIdPlaceholder": "Twój Client ID z developer.fedex.com",
+      "clientIdHelp": "FedEx Developer Portal: developer.fedex.com",
+      "clientSecret": "Client Secret (Secret Key)",
+      "accountNumber": "Numer konta FedEx",
+      "accountNumberPlaceholder": "Twój 9-cyfrowy numer konta",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "poczta_polska": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API Poczta Polska",
+      "apiKeyHelp": "Elektroniczny Nadawca > Ustawienia > API",
+      "partnerId": "ID Partnera",
+      "partnerIdPlaceholder": "Twój identyfikator partnera",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "orlen_paczka": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API Orlen Paczka",
+      "apiKeyHelp": "Panel Orlen Paczka > Ustawienia > Dostęp API",
+      "partnerId": "ID Partnera",
+      "partnerIdPlaceholder": "Twój identyfikator partnera",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "fakturownia": {
+      "apiToken": "Token API",
+      "apiTokenPlaceholder": "Twój token API Fakturownia",
+      "apiTokenHelp": "Ustawienia > Ustawienia konta > Integracja > Kod autoryzacyjny API",
+      "subdomain": "Subdomena",
+      "subdomainPlaceholder": "twoja-firma",
+      "subdomainHelp": "Nazwa Twojego konta, np. 'twoja-firma' z twoja-firma.fakturownia.pl"
+    },
+    "btp": {
+      "username": "Klucz publiczny (login)",
+      "usernamePlaceholder": "Twój klucz publiczny z panelu BTP",
+      "usernameHelp": "Znajdziesz go w panelu B2B → Profil użytkownika → zakładka Klucze",
+      "password": "Klucz prywatny (hasło)",
+      "passwordPlaceholder": "Twój klucz prywatny z panelu BTP",
+      "passwordHelp": "Para kluczy służy do uwierzytelnienia Basic Auth w API BTP",
+      "baseUrl": "Adres API hurtowni",
+      "baseUrlPlaceholder": "https://twoja-hurtownia.btp.pro",
+      "baseUrlHelp": "Adres Swagger API Twojej hurtowni, np. https://nazwa.btp.pro"
+    }
+  },
+  "automation": {
+    "title": "Automatyzacja",
+    "subtitle": "Zarządzaj regułami automatyzacji",
+    "newRule": "Nowa reguła",
+    "editRule": "Edytuj regułę",
+    "triggers": {
+      "order.created": "Zamówienie utworzone",
+      "order.status_changed": "Zmiana statusu zamówienia",
+      "order.updated": "Zamówienie zaktualizowane",
+      "shipment.created": "Przesyłka utworzona",
+      "shipment.status_changed": "Zmiana statusu przesyłki",
+      "return.created": "Zwrot utworzony",
+      "return.status_changed": "Zmiana statusu zwrotu",
+      "product.created": "Produkt utworzony",
+      "product.updated": "Produkt zaktualizowany",
+      "product.stock_restored": "Stan magazynowy przywrócony",
+      "product.out_of_stock": "Produkt niedostępny (stan = 0)"
+    },
+    "operators": {
+      "eq": "Równe (=)",
+      "neq": "Różne (!=)",
+      "in": "Zawiera się w",
+      "not_in": "Nie zawiera się w",
+      "gt": "Większe (>)",
+      "gte": "Większe lub równe (>=)",
+      "lt": "Mniejsze (<)",
+      "lte": "Mniejsze lub równe (<=)",
+      "contains": "Zawiera",
+      "not_contains": "Nie zawiera",
+      "starts_with": "Zaczyna się od"
+    },
+    "actions": {
+      "set_status": "Ustaw status",
+      "add_tag": "Dodaj tag",
+      "send_email": "Wyślij e-mail",
+      "create_invoice": "Utwórz fakturę",
+      "webhook": "Wywołaj webhook",
+      "activate_listing": "Aktywuj listing",
+      "deactivate_listing": "Dezaktywuj listing"
+    }
+  },
+  "orders": {
+    "title": "Zamówienia",
+    "subtitle": "Zarządzaj zamówieniami w systemie",
+    "newOrder": "Nowe zamówienie",
+    "editOrder": "Edytuj zamówienie",
+    "orderDetails": "Szczegóły zamówienia",
+    "columns": {
+      "id": "ID",
+      "customer": "Klient",
+      "source": "Źródło",
+      "status": "Status",
+      "priority": "Priorytet",
+      "amount": "Kwota",
+      "payment": "Płatność",
+      "notes": "Notatki",
+      "tags": "Tagi",
+      "date": "Data"
+    },
+    "empty": {
+      "title": "Brak zamówień",
+      "description": "Połącz Allegro, aby automatycznie importować zamówienia, lub dodaj je ręcznie.",
+      "connectAllegro": "Połącz Allegro",
+      "addOrder": "Dodaj zamówienie"
+    },
+    "merge": {
+      "title": "Scal zamówienia",
+      "description": "Czy na pewno chcesz scalić {count} zamówień w jedno? Pozycje ze wszystkich zamówień zostaną połączone, a kwoty zsumowane. Oryginalne zamówienia otrzymają status \"merged\".",
+      "selectedOrders": "Wybrane zamówienia:",
+      "button": "Scal zamówienia ({count})",
+      "merging": "Scalanie...",
+      "success": "Zamówienia zostały scalone"
+    },
+    "labels": {
+      "generate": "Generuj etykiety ({count})",
+      "noLabels": "Brak przesyłek z etykietami dla wybranych zamówień",
+      "downloaded": "Pobrano etykiety ({count})"
+    },
+    "form": {
+      "source": "Źródło",
+      "sourcePlaceholder": "Wybierz źródło",
+      "customerName": "Nazwa klienta",
+      "customerNamePlaceholder": "Jan Kowalski",
+      "customerEmail": "Email klienta",
+      "customerPhone": "Telefon klienta",
+      "currency": "Waluta",
+      "orderItems": "Pozycje zamówienia",
+      "addItem": "Dodaj pozycję",
+      "itemName": "Nazwa",
+      "itemNamePlaceholder": "Nazwa produktu",
+      "itemSku": "SKU",
+      "itemQuantity": "Ilość",
+      "itemPrice": "Cena",
+      "itemsTotal": "Suma pozycji: {total}",
+      "noItems": "Brak pozycji. Kliknij \"Dodaj pozycję\" aby dodać produkty.",
+      "totalAmount": "Kwota całkowita",
+      "totalAutoCalculated": "Obliczane automatycznie z pozycji zamówienia",
+      "payment": "Płatność",
+      "paymentStatus": "Status płatności",
+      "paymentStatusPlaceholder": "Wybierz status",
+      "paymentMethod": "Metoda płatności",
+      "paymentMethodPlaceholder": "Wybierz metodę",
+      "shippingAddress": "Adres dostawy",
+      "fullName": "Imię i nazwisko",
+      "street": "Ulica",
+      "streetPlaceholder": "ul. Przykładowa 1",
+      "city": "Miasto",
+      "cityPlaceholder": "Warszawa",
+      "postalCode": "Kod pocztowy",
+      "postalCodePlaceholder": "00-001",
+      "country": "Kraj",
+      "deliveryMethod": "Metoda dostawy",
+      "shipmentProvider": "Dostawca przesyłki",
+      "shipmentProviderPlaceholder": "Wybierz dostawcę",
+      "noShipment": "Brak (bez przesyłki)",
+      "inpostServiceType": "Typ usługi InPost",
+      "inpostLocker": "Paczkomat",
+      "inpostCourier": "Kurier InPost",
+      "targetLocker": "Paczkomat docelowy",
+      "autoCreateShipment": "Utwórz przesyłkę automatycznie",
+      "billingSameAsShipping": "Adres rozliczeniowy taki sam jak adres dostawy",
+      "billingNameCompany": "Imię i nazwisko / Firma",
+      "notesPlaceholder": "Dodatkowe uwagi do zamówienia...",
+      "priority": "Priorytet",
+      "priorityPlaceholder": "Wybierz priorytet",
+      "internalNotes": "Notatki wewnętrzne",
+      "internalNotesPlaceholder": "Notatki widoczne tylko dla zespołu...",
+      "customFields": "Pola dodatkowe",
+      "submitCreate": "Utwórz zamówienie",
+      "submitUpdate": "Zapisz zmiany",
+      "fieldRequired": "Pole \"{field}\" jest wymagane"
+    }
+  },
+  "products": {
+    "title": "Produkty",
+    "subtitle": "Zarządzaj produktami w katalogu",
+    "newProduct": "Nowy produkt",
+    "editProduct": "Edytuj produkt",
+    "productData": "Dane produktu",
+    "addToCatalog": "Dodaj nowy produkt do katalogu",
+    "created": "Produkt został utworzony",
+    "createError": "Nie udało się utworzyć produktu",
+    "form": {
+      "productName": "Nazwa produktu",
+      "productNamePlaceholder": "Nazwa produktu",
+      "sku": "SKU",
+      "skuPlaceholder": "Opcjonalny kod SKU",
+      "ean": "EAN",
+      "eanPlaceholder": "Opcjonalny kod EAN",
+      "price": "Cena",
+      "stockQuantity": "Stan magazynowy",
+      "source": "Źródło",
+      "sourcePlaceholder": "Wybierz źródło",
+      "category": "Kategoria",
+      "categoryPlaceholder": "Wybierz kategorię...",
+      "shortDescription": "Krótki opis",
+      "shortDescriptionPlaceholder": "Krótki opis produktu...",
+      "longDescription": "Opis",
+      "longDescriptionPlaceholder": "Pełny opis produktu...",
+      "improve": "Popraw",
+      "translate": "Przetłumacz",
+      "descriptionEmpty": "Pole opisu jest puste",
+      "improvedByAi": "Opis poprawiony przez AI",
+      "translatedByAi": "Opis przetłumaczony przez AI",
+      "dimensionsAndWeight": "Wymiary i waga",
+      "weight": "Waga (kg)",
+      "width": "Szerokość (cm)",
+      "height": "Wysokość (cm)",
+      "depth": "Głębokość (cm)",
+      "mainImage": "Zdjęcie główne (URL)",
+      "uploadImage": "Wgraj",
+      "fileTooLarge": "Plik jest za duży. Maksymalny rozmiar: 5 MB.",
+      "uploadError": "Błąd uploadu",
+      "mainImagePreview": "Podgląd zdjęcia głównego",
+      "additionalImages": "Dodatkowe zdjęcia",
+      "imageUrl": "URL zdjęcia",
+      "imageAlt": "Tekst alternatywny (opcjonalny)",
+      "addImage": "Dodaj zdjęcie",
+      "uploadPhoto": "Wgraj zdjęcie",
+      "dropshipProduct": "Produkt dropship",
+      "dropshipDescription": "Zamówienia z tym produktem będą automatycznie routowane do dostawcy",
+      "dropshipSupplier": "Dostawca dropship",
+      "dropshipSupplierPlaceholder": "Wybierz dostawcę",
+      "submitCreate": "Utwórz produkt",
+      "submitUpdate": "Zapisz zmiany"
+    },
+    "validation": {
+      "nameRequired": "Nazwa produktu jest wymagana",
+      "priceMin": "Cena musi być większa lub równa 0",
+      "quantityInteger": "Ilość musi być liczbą całkowitą",
+      "quantityMin": "Ilość musi być większa lub równa 0"
+    }
+  },
+  "shipments": {
+    "title": "Przesyłki",
+    "subtitle": "Zarządzaj przesyłkami zamówień",
+    "newShipment": "Nowa przesyłka",
+    "columns": {
+      "id": "ID",
+      "order": "Zamówienie",
+      "provider": "Dostawca",
+      "status": "Status",
+      "trackingNumber": "Numer śledzenia",
+      "createdAt": "Data utworzenia"
+    },
+    "empty": {
+      "title": "Brak przesyłek",
+      "description": "Nie znaleziono przesyłek do wyświetlenia."
+    },
+    "printLabels": "Drukuj etykiety ({count})",
+    "labelsDownloaded": "Etykiety zostały pobrane",
+    "orderCourier": "Zamów kuriera ({count})"
+  },
+  "returns": {
+    "title": "Zwroty",
+    "subtitle": "Zarządzaj zwrotami i reklamacjami",
+    "newReturn": "Nowy zwrot",
+    "columns": {
+      "status": "Status",
+      "order": "Zamówienie",
+      "reason": "Powód",
+      "refundAmount": "Kwota zwrotu",
+      "date": "Data"
+    },
+    "empty": {
+      "title": "Brak zwrotów",
+      "description": "Nie znaleziono zwrotów do wyświetlenia."
+    }
+  },
+  "customers": {
+    "title": "Klienci",
+    "subtitle": "Zarządzaj bazą klientów",
+    "newCustomer": "Nowy klient",
+    "customerData": "Dane klienta",
+    "addDescription": "Dodaj nowego klienta do bazy",
+    "created": "Klient został utworzony",
+    "form": {
+      "fullName": "Imię i nazwisko",
+      "fullNamePlaceholder": "np. Jan Kowalski",
+      "email": "E-mail",
+      "emailPlaceholder": "jan@example.com",
+      "phone": "Telefon",
+      "phonePlaceholder": "+48 123 456 789",
+      "company": "Firma",
+      "companyPlaceholder": "np. Firma Sp. z o.o.",
+      "nip": "NIP",
+      "nipPlaceholder": "np. 1234567890",
+      "notes": "Notatki",
+      "notesPlaceholder": "Dodatkowe informacje o kliencie...",
+      "submitCreate": "Utwórz klienta",
+      "submitUpdate": "Zapisz zmiany"
+    },
+    "validation": {
+      "nameRequired": "Imię i nazwisko jest wymagane",
+      "invalidEmail": "Nieprawidłowy adres e-mail"
+    }
+  },
+  "invoices": {
+    "title": "Faktury",
+    "subtitle": "Lista wystawionych faktur",
+    "sendToKsef": "Wyślij do KSeF ({count})",
+    "ksefSent": "Wysłano {sent} z {total} faktur do KSeF",
+    "ksefErrors": "Błędy: {errors}",
+    "filters": {
+      "allStatuses": "Wszystkie statusy",
+      "allProviders": "Wszyscy dostawcy",
+      "allKsef": "Wszystkie (KSeF)"
+    }
+  },
+  "warehouses": {
+    "title": "Magazyny",
+    "subtitle": "Zarządzaj magazynami i stanami magazynowymi",
+    "newWarehouse": "Nowy magazyn",
+    "addDescription": "Dodaj nowy magazyn do systemu",
+    "created": "Magazyn został utworzony",
+    "deleted": "Magazyn został usunięty",
+    "columns": {
+      "name": "Nazwa",
+      "code": "Kod",
+      "default": "Domyślny",
+      "active": "Aktywny",
+      "createdAt": "Utworzono"
+    },
+    "empty": {
+      "title": "Brak magazynów",
+      "description": "Dodaj pierwszy magazyn, aby zarządzać stanami magazynowymi produktów."
+    },
+    "deleteConfirm": {
+      "title": "Usuń magazyn",
+      "description": "Czy na pewno chcesz usunąć ten magazyn? Wszystkie stany magazynowe zostaną usunięte."
+    }
+  },
+  "warehouseDocuments": {
+    "title": "Dokumenty magazynowe",
+    "subtitle": "Zarządzaj dokumentami PZ/WZ/MM",
+    "deleted": "Dokument został usunięty"
+  },
+  "stocktakes": {
+    "title": "Inwentaryzacja",
+    "subtitle": "Zarządzaj inwentaryzacjami"
+  },
+  "users": {
+    "title": "Użytkownicy",
+    "subtitle": "Zarządzaj użytkownikami w organizacji",
+    "newUser": "Nowy użytkownik",
+    "editUser": "Edytuj użytkownika",
+    "created": "Użytkownik został utworzony",
+    "updated": "Użytkownik został zaktualizowany",
+    "deleted": "Użytkownik został usunięty",
+    "columns": {
+      "name": "Nazwa",
+      "email": "Email",
+      "role": "Rola",
+      "lastLogin": "Ostatnie logowanie",
+      "createdAt": "Utworzono"
+    },
+    "empty": {
+      "title": "Brak użytkowników",
+      "description": "Dodaj pierwszego użytkownika do organizacji."
+    },
+    "deleteConfirm": {
+      "title": "Usuń użytkownika",
+      "description": "Czy na pewno chcesz usunąć tego użytkownika? Ta operacja jest nieodwracalna."
+    }
+  },
+  "settings": {
+    "company": {
+      "title": "Firma",
+      "subtitle": "Ustawienia firmy",
+      "companyName": "Nazwa firmy",
+      "companyNameRequired": "Nazwa firmy jest wymagana",
+      "logo": "Logo",
+      "address": "Adres",
+      "city": "Miasto",
+      "postCode": "Kod pocztowy",
+      "nip": "NIP",
+      "phone": "Telefon",
+      "email": "E-mail",
+      "emailInvalid": "Nieprawidłowy adres email",
+      "website": "Strona www",
+      "saved": "Ustawienia zostały zapisane",
+      "exportData": "Eksportuj dane",
+      "importData": "Importuj dane"
+    },
+    "security": {
+      "title": "Bezpieczeństwo",
+      "subtitle": "Ustawienia bezpieczeństwa i 2FA",
+      "twoFaTitle": "Uwierzytelnianie dwuskładnikowe (2FA)",
+      "twoFaEnabled": "2FA jest włączone",
+      "twoFaDisabled": "2FA jest wyłączone",
+      "enable2fa": "Włącz 2FA",
+      "disable2fa": "Wyłącz 2FA"
+    }
+  },
+  "integrations": {
+    "title": "Integracje",
+    "subtitle": "Połącz z zewnętrznymi serwisami",
+    "newIntegration": "Nowa integracja"
+  },
+  "auth": {
+    "login": {
+      "title": "Logowanie",
+      "subtitle": "Zaloguj się do panelu OpenOMS",
+      "organization": "Organizacja",
+      "organizationPlaceholder": "moja-firma",
+      "email": "Email",
+      "password": "Hasło",
+      "showPassword": "Pokaż hasło",
+      "hidePassword": "Ukryj hasło",
+      "submit": "Zaloguj się",
+      "submitting": "Logowanie...",
+      "noAccount": "Nie masz konta?",
+      "register": "Zarejestruj się"
+    },
+    "register": {
+      "title": "Wybierz plan dla swojego biznesu",
+      "trialDays": "{days} dni za darmo",
+      "trialDescription": "Wszystkie plany z pełnym dostępem przez {days} dni. Bez karty na start. Zrezygnuj kiedy chcesz.",
+      "monthly": "Miesięcznie",
+      "yearly": "Rocznie",
+      "perMonth": "/mies.",
+      "yearlyTotal": "{price} rocznie",
+      "freeTrialStart": "{days} dni za darmo na start",
+      "mostPopular": "Najpopularniejszy",
+      "startFree": "Zacznij za darmo",
+      "redirecting": "Przekierowanie...",
+      "haveAccount": "Masz już konto?",
+      "loginLink": "Zaloguj się",
+      "haveInvite": "Masz token zaproszenia?",
+      "registerWithInvite": "Zarejestruj się z zaproszeniem",
+      "noPlans": "Brak dostępnych planów",
+      "plansNotConfigured": "Plany cenowe nie są jeszcze skonfigurowane.",
+      "loadError": "Nie udało się załadować planów"
+    },
+    "twoFa": {
+      "title": "Weryfikacja 2FA",
+      "subtitle": "Kod z aplikacji uwierzytelniającej",
+      "codeLabel": "Kod weryfikacyjny",
+      "codeHint": "Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej",
+      "verify": "Zweryfikuj",
+      "verifying": "Weryfikacja...",
+      "backToLogin": "Wróć do logowania"
+    },
+    "logout": "Wyloguj się",
+    "validation": {
+      "orgRequired": "Slug organizacji jest wymagany",
+      "emailInvalid": "Nieprawidłowy adres email",
+      "passwordRequired": "Hasło jest wymagane"
+    }
+  },
+  "validation": {
+    "required": "To pole jest wymagane",
+    "invalidEmail": "Nieprawidłowy adres email",
+    "minLength": "Minimum {min} znaków",
+    "maxLength": "Maksimum {max} znaków",
+    "minValue": "Wartość musi wynosić co najmniej {min}",
+    "maxValue": "Wartość musi wynosić co najwyżej {max}",
+    "integer": "Musi być liczbą całkowitą",
+    "sourceRequired": "Źródło jest wymagane",
+    "customerNameRequired": "Nazwa klienta jest wymagana",
+    "amountMin": "Kwota musi być >= 0",
+    "currencyRequired": "Waluta jest wymagana"
+  },
+  "errors": {
+    "generic": "Wystąpił błąd",
+    "notFound": "Nie znaleziono",
+    "unauthorized": "Brak autoryzacji",
+    "forbidden": "Brak dostępu",
+    "serverError": "Błąd serwera",
+    "networkError": "Błąd sieci",
+    "loadError": "Nie udało się załadować danych"
+  },
+  "toasts": {
+    "created": "{entity} został(a) utworzony(a)",
+    "updated": "{entity} został(a) zaktualizowany(a)",
+    "deleted": "{entity} został(a) usunięty(a)",
+    "saved": "Zmiany zostały zapisane",
+    "error": "Wystąpił błąd: {message}",
+    "copied": "Skopiowano do schowka",
+    "exportSuccess": "Eksport zakończony pomyślnie",
+    "importSuccess": "Import zakończony pomyślnie"
+  },
+  "dashboard": {
+    "title": "Pulpit",
+    "stats": {
+      "totalOrders": "Wszystkie zamówienia",
+      "new": "Nowe",
+      "inTransit": "W transporcie",
+      "delivered": "Dostarczone"
+    },
+    "recentOrders": "Ostatnie zamówienia",
+    "noOrders": "Brak zamówień"
+  },
+  "onboarding": {
+    "title": "Pierwsze kroki",
+    "progress": "{completed} z {total} ukończone",
+    "dismiss": "Pomiń",
+    "steps": {
+      "company": {
+        "title": "Uzupełnij dane firmy",
+        "description": "Dodaj nazwę firmy i NIP — potrzebne do faktur i przesyłek."
+      },
+      "integration": {
+        "title": "Połącz z Allegro",
+        "description": "Zaimportuj zamówienia i produkty z Allegro."
+      },
+      "product": {
+        "title": "Dodaj pierwszy produkt",
+        "description": "Ręcznie lub przez import CSV."
+      },
+      "order": {
+        "title": "Pierwsze zamówienie",
+        "description": "Przyjdzie automatycznie z Allegro lub dodaj ręcznie."
+      }
+    }
+  },
+  "commandPalette": {
+    "title": "Paleta poleceń",
+    "placeholder": "Wyszukaj stronę lub akcję...",
+    "noResults": "Nie znaleziono wyników.",
+    "navigation": "Nawigacja",
+    "quickActions": "Akcje",
+    "newOrder": "Nowe zamówienie",
+    "newProduct": "Nowy produkt",
+    "newShipment": "Nowa przesyłka",
+    "newCustomer": "Nowy klient"
+  },
+  "pagination": {
+    "results": "Wyniki {start}-{end} z {total}",
+    "noResults": "Brak wyników",
+    "perPage": "Na stronie:",
+    "pageOf": "Strona {current} z {total}",
+    "previous": "Poprzednia",
+    "next": "Następna"
+  },
+  "subscription": {
+    "suspended": "Subskrypcja została zawieszona. Odnów płatność aby kontynuować korzystanie z systemu.",
+    "pastDue": "Płatność zaległa. Tworzenie nowych zasobów zostało zablokowane do momentu uregulowania należności.",
+    "trial": "Okres próbny — pozostało {days} dni.",
+    "manageSubscription": "Zarządzaj subskrypcją",
+    "canceled": "Subskrypcja anulowana. Dostęp wygasa {date}.",
+    "renewSubscription": "Odnów subskrypcję"
+  },
+  "ksef": {
+    "environments": {
+      "test": "Testowe (ksef-test.mf.gov.pl)",
+      "production": "Produkcyjne (ksef.mf.gov.pl)"
+    }
+  },
+  "syncJobs": {
+    "title": "Synchronizacja",
+    "subtitle": "Historia zadań synchronizacji",
+    "types": {
+      "all": "Wszystkie",
+      "orders": "Zamówienia",
+      "products": "Produkty",
+      "stock": "Stany magazynowe",
+      "prices": "Ceny"
+    }
   }
 }
