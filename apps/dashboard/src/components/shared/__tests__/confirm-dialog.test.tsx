@@ -33,7 +33,7 @@ describe("ConfirmDialog", () => {
     expect(screen.queryByText("Confirm Delete")).not.toBeInTheDocument();
   });
 
-  it("shows default confirm label (Potwierdź)", () => {
+  it("shows default confirm label", () => {
     render(
       <ConfirmDialog
         open={true}
@@ -44,7 +44,8 @@ describe("ConfirmDialog", () => {
       />
     );
 
-    expect(screen.getByText("Potwierdź")).toBeInTheDocument();
+    // With mocked useTranslations, t("confirm") returns "confirm"
+    expect(screen.getByText("confirm")).toBeInTheDocument();
   });
 
   it("shows custom confirm label", () => {
@@ -81,7 +82,7 @@ describe("ConfirmDialog", () => {
     expect(handleConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("shows cancel button with text 'Anuluj'", () => {
+  it("shows cancel button", () => {
     render(
       <ConfirmDialog
         open={true}
@@ -92,7 +93,8 @@ describe("ConfirmDialog", () => {
       />
     );
 
-    expect(screen.getByText("Anuluj")).toBeInTheDocument();
+    // With mocked useTranslations, t("cancel") returns "cancel"
+    expect(screen.getByText("cancel")).toBeInTheDocument();
   });
 
   it("shows loading state", () => {
@@ -108,7 +110,8 @@ describe("ConfirmDialog", () => {
       />
     );
 
-    expect(screen.getByText("Przetwarzanie...")).toBeInTheDocument();
+    // With mocked useTranslations, t("processing") returns "processing"
+    expect(screen.getByText("processing")).toBeInTheDocument();
     expect(screen.queryByText("Yes")).not.toBeInTheDocument();
   });
 
@@ -124,7 +127,7 @@ describe("ConfirmDialog", () => {
       />
     );
 
-    expect(screen.getByText("Anuluj")).toBeDisabled();
-    expect(screen.getByText("Przetwarzanie...")).toBeDisabled();
+    expect(screen.getByText("cancel")).toBeDisabled();
+    expect(screen.getByText("processing")).toBeDisabled();
   });
 });

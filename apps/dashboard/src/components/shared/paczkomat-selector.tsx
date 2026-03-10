@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, MapPin, Loader2, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -84,6 +85,7 @@ function SearchWithMapFallback({
   onPointSelect: (pointName: string) => void;
   layout: "row" | "stacked";
 }) {
+  const t = useTranslations("shared.paczkomat");
   const [mapOpen, setMapOpen] = useState(false);
 
   return (
@@ -98,10 +100,10 @@ function SearchWithMapFallback({
             variant="outline"
             size={layout === "stacked" ? "default" : "icon"}
             onClick={() => setMapOpen(true)}
-            title="Pokaż mapę paczkomatów"
+            title={t("showMap")}
           >
             <Map className="h-4 w-4" />
-            {layout === "stacked" && <span className="ml-2">Pokaż na mapie</span>}
+            {layout === "stacked" && <span className="ml-2">{t("showOnMap")}</span>}
           </Button>
           <MapDialog
             token={token}
@@ -130,6 +132,7 @@ function MapDialog({
   onOpenChange: (open: boolean) => void;
   onPointSelect: (pointName: string) => void;
 }) {
+  const t = useTranslations("shared.paczkomat");
   const [widgetError, setWidgetError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onPointSelect);
@@ -185,22 +188,22 @@ function MapDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Wybierz paczkomat InPost</DialogTitle>
+          <DialogTitle>{t("selectPoint")}</DialogTitle>
         </DialogHeader>
         {widgetError ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-center max-w-md">
-              <p className="font-medium text-destructive">Błąd tokenu GeoWidget</p>
+              <p className="font-medium text-destructive">{t("tokenError")}</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Token GeoWidget jest przypisany do konkretnej domeny. Sprawdź w{" "}
+                {t("tokenHelp")}{" "}
                 <a href="https://manager.paczkomaty.pl" target="_blank" rel="noopener noreferrer" className="underline">
-                  panelu InPost
+                  {t("inpostPanel")}
                 </a>{" "}
-                czy token jest wygenerowany dla domeny:{" "}
+                {t("tokenDomain")}{" "}
                 <code className="bg-muted px-1 rounded text-xs">{typeof window !== "undefined" ? window.location.hostname : "localhost"}</code>
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">Zamknij dialog i użyj wyszukiwarki tekstowej.</p>
+            <p className="text-sm text-muted-foreground">{t("closeAndSearch")}</p>
           </div>
         ) : (
           <div ref={containerRef} className="flex-1 min-h-[60vh]" />
@@ -217,6 +220,7 @@ function SearchMode({
   value: string;
   onPointSelect: (pointName: string) => void;
 }) {
+  const t = useTranslations("shared.paczkomat");
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -243,7 +247,7 @@ function SearchMode({
         >
           <span className="flex items-center gap-2 truncate">
             <MapPin className="h-4 w-4 shrink-0" />
-            {value ? `Paczkomat: ${value}` : "Wybierz paczkomat..."}
+            {value ? t("selected", { name: value }) : t("placeholder")}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -251,7 +255,7 @@ function SearchMode({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Wpisz miasto lub kod paczkomatu..."
+            placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
@@ -261,9 +265,9 @@ function SearchMode({
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : debouncedQuery.length < 2 ? (
-              <CommandEmpty>Wpisz min. 2 znaki, aby wyszukać</CommandEmpty>
+              <CommandEmpty>{t("minChars")}</CommandEmpty>
             ) : points.length === 0 ? (
-              <CommandEmpty>Nie znaleziono paczkomatów</CommandEmpty>
+              <CommandEmpty>{t("noResults")}</CommandEmpty>
             ) : (
               <CommandGroup>
                 {points.map((point: InPostPoint) => (

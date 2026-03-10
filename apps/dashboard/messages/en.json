@@ -1015,5 +1015,143 @@
       "stock": "Stock levels",
       "prices": "Prices"
     }
+  },
+  "shared": {
+    "sidebar": {
+      "mainMenu": "Main menu",
+      "expandMenu": "Expand menu (Ctrl+B)",
+      "collapseMenu": "Collapse menu"
+    },
+    "mobileNav": {
+      "openMenu": "Open menu"
+    },
+    "tableDensity": {
+      "compact": "Compact",
+      "comfortable": "Comfortable",
+      "spacious": "Spacious"
+    },
+    "editableCell": {
+      "saving": "Saving...",
+      "saveError": "Failed to save changes",
+      "doubleClickToEdit": "Double-click to edit"
+    },
+    "tagInput": {
+      "placeholder": "Add tag..."
+    },
+    "orderSearch": {
+      "placeholder": "Select order...",
+      "searchPlaceholder": "Search order...",
+      "noResults": "No orders found."
+    },
+    "categoryPicker": {
+      "placeholder": "Select category...",
+      "searchPlaceholder": "Search category...",
+      "noCategory": "No category"
+    },
+    "paczkomat": {
+      "showMap": "Show parcel locker map",
+      "showOnMap": "Show on map",
+      "selectPoint": "Select InPost parcel locker",
+      "tokenError": "GeoWidget token error",
+      "tokenHelp": "GeoWidget token is bound to a specific domain. Check in the",
+      "inpostPanel": "InPost panel",
+      "tokenDomain": "if the token was generated for domain:",
+      "closeAndSearch": "Close the dialog and use the text search.",
+      "selected": "Parcel locker: {name}",
+      "placeholder": "Select parcel locker...",
+      "searchPlaceholder": "Enter city or parcel locker code...",
+      "minChars": "Enter at least 2 characters to search",
+      "noResults": "No parcel lockers found"
+    },
+    "errorBoundary": {
+      "sessionExpired": "Session expired",
+      "sessionExpiredMessage": "Session expired. Please log in again.",
+      "tooManyRequests": "Too many requests",
+      "tooManyRequestsMessage": "Too many requests. Please wait a moment and try again.",
+      "serverError": "Server error",
+      "serverErrorMessage": "Server error. Please try again later.",
+      "genericError": "Something went wrong",
+      "genericErrorMessage": "An unexpected error occurred. Try refreshing the page.",
+      "tryAgain": "Try again",
+      "logIn": "Log in"
+    },
+    "developmentBanner": {
+      "title": "Under construction",
+      "message": "This integration is under construction and has not been verified in production. Use at your own risk.",
+      "badge": "Under construction"
+    },
+    "noData": "No data"
+  },
+  "breadcrumbs": {
+    "orders": "Orders",
+    "shipments": "Shipments",
+    "products": "Products",
+    "integrations": "Integrations",
+    "settings": "Settings",
+    "users": "Users",
+    "returns": "Returns",
+    "audit": "Activity log",
+    "company": "Company",
+    "email": "Email",
+    "order-statuses": "Statuses",
+    "custom-fields": "Fields",
+    "product-categories": "Categories",
+    "webhooks": "Webhooks",
+    "allegro": "Allegro",
+    "amazon": "Amazon",
+    "offers": "Offers",
+    "messages": "Messages",
+    "catalog": "Catalog",
+    "promotions": "Promotions",
+    "disputes": "Disputes",
+    "delivery": "Delivery",
+    "policies": "Policies",
+    "finance": "Finance",
+    "ratings": "Ratings",
+    "listings": "Marketplace listings",
+    "suppliers": "Suppliers",
+    "deliveries": "Deliveries",
+    "new": "New",
+    "import": "Import",
+    "warehouse-documents": "Warehouse documents",
+    "price-lists": "Price lists",
+    "sync-jobs": "Synchronization",
+    "webhook-deliveries": "Webhook deliveries",
+    "reports": "Reports",
+    "packing": "Packing",
+    "marketing": "Marketing",
+    "helpdesk": "Helpdesk",
+    "sms": "SMS",
+    "notifications": "Notifications",
+    "currencies": "Currencies",
+    "print-templates": "Print templates",
+    "categories": "Categories",
+    "automation": "Automation",
+    "variants": "Variants",
+    "bundles": "Bundles",
+    "return-request": "Return request",
+    "customers": "Customers",
+    "invoices": "Invoices",
+    "invoicing": "Invoicing",
+    "ksef": "KSeF",
+    "roles": "Roles",
+    "warehouses": "Warehouses",
+    "stocktakes": "Stocktaking",
+    "security": "Security",
+    "inventory": "Inventory control",
+    "details": "Details"
+  },
+  "layout": {
+    "logout": "Log out",
+    "theme": {
+      "toggle": "Toggle theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "connection": {
+      "connected": "Connection active",
+      "disconnected": "No connection to server"
+    }
   }
 }

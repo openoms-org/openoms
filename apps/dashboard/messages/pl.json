@@ -1015,5 +1015,143 @@
       "stock": "Stany magazynowe",
       "prices": "Ceny"
     }
+  },
+  "shared": {
+    "sidebar": {
+      "mainMenu": "Menu główne",
+      "expandMenu": "Rozwiń menu (Ctrl+B)",
+      "collapseMenu": "Zwiń menu"
+    },
+    "mobileNav": {
+      "openMenu": "Otwórz menu"
+    },
+    "tableDensity": {
+      "compact": "Kompaktowy",
+      "comfortable": "Standardowy",
+      "spacious": "Przestronny"
+    },
+    "editableCell": {
+      "saving": "Zapisywanie...",
+      "saveError": "Nie udało się zapisać zmian",
+      "doubleClickToEdit": "Kliknij dwukrotnie, aby edytować"
+    },
+    "tagInput": {
+      "placeholder": "Dodaj tag..."
+    },
+    "orderSearch": {
+      "placeholder": "Wybierz zamówienie...",
+      "searchPlaceholder": "Szukaj zamówienia...",
+      "noResults": "Nie znaleziono zamówień."
+    },
+    "categoryPicker": {
+      "placeholder": "Wybierz kategorię...",
+      "searchPlaceholder": "Szukaj kategorii...",
+      "noCategory": "Brak kategorii"
+    },
+    "paczkomat": {
+      "showMap": "Pokaż mapę paczkomatów",
+      "showOnMap": "Pokaż na mapie",
+      "selectPoint": "Wybierz paczkomat InPost",
+      "tokenError": "Błąd tokenu GeoWidget",
+      "tokenHelp": "Token GeoWidget jest przypisany do konkretnej domeny. Sprawdź w",
+      "inpostPanel": "panelu InPost",
+      "tokenDomain": "czy token jest wygenerowany dla domeny:",
+      "closeAndSearch": "Zamknij dialog i użyj wyszukiwarki tekstowej.",
+      "selected": "Paczkomat: {name}",
+      "placeholder": "Wybierz paczkomat...",
+      "searchPlaceholder": "Wpisz miasto lub kod paczkomatu...",
+      "minChars": "Wpisz min. 2 znaki, aby wyszukać",
+      "noResults": "Nie znaleziono paczkomatów"
+    },
+    "errorBoundary": {
+      "sessionExpired": "Sesja wygasła",
+      "sessionExpiredMessage": "Sesja wygasła. Zaloguj się ponownie.",
+      "tooManyRequests": "Zbyt wiele żądań",
+      "tooManyRequestsMessage": "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.",
+      "serverError": "Błąd serwera",
+      "serverErrorMessage": "Błąd serwera. Spróbuj ponownie później.",
+      "genericError": "Coś poszło nie tak",
+      "genericErrorMessage": "Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.",
+      "tryAgain": "Spróbuj ponownie",
+      "logIn": "Zaloguj się"
+    },
+    "developmentBanner": {
+      "title": "W budowie",
+      "message": "Ta integracja jest w trakcie budowy i nie została jeszcze zweryfikowana produkcyjnie. Używaj na własną odpowiedzialność.",
+      "badge": "W budowie"
+    },
+    "noData": "Brak danych"
+  },
+  "breadcrumbs": {
+    "orders": "Zamówienia",
+    "shipments": "Przesyłki",
+    "products": "Produkty",
+    "integrations": "Połączenia",
+    "settings": "Ustawienia",
+    "users": "Użytkownicy",
+    "returns": "Zwroty",
+    "audit": "Dziennik aktywności",
+    "company": "Firma",
+    "email": "E-mail",
+    "order-statuses": "Statusy",
+    "custom-fields": "Pola",
+    "product-categories": "Kategorie",
+    "webhooks": "Webhooki",
+    "allegro": "Allegro",
+    "amazon": "Amazon",
+    "offers": "Oferty",
+    "messages": "Wiadomości",
+    "catalog": "Katalog",
+    "promotions": "Promocje",
+    "disputes": "Spory",
+    "delivery": "Dostawa",
+    "policies": "Polityki",
+    "finance": "Finanse",
+    "ratings": "Oceny",
+    "listings": "Oferty marketplace",
+    "suppliers": "Dostawcy",
+    "deliveries": "Dostarczenia",
+    "new": "Nowe",
+    "import": "Import",
+    "warehouse-documents": "Dokumenty magazynowe",
+    "price-lists": "Cenniki",
+    "sync-jobs": "Synchronizacja",
+    "webhook-deliveries": "Dostarczenia webhooków",
+    "reports": "Raporty",
+    "packing": "Pakowanie",
+    "marketing": "Marketing",
+    "helpdesk": "Helpdesk",
+    "sms": "SMS",
+    "notifications": "Powiadomienia",
+    "currencies": "Waluty",
+    "print-templates": "Szablony wydruków",
+    "categories": "Kategorie",
+    "automation": "Automatyzacja",
+    "variants": "Warianty",
+    "bundles": "Zestawy",
+    "return-request": "Zgłoszenie zwrotu",
+    "customers": "Klienci",
+    "invoices": "Faktury",
+    "invoicing": "Fakturowanie",
+    "ksef": "KSeF",
+    "roles": "Role",
+    "warehouses": "Magazyny",
+    "stocktakes": "Inwentaryzacja",
+    "security": "Bezpieczeństwo",
+    "inventory": "Kontrola magazynowa",
+    "details": "Szczegóły"
+  },
+  "layout": {
+    "logout": "Wyloguj się",
+    "theme": {
+      "toggle": "Zmień motyw",
+      "light": "Jasny",
+      "dark": "Ciemny",
+      "system": "Systemowy"
+    },
+    "connection": {
+      "connected": "Połączenie aktywne",
+      "disconnected": "Brak połączenia z serwerem"
+    }
   }
 }

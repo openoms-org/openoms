@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -57,7 +58,7 @@ export function DataTable<T>({
   columns,
   data,
   isLoading = false,
-  emptyMessage = "Brak danych",
+  emptyMessage,
   emptyState,
   onRowClick,
   selectable = false,
@@ -70,6 +71,7 @@ export function DataTable<T>({
   editableColumns,
   resizable = false,
 }: DataTableProps<T>) {
+  const t = useTranslations("shared");
   const { density } = useTableDensity();
   const cellPx = densityConfig[density].cellPadding;
 
@@ -235,7 +237,7 @@ export function DataTable<T>({
     }
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+        <p className="text-muted-foreground text-sm">{emptyMessage ?? t("noData")}</p>
       </div>
     );
   }

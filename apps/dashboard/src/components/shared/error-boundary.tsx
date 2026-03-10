@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ApiClientError } from "@/lib/api-client";
 
@@ -14,38 +15,59 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-function getErrorDisplay(error: Error | null): {
-  title: string;
-  message: string;
-  showLogin: boolean;
-} {
+function ErrorDisplay({
+  error,
+  onReset,
+}: {
+  error: Error | null;
+  onReset: () => void;
+}) {
+  const t = useTranslations("shared.errorBoundary");
+
+  let title: string;
+  let message: string;
+  let showLogin = false;
+
   if (error instanceof ApiClientError) {
     switch (error.status) {
       case 401:
-        return {
-          title: "Sesja wygasła",
-          message: "Sesja wygasła. Zaloguj się ponownie.",
-          showLogin: true,
-        };
+        title = t("sessionExpired");
+        message = t("sessionExpiredMessage");
+        showLogin = true;
+        break;
       case 429:
-        return {
-          title: "Zbyt wiele żądań",
-          message: "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.",
-          showLogin: false,
-        };
+        title = t("tooManyRequests");
+        message = t("tooManyRequestsMessage");
+        break;
       case 500:
-        return {
-          title: "Błąd serwera",
-          message: "Błąd serwera. Spróbuj ponownie później.",
-          showLogin: false,
-        };
+        title = t("serverError");
+        message = t("serverErrorMessage");
+        break;
+      default:
+        title = t("genericError");
+        message = t("genericErrorMessage");
     }
+  } else {
+    title = t("genericError");
+    message = t("genericErrorMessage");
   }
-  return {
-    title: "Coś poszło nie tak",
-    message: "Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.",
-    showLogin: false,
-  };
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 py-20">
+      <h2 className="text-xl font-semibold">{title}</h2>
+      <p className="text-muted-foreground text-sm">{message}</p>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={onReset}>
+          {t("tryAgain")}
+        </Button>
+        {showLogin && (
+          <Button asChild>
+            <Link href="/login">{t("logIn")}</Link>
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -66,25 +88,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.hasError) {
-      const { title, message, showLogin } = getErrorDisplay(this.state.error);
       return (
-        <div className="flex flex-col items-center justify-center gap-4 py-20">
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <p className="text-muted-foreground text-sm">{message}</p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => this.setState({ hasError: false, error: null })}
-            >
-              Spróbuj ponownie
-            </Button>
-            {showLogin && (
-              <Button asChild>
-                <Link href="/login">Zaloguj się</Link>
-              </Button>
-            )}
-          </div>
-        </div>
+        <ErrorDisplay
+          error={this.state.error}
+          onReset={() => this.setState({ hasError: false, error: null })}
+        />
       );
     }
 

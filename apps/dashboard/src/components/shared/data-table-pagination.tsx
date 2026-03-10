@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,6 +25,7 @@ export function DataTablePagination({
   onPageChange,
   onPageSizeChange,
 }: DataTablePaginationProps) {
+  const t = useTranslations("pagination");
   const currentPage = Math.floor(offset / limit) + 1;
   const totalPages = Math.ceil(total / limit);
   const rangeStart = total === 0 ? 0 : offset + 1;
@@ -33,12 +35,12 @@ export function DataTablePagination({
     <div className="flex items-center justify-between px-2 py-4">
       <div className="text-muted-foreground text-sm">
         {total > 0
-          ? `Wyniki ${rangeStart}-${rangeEnd} z ${total}`
-          : "Brak wyników"}
+          ? t("results", { start: rangeStart, end: rangeEnd, total })
+          : t("noResults")}
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">Na stronie:</span>
+          <span className="text-muted-foreground text-sm">{t("perPage")}</span>
           <Select
             value={String(limit)}
             onValueChange={(value) => onPageSizeChange(Number(value))}
@@ -55,7 +57,7 @@ export function DataTablePagination({
         </div>
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-sm">
-            Strona {currentPage} z {totalPages || 1}
+            {t("pageOf", { current: currentPage, total: totalPages || 1 })}
           </span>
           <Button
             variant="outline"
@@ -63,7 +65,7 @@ export function DataTablePagination({
             onClick={() => onPageChange(offset - limit)}
             disabled={offset === 0}
           >
-            Poprzednia
+            {t("previous")}
           </Button>
           <Button
             variant="outline"
@@ -71,7 +73,7 @@ export function DataTablePagination({
             onClick={() => onPageChange(offset + limit)}
             disabled={offset + limit >= total}
           >
-            Następna
+            {t("next")}
           </Button>
         </div>
       </div>

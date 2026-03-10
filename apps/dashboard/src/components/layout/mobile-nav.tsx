@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronRight, Menu, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth";
@@ -18,6 +19,8 @@ export function MobileNav() {
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin" || user?.role === "owner";
   const { toggleGroup, isGroupExpanded } = useGroupExpansion();
+  const tNav = useTranslations("navigation");
+  const tShared = useTranslations("shared");
 
   const filteredItems = navItems.filter(
     (item) => !item.adminOnly || isAdmin
@@ -60,7 +63,7 @@ export function MobileNav() {
             )}
           >
             <item.icon className="h-4 w-4" />
-            {item.label}
+            {tNav(item.label)}
             <ChevronRight
               className={cn(
                 "ml-auto h-3 w-3 transition-transform duration-200",
@@ -88,7 +91,7 @@ export function MobileNav() {
           )}
         >
           <item.icon className={cn("h-4 w-4 shrink-0", isChild && "h-3.5 w-3.5")} />
-          <span className="truncate">{item.label}</span>
+          <span className="truncate">{tNav(item.label)}</span>
         </Link>
       </div>
     );
@@ -99,7 +102,7 @@ export function MobileNav() {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="md:hidden">
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Otwórz menu</span>
+          <span className="sr-only">{tShared("mobileNav.openMenu")}</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
@@ -109,7 +112,7 @@ export function MobileNav() {
             OpenOMS
           </SheetTitle>
         </SheetHeader>
-        <nav aria-label="Menu główne" className="space-y-1 overflow-y-auto p-3">
+        <nav aria-label={tShared("sidebar.mainMenu")} className="space-y-1 overflow-y-auto p-3">
           {ungroupedItems.map((item) => renderNavLink(item))}
 
           {navGroups.map((group) => {
@@ -131,7 +134,7 @@ export function MobileNav() {
                     )}
                   />
                   <group.icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{group.label}</span>
+                  <span className="truncate">{tNav(`groups.${group.label}`)}</span>
                 </button>
                 {expanded && (
                   <div className="mt-0.5 space-y-0.5">

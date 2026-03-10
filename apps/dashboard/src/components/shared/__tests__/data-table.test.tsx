@@ -36,7 +36,8 @@ describe("DataTable", () => {
 
   it("shows default empty message when data is empty", () => {
     render(<DataTable columns={columns} data={[]} />);
-    expect(screen.getByText("Brak danych")).toBeInTheDocument();
+    // With mocked useTranslations, t("noData") returns "noData"
+    expect(screen.getByText("noData")).toBeInTheDocument();
   });
 
   it("shows custom empty message", () => {

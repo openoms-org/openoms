@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useWebSocket } from "@/hooks/use-websocket";
 import {
   Tooltip,
@@ -10,6 +11,7 @@ import {
 
 export function ConnectionStatus() {
   const { isConnected } = useWebSocket();
+  const t = useTranslations("layout.connection");
 
   return (
     <TooltipProvider>
@@ -28,8 +30,8 @@ export function ConnectionStatus() {
         <TooltipContent>
           <p>
             {isConnected
-              ? "Połączenie aktywne"
-              : "Brak połączenia z serwerem"}
+              ? t("connected")
+              : t("disconnected")}
           </p>
         </TooltipContent>
       </Tooltip>
