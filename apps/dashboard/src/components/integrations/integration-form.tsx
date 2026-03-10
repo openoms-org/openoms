@@ -131,7 +131,7 @@ export function IntegrationForm({
       if (!isEditMode && field.required && field.type !== "checkbox") {
         const val = credentialValues[field.key];
         if (!val || (typeof val === "string" && val.trim() === "")) {
-          newErrors[field.key] = `Pole "${field.label}" jest wymagane`;
+          newErrors[field.key] = `Pole "${field.labelKey}" jest wymagane`;
         }
       }
       if (field.type === "url" && credentialValues[field.key]) {
@@ -204,7 +204,7 @@ export function IntegrationForm({
         ? cat.providers
         : cat.providers.filter((p) => !(p in PROVIDERS_WITH_DEDICATED_PAGES)),
     },
-  ] as [string, { label: string; providers: string[] }]).filter(([, cat]) => cat.providers.length > 0);
+  ] as [string, { labelKey: string; providers: string[] }]).filter(([, cat]) => cat.providers.length > 0);
 
   const renderField = (field: CredentialField) => {
     if (field.type === "checkbox") {
@@ -218,7 +218,7 @@ export function IntegrationForm({
             }
           />
           <Label htmlFor={`cred-${field.key}`} className="font-normal cursor-pointer">
-            {field.label}
+            {field.labelKey}
           </Label>
         </div>
       );
@@ -227,7 +227,7 @@ export function IntegrationForm({
     if (field.type === "select" && field.options) {
       return (
         <div key={field.key} className="space-y-2">
-          <Label htmlFor={`cred-${field.key}`}>{field.label}</Label>
+          <Label htmlFor={`cred-${field.key}`}>{field.labelKey}</Label>
           <Select
             value={(credentialValues[field.key] as string) ?? ""}
             onValueChange={(v) => handleCredentialChange(field.key, v)}
@@ -238,13 +238,13 @@ export function IntegrationForm({
             <SelectContent>
               {field.options.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {opt.labelKey}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {field.helpText && (
-            <p className="text-sm text-muted-foreground">{field.helpText}</p>
+          {field.helpTextKey && (
+            <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
           )}
         </div>
       );
@@ -257,14 +257,14 @@ export function IntegrationForm({
     return (
       <div key={field.key} className="space-y-2">
         <Label htmlFor={`cred-${field.key}`}>
-          {field.label}
+          {field.labelKey}
           {!isEditMode && field.required && <span className="text-destructive ml-1">*</span>}
         </Label>
         <div className="relative">
           <Input
             id={`cred-${field.key}`}
             type={inputType}
-            placeholder={isEditMode ? "Pozostaw puste, aby nie zmieniać" : field.placeholder}
+            placeholder={isEditMode ? "Pozostaw puste, aby nie zmieniać" : field.placeholderKey}
             value={(credentialValues[field.key] as string) ?? ""}
             onChange={(e) => handleCredentialChange(field.key, e.target.value)}
             className={isPassword ? "pr-10" : ""}
@@ -285,13 +285,13 @@ export function IntegrationForm({
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="sr-only">
-                {isVisible ? "Ukryj" : "Pokaż"} {field.label.toLowerCase()}
+                {isVisible ? "Ukryj" : "Pokaż"} {field.labelKey.toLowerCase()}
               </span>
             </Button>
           )}
         </div>
-        {field.helpText && (
-          <p className="text-sm text-muted-foreground">{field.helpText}</p>
+        {field.helpTextKey && (
+          <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
         )}
         {credentialErrors[field.key] && (
           <p className="text-sm text-destructive">{credentialErrors[field.key]}</p>
@@ -317,7 +317,7 @@ export function IntegrationForm({
               {categoryEntries.map(([catKey, category], catIndex) => (
                 <SelectGroup key={catKey}>
                   {catIndex > 0 && <SelectSeparator />}
-                  <SelectLabel>{category.label}</SelectLabel>
+                  <SelectLabel>{category.labelKey}</SelectLabel>
                   {category.providers.map((provider) => (
                     <SelectItem key={provider} value={provider}>
                       {INTEGRATION_PROVIDER_LABELS[provider] ??

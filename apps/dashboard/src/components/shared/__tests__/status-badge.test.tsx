@@ -6,7 +6,7 @@ import { ORDER_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES } from "@/lib/consta
 describe("StatusBadge", () => {
   it("renders the label text for a known status", () => {
     render(<StatusBadge status="new" statusMap={ORDER_STATUSES} />);
-    expect(screen.getByText("Nowe")).toBeInTheDocument();
+    expect(screen.getByText("new")).toBeInTheDocument();
   });
 
   it("renders correct color classes for 'new' order status", () => {
@@ -32,12 +32,12 @@ describe("StatusBadge", () => {
 
   it("renders correct label for shipment statuses", () => {
     render(<StatusBadge status="in_transit" statusMap={SHIPMENT_STATUSES} />);
-    expect(screen.getByText("W transporcie")).toBeInTheDocument();
+    expect(screen.getByText("in_transit")).toBeInTheDocument();
   });
 
   it("renders correct label for return statuses", () => {
     render(<StatusBadge status="approved" statusMap={RETURN_STATUSES} />);
-    expect(screen.getByText("Zatwierdzone")).toBeInTheDocument();
+    expect(screen.getByText("approved")).toBeInTheDocument();
   });
 
   it("falls back to outline Badge with raw status for unknown status", () => {

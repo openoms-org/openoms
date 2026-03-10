@@ -82,7 +82,7 @@ export default function NewMarketplacePage() {
       if (field.required && field.type !== "checkbox") {
         const val = credentialValues[field.key];
         if (!val || (typeof val === "string" && val.trim() === "")) {
-          newErrors[field.key] = `Pole "${field.label}" jest wymagane`;
+          newErrors[field.key] = `Pole "${field.labelKey}" jest wymagane`;
         }
       }
       if (field.type === "url" && credentialValues[field.key]) {
@@ -154,7 +154,7 @@ export default function NewMarketplacePage() {
             }
           />
           <Label htmlFor={`cred-${field.key}`} className="font-normal cursor-pointer">
-            {field.label}
+            {field.labelKey}
           </Label>
         </div>
       );
@@ -163,7 +163,7 @@ export default function NewMarketplacePage() {
     if (field.type === "select" && field.options) {
       return (
         <div key={field.key} className="space-y-2">
-          <Label htmlFor={`cred-${field.key}`}>{field.label}</Label>
+          <Label htmlFor={`cred-${field.key}`}>{field.labelKey}</Label>
           <Select
             value={(credentialValues[field.key] as string) ?? ""}
             onValueChange={(v) => handleCredentialChange(field.key, v)}
@@ -174,13 +174,13 @@ export default function NewMarketplacePage() {
             <SelectContent>
               {field.options.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {opt.labelKey}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {field.helpText && (
-            <p className="text-sm text-muted-foreground">{field.helpText}</p>
+          {field.helpTextKey && (
+            <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
           )}
         </div>
       );
@@ -193,14 +193,14 @@ export default function NewMarketplacePage() {
     return (
       <div key={field.key} className="space-y-2">
         <Label htmlFor={`cred-${field.key}`}>
-          {field.label}
+          {field.labelKey}
           {field.required && <span className="text-destructive ml-1">*</span>}
         </Label>
         <div className="relative">
           <Input
             id={`cred-${field.key}`}
             type={inputType}
-            placeholder={field.placeholder}
+            placeholder={field.placeholderKey}
             value={(credentialValues[field.key] as string) ?? ""}
             onChange={(e) => handleCredentialChange(field.key, e.target.value)}
             className={isPassword ? "pr-10" : ""}
@@ -221,13 +221,13 @@ export default function NewMarketplacePage() {
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="sr-only">
-                {isVisible ? "Ukryj" : "Pokaz"} {field.label.toLowerCase()}
+                {isVisible ? "Ukryj" : "Pokaz"} {field.labelKey.toLowerCase()}
               </span>
             </Button>
           )}
         </div>
-        {field.helpText && (
-          <p className="text-sm text-muted-foreground">{field.helpText}</p>
+        {field.helpTextKey && (
+          <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
         )}
         {credentialErrors[field.key] && (
           <p className="text-sm text-destructive">{credentialErrors[field.key]}</p>

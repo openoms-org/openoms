@@ -1,18 +1,18 @@
 export const ORDER_STATUSES: Record<string, { label: string; color: string }> = {
-  new: { label: "Nowe", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  confirmed: { label: "Potwierdzone", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
-  processing: { label: "W realizacji", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-  ready_to_ship: { label: "Gotowe do wysyłki", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  shipped: { label: "Wysłane", color: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200" },
-  in_transit: { label: "W transporcie", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
-  out_for_delivery: { label: "W doręczeniu", color: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
-  delivered: { label: "Dostarczone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  completed: { label: "Zakończone", color: "bg-green-200 text-green-900 dark:bg-green-900 dark:text-green-200" },
-  on_hold: { label: "Wstrzymane", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  refunded: { label: "Zwrócone", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
-  merged: { label: "Scalone", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  split: { label: "Rozdzielone", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  new: { label: "new", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  confirmed: { label: "confirmed", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  processing: { label: "processing", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  ready_to_ship: { label: "ready_to_ship", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  shipped: { label: "shipped", color: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200" },
+  in_transit: { label: "in_transit", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
+  out_for_delivery: { label: "out_for_delivery", color: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
+  delivered: { label: "delivered", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  completed: { label: "completed", color: "bg-green-200 text-green-900 dark:bg-green-900 dark:text-green-200" },
+  on_hold: { label: "on_hold", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  cancelled: { label: "cancelled", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  refunded: { label: "refunded", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
+  merged: { label: "merged", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  split: { label: "split", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
 };
 
 export const ORDER_TRANSITIONS: Record<string, string[]> = {
@@ -33,14 +33,14 @@ export const ORDER_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const SHIPMENT_STATUSES: Record<string, { label: string; color: string }> = {
-  created: { label: "Utworzona", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  label_ready: { label: "Etykieta gotowa", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
-  picked_up: { label: "Odebrana", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-  in_transit: { label: "W transporcie", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
-  out_for_delivery: { label: "W doręczeniu", color: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
-  delivered: { label: "Dostarczona", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  returned: { label: "Zwrócona", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  failed: { label: "Nieudana", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
+  created: { label: "created", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  label_ready: { label: "label_ready", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  picked_up: { label: "picked_up", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  in_transit: { label: "in_transit", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
+  out_for_delivery: { label: "out_for_delivery", color: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200" },
+  delivered: { label: "delivered", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  returned: { label: "returned", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  failed: { label: "failed", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const SHIPMENT_TRANSITIONS: Record<string, string[]> = {
@@ -55,12 +55,12 @@ export const SHIPMENT_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const RETURN_STATUSES: Record<string, { label: string; color: string }> = {
-  requested: { label: "Zgłoszone", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-  approved: { label: "Zatwierdzone", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  received: { label: "Odebrane", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
-  refunded: { label: "Zwrócone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  rejected: { label: "Odrzucone", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  cancelled: { label: "Anulowane", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  requested: { label: "requested", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  approved: { label: "approved", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  received: { label: "received", color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
+  refunded: { label: "refunded", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  rejected: { label: "rejected", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  cancelled: { label: "cancelled", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
 };
 
 export const RETURN_TRANSITIONS: Record<string, string[]> = {
@@ -73,46 +73,46 @@ export const RETURN_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const PURCHASE_ORDER_STATUSES: Record<string, { label: string; color: string }> = {
-  draft: { label: "Szkic", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  sent: { label: "Wysłane", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  partially_received: { label: "Częściowo odebrane", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-  received: { label: "Odebrane", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  draft: { label: "draft", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  sent: { label: "sent", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  partially_received: { label: "partially_received", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  received: { label: "received", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  cancelled: { label: "cancelled", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const SUPPLIER_STATUSES: Record<string, { label: string; color: string }> = {
-  active: { label: "Aktywny", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  inactive: { label: "Nieaktywny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  error: { label: "Błąd", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  active: { label: "active", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  inactive: { label: "inactive", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  error: { label: "error", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const INTEGRATION_STATUSES: Record<string, { label: string; color: string }> = {
-  active: { label: "Aktywna", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  inactive: { label: "Nieaktywna", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  error: { label: "Błąd", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  active: { label: "active", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  inactive: { label: "inactive", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  error: { label: "error", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const ROLES: Record<string, string> = {
-  owner: "Właściciel",
-  admin: "Administrator",
-  member: "Członek",
+  owner: "owner",
+  admin: "admin",
+  member: "member",
 };
 
 export const ORDER_SOURCES = ["manual", "supplier", "allegro", "amazon", "empik", "erli", "ebay", "kaufland", "olx", "woocommerce"] as const;
 
 export const ORDER_PRIORITIES: Record<string, { label: string; color: string }> = {
-  urgent: { label: "Pilne", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  high: { label: "Wysoki", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  normal: { label: "Normalny", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  low: { label: "Niski", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  urgent: { label: "urgent", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  high: { label: "high", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  normal: { label: "normal", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  low: { label: "low", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
 };
 
 export const PAYMENT_STATUSES: Record<string, { label: string; color: string }> = {
-  pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-  paid: { label: "Opłacone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  partially_paid: { label: "Częściowo", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  refunded: { label: "Zwrócone", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  failed: { label: "Nieudane", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
+  pending: { label: "pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  paid: { label: "paid", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  partially_paid: { label: "partially_paid", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  refunded: { label: "refunded", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  failed: { label: "failed", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const PAYMENT_METHODS = ["przelew", "pobranie", "karta", "PayU", "Przelewy24", "BLIK"] as const;
@@ -120,88 +120,88 @@ export const SHIPMENT_PROVIDERS = ["inpost", "dhl", "dpd", "gls", "ups", "poczta
 export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik", "inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka", "fakturownia", "btp"] as const;
 
 export const ORDER_SOURCE_LABELS: Record<string, string> = {
-  manual: "Ręczne",
-  supplier: "Dostawca",
-  allegro: "Allegro",
-  amazon: "Amazon",
-  empik: "Empik",
-  erli: "Erli",
-  ebay: "eBay",
-  kaufland: "Kaufland",
-  olx: "OLX",
-  woocommerce: "WooCommerce",
+  manual: "manual",
+  supplier: "supplier",
+  allegro: "allegro",
+  amazon: "amazon",
+  empik: "empik",
+  erli: "erli",
+  ebay: "ebay",
+  kaufland: "kaufland",
+  olx: "olx",
+  woocommerce: "woocommerce",
 };
 
 export const SHIPMENT_PROVIDER_LABELS: Record<string, string> = {
-  inpost: "InPost",
-  dhl: "DHL",
-  dpd: "DPD",
-  gls: "GLS",
-  ups: "UPS",
-  poczta_polska: "Poczta Polska",
-  orlen_paczka: "Orlen Paczka",
-  fedex: "FedEx",
-  manual: "Ręczna",
+  inpost: "inpost",
+  dhl: "dhl",
+  dpd: "dpd",
+  gls: "gls",
+  ups: "ups",
+  poczta_polska: "poczta_polska",
+  orlen_paczka: "orlen_paczka",
+  fedex: "fedex",
+  manual: "manual",
 };
 
 export const INTEGRATION_PROVIDER_LABELS: Record<string, string> = {
-  allegro: "Allegro",
-  amazon: "Amazon",
-  empik: "Empik",
-  erli: "Erli",
-  ebay: "eBay",
-  kaufland: "Kaufland",
-  olx: "OLX",
-  inpost: "InPost",
-  dhl: "DHL",
-  dpd: "DPD",
-  woocommerce: "WooCommerce",
-  gls: "GLS",
-  ups: "UPS",
-  fedex: "FedEx",
-  poczta_polska: "Poczta Polska",
-  orlen_paczka: "Orlen Paczka",
-  fakturownia: "Fakturownia",
-  btp: "BTP.pro",
+  allegro: "allegro",
+  amazon: "amazon",
+  empik: "empik",
+  erli: "erli",
+  ebay: "ebay",
+  kaufland: "kaufland",
+  olx: "olx",
+  inpost: "inpost",
+  dhl: "dhl",
+  dpd: "dpd",
+  woocommerce: "woocommerce",
+  gls: "gls",
+  ups: "ups",
+  fedex: "fedex",
+  poczta_polska: "poczta_polska",
+  orlen_paczka: "orlen_paczka",
+  fakturownia: "fakturownia",
+  btp: "btp",
 };
 
 export const INVOICE_STATUS_MAP: Record<string, { label: string; color: string }> = {
-  draft: { label: "Szkic", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  issued: { label: "Wystawiona", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  sent: { label: "Wysłana", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
-  paid: { label: "Opłacona", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  partially_paid: { label: "Częściowo opłacona", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  cancelled: { label: "Anulowana", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  error: { label: "Błąd", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
+  draft: { label: "draft", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  issued: { label: "issued", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  sent: { label: "sent", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  paid: { label: "paid", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  partially_paid: { label: "partially_paid", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  cancelled: { label: "cancelled", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  error: { label: "error", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const INVOICE_TYPE_LABELS: Record<string, string> = {
-  standard: "Standardowa",
-  vat: "Faktura VAT",
-  proforma: "Proforma",
-  correction: "Korekta",
-  receipt: "Paragon",
+  standard: "standard",
+  vat: "vat",
+  proforma: "proforma",
+  correction: "correction",
+  receipt: "receipt",
 };
 
 export const INVOICING_PROVIDERS = ["fakturownia", "wfirma", "infakt"] as const;
 
 export const INVOICING_PROVIDER_LABELS: Record<string, string> = {
-  fakturownia: "Fakturownia",
-  wfirma: "wFirma",
-  infakt: "inFakt",
+  fakturownia: "fakturownia",
+  wfirma: "wfirma",
+  infakt: "infakt",
 };
 
 // === KSeF ===
 export const KSEF_STATUS_MAP: Record<string, { label: string; color: string }> = {
-  not_sent: { label: "Nie wysłano", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
-  pending: { label: "Oczekuje", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
-  accepted: { label: "Zaakceptowana", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  rejected: { label: "Odrzucona", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  not_sent: { label: "not_sent", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  pending: { label: "pending", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  accepted: { label: "accepted", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  rejected: { label: "rejected", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
 export const KSEF_ENVIRONMENTS = [
-  { value: "test", label: "Testowe (ksef-test.mf.gov.pl)" },
-  { value: "production", label: "Produkcyjne (ksef.mf.gov.pl)" },
+  { value: "test", label: "test" },
+  { value: "production", label: "production" },
 ] as const;
 
 // === Automation ===
@@ -220,17 +220,17 @@ export const AUTOMATION_TRIGGER_EVENTS = [
 ] as const;
 
 export const AUTOMATION_TRIGGER_LABELS: Record<string, string> = {
-  "order.created": "Zamówienie utworzone",
-  "order.status_changed": "Zmiana statusu zamówienia",
-  "order.updated": "Zamówienie zaktualizowane",
-  "shipment.created": "Przesyłka utworzona",
-  "shipment.status_changed": "Zmiana statusu przesyłki",
-  "return.created": "Zwrot utworzony",
-  "return.status_changed": "Zmiana statusu zwrotu",
-  "product.created": "Produkt utworzony",
-  "product.updated": "Produkt zaktualizowany",
-  "product.stock_restored": "Stan magazynowy przywrócony",
-  "product.out_of_stock": "Produkt niedostępny (stan = 0)",
+  "order.created": "order.created",
+  "order.status_changed": "order.status_changed",
+  "order.updated": "order.updated",
+  "shipment.created": "shipment.created",
+  "shipment.status_changed": "shipment.status_changed",
+  "return.created": "return.created",
+  "return.status_changed": "return.status_changed",
+  "product.created": "product.created",
+  "product.updated": "product.updated",
+  "product.stock_restored": "product.stock_restored",
+  "product.out_of_stock": "product.out_of_stock",
 };
 
 export const AUTOMATION_OPERATORS = [
@@ -248,17 +248,17 @@ export const AUTOMATION_OPERATORS = [
 ] as const;
 
 export const AUTOMATION_OPERATOR_LABELS: Record<string, string> = {
-  eq: "Równe (=)",
-  neq: "Różne (!=)",
-  in: "Zawiera się w",
-  not_in: "Nie zawiera się w",
-  gt: "Większe (>)",
-  gte: "Większe lub równe (>=)",
-  lt: "Mniejsze (<)",
-  lte: "Mniejsze lub równe (<=)",
-  contains: "Zawiera",
-  not_contains: "Nie zawiera",
-  starts_with: "Zaczyna się od",
+  eq: "eq",
+  neq: "neq",
+  in: "in",
+  not_in: "not_in",
+  gt: "gt",
+  gte: "gte",
+  lt: "lt",
+  lte: "lte",
+  contains: "contains",
+  not_contains: "not_contains",
+  starts_with: "starts_with",
 };
 
 export const AUTOMATION_ACTION_TYPES = [
@@ -272,32 +272,32 @@ export const AUTOMATION_ACTION_TYPES = [
 ] as const;
 
 export const AUTOMATION_ACTION_LABELS: Record<string, string> = {
-  set_status: "Ustaw status",
-  add_tag: "Dodaj tag",
-  send_email: "Wyślij e-mail",
-  create_invoice: "Utwórz fakturę",
-  webhook: "Wywołaj webhook",
-  activate_listing: "Aktywuj listing",
-  deactivate_listing: "Dezaktywuj listing",
+  set_status: "set_status",
+  add_tag: "add_tag",
+  send_email: "send_email",
+  create_invoice: "create_invoice",
+  webhook: "webhook",
+  activate_listing: "activate_listing",
+  deactivate_listing: "deactivate_listing",
 };
 
 // === Integration Provider Credential Fields ===
 
 export interface CredentialField {
   key: string;
-  label: string;
-  placeholder: string;
-  helpText?: string;
+  labelKey: string;
+  placeholderKey?: string;
+  helpTextKey?: string;
   type: "text" | "password" | "url" | "checkbox" | "select";
   required: boolean;
-  options?: { value: string; label: string }[];
+  options?: { value: string; labelKey: string }[];
 }
 
-export const PROVIDER_CATEGORIES: Record<string, { label: string; providers: string[] }> = {
-  marketplace: { label: "Marketplace", providers: ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik"] },
-  carrier: { label: "Kurierzy", providers: ["inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka"] },
-  invoicing: { label: "Fakturowanie", providers: ["fakturownia"] },
-  supplier: { label: "Hurtownie", providers: ["btp"] },
+export const PROVIDER_CATEGORIES: Record<string, { labelKey: string; providers: string[] }> = {
+  marketplace: { labelKey: "category.marketplace", providers: ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik"] },
+  carrier: { labelKey: "category.carrier", providers: ["inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka"] },
+  invoicing: { labelKey: "category.invoicing", providers: ["fakturownia"] },
+  supplier: { labelKey: "category.supplier", providers: ["btp"] },
 };
 
 /** Providers with dedicated setup pages — excluded from the generic "New Integration" form */
@@ -309,110 +309,110 @@ export const PROVIDERS_WITH_DEDICATED_PAGES: Record<string, string> = {
 
 export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   allegro: [
-    { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z apps.developer.allegro.pl", helpText: "Znajdziesz w panelu deweloperskim Allegro: apps.developer.allegro.pl", type: "text", required: true },
-    { key: "client_secret", label: "Client Secret", placeholder: "Twój Client Secret", type: "password", required: true },
-    { key: "access_token", label: "Access Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
-    { key: "refresh_token", label: "Refresh Token", placeholder: "", type: "password", required: false },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "client_id", labelKey: "credentials.allegro.clientId", placeholderKey: "credentials.allegro.clientIdPlaceholder", helpTextKey: "credentials.allegro.clientIdHelp", type: "text", required: true },
+    { key: "client_secret", labelKey: "credentials.allegro.clientSecret", placeholderKey: "credentials.allegro.clientSecretPlaceholder", type: "password", required: true },
+    { key: "access_token", labelKey: "credentials.allegro.accessToken", helpTextKey: "credentials.allegro.accessTokenHelp", type: "password", required: false },
+    { key: "refresh_token", labelKey: "credentials.allegro.refreshToken", type: "password", required: false },
+    { key: "sandbox", labelKey: "credentials.allegro.sandbox", type: "checkbox", required: false },
   ],
   amazon: [
-    { key: "application_id", label: "Application ID", placeholder: "amzn1.sellerapps.app.xxx", helpText: "ID aplikacji z Amazon Developer Console (wymagane do OAuth)", type: "text", required: true },
-    { key: "client_id", label: "Client ID (LWA)", placeholder: "amzn1.application-oa2-client.xxx", helpText: "Login with Amazon credentials z Seller Central > Develop Apps", type: "text", required: true },
-    { key: "client_secret", label: "Client Secret (LWA)", placeholder: "", type: "password", required: true },
-    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
-    { key: "marketplace_id", label: "Marketplace ID", placeholder: "A1C3SOZRARQ6R3", helpText: "Amazon.pl: A1C3SOZRARQ6R3, Amazon.de: A1PA6795UKMFR9", type: "text", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "application_id", labelKey: "credentials.amazon.applicationId", placeholderKey: "credentials.amazon.applicationIdPlaceholder", helpTextKey: "credentials.amazon.applicationIdHelp", type: "text", required: true },
+    { key: "client_id", labelKey: "credentials.amazon.clientId", placeholderKey: "credentials.amazon.clientIdPlaceholder", helpTextKey: "credentials.amazon.clientIdHelp", type: "text", required: true },
+    { key: "client_secret", labelKey: "credentials.amazon.clientSecret", type: "password", required: true },
+    { key: "refresh_token", labelKey: "credentials.amazon.refreshToken", helpTextKey: "credentials.amazon.refreshTokenHelp", type: "password", required: false },
+    { key: "marketplace_id", labelKey: "credentials.amazon.marketplaceId", placeholderKey: "credentials.amazon.marketplaceIdPlaceholder", helpTextKey: "credentials.amazon.marketplaceIdHelp", type: "text", required: true },
+    { key: "sandbox", labelKey: "credentials.amazon.sandbox", type: "checkbox", required: false },
   ],
   woocommerce: [
-    { key: "store_url", label: "Adres sklepu", placeholder: "https://twoj-sklep.pl", helpText: "Pełny adres URL Twojego sklepu WooCommerce", type: "url", required: true },
-    { key: "consumer_key", label: "Consumer Key", placeholder: "ck_...", helpText: "WooCommerce > Ustawienia > Zaawansowane > REST API > Dodaj klucz", type: "password", required: true },
-    { key: "consumer_secret", label: "Consumer Secret", placeholder: "cs_...", type: "password", required: true },
+    { key: "store_url", labelKey: "credentials.woocommerce.storeUrl", placeholderKey: "credentials.woocommerce.storeUrlPlaceholder", helpTextKey: "credentials.woocommerce.storeUrlHelp", type: "url", required: true },
+    { key: "consumer_key", labelKey: "credentials.woocommerce.consumerKey", placeholderKey: "credentials.woocommerce.consumerKeyPlaceholder", helpTextKey: "credentials.woocommerce.consumerKeyHelp", type: "password", required: true },
+    { key: "consumer_secret", labelKey: "credentials.woocommerce.consumerSecret", placeholderKey: "credentials.woocommerce.consumerSecretPlaceholder", type: "password", required: true },
   ],
   ebay: [
-    { key: "app_id", label: "App ID (Client ID)", placeholder: "Twój App ID z developer.ebay.com", helpText: "Znajdziesz w eBay Developer Program: developer.ebay.com", type: "text", required: true },
-    { key: "cert_id", label: "Cert ID (Client Secret)", placeholder: "", type: "password", required: true },
-    { key: "dev_id", label: "Dev ID", placeholder: "", type: "text", required: true },
-    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Wygeneruj przez eBay OAuth flow", type: "password", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "app_id", labelKey: "credentials.ebay.appId", placeholderKey: "credentials.ebay.appIdPlaceholder", helpTextKey: "credentials.ebay.appIdHelp", type: "text", required: true },
+    { key: "cert_id", labelKey: "credentials.ebay.certId", type: "password", required: true },
+    { key: "dev_id", labelKey: "credentials.ebay.devId", type: "text", required: true },
+    { key: "refresh_token", labelKey: "credentials.ebay.refreshToken", helpTextKey: "credentials.ebay.refreshTokenHelp", type: "password", required: true },
+    { key: "sandbox", labelKey: "credentials.ebay.sandbox", type: "checkbox", required: false },
   ],
   kaufland: [
-    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API Kaufland", helpText: "Seller Portal Kaufland > Ustawienia > API", type: "password", required: true },
-    { key: "secret_key", label: "Klucz Secret", placeholder: "", type: "password", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "api_key", labelKey: "credentials.kaufland.apiKey", placeholderKey: "credentials.kaufland.apiKeyPlaceholder", helpTextKey: "credentials.kaufland.apiKeyHelp", type: "password", required: true },
+    { key: "secret_key", labelKey: "credentials.kaufland.secretKey", type: "password", required: true },
+    { key: "sandbox", labelKey: "credentials.kaufland.sandbox", type: "checkbox", required: false },
   ],
   olx: [
-    { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z OLX API", helpText: "Zarejestruj aplikację na developer.olx.pl", type: "text", required: true },
-    { key: "client_secret", label: "Client Secret", placeholder: "", type: "password", required: true },
-    { key: "access_token", label: "Access Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
-    { key: "refresh_token", label: "Refresh Token", placeholder: "", helpText: "Zostanie pobrany automatycznie po autoryzacji OAuth2", type: "password", required: false },
+    { key: "client_id", labelKey: "credentials.olx.clientId", placeholderKey: "credentials.olx.clientIdPlaceholder", helpTextKey: "credentials.olx.clientIdHelp", type: "text", required: true },
+    { key: "client_secret", labelKey: "credentials.olx.clientSecret", type: "password", required: true },
+    { key: "access_token", labelKey: "credentials.olx.accessToken", helpTextKey: "credentials.olx.accessTokenHelp", type: "password", required: false },
+    { key: "refresh_token", labelKey: "credentials.olx.refreshToken", helpTextKey: "credentials.olx.refreshTokenHelp", type: "password", required: false },
   ],
   erli: [
-    { key: "api_token", label: "Token API", placeholder: "Twój token API Erli", helpText: "Panel sprzedawcy Erli > Ustawienia > API", type: "password", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "api_token", labelKey: "credentials.erli.apiToken", placeholderKey: "credentials.erli.apiTokenPlaceholder", helpTextKey: "credentials.erli.apiTokenHelp", type: "password", required: true },
+    { key: "sandbox", labelKey: "credentials.erli.sandbox", type: "checkbox", required: false },
   ],
   empik: [
-    { key: "base_url", label: "Adres API Mirakl", placeholder: "https://empikplace-prod.mirakl.net", helpText: "URL platformy Mirakl dla Empik Marketplace", type: "url", required: true },
-    { key: "api_key", label: "Klucz API", placeholder: "", helpText: "Mój Profil > Klucze API w panelu Mirakl", type: "password", required: true },
+    { key: "base_url", labelKey: "credentials.empik.baseUrl", placeholderKey: "credentials.empik.baseUrlPlaceholder", helpTextKey: "credentials.empik.baseUrlHelp", type: "url", required: true },
+    { key: "api_key", labelKey: "credentials.empik.apiKey", helpTextKey: "credentials.empik.apiKeyHelp", type: "password", required: true },
   ],
   inpost: [
-    { key: "api_token", label: "Token API", placeholder: "Twój token API InPost", helpText: "Manager Paczek InPost > Ustawienia > API", type: "password", required: true },
-    { key: "organization_id", label: "ID organizacji", placeholder: "Twój numer organizacji InPost", type: "text", required: true },
-    { key: "geowidget_token", label: "Token GeoWidget (mapa)", placeholder: "Twój token GeoWidget InPost", helpText: "Token do wyświetlania mapy paczkomatów. Wygeneruj na manager.paczkomaty.pl > API > GeoWidget. WAŻNE: token jest przypisany do domeny — dla dev wpisz 'localhost', dla produkcji domenę sklepu.", type: "text", required: false },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
-    { key: "default_sending_method", label: "Domyślna metoda nadania", placeholder: "", helpText: "Metoda nadania używana domyślnie przy generowaniu etykiety InPost", type: "select", required: false, options: [
-      { value: "dispatch_order", label: "Kurier odbierze (zlecenie odbioru)" },
-      { value: "parcel_locker", label: "Nadam w paczkomacie" },
-      { value: "pop", label: "Nadam w PaczkoPunkcie (POP)" },
-      { value: "any_point", label: "Dowolny punkt (paczkomat/POP)" },
-      { value: "pok", label: "Punkt Obsługi Klienta (POK)" },
-      { value: "branch", label: "Oddział InPost" },
+    { key: "api_token", labelKey: "credentials.inpost.apiToken", placeholderKey: "credentials.inpost.apiTokenPlaceholder", helpTextKey: "credentials.inpost.apiTokenHelp", type: "password", required: true },
+    { key: "organization_id", labelKey: "credentials.inpost.organizationId", placeholderKey: "credentials.inpost.organizationIdPlaceholder", type: "text", required: true },
+    { key: "geowidget_token", labelKey: "credentials.inpost.geowidgetToken", placeholderKey: "credentials.inpost.geowidgetTokenPlaceholder", helpTextKey: "credentials.inpost.geowidgetTokenHelp", type: "text", required: false },
+    { key: "sandbox", labelKey: "credentials.inpost.sandbox", type: "checkbox", required: false },
+    { key: "default_sending_method", labelKey: "credentials.inpost.defaultSendingMethod", helpTextKey: "credentials.inpost.defaultSendingMethodHelp", type: "select", required: false, options: [
+      { value: "dispatch_order", labelKey: "credentials.inpost.sendingMethods.dispatch_order" },
+      { value: "parcel_locker", labelKey: "credentials.inpost.sendingMethods.parcel_locker" },
+      { value: "pop", labelKey: "credentials.inpost.sendingMethods.pop" },
+      { value: "any_point", labelKey: "credentials.inpost.sendingMethods.any_point" },
+      { value: "pok", labelKey: "credentials.inpost.sendingMethods.pok" },
+      { value: "branch", labelKey: "credentials.inpost.sendingMethods.branch" },
     ]},
   ],
   dhl: [
-    { key: "username", label: "Nazwa użytkownika", placeholder: "Login do DHL WebAPI", type: "text", required: true },
-    { key: "password", label: "Hasło", placeholder: "", type: "password", required: true },
-    { key: "account_number", label: "Numer konta DHL", placeholder: "Twój numer konta nadawczego", helpText: "Numer konta nadawczego DHL (SAP)", type: "text", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "username", labelKey: "credentials.dhl.username", placeholderKey: "credentials.dhl.usernamePlaceholder", type: "text", required: true },
+    { key: "password", labelKey: "credentials.dhl.password", type: "password", required: true },
+    { key: "account_number", labelKey: "credentials.dhl.accountNumber", placeholderKey: "credentials.dhl.accountNumberPlaceholder", helpTextKey: "credentials.dhl.accountNumberHelp", type: "text", required: true },
+    { key: "sandbox", labelKey: "credentials.dhl.sandbox", type: "checkbox", required: false },
   ],
   dpd: [
-    { key: "login", label: "Login", placeholder: "Login do DPD WebAPI", type: "text", required: true },
-    { key: "password", label: "Hasło", placeholder: "", type: "password", required: true },
-    { key: "master_fid", label: "Master FID", placeholder: "Numer Master FID", helpText: "Numer identyfikacyjny nadawcy DPD", type: "text", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "login", labelKey: "credentials.dpd.login", placeholderKey: "credentials.dpd.loginPlaceholder", type: "text", required: true },
+    { key: "password", labelKey: "credentials.dpd.password", type: "password", required: true },
+    { key: "master_fid", labelKey: "credentials.dpd.masterFid", placeholderKey: "credentials.dpd.masterFidPlaceholder", helpTextKey: "credentials.dpd.masterFidHelp", type: "text", required: true },
+    { key: "sandbox", labelKey: "credentials.dpd.sandbox", type: "checkbox", required: false },
   ],
   gls: [
-    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API GLS", helpText: "GLS Poland > Konto firmowe > API", type: "password", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "api_key", labelKey: "credentials.gls.apiKey", placeholderKey: "credentials.gls.apiKeyPlaceholder", helpTextKey: "credentials.gls.apiKeyHelp", type: "password", required: true },
+    { key: "sandbox", labelKey: "credentials.gls.sandbox", type: "checkbox", required: false },
   ],
   ups: [
-    { key: "client_id", label: "Client ID", placeholder: "Twój Client ID z developer.ups.com", helpText: "UPS Developer Kit: developer.ups.com", type: "text", required: true },
-    { key: "client_secret", label: "Client Secret", placeholder: "", type: "password", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "client_id", labelKey: "credentials.ups.clientId", placeholderKey: "credentials.ups.clientIdPlaceholder", helpTextKey: "credentials.ups.clientIdHelp", type: "text", required: true },
+    { key: "client_secret", labelKey: "credentials.ups.clientSecret", type: "password", required: true },
+    { key: "sandbox", labelKey: "credentials.ups.sandbox", type: "checkbox", required: false },
   ],
   fedex: [
-    { key: "client_id", label: "Client ID (API Key)", placeholder: "Twój Client ID z developer.fedex.com", helpText: "FedEx Developer Portal: developer.fedex.com", type: "text", required: true },
-    { key: "client_secret", label: "Client Secret (Secret Key)", placeholder: "", type: "password", required: true },
-    { key: "account_number", label: "Numer konta FedEx", placeholder: "Twój 9-cyfrowy numer konta", type: "text", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "client_id", labelKey: "credentials.fedex.clientId", placeholderKey: "credentials.fedex.clientIdPlaceholder", helpTextKey: "credentials.fedex.clientIdHelp", type: "text", required: true },
+    { key: "client_secret", labelKey: "credentials.fedex.clientSecret", type: "password", required: true },
+    { key: "account_number", labelKey: "credentials.fedex.accountNumber", placeholderKey: "credentials.fedex.accountNumberPlaceholder", type: "text", required: true },
+    { key: "sandbox", labelKey: "credentials.fedex.sandbox", type: "checkbox", required: false },
   ],
   poczta_polska: [
-    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API Poczta Polska", helpText: "Elektroniczny Nadawca > Ustawienia > API", type: "password", required: true },
-    { key: "partner_id", label: "ID Partnera", placeholder: "Twój identyfikator partnera", type: "text", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "api_key", labelKey: "credentials.poczta_polska.apiKey", placeholderKey: "credentials.poczta_polska.apiKeyPlaceholder", helpTextKey: "credentials.poczta_polska.apiKeyHelp", type: "password", required: true },
+    { key: "partner_id", labelKey: "credentials.poczta_polska.partnerId", placeholderKey: "credentials.poczta_polska.partnerIdPlaceholder", type: "text", required: true },
+    { key: "sandbox", labelKey: "credentials.poczta_polska.sandbox", type: "checkbox", required: false },
   ],
   orlen_paczka: [
-    { key: "api_key", label: "Klucz API", placeholder: "Twój klucz API Orlen Paczka", helpText: "Panel Orlen Paczka > Ustawienia > Dostęp API", type: "password", required: true },
-    { key: "partner_id", label: "ID Partnera", placeholder: "Twój identyfikator partnera", type: "text", required: true },
-    { key: "sandbox", label: "Tryb testowy (Sandbox)", placeholder: "", type: "checkbox", required: false },
+    { key: "api_key", labelKey: "credentials.orlen_paczka.apiKey", placeholderKey: "credentials.orlen_paczka.apiKeyPlaceholder", helpTextKey: "credentials.orlen_paczka.apiKeyHelp", type: "password", required: true },
+    { key: "partner_id", labelKey: "credentials.orlen_paczka.partnerId", placeholderKey: "credentials.orlen_paczka.partnerIdPlaceholder", type: "text", required: true },
+    { key: "sandbox", labelKey: "credentials.orlen_paczka.sandbox", type: "checkbox", required: false },
   ],
   fakturownia: [
-    { key: "api_token", label: "Token API", placeholder: "Twój token API Fakturownia", helpText: "Ustawienia > Ustawienia konta > Integracja > Kod autoryzacyjny API", type: "password", required: true },
-    { key: "subdomain", label: "Subdomena", placeholder: "twoja-firma", helpText: "Nazwa Twojego konta, np. 'twoja-firma' z twoja-firma.fakturownia.pl", type: "text", required: true },
+    { key: "api_token", labelKey: "credentials.fakturownia.apiToken", placeholderKey: "credentials.fakturownia.apiTokenPlaceholder", helpTextKey: "credentials.fakturownia.apiTokenHelp", type: "password", required: true },
+    { key: "subdomain", labelKey: "credentials.fakturownia.subdomain", placeholderKey: "credentials.fakturownia.subdomainPlaceholder", helpTextKey: "credentials.fakturownia.subdomainHelp", type: "text", required: true },
   ],
   btp: [
-    { key: "username", label: "Klucz publiczny (login)", placeholder: "Twój klucz publiczny z panelu BTP", helpText: "Znajdziesz go w panelu B2B → Profil użytkownika → zakładka Klucze", type: "text", required: true },
-    { key: "password", label: "Klucz prywatny (hasło)", placeholder: "Twój klucz prywatny z panelu BTP", helpText: "Para kluczy służy do uwierzytelnienia Basic Auth w API BTP", type: "password", required: true },
-    { key: "base_url", label: "Adres API hurtowni", placeholder: "https://twoja-hurtownia.btp.pro", helpText: "Adres Swagger API Twojej hurtowni, np. https://nazwa.btp.pro", type: "url", required: false },
+    { key: "username", labelKey: "credentials.btp.username", placeholderKey: "credentials.btp.usernamePlaceholder", helpTextKey: "credentials.btp.usernameHelp", type: "text", required: true },
+    { key: "password", labelKey: "credentials.btp.password", placeholderKey: "credentials.btp.passwordPlaceholder", helpTextKey: "credentials.btp.passwordHelp", type: "password", required: true },
+    { key: "base_url", labelKey: "credentials.btp.baseUrl", placeholderKey: "credentials.btp.baseUrlPlaceholder", helpTextKey: "credentials.btp.baseUrlHelp", type: "url", required: false },
   ],
 };
 
