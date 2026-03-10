@@ -56,6 +56,7 @@ function useUpdatePrintTemplates() {
 
 export default function PrintTemplatesPage() {
   const t = useTranslations("settings");
+  const tp = useTranslations("settings.printTemplates");
   const { data: templates, isLoading } = usePrintTemplates();
   const updateTemplates = useUpdatePrintTemplates();
 
@@ -73,7 +74,7 @@ export default function PrintTemplatesPage() {
   const handleSave = async () => {
     try {
       await updateTemplates.mutateAsync(form);
-      toast.success("Szablony wydruku zapisane");
+      toast.success(tp("saved"));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : t("nieudałosiezapisacszablonow");
@@ -90,7 +91,7 @@ export default function PrintTemplatesPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Szablony wydruku</h1>
+          <h1 className="text-2xl font-bold">{tp("title")}</h1>
           <p className="text-muted-foreground mt-1">
             {t("dostosujSzablonyHtmlDlaListowPrzewozowychPodsumowa")}
             {t("formularzyZwrotowPozostawPusteAbyUzywacDomyslnych")}
@@ -102,7 +103,7 @@ export default function PrintTemplatesPage() {
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Zapisz
+          {tp("saveButton")}
         </Button>
       </div>
 
@@ -111,13 +112,13 @@ export default function PrintTemplatesPage() {
           <CardTitle>{t("zmienneSzablonow")}</CardTitle>
           <CardDescription>
             {t("szablonyUzywajaSkładniGoHtmltemplateDostepneZmienn")}
-            typu szablonu. Funkcja {`{{inc $i}}`} zwiększa indeks o 1.
+            {tp("templateVarInfo")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 text-sm">
             <div>
-              <p className="font-medium mb-1">List przewozowy</p>
+              <p className="font-medium mb-1">{tp("packingSlip")}</p>
               <code className="block text-xs text-muted-foreground whitespace-pre-wrap">
                 {`.CompanyName .CompanyAddress .CompanyNIP
 .OrderID .OrderDate .Source
@@ -139,7 +140,7 @@ export default function PrintTemplatesPage() {
               </code>
             </div>
             <div>
-              <p className="font-medium mb-1">Formularz zwrotu</p>
+              <p className="font-medium mb-1">{tp("returnForm")}</p>
               <code className="block text-xs text-muted-foreground whitespace-pre-wrap">
                 {`.CompanyName .CompanyAddress .CompanyNIP
 .ReturnID .OrderID .ReturnDate .Status
@@ -154,9 +155,9 @@ export default function PrintTemplatesPage() {
 
       <Tabs defaultValue="packing_slip">
         <TabsList>
-          <TabsTrigger value="packing_slip">List przewozowy</TabsTrigger>
+          <TabsTrigger value="packing_slip">{tp("packingSlip")}</TabsTrigger>
           <TabsTrigger value="order_summary">{t("podsumowanieZamowienia")}</TabsTrigger>
-          <TabsTrigger value="return_slip">Formularz zwrotu</TabsTrigger>
+          <TabsTrigger value="return_slip">{tp("returnForm")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="packing_slip" className="mt-4">
@@ -164,7 +165,7 @@ export default function PrintTemplatesPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>List przewozowy</CardTitle>
+                  <CardTitle>{tp("packingSlip")}</CardTitle>
                   <CardDescription>
                     {t("szablonHtmlDoDrukowaniaListowPrzewozowych")}
                   </CardDescription>
@@ -173,7 +174,7 @@ export default function PrintTemplatesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="packing_slip_html">Szablon HTML</Label>
+                <Label htmlFor="packing_slip_html">{tp("htmlTemplate")}</Label>
                 <Textarea
                   id="packing_slip_html"
                   value={form.packing_slip_html}
@@ -203,7 +204,7 @@ export default function PrintTemplatesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="order_summary_html">Szablon HTML</Label>
+                <Label htmlFor="order_summary_html">{tp("htmlTemplate")}</Label>
                 <Textarea
                   id="order_summary_html"
                   value={form.order_summary_html}
@@ -224,7 +225,7 @@ export default function PrintTemplatesPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Formularz zwrotu</CardTitle>
+                  <CardTitle>{tp("returnForm")}</CardTitle>
                   <CardDescription>
                     {t("szablonHtmlDoDrukowaniaFormularzyZwrotow")}
                   </CardDescription>
@@ -233,7 +234,7 @@ export default function PrintTemplatesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="return_slip_html">Szablon HTML</Label>
+                <Label htmlFor="return_slip_html">{tp("htmlTemplate")}</Label>
                 <Textarea
                   id="return_slip_html"
                   value={form.return_slip_html}

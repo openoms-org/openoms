@@ -34,6 +34,7 @@ import { useTranslations } from "next-intl";
 
 export default function AutomationRulesPage() {
   const t = useTranslations("automation");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [triggerFilter, setTriggerFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -69,12 +70,12 @@ export default function AutomationRulesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Automatyzacja</h1>
+          <h1 className="text-2xl font-bold">{t("pageTitle")}</h1>
           <p className="text-muted-foreground mt-1">
             {t("regułyAutomatycznegoPrzetwarzaniaZdarzen")}
           </p>
           <p className="text-sm text-muted-foreground">
-            Reguły automatyzacji wykonują wewnętrzne akcje (zmiana statusu, wysyłka powiadomień) gdy spełnione są warunki.
+            {t("pageDescription")}
           </p>
         </div>
         <Button onClick={() => router.push("/settings/automation/new")}>
@@ -90,7 +91,7 @@ export default function AutomationRulesPage() {
               <SelectValue placeholder={t("zdarzenieWyzwalajace")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie zdarzenia</SelectItem>
+              <SelectItem value="all">{t("allEvents")}</SelectItem>
               {AUTOMATION_TRIGGER_EVENTS.map((event) => (
                 <SelectItem key={event} value={event}>
                   {AUTOMATION_TRIGGER_LABELS[event] || event}
@@ -119,11 +120,11 @@ export default function AutomationRulesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>Zdarzenie</TableHead>
-                <TableHead>Priorytet</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Wykonania</TableHead>
+                <TableHead>{t("columns.name")}</TableHead>
+                <TableHead>{t("columns.event")}</TableHead>
+                <TableHead>{t("columns.priority")}</TableHead>
+                <TableHead>{tc("status")}</TableHead>
+                <TableHead className="text-right">{t("columns.executions")}</TableHead>
                 <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
@@ -159,7 +160,7 @@ export default function AutomationRulesPage() {
                             : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                         }
                       >
-                        {rule.enabled ? "Aktywna" : t("wyłaczona1")}
+                        {rule.enabled ? t("statusActive") : t("wyłaczona1")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">{rule.fire_count}</TableCell>

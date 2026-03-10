@@ -45,7 +45,7 @@ export default function MarketplacesPage() {
     if (!deleteId) return;
     deleteIntegration.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Marketplace zostal usuniety");
+        toast.success(t("marketplaceDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -67,13 +67,13 @@ export default function MarketplacesPage() {
       <PageHeader
         title="Marketplace"
         description={t("zarzadzajpołaczeniamizplatformamisprzedazowymi")}
-        action={{ label: "Dodaj marketplace", href: "/marketplaces/new" }}
+        action={{ label: t("addMarketplace"), href: "/marketplaces/new" }}
       />
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -81,7 +81,7 @@ export default function MarketplacesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -89,21 +89,21 @@ export default function MarketplacesPage() {
       {!marketplaces || marketplaces.length === 0 ? (
         <EmptyState
           icon={Store}
-          title="Brak marketplace"
+          title={t("noMarketplaces")}
           description={t("dodajPierwszaPlatformeSprzedazowaAbySynchronizowac")}
-          action={{ label: "Dodaj marketplace", href: "/marketplaces/new" }}
+          action={{ label: t("addMarketplace"), href: "/marketplaces/new" }}
         />
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Platforma</TableHead>
-                <TableHead>Etykieta</TableHead>
+                <TableHead>{t("platform")}</TableHead>
+                <TableHead>{t("label")}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>{t("daneUwierzytelniajace")}</TableHead>
-                <TableHead>Ostatnia synchronizacja</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{t("lastSync")}</TableHead>
+                <TableHead>{t("createdAt")}</TableHead>
                 <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
@@ -130,11 +130,11 @@ export default function MarketplacesPage() {
                     {integration.has_credentials ? (
                       <Badge variant="success" className="gap-1">
                         <KeyRound className="h-3 w-3" />
-                        Skonfigurowane
+                        {t("configured")}
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="text-muted-foreground">
-                        Brak
+                        {t("none")}
                       </Badge>
                     )}
                   </TableCell>
@@ -166,9 +166,9 @@ export default function MarketplacesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun marketplace"
-        description="Czy na pewno chcesz usunac ten marketplace? Ta operacja jest nieodwracalna."
-        confirmLabel="Usun"
+        title={t("deleteMarketplace")}
+        description={t("deleteMarketplaceConfirmation")}
+        confirmLabel={t("deleteAction")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteIntegration.isPending}

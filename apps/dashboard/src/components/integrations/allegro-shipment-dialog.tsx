@@ -194,13 +194,13 @@ export function AllegroShipmentDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Anuluj
+                {t("cancel")}
               </Button>
               <Button
                 onClick={() => setStep("package-details")}
                 disabled={!selectedServiceId}
               >
-                Dalej
+                {t("next")}
               </Button>
             </DialogFooter>
           </div>
@@ -210,7 +210,7 @@ export function AllegroShipmentDialog({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Waga (kg)</Label>
+                <Label>{t("weightKg")}</Label>
                 <Input
                   type="number"
                   step="0.1"
@@ -256,7 +256,7 @@ export function AllegroShipmentDialog({
             </div>
 
             <div className="rounded-md border bg-muted/50 p-3 text-sm">
-              <p className="font-medium">Dane odbiorcy</p>
+              <p className="font-medium">{t("receiverData")}</p>
               <p className="text-muted-foreground">
                 {order.shipping_address?.name || order.customer_name}
               </p>
@@ -274,7 +274,7 @@ export function AllegroShipmentDialog({
                 variant="outline"
                 onClick={() => setStep("select-service")}
               >
-                Wstecz
+                {t("back")}
               </Button>
               <Button
                 onClick={handleCreateShipment}
@@ -283,7 +283,7 @@ export function AllegroShipmentDialog({
                 {createShipment.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Tworzenie...
+                    {t("creating")}
                   </>
                 ) : (
                   t("utworzPrzesyłke")
@@ -299,7 +299,7 @@ export function AllegroShipmentDialog({
               <CheckCircle2 className="h-12 w-12 text-green-500" />
               <p className="text-lg font-medium">{t("triggers.shipment.created")}</p>
               <p className="text-sm text-muted-foreground text-center">
-                ID przesyłki: {createdShipmentId}
+                {t("shipmentIdLabel", { id: createdShipmentId })}
               </p>
             </div>
 
@@ -318,7 +318,7 @@ export function AllegroShipmentDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Zamknij
+                {t("close")}
               </Button>
             </DialogFooter>
           </div>

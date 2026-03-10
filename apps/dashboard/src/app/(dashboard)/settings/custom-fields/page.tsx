@@ -20,18 +20,19 @@ import { Trash2, Plus } from "lucide-react";
 import type { CustomFieldDef, CustomFieldsConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const TYPE_OPTIONS: { value: CustomFieldDef["type"]; label: string }[] = [
-  { value: "text", label: "Tekst" },
-  { value: "number", label: "Liczba" },
-  { value: "select", label: "Lista wyboru" },
-  { value: "date", label: "Data" },
-  { value: "checkbox", label: "Tak/Nie" },
-];
-
 export default function CustomFieldsPage() {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data: config, isLoading } = useCustomFields();
   const updateCustomFields = useUpdateCustomFields();
+
+  const TYPE_OPTIONS: { value: CustomFieldDef["type"]; label: string }[] = [
+    { value: "text", label: t("customFields.typeText") },
+    { value: "number", label: t("customFields.typeNumber") },
+    { value: "select", label: t("customFields.typeSelect") },
+    { value: "date", label: t("customFields.typeDate") },
+    { value: "checkbox", label: t("customFields.typeCheckbox") },
+  ];
 
   const [fields, setFields] = useState<CustomFieldDef[]>([]);
 
@@ -89,10 +90,10 @@ export default function CustomFieldsPage() {
 
     try {
       await updateCustomFields.mutateAsync(configToSave);
-      toast.success(t("poladodatkowezostałyzapisane"));
+      toast.success(t("polaDodatkoweZostałyZapisane"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("bładpodczaszapisywania")
+        error instanceof Error ? error.message : t("bładPodczasZapisywania")
       );
     }
   };
@@ -105,7 +106,7 @@ export default function CustomFieldsPage() {
     <AdminGuard>
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Pola dodatkowe</h1>
+        <h1 className="text-2xl font-bold">{t("customFields.title")}</h1>
         <p className="text-muted-foreground mt-1">
           {t("zdefiniujDodatkowePolaDlaZamowien")}
         </p>
@@ -113,7 +114,7 @@ export default function CustomFieldsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Pola</CardTitle>
+          <CardTitle>{t("customFields.fieldsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {fields.map((field, index) => (
@@ -132,9 +133,9 @@ export default function CustomFieldsPage() {
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-1">
-                  <Label>Klucz</Label>
+                  <Label>{t("customFields.keyLabel")}</Label>
                   <Input
-                    placeholder="np. numer_faktury"
+                    placeholder={t("customFields.keyPlaceholder")}
                     value={field.key}
                     onChange={(e) =>
                       handleFieldChange(
@@ -148,9 +149,9 @@ export default function CustomFieldsPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label>Etykieta</Label>
+                  <Label>{t("customFields.labelLabel")}</Label>
                   <Input
-                    placeholder="np. Numer faktury"
+                    placeholder={t("customFields.labelPlaceholder")}
                     value={field.label}
                     onChange={(e) =>
                       handleFieldChange(index, "label", e.target.value)
@@ -158,7 +159,7 @@ export default function CustomFieldsPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label>Typ</Label>
+                  <Label>{t("customFields.typeLabel")}</Label>
                   <Select
                     value={field.type}
                     onValueChange={(v) => handleFieldChange(index, "type", v)}
@@ -185,13 +186,13 @@ export default function CustomFieldsPage() {
                       }
                       className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                     />
-                    Wymagane
+                    {t("customFields.required")}
                   </label>
                 </div>
               </div>
               {field.type === "select" && (
                 <div className="space-y-1">
-                  <Label>Opcje (po przecinku)</Label>
+                  <Label>{t("customFields.options")}</Label>
                   <Input
                     placeholder="opcja1, opcja2, opcja3"
                     value={(field.options || []).join(", ")}
@@ -212,14 +213,14 @@ export default function CustomFieldsPage() {
           ))}
           <Button variant="outline" size="sm" onClick={handleAddField}>
             <Plus className="mr-2 h-4 w-4" />
-            Dodaj pole
+            {t("customFields.addField")}
           </Button>
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={updateCustomFields.isPending}>
-          {updateCustomFields.isPending ? "Zapisywanie..." : "Zapisz"}
+          {updateCustomFields.isPending ? t("customFields.saving") : t("customFields.saveButton")}
         </Button>
       </div>
     </div>

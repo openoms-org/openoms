@@ -57,7 +57,7 @@ function RevenueBySourceChart() {
 
   const chartData = data?.map((d) => ({
     ...d,
-    label: d.source || "Nieznane",
+    label: d.source || t("unknown"),
   }));
 
   return (
@@ -70,7 +70,7 @@ function RevenueBySourceChart() {
           <Skeleton className="h-[300px] w-full" />
         ) : !chartData || chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -156,7 +156,7 @@ function DailyRevenueTrendChart() {
           <Skeleton className="h-[300px] w-full" />
         ) : !chartData || chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -182,7 +182,7 @@ function DailyRevenueTrendChart() {
                   const v = Number(value);
                   if (name === "avg_value")
                     return [formatCurrency(v, "PLN"), t("sredniaWartosc")];
-                  return [v, "Liczba"];
+                  return [v, t("count")];
                 }}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -219,21 +219,21 @@ function TopProductsTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top produkty</CardTitle>
+        <CardTitle>{t("topProducts")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : !data || data.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>SKU</TableHead>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("sku")}</TableHead>
                 <TableHead className="text-right">{t("quantity")}</TableHead>
                 <TableHead className="text-right">{t("przychod")}</TableHead>
               </TableRow>
@@ -281,7 +281,7 @@ function OrderTrendsChart() {
           <Skeleton className="h-[300px] w-full" />
         ) : !chartData || chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -363,7 +363,7 @@ function PaymentMethodChart() {
     ? Object.entries(data)
         .filter(([, count]) => count > 0)
         .map(([method, count]) => ({
-          name: (method === "unknown" || !method) ? "Nieznana" : method,
+          name: (method === "unknown" || !method) ? t("unknownFeminine") : method,
           value: count,
         }))
         .sort((a, b) => b.value - a.value)
@@ -379,7 +379,7 @@ function PaymentMethodChart() {
           <Skeleton className="h-[300px] w-full" />
         ) : chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -428,7 +428,7 @@ export default function ReportsPage() {
     <AdminGuard>
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Raporty</h1>
+        <h1 className="text-2xl font-bold">{t("reports")}</h1>
         <p className="text-muted-foreground mt-1">
           {t("szczegołoweStatystykiIAnalizySprzedazy")}
         </p>
@@ -436,9 +436,9 @@ export default function ReportsPage() {
 
       <Tabs defaultValue="revenue">
         <TabsList>
-          <TabsTrigger value="revenue">Przychody</TabsTrigger>
-          <TabsTrigger value="products">Produkty</TabsTrigger>
-          <TabsTrigger value="trends">Trendy</TabsTrigger>
+          <TabsTrigger value="revenue">{t("revenue")}</TabsTrigger>
+          <TabsTrigger value="products">{t("products")}</TabsTrigger>
+          <TabsTrigger value="trends">{t("trends")}</TabsTrigger>
           <TabsTrigger value="payments">{t("płatnosci")}</TabsTrigger>
         </TabsList>
 

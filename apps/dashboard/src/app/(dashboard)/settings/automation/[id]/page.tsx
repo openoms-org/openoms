@@ -54,6 +54,7 @@ import { useTranslations } from "next-intl";
 
 export default function AutomationRuleDetailPage() {
   const t = useTranslations("automation");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
@@ -215,9 +216,9 @@ export default function AutomationRuleDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{rule.name}</h1>
             <p className="text-muted-foreground text-sm">
-              Ostatnie wykonanie:{" "}
-              {rule.last_fired_at ? formatDate(rule.last_fired_at) : "nigdy"}{" "}
-              | Wykonania: {rule.fire_count}
+              {t("lastExecution")}{" "}
+              {rule.last_fired_at ? formatDate(rule.last_fired_at) : t("never")}{" "}
+              | {t("executions")} {rule.fire_count}
             </p>
           </div>
         </div>
@@ -229,23 +230,23 @@ export default function AutomationRuleDetailPage() {
 
       <Tabs defaultValue="edit">
         <TabsList>
-          <TabsTrigger value="edit">Edycja</TabsTrigger>
+          <TabsTrigger value="edit">{t("tabs.edit")}</TabsTrigger>
           <TabsTrigger value="logs">
             {t("historiaWykonan")}
           </TabsTrigger>
-          <TabsTrigger value="test">Test</TabsTrigger>
+          <TabsTrigger value="test">{t("tabs.test")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="edit" className="space-y-6 mt-4">
           {/* Basic info */}
           <Card>
             <CardHeader>
-              <CardTitle>Podstawowe informacje</CardTitle>
+              <CardTitle>{t("basicInfo")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Nazwa *</Label>
+                  <Label>{t("nameRequired")}</Label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -253,7 +254,7 @@ export default function AutomationRuleDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Priorytet</Label>
+                  <Label>{t("priorityLabel")}</Label>
                   <Input
                     type="number"
                     value={priority}
@@ -262,7 +263,7 @@ export default function AutomationRuleDetailPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Opis</Label>
+                <Label>{t("descriptionLabel")}</Label>
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -284,10 +285,10 @@ export default function AutomationRuleDetailPage() {
             <CardContent>
               <Select value={triggerEvent || "none"} onValueChange={(v) => setTriggerEvent(v === "none" ? "" : v)}>
                 <SelectTrigger className="w-full max-w-md">
-                  <SelectValue placeholder="Wybierz zdarzenie" />
+                  <SelectValue placeholder={t("selectEvent")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Wybierz zdarzenie...</SelectItem>
+                  <SelectItem value="none">{t("selectEventPlaceholder")}</SelectItem>
                   {AUTOMATION_TRIGGER_EVENTS.map((event) => (
                     <SelectItem key={event} value={event}>
                       {AUTOMATION_TRIGGER_LABELS[event] || event}
@@ -302,10 +303,10 @@ export default function AutomationRuleDetailPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Warunki</CardTitle>
+                <CardTitle>{t("conditions")}</CardTitle>
                 <Button variant="outline" size="sm" onClick={addCondition}>
                   <Plus className="h-4 w-4" />
-                  Dodaj warunek
+                  {t("addCondition")}
                 </Button>
               </div>
             </CardHeader>
@@ -319,15 +320,15 @@ export default function AutomationRuleDetailPage() {
                   <div key={index} className="flex items-start gap-3 rounded-md border p-3">
                     <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Pole</Label>
+                        <Label className="text-xs">{t("fieldLabel")}</Label>
                         <Input
                           value={condition.field}
                           onChange={(e) => updateCondition(index, { field: e.target.value })}
-                          placeholder="np. status, total_amount"
+                          placeholder={t("fieldPlaceholder")}
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Operator</Label>
+                        <Label className="text-xs">{t("operatorLabel")}</Label>
                         <Select
                           value={condition.operator}
                           onValueChange={(v) => updateCondition(index, { operator: v })}
@@ -371,7 +372,7 @@ export default function AutomationRuleDetailPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Akcje</CardTitle>
+                <CardTitle>{t("actions")}</CardTitle>
                 <Button variant="outline" size="sm" onClick={addAction}>
                   <Plus className="h-4 w-4" />
                   {t("dodajAkcje")}
@@ -388,7 +389,7 @@ export default function AutomationRuleDetailPage() {
                   <div key={index} className="flex items-start gap-3 rounded-md border p-3">
                     <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Typ akcji</Label>
+                        <Label className="text-xs">{t("actionTypeLabel")}</Label>
                         <Select
                           value={action.type}
                           onValueChange={(v) => updateAction(index, { type: v, config: {} })}
@@ -397,9 +398,9 @@ export default function AutomationRuleDetailPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {AUTOMATION_ACTION_TYPES.map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {AUTOMATION_ACTION_LABELS[t] || t}
+                            {AUTOMATION_ACTION_TYPES.map((at) => (
+                              <SelectItem key={at} value={at}>
+                                {AUTOMATION_ACTION_LABELS[at] || at}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -407,11 +408,11 @@ export default function AutomationRuleDetailPage() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">
-                          {action.type === "set_status" && "Nowy status"}
-                          {action.type === "add_tag" && "Tag"}
-                          {action.type === "send_email" && "Adres e-mail"}
-                          {action.type === "create_invoice" && "Typ faktury"}
-                          {action.type === "webhook" && "URL webhooka"}
+                          {action.type === "set_status" && t("actionNewStatus")}
+                          {action.type === "add_tag" && t("actionTag")}
+                          {action.type === "send_email" && t("actionEmail")}
+                          {action.type === "create_invoice" && t("actionInvoiceType")}
+                          {action.type === "webhook" && t("actionWebhookUrl")}
                         </Label>
                         <Input
                           value={String(
@@ -446,13 +447,13 @@ export default function AutomationRuleDetailPage() {
                           }}
                           placeholder={
                             action.type === "set_status"
-                              ? "np. confirmed"
+                              ? t("placeholderStatus")
                               : action.type === "add_tag"
-                              ? "np. vip"
+                              ? t("placeholderTag")
                               : action.type === "send_email"
-                              ? "np. admin@firma.pl"
+                              ? t("placeholderEmail")
                               : action.type === "create_invoice"
-                              ? "np. vat"
+                              ? t("placeholderInvoice")
                               : action.type === "webhook"
                               ? "https://..."
                               : ""
@@ -460,7 +461,7 @@ export default function AutomationRuleDetailPage() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Opoznienie (minuty)</Label>
+                        <Label className="text-xs">{t("delayMinutes")}</Label>
                         <Input
                           type="number"
                           min={0}
@@ -469,10 +470,10 @@ export default function AutomationRuleDetailPage() {
                             const minutes = parseInt(e.target.value) || 0;
                             updateAction(index, { delay_seconds: minutes * 60 });
                           }}
-                          placeholder="0 = natychmiast"
+                          placeholder={t("delayImmediate")}
                         />
                         <p className="text-xs text-muted-foreground">
-                          0 = natychmiast
+                          {t("delayImmediate")}
                         </p>
                       </div>
                     </div>
@@ -498,7 +499,7 @@ export default function AutomationRuleDetailPage() {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              Zapisz zmiany
+              {t("saveChanges")}
             </Button>
           </div>
         </TabsContent>
@@ -518,10 +519,10 @@ export default function AutomationRuleDetailPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Zdarzenie</TableHead>
-                        <TableHead>Encja</TableHead>
-                        <TableHead>Warunki</TableHead>
+                        <TableHead>{t("columns.date")}</TableHead>
+                        <TableHead>{t("columns.event")}</TableHead>
+                        <TableHead>{t("columns.entity")}</TableHead>
+                        <TableHead>{t("columns.conditionsMet")}</TableHead>
                         <TableHead>{t("invoice.error")}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -581,7 +582,7 @@ export default function AutomationRuleDetailPage() {
                 {t("podajDaneTestoweWFormacieJsonAby")}
               </p>
               <div className="space-y-2">
-                <Label>Dane testowe (JSON)</Label>
+                <Label>{t("testDataJson")}</Label>
                 <Textarea
                   value={testData}
                   onChange={(e) => setTestData(e.target.value)}
@@ -596,11 +597,11 @@ export default function AutomationRuleDetailPage() {
                 ) : (
                   <Play className="h-4 w-4" />
                 )}
-                Uruchom test
+                {t("runTest")}
               </Button>
               {testResult && (
                 <div className="space-y-2">
-                  <Label>Wynik testu</Label>
+                  <Label>{t("testResult")}</Label>
                   <pre className="rounded-md border bg-muted p-4 text-sm font-mono overflow-auto max-h-[400px]">
                     {testResult}
                   </pre>

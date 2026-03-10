@@ -38,12 +38,12 @@ import { useTranslations } from "next-intl";
 
 interface ProviderInfo {
   name: string;
-  description: string;
+  descriptionKey: string;
   url: string;
   credentialFields: {
     key: string;
-    label: string;
-    placeholder: string;
+    labelKey: string;
+    placeholderKey: string;
     type?: string;
   }[];
 }
@@ -51,47 +51,44 @@ interface ProviderInfo {
 const PROVIDER_INFO: Record<string, ProviderInfo> = {
   fakturownia: {
     name: "Fakturownia",
-    description:
-      "Popularny polski system fakturowania online. Obsługuje faktury VAT, proforma, korekty. Integracja przez API REST.",
+    descriptionKey: "accounting.fakturownia.description",
     url: "https://fakturownia.pl",
     credentialFields: [
       {
         key: "subdomain",
-        label: "Subdomena",
-        placeholder: "moja-firma",
+        labelKey: "accounting.fakturownia.subdomain",
+        placeholderKey: "accounting.fakturownia.subdomainPlaceholder",
       },
       {
         key: "api_token",
-        label: "Token API",
-        placeholder: "Token API z Fakturowni",
+        labelKey: "accounting.fakturownia.apiToken",
+        placeholderKey: "accounting.fakturownia.apiTokenPlaceholder",
         type: "password",
       },
     ],
   },
   wfirma: {
     name: "wFirma",
-    description:
-      "System ERP i fakturowania dla firm. Obsługuje pełną księgowość, faktury VAT, JPK. API REST z autoryzacją kluczem API.",
+    descriptionKey: "accounting.wfirma.description",
     url: "https://wfirma.pl",
     credentialFields: [
       {
         key: "api_key",
-        label: "Klucz API",
-        placeholder: "Klucz API z wFirma",
+        labelKey: "accounting.wfirma.apiKey",
+        placeholderKey: "accounting.wfirma.apiKeyPlaceholder",
         type: "password",
       },
     ],
   },
   infakt: {
     name: "inFakt",
-    description:
-      "Prosty system fakturowania dla freelancerów i małych firm. Automatyczna wysyłka faktur, rozliczenia. API REST v3.",
+    descriptionKey: "accounting.infakt.description",
     url: "https://www.infakt.pl",
     credentialFields: [
       {
         key: "api_key",
-        label: "Klucz API",
-        placeholder: "Klucz API z inFakt",
+        labelKey: "accounting.infakt.apiKey",
+        placeholderKey: "accounting.infakt.apiKeyPlaceholder",
         type: "password",
       },
     ],
@@ -100,6 +97,7 @@ const PROVIDER_INFO: Record<string, ProviderInfo> = {
 
 export default function AccountingSettingsPage() {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data: config, isLoading } = useAccountingSettings();
   const updateSettings = useUpdateAccountingSettings();
   const testConnection = useTestAccountingConnection();
@@ -134,7 +132,7 @@ export default function AccountingSettingsPage() {
       toast.success(t("ustawieniaKsiegowosciZapisane"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
+        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
       toast.error(message);
     }
   };
@@ -145,7 +143,7 @@ export default function AccountingSettingsPage() {
     try {
       await updateSettings.mutateAsync({ provider, credentials });
     } catch {
-      toast.error("Zapisz ustawienia przed testem");
+      toast.error(t("saveBeforeTest"));
       return;
     }
 
@@ -161,7 +159,7 @@ export default function AccountingSettingsPage() {
       const message =
         err instanceof Error
           ? err.message
-          : t("nieudałosieprzetestowacpołaczenia");
+          : t("nieUdałoSiePrzetestowacPołaczenia");
       toast.error(message);
       setTestResult({ success: false, message });
     }
@@ -191,14 +189,14 @@ export default function AccountingSettingsPage() {
         {/* Provider selection */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("dostawcausługksiegowych")}</CardTitle>
+            <CardTitle>{t("dostawcaUsługKsiegowych")}</CardTitle>
             <CardDescription>
               {t("wybierzSystemKsiegowyZKtorymChceszZintegrowac")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Dostawca</Label>
+              <Label>{t("providerLabel")}</Label>
               <Select
                 value={provider || "none"}
                 onValueChange={handleProviderChange}
@@ -207,7 +205,7 @@ export default function AccountingSettingsPage() {
                   <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Brak</SelectItem>
+                  <SelectItem value="none">{t("noneOption")}</SelectItem>
                   {Object.entries(INVOICING_PROVIDER_LABELS).map(
                     ([key, label]) => (
                       <SelectItem key={key} value={key}>
@@ -224,7 +222,7 @@ export default function AccountingSettingsPage() {
               <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/15 p-3">
                 <CheckCircle className="h-5 w-5 text-success" />
                 <span className="text-sm">
-                  Połączono z {INVOICING_PROVIDER_LABELS[config.provider] || config.provider}
+                  {t("connectedTo", { provider: INVOICING_PROVIDER_LABELS[config.provider] || config.provider })}
                 </span>
               </div>
             )}
@@ -238,7 +236,7 @@ export default function AccountingSettingsPage() {
               <CardTitle>
                 {currentInfo.name}
               </CardTitle>
-              <CardDescription>{currentInfo.description}</CardDescription>
+              <CardDescription>{t(currentInfo.descriptionKey)}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <a
@@ -254,7 +252,7 @@ export default function AccountingSettingsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {currentInfo.credentialFields.map((field) => (
                   <div key={field.key} className="space-y-2">
-                    <Label>{field.label}</Label>
+                    <Label>{t(field.labelKey)}</Label>
                     <Input
                       type={field.type || "text"}
                       value={credentials[field.key] || ""}
@@ -264,7 +262,7 @@ export default function AccountingSettingsPage() {
                           [field.key]: e.target.value,
                         })
                       }
-                      placeholder={field.placeholder}
+                      placeholder={t(field.placeholderKey)}
                     />
                   </div>
                 ))}
@@ -277,7 +275,7 @@ export default function AccountingSettingsPage() {
         {provider && (
           <Card>
             <CardHeader>
-              <CardTitle>{t("testpołaczenia")}</CardTitle>
+              <CardTitle>{t("testPołaczenia")}</CardTitle>
               <CardDescription>
                 {t("sprawdzCzyDaneDostepoweSaPoprawne")}
               </CardDescription>
@@ -327,7 +325,7 @@ export default function AccountingSettingsPage() {
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            Zapisz ustawienia
+            {t("saveSettings")}
           </Button>
         </div>
       </div>

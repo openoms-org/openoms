@@ -15,47 +15,48 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useTranslations } from "next-intl";
 
-const PERMISSION_LABELS: Record<string, string> = {
-  "orders.view": "Podgląd",
-  "orders.create": "Tworzenie",
-  "orders.edit": "Edycja",
-  "orders.delete": "Usuwanie",
-  "orders.export": "Eksport",
-  "products.view": "Podgląd",
-  "products.create": "Tworzenie",
-  "products.edit": "Edycja",
-  "products.delete": "Usuwanie",
-  "shipments.view": "Podgląd",
-  "shipments.create": "Tworzenie",
-  "shipments.edit": "Edycja",
-  "shipments.delete": "Usuwanie",
-  "returns.view": "Podgląd",
-  "returns.create": "Tworzenie",
-  "returns.edit": "Edycja",
-  "returns.delete": "Usuwanie",
-  "customers.view": "Podgląd",
-  "customers.create": "Tworzenie",
-  "customers.edit": "Edycja",
-  "customers.delete": "Usuwanie",
-  "invoices.view": "Podgląd",
-  "invoices.create": "Tworzenie",
-  "invoices.delete": "Usuwanie",
-  "integrations.manage": "Zarządzanie integracjami",
-  "settings.manage": "Zarządzanie ustawieniami",
-  "users.manage": "Zarządzanie użytkownikami",
-  "reports.view": "Podgląd raportów",
-  "audit.view": "Podgląd dziennika",
-  "automation.manage": "Zarządzanie automatyzacją",
-  "warehouses.manage": "Zarządzanie magazynami",
-};
-
 export default function RoleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations("roles");
+  const td = useTranslations("roles.detail");
   const { id } = use(params);
   const router = useRouter();
   const { data: role, isLoading } = useRole(id);
   const { data: permGroups } = usePermissionGroups();
   const updateRole = useUpdateRole(id);
+
+  const PERMISSION_LABELS: Record<string, string> = {
+    "orders.view": td("permView"),
+    "orders.create": td("permCreate"),
+    "orders.edit": td("permEdit"),
+    "orders.delete": td("permDelete"),
+    "orders.export": td("permExport"),
+    "products.view": td("permView"),
+    "products.create": td("permCreate"),
+    "products.edit": td("permEdit"),
+    "products.delete": td("permDelete"),
+    "shipments.view": td("permView"),
+    "shipments.create": td("permCreate"),
+    "shipments.edit": td("permEdit"),
+    "shipments.delete": td("permDelete"),
+    "returns.view": td("permView"),
+    "returns.create": td("permCreate"),
+    "returns.edit": td("permEdit"),
+    "returns.delete": td("permDelete"),
+    "customers.view": td("permView"),
+    "customers.create": td("permCreate"),
+    "customers.edit": td("permEdit"),
+    "customers.delete": td("permDelete"),
+    "invoices.view": td("permView"),
+    "invoices.create": td("permCreate"),
+    "invoices.delete": td("permDelete"),
+    "integrations.manage": td("permManageIntegrations"),
+    "settings.manage": td("permManageSettings"),
+    "users.manage": td("permManageUsers"),
+    "reports.view": td("permViewReports"),
+    "audit.view": td("permViewAudit"),
+    "automation.manage": td("permManageAutomation"),
+    "warehouses.manage": td("permManageWarehouses"),
+  };
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -77,7 +78,7 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
   if (!role) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Nie znaleziono roli</p>
+        <p className="text-muted-foreground">{td("notFound")}</p>
       </div>
     );
   }
@@ -132,20 +133,20 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{role.name}</h1>
           <p className="text-muted-foreground">
-            {role.is_system ? "Rola systemowa" : "Rola niestandardowa"} &middot;{" "}
-            {role.permissions.length} uprawnień
+            {role.is_system ? td("systemRole") : td("customRole")} &middot;{" "}
+            {t("permissionsCount", { count: role.permissions.length })}
           </p>
         </div>
         <Button onClick={handleSave} disabled={!dirty || updateRole.isPending}>
           <Save className="h-4 w-4 mr-2" />
-          {updateRole.isPending ? "Zapisywanie..." : "Zapisz"}
+          {updateRole.isPending ? td("saving") : td("saveButton")}
         </Button>
       </div>
 
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="role-name">Nazwa</Label>
+            <Label htmlFor="role-name">{td("nameLabel")}</Label>
             <Input
               id="role-name"
               value={name}
@@ -157,7 +158,7 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="role-desc">Opis</Label>
+            <Label htmlFor="role-desc">{td("descriptionLabel")}</Label>
             <Input
               id="role-desc"
               value={description}
@@ -165,13 +166,13 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
                 setDescription(e.target.value);
                 setDirty(true);
               }}
-              placeholder="Opcjonalny opis roli"
+              placeholder={td("descriptionPlaceholder")}
             />
           </div>
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold mb-4">Uprawnienia</h2>
+          <h2 className="text-lg font-semibold mb-4">{td("permissions")}</h2>
           <div className="space-y-6">
             {groups.map((group) => {
               const groupPerms = group.permissions;

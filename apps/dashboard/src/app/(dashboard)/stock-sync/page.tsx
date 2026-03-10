@@ -54,20 +54,26 @@ import type {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-const channelTypeLabels: Record<string, string> = {
-  allegro: "Allegro",
-  amazon: "Amazon",
-  woocommerce: "WooCommerce",
-  ebay: "eBay",
-  shopify: "Shopify",
-  manual: "Ręczny",
-};
+function useChannelTypeLabels() {
+  const t = useTranslations("stockSync");
+  return {
+    allegro: "Allegro",
+    amazon: "Amazon",
+    woocommerce: "WooCommerce",
+    ebay: "eBay",
+    shopify: "Shopify",
+    manual: t("channelManual"),
+  } as Record<string, string>;
+}
 
-const syncModeLabels: Record<string, string> = {
-  realtime: "Czas rzeczywisty",
-  scheduled: "Zaplanowany",
-  manual: "Ręczny",
-};
+function useSyncModeLabels() {
+  const t = useTranslations("stockSync");
+  return {
+    realtime: t("syncModeRealtime"),
+    scheduled: t("syncModeScheduled"),
+    manual: t("syncModeManual"),
+  } as Record<string, string>;
+}
 
 function ChannelStatusIndicator({ status }: { status: string }) {
   switch (status) {
@@ -95,7 +101,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const labels: Record<string, string> = {
     ok: "OK",
-    warning: "Brak synchronizacji",
+    warning: t("noSync"),
     error: t("invoice.error"),
     disabled: t("wyłaczony"),
   };
@@ -109,6 +115,8 @@ function StatusBadge({ status }: { status: string }) {
 
 function AddChannelDialog() {
   const t = useTranslations("stockSync");
+  const channelTypeLabels = useChannelTypeLabels();
+  const syncModeLabels = useSyncModeLabels();
   const [open, setOpen] = useState(false);
   const [channelType, setChannelType] = useState("allegro");
   const [syncMode, setSyncMode] = useState("realtime");
@@ -162,7 +170,7 @@ function AddChannelDialog() {
             </Select>
           </div>
           <div>
-            <Label>Tryb synchronizacji</Label>
+            <Label>{t("syncMode")}</Label>
             <Select value={syncMode} onValueChange={setSyncMode}>
               <SelectTrigger>
                 <SelectValue />
@@ -189,23 +197,23 @@ function AddChannelDialog() {
             </p>
           </div>
           <div>
-            <Label>Priorytet</Label>
+            <Label>{t("priority")}</Label>
             <Input
               type="number"
               value={priority}
               onChange={(e) => setPriority(Number(e.target.value))}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Wyższy priorytet = pierwszeństwo przy ograniczonym stanie
+              {t("priorityHint")}
             </p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Anuluj
+            {t("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={createChannel.isPending}>
-            {createChannel.isPending ? "Tworzenie..." : t("create")}
+            {createChannel.isPending ? t("creating") : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -215,6 +223,8 @@ function AddChannelDialog() {
 
 function ChannelCard({ channel }: { channel: ChannelSummary }) {
   const t = useTranslations("stockSync");
+  const channelTypeLabels = useChannelTypeLabels();
+  const syncModeLabels = useSyncModeLabels();
   const deleteChannel = useDeleteStockSyncChannel();
   const updateChannel = useUpdateStockSyncChannel(channel.id);
   const pushChannel = usePushChannelStock();
@@ -272,16 +282,16 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
       <CardContent>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Status</span>
+            <span className="text-muted-foreground">{t("status")}</span>
             <StatusBadge status={channel.status} />
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Tryb</span>
+            <span className="text-muted-foreground">{t("mode")}</span>
             <span>{syncModeLabels[channel.sync_mode] || channel.sync_mode}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Bufor</span>
-            <span>{channel.stock_buffer} szt.</span>
+            <span className="text-muted-foreground">{t("buffer")}</span>
+            <span>{channel.stock_buffer} {t("pcs")}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("błedy24h")}</span>
@@ -295,7 +305,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
           </div>
           {channel.last_sync_at && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Ostatnia synchronizacja</span>
+              <span className="text-muted-foreground">{t("lastSync")}</span>
               <span>{formatDate(channel.last_sync_at)}</span>
             </div>
           )}
@@ -326,7 +336,7 @@ export default function StockSyncPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Sync magazynu
+              {t("stockSync")}
             </h1>
             <p className="text-muted-foreground">
               {t("synchronizacjaStanowMagazynowychZKanałamiSprzedazy")}
@@ -334,7 +344,7 @@ export default function StockSyncPage() {
             </p>
             {dataUpdatedAt > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                Odświeżono: {new Date(dataUpdatedAt).toLocaleTimeString("pl-PL")}
+                {t("refreshedAt")}: {new Date(dataUpdatedAt).toLocaleTimeString()}
               </p>
             )}
           </div>
@@ -347,7 +357,7 @@ export default function StockSyncPage() {
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${pushAll.isPending ? "animate-spin" : ""}`}
               />
-              {pushAll.isPending ? t("synchronizuje") : "Synchronizuj wszystko"}
+              {pushAll.isPending ? t("synchronizuje") : t("syncAll")}
             </Button>
             <AddChannelDialog />
           </div>
@@ -362,7 +372,7 @@ export default function StockSyncPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Produkty z magazynem
+                    {t("productsWithStock")}
                   </CardTitle>
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -388,7 +398,7 @@ export default function StockSyncPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Błędy (24h)
+                    {t("errors24h")}
                   </CardTitle>
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -407,7 +417,7 @@ export default function StockSyncPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Ostatnia synchronizacja
+                    {t("lastSync")}
                   </CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -415,7 +425,7 @@ export default function StockSyncPage() {
                   <div className="text-sm font-medium">
                     {dashboard?.last_sync_at
                       ? formatDate(dashboard.last_sync_at)
-                      : "Nigdy"}
+                      : t("never")}
                   </div>
                 </CardContent>
               </Card>

@@ -67,16 +67,16 @@ function statusBadgeVariant(status?: string) {
   }
 }
 
-function statusLabel(status?: string) {
+function statusLabel(status: string | undefined, t: (key: string) => string) {
   switch (status) {
     case "PUBLISHED":
-      return "Opublikowana";
+      return t("offerStatusPublished");
     case "ACTIVE":
-      return "Aktywna";
+      return t("offerStatusActive");
     case "UNPUBLISHED":
-      return "Nieopublikowana";
+      return t("offerStatusUnpublished");
     case "ENDED":
-      return "Zakonczona";
+      return t("offerStatusEnded");
     default:
       return status ?? "---";
   }
@@ -156,7 +156,7 @@ export default function EbayOffersPage() {
           <Card>
             <CardContent className="pt-6">
               <p className="py-8 text-center text-muted-foreground">
-                Brak skonfigurowanej integracji eBay.{" "}
+                {t("noEbayIntegration")}{" "}
                 <Link
                   href="/marketplaces/ebay"
                   className="text-primary underline"
@@ -188,7 +188,7 @@ export default function EbayOffersPage() {
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
-                        placeholder="Szukaj po SKU..."
+                        placeholder={t("searchBySku")}
                         value={searchSku}
                         onChange={(e) => {
                           setSearchSku(e.target.value);
@@ -207,10 +207,10 @@ export default function EbayOffersPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Oferty
+                  {t("offers")}
                   {data && (
                     <span className="text-sm font-normal text-muted-foreground">
-                      ({data.total} łącznie)
+                      ({t("totalCount", { count: data.total })})
                     </span>
                   )}
                   {isFetching && (
@@ -238,8 +238,8 @@ export default function EbayOffersPage() {
                           <TableHead>Offer ID</TableHead>
                           <TableHead>Listing ID</TableHead>
                           <TableHead className="w-28">Marketplace</TableHead>
-                          <TableHead className="w-28">Cena</TableHead>
-                          <TableHead className="w-24">Stan</TableHead>
+                          <TableHead className="w-28">{t("price")}</TableHead>
+                          <TableHead className="w-24">{t("stock")}</TableHead>
                           <TableHead className="w-28">Status</TableHead>
                           <TableHead className="w-24">Format</TableHead>
                         </TableRow>
@@ -254,8 +254,7 @@ export default function EbayOffersPage() {
                     {/* Pagination */}
                     <div className="mt-4 flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">
-                        Strona {page + 1} z{" "}
-                        {Math.max(1, Math.ceil(data.total / PAGE_SIZE))}
+                        {t("pageOf", { page: page + 1, total: Math.max(1, Math.ceil(data.total / PAGE_SIZE)) })}
                       </p>
                       <div className="flex gap-2">
                         <Button
@@ -264,7 +263,7 @@ export default function EbayOffersPage() {
                           disabled={page === 0}
                           onClick={() => setPage((p) => p - 1)}
                         >
-                          Poprzednia
+                          {t("previous")}
                         </Button>
                         <Button
                           variant="outline"
@@ -288,6 +287,7 @@ export default function EbayOffersPage() {
 }
 
 function OfferRow({ offer }: { offer: EbayOffer }) {
+  const t = useTranslations("marketplaces");
   return (
     <TableRow>
       {/* SKU */}
@@ -331,7 +331,7 @@ function OfferRow({ offer }: { offer: EbayOffer }) {
       {/* Status */}
       <TableCell>
         <Badge variant={statusBadgeVariant(offer.status)}>
-          {statusLabel(offer.status)}
+          {statusLabel(offer.status, t)}
         </Badge>
       </TableCell>
 

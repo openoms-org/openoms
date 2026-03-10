@@ -116,14 +116,14 @@ export default function SupplierDetailPage() {
   }
 
   if (!supplier) {
-    return <div className="text-center py-8 text-muted-foreground">Dostawca nie znaleziony</div>;
+    return <div className="text-center py-8 text-muted-foreground">{t("notFound")}</div>;
   }
 
   const handleUpdate = () => {
     updateSupplier.mutate(
       { name, code: code || undefined, feed_url: feedUrl || undefined, feed_format: feedFormat, sync_interval_minutes: parseInt(syncInterval, 10), status, default_category_id: defaultCategoryId },
       {
-        onSuccess: () => toast.success("Dostawca zaktualizowany"),
+        onSuccess: () => toast.success(t("supplierUpdated")),
         onError: (error) =>
           toast.error(getErrorMessage(error)),
       }
@@ -150,13 +150,13 @@ export default function SupplierDetailPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{supplier.name}</h1>
           <p className="text-muted-foreground">
-            Format: {supplier.feed_format.toUpperCase()} | Utworzono: {formatDate(supplier.created_at)}
+            {t("format")}: {supplier.feed_format.toUpperCase()} | {tc("createdAt")}: {formatDate(supplier.created_at)}
           </p>
         </div>
         <StatusBadge status={supplier.status} statusMap={SUPPLIER_STATUSES} />
         <Button onClick={handleSync} disabled={syncSupplier.isPending}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Synchronizuj
+          {t("synchronize")}
         </Button>
       </div>
 
@@ -169,25 +169,25 @@ export default function SupplierDetailPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Dane dostawcy</CardTitle>
-            <CardDescription>Edytuj informacje o dostawcy</CardDescription>
+            <CardTitle>{t("supplierData")}</CardTitle>
+            <CardDescription>{t("editSupplierInfo")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nazwa</Label>
+              <Label htmlFor="name">{tc("name")}</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="code">Kod</Label>
+              <Label htmlFor="code">{tc("code")}</Label>
               <Input id="code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="np. ABC123" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="feedUrl">URL feeda</Label>
+              <Label htmlFor="feedUrl">{t("feedUrl")}</Label>
               <Input id="feedUrl" value={feedUrl} onChange={(e) => setFeedUrl(e.target.value)} placeholder="https://example.com/feed.xml" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Format</Label>
+                <Label>{t("format")}</Label>
                 <Select value={feedFormat} onValueChange={setFeedFormat}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -198,12 +198,12 @@ export default function SupplierDetailPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>{tc("status")}</Label>
                 <Select value={status} onValueChange={setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Aktywny</SelectItem>
-                    <SelectItem value="inactive">Nieaktywny</SelectItem>
+                    <SelectItem value="active">{tc("active")}</SelectItem>
+                    <SelectItem value="inactive">{tc("inactive")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -213,14 +213,14 @@ export default function SupplierDetailPage() {
               <Select value={syncInterval} onValueChange={setSyncInterval}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="5">Co 5 minut</SelectItem>
-                  <SelectItem value="15">Co 15 minut</SelectItem>
-                  <SelectItem value="30">Co 30 minut</SelectItem>
+                  <SelectItem value="5">{t("every5Min")}</SelectItem>
+                  <SelectItem value="15">{t("every15Min")}</SelectItem>
+                  <SelectItem value="30">{t("every30Min")}</SelectItem>
                   <SelectItem value="60">{t("co1Godzine")}</SelectItem>
-                  <SelectItem value="120">Co 2 godziny</SelectItem>
-                  <SelectItem value="360">Co 6 godzin</SelectItem>
-                  <SelectItem value="720">Co 12 godzin</SelectItem>
-                  <SelectItem value="1440">Raz dziennie</SelectItem>
+                  <SelectItem value="120">{t("every2Hours")}</SelectItem>
+                  <SelectItem value="360">{t("every6Hours")}</SelectItem>
+                  <SelectItem value="720">{t("every12Hours")}</SelectItem>
+                  <SelectItem value="1440">{t("onceDaily")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -237,26 +237,26 @@ export default function SupplierDetailPage() {
               </p>
             </div>
             <Button onClick={handleUpdate} disabled={updateSupplier.isPending} className="w-full">
-              {updateSupplier.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
+              {updateSupplier.isPending ? tc("saving") : tc("saveChanges")}
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Informacje</CardTitle>
+            <CardTitle>{tc("details")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Ostatnia synchronizacja</span>
-              <span>{supplier.last_sync_at ? formatDate(supplier.last_sync_at) : "Nigdy"}</span>
+              <span className="text-muted-foreground">{t("lastSync")}</span>
+              <span>{supplier.last_sync_at ? formatDate(supplier.last_sync_at) : t("never")}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("interwałsynca")}</span>
               <span>{supplier.sync_interval_minutes >= 60 ? `${supplier.sync_interval_minutes / 60}h` : `${supplier.sync_interval_minutes} min`}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Produkty dostawcy</span>
+              <span className="text-muted-foreground">{t("supplierProducts")}</span>
               <span>{productsData?.total ?? 0}</span>
             </div>
             <div className="flex justify-between">
@@ -264,11 +264,11 @@ export default function SupplierDetailPage() {
               <span>{products.filter((p) => p.product_id).length}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Utworzono</span>
+              <span className="text-muted-foreground">{tc("createdAt")}</span>
               <span>{formatDate(supplier.created_at)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Zaktualizowano</span>
+              <span className="text-muted-foreground">{tc("updatedAt")}</span>
               <span>{formatDate(supplier.updated_at)}</span>
             </div>
           </CardContent>
@@ -277,24 +277,24 @@ export default function SupplierDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Portal dostawcy</CardTitle>
+          <CardTitle>{t("supplierPortal")}</CardTitle>
           <CardDescription>
-            Zewnetrzny portal, przez ktory dostawca moze potwierdzac zamowienia, oznaczac wysylke i komunikowac sie
+            {t("supplierPortalDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <p className="text-sm font-medium">
-                Status: {supplier.portal_enabled ? (
-                  <Badge variant="default" className="ml-2">Aktywny</Badge>
+                {tc("status")}: {supplier.portal_enabled ? (
+                  <Badge variant="default" className="ml-2">{tc("active")}</Badge>
                 ) : (
-                  <Badge variant="secondary" className="ml-2">Nieaktywny</Badge>
+                  <Badge variant="secondary" className="ml-2">{tc("inactive")}</Badge>
                 )}
               </p>
               {portalStatus?.last_used_at && (
                 <p className="text-xs text-muted-foreground">
-                  Ostatni dostep: {formatDate(portalStatus.last_used_at)}
+                  {t("lastAccess")}: {formatDate(portalStatus.last_used_at)}
                 </p>
               )}
             </div>
@@ -304,7 +304,7 @@ export default function SupplierDetailPage() {
                   generateLink.mutate(undefined, {
                     onSuccess: (data) => {
                       setPortalLink(data.url);
-                      toast.success("Link wygenerowany");
+                      toast.success(t("linkGenerated"));
                     },
                     onError: (error) => toast.error(getErrorMessage(error)),
                   });
@@ -313,7 +313,7 @@ export default function SupplierDetailPage() {
                 size="sm"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                {generateLink.isPending ? "Generowanie..." : "Generuj link"}
+                {generateLink.isPending ? t("generating") : t("generateLink")}
               </Button>
               {supplier.portal_enabled && (
                 <Button
@@ -323,7 +323,7 @@ export default function SupplierDetailPage() {
                     revokeAccess.mutate(undefined, {
                       onSuccess: () => {
                         setPortalLink(null);
-                        toast.success("Dostep odwolany");
+                        toast.success(t("accessRevoked"));
                       },
                       onError: (error) => toast.error(getErrorMessage(error)),
                     });
@@ -331,14 +331,14 @@ export default function SupplierDetailPage() {
                   disabled={revokeAccess.isPending}
                 >
                   <ShieldOff className="h-4 w-4 mr-2" />
-                  {revokeAccess.isPending ? "Odwolywanie..." : "Odwolaj dostep"}
+                  {revokeAccess.isPending ? t("revoking") : t("revokeAccess")}
                 </Button>
               )}
             </div>
           </div>
           {portalLink && (
             <div className="rounded-md border bg-muted/50 p-3">
-              <p className="text-xs text-muted-foreground mb-1">Link portalu (wazny 30 dni):</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("portalLinkValid30Days")}</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-xs bg-background rounded px-2 py-1 overflow-auto">
                   {portalLink}
@@ -348,7 +348,7 @@ export default function SupplierDetailPage() {
                   size="sm"
                   onClick={() => {
                     navigator.clipboard.writeText(portalLink);
-                    toast.success("Skopiowano do schowka");
+                    toast.success(tc("copied"));
                   }}
                 >
                   <Copy className="h-3 w-3" />
@@ -362,7 +362,7 @@ export default function SupplierDetailPage() {
       {/* Category Mappings */}
       <Card>
         <CardHeader>
-          <CardTitle>Mapowanie kategorii</CardTitle>
+          <CardTitle>{t("categoryMapping")}</CardTitle>
           <CardDescription>
             {t("powiazaniaMiedzyKategoriamiZFeedaDostawcyA")}
           </CardDescription>
@@ -377,9 +377,9 @@ export default function SupplierDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("kategoriazrodłowa")}</TableHead>
-                  <TableHead>Kategoria OMS</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[100px]">Akcje</TableHead>
+                  <TableHead>{t("omsCategory")}</TableHead>
+                  <TableHead>{tc("status")}</TableHead>
+                  <TableHead className="w-[100px]">{tc("actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -403,7 +403,7 @@ export default function SupplierDetailPage() {
                                 confirmed: true,
                               },
                               {
-                                onSuccess: () => toast.success("Mapowanie zaktualizowane"),
+                                onSuccess: () => toast.success(t("mappingUpdated")),
                                 onError: (error) => toast.error(getErrorMessage(error)),
                               }
                             );
@@ -416,15 +416,15 @@ export default function SupplierDetailPage() {
                         {mapping.confirmed ? (
                           <Badge variant="default" className="gap-1">
                             <Check className="h-3 w-3" />
-                            Potwierdzone
+                            {t("confirmed")}
                           </Badge>
                         ) : mapping.auto_matched ? (
                           <Badge variant="secondary" className="gap-1">
                             <AlertCircle className="h-3 w-3" />
-                            Auto-dopasowanie
+                            {t("autoMatched")}
                           </Badge>
                         ) : (
-                          <Badge variant="outline">Nieprzypisane</Badge>
+                          <Badge variant="outline">{t("unassigned")}</Badge>
                         )}
                       </TableCell>
                       <TableCell>
@@ -443,7 +443,7 @@ export default function SupplierDetailPage() {
                                     confirmed: true,
                                   },
                                   {
-                                    onSuccess: () => toast.success("Mapowanie potwierdzone"),
+                                    onSuccess: () => toast.success(t("mappingConfirmed")),
                                     onError: (error) => toast.error(getErrorMessage(error)),
                                   }
                                 );
@@ -483,8 +483,8 @@ export default function SupplierDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Produkty dostawcy ({productsData?.total ?? 0})</CardTitle>
-            <CardDescription>Produkty zaimportowane z feeda dostawcy</CardDescription>
+            <CardTitle>{t("supplierProducts")} ({productsData?.total ?? 0})</CardTitle>
+            <CardDescription>{t("productsImportedFromFeed")}</CardDescription>
           </div>
           <Button
             variant="outline"
@@ -515,14 +515,7 @@ export default function SupplierDetailPage() {
   );
 }
 
-const FIELD_SOURCES = [
-  { value: "ean", label: "EAN" },
-  { value: "sku", label: "SKU" },
-  { value: "name", label: "Nazwa" },
-  { value: "brand", label: "Marka" },
-  { value: "weight", label: "Waga" },
-  { value: "price", label: "Cena" },
-];
+// FIELD_SOURCES moved inside component to use translations
 
 interface MappingRow {
   allegro_param_id: string;
@@ -534,6 +527,16 @@ interface MappingRow {
 }
 
 function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) {
+  const t = useTranslations("suppliers");
+  const tc = useTranslations("common");
+  const FIELD_SOURCES = [
+    { value: "ean", label: "EAN" },
+    { value: "sku", label: "SKU" },
+    { value: "name", label: tc("name") },
+    { value: "brand", label: t("brand") },
+    { value: "weight", label: t("weight") },
+    { value: "price", label: tc("price") },
+  ];
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedCategoryName, setSelectedCategoryName] = useState("");
@@ -588,7 +591,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
     if (!selectedCategoryId) return;
     const configured = mappingRows.filter((r) => r.source_type && r.source_key);
     if (configured.length === 0) {
-      toast.error("Skonfiguruj co najmniej jedno mapowanie");
+      toast.error(t("configureAtLeastOneMapping"));
       return;
     }
     bulkUpsert.mutate(
@@ -602,7 +605,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
         })),
       },
       {
-        onSuccess: () => toast.success("Mapowania zapisane"),
+        onSuccess: () => toast.success(t("mappingsSaved")),
         onError: (error) => toast.error(getErrorMessage(error)),
       }
     );
@@ -616,9 +619,9 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
       >
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Mapowanie parametrow Allegro</CardTitle>
+            <CardTitle>{t("allegroParamMapping")}</CardTitle>
             <CardDescription>
-              Powiaz parametry kategorii Allegro z danymi dostawcy
+              {t("allegroParamMappingDesc")}
             </CardDescription>
           </div>
           <ChevronDown
@@ -631,7 +634,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
           {/* Configured categories badges */}
           {configuredCategories && configuredCategories.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              <span className="text-xs text-muted-foreground mr-1 self-center">Skonfigurowane:</span>
+              <span className="text-xs text-muted-foreground mr-1 self-center">{t("configured")}:</span>
               {configuredCategories.map((catId) => (
                 <Badge
                   key={catId}
@@ -650,11 +653,11 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
 
           {/* Category search */}
           <div className="space-y-2">
-            <Label>Kategoria Allegro</Label>
+            <Label>{t("allegroCategory")}</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Szukaj kategorii Allegro..."
+                placeholder={t("searchAllegroCategory")}
                 value={categorySearch}
                 onChange={(e) => setCategorySearch(e.target.value)}
                 className="pl-9"
@@ -690,7 +693,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
             )}
             {selectedCategoryId && (
               <p className="text-xs text-muted-foreground">
-                Wybrana: <span className="font-medium">{selectedCategoryName}</span> ({selectedCategoryId})
+                {t("selected")}: <span className="font-medium">{selectedCategoryName}</span> ({selectedCategoryId})
               </p>
             )}
           </div>
@@ -701,10 +704,10 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Parametr Allegro</TableHead>
-                    <TableHead className="w-[80px]">Typ</TableHead>
-                    <TableHead className="w-[140px]">Zrodlo</TableHead>
-                    <TableHead className="w-[200px]">Wartosc</TableHead>
+                    <TableHead>{t("allegroParam")}</TableHead>
+                    <TableHead className="w-[80px]">{tc("type")}</TableHead>
+                    <TableHead className="w-[140px]">{t("source")}</TableHead>
+                    <TableHead className="w-[200px]">{t("value")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -732,9 +735,9 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
                             <SelectValue placeholder="—" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="attribute">Atrybut</SelectItem>
-                            <SelectItem value="field">Pole</SelectItem>
-                            <SelectItem value="static">Stala</SelectItem>
+                            <SelectItem value="attribute">{t("attribute")}</SelectItem>
+                            <SelectItem value="field">{t("fieldLabel")}</SelectItem>
+                            <SelectItem value="static">{t("staticValue")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -745,7 +748,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
                             onValueChange={(v) => updateRow(row.allegro_param_id, "source_key", v)}
                           >
                             <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Wybierz atrybut..." />
+                              <SelectValue placeholder={t("selectAttribute")} />
                             </SelectTrigger>
                             <SelectContent>
                               {(supplierAttributes ?? []).map((attr) => (
@@ -762,7 +765,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
                             onValueChange={(v) => updateRow(row.allegro_param_id, "source_key", v)}
                           >
                             <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Wybierz pole..." />
+                              <SelectValue placeholder={t("selectField")} />
                             </SelectTrigger>
                             <SelectContent>
                               {FIELD_SOURCES.map((f) => (
@@ -777,7 +780,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
                           <Input
                             value={row.source_key}
                             onChange={(e) => updateRow(row.allegro_param_id, "source_key", e.target.value)}
-                            placeholder="Wpisz wartosc..."
+                            placeholder={t("enterValue")}
                             className="h-8 text-xs"
                           />
                         )}
@@ -789,7 +792,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
               <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={bulkUpsert.isPending}>
                   <Save className="h-4 w-4 mr-2" />
-                  {bulkUpsert.isPending ? "Zapisywanie..." : "Zapisz mapowania"}
+                  {bulkUpsert.isPending ? tc("saving") : t("saveMappings")}
                 </Button>
               </div>
             </>

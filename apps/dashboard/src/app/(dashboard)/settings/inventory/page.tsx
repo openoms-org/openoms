@@ -30,6 +30,7 @@ import { useTranslations } from "next-intl";
 
 export default function InventorySettingsPage() {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data, isLoading } = useInventorySettings();
   const updateSettings = useUpdateInventorySettings();
   const [showWarning, setShowWarning] = useState(false);
@@ -50,7 +51,7 @@ export default function InventorySettingsPage() {
         { strict_mode: false },
         {
           onSuccess: () => {
-            toast.success(t("trybscisłejkontrolimagazynowejwyłaczony"));
+            toast.success(t("trybScisłejKontroliMagazynowejWyłaczony"));
           },
           onError: (error) => {
             toast.error(getErrorMessage(error));
@@ -65,7 +66,7 @@ export default function InventorySettingsPage() {
       { strict_mode: true },
       {
         onSuccess: () => {
-          toast.success(t("trybscisłejkontrolimagazynowejwłaczony"));
+          toast.success(t("trybScisłejKontroliMagazynowejWłaczony"));
           setShowWarning(false);
         },
         onError: (error) => {
@@ -81,16 +82,16 @@ export default function InventorySettingsPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Ustawienia magazynowe
+            {t("inventory.title")}
           </h1>
           <p className="text-muted-foreground">
-            Konfiguruj zachowanie systemu magazynowego
+            {t("inventory.subtitle")}
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Kontrola magazynowa</CardTitle>
+            <CardTitle>{t("inventory.controlTitle")}</CardTitle>
             <CardDescription>
               {t("ustawieniaDotyczaceSposobuZarzadzaniaStanamiMagazy")}
             </CardDescription>
@@ -121,8 +122,7 @@ export default function InventorySettingsPage() {
                     {t("trybScisłejKontroliJestAktywny")}
                   </p>
                   <p className="text-sm text-warning">
-                    Ręczna zmiana stanów magazynowych (PUT /warehouses/&#123;id&#125;/stock) jest zablokowana.
-                    Wszystkie zmiany muszą przechodzić przez dokumenty magazynowe (PZ, WZ, MM) lub inwentaryzacje.
+                    {t("inventory.strictModeWarning")}
                   </p>
                 </div>
               </div>
@@ -139,12 +139,12 @@ export default function InventorySettingsPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {t("uwagaPoWłaczeniuNieBedzieMozliwaReczna")}
-              Wszystkie zmiany będą musiały przechodzić przez dokumenty magazynowe (PZ/WZ/MM).
+              {t("inventory.allChangesMustGoThrough")}
               {t("czyNaPewnoChceszWłaczycTenTryb")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmEnable}>
               {updateSettings.isPending ? t("właczanie") : t("włacz1")}
             </AlertDialogAction>

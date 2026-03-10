@@ -120,7 +120,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
                 size="sm"
                 onClick={() => window.close()}
               >
-                Zamknij okno
+                {t("closeWindow")}
               </Button>
             </>
           )}
@@ -158,7 +158,7 @@ function OlxMainPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Integracja OLX</h1>
+            <h1 className="text-2xl font-bold">{t("olxIntegration")}</h1>
             <p className="text-muted-foreground">
               {t("połaczSwojeKontoOlxAbySynchronizowacOgłoszenia")}
               transakcje
@@ -275,7 +275,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       },
       {
         onSuccess: () => {
-          toast.success("Dane OLX zapisane. Otwieranie autoryzacji...");
+          toast.success(t("olxSavedOpeningAuth"));
           openOAuthPopup(() => onCreated());
         },
         onError: (error) => {
@@ -333,7 +333,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
           </div>
 
           <ol className="list-decimal list-inside space-y-2 text-sm" start={4}>
-            <li>Po rejestracji skopiuj Client ID i Client Secret</li>
+            <li>{t("olxStep4CopyKeys")}</li>
           </ol>
         </CardContent>
       </Card>
@@ -342,7 +342,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         <CardHeader>
           <CardTitle>{t("krok2WprowadzDaneAplikacji")}</CardTitle>
           <CardDescription>
-            Wklej Client ID i Client Secret z panelu deweloperskiego OLX.
+            {t("pasteOlxKeys")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -350,7 +350,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
             <Label htmlFor="client-id">Client ID</Label>
             <Input
               id="client-id"
-              placeholder="Wklej Client ID aplikacji OLX"
+              placeholder={t("pasteOlxClientId")}
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
             />
@@ -361,7 +361,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Input
                 id="client-secret"
                 type={showSecret ? "text" : "password"}
-                placeholder="Wklej Client Secret aplikacji OLX"
+                placeholder={t("pasteOlxClientSecret")}
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 className="pr-10"
@@ -504,7 +504,7 @@ function ConnectedState({
       {needsOAuth && (
         <Card className="border-amber-200 dark:border-amber-800">
           <CardHeader>
-            <CardTitle>Autoryzacja OAuth</CardTitle>
+            <CardTitle>{t("oauthAuthorization")}</CardTitle>
             <CardDescription>
               {t("daneAplikacjiZostałyZapisaneKliknijPonizejAby")}
               {t("dostepDoKontaOlxOtworzySieOkno")}
@@ -554,18 +554,18 @@ function ConnectedState({
                   {t("daneUwierzytelniajace")}
                 </p>
                 <p className="mt-1 font-medium">
-                  {integration.has_credentials ? "Skonfigurowane" : "Brak"}
+                  {integration.has_credentials ? t("configured") : t("none")}
                 </p>
               </div>
               {integration.label && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Etykieta</p>
+                  <p className="text-sm text-muted-foreground">{t("label")}</p>
                   <p className="mt-1 font-medium">{integration.label}</p>
                 </div>
               )}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia synchronizacja
+                  {t("lastSync")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.last_sync_at
@@ -574,11 +574,11 @@ function ConnectedState({
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">ID integracji</p>
+                <p className="text-sm text-muted-foreground">{t("integrationId")}</p>
                 <p className="mt-1 font-mono text-xs">{integration.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Data utworzenia</p>
+                <p className="text-sm text-muted-foreground">{t("createdAt")}</p>
                 <p className="mt-1 font-medium">
                   {formatDate(integration.created_at)}
                 </p>
@@ -600,7 +600,7 @@ function ConnectedState({
 
         <Card>
           <CardHeader>
-            <CardTitle>Akcje</CardTitle>
+            <CardTitle>{t("actions")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {integration.status === "active" && (
@@ -632,7 +632,7 @@ function ConnectedState({
               ) : (
                 <Unplug className="mr-2 h-4 w-4" />
               )}
-              Dezaktywuj
+              {t("deactivate")}
             </Button>
             <Button
               className="w-full"
@@ -719,7 +719,7 @@ function CredentialsCard({
           <Label htmlFor="edit-client-id">Client ID</Label>
           <Input
             id="edit-client-id"
-            placeholder="Nowy Client ID"
+            placeholder={t("newClientId")}
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
           />
@@ -730,7 +730,7 @@ function CredentialsCard({
             <Input
               id="edit-client-secret"
               type={showSecret ? "text" : "password"}
-              placeholder="Nowy Client Secret"
+              placeholder={t("newClientSecret")}
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
               className="pr-10"
@@ -764,7 +764,7 @@ function CredentialsCard({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           <Save className="mr-2 h-4 w-4" />
-          Zaktualizuj dane
+          {t("updateCredentials")}
         </Button>
       </CardContent>
     </Card>

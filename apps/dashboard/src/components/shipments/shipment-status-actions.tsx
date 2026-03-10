@@ -71,10 +71,10 @@ export function ShipmentStatusActions({
       <StatusTransitionDialog
         open={!!confirmStatus}
         onOpenChange={(open) => !open && setConfirmStatus(null)}
-        title="Potwierdzenie zmiany statusu"
+        title={t("statusChangeConfirmation")}
         description={
           <>
-            Czy na pewno chcesz zmienić status przesyłki na{" "}
+            {t("confirmShipmentStatusChange")}{" "}
             <strong>
               {confirmStatus
                 ? SHIPMENT_STATUSES[confirmStatus]?.label ?? confirmStatus

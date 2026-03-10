@@ -39,7 +39,7 @@ export default function NewShipmentPage() {
       setSelectedCarrier(rate.carrier_code as ProviderValue);
     }
     toast.success(
-      `Wybrano: ${rate.carrier_name} - ${rate.service_name} (${rate.price.toFixed(2)} ${rate.currency})`
+      t("rateSelected", { carrier: rate.carrier_name, service: rate.service_name, price: rate.price.toFixed(2), currency: rate.currency })
     );
   }, []);
 

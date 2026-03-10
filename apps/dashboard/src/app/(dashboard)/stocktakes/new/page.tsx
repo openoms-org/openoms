@@ -72,7 +72,7 @@ export default function NewStocktakePage() {
       <div className="mx-auto max-w-4xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">
-          Nowa inwentaryzacja
+          {t("newStocktake")}
         </h1>
         <p className="text-muted-foreground">
           {t("utworzNowaInwentaryzacjeDlaWybranegoMagazynu")}
@@ -81,20 +81,18 @@ export default function NewStocktakePage() {
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle>Dane inwentaryzacji</CardTitle>
+          <CardTitle>{t("stocktakeData")}</CardTitle>
           <CardDescription>
-            {t("poUtworzeniuInwentaryzacjiDoPozycjiZostanaAutomaty")}
-            dodane wszystkie produkty z wybranego magazynu wraz z ich aktualnymi
-            stanami magazynowymi.
+            {t("stocktakeCreateDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="warehouse">Magazyn *</Label>
+              <Label htmlFor="warehouse">{t("warehouseRequired")}</Label>
               <Select value={warehouseId} onValueChange={setWarehouseId}>
                 <SelectTrigger id="warehouse">
-                  <SelectValue placeholder="Wybierz magazyn..." />
+                  <SelectValue placeholder={t("selectWarehouse")} />
                 </SelectTrigger>
                 <SelectContent>
                   {warehouses.map((w) => (
@@ -108,22 +106,22 @@ export default function NewStocktakePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Nazwa *</Label>
+              <Label htmlFor="name">{t("nameRequired")}</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="np. Inwentaryzacja Q1 2025"
+                placeholder={t("stocktakeNamePlaceholder")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Uwagi</Label>
+              <Label htmlFor="notes">{t("notes")}</Label>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Opcjonalne uwagi..."
+                placeholder={t("optionalNotes")}
                 rows={3}
               />
             </div>
@@ -134,7 +132,7 @@ export default function NewStocktakePage() {
                 variant="outline"
                 onClick={() => router.push("/stocktakes")}
               >
-                Anuluj
+                {t("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -146,7 +144,7 @@ export default function NewStocktakePage() {
                 }
               >
                 {createStocktake.isPending
-                  ? "Tworzenie..."
+                  ? t("creating")
                   : t("utworzInwentaryzacje")}
               </Button>
             </div>

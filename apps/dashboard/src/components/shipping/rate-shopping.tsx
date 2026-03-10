@@ -25,11 +25,11 @@ import type { ShippingRate } from "@/types/api";
 import { useTranslations } from "next-intl";
 
 const rateFormSchema = z.object({
-  from_postal_code: z.string().min(1, "Kod pocztowy nadawcy jest wymagany"),
+  from_postal_code: z.string().min(1),
   from_country: z.string(),
-  to_postal_code: z.string().min(1, "Kod pocztowy odbiorcy jest wymagany"),
+  to_postal_code: z.string().min(1),
   to_country: z.string(),
-  weight: z.number().positive("Waga musi być większa od 0"),
+  weight: z.number().positive(),
   width: z.number().min(0),
   height: z.number().min(0),
   length: z.number().min(0),
@@ -131,7 +131,7 @@ export function RateShopping({
         <CardTitle className="flex items-center justify-between">
           <span className="flex items-center gap-2">
             <Truck className="h-5 w-5" />
-            Porownaj ceny kurierow
+            {t("rateShopping.compareCarrierPrices")}
           </span>
           {isExpanded ? (
             <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -147,7 +147,7 @@ export function RateShopping({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="from_postal_code">
-                  Kod pocztowy nadawcy
+                  {t("rateShopping.senderPostalCode")}
                 </Label>
                 <Input
                   id="from_postal_code"
@@ -162,7 +162,7 @@ export function RateShopping({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="to_postal_code">
-                  Kod pocztowy odbiorcy
+                  {t("rateShopping.recipientPostalCode")}
                 </Label>
                 <Input
                   id="to_postal_code"
@@ -179,7 +179,7 @@ export function RateShopping({
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="space-y-2">
-                <Label htmlFor="weight">Waga (kg)</Label>
+                <Label htmlFor="weight">{t("rateShopping.weightKg")}</Label>
                 <Input
                   id="weight"
                   type="number"
@@ -195,7 +195,7 @@ export function RateShopping({
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="width">Szer. (cm)</Label>
+                <Label htmlFor="width">{t("rateShopping.widthCm")}</Label>
                 <Input
                   id="width"
                   type="number"
@@ -206,7 +206,7 @@ export function RateShopping({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="height">Wys. (cm)</Label>
+                <Label htmlFor="height">{t("rateShopping.heightCm")}</Label>
                 <Input
                   id="height"
                   type="number"
@@ -217,7 +217,7 @@ export function RateShopping({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="length">Dl. (cm)</Label>
+                <Label htmlFor="length">{t("rateShopping.lengthCm")}</Label>
                 <Input
                   id="length"
                   type="number"
@@ -242,7 +242,7 @@ export function RateShopping({
                   }}
                 />
                 <Label htmlFor="cod_checkbox" className="cursor-pointer">
-                  Pobranie (COD)
+                  {t("rateShopping.cod")}
                 </Label>
               </div>
               {useCod && (
@@ -251,7 +251,7 @@ export function RateShopping({
                     type="number"
                     step="0.01"
                     min="0"
-                    placeholder="Kwota pobrania"
+                    placeholder={t("rateShopping.codAmount")}
                     className="w-40"
                     {...register("cod", { valueAsNumber: true })}
                   />
@@ -264,10 +264,10 @@ export function RateShopping({
               {getRates.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Porownywanie...
+                  {t("rateShopping.comparing")}
                 </>
               ) : (
-                "Porownaj ceny"
+                t("rateShopping.comparePrices")
               )}
             </Button>
           </form>
@@ -280,7 +280,7 @@ export function RateShopping({
 
           {hasSearched && !error && rates.length === 0 && (
             <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              Brak dostepnych stawek dla podanych parametrow. Upewnij sie, ze masz aktywne integracje z kurierami.
+              {t("rateShopping.noRatesFound")}
             </div>
           )}
 
@@ -289,13 +289,13 @@ export function RateShopping({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Kurier</TableHead>
-                    <TableHead>Usluga</TableHead>
-                    <TableHead className="text-right">Cena</TableHead>
+                    <TableHead>{t("rateShopping.carrier")}</TableHead>
+                    <TableHead>{t("rateShopping.service")}</TableHead>
+                    <TableHead className="text-right">{t("rateShopping.price")}</TableHead>
                     <TableHead className="text-center">
-                      Szacowany czas dostawy
+                      {t("rateShopping.estimatedDeliveryTime")}
                     </TableHead>
-                    <TableHead className="text-center">Typ</TableHead>
+                    <TableHead className="text-center">{t("rateShopping.type")}</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -320,13 +320,13 @@ export function RateShopping({
                             {isCheapest && (
                               <Badge variant="success">
                                 <Tag className="mr-1 h-3 w-3" />
-                                Najtansza
+                                {t("rateShopping.cheapest")}
                               </Badge>
                             )}
                             {isFastest && !isCheapest && (
                               <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                 <Zap className="mr-1 h-3 w-3" />
-                                Najszybsza
+                                {t("rateShopping.fastest")}
                               </Badge>
                             )}
                           </div>
@@ -338,14 +338,14 @@ export function RateShopping({
                         <TableCell className="text-center">
                           {rate.estimated_days}{" "}
                           {rate.estimated_days === 1
-                            ? "dzien roboczy"
-                            : "dni roboczych"}
+                            ? t("rateShopping.businessDay")
+                            : t("rateShopping.businessDays")}
                         </TableCell>
                         <TableCell className="text-center">
                           {rate.pickup_point ? (
-                            <Badge variant="outline">Punkt odbioru</Badge>
+                            <Badge variant="outline">{t("rateShopping.pickupPoint")}</Badge>
                           ) : (
-                            <Badge variant="secondary">Kurier</Badge>
+                            <Badge variant="secondary">{t("rateShopping.courierType")}</Badge>
                           )}
                         </TableCell>
                         <TableCell>
@@ -355,7 +355,7 @@ export function RateShopping({
                               size="sm"
                               onClick={() => onSelectRate(rate)}
                             >
-                              Wybierz
+                              {t("rateShopping.select")}
                             </Button>
                           )}
                         </TableCell>

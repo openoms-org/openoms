@@ -22,36 +22,36 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
-const STRATEGIES = [
-  {
-    value: "margin",
-    label: "Marża",
-    description: "Ustal ceny na podstawie kosztu + docelowej marży",
-    icon: TrendingUp,
-  },
-  {
-    value: "stock_based",
-    label: "Stan magazynowy",
-    description: "Dostosuj ceny na podstawie poziomu zapasów",
-    icon: Package,
-  },
-  {
-    value: "time_based",
-    label: "Harmonogram",
-    description: "Zaplanuj rabaty wg dnia/godziny",
-    icon: Clock,
-  },
-  {
-    value: "competitive",
-    label: "Konkurencja",
-    description: "Wkrótce - dopasuj ceny do konkurencji",
-    icon: BarChart3,
-    disabled: true,
-  },
-];
-
 export default function NewRepricingRulePage() {
   const t = useTranslations("repricing");
+
+  const STRATEGIES = [
+    {
+      value: "margin",
+      label: t("strategyMargin"),
+      description: t("strategyMarginDesc"),
+      icon: TrendingUp,
+    },
+    {
+      value: "stock_based",
+      label: t("strategyStockBased"),
+      description: t("strategyStockBasedDesc"),
+      icon: Package,
+    },
+    {
+      value: "time_based",
+      label: t("strategyTimeBased"),
+      description: t("strategyTimeBasedDesc"),
+      icon: Clock,
+    },
+    {
+      value: "competitive",
+      label: t("strategyCompetitive"),
+      description: t("strategyCompetitiveDesc"),
+      icon: BarChart3,
+      disabled: true,
+    },
+  ];
   const router = useRouter();
   const createRule = useCreateRepricingRule();
 
@@ -166,7 +166,7 @@ export default function NewRepricingRulePage() {
         {/* Name */}
         <Card>
           <CardHeader>
-            <CardTitle>Podstawowe</CardTitle>
+            <CardTitle>{t("basics")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -180,9 +180,9 @@ export default function NewRepricingRulePage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Priorytet ({priority})</Label>
+              <Label>{t("priorityValue", { value: priority })}</Label>
               <p className="text-xs text-muted-foreground">
-                Wyższy priorytet = reguła oceniana jako pierwsza
+                {t("priorityHint")}
               </p>
               <Slider
                 value={[priority]}
@@ -198,8 +198,8 @@ export default function NewRepricingRulePage() {
         {/* Strategy */}
         <Card>
           <CardHeader>
-            <CardTitle>Strategia</CardTitle>
-            <CardDescription>Wybierz algorytm ustalania cen</CardDescription>
+            <CardTitle>{t("strategy")}</CardTitle>
+            <CardDescription>{t("chooseAlgorithm")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -267,7 +267,7 @@ export default function NewRepricingRulePage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="costField">Pole kosztu w metadanych</Label>
+                <Label htmlFor="costField">{t("costFieldLabel")}</Label>
                 <Input
                   id="costField"
                   value={costField}
@@ -285,7 +285,7 @@ export default function NewRepricingRulePage() {
         {strategy === "stock_based" && (
           <Card>
             <CardHeader>
-              <CardTitle>Parametry magazynowe</CardTitle>
+              <CardTitle>{t("stockParams")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -298,7 +298,7 @@ export default function NewRepricingRulePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Narzut przy niskim stanie (%)</Label>
+                  <Label>{t("lowStockMarkup")}</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -317,7 +317,7 @@ export default function NewRepricingRulePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Rabat przy wysokim stanie (%)</Label>
+                  <Label>{t("highStockDiscount")}</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -333,11 +333,11 @@ export default function NewRepricingRulePage() {
         {strategy === "time_based" && (
           <Card>
             <CardHeader>
-              <CardTitle>Parametry harmonogramu</CardTitle>
+              <CardTitle>{t("scheduleParams")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Dni tygodnia (oddzielone przecinkami)</Label>
+                <Label>{t("weekdaysLabel")}</Label>
                 <Input
                   value={timeDays}
                   onChange={(e) => setTimeDays(e.target.value)}
@@ -349,7 +349,7 @@ export default function NewRepricingRulePage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Godziny (opcjonalne, np. 18-23)</Label>
+                  <Label>{t("hoursLabel")}</Label>
                   <Input
                     value={timeHours}
                     onChange={(e) => setTimeHours(e.target.value)}
@@ -357,7 +357,7 @@ export default function NewRepricingRulePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Rabat (%)</Label>
+                  <Label>{t("discountPct")}</Label>
                   <Input
                     type="number"
                     step="0.1"
@@ -377,16 +377,16 @@ export default function NewRepricingRulePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Typ zakresu</Label>
+              <Label>{t("scopeType")}</Label>
               <Select value={scopeType} onValueChange={setScopeType}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Wszystkie produkty</SelectItem>
-                  <SelectItem value="category">Kategoria</SelectItem>
-                  <SelectItem value="tag">Tag</SelectItem>
-                  <SelectItem value="product_ids">Wybrane produkty (ID)</SelectItem>
+                  <SelectItem value="all">{t("scopeAll")}</SelectItem>
+                  <SelectItem value="category">{t("scopeCategory")}</SelectItem>
+                  <SelectItem value="tag">{t("scopeTag")}</SelectItem>
+                  <SelectItem value="product_ids">{t("scopeProductIdsLabel")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -394,9 +394,9 @@ export default function NewRepricingRulePage() {
               <div className="space-y-2">
                 <Label>
                   {scopeType === "category"
-                    ? "Nazwa kategorii"
+                    ? t("categoryName")
                     : scopeType === "tag"
-                      ? "Tag"
+                      ? t("scopeTag")
                       : t("idProduktowOddzielonePrzecinkami")}
                 </Label>
                 <Input
@@ -405,7 +405,7 @@ export default function NewRepricingRulePage() {
                   placeholder={
                     scopeType === "product_ids"
                       ? "uuid1, uuid2, uuid3"
-                      : "nazwa"
+                      : t("namePlaceholder")
                   }
                 />
               </div>
@@ -416,31 +416,31 @@ export default function NewRepricingRulePage() {
         {/* Price bounds */}
         <Card>
           <CardHeader>
-            <CardTitle>Ograniczenia cenowe</CardTitle>
+            <CardTitle>{t("priceBounds")}</CardTitle>
             <CardDescription>
-              Opcjonalne minimalne i maksymalne ceny (zabezpieczenie)
+              {t("priceBoundsDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Cena minimalna (PLN)</Label>
+                <Label>{t("minPricePln")}</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
-                  placeholder="Brak limitu"
+                  placeholder={t("noLimit")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Cena maksymalna (PLN)</Label>
+                <Label>{t("maxPricePln")}</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
-                  placeholder="Brak limitu"
+                  placeholder={t("noLimit")}
                 />
               </div>
             </div>
@@ -450,14 +450,14 @@ export default function NewRepricingRulePage() {
         {/* Submit */}
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={createRule.isPending}>
-            {createRule.isPending ? "Tworzenie..." : t("utworzregułe")}
+            {createRule.isPending ? t("creating") : t("utworzregułe")}
           </Button>
           <Button
             variant="outline"
             type="button"
             onClick={() => router.push("/repricing")}
           >
-            Anuluj
+            {t("cancel")}
           </Button>
         </div>
       </form>

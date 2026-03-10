@@ -55,17 +55,17 @@ import { useTranslations } from "next-intl";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 const MARKETPLACE_OPTIONS = [
-  { value: "EBAY_PL", label: "eBay Polska (EBAY_PL)" },
-  { value: "EBAY_DE", label: "eBay Niemcy (EBAY_DE)" },
-  { value: "EBAY_US", label: "eBay USA (EBAY_US)" },
-  { value: "EBAY_GB", label: "eBay Wielka Brytania (EBAY_GB)" },
+  { value: "EBAY_PL", labelKey: "ebayMarketplacePl" },
+  { value: "EBAY_DE", labelKey: "ebayMarketplaceDe" },
+  { value: "EBAY_US", labelKey: "ebayMarketplaceUs" },
+  { value: "EBAY_GB", labelKey: "ebayMarketplaceGb" },
 ] as const;
 
 const CURRENCY_OPTIONS = [
-  { value: "PLN", label: "PLN — Polski złoty" },
-  { value: "EUR", label: "EUR — Euro" },
-  { value: "USD", label: "USD — Dolar amerykański" },
-  { value: "GBP", label: "GBP — Funt brytyjski" },
+  { value: "PLN", labelKey: "currencyPln" },
+  { value: "EUR", labelKey: "currencyEur" },
+  { value: "USD", labelKey: "currencyUsd" },
+  { value: "GBP", labelKey: "currencyGbp" },
 ] as const;
 
 function getRedirectURI() {
@@ -144,7 +144,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
                 size="sm"
                 onClick={() => window.close()}
               >
-                Zamknij okno
+                {t("closeWindow")}
               </Button>
             </>
           )}
@@ -182,7 +182,7 @@ function EbayMainPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Integracja eBay</h1>
+            <h1 className="text-2xl font-bold">{t("ebayIntegration")}</h1>
             <p className="text-muted-foreground">
               {t("połaczSwojeKontoEbayAbySynchronizowacZamowienia")}
             </p>
@@ -281,7 +281,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       },
       {
         onSuccess: () => {
-          toast.success("Dane eBay zapisane. Otwieranie autoryzacji...");
+          toast.success(t("ebaySavedOpeningAuth"));
           openOAuthPopup(() => onCreated());
         },
         onError: (error) => {
@@ -315,12 +315,12 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 onCheckedChange={setSandbox}
               />
               <Label htmlFor="setup-sandbox" className="cursor-pointer">
-                Tryb sandbox (testowy)
+                {t("sandboxMode")}
               </Label>
             </div>
             {sandbox && (
               <p className="text-xs text-muted-foreground">
-                Sandbox wymaga osobnych kluczy API z panelu eBay Developer
+                {t("sandboxRequiresSeparateKeys")}
               </p>
             )}
           </div>
@@ -340,15 +340,15 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 <ExternalLink className="h-3 w-3" />
               </a>
             </li>
-            <li>Skopiuj App ID (Client ID), Cert ID (Client Secret) i Dev ID</li>
+            <li>{t("ebayStep2CopyKeys")}</li>
             <li>
-              W sekcji <strong>User Tokens</strong> dodaj Redirect URI (RuName):
+              {t("ebayStep3AddRedirectUri")}
             </li>
           </ol>
 
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Redirect URI (do wklejenia w eBay)
+              {t("redirectUriLabel")}
             </Label>
             <code className="block rounded bg-muted px-3 py-2 text-sm font-mono break-all">
               {redirectURI}
@@ -369,7 +369,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         <CardHeader>
           <CardTitle>{t("krok2WprowadzDaneAplikacji")}</CardTitle>
           <CardDescription>
-            Wklej klucze API z panelu deweloperskiego eBay.
+            {t("pasteEbayApiKeys")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -379,7 +379,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Input
                 id="app-id"
                 type={showAppId ? "text" : "password"}
-                placeholder="Wklej App ID aplikacji eBay"
+                placeholder={t("pasteAppId")}
                 value={appId}
                 onChange={(e) => setAppId(e.target.value)}
                 className="pr-10"
@@ -406,7 +406,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Input
                 id="cert-id"
                 type={showCertId ? "text" : "password"}
-                placeholder="Wklej Cert ID aplikacji eBay"
+                placeholder={t("pasteCertId")}
                 value={certId}
                 onChange={(e) => setCertId(e.target.value)}
                 className="pr-10"
@@ -433,7 +433,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Input
                 id="dev-id"
                 type={showDevId ? "text" : "password"}
-                placeholder="Wklej Dev ID aplikacji eBay"
+                placeholder={t("pasteDevId")}
                 value={devId}
                 onChange={(e) => setDevId(e.target.value)}
                 className="pr-10"
@@ -466,14 +466,14 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 <SelectContent>
                   {MARKETPLACE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency">Waluta</Label>
+              <Label htmlFor="currency">{t("currency")}</Label>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger id="currency" className="w-full">
                   <SelectValue placeholder={t("wybierzWalute")} />
@@ -481,7 +481,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 <SelectContent>
                   {CURRENCY_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -645,7 +645,7 @@ function ConnectedState({
       {needsOAuth && (
         <Card className="border-amber-200 dark:border-amber-800">
           <CardHeader>
-            <CardTitle>Autoryzacja OAuth</CardTitle>
+            <CardTitle>{t("oauthAuthorization")}</CardTitle>
             <CardDescription>
               {t("daneAplikacjiZostałyZapisaneKliknijPonizejAby")}
               {t("dostepDoKontaEbayOtworzySieOkno")}
@@ -690,18 +690,18 @@ function ConnectedState({
                   {t("daneUwierzytelniajace")}
                 </p>
                 <p className="mt-1 font-medium">
-                  {integration.has_credentials ? "Skonfigurowane" : "Brak"}
+                  {integration.has_credentials ? t("configured") : t("none")}
                 </p>
               </div>
               {integration.label && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Etykieta</p>
+                  <p className="text-sm text-muted-foreground">{t("label")}</p>
                   <p className="mt-1 font-medium">{integration.label}</p>
                 </div>
               )}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia synchronizacja
+                  {t("lastSync")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.last_sync_at
@@ -712,7 +712,7 @@ function ConnectedState({
               {integration.sync_cursor && (
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Kursor synchronizacji
+                    {t("syncCursor")}
                   </p>
                   <p className="mt-1 font-mono text-xs truncate">
                     {integration.sync_cursor}
@@ -720,11 +720,11 @@ function ConnectedState({
                 </div>
               )}
               <div>
-                <p className="text-sm text-muted-foreground">ID integracji</p>
+                <p className="text-sm text-muted-foreground">{t("integrationId")}</p>
                 <p className="mt-1 font-mono text-xs">{integration.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Data utworzenia</p>
+                <p className="text-sm text-muted-foreground">{t("createdAt")}</p>
                 <p className="mt-1 font-medium">
                   {formatDate(integration.created_at)}
                 </p>
@@ -747,7 +747,7 @@ function ConnectedState({
         {/* Actions card */}
         <Card>
           <CardHeader>
-            <CardTitle>Akcje</CardTitle>
+            <CardTitle>{t("actions")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {integration.status === "active" && (
@@ -779,7 +779,7 @@ function ConnectedState({
               ) : (
                 <Unplug className="mr-2 h-4 w-4" />
               )}
-              Dezaktywuj
+              {t("deactivate")}
             </Button>
             <Button
               className="w-full"
@@ -806,7 +806,7 @@ function ConnectedState({
         {/* Marketplace & currency settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Ustawienia marketplace</CardTitle>
+            <CardTitle>{t("marketplaceSettings")}</CardTitle>
             <CardDescription>
               {t("wybierzRynekEbayIWaluteDoSynchronizacji")}
             </CardDescription>
@@ -821,14 +821,14 @@ function ConnectedState({
                 <SelectContent>
                   {MARKETPLACE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settings-currency">Waluta</Label>
+              <Label htmlFor="settings-currency">{t("currency")}</Label>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger id="settings-currency" className="w-full">
                   <SelectValue placeholder={t("wybierzWalute")} />
@@ -836,7 +836,7 @@ function ConnectedState({
                 <SelectContent>
                   {CURRENCY_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -851,7 +851,7 @@ function ConnectedState({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               <Save className="mr-2 h-4 w-4" />
-              Zapisz ustawienia
+              {t("saveSettings")}
             </Button>
           </CardContent>
         </Card>
@@ -929,7 +929,7 @@ function CredentialsCard({
             <Input
               id="edit-app-id"
               type={showAppId ? "text" : "password"}
-              placeholder="Nowy App ID"
+              placeholder={t("newAppId")}
               value={appId}
               onChange={(e) => setAppId(e.target.value)}
               className="pr-10"
@@ -956,7 +956,7 @@ function CredentialsCard({
             <Input
               id="edit-cert-id"
               type={showCertId ? "text" : "password"}
-              placeholder="Nowy Cert ID"
+              placeholder={t("newCertId")}
               value={certId}
               onChange={(e) => setCertId(e.target.value)}
               className="pr-10"
@@ -983,7 +983,7 @@ function CredentialsCard({
             <Input
               id="edit-dev-id"
               type={showDevId ? "text" : "password"}
-              placeholder="Nowy Dev ID"
+              placeholder={t("newDevId")}
               value={devId}
               onChange={(e) => setDevId(e.target.value)}
               className="pr-10"
@@ -1011,7 +1011,7 @@ function CredentialsCard({
             onCheckedChange={setSandbox}
           />
           <Label htmlFor="edit-sandbox" className="cursor-pointer">
-            Tryb sandbox (testowy)
+            {t("sandboxMode")}
           </Label>
         </div>
 
@@ -1029,7 +1029,7 @@ function CredentialsCard({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           <Save className="mr-2 h-4 w-4" />
-          Zaktualizuj dane
+          {t("updateCredentials")}
         </Button>
       </CardContent>
     </Card>

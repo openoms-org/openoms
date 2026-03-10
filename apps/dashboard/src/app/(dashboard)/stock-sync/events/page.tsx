@@ -27,14 +27,6 @@ import { useStockSyncEvents } from "@/hooks/use-stock-sync";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-const triggerTypeLabels: Record<string, string> = {
-  order_placed: "Złożenie zamówienia",
-  order_cancelled: "Anulowanie zamówienia",
-  stock_adjusted: "Korekta stanu",
-  manual: "Ręczna synchronizacja",
-  recount: "Remanent",
-};
-
 const triggerTypeVariants: Record<string, string> = {
   order_placed:
     "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
@@ -50,6 +42,15 @@ const triggerTypeVariants: Record<string, string> = {
 
 export default function StockSyncEventsPage() {
   const t = useTranslations("stockSync");
+
+  const triggerTypeLabels: Record<string, string> = {
+    order_placed: t("triggerOrderPlaced"),
+    order_cancelled: t("triggerOrderCancelled"),
+    stock_adjusted: t("triggerStockAdjusted"),
+    manual: t("triggerManualSync"),
+    recount: t("triggerRecount"),
+  };
+
   const [triggerFilter, setTriggerFilter] = useState<string>("");
   const [offset, setOffset] = useState(0);
   const limit = 20;
@@ -101,10 +102,10 @@ export default function StockSyncEventsPage() {
             }}
           >
             <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Filtruj po typie zdarzenia" />
+              <SelectValue placeholder={t("filterByEventType")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie typy</SelectItem>
+              <SelectItem value="all">{t("allTypes")}</SelectItem>
               {Object.entries(triggerTypeLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -128,11 +129,11 @@ export default function StockSyncEventsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Typ zdarzenia</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead className="text-right">Poprzedni stan</TableHead>
-                    <TableHead className="text-right">Nowy stan</TableHead>
+                    <TableHead>{t("date")}</TableHead>
+                    <TableHead>{t("eventType")}</TableHead>
+                    <TableHead>{t("sku")}</TableHead>
+                    <TableHead className="text-right">{t("previousStock")}</TableHead>
+                    <TableHead className="text-right">{t("newStock")}</TableHead>
                     <TableHead className="text-right">{t("dostepny")}</TableHead>
                     <TableHead className="text-right">
                       {t("kanałyPowiadomione")}
@@ -200,8 +201,7 @@ export default function StockSyncEventsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Wyświetlanie {offset + 1}-{Math.min(offset + limit, total)} z{" "}
-                {total}
+                {t("showingRange", { from: offset + 1, to: Math.min(offset + limit, total), total })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -210,7 +210,7 @@ export default function StockSyncEventsPage() {
                   disabled={!hasPrev}
                   onClick={() => setOffset(Math.max(0, offset - limit))}
                 >
-                  Poprzednia
+                  {t("previous")}
                 </Button>
                 <Button
                   variant="outline"

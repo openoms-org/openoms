@@ -45,19 +45,20 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "next-intl";
 
-const discountTypeLabels: Record<string, string> = {
-  percentage: "Procentowy",
-  fixed: "Kwotowy",
-  override: "Cena nadpisana",
-};
-
 export default function PriceListsPage() {
   const t = useTranslations("settings");
+  const tp = useTranslations("settings.priceLists");
   const tc = useTranslations("common");
   const router = useRouter();
   const { data, isLoading, isError, refetch } = usePriceLists();
   const deletePriceList = useDeletePriceList();
   const createPriceList = useCreatePriceList();
+
+  const discountTypeLabels: Record<string, string> = {
+    percentage: tp("percentage"),
+    fixed: tp("fixed"),
+    override: tp("override"),
+  };
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -76,7 +77,7 @@ export default function PriceListsPage() {
     if (!deleteId) return;
     deletePriceList.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("cennikzostałusuniety"));
+        toast.success(t("cennikZostałUsuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -96,7 +97,7 @@ export default function PriceListsPage() {
       },
       {
         onSuccess: () => {
-          toast.success(t("cennikzostałutworzony"));
+          toast.success(t("cennikZostałUtworzony"));
           setShowCreate(false);
           setNewName("");
           setNewDescription("");
@@ -114,7 +115,7 @@ export default function PriceListsPage() {
     <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Cenniki B2B</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{tp("title")}</h1>
           <p className="text-muted-foreground">
             {t("zarzadzajCennikamiIRabatamiDlaKlientowBiznesowych")}
           </p>
@@ -123,37 +124,37 @@ export default function PriceListsPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Nowy cennik
+              {tp("newPriceList")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nowy cennik</DialogTitle>
+              <DialogTitle>{tp("newPriceListDialog")}</DialogTitle>
               <DialogDescription>
                 {t("utworzNowyCennikZRabatamiDlaKlientow")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-name">Nazwa</Label>
+                <Label htmlFor="new-name">{tp("nameLabel")}</Label>
                 <Input
                   id="new-name"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="np. Cennik hurtowy"
+                  placeholder={tp("namePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-desc">Opis</Label>
+                <Label htmlFor="new-desc">{tp("descriptionLabel")}</Label>
                 <Input
                   id="new-desc"
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Opcjonalny opis cennika"
+                  placeholder={tp("descriptionPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Typ rabatu</Label>
+                <Label>{tp("discountType")}</Label>
                 <Select
                   value={newDiscountType}
                   onValueChange={setNewDiscountType}
@@ -162,14 +163,14 @@ export default function PriceListsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="percentage">Procentowy</SelectItem>
-                    <SelectItem value="fixed">Kwotowy</SelectItem>
-                    <SelectItem value="override">Cena nadpisana</SelectItem>
+                    <SelectItem value="percentage">{tp("percentage")}</SelectItem>
+                    <SelectItem value="fixed">{tp("fixed")}</SelectItem>
+                    <SelectItem value="override">{tp("override")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-currency">Waluta</Label>
+                <Label htmlFor="new-currency">{tp("currency")}</Label>
                 <Input
                   id="new-currency"
                   value={newCurrency}
@@ -183,13 +184,13 @@ export default function PriceListsPage() {
                 variant="outline"
                 onClick={() => setShowCreate(false)}
               >
-                Anuluj
+                {tp("cancelButton")}
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={!newName.trim() || createPriceList.isPending}
               >
-                {createPriceList.isPending ? "Tworzenie..." : tc("create")}
+                {createPriceList.isPending ? tp("creating") : tc("create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -199,7 +200,7 @@ export default function PriceListsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            {t("loadError")}
+            {tc("loadError")}
           </p>
           <Button
             variant="outline"
@@ -207,7 +208,7 @@ export default function PriceListsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            {t("retry")}
+            {tc("retry")}
           </Button>
         </div>
       )}
@@ -223,12 +224,12 @@ export default function PriceListsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>Typ rabatu</TableHead>
-                <TableHead>Waluta</TableHead>
+                <TableHead>{tp("columns.name")}</TableHead>
+                <TableHead>{tp("columns.discountType")}</TableHead>
+                <TableHead>{tp("columns.currency")}</TableHead>
                 <TableHead>{tc("default")}</TableHead>
-                <TableHead>Aktywny</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{tp("columns.active")}</TableHead>
+                <TableHead>{tp("columns.createdAt")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -257,9 +258,9 @@ export default function PriceListsPage() {
                   <TableCell>{pl.currency}</TableCell>
                   <TableCell>
                     {pl.is_default ? (
-                      <Badge variant="default">Tak</Badge>
+                      <Badge variant="default">{tp("yes")}</Badge>
                     ) : (
-                      <span className="text-muted-foreground">Nie</span>
+                      <span className="text-muted-foreground">{tp("no")}</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -268,14 +269,14 @@ export default function PriceListsPage() {
                         variant="outline"
                         className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                       >
-                        Aktywny
+                        {tp("active")}
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
                         className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                       >
-                        Nieaktywny
+                        {tp("inactive")}
                       </Badge>
                     )}
                   </TableCell>

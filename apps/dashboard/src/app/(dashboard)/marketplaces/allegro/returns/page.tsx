@@ -54,15 +54,17 @@ import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 import { formatDate } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
-const RETURN_STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  EXCHANGE: { label: "Wymiana", variant: "secondary" },
-  REFUND: { label: "Zwrot", variant: "default" },
-  REFUND_AND_RETURN: { label: "Zwrot + odesłanie", variant: "default" },
-  WAITING: { label: "Oczekujący", variant: "outline" },
-  ACCEPTED: { label: "Zaakceptowany", variant: "default" },
-  REJECTED: { label: "Odrzucony", variant: "destructive" },
-  CANCELLED: { label: "Anulowany", variant: "secondary" },
-};
+function getReturnStatusMap(t: (key: string) => string): Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> {
+  return {
+    EXCHANGE: { label: t("returnStatusExchange"), variant: "secondary" },
+    REFUND: { label: t("returnStatusRefund"), variant: "default" },
+    REFUND_AND_RETURN: { label: t("returnStatusRefundAndReturn"), variant: "default" },
+    WAITING: { label: t("returnStatusWaiting"), variant: "outline" },
+    ACCEPTED: { label: t("returnStatusAccepted"), variant: "default" },
+    REJECTED: { label: t("returnStatusRejected"), variant: "destructive" },
+    CANCELLED: { label: t("returnStatusCancelled"), variant: "secondary" },
+  };
+}
 
 export default function AllegroReturnsPage() {
   const t = useTranslations("marketplaces");
@@ -91,7 +93,7 @@ export default function AllegroReturnsPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Zwroty Allegro</h1>
+            <h1 className="text-2xl font-bold">{t("allegroReturns")}</h1>
             <p className="text-muted-foreground">
               {t("zarzadzajZwrotamiOdKupujacychNaAllegro")}
             </p>
@@ -111,12 +113,12 @@ export default function AllegroReturnsPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Wszystkie</SelectItem>
-                <SelectItem value="EXCHANGE">Wymiana</SelectItem>
-                <SelectItem value="REFUND">Zwrot</SelectItem>
+                <SelectItem value="all">{t("all")}</SelectItem>
+                <SelectItem value="EXCHANGE">{t("returnStatusExchange")}</SelectItem>
+                <SelectItem value="REFUND">{t("returnStatusRefund")}</SelectItem>
                 <SelectItem value="WAITING">{t("detail.ticketStatusPending")}</SelectItem>
-                <SelectItem value="ACCEPTED">Zaakceptowany</SelectItem>
-                <SelectItem value="REJECTED">Odrzucony</SelectItem>
+                <SelectItem value="ACCEPTED">{t("returnStatusAccepted")}</SelectItem>
+                <SelectItem value="REJECTED">{t("returnStatusRejected")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -165,8 +167,7 @@ export default function AllegroReturnsPage() {
         {data && data.count > limit && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Wyświetlanie {offset + 1}-{Math.min(offset + limit, data.count)} z{" "}
-              {data.count}
+              {t("showingRange", { from: offset + 1, to: Math.min(offset + limit, data.count), total: data.count })}
             </p>
             <div className="flex gap-2">
               <Button
@@ -175,7 +176,7 @@ export default function AllegroReturnsPage() {
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - limit))}
               >
-                Poprzednia
+                {t("previous")}
               </Button>
               <Button
                 variant="outline"
@@ -223,6 +224,7 @@ function ReturnCard({
   onRefund: () => void;
 }) {
   const t = useTranslations("marketplaces");
+  const RETURN_STATUS_MAP = getReturnStatusMap(t);
   const statusInfo = RETURN_STATUS_MAP[ret.status] ?? {
     label: ret.status,
     variant: "outline" as const,
@@ -274,7 +276,7 @@ function ReturnCard({
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">
-                  Pozycje
+                  {t("items")}
                 </p>
                 <div className="space-y-1">
                   {ret.items.map((item, idx) => (
@@ -285,7 +287,7 @@ function ReturnCard({
                       <span className="truncate max-w-[60%]">{item.name}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-muted-foreground">
-                          Szt.: {item.quantity}
+                          {t("qty")}: {item.quantity}
                         </span>
                         <span className="font-mono text-xs text-muted-foreground">
                           ID: {item.offerId.slice(0, 10)}
@@ -364,8 +366,7 @@ function RejectDialog({
         <DialogHeader>
           <DialogTitle>{t("odrzucZwrot")}</DialogTitle>
           <DialogDescription>
-            Zwrot {ret.referenceNumber || ret.id.slice(0, 12)} od{" "}
-            {ret.buyer.login}
+            {t("returnFrom", { ref: ret.referenceNumber || ret.id.slice(0, 12), buyer: ret.buyer.login })}
           </DialogDescription>
         </DialogHeader>
 
@@ -384,7 +385,7 @@ function RejectDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Anuluj
+            {t("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -460,36 +461,35 @@ function RefundDialog({
         <DialogHeader>
           <DialogTitle>{t("zwrotPieniedzy")}</DialogTitle>
           <DialogDescription>
-            Utwórz zwrot pieniędzy dla zwrotu{" "}
-            {ret.referenceNumber || ret.id.slice(0, 12)}
+            {t("createRefundFor", { ref: ret.referenceNumber || ret.id.slice(0, 12) })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="payment-id">ID platnosci</Label>
+            <Label htmlFor="payment-id">{t("paymentId")}</Label>
             <Input
               id="payment-id"
               value={paymentId}
               onChange={(e) => setPaymentId(e.target.value)}
-              placeholder="ID platnosci z zamowienia Allegro"
+              placeholder={t("paymentIdPlaceholder")}
               className="mt-1"
             />
           </div>
           <div>
-            <Label htmlFor="refund-reason">Powod zwrotu</Label>
+            <Label htmlFor="refund-reason">{t("refundReason")}</Label>
             <Textarea
               id="refund-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Opisz powod zwrotu pieniedzy..."
+              placeholder={t("refundReasonPlaceholder")}
               className="mt-1"
             />
           </div>
           {ret.refund && (
             <div className="rounded-md border p-3 bg-muted/50">
               <p className="text-sm">
-                Kwota zwrotu:{" "}
+                {t("refundAmount")}:{" "}
                 <span className="font-medium">
                   {ret.refund.amount} {ret.refund.currency}
                 </span>
@@ -498,7 +498,7 @@ function RefundDialog({
           )}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">
-              Pozycje do zwrotu
+              {t("itemsToRefund")}
             </p>
             <div className="space-y-1">
               {ret.items.map((item, idx) => (
@@ -515,7 +515,7 @@ function RefundDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Anuluj
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleRefund}
@@ -527,7 +527,7 @@ function RefundDialog({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             <CreditCard className="mr-2 h-4 w-4" />
-            Utworz zwrot
+            {t("createRefund")}
           </Button>
         </DialogFooter>
       </DialogContent>

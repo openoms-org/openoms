@@ -61,18 +61,18 @@ export default function IntegrationsPage() {
       <PageHeader
         title={t("integrations")}
         description={t("zarzadzajpołaczeniamizzewnetrznymiserwisami")}
-        action={{ label: "Nowa integracja", href: "/integrations/new" }}
+        action={{ label: t("newIntegration"), href: "/integrations/new" }}
       />
 
       <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
         <CardContent className="flex items-center gap-3 py-3">
           <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            Szukasz integracji?{" "}
-            <Link href="/carriers" className="font-medium underline">Kurierzy</Link>,{" "}
+            {t("lookingForIntegrations")}{" "}
+            <Link href="/carriers" className="font-medium underline">{t("carriers")}</Link>,{" "}
             <Link href="/marketplaces" className="font-medium underline">Marketplace</Link>{" "}
-            i{" "}
-            <Link href="/invoicing" className="font-medium underline">Fakturowanie</Link>{" "}
+            {t("and")}{" "}
+            <Link href="/invoicing" className="font-medium underline">{t("invoicing")}</Link>{" "}
             {t("majaTerazWłasneSekcjeWMenu")}
           </p>
         </CardContent>
@@ -97,20 +97,20 @@ export default function IntegrationsPage() {
       {!integrations || integrations.length === 0 ? (
         <EmptyState
           icon={Plug}
-          title="Brak integracji"
+          title={t("noIntegrations")}
           description={t("dodajpierwszaintegracjeabypołaczycsiezzewnetrznymi")}
-          action={{ label: "Nowa integracja", href: "/integrations/new" }}
+          action={{ label: t("newIntegration"), href: "/integrations/new" }}
         />
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Dostawca</TableHead>
+                <TableHead>{t("provider")}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>{t("daneUwierzytelniajace")}</TableHead>
-                <TableHead>Ostatnia synchronizacja</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{t("lastSync")}</TableHead>
+                <TableHead>{t("createdAt")}</TableHead>
                 <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
@@ -148,11 +148,11 @@ export default function IntegrationsPage() {
                     {integration.has_credentials ? (
                       <Badge variant="success" className="gap-1">
                         <KeyRound className="h-3 w-3" />
-                        Skonfigurowane
+                        {t("configured")}
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="text-muted-foreground">
-                        Brak
+                        {t("notConfigured")}
                       </Badge>
                     )}
                   </TableCell>

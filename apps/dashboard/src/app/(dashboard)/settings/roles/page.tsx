@@ -57,7 +57,7 @@ export default function RolesPage() {
     if (!deleteId) return;
     deleteRole.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("rolazostałausunieta"));
+        toast.success(t("rolaZostałaUsunieta"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -76,7 +76,7 @@ export default function RolesPage() {
       },
       {
         onSuccess: (role) => {
-          toast.success(t("rolazostałautworzona"));
+          toast.success(t("rolaZostałaUtworzona"));
           setShowCreate(false);
           setNewName("");
           setNewDesc("");
@@ -93,7 +93,7 @@ export default function RolesPage() {
     <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Role</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
             {t("zarzadzajRolamiIUprawnieniamiUzytkownikow")}
           </p>
@@ -102,33 +102,33 @@ export default function RolesPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Nowa rola
+              {t("newRole")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nowa rola</DialogTitle>
+              <DialogTitle>{t("newRoleDialog")}</DialogTitle>
               <DialogDescription>
                 {t("utworzNowaRoleIPrzypiszUprawnienia")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-name">Nazwa</Label>
+                <Label htmlFor="new-name">{t("nameLabel")}</Label>
                 <Input
                   id="new-name"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="np. Magazynier"
+                  placeholder={t("namePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-desc">Opis</Label>
+                <Label htmlFor="new-desc">{t("descriptionLabel")}</Label>
                 <Input
                   id="new-desc"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Opcjonalny opis roli"
+                  placeholder={t("descriptionPlaceholder")}
                 />
               </div>
             </div>
@@ -137,13 +137,13 @@ export default function RolesPage() {
                 variant="outline"
                 onClick={() => setShowCreate(false)}
               >
-                Anuluj
+                {t("cancelButton")}
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={!newName.trim() || createRole.isPending}
               >
-                {createRole.isPending ? "Tworzenie..." : tc("create")}
+                {createRole.isPending ? t("creating") : tc("create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -153,7 +153,7 @@ export default function RolesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4 mb-6">
           <p className="text-sm text-destructive">
-            {t("loadError")}
+            {tc("loadError")}
           </p>
           <Button
             variant="outline"
@@ -161,7 +161,7 @@ export default function RolesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            {t("retry")}
+            {tc("retry")}
           </Button>
         </div>
       )}
@@ -177,11 +177,11 @@ export default function RolesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>Opis</TableHead>
-                <TableHead>Uprawnienia</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{t("columns.name")}</TableHead>
+                <TableHead>{t("columns.description")}</TableHead>
+                <TableHead>{t("columns.permissions")}</TableHead>
+                <TableHead>{t("columns.type")}</TableHead>
+                <TableHead>{t("columns.createdAt")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -205,18 +205,18 @@ export default function RolesPage() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">
-                      {role.permissions.length} uprawnień
+                      {t("permissionsCount", { count: role.permissions.length })}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {role.is_system ? (
-                      <Badge variant="outline">Systemowa</Badge>
+                      <Badge variant="outline">{t("systemRole")}</Badge>
                     ) : (
                       <Badge
                         variant="outline"
                         className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                       >
-                        Niestandardowa
+                        {t("customRole")}
                       </Badge>
                     )}
                   </TableCell>

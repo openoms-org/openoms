@@ -50,15 +50,16 @@ import {
 } from "@/components/ui/select";
 import { useTranslations } from "next-intl";
 
-const SEGMENT_TYPE_LABELS: Record<string, string> = {
-  manual: "Ręczny",
-  rfm_auto: "RFM (auto)",
-  rule_based: "Regułowy",
-};
+// SEGMENT_TYPE_LABELS moved inside component to use translations
 
 export default function SegmentDetailPage() {
   const t = useTranslations("customers");
   const tc = useTranslations("common");
+  const SEGMENT_TYPE_LABELS: Record<string, string> = {
+    manual: t("segmentTypeManual"),
+    rfm_auto: t("segmentTypeRfm"),
+    rule_based: t("segmentTypeRuleBased"),
+  };
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [memberPagination, setMemberPagination] = useState({
@@ -104,7 +105,7 @@ export default function SegmentDetailPage() {
   if (!segment) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono segmentu</p>
+        <p className="text-muted-foreground">{t("segmentNotFound")}</p>
         <Button
           variant="outline"
           className="mt-4"
@@ -194,7 +195,7 @@ export default function SegmentDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={startEditing}>
-            Edytuj
+            {tc("edit")}
           </Button>
           <Button
             variant="destructive"
@@ -208,26 +209,26 @@ export default function SegmentDetailPage() {
       {isEditing && (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja segmentu</CardTitle>
+            <CardTitle>{t("editSegment")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-w-md">
               <div className="space-y-2">
-                <Label>Nazwa</Label>
+                <Label>{tc("name")}</Label>
                 <Input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Opis</Label>
+                <Label>{tc("description")}</Label>
                 <Input
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Kolor</Label>
+                <Label>{t("segmentColor")}</Label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -247,13 +248,13 @@ export default function SegmentDetailPage() {
                   onClick={handleUpdate}
                   disabled={updateSegment.isPending}
                 >
-                  {updateSegment.isPending ? "Zapisywanie..." : "Zapisz"}
+                  {updateSegment.isPending ? tc("saving") : tc("save")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing(false)}
                 >
-                  Anuluj
+                  {tc("cancel")}
                 </Button>
               </div>
             </div>
@@ -264,17 +265,17 @@ export default function SegmentDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Informacje</CardTitle>
+            <CardTitle>{tc("details")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {segment.description && (
               <div>
-                <p className="text-sm text-muted-foreground">Opis</p>
+                <p className="text-sm text-muted-foreground">{tc("description")}</p>
                 <p className="mt-1 text-sm">{segment.description}</p>
               </div>
             )}
             <div>
-              <p className="text-sm text-muted-foreground">Typ</p>
+              <p className="text-sm text-muted-foreground">{tc("type")}</p>
               <p className="mt-1 text-sm font-medium">
                 {SEGMENT_TYPE_LABELS[segment.segment_type] ||
                   segment.segment_type}
@@ -287,7 +288,7 @@ export default function SegmentDetailPage() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Utworzono</p>
+              <p className="text-sm text-muted-foreground">{tc("createdAt")}</p>
               <p className="mt-1 text-sm">{formatDate(segment.created_at)}</p>
             </div>
           </CardContent>
@@ -316,7 +317,7 @@ export default function SegmentDetailPage() {
               onClick={() => setShowAddMemberDialog(true)}
             >
               <Plus className="mr-1 h-4 w-4" />
-              Dodaj klienta
+              {t("addCustomer")}
             </Button>
           )}
         </CardHeader>
@@ -338,11 +339,11 @@ export default function SegmentDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Klient</TableHead>
-                    <TableHead>E-mail</TableHead>
+                    <TableHead>{t("form.fullName")}</TableHead>
+                    <TableHead>{t("form.email")}</TableHead>
                     <TableHead className="text-right">{t("zamowien")}</TableHead>
-                    <TableHead className="text-right">Wydano</TableHead>
-                    <TableHead>Dodano</TableHead>
+                    <TableHead className="text-right">{t("wydanoŁacznie")}</TableHead>
+                    <TableHead>{t("addedAt")}</TableHead>
                     <TableHead className="w-[60px]" />
                   </TableRow>
                 </TableHeader>
@@ -409,11 +410,11 @@ export default function SegmentDetailPage() {
       <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Dodaj klienta do segmentu</DialogTitle>
+            <DialogTitle>{t("addCustomerToSegment")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Szukaj klienta</Label>
+              <Label>{t("searchCustomer")}</Label>
               <Input
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
@@ -426,7 +427,7 @@ export default function SegmentDetailPage() {
                 onValueChange={setSelectedCustomerId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz klienta" />
+                  <SelectValue placeholder={t("selectCustomer")} />
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
@@ -442,13 +443,13 @@ export default function SegmentDetailPage() {
                 variant="outline"
                 onClick={() => setShowAddMemberDialog(false)}
               >
-                Anuluj
+                {tc("cancel")}
               </Button>
               <Button
                 onClick={handleAddMember}
                 disabled={addMember.isPending || !selectedCustomerId}
               >
-                {addMember.isPending ? "Dodawanie..." : "Dodaj"}
+                {addMember.isPending ? t("adding") : tc("add")}
               </Button>
             </div>
           </div>
@@ -458,7 +459,7 @@ export default function SegmentDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuwanie segmentu"
+        title={t("deleteSegmentTitle")}
         description={t("czyNaPewnoChceszUsunacTenSegment")}
         confirmLabel={t("usunSegment")}
         variant="destructive"

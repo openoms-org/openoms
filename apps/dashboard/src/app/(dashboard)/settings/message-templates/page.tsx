@@ -80,14 +80,14 @@ const emptyForm: FormState = {
   enabled: true,
 };
 
-function templateToForm(t: MessageTemplate): FormState {
+function templateToForm(tpl: MessageTemplate): FormState {
   return {
-    name: t.name,
-    channel: t.channel,
-    subject: t.subject,
-    body: t.body,
-    variables: (t.variables ?? []).join(", "),
-    enabled: t.enabled,
+    name: tpl.name,
+    channel: tpl.channel,
+    subject: tpl.subject,
+    body: tpl.body,
+    variables: (tpl.variables ?? []).join(", "),
+    enabled: tpl.enabled,
   };
 }
 
@@ -128,7 +128,6 @@ export default function MessageTemplatesPage() {
       .map((v) => v.trim())
       .filter(Boolean);
 
-  // We need the update hook at the top level — the id is known from editingTemplate
   const updateTemplate = useUpdateMessageTemplate(
     editingTemplate?.id ?? ""
   );
@@ -148,7 +147,7 @@ export default function MessageTemplatesPage() {
     if (editingTemplate) {
       updateTemplate.mutate(payload, {
         onSuccess: () => {
-          toast.success(t("szablonzostałzaktualizowany"));
+          toast.success(t("szablonZostałZaktualizowany"));
           closeDialog();
         },
         onError: (error) => {
@@ -158,7 +157,7 @@ export default function MessageTemplatesPage() {
     } else {
       createTemplate.mutate(payload, {
         onSuccess: () => {
-          toast.success(t("szablonzostałutworzony"));
+          toast.success(t("szablonZostałUtworzony"));
           closeDialog();
         },
         onError: (error) => {
@@ -172,7 +171,7 @@ export default function MessageTemplatesPage() {
     if (!deleteId) return;
     deleteTemplate.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("szablonzostałusuniety"));
+        toast.success(t("szablonZostałUsuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -198,20 +197,19 @@ export default function MessageTemplatesPage() {
           </h1>
           <p className="text-muted-foreground">
             {t("zarzadzajSzablonamiWiadomosciDlaAutomatyzacjiIKomu")}
-            z klientami
+            {t("messageTemplates.withClients")}
           </p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4 mr-2" />
-          Nowy szablon
+          {t("messageTemplates.newTemplate")}
         </Button>
       </div>
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4 mb-6">
           <p className="text-sm text-destructive">
-            {t("wystapiłBładPodczasŁadowaniaDanychSprobujOdswiezyc")}
-            {t("strone")}
+            {tc("loadError")}
           </p>
           <Button
             variant="outline"
@@ -219,7 +217,7 @@ export default function MessageTemplatesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            {t("retry")}
+            {tc("retry")}
           </Button>
         </div>
       )}
@@ -235,11 +233,11 @@ export default function MessageTemplatesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
+                <TableHead>{t("messageTemplates.columns.name")}</TableHead>
                 <TableHead>{t("kanał1")}</TableHead>
-                <TableHead>Temat</TableHead>
-                <TableHead>Aktywny</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{t("messageTemplates.columns.subject")}</TableHead>
+                <TableHead>{t("messageTemplates.columns.active")}</TableHead>
+                <TableHead>{t("messageTemplates.columns.createdAt")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -273,14 +271,14 @@ export default function MessageTemplatesPage() {
                         variant="outline"
                         className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                       >
-                        Aktywny
+                        {t("messageTemplates.activeStatus")}
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
                         className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                       >
-                        Nieaktywny
+                        {t("messageTemplates.inactiveStatus")}
                       </Badge>
                     )}
                   </TableCell>
@@ -317,25 +315,25 @@ export default function MessageTemplatesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingTemplate ? "Edytuj szablon" : "Nowy szablon"}
+              {editingTemplate ? t("messageTemplates.editTemplate") : t("messageTemplates.newTemplateDialog")}
             </DialogTitle>
             <DialogDescription>
               {editingTemplate
-                ? t("zaktualizujszczegołyszablonuwiadomosci")
+                ? t("zaktualizujSzczegołySzablonuWiadomosci")
                 : t("dodajNowySzablonWiadomosciDoSystemu")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="tpl-name">Nazwa</Label>
+              <Label htmlFor="tpl-name">{t("messageTemplates.nameLabel")}</Label>
               <Input
                 id="tpl-name"
                 value={form.name}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, name: e.target.value }))
                 }
-                placeholder={t("nppotwierdzeniewysyłki")}
+                placeholder={t("npPotwierdzenieWysyłki")}
               />
             </div>
 
@@ -360,7 +358,7 @@ export default function MessageTemplatesPage() {
 
             {form.channel === "email" && (
               <div className="space-y-2">
-                <Label htmlFor="tpl-subject">Temat</Label>
+                <Label htmlFor="tpl-subject">{t("messageTemplates.subjectLabel")}</Label>
                 <Input
                   id="tpl-subject"
                   value={form.subject}
@@ -389,7 +387,7 @@ export default function MessageTemplatesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tpl-variables">Zmienne</Label>
+              <Label htmlFor="tpl-variables">{t("messageTemplates.variablesLabel")}</Label>
               <Input
                 id="tpl-variables"
                 value={form.variables}
@@ -402,7 +400,7 @@ export default function MessageTemplatesPage() {
                 placeholder="order_number, customer_name, tracking_number"
               />
               <p className="text-xs text-muted-foreground">
-                Dostępne zmienne: {"{{order_number}}"},{" "}
+                {t("messageTemplates.availableVars")} {"{{order_number}}"},{" "}
                 {"{{customer_name}}"}, {"{{tracking_number}}"},{" "}
                 {"{{status}}"}
               </p>
@@ -416,13 +414,13 @@ export default function MessageTemplatesPage() {
                   setForm((prev) => ({ ...prev, enabled: checked }))
                 }
               />
-              <Label htmlFor="tpl-active">Aktywny</Label>
+              <Label htmlFor="tpl-active">{t("messageTemplates.activeLabel")}</Label>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>
-              Anuluj
+              {t("messageTemplates.cancelButton")}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -431,9 +429,9 @@ export default function MessageTemplatesPage() {
               }
             >
               {isSaving
-                ? "Zapisywanie..."
+                ? t("messageTemplates.savingButton")
                 : editingTemplate
-                  ? "Zapisz"
+                  ? t("messageTemplates.saveButton")
                   : tc("create")}
             </Button>
           </DialogFooter>

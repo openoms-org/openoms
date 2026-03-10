@@ -56,6 +56,8 @@ function CategoryRow({
   onEditChange: (field: "name" | "color", value: string) => void;
 }) {
   const t = useTranslations("settings");
+  const tp = useTranslations("settings.productCategories");
+  const tc = useTranslations("common");
   const hasChildren = category.children && category.children.length > 0;
   const isExpanded = expanded.has(category.id);
   const isEditing = editState?.id === category.id;
@@ -131,7 +133,7 @@ function CategoryRow({
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => onEdit(category)}
-                title="Edytuj"
+                title={tp("editTitle")}
               >
                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
@@ -140,7 +142,7 @@ function CategoryRow({
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => onDelete(category.id)}
-                title={t("delete")}
+                title={tc("delete")}
               >
                 <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
@@ -171,6 +173,7 @@ function CategoryRow({
 
 export default function ProductCategoriesPage() {
   const t = useTranslations("settings");
+  const tp = useTranslations("settings.productCategories");
   const tc = useTranslations("common");
   const { data: tree, isLoading } = useCategoryTree();
   const createCategory = useCreateCategory();
@@ -211,7 +214,7 @@ export default function ProductCategoriesPage() {
   const handleSaveEdit = async () => {
     if (!editState) return;
     if (!editState.name.trim()) {
-      toast.error("Nazwa kategorii jest wymagana");
+      toast.error(tp("categoryNameRequired"));
       return;
     }
     try {
@@ -219,7 +222,7 @@ export default function ProductCategoriesPage() {
         id: editState.id,
         data: { name: editState.name, color: editState.color },
       });
-      toast.success("Kategoria zaktualizowana");
+      toast.success(tp("categoryUpdated"));
       setEditState(null);
     } catch {
       toast.error(t("bładpodczasaktualizacjikategorii"));
@@ -258,7 +261,7 @@ export default function ProductCategoriesPage() {
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) {
-      toast.error("Nazwa kategorii jest wymagana");
+      toast.error(tp("categoryNameRequired"));
       return;
     }
     try {
@@ -267,7 +270,7 @@ export default function ProductCategoriesPage() {
         parent_id: addingParentId,
         color: newCategoryColor,
       });
-      toast.success("Kategoria utworzona");
+      toast.success(tp("categoryCreated"));
       setNewCategoryName("");
       setNewCategoryColor("#6b7280");
       setShowAddForm(false);
@@ -292,7 +295,7 @@ export default function ProductCategoriesPage() {
           </div>
           <Button onClick={handleAddRoot} size="sm">
             <Plus className="mr-2 h-4 w-4" />
-            Nowa kategoria
+            {tp("newCategory")}
           </Button>
         </div>
 
@@ -309,8 +312,8 @@ export default function ProductCategoriesPage() {
                 <Input
                   placeholder={
                     addingParentId
-                      ? "Nazwa podkategorii..."
-                      : "Nazwa kategorii..."
+                      ? tp("subcategoryPlaceholder")
+                      : tp("categoryPlaceholder")
                   }
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
@@ -326,14 +329,14 @@ export default function ProductCategoriesPage() {
                   onClick={handleCreateCategory}
                   disabled={createCategory.isPending}
                 >
-                  {createCategory.isPending ? "Tworzenie..." : tc("create")}
+                  {createCategory.isPending ? tp("creating") : tc("create")}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowAddForm(false)}
                 >
-                  Anuluj
+                  {tp("cancelButton")}
                 </Button>
               </div>
               {addingParentId && (
@@ -347,7 +350,7 @@ export default function ProductCategoriesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Drzewo kategorii</CardTitle>
+            <CardTitle>{tp("categoryTree")}</CardTitle>
           </CardHeader>
           <CardContent>
             {!tree || tree.length === 0 ? (

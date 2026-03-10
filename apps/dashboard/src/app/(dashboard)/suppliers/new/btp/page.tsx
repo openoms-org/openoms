@@ -51,20 +51,21 @@ import { useTranslations } from "next-intl";
 
 type WizardStep = 1 | 2 | 3;
 
-const steps = [
-  { num: 1 as const, label: "Import XML", icon: FileText },
-  { num: 2 as const, label: "Klucze API", icon: KeyRound },
-  { num: 3 as const, label: "Ustawienia", icon: Settings },
-];
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default function BTPWizardPage() {
   const t = useTranslations("suppliers");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
+
+  const steps = [
+    { num: 1 as const, label: t("btp.step1"), icon: FileText },
+    { num: 2 as const, label: t("btp.step2"), icon: KeyRound },
+    { num: 3 as const, label: t("btp.step3"), icon: Settings },
+  ];
   const [supplierId, setSupplierId] = useState<string | null>(null);
 
   // ── Step 1 state ──

@@ -38,6 +38,7 @@ import { useTranslations } from "next-intl";
 
 export default function NewAutomationRulePage() {
   const t = useTranslations("automation");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const createRule = useCreateAutomationRule();
@@ -130,12 +131,12 @@ export default function NewAutomationRulePage() {
       {/* Basic info */}
       <Card>
         <CardHeader>
-          <CardTitle>Podstawowe informacje</CardTitle>
+          <CardTitle>{t("basicInfo")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Nazwa *</Label>
+              <Label>{t("nameRequired")}</Label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -143,7 +144,7 @@ export default function NewAutomationRulePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Priorytet</Label>
+              <Label>{t("priorityLabel")}</Label>
               <Input
                 type="number"
                 value={priority}
@@ -151,12 +152,12 @@ export default function NewAutomationRulePage() {
                 placeholder="0"
               />
               <p className="text-xs text-muted-foreground">
-                Wyższy priorytet = wcześniejsze wykonanie
+                {t("higherPriorityHint")}
               </p>
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Opis</Label>
+            <Label>{t("descriptionLabel")}</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -179,10 +180,10 @@ export default function NewAutomationRulePage() {
         <CardContent>
           <Select value={triggerEvent || "none"} onValueChange={(v) => setTriggerEvent(v === "none" ? "" : v)}>
             <SelectTrigger className="w-full max-w-md">
-              <SelectValue placeholder="Wybierz zdarzenie" />
+              <SelectValue placeholder={t("selectEvent")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Wybierz zdarzenie...</SelectItem>
+              <SelectItem value="none">{t("selectEventPlaceholder")}</SelectItem>
               {AUTOMATION_TRIGGER_EVENTS.map((event) => (
                 <SelectItem key={event} value={event}>
                   {AUTOMATION_TRIGGER_LABELS[event] || event}
@@ -197,10 +198,10 @@ export default function NewAutomationRulePage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Warunki</CardTitle>
+            <CardTitle>{t("conditions")}</CardTitle>
             <Button variant="outline" size="sm" onClick={addCondition}>
               <Plus className="h-4 w-4" />
-              Dodaj warunek
+              {t("addCondition")}
             </Button>
           </div>
         </CardHeader>
@@ -214,15 +215,15 @@ export default function NewAutomationRulePage() {
               <div key={index} className="flex items-start gap-3 rounded-md border p-3">
                 <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Pole</Label>
+                    <Label className="text-xs">{t("fieldLabel")}</Label>
                     <Input
                       value={condition.field}
                       onChange={(e) => updateCondition(index, { field: e.target.value })}
-                      placeholder="np. status, total_amount"
+                      placeholder={t("fieldPlaceholder")}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Operator</Label>
+                    <Label className="text-xs">{t("operatorLabel")}</Label>
                     <Select
                       value={condition.operator}
                       onValueChange={(v) => updateCondition(index, { operator: v })}
@@ -266,7 +267,7 @@ export default function NewAutomationRulePage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Akcje</CardTitle>
+            <CardTitle>{t("actions")}</CardTitle>
             <Button variant="outline" size="sm" onClick={addAction}>
               <Plus className="h-4 w-4" />
               {t("dodajAkcje")}
@@ -283,7 +284,7 @@ export default function NewAutomationRulePage() {
               <div key={index} className="flex items-start gap-3 rounded-md border p-3">
                 <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Typ akcji</Label>
+                    <Label className="text-xs">{t("actionTypeLabel")}</Label>
                     <Select
                       value={action.type}
                       onValueChange={(v) => updateAction(index, { type: v, config: {} })}
@@ -292,9 +293,9 @@ export default function NewAutomationRulePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {AUTOMATION_ACTION_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {AUTOMATION_ACTION_LABELS[t] || t}
+                        {AUTOMATION_ACTION_TYPES.map((at) => (
+                          <SelectItem key={at} value={at}>
+                            {AUTOMATION_ACTION_LABELS[at] || at}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -302,11 +303,11 @@ export default function NewAutomationRulePage() {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">
-                      {action.type === "set_status" && "Nowy status"}
-                      {action.type === "add_tag" && "Tag"}
-                      {action.type === "send_email" && "Adres e-mail"}
-                      {action.type === "create_invoice" && "Typ faktury"}
-                      {action.type === "webhook" && "URL webhooka"}
+                      {action.type === "set_status" && t("actionNewStatus")}
+                      {action.type === "add_tag" && t("actionTag")}
+                      {action.type === "send_email" && t("actionEmail")}
+                      {action.type === "create_invoice" && t("actionInvoiceType")}
+                      {action.type === "webhook" && t("actionWebhookUrl")}
                     </Label>
                     <Input
                       value={String(
@@ -341,13 +342,13 @@ export default function NewAutomationRulePage() {
                       }}
                       placeholder={
                         action.type === "set_status"
-                          ? "np. confirmed"
+                          ? t("placeholderStatus")
                           : action.type === "add_tag"
-                          ? "np. vip"
+                          ? t("placeholderTag")
                           : action.type === "send_email"
-                          ? "np. admin@firma.pl"
+                          ? t("placeholderEmail")
                           : action.type === "create_invoice"
-                          ? "np. vat"
+                          ? t("placeholderInvoice")
                           : action.type === "webhook"
                           ? "https://..."
                           : ""
@@ -355,7 +356,7 @@ export default function NewAutomationRulePage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Opoznienie (minuty)</Label>
+                    <Label className="text-xs">{t("delayMinutes")}</Label>
                     <Input
                       type="number"
                       min={0}
@@ -364,10 +365,10 @@ export default function NewAutomationRulePage() {
                         const minutes = parseInt(e.target.value) || 0;
                         updateAction(index, { delay_seconds: minutes * 60 });
                       }}
-                      placeholder="0 = natychmiast"
+                      placeholder={t("delayImmediate")}
                     />
                     <p className="text-xs text-muted-foreground">
-                      0 = natychmiast
+                      {t("delayImmediate")}
                     </p>
                   </div>
                 </div>
@@ -388,7 +389,7 @@ export default function NewAutomationRulePage() {
       {/* Save */}
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={() => router.push("/settings/automation")}>
-          Anuluj
+          {t("cancelButton")}
         </Button>
         <Button onClick={handleSave} disabled={createRule.isPending}>
           {createRule.isPending ? (

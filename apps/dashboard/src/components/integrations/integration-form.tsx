@@ -32,7 +32,7 @@ import { isInDevelopment } from "@/lib/integration-status";
 import { useTranslations } from "next-intl";
 
 const integrationSchema = z.object({
-  provider: z.string().min(1, "Dostawca jest wymagany"),
+  provider: z.string().min(1),
   settings: z.string().optional().refine(
     (val) => {
       if (!val || val.trim() === "") return true;
@@ -43,7 +43,7 @@ const integrationSchema = z.object({
         return false;
       }
     },
-    { message: "Nieprawidłowy format JSON" }
+    { message: "Invalid JSON format" }
   ),
 });
 
@@ -133,7 +133,7 @@ export function IntegrationForm({
       if (!isEditMode && field.required && field.type !== "checkbox") {
         const val = credentialValues[field.key];
         if (!val || (typeof val === "string" && val.trim() === "")) {
-          newErrors[field.key] = `Pole "${field.labelKey}" jest wymagane`;
+          newErrors[field.key] = t("fieldRequired", { field: field.labelKey });
         }
       }
       if (field.type === "url" && credentialValues[field.key]) {
@@ -235,7 +235,7 @@ export function IntegrationForm({
             onValueChange={(v) => handleCredentialChange(field.key, v)}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Nie ustawiono" />
+              <SelectValue placeholder={t("notSet")} />
             </SelectTrigger>
             <SelectContent>
               {field.options.map((opt) => (
@@ -287,7 +287,7 @@ export function IntegrationForm({
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="sr-only">
-                {isVisible ? "Ukryj" : t("pokaz")} {field.labelKey.toLowerCase()}
+                {isVisible ? t("hide") : t("pokaz")} {field.labelKey.toLowerCase()}
               </span>
             </Button>
           )}
@@ -307,7 +307,7 @@ export function IntegrationForm({
       {/* Provider selection — only shown in create mode */}
       {!isEditMode && (
         <div className="space-y-2">
-          <Label htmlFor="provider">Dostawca</Label>
+          <Label htmlFor="provider">{t("provider")}</Label>
           <Select
             value={selectedProvider}
             onValueChange={handleProviderChange}
@@ -324,7 +324,7 @@ export function IntegrationForm({
                     <SelectItem key={provider} value={provider}>
                       {INTEGRATION_PROVIDER_LABELS[provider] ??
                         provider.charAt(0).toUpperCase() + provider.slice(1)}
-                      {isInDevelopment(provider) ? " (W budowie)" : ""}
+                      {isInDevelopment(provider) ? ` (${t("inDevelopment")})` : ""}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -341,7 +341,7 @@ export function IntegrationForm({
       {selectedProvider && fields.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-foreground">
-            {isEditMode ? "Aktualizuj dane" : t("daneUwierzytelniajace")} &mdash;{" "}
+            {isEditMode ? t("updateData") : t("daneUwierzytelniajace")} &mdash;{" "}
             {INTEGRATION_PROVIDER_LABELS[selectedProvider] ?? selectedProvider}
           </h3>
           {isEditMode && (
@@ -383,7 +383,7 @@ export function IntegrationForm({
         </button>
         {showAdvanced && (
           <div className="space-y-2 pt-2">
-            <Label htmlFor="settings">Ustawienia dodatkowe (JSON, opcjonalne)</Label>
+            <Label htmlFor="settings">{t("additionalSettingsJson")}</Label>
             <Textarea
               id="settings"
               placeholder='{"webhook_url": "...", "sync_interval": 3600}'
@@ -400,8 +400,8 @@ export function IntegrationForm({
       <div className="flex justify-end gap-3">
         <Button type="submit" disabled={isLoading}>
           {isLoading
-            ? isEditMode ? "Aktualizowanie..." : "Tworzenie..."
-            : isEditMode ? "Zapisz zmiany" : t("utworzIntegracje")
+            ? isEditMode ? t("updating") : t("creating")
+            : isEditMode ? t("saveChanges") : t("utworzIntegracje")
           }
         </Button>
       </div>

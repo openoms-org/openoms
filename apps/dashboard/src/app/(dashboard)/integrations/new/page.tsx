@@ -42,14 +42,14 @@ export default function NewIntegrationPage() {
   return (
     <AdminGuard>
       <PageHeader
-        title="Nowa integracja"
+        title={t("newIntegration")}
         description={t("dodajnowepołaczeniezzewnetrznymserwisem")}
       />
 
       {dedicatedEntries.length > 0 && (
         <Card className="max-w-2xl mb-6">
           <CardHeader>
-            <CardTitle className="text-base">Integracje z dedykowanym kreatorem</CardTitle>
+            <CardTitle className="text-base">{t("integrationsWithDedicatedWizard")}</CardTitle>
             <CardDescription>
               {t("ponizszeIntegracjeWymagajaAutoryzacjiOauthIMaja")}
             </CardDescription>

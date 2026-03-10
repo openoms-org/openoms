@@ -67,7 +67,7 @@ function ParcelDimensionFields({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label>Waga (kg)</Label>
+        <Label>{t("weightKg")}</Label>
         <Input
           type="number"
           step="0.01"
@@ -149,7 +149,7 @@ function InPostFields({
               onChange={() => onChange("service_type", "inpost_locker_standard")}
               className="accent-primary h-4 w-4"
             />
-            <span className="text-sm">Paczkomat InPost</span>
+            <span className="text-sm">{t("inpostLocker")}</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -160,7 +160,7 @@ function InPostFields({
               onChange={() => onChange("service_type", "inpost_courier_standard")}
               className="accent-primary h-4 w-4"
             />
-            <span className="text-sm">Kurier InPost</span>
+            <span className="text-sm">{t("inpostCourier")}</span>
           </label>
         </div>
       </div>
@@ -168,7 +168,7 @@ function InPostFields({
       {/* Target point (only for locker) */}
       {isLocker && (
         <div className="space-y-2">
-          <Label>Paczkomat docelowy</Label>
+          <Label>{t("targetLocker")}</Label>
           {targetPoint && (
             <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
               <MapPin className="h-4 w-4 text-primary" />
@@ -185,7 +185,7 @@ function InPostFields({
 
       {/* Sending method */}
       <div className="space-y-2">
-        <Label>Metoda nadania</Label>
+        <Label>{t("sendingMethod")}</Label>
         <Select
           value={(values.sending_method as string) ?? "__default__"}
           onValueChange={(v) => onChange("sending_method", v === "__default__" ? undefined : v)}
@@ -195,10 +195,10 @@ function InPostFields({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__default__">{t("domyslnaZUstawienIntegracji")}</SelectItem>
-            <SelectItem value="dispatch_order">Kurier odbierze (zlecenie odbioru)</SelectItem>
-            <SelectItem value="parcel_locker">Nadam w paczkomacie</SelectItem>
-            <SelectItem value="pop">Nadam w PaczkoPunkcie (POP)</SelectItem>
-            <SelectItem value="any_point">Dowolny punkt (paczkomat/POP)</SelectItem>
+            <SelectItem value="dispatch_order">{t("inpost.sendingMethods.dispatchOrder")}</SelectItem>
+            <SelectItem value="parcel_locker">{t("inpost.sendingMethods.parcelLocker")}</SelectItem>
+            <SelectItem value="pop">{t("inpost.sendingMethods.pop")}</SelectItem>
+            <SelectItem value="any_point">{t("inpost.sendingMethods.anyPoint")}</SelectItem>
             <SelectItem value="pok">{t("inpost.sendingMethods.pok")}</SelectItem>
             <SelectItem value="branch">{t("inpost.sendingMethods.branch")}</SelectItem>
           </SelectContent>
@@ -210,7 +210,7 @@ function InPostFields({
 
       {/* Parcel size */}
       <div className="space-y-2">
-        <Label>Rozmiar paczki</Label>
+        <Label>{t("parcelSize")}</Label>
         <Select
           value={(values.parcel_size as string) ?? "small"}
           onValueChange={(v) => onChange("parcel_size", v)}
@@ -303,12 +303,12 @@ function CODAndInsuranceFields({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label>Kwota pobrania (PLN)</Label>
+        <Label>{t("codAmountPln")}</Label>
         <Input
           type="number"
           step="0.01"
           min="0"
-          placeholder="Opcjonalnie"
+          placeholder={t("optional")}
           value={values.cod_amount ?? ""}
           onChange={(e) =>
             onChange("cod_amount", e.target.value ? parseFloat(e.target.value) : undefined)
@@ -321,7 +321,7 @@ function CODAndInsuranceFields({
           type="number"
           step="0.01"
           min="0"
-          placeholder="Opcjonalnie"
+          placeholder={t("optional")}
           value={values.insured_value ?? ""}
           onChange={(e) =>
             onChange("insured_value", e.target.value ? parseFloat(e.target.value) : undefined)
@@ -472,10 +472,11 @@ function OrlenPaczkaFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <>
       <div className="space-y-2">
-        <Label>Automat Orlen Paczka</Label>
+        <Label>{t("orlenPaczkaLocker")}</Label>
         <Input
           type="text"
           placeholder="np. PL10001"
@@ -483,7 +484,7 @@ function OrlenPaczkaFields({
           onChange={(e) => onChange("target_point", e.target.value || undefined)}
         />
         <p className="text-xs text-muted-foreground">
-          Identyfikator automatu docelowego Orlen Paczka.
+          {t("orlenPaczkaIdHelp")}
         </p>
       </div>
 

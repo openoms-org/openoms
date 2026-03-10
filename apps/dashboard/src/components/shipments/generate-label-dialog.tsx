@@ -54,10 +54,10 @@ function buildInitialValues(provider: string, shipment?: Shipment): CarrierField
   return { ...defaults, ...carrierData };
 }
 
-function getDialogTitle(provider: string): string {
+function getDialogTitle(provider: string, t: (key: string, params?: Record<string, string>) => string): string {
   const label = SHIPMENT_PROVIDER_LABELS[provider];
-  if (label) return `Generuj etykietę ${label}`;
-  return `Generuj etykietę — ${provider.toUpperCase()}`;
+  if (label) return t("generateLabelFor", { carrier: label });
+  return t("generateLabelFor", { carrier: provider.toUpperCase() });
 }
 
 export function GenerateLabelDialog({
@@ -105,7 +105,7 @@ export function GenerateLabelDialog({
 
     generateLabel.mutate(data, {
       onSuccess: () => {
-        toast.success("Etykieta wygenerowana");
+        toast.success(t("labelGenerated"));
         onOpenChange(false);
       },
       onError: (error) => {
@@ -120,7 +120,7 @@ export function GenerateLabelDialog({
         className={isLocker ? "max-w-3xl" : ""}
       >
         <DialogHeader>
-          <DialogTitle>{getDialogTitle(provider)}</DialogTitle>
+          <DialogTitle>{getDialogTitle(provider, t)}</DialogTitle>
           <DialogDescription>
             {t("wypełnijDanePrzesyłkiAbyWygenerowacEtykiete")}
           </DialogDescription>
@@ -136,7 +136,7 @@ export function GenerateLabelDialog({
 
           {/* Label format — shared across all carriers */}
           <div className="space-y-2">
-            <Label>Format etykiety</Label>
+            <Label>{t("labelFormat")}</Label>
             <Select
               value={labelFormat}
               onValueChange={setLabelFormat}
@@ -146,8 +146,8 @@ export function GenerateLabelDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="zpl">ZPL (drukarka termiczna)</SelectItem>
-                <SelectItem value="epl">EPL (drukarka termiczna)</SelectItem>
+                <SelectItem value="zpl">{t("zplThermalPrinter")}</SelectItem>
+                <SelectItem value="epl">{t("eplThermalPrinter")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -155,14 +155,14 @@ export function GenerateLabelDialog({
           {/* Receiver preview */}
           {order && (
             <div className="space-y-2 rounded-md border p-3">
-              <Label>Odbiorca</Label>
+              <Label>{t("receiver")}</Label>
               <div className="space-y-1 text-sm">
                 <p>
                   <span className="text-muted-foreground">{t("imieINazwisko")} </span>
                   {order.customer_name}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Telefon: </span>
+                  <span className="text-muted-foreground">{t("phone")}: </span>
                   {order.customer_phone ?? "-"}
                 </p>
                 <p>

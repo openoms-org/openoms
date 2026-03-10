@@ -118,7 +118,7 @@ export function MarketplaceShipmentSettings({
             htmlFor="auto_generate_label"
             className={`font-normal cursor-pointer ${!autoCreate ? "text-muted-foreground" : ""}`}
           >
-            Automatycznie generuj etykietę (wkrótce)
+            {t("autoGenerateLabelSoon")}
           </Label>
         </div>
 
@@ -130,10 +130,10 @@ export function MarketplaceShipmentSettings({
             onValueChange={(v) => setDefaultCarrier(v === "__none__" ? "" : v)}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Brak" />
+              <SelectValue placeholder={t("noneOption")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">Brak</SelectItem>
+              <SelectItem value="__none__">{t("noneOption")}</SelectItem>
               {SHIPMENT_PROVIDERS.filter(p => p !== "manual").map((p) => (
                 <SelectItem key={p} value={p}>
                   {SHIPMENT_PROVIDER_LABELS[p] ?? p}
@@ -148,7 +148,7 @@ export function MarketplaceShipmentSettings({
 
         {/* Carrier mapping */}
         <div className="space-y-2">
-          <Label>Mapowanie metod dostawy</Label>
+          <Label>{t("deliveryMethodMapping")}</Label>
           <p className="text-xs text-muted-foreground mb-2">
             {t("przypiszNazwyMetodDostawyZMarketplaceDo")}
             Dopasowanie działa na podstawie fragmentu nazwy (np. &quot;Paczkomaty&quot; pasuje do &quot;Paczkomaty 24/7&quot;).

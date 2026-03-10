@@ -38,38 +38,38 @@ import { getErrorMessage } from "@/lib/api-client";
 import type { SimulationResult } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const RULE_STATUSES: Record<string, { label: string; color: string }> = {
-  active: {
-    label: "Aktywna",
-    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  },
-  paused: {
-    label: "Wstrzymana",
-    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  },
-  archived: {
-    label: "Zarchiwizowana",
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-  },
-};
-
-const STRATEGY_LABELS: Record<string, string> = {
-  margin: "Marża",
-  competitive: "Konkurencja (wkrótce)",
-  time_based: "Harmonogram",
-  stock_based: "Stan magazynowy",
-};
-
-const SCOPE_LABELS: Record<string, string> = {
-  all: "Wszystkie produkty",
-  category: "Kategoria",
-  tag: "Tag",
-  product_ids: "Wybrane produkty",
-};
-
 export default function RepricingRuleDetailPage() {
   const t = useTranslations("repricing");
   const tc = useTranslations("common");
+
+  const RULE_STATUSES: Record<string, { label: string; color: string }> = {
+    active: {
+      label: t("statusActive"),
+      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    },
+    paused: {
+      label: t("statusPaused"),
+      color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    },
+    archived: {
+      label: t("statusArchived"),
+      color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+    },
+  };
+
+  const STRATEGY_LABELS: Record<string, string> = {
+    margin: t("strategyMargin"),
+    competitive: t("strategyCompetitiveSoon"),
+    time_based: t("strategyTimeBased"),
+    stock_based: t("strategyStockBased"),
+  };
+
+  const SCOPE_LABELS: Record<string, string> = {
+    all: t("scopeAll"),
+    category: t("scopeCategory"),
+    tag: t("scopeTag"),
+    product_ids: t("scopeProductIds"),
+  };
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -146,7 +146,7 @@ export default function RepricingRuleDetailPage() {
     try {
       const result = await applyRules.mutateAsync();
       toast.success(
-        `Repricing wykonany: ${result.price_changes} zmian cen`
+        t("repricingCompletedShort", { priceChanges: result.price_changes })
       );
       refetch();
     } catch (error) {
@@ -171,8 +171,8 @@ export default function RepricingRuleDetailPage() {
               <StatusBadge status={rule.status} statusMap={RULE_STATUSES} />
             </div>
             <p className="text-muted-foreground mt-1">
-              Strategia: {STRATEGY_LABELS[rule.strategy] || rule.strategy} |
-              Priorytet: {rule.priority}
+              {t("strategy")}: {STRATEGY_LABELS[rule.strategy] || rule.strategy} |
+              {t("priority")}: {rule.priority}
             </p>
           </div>
         </div>
@@ -184,7 +184,7 @@ export default function RepricingRuleDetailPage() {
             disabled={simulateRule.isPending}
           >
             <Eye className="mr-2 h-4 w-4" />
-            {simulateRule.isPending ? "Symulacja..." : "Symuluj"}
+            {simulateRule.isPending ? t("simulating") : t("simulate")}
           </Button>
           <Button
             variant="outline"
@@ -193,18 +193,18 @@ export default function RepricingRuleDetailPage() {
             disabled={applyRules.isPending}
           >
             <Zap className="mr-2 h-4 w-4" />
-            Zastosuj teraz
+            {t("applyNow")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleToggleStatus}>
             {rule.status === "active" ? (
               <>
                 <Pause className="mr-2 h-4 w-4" />
-                Wstrzymaj
+                {t("pause")}
               </>
             ) : (
               <>
                 <Play className="mr-2 h-4 w-4" />
-                Aktywuj
+                {t("activate")}
               </>
             )}
           </Button>
@@ -223,16 +223,16 @@ export default function RepricingRuleDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Konfiguracja</CardTitle>
+            <CardTitle>{t("configuration")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Strategia</span>
+              <span className="text-muted-foreground">{t("strategy")}</span>
               <span>{STRATEGY_LABELS[rule.strategy] || rule.strategy}</span>
             </div>
             <Separator />
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Zakres</span>
+              <span className="text-muted-foreground">{t("scope")}</span>
               <span>{SCOPE_LABELS[rule.scope_type] || rule.scope_type}</span>
             </div>
             {rule.scope_value != null && (
@@ -250,14 +250,14 @@ export default function RepricingRuleDetailPage() {
             )}
             <Separator />
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Priorytet</span>
+              <span className="text-muted-foreground">{t("priority")}</span>
               <span>{rule.priority}</span>
             </div>
             {rule.min_price != null && (
               <>
                 <Separator />
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Cena min.</span>
+                  <span className="text-muted-foreground">{t("minPrice")}</span>
                   <span>{formatCurrency(rule.min_price)}</span>
                 </div>
               </>
@@ -266,14 +266,14 @@ export default function RepricingRuleDetailPage() {
               <>
                 <Separator />
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Cena maks.</span>
+                  <span className="text-muted-foreground">{t("maxPrice")}</span>
                   <span>{formatCurrency(rule.max_price)}</span>
                 </div>
               </>
             )}
             <Separator />
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Produkty</span>
+              <span className="text-muted-foreground">{t("products")}</span>
               <span>{rule.products_affected}</span>
             </div>
             {rule.last_applied_at && (
@@ -281,7 +281,7 @@ export default function RepricingRuleDetailPage() {
                 <Separator />
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Ostatnie zastosowanie
+                    {t("lastApplied")}
                   </span>
                   <span>{formatDate(rule.last_applied_at)}</span>
                 </div>
@@ -292,7 +292,7 @@ export default function RepricingRuleDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Parametry strategii</CardTitle>
+            <CardTitle>{t("strategyParams")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {Object.entries(ruleParams).map(([key, value]) => (
@@ -318,19 +318,19 @@ export default function RepricingRuleDetailPage() {
       {/* Recent price changes */}
       <Card>
         <CardHeader>
-          <CardTitle>Ostatnie zmiany cen</CardTitle>
+          <CardTitle>{t("recentPriceChanges")}</CardTitle>
         </CardHeader>
         <CardContent>
           {logData && logData.items.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produkt</TableHead>
-                  <TableHead>Stara cena</TableHead>
-                  <TableHead>Nowa cena</TableHead>
-                  <TableHead>Zmiana</TableHead>
+                  <TableHead>{t("product")}</TableHead>
+                  <TableHead>{t("oldPrice")}</TableHead>
+                  <TableHead>{t("newPrice")}</TableHead>
+                  <TableHead>{t("change")}</TableHead>
                   <TableHead>{t("detail.reason")}</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead>{t("date")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -388,17 +388,17 @@ export default function RepricingRuleDetailPage() {
       <Dialog open={showSimulation} onOpenChange={setShowSimulation}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Wyniki symulacji</DialogTitle>
+            <DialogTitle>{t("simulationResults")}</DialogTitle>
           </DialogHeader>
           {simulationResults && simulationResults.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produkt</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Stara cena</TableHead>
-                  <TableHead>Nowa cena</TableHead>
-                  <TableHead>Zmiana</TableHead>
+                  <TableHead>{t("product")}</TableHead>
+                  <TableHead>{t("sku")}</TableHead>
+                  <TableHead>{t("oldPrice")}</TableHead>
+                  <TableHead>{t("newPrice")}</TableHead>
+                  <TableHead>{t("change")}</TableHead>
                   <TableHead>{t("detail.reason")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -447,7 +447,7 @@ export default function RepricingRuleDetailPage() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title={t("usunacregułe")}
-        description={`Reguła "${rule.name}" zostanie trwale usunięta wraz z historią zmian cen.`}
+        description={t("deleteRuleConfirmation", { name: rule.name })}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}

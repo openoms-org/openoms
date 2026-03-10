@@ -22,8 +22,8 @@ import type { Shipment } from "@/types/api";
 import { useTranslations } from "next-intl";
 
 const shipmentSchema = z.object({
-  order_id: z.string().min(1, "ID zamówienia jest wymagane"),
-  provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"], "Wybierz dostawcę"),
+  order_id: z.string().min(1),
+  provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"]),
   tracking_number: z.string().optional(),
   label_url: z.string().optional(),
   carrier_data: z.record(z.string(), z.unknown()).optional(),
@@ -97,7 +97,7 @@ export function ShipmentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="provider">Dostawca</Label>
+        <Label htmlFor="provider">{t("provider")}</Label>
         <Select
           value={providerValue}
           onValueChange={(value) =>
@@ -124,7 +124,7 @@ export function ShipmentForm({
 
       {providerValue === "inpost" && (
         <div className="space-y-2">
-          <Label>Paczkomat docelowy</Label>
+          <Label>{t("targetLocker")}</Label>
           {targetPoint && (
             <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
               <MapPin className="h-4 w-4 text-primary" />
@@ -149,16 +149,16 @@ export function ShipmentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="label_url">URL etykiety</Label>
+        <Label htmlFor="label_url">{t("labelUrl")}</Label>
         <Input
           id="label_url"
-          placeholder="Opcjonalny URL etykiety"
+          placeholder={t("optionalLabelUrl")}
           {...register("label_url")}
         />
       </div>
 
       <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Zapisywanie..." : shipment ? "Zapisz zmiany" : t("utworzPrzesyłke")}
+        {isLoading ? t("saving") : shipment ? t("saveChanges") : t("utworzPrzesyłke")}
       </Button>
     </form>
   );

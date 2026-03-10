@@ -45,7 +45,7 @@ import { useTranslations } from "next-intl";
 // ---------------------------------------------------------------------------
 
 const fileSupplierSchema = z.object({
-  name: z.string().min(1, "Nazwa jest wymagana"),
+  name: z.string().min(1),
   code: z.string().optional(),
   feed_url: z.string().optional(),
   feed_format: z.string().optional(),
@@ -60,20 +60,7 @@ type Step = "pick" | "file";
 // Provider cards for the picker
 // ---------------------------------------------------------------------------
 
-const providers = [
-  {
-    key: "btp" as const,
-    logo: "/logos/btp.svg",
-    name: "BTP.pro",
-    description: "Integracja API z hurtownią B2B na platformie BTP",
-  },
-  {
-    key: "file" as const,
-    icon: FileText,
-    name: "Plik / URL",
-    description: "Import produktów z pliku IOF, CSV lub zewnętrznego URL",
-  },
-];
+// providers array moved inside component to use translations
 
 // ---------------------------------------------------------------------------
 // Page
@@ -81,8 +68,24 @@ const providers = [
 
 export default function NewSupplierPage() {
   const t = useTranslations("suppliers");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [step, setStep] = useState<Step>("pick");
+
+  const providers = [
+    {
+      key: "btp" as const,
+      logo: "/logos/btp.svg",
+      name: "BTP.pro",
+      description: t("btpDescription"),
+    },
+    {
+      key: "file" as const,
+      icon: FileText,
+      name: t("fileUrl"),
+      description: t("fileUrlDescription"),
+    },
+  ];
 
   const createIntegration = useCreateIntegration();
 
@@ -163,8 +166,8 @@ export default function NewSupplierPage() {
   };
 
   const titles: Record<Step, string> = {
-    pick: "Nowy dostawca",
-    file: "Nowy dostawca — Plik / URL",
+    pick: t("newSupplier"),
+    file: t("newSupplierFileUrl"),
   };
 
   return (
@@ -225,7 +228,7 @@ export default function NewSupplierPage() {
         {step === "file" && (
           <Card>
             <CardHeader>
-              <CardTitle>Dane dostawcy</CardTitle>
+              <CardTitle>{t("supplierData")}</CardTitle>
               <CardDescription>
                 {t("dodajDostawceImportujacegoProduktyZPlikuLub")}
               </CardDescription>
@@ -236,7 +239,7 @@ export default function NewSupplierPage() {
                 className="space-y-4"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nazwa *</Label>
+                  <Label htmlFor="name">{tc("name")} *</Label>
                   <Input
                     id="name"
                     {...register("name")}
@@ -249,7 +252,7 @@ export default function NewSupplierPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="code">Kod dostawcy</Label>
+                  <Label htmlFor="code">{t("supplierCode")}</Label>
                   <Input
                     id="code"
                     {...register("code")}
@@ -266,7 +269,7 @@ export default function NewSupplierPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Format feeda</Label>
+                    <Label>{t("feedFormat")}</Label>
                     <Select
                       defaultValue="iof"
                       onValueChange={(v) => setValue("feed_format", v)}
@@ -297,13 +300,13 @@ export default function NewSupplierPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="15">Co 15 minut</SelectItem>
-                        <SelectItem value="30">Co 30 minut</SelectItem>
+                        <SelectItem value="15">{t("every15Min")}</SelectItem>
+                        <SelectItem value="30">{t("every30Min")}</SelectItem>
                         <SelectItem value="60">{t("co1Godzine")}</SelectItem>
-                        <SelectItem value="120">Co 2 godziny</SelectItem>
-                        <SelectItem value="360">Co 6 godzin</SelectItem>
-                        <SelectItem value="720">Co 12 godzin</SelectItem>
-                        <SelectItem value="1440">Raz dziennie</SelectItem>
+                        <SelectItem value="120">{t("every2Hours")}</SelectItem>
+                        <SelectItem value="360">{t("every6Hours")}</SelectItem>
+                        <SelectItem value="720">{t("every12Hours")}</SelectItem>
+                        <SelectItem value="1440">{t("onceDaily")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -318,7 +321,7 @@ export default function NewSupplierPage() {
                     >
                       <div className="flex items-center gap-2">
                         <KeyRound className="h-4 w-4 text-muted-foreground" />
-                        Klucze API BTP (opcjonalnie)
+                        {t("btpApiKeysOptional")}
                       </div>
                       <ChevronDown
                         className={cn(
@@ -336,18 +339,18 @@ export default function NewSupplierPage() {
                         </p>
                         <div className="space-y-2">
                           <Label htmlFor="xml-public-key">
-                            Klucz publiczny (login)
+                            {t("publicKeyLogin")}
                           </Label>
                           <Input
                             id="xml-public-key"
                             value={xmlPublicKey}
                             onChange={(e) => setXmlPublicKey(e.target.value)}
-                            placeholder="Klucz publiczny z panelu BTP"
+                            placeholder={t("publicKeyFromBtp")}
                           />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="xml-private-key">
-                            Klucz prywatny (hasło)
+                            {t("privateKeyPassword")}
                           </Label>
                           <div className="relative">
                             <Input
@@ -356,7 +359,7 @@ export default function NewSupplierPage() {
                               className="pr-10"
                               value={xmlPrivateKey}
                               onChange={(e) => setXmlPrivateKey(e.target.value)}
-                              placeholder="Klucz prywatny z panelu BTP"
+                              placeholder={t("privateKeyFromBtp")}
                             />
                             <button
                               type="button"
@@ -367,7 +370,7 @@ export default function NewSupplierPage() {
                               tabIndex={-1}
                               aria-label={
                                 showXmlPrivateKey
-                                  ? "Ukryj klucz"
+                                  ? t("hideKey")
                                   : t("pokazKlucz")
                               }
                             >
@@ -381,9 +384,9 @@ export default function NewSupplierPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="xml-base-url">
-                            Adres API hurtowni{" "}
+                            {t("apiAddress")}{" "}
                             <span className="text-muted-foreground font-normal">
-                              (opcjonalnie)
+                              ({t("optional")})
                             </span>
                           </Label>
                           <Input
@@ -406,7 +409,7 @@ export default function NewSupplierPage() {
                     {createSupplier.isPending || fileSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Tworzenie...
+                        {tc("creating")}
                       </>
                     ) : (
                       t("utworzDostawce")
@@ -417,7 +420,7 @@ export default function NewSupplierPage() {
                     variant="outline"
                     onClick={() => setStep("pick")}
                   >
-                    Wstecz
+                    {tc("back")}
                   </Button>
                 </div>
               </form>

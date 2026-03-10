@@ -48,18 +48,19 @@ import {
 } from "@/components/ui/table";
 import { useTranslations } from "next-intl";
 
-const discountTypeLabels: Record<string, string> = {
-  percentage: "Procentowy",
-  fixed: "Kwotowy",
-  override: "Cena nadpisana",
-};
-
 export default function PriceListDetailPage() {
   const t = useTranslations("settings");
+  const tp = useTranslations("settings.priceLists");
   const tc = useTranslations("common");
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+
+  const discountTypeLabels: Record<string, string> = {
+    percentage: tp("percentage"),
+    fixed: tp("fixed"),
+    override: tp("override"),
+  };
 
   const { data: priceList, isLoading } = usePriceList(id);
   const updatePriceList = useUpdatePriceList(id);
@@ -77,7 +78,6 @@ export default function PriceListDetailPage() {
   const [newMinQty, setNewMinQty] = useState("1");
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
 
-  // Inline editing state
   const [editName, setEditName] = useState<string | null>(null);
   const [editDescription, setEditDescription] = useState<string | null>(null);
 
@@ -88,13 +88,13 @@ export default function PriceListDetailPage() {
   if (!priceList) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono cennika</p>
+        <p className="text-muted-foreground">{tp("notFound")}</p>
         <Button
           variant="outline"
           className="mt-4"
           onClick={() => router.push("/settings/price-lists")}
         >
-          {t("powrotDoListy")}
+          {tp("backToList")}
         </Button>
       </div>
     );
@@ -109,7 +109,7 @@ export default function PriceListDetailPage() {
       {
         onSuccess: () => {
           toast.success(
-            priceList.active ? "Cennik dezaktywowany" : "Cennik aktywowany"
+            priceList.active ? tp("deactivated") : tp("activated")
           );
         },
         onError: (err) => toast.error(getErrorMessage(err)),
@@ -126,7 +126,7 @@ export default function PriceListDetailPage() {
       { name: editName },
       {
         onSuccess: () => {
-          toast.success("Nazwa zaktualizowana");
+          toast.success(tp("nameUpdated"));
           setEditName(null);
         },
         onError: (err) => toast.error(getErrorMessage(err)),
@@ -140,7 +140,7 @@ export default function PriceListDetailPage() {
       { description: editDescription },
       {
         onSuccess: () => {
-          toast.success("Opis zaktualizowany");
+          toast.success(tp("descriptionUpdated"));
           setEditDescription(null);
         },
         onError: (err) => toast.error(getErrorMessage(err)),
@@ -164,7 +164,7 @@ export default function PriceListDetailPage() {
 
     createItem.mutate(data, {
       onSuccess: () => {
-        toast.success("Produkt dodany do cennika");
+        toast.success(tp("productAdded"));
         setShowAddProduct(false);
         setSelectedProductId("");
         setNewDiscount("");
@@ -207,11 +207,11 @@ export default function PriceListDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>{t("szczegołycennika")}</CardTitle>
+            <CardTitle>{t("szczegołyCennika")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Nazwa</Label>
+              <Label>{tc("name")}</Label>
               {editName !== null ? (
                 <div className="flex gap-2">
                   <Input
@@ -219,14 +219,14 @@ export default function PriceListDetailPage() {
                     onChange={(e) => setEditName(e.target.value)}
                   />
                   <Button size="sm" onClick={handleSaveName}>
-                    Zapisz
+                    {tp("saveButton")}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setEditName(null)}
                   >
-                    Anuluj
+                    {tp("cancelButton")}
                   </Button>
                 </div>
               ) : (
@@ -240,7 +240,7 @@ export default function PriceListDetailPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Opis</Label>
+              <Label>{tc("description")}</Label>
               {editDescription !== null ? (
                 <div className="flex gap-2">
                   <Input
@@ -248,14 +248,14 @@ export default function PriceListDetailPage() {
                     onChange={(e) => setEditDescription(e.target.value)}
                   />
                   <Button size="sm" onClick={handleSaveDescription}>
-                    Zapisz
+                    {tp("saveButton")}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setEditDescription(null)}
                   >
-                    Anuluj
+                    {tp("cancelButton")}
                   </Button>
                 </div>
               ) : (
@@ -272,27 +272,27 @@ export default function PriceListDetailPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Typ rabatu</Label>
+                <Label>{tp("discountType")}</Label>
                 <p className="text-sm mt-1">
                   {discountTypeLabels[priceList.discount_type] ??
                     priceList.discount_type}
                 </p>
               </div>
               <div>
-                <Label>Waluta</Label>
+                <Label>{tp("currency")}</Label>
                 <p className="text-sm mt-1">{priceList.currency}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Utworzono</Label>
+                <Label>{tc("createdAt")}</Label>
                 <p className="text-sm mt-1">
                   {formatDate(priceList.created_at)}
                 </p>
               </div>
               <div>
-                <Label>Zaktualizowano</Label>
+                <Label>{tc("updatedAt")}</Label>
                 <p className="text-sm mt-1">
                   {formatDate(priceList.updated_at)}
                 </p>
@@ -303,11 +303,11 @@ export default function PriceListDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Status</CardTitle>
+            <CardTitle>{tc("status")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Aktywny</Label>
+              <Label>{tc("active")}</Label>
               <Switch
                 checked={priceList.active}
                 onCheckedChange={handleToggleActive}
@@ -335,30 +335,30 @@ export default function PriceListDetailPage() {
       {/* Items */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Pozycje cennika</CardTitle>
+          <CardTitle>{tp("items")}</CardTitle>
           <Dialog open={showAddProduct} onOpenChange={setShowAddProduct}>
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Dodaj produkt
+                {tp("addProduct")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Dodaj produkt do cennika</DialogTitle>
+                <DialogTitle>{tp("addProductDialog")}</DialogTitle>
                 <DialogDescription>
                   {t("wybierzProduktIUstawRabatLubCene")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Produkt</Label>
+                  <Label>{tp("productLabel")}</Label>
                   <Select
                     value={selectedProductId}
                     onValueChange={setSelectedProductId}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Wybierz produkt..." />
+                      <SelectValue placeholder={tp("selectProduct")} />
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((p) => (
@@ -372,7 +372,7 @@ export default function PriceListDetailPage() {
 
                 {priceList.discount_type === "override" ? (
                   <div className="space-y-2">
-                    <Label>Cena ({priceList.currency})</Label>
+                    <Label>{tp("priceLabel", { currency: priceList.currency })}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -384,11 +384,11 @@ export default function PriceListDetailPage() {
                 ) : (
                   <div className="space-y-2">
                     <Label>
-                      Rabat (
-                      {priceList.discount_type === "percentage"
-                        ? "%"
-                        : priceList.currency}
-                      )
+                      {tp("discountLabel", {
+                        unit: priceList.discount_type === "percentage"
+                          ? "%"
+                          : priceList.currency,
+                      })}
                     </Label>
                     <Input
                       type="number"
@@ -415,13 +415,13 @@ export default function PriceListDetailPage() {
                   variant="outline"
                   onClick={() => setShowAddProduct(false)}
                 >
-                  Anuluj
+                  {tp("cancelButton")}
                 </Button>
                 <Button
                   onClick={handleAddProduct}
                   disabled={!selectedProductId || createItem.isPending}
                 >
-                  {createItem.isPending ? "Dodawanie..." : "Dodaj"}
+                  {createItem.isPending ? tp("addingButton") : tp("addButton")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -439,14 +439,14 @@ export default function PriceListDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Produkt</TableHead>
+                    <TableHead>{tp("columns.product")}</TableHead>
                     <TableHead>
                       {priceList.discount_type === "override"
-                        ? "Cena"
-                        : "Rabat"}
+                        ? tp("columns.priceOrDiscount")
+                        : tp("columns.discount")}
                     </TableHead>
                     <TableHead>{t("minIlosc")}</TableHead>
-                    <TableHead>Dodano</TableHead>
+                    <TableHead>{tp("columns.addedAt")}</TableHead>
                     <TableHead className="w-[60px]" />
                   </TableRow>
                 </TableHeader>

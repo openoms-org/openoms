@@ -48,6 +48,8 @@ function QRCodeCanvas({ data, size }: { data: string; size: number }) {
 
 export default function SecuritySettingsPage() {
   const t = useTranslations("settings");
+  const ts = useTranslations("settings.security");
+  const tc = useTranslations("common");
   const queryClient = useQueryClient();
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
@@ -122,7 +124,7 @@ export default function SecuritySettingsPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">{t("security.title")}</h1>
+        <h1 className="text-2xl font-bold">{ts("title")}</h1>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -133,7 +135,7 @@ export default function SecuritySettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t("security.title")}</h1>
+        <h1 className="text-2xl font-bold">{ts("title")}</h1>
         <p className="text-muted-foreground">
           {t("zarzadzajUstawieniamiBezpieczenstwaKonta")}
         </p>
@@ -143,32 +145,32 @@ export default function SecuritySettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" />
-            Uwierzytelnianie dwuskładnikowe (2FA)
+            {ts("twoFaTitle")}
           </CardTitle>
           <CardDescription>
             {t("dodatkowaWarstwaZabezpieczenDlaTwojegoKontaWymaga")}
-            aplikacji uwierzytelniającej (np. Google Authenticator, Authy) przy
+            {ts("authenticatorApp")}
             {t("kazdymLogowaniu")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-sm font-medium">Status</p>
+              <p className="text-sm font-medium">{ts("statusLabel")}</p>
               {status?.enabled ? (
                 <div className="flex items-center gap-2">
                   <Badge variant="default" className="bg-green-600">
-                    2FA aktywne
+                    {ts("twoFaActive")}
                   </Badge>
                   {status.verified_at && (
                     <span className="text-xs text-muted-foreground">
-                      Aktywowane:{" "}
+                      {ts("activatedAt")}{" "}
                       {new Date(status.verified_at).toLocaleDateString("pl-PL")}
                     </span>
                   )}
                 </div>
               ) : (
-                <Badge variant="secondary">{t("disabled")}</Badge>
+                <Badge variant="secondary">{tc("disabled")}</Badge>
               )}
             </div>
             <div>
@@ -179,7 +181,7 @@ export default function SecuritySettingsPage() {
                   onClick={() => setShowDisableDialog(true)}
                 >
                   <ShieldOff className="mr-2 h-4 w-4" />
-                  {t("security.disable2fa")}
+                  {ts("disable2fa")}
                 </Button>
               ) : (
                 <Button
@@ -192,7 +194,7 @@ export default function SecuritySettingsPage() {
                   ) : (
                     <ShieldCheck className="mr-2 h-4 w-4" />
                   )}
-                  {t("security.enable2fa")}
+                  {ts("enable2fa")}
                 </Button>
               )}
             </div>
@@ -231,7 +233,7 @@ export default function SecuritySettingsPage() {
       <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Konfiguracja 2FA</DialogTitle>
+            <DialogTitle>{ts("setupTitle")}</DialogTitle>
             <DialogDescription>
               {t("zeskanujKodQrWAplikacjiUwierzytelniajacejLub")}
             </DialogDescription>
@@ -273,7 +275,7 @@ export default function SecuritySettingsPage() {
 
               {/* Verification */}
               <div className="space-y-2">
-                <Label htmlFor="verify-code">Kod weryfikacyjny</Label>
+                <Label htmlFor="verify-code">{ts("verificationCode")}</Label>
                 <Input
                   id="verify-code"
                   type="text"
@@ -303,7 +305,7 @@ export default function SecuritySettingsPage() {
                 setVerifyCode("");
               }}
             >
-              Anuluj
+              {ts("cancelButton")}
             </Button>
             <Button
               onClick={() => verifyMutation.mutate(verifyCode)}
@@ -331,7 +333,7 @@ export default function SecuritySettingsPage() {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="disable-password">{t("dhl.password")}</Label>
+              <Label htmlFor="disable-password">{ts("password")}</Label>
               <Input
                 id="disable-password"
                 type="password"
@@ -341,7 +343,7 @@ export default function SecuritySettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="disable-code">Kod 2FA</Label>
+              <Label htmlFor="disable-code">{ts("twoFaCode")}</Label>
               <Input
                 id="disable-code"
                 type="text"
@@ -366,7 +368,7 @@ export default function SecuritySettingsPage() {
                 setDisableCode("");
               }}
             >
-              Anuluj
+              {ts("cancelButton")}
             </Button>
             <Button
               variant="destructive"
@@ -385,7 +387,7 @@ export default function SecuritySettingsPage() {
               {disableMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {t("security.disable2fa")}
+              {ts("disable2fa")}
             </Button>
           </DialogFooter>
         </DialogContent>

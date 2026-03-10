@@ -259,7 +259,49 @@
     "usunRole": "Usuń rolę",
     "czyNaPewnoChceszUsunacTeRoleUzytkownicyZTaRolaStra": "Czy na pewno chcesz usunąć tę rolę? Użytkownicy z tą rolą stracą przypisane uprawnienia.",
     "zarzadzajRolamiIUprawnieniamiUzytkownikow": "Zarządzaj rolami i uprawnieniami użytkowników",
-    "utworzNowaRoleIPrzypiszUprawnienia": "Utwórz nową rolę i przypisz uprawnienia"
+    "utworzNowaRoleIPrzypiszUprawnienia": "Utwórz nową rolę i przypisz uprawnienia",
+    "title": "Role",
+    "newRole": "Nowa rola",
+    "newRoleDialog": "Nowa rola",
+    "nameLabel": "Nazwa",
+    "namePlaceholder": "np. Magazynier",
+    "descriptionLabel": "Opis",
+    "descriptionPlaceholder": "Opcjonalny opis roli",
+    "cancelButton": "Anuluj",
+    "creating": "Tworzenie...",
+    "columns": {
+      "name": "Nazwa",
+      "description": "Opis",
+      "permissions": "Uprawnienia",
+      "type": "Typ",
+      "createdAt": "Utworzono"
+    },
+    "permissionsCount": "{count} uprawnień",
+    "systemRole": "Systemowa",
+    "customRole": "Niestandardowa",
+    "detail": {
+      "systemRole": "Rola systemowa",
+      "customRole": "Rola niestandardowa",
+      "notFound": "Nie znaleziono roli",
+      "saving": "Zapisywanie...",
+      "saveButton": "Zapisz",
+      "nameLabel": "Nazwa",
+      "descriptionLabel": "Opis",
+      "descriptionPlaceholder": "Opcjonalny opis roli",
+      "permissions": "Uprawnienia",
+      "permView": "Podgląd",
+      "permCreate": "Tworzenie",
+      "permEdit": "Edycja",
+      "permDelete": "Usuwanie",
+      "permExport": "Eksport",
+      "permManageIntegrations": "Zarządzanie integracjami",
+      "permManageSettings": "Zarządzanie ustawieniami",
+      "permManageUsers": "Zarządzanie użytkownikami",
+      "permViewReports": "Podgląd raportów",
+      "permViewAudit": "Podgląd dziennika",
+      "permManageAutomation": "Zarządzanie automatyzacją",
+      "permManageWarehouses": "Zarządzanie magazynami"
+    }
   },
   "providers": {
     "orderSource": {
@@ -318,29 +360,75 @@
       "invoicing": "Fakturowanie",
       "supplier": "Hurtownie"
     },
-    "allegro": { "description": "Największa platforma e-commerce w Polsce" },
-    "amazon": { "description": "Globalny marketplace" },
-    "woocommerce": { "description": "Platforma e-commerce na WordPress" },
-    "shopify": { "description": "Platforma e-commerce SaaS" },
-    "prestashop": { "description": "Open-source e-commerce" },
-    "shoper": { "description": "Polska platforma sklepowa" },
-    "ebay": { "description": "Globalny marketplace aukcyjny" },
-    "kaufland": { "description": "Marketplace Kaufland (PL, DE, CZ)" },
-    "olx": { "description": "Polska platforma ogłoszeniowa" },
-    "erli": { "description": "Polski marketplace" },
-    "empik": { "description": "Empik Marketplace na platformie Mirakl" },
-    "inpost": { "description": "Paczkomaty i kurier InPost" },
-    "dhl": { "description": "Kurier DHL Express i Parcel" },
-    "dpd": { "description": "Kurier DPD Polska" },
-    "gls": { "description": "Kurier GLS Poland" },
-    "ups": { "description": "Kurier UPS Polska" },
-    "fedex": { "description": "Kurier FedEx Express" },
-    "poczta_polska": { "description": "Elektroniczny Nadawca" },
-    "orlen_paczka": { "description": "Automaty paczkowe Orlen" },
-    "fakturownia": { "description": "System fakturowania online" },
-    "wfirma": { "description": "Księgowość i fakturowanie online" },
-    "infakt": { "description": "Fakturowanie i księgowość" },
-    "btp": { "description": "Hurtownia BTP — integracja API" }
+    "allegro": {
+      "description": "Największa platforma e-commerce w Polsce"
+    },
+    "amazon": {
+      "description": "Globalny marketplace"
+    },
+    "woocommerce": {
+      "description": "Platforma e-commerce na WordPress"
+    },
+    "shopify": {
+      "description": "Platforma e-commerce SaaS"
+    },
+    "prestashop": {
+      "description": "Open-source e-commerce"
+    },
+    "shoper": {
+      "description": "Polska platforma sklepowa"
+    },
+    "ebay": {
+      "description": "Globalny marketplace aukcyjny"
+    },
+    "kaufland": {
+      "description": "Marketplace Kaufland (PL, DE, CZ)"
+    },
+    "olx": {
+      "description": "Polska platforma ogłoszeniowa"
+    },
+    "erli": {
+      "description": "Polski marketplace"
+    },
+    "empik": {
+      "description": "Empik Marketplace na platformie Mirakl"
+    },
+    "inpost": {
+      "description": "Paczkomaty i kurier InPost"
+    },
+    "dhl": {
+      "description": "Kurier DHL Express i Parcel"
+    },
+    "dpd": {
+      "description": "Kurier DPD Polska"
+    },
+    "gls": {
+      "description": "Kurier GLS Poland"
+    },
+    "ups": {
+      "description": "Kurier UPS Polska"
+    },
+    "fedex": {
+      "description": "Kurier FedEx Express"
+    },
+    "poczta_polska": {
+      "description": "Elektroniczny Nadawca"
+    },
+    "orlen_paczka": {
+      "description": "Automaty paczkowe Orlen"
+    },
+    "fakturownia": {
+      "description": "System fakturowania online"
+    },
+    "wfirma": {
+      "description": "Księgowość i fakturowanie online"
+    },
+    "infakt": {
+      "description": "Fakturowanie i księgowość"
+    },
+    "btp": {
+      "description": "Hurtownia BTP — integracja API"
+    }
   },
   "invoiceTypes": {
     "standard": "Standardowa",
@@ -558,15 +646,7 @@
       "not_contains": "Nie zawiera",
       "starts_with": "Zaczyna się od"
     },
-    "actions": {
-      "set_status": "Ustaw status",
-      "add_tag": "Dodaj tag",
-      "send_email": "Wyślij e-mail",
-      "create_invoice": "Utwórz fakturę",
-      "webhook": "Wywołaj webhook",
-      "activate_listing": "Aktywuj listing",
-      "deactivate_listing": "Dezaktywuj listing"
-    },
+    "actions": "Akcje",
     "regułaZostałaZaktualizowana": "Reguła została zaktualizowana",
     "nieUdałoSieZaktualizowacReguły": "Nie udało się zaktualizować reguły",
     "czyNaPewnoChceszUsunacTeRegułe": "Czy na pewno chcesz usunąć tę regułę?",
@@ -599,7 +679,57 @@
     "dodajAkcje": "Dodaj akcję",
     "brakAkcjiDodajCoNajmniejJednaAkcje": "Brak akcji - dodaj co najmniej jedną akcję do wykonania.",
     "brakHistoriiWykonan": "Brak historii wykonań",
-    "podajDaneTestoweWFormacieJsonAby": "Podaj dane testowe w formacie JSON, aby sprawdzić jak reguła zareagowałaby na zdarzenie."
+    "podajDaneTestoweWFormacieJsonAby": "Podaj dane testowe w formacie JSON, aby sprawdzić jak reguła zareagowałaby na zdarzenie.",
+    "pageTitle": "Automatyzacja",
+    "pageDescription": "Reguły automatyzacji wykonują wewnętrzne akcje (zmiana statusu, wysyłka powiadomień) gdy spełnione są warunki.",
+    "allEvents": "Wszystkie zdarzenia",
+    "columns": {
+      "name": "Nazwa",
+      "event": "Zdarzenie",
+      "priority": "Priorytet",
+      "status": "Status",
+      "executions": "Wykonania",
+      "date": "Data",
+      "entity": "Encja",
+      "conditionsMet": "Warunki"
+    },
+    "statusActive": "Aktywna",
+    "lastExecution": "Ostatnie wykonanie:",
+    "never": "nigdy",
+    "executions": "Wykonania:",
+    "tabs": {
+      "edit": "Edycja",
+      "test": "Test"
+    },
+    "basicInfo": "Podstawowe informacje",
+    "nameRequired": "Nazwa *",
+    "priorityLabel": "Priorytet",
+    "descriptionLabel": "Opis",
+    "selectEvent": "Wybierz zdarzenie",
+    "selectEventPlaceholder": "Wybierz zdarzenie...",
+    "conditions": "Warunki",
+    "addCondition": "Dodaj warunek",
+    "fieldLabel": "Pole",
+    "fieldPlaceholder": "np. status, total_amount",
+    "operatorLabel": "Operator",
+    "actionTypeLabel": "Typ akcji",
+    "actionNewStatus": "Nowy status",
+    "actionTag": "Tag",
+    "actionEmail": "Adres e-mail",
+    "actionInvoiceType": "Typ faktury",
+    "actionWebhookUrl": "URL webhooka",
+    "delayMinutes": "Opoznienie (minuty)",
+    "delayImmediate": "0 = natychmiast",
+    "placeholderStatus": "np. confirmed",
+    "placeholderTag": "np. vip",
+    "placeholderEmail": "np. admin@firma.pl",
+    "placeholderInvoice": "np. vat",
+    "saveChanges": "Zapisz zmiany",
+    "testDataJson": "Dane testowe (JSON)",
+    "runTest": "Uruchom test",
+    "testResult": "Wynik testu",
+    "higherPriorityHint": "Wyższy priorytet = wcześniejsze wykonanie",
+    "cancelButton": "Anuluj"
   },
   "orders": {
     "title": "Zamówienia",
@@ -1479,7 +1609,49 @@
     "mmPrzesuniecieMiedzymagazynowe": "MM - Przesunięcie międzymagazynowe",
     "zarzadzajDokumentamiPzWzIMm": "Zarządzaj dokumentami PZ, WZ i MM",
     "utworzDokumentPzWzLubMm": "Utwórz dokument PZ, WZ lub MM",
-    "nieUdałoSieZaładowacDokumentu": "Nie udało się załadować dokumentu."
+    "nieUdałoSieZaładowacDokumentu": "Nie udało się załadować dokumentu.",
+    "pzLabel": "PZ - Przyjęcie zewnętrzne",
+    "wzLabel": "WZ - Wydanie zewnętrzne",
+    "mmLabel": "MM - Przesunięcie międzymagazynowe",
+    "statusDraft": "Szkic",
+    "statusConfirmed": "Zatwierdzony",
+    "statusCancelled": "Anulowany",
+    "confirming": "Zatwierdzanie...",
+    "cancelling": "Anulowanie...",
+    "cancelButton": "Anuluj",
+    "details": "Szczegóły",
+    "type": "Typ:",
+    "warehouse": "Magazyn:",
+    "targetWarehouse": "Magazyn docelowy:",
+    "supplier": "Dostawca:",
+    "dates": "Daty",
+    "createdAt": "Utworzono:",
+    "confirmedAt": "Zatwierdzono:",
+    "notesLabel": "Uwagi:",
+    "items": "Pozycje ({count})",
+    "noItems": "Brak pozycji",
+    "columns": {
+      "product": "Produkt",
+      "variant": "Wariant",
+      "unitPrice": "Cena jedn.",
+      "notes": "Uwagi"
+    },
+    "newDocument": "Nowy dokument magazynowy",
+    "docTypeLabel": "Typ dokumentu *",
+    "selectType": "Wybierz typ",
+    "warehouseLabel": "Magazyn *",
+    "selectWarehouse": "Wybierz magazyn",
+    "targetWarehouseLabel": "Magazyn docelowy *",
+    "selectTargetWarehouse": "Wybierz magazyn docelowy",
+    "supplierLabel": "Dostawca",
+    "notesPlaceholder": "Opcjonalne uwagi do dokumentu",
+    "itemsLabel": "Pozycje *",
+    "productLabel": "Produkt",
+    "searchProduct": "Szukaj produktu...",
+    "unitPriceLabel": "Cena jedn.",
+    "documentCreated": "Dokument {number} został utworzony",
+    "creating": "Tworzenie...",
+    "zmien": "Zmień"
   },
   "stocktakes": {
     "title": "Inwentaryzacja",
@@ -1576,7 +1748,16 @@
       "twoFaEnabled": "2FA jest włączone",
       "twoFaDisabled": "2FA jest wyłączone",
       "enable2fa": "Włącz 2FA",
-      "disable2fa": "Wyłącz 2FA"
+      "disable2fa": "Wyłącz 2FA",
+      "authenticatorApp": "aplikacji uwierzytelniającej (np. Google Authenticator, Authy) przy",
+      "statusLabel": "Status",
+      "twoFaActive": "2FA aktywne",
+      "activatedAt": "Aktywowane:",
+      "setupTitle": "Konfiguracja 2FA",
+      "verificationCode": "Kod weryfikacyjny",
+      "cancelButton": "Anuluj",
+      "twoFaCode": "Kod 2FA",
+      "password": "Hasło"
     },
     "ustawieniaKsiegowosciZapisane": "Ustawienia księgowości zapisane",
     "nieUdałoSieZapisacUstawien": "Nie udało się zapisać ustawień",
@@ -1746,7 +1927,280 @@
     "wybierzPrzyJakichZmianachStatusuWysyłacEmail": "Wybierz przy jakich zmianach statusu wysyłać email do klienta",
     "wysyłajAutomatyczneSmsyPrzyZmianieStatusuZamowieni": "Wysyłaj automatyczne SMS-y przy zmianie statusu zamówienia",
     "wybierzPrzyJakichZmianachStatusuWysyłacSms": "Wybierz przy jakich zmianach statusu wysyłać SMS do klienta",
-    "eksportujWszystkieUstawieniaSystemuDoPlikuJson": "Eksportuj wszystkie ustawienia systemu do pliku JSON lub zaimportuj wcześniej wyeksportowane ustawienia."
+    "eksportujWszystkieUstawieniaSystemuDoPlikuJson": "Eksportuj wszystkie ustawienia systemu do pliku JSON lub zaimportuj wcześniej wyeksportowane ustawienia.",
+    "saveSettings": "Zapisz ustawienia",
+    "saveBeforeTest": "Zapisz ustawienia przed testem",
+    "connectedTo": "Połączono z {provider}",
+    "providerLabel": "Dostawca",
+    "noneOption": "Brak",
+    "accounting": {
+      "fakturownia": {
+        "description": "Popularny polski system fakturowania online. Obsługuje faktury VAT, proforma, korekty. Integracja przez API REST.",
+        "subdomain": "Subdomena",
+        "subdomainPlaceholder": "moja-firma",
+        "apiToken": "Token API",
+        "apiTokenPlaceholder": "Token API z Fakturowni"
+      },
+      "wfirma": {
+        "description": "System ERP i fakturowania dla firm. Obsługuje pełną księgowość, faktury VAT, JPK. API REST z autoryzacją kluczem API.",
+        "apiKey": "Klucz API",
+        "apiKeyPlaceholder": "Klucz API z wFirma"
+      },
+      "infakt": {
+        "description": "Prosty system fakturowania dla freelancerów i małych firm. Automatyczna wysyłka faktur, rozliczenia. API REST v3.",
+        "apiKey": "Klucz API",
+        "apiKeyPlaceholder": "Klucz API z inFakt"
+      }
+    },
+    "currencies": {
+      "title": "Waluty i kursy wymiany",
+      "fetchingNBP": "Pobieranie...",
+      "fetchNBP": "Pobierz kursy NBP",
+      "fetchedNBP": "Pobrano {count} kursów z NBP",
+      "newRate": "Nowy kurs",
+      "newExchangeRate": "Nowy kurs wymiany",
+      "baseCurrency": "Waluta bazowa",
+      "targetCurrency": "Waluta docelowa",
+      "rate": "Kurs",
+      "ratePlaceholder": "np. 0.2326",
+      "cancelButton": "Anuluj",
+      "adding": "Dodawanie...",
+      "addButton": "Dodaj",
+      "fetchedAt": "Pobrano"
+    },
+    "customFields": {
+      "title": "Pola dodatkowe",
+      "fieldsTitle": "Pola",
+      "keyLabel": "Klucz",
+      "keyPlaceholder": "np. numer_faktury",
+      "labelLabel": "Etykieta",
+      "labelPlaceholder": "np. Numer faktury",
+      "typeLabel": "Typ",
+      "typeText": "Tekst",
+      "typeNumber": "Liczba",
+      "typeSelect": "Lista wyboru",
+      "typeDate": "Data",
+      "typeCheckbox": "Tak/Nie",
+      "required": "Wymagane",
+      "options": "Opcje (po przecinku)",
+      "addField": "Dodaj pole",
+      "saving": "Zapisywanie...",
+      "saveButton": "Zapisz"
+    },
+    "helpdesk": {
+      "title": "Helpdesk (Freshdesk)",
+      "freshdeskConfig": "Konfiguracja Freshdesk",
+      "activeIntegration": "Aktywna integracja",
+      "freshdeskDomain": "Domena Freshdesk",
+      "domainPlaceholder": "mojafirma",
+      "domainHint": "Domena bez .freshdesk.com (np. \"mojafirma\" dla mojafirma.freshdesk.com)",
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Wklej klucz API Freshdesk",
+      "apiKeyHint": "Klucz API znajdziesz w Freshdesk > Profil > API key",
+      "freshdeskSaved": "Ustawienia Freshdesk zapisane",
+      "columns": {
+        "subject": "Temat",
+        "status": "Status",
+        "priority": "Priorytet",
+        "createdAt": "Utworzono"
+      },
+      "statusOpen": "Otwarty",
+      "statusPending": "Oczekujący",
+      "statusResolved": "Rozwiązany",
+      "statusClosed": "Zamknięty",
+      "priorityLow": "Niski",
+      "priorityMedium": "Średni",
+      "priorityHigh": "Wysoki",
+      "priorityUrgent": "Pilny"
+    },
+    "inventory": {
+      "title": "Ustawienia magazynowe",
+      "subtitle": "Konfiguruj zachowanie systemu magazynowego",
+      "controlTitle": "Kontrola magazynowa",
+      "strictModeWarning": "Ręczna zmiana stanów magazynowych (PUT /warehouses/{id}/stock) jest zablokowana. Wszystkie zmiany muszą przechodzić przez dokumenty magazynowe (PZ, WZ, MM) lub inwentaryzacje.",
+      "allChangesMustGoThrough": "Wszystkie zmiany będą musiały przechodzić przez dokumenty magazynowe (PZ/WZ/MM)."
+    },
+    "marketing": {
+      "title": "Marketing (Mailchimp)",
+      "integrationStatus": "Status integracji",
+      "configured": "Skonfigurowany",
+      "notConfigured": "Nieskonfigurowany",
+      "mailchimpConfig": "Konfiguracja Mailchimp",
+      "activeIntegration": "Aktywna integracja",
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Wklej klucz API Mailchimp",
+      "apiKeyHint": "Klucz API znajdziesz w Mailchimp > Account > API keys",
+      "listId": "ID listy (Audience)",
+      "listIdHint": "ID listy znajdziesz w Mailchimp > Audience > Settings",
+      "mailchimpSaved": "Ustawienia Mailchimp zapisane",
+      "syncCompleted": "Synchronizacja zakończona: {synced} zsynchronizowanych, {failed} błędów",
+      "syncNow": "Synchronizuj teraz",
+      "newCampaign": "Nowa kampania",
+      "campaignName": "Nazwa kampanii",
+      "emailSubject": "Temat emaila",
+      "campaignCreated": "Kampania utworzona (ID: {id})"
+    },
+    "messageTemplates": {
+      "newTemplate": "Nowy szablon",
+      "withClients": "z klientami",
+      "columns": {
+        "name": "Nazwa",
+        "subject": "Temat",
+        "active": "Aktywny",
+        "createdAt": "Utworzono"
+      },
+      "activeStatus": "Aktywny",
+      "inactiveStatus": "Nieaktywny",
+      "editTemplate": "Edytuj szablon",
+      "newTemplateDialog": "Nowy szablon",
+      "nameLabel": "Nazwa",
+      "subjectLabel": "Temat",
+      "variablesLabel": "Zmienne",
+      "availableVars": "Dostępne zmienne:",
+      "activeLabel": "Aktywny",
+      "cancelButton": "Anuluj",
+      "savingButton": "Zapisywanie...",
+      "saveButton": "Zapisz"
+    },
+    "notifications": {
+      "title": "Powiadomienia",
+      "emailNotifications": "Powiadomienia email",
+      "smsNotifications": "Powiadomienia SMS",
+      "smtpConfig": "Konfiguracja SMTP",
+      "smtpHost": "Host SMTP",
+      "port": "Port",
+      "senderEmail": "Email nadawcy",
+      "senderName": "Nazwa nadawcy",
+      "senderNamePlaceholder": "Moja Firma",
+      "triggers": "Wyzwalacze",
+      "testEmail": "Testowy email",
+      "testSMS": "Testowy SMS",
+      "savedEmail": "Ustawienia zapisane",
+      "savedSMS": "Ustawienia SMS zapisane",
+      "smsapiConfig": "Konfiguracja SMSAPI.pl",
+      "smsApiToken": "Token API",
+      "smsApiTokenPlaceholder": "Wklej token z panelu SMSAPI.pl",
+      "smsApiTokenHint": "Token znajdziesz w panelu SMSAPI.pl > Ustawienia > API",
+      "smsSenderName": "Nazwa nadawcy",
+      "smsSenderHint": "Nazwa zarejestrowana w panelu SMSAPI.pl",
+      "smsAvailableVars": "Dostępne zmienne:",
+      "phoneHint": "Numer telefonu w formacie E.164 (np. 48123456789)",
+      "orderConfirmed": "Potwierdzenie zamówienia",
+      "orderShipped": "Wysyłka zamówienia",
+      "orderDelivered": "Dostarczenie zamówienia",
+      "orderCancelled": "Anulowanie zamówienia",
+      "refunded": "Zwrot środków",
+      "outForDelivery": "W doręczeniu",
+      "inTransit": "W transporcie"
+    },
+    "orderStatuses": "Statusy zamówień",
+    "priceLists": {
+      "title": "Cenniki B2B",
+      "newPriceList": "Nowy cennik",
+      "newPriceListDialog": "Nowy cennik",
+      "nameLabel": "Nazwa",
+      "namePlaceholder": "np. Cennik hurtowy",
+      "descriptionLabel": "Opis",
+      "descriptionPlaceholder": "Opcjonalny opis cennika",
+      "discountType": "Typ rabatu",
+      "percentage": "Procentowy",
+      "fixed": "Kwotowy",
+      "override": "Cena nadpisana",
+      "currency": "Waluta",
+      "cancelButton": "Anuluj",
+      "creating": "Tworzenie...",
+      "columns": {
+        "name": "Nazwa",
+        "discountType": "Typ rabatu",
+        "currency": "Waluta",
+        "active": "Aktywny",
+        "createdAt": "Utworzono",
+        "product": "Produkt",
+        "priceOrDiscount": "Cena",
+        "discount": "Rabat",
+        "addedAt": "Dodano"
+      },
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "yes": "Tak",
+      "no": "Nie",
+      "notFound": "Nie znaleziono cennika",
+      "backToList": "Powrót do listy",
+      "nameUpdated": "Nazwa zaktualizowana",
+      "descriptionUpdated": "Opis zaktualizowany",
+      "deactivated": "Cennik dezaktywowany",
+      "activated": "Cennik aktywowany",
+      "productAdded": "Produkt dodany do cennika",
+      "items": "Pozycje cennika",
+      "addProduct": "Dodaj produkt",
+      "addProductDialog": "Dodaj produkt do cennika",
+      "productLabel": "Produkt",
+      "selectProduct": "Wybierz produkt...",
+      "priceLabel": "Cena ({currency})",
+      "discountLabel": "Rabat ({unit})",
+      "addingButton": "Dodawanie...",
+      "addButton": "Dodaj",
+      "saveButton": "Zapisz"
+    },
+    "printTemplates": {
+      "title": "Szablony wydruku",
+      "saved": "Szablony wydruku zapisane",
+      "saveButton": "Zapisz",
+      "templateVarInfo": "typu szablonu. Funkcja {{inc $i}} zwiększa indeks o 1.",
+      "packingSlip": "List przewozowy",
+      "returnForm": "Formularz zwrotu",
+      "htmlTemplate": "Szablon HTML"
+    },
+    "productCategories": {
+      "newCategory": "Nowa kategoria",
+      "subcategoryPlaceholder": "Nazwa podkategorii...",
+      "categoryPlaceholder": "Nazwa kategorii...",
+      "creating": "Tworzenie...",
+      "cancelButton": "Anuluj",
+      "categoryTree": "Drzewo kategorii",
+      "editTitle": "Edytuj",
+      "categoryNameRequired": "Nazwa kategorii jest wymagana",
+      "categoryUpdated": "Kategoria zaktualizowana",
+      "categoryCreated": "Kategoria utworzona"
+    },
+    "webhooks": {
+      "viewDeliveryLog": "Zobacz log dostaw",
+      "endpointLabel": "Endpoint {index}",
+      "nameLabel": "Nazwa",
+      "urlLabel": "URL",
+      "secretLabel": "Secret",
+      "secretPlaceholder": "Klucz tajny do podpisywania",
+      "activeLabel": "Aktywny",
+      "eventsLabel": "Zdarzenia",
+      "addEndpoint": "Dodaj endpoint",
+      "saving": "Zapisywanie...",
+      "saveButton": "Zapisz",
+      "eventMustHaveOne": "Endpoint \"{name}\" musi mieć co najmniej jedno zdarzenie",
+      "eventOrderCreated": "Zamówienie utworzone",
+      "eventOrderStatusChanged": "Status zamówienia zmieniony",
+      "eventOrderDeleted": "Zamówienie usunięte",
+      "eventProductCreated": "Produkt utworzony",
+      "eventProductUpdated": "Produkt zaktualizowany",
+      "eventProductDeleted": "Produkt usunięty",
+      "eventShipmentCreated": "Przesyłka utworzona",
+      "eventShipmentUpdated": "Przesyłka zaktualizowana"
+    },
+    "webhookDeliveries": {
+      "allEvents": "Wszystkie zdarzenia",
+      "allStatuses": "Wszystkie statusy",
+      "statusSuccess": "Sukces",
+      "statusFailed": "Błąd",
+      "columns": {
+        "time": "Czas",
+        "event": "Zdarzenie",
+        "code": "Kod"
+      },
+      "eventTypePlaceholder": "Typ zdarzenia"
+    },
+    "language": "Język",
+    "languageDescription": "Wybierz język interfejsu",
+    "powrotDoListy": "Powrót do listy",
+    "loading": "Ładowanie..."
   },
   "integrations": {
     "title": "Integracje",
@@ -2039,7 +2493,21 @@
     "nieUdałoSieZaładowacDanychSubskrypcji": "Nie udało się załadować danych subskrypcji.",
     "maksUzytkownikow": "Maks. użytkowników",
     "zamowienMiesiac": "Zamówień / miesiąc",
-    "brakLimitowWBiezacymPlanie": "Brak limitów w bieżącym planie."
+    "brakLimitowWBiezacymPlanie": "Brak limitów w bieżącym planie.",
+    "title": "Subskrypcja",
+    "statusTrialing": "Okres próbny",
+    "statusActive": "Aktywna",
+    "statusPastDue": "Zaległa płatność",
+    "statusCanceled": "Anulowana",
+    "statusSuspended": "Zawieszona",
+    "intervalMonth": "Miesięcznie",
+    "intervalYear": "Rocznie",
+    "trialEndsIn": "Okres próbny kończy się za",
+    "days": "{count} dni",
+    "accessExpires": "Dostęp wygasa:",
+    "nextRenewal": "Następne odnowienie:",
+    "planLimits": "Limity planu",
+    "maxIntegrations": "Maks. integracji"
   },
   "ksef": {
     "environments": {
@@ -2057,10 +2525,32 @@
     "automatycznieWysyłajNowoUtworzoneFakturyDoKsef": "Automatycznie wysyłaj nowo utworzone faktury do KSeF.",
     "właczIntegracjeKsefAbyKorzystacZAutomatycznego": "Włącz integrację KSeF, aby korzystać z automatycznego wysyłania.",
     "daneFirmyUzywaneWFakturachStrukturalnychKsef": "Dane firmy używane w fakturach strukturalnych KSeF",
-    "sprawdzCzyPołaczenieZKsefDziałaPoprawnie": "Sprawdź czy połączenie z KSeF działa poprawnie"
+    "sprawdzCzyPołaczenieZKsefDziałaPoprawnie": "Sprawdź czy połączenie z KSeF działa poprawnie",
+    "title": "KSeF - Krajowy System e-Faktur",
+    "subtitle": "Konfiguracja integracji z Krajowym Systemem e-Faktur",
+    "integrationStatus": "Status integracji",
+    "settingsSaved": "Ustawienia KSeF zapisane",
+    "autoSendRetry": "Nieudane wysyłki będą automatycznie ponawiane (maks. 3 próby).",
+    "environmentDescription": "Wybierz środowisko KSeF (testowe do testów, produkcyjne do wysyłki prawdziwych faktur)",
+    "authData": "Dane autoryzacyjne",
+    "authDescription": "NIP firmy i token autoryzacyjny z portalu KSeF",
+    "nipHint": "10-cyfrowy numer identyfikacji podatkowej",
+    "authToken": "Token autoryzacyjny",
+    "authTokenPlaceholder": "Token z portalu KSeF",
+    "generateTokenHint": "Wygeneruj token w portalu {portal}",
+    "companyData": "Dane firmy (sprzedawca)",
+    "companyName": "Nazwa firmy",
+    "companyNamePlaceholder": "Nazwa firmy sp. z o.o.",
+    "street": "Ulica",
+    "city": "Miasto",
+    "postalCode": "Kod pocztowy",
+    "country": "Kraj",
+    "testpołaczenia": "Test połączenia",
+    "nieudałosiezapisacustawien": "Nie udało się zapisać ustawień",
+    "nieudałosieprzetestowacpołaczenia": "Nie udało się przetestować połączenia"
   },
   "syncJobs": {
-    "title": "Synchronizacja",
+    "title": "Historia synchronizacji",
     "subtitle": "Historia zadań synchronizacji",
     "types": {
       "all": "Wszystkie",
@@ -2081,7 +2571,26 @@
     "przegladWszystkichZadanSynchronizacjiZZewnetrznymi": "Przegląd wszystkich zadań synchronizacji z zewnętrznymi integracjami",
     "language": "Język",
     "languageDescription": "Wybierz preferowany język",
-    "languageSaveFailed": "Nie udało się zapisać preferencji języka"
+    "languageSaveFailed": "Nie udało się zapisać preferencji języka",
+    "statusAll": "Wszystkie",
+    "statusRunning": "W trakcie",
+    "statusCompleted": "Zakończone",
+    "statusFailed": "Nieudane",
+    "typeAll": "Wszystkie",
+    "typeOrders": "Zamówienia",
+    "typeProducts": "Produkty",
+    "typeStock": "Stany magazynowe",
+    "typePrices": "Ceny",
+    "columns": {
+      "jobType": "Typ zadania",
+      "integration": "Integracja",
+      "status": "Status",
+      "processed": "Przetworzone",
+      "message": "Komunikat",
+      "createdAt": "Utworzono:"
+    },
+    "metadataJson": "Metadane (JSON):",
+    "komunikatbłedu": "Komunikat błędu:"
   },
   "shared": {
     "sidebar": {
@@ -2740,7 +3249,12 @@
     "brakMapowanKategoriiUruchomSynchronizacjeMapowania": "Brak mapowań kategorii. Uruchom synchronizację — mapowania zostaną utworzone automatycznie.",
     "zarzadzajProduktami": "Zarządzaj produktami",
     "odłaczOdProduktu": "Odłącz od produktu",
-    "0Partspushpominieto": "0) parts.push(`Pominięto: $"
+    "0Partspushpominieto": "0) parts.push(`Pominięto: $",
+    "btp": {
+      "step1": "Import XML",
+      "step2": "Klucze API",
+      "step3": "Ustawienia synchronizacji"
+    }
   },
   "tools": {
     "nieobsługiwanyTypPlikuDozwoloneJpegPngWebp": "Nieobsługiwany typ pliku. Dozwolone: JPEG, PNG, WEBP.",

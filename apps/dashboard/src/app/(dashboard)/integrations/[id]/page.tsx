@@ -88,7 +88,7 @@ export default function IntegrationDetailPage() {
   if (!integration) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Nie znaleziono integracji</h1>
+        <h1 className="text-2xl font-bold">{t("integrationNotFound")}</h1>
         <Button asChild variant="outline">
           <Link href="/integrations">{t("detail.backToList")}</Link>
         </Button>
@@ -191,7 +191,7 @@ export default function IntegrationDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{providerLabel}</h1>
             <p className="text-muted-foreground">
-              Utworzona {formatDate(integration.created_at)}
+              {t("createdOn", { date: formatDate(integration.created_at) })}
             </p>
           </div>
         </div>
@@ -214,7 +214,7 @@ export default function IntegrationDetailPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Dostawca</p>
+                <p className="text-sm text-muted-foreground">{t("provider")}</p>
                 <p className="mt-1 font-medium">{providerLabel}</p>
               </div>
               <div>
@@ -228,7 +228,7 @@ export default function IntegrationDetailPage() {
               </div>
               {integration.label && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Etykieta</p>
+                  <p className="text-sm text-muted-foreground">{t("label")}</p>
                   <p className="mt-1 font-medium">{integration.label}</p>
                 </div>
               )}
@@ -237,12 +237,12 @@ export default function IntegrationDetailPage() {
                   {t("daneUwierzytelniajace")}
                 </p>
                 <p className="mt-1 font-medium">
-                  {integration.has_credentials ? "Skonfigurowane" : "Brak"}
+                  {integration.has_credentials ? t("configured") : t("notConfigured")}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia synchronizacja
+                  {t("lastSync")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.last_sync_at
@@ -252,7 +252,7 @@ export default function IntegrationDetailPage() {
               </div>
               {integration.sync_cursor && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Kursor synchronizacji</p>
+                  <p className="text-sm text-muted-foreground">{t("syncCursor")}</p>
                   <p className="mt-1 font-mono text-xs truncate">
                     {integration.sync_cursor}
                   </p>
@@ -264,7 +264,7 @@ export default function IntegrationDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia aktualizacja
+                  {t("lastUpdated")}
                 </p>
                 <p className="mt-1 font-medium">
                   {formatDate(integration.updated_at)}
@@ -299,8 +299,8 @@ export default function IntegrationDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Aktywna</SelectItem>
-                  <SelectItem value="inactive">Nieaktywna</SelectItem>
+                  <SelectItem value="active">{t("statusActive")}</SelectItem>
+                  <SelectItem value="inactive">{t("statusInactive")}</SelectItem>
                 </SelectContent>
               </Select>
             </CardContent>
@@ -308,7 +308,7 @@ export default function IntegrationDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Aktualizuj dane integracji</CardTitle>
+              <CardTitle>{t("updateIntegrationData")}</CardTitle>
             </CardHeader>
             <CardContent>
               <IntegrationForm
@@ -375,7 +375,7 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Mapowanie kategorii marketplace</CardTitle>
+        <CardTitle>{t("categoryMapping")}</CardTitle>
         <CardDescription>
           {t("powiazaniaMiedzyKategoriamiZMarketplaceAKategoriam")}
         </CardDescription>
@@ -389,11 +389,11 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Kategoria marketplace</TableHead>
+                <TableHead>{t("marketplaceCategory")}</TableHead>
                 <TableHead>{t("detail.externalId")}</TableHead>
-                <TableHead>Kategoria OMS</TableHead>
+                <TableHead>{t("omsCategory")}</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="w-[100px]">Akcje</TableHead>
+                <TableHead className="w-[100px]">{t("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -417,7 +417,7 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
                             confirmed: true,
                           },
                           {
-                            onSuccess: () => toast.success("Mapowanie zaktualizowane"),
+                            onSuccess: () => toast.success(t("mappingUpdated")),
                             onError: (error) => toast.error(getErrorMessage(error)),
                           }
                         );
@@ -430,15 +430,15 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
                     {mapping.confirmed ? (
                       <Badge variant="default" className="gap-1">
                         <Check className="h-3 w-3" />
-                        Potwierdzone
+                        {t("confirmed")}
                       </Badge>
                     ) : mapping.auto_created ? (
                       <Badge variant="secondary" className="gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        Auto-utworzone
+                        {t("autoCreated")}
                       </Badge>
                     ) : (
-                      <Badge variant="outline">Nieprzypisane</Badge>
+                      <Badge variant="outline">{t("unassigned")}</Badge>
                     )}
                   </TableCell>
                   <TableCell>
@@ -458,7 +458,7 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
                                 confirmed: true,
                               },
                               {
-                                onSuccess: () => toast.success("Mapowanie potwierdzone"),
+                                onSuccess: () => toast.success(t("mappingConfirmed")),
                                 onError: (error) => toast.error(getErrorMessage(error)),
                               }
                             );

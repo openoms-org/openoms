@@ -83,11 +83,11 @@ function AttributeEditor({
 
   return (
     <div className="space-y-2">
-      <Label>Atrybuty</Label>
+      <Label>{t("variants.attributes")}</Label>
       {attributes.map((attr, i) => (
         <div key={i} className="flex gap-2 items-center">
           <Input
-            placeholder="Klucz (np. Kolor)"
+            placeholder={t("variants.keyPlaceholder")}
             value={attr.key}
             onChange={(e) => updateAttribute(i, "key", e.target.value)}
             className="flex-1"
@@ -110,7 +110,7 @@ function AttributeEditor({
       ))}
       <Button type="button" variant="outline" size="sm" onClick={addAttribute}>
         <Plus className="h-3 w-3 mr-1" />
-        Dodaj atrybut
+        {t("variants.addAttribute")}
       </Button>
     </div>
   );
@@ -243,7 +243,7 @@ export default function ProductVariantsPage() {
   if (!product) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Nie znaleziono produktu</h1>
+        <h1 className="text-2xl font-bold">{t("variants.productNotFound")}</h1>
         <Button asChild variant="outline">
           <Link href="/products">{t("detail.backToList")}</Link>
         </Button>
@@ -265,12 +265,12 @@ export default function ProductVariantsPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">{product.name}</h1>
-            <p className="text-muted-foreground">Warianty produktu</p>
+            <p className="text-muted-foreground">{t("variants.title")}</p>
           </div>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Dodaj wariant
+          {t("variants.addVariant")}
         </Button>
       </div>
 
@@ -286,7 +286,7 @@ export default function ProductVariantsPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Warianty ({variantsData?.total ?? 0})
+              {t("variants.title")} ({variantsData?.total ?? 0})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -294,15 +294,15 @@ export default function ProductVariantsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nazwa</TableHead>
+                    <TableHead>{t("variants.name")}</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>EAN</TableHead>
-                    <TableHead>Cena nadpisana</TableHead>
-                    <TableHead>Stan magazynowy</TableHead>
-                    <TableHead>Atrybuty</TableHead>
-                    <TableHead>Pozycja</TableHead>
-                    <TableHead>Aktywny</TableHead>
-                    <TableHead className="w-[100px]">Akcje</TableHead>
+                    <TableHead>{t("variants.priceOverride")}</TableHead>
+                    <TableHead>{t("variants.stockQuantity")}</TableHead>
+                    <TableHead>{t("variants.attributes")}</TableHead>
+                    <TableHead>{t("variants.position")}</TableHead>
+                    <TableHead>{t("variants.active")}</TableHead>
+                    <TableHead className="w-[100px]">{t("variants.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -356,7 +356,7 @@ export default function ProductVariantsPage() {
                         <Badge
                           variant={variant.active ? "default" : "outline"}
                         >
-                          {variant.active ? "Tak" : "Nie"}
+                          {variant.active ? t("variants.yes") : t("variants.no")}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -390,18 +390,18 @@ export default function ProductVariantsPage() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Dodaj wariant</DialogTitle>
+            <DialogTitle>{t("variants.addVariant")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="create-name">Nazwa *</Label>
+              <Label htmlFor="create-name">{t("variants.name")} *</Label>
               <Input
                 id="create-name"
                 value={createForm.name}
                 onChange={(e) =>
                   setCreateForm({ ...createForm, name: e.target.value })
                 }
-                placeholder="np. Czerwony XL"
+                placeholder={t("variants.namePlaceholder")}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -428,7 +428,7 @@ export default function ProductVariantsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="create-price">Cena nadpisana</Label>
+                <Label htmlFor="create-price">{t("variants.priceOverride")}</Label>
                 <Input
                   id="create-price"
                   type="number"
@@ -444,7 +444,7 @@ export default function ProductVariantsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="create-stock">Stan magazynowy</Label>
+                <Label htmlFor="create-stock">{t("variants.stockQuantity")}</Label>
                 <Input
                   id="create-stock"
                   type="number"
@@ -461,7 +461,7 @@ export default function ProductVariantsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="create-weight">Waga (kg)</Label>
+                <Label htmlFor="create-weight">{t("variants.weightKg")}</Label>
                 <Input
                   id="create-weight"
                   type="number"
@@ -474,7 +474,7 @@ export default function ProductVariantsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="create-position">Pozycja</Label>
+                <Label htmlFor="create-position">{t("variants.position")}</Label>
                 <Input
                   id="create-position"
                   type="number"
@@ -494,7 +494,7 @@ export default function ProductVariantsPage() {
                   setCreateForm({ ...createForm, active: checked })
                 }
               />
-              <Label htmlFor="create-active">Aktywny</Label>
+              <Label htmlFor="create-active">{t("variants.active")}</Label>
             </div>
             <AttributeEditor
               attributes={createForm.attributes}
@@ -508,13 +508,13 @@ export default function ProductVariantsPage() {
               variant="outline"
               onClick={() => setShowCreateDialog(false)}
             >
-              Anuluj
+              {t("variants.cancel")}
             </Button>
             <Button
               onClick={handleCreate}
               disabled={!createForm.name || createVariant.isPending}
             >
-              {createVariant.isPending ? "Dodawanie..." : "Dodaj"}
+              {createVariant.isPending ? t("variants.adding") : t("variants.add")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -622,11 +622,11 @@ function EditVariantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edytuj wariant</DialogTitle>
+          <DialogTitle>{t("variants.editVariant")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="edit-name">Nazwa *</Label>
+            <Label htmlFor="edit-name">{t("variants.name")} *</Label>
             <Input
               id="edit-name"
               value={form.name}
@@ -653,7 +653,7 @@ function EditVariantDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="edit-price">Cena nadpisana</Label>
+              <Label htmlFor="edit-price">{t("variants.priceOverride")}</Label>
               <Input
                 id="edit-price"
                 type="number"
@@ -666,7 +666,7 @@ function EditVariantDialog({
               />
             </div>
             <div>
-              <Label htmlFor="edit-stock">Stan magazynowy</Label>
+              <Label htmlFor="edit-stock">{t("variants.stockQuantity")}</Label>
               <Input
                 id="edit-stock"
                 type="number"
@@ -680,7 +680,7 @@ function EditVariantDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="edit-weight">Waga (kg)</Label>
+              <Label htmlFor="edit-weight">{t("variants.weightKg")}</Label>
               <Input
                 id="edit-weight"
                 type="number"
@@ -693,7 +693,7 @@ function EditVariantDialog({
               />
             </div>
             <div>
-              <Label htmlFor="edit-position">Pozycja</Label>
+              <Label htmlFor="edit-position">{t("variants.position")}</Label>
               <Input
                 id="edit-position"
                 type="number"
@@ -713,7 +713,7 @@ function EditVariantDialog({
                 setForm({ ...form, active: checked })
               }
             />
-            <Label htmlFor="edit-active">Aktywny</Label>
+            <Label htmlFor="edit-active">{t("variants.active")}</Label>
           </div>
           <AttributeEditor
             attributes={form.attributes}
@@ -722,13 +722,13 @@ function EditVariantDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {t("variants.cancel")}
           </Button>
           <Button
             onClick={handleUpdate}
             disabled={!form.name || updateVariant.isPending}
           >
-            {updateVariant.isPending ? "Zapisywanie..." : "Zapisz"}
+            {updateVariant.isPending ? t("variants.saving") : t("variants.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

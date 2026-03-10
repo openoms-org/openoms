@@ -68,18 +68,18 @@ export default function CustomersPage() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Klienci</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">{t("bazaKlientowIHistoriaZamowien")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
             <Link href="/customers/import">
               <Upload className="h-4 w-4" />
-              Importuj CSV
+              {t("importCsv")}
             </Link>
           </Button>
           <Button asChild>
-            <Link href="/customers/new">Nowy klient</Link>
+            <Link href="/customers/new">{t("newCustomer")}</Link>
           </Button>
         </div>
       </div>
@@ -88,14 +88,14 @@ export default function CustomersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Szukaj po imieniu, e-mail, telefonie..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
         <Button type="submit" variant="outline" size="sm">
-          Szukaj
+          {tc("search")}
         </Button>
         <div className="ml-auto">
           <DensityToggle />
@@ -123,7 +123,7 @@ export default function CustomersPage() {
           icon={Contact}
           title={t("brakKlientow")}
           description={t("dodajPierwszegoKlientaAbySledzicZamowieniaIHistori")}
-          action={{ label: "Nowy klient", href: "/customers/new" }}
+          action={{ label: t("newCustomer"), href: "/customers/new" }}
         />
       ) : (
         <>
@@ -132,12 +132,12 @@ export default function CustomersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("form.fullName")}</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead>Firma</TableHead>
+                  <TableHead>{t("form.email")}</TableHead>
+                  <TableHead>{t("form.phone")}</TableHead>
+                  <TableHead>{t("form.company")}</TableHead>
                   <TableHead className="text-right">{t("zamowien")}</TableHead>
                   <TableHead className="text-right">{t("wydanołacznie")}</TableHead>
-                  <TableHead>Tagi</TableHead>
+                  <TableHead>{tc("tags")}</TableHead>
                   <TableHead className="w-[60px]" />
                 </TableRow>
               </TableHeader>

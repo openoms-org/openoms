@@ -159,12 +159,12 @@ function ThreadList({
                       variant="default"
                       className="shrink-0 text-[10px] px-1.5 py-0"
                     >
-                      Nowa
+                      {t("newBadge")}
                     </Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {thread.subject || (thread.offer ? thread.offer.name : "Brak tematu")}
+                  {thread.subject || (thread.offer ? thread.offer.name : t("noSubject"))}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {formatDate(thread.lastMessageDateTime)}

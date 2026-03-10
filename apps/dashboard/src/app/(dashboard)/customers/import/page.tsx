@@ -28,6 +28,7 @@ import { useTranslations } from "next-intl";
 
 export default function CustomerImportPage() {
   const t = useTranslations("customers");
+  const tc = useTranslations("common");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CustomerImportPreview | null>(null);
   const [result, setResult] = useState<CustomerImportResult | null>(null);
@@ -61,7 +62,7 @@ export default function CustomerImportPage() {
       if (droppedFile && droppedFile.name.endsWith(".csv")) {
         handleFile(droppedFile);
       } else {
-        toast.error("Wybierz plik CSV");
+        toast.error(t("selectCsvFile"));
       }
     },
     [handleFile]
@@ -73,7 +74,7 @@ export default function CustomerImportPage() {
       onSuccess: (data) => {
         setResult(data);
         toast.success(
-          `Import zakończony: ${data.created} utworzonych, ${data.updated} zaktualizowanych, ${data.skipped} pominiętych`
+          t("importResultToast", { created: data.created, updated: data.updated, skipped: data.skipped })
         );
       },
       onError: (error) => {
@@ -101,7 +102,7 @@ export default function CustomerImportPage() {
             {t("importKlientowCsv")}
           </h1>
           <p className="text-muted-foreground">
-            Importuj klientów z pliku CSV. Istniejący klienci (dopasowani po e-mail) zostaną zaktualizowani.
+            {t("importDescription")}
           </p>
         </div>
       </div>
@@ -122,7 +123,7 @@ export default function CustomerImportPage() {
                   {result.created}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Nowi klienci
+                  {t("newCustomers")}
                 </p>
               </div>
               <div className="rounded-lg border p-4 text-center">
@@ -130,7 +131,7 @@ export default function CustomerImportPage() {
                   {result.updated}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Zaktualizowani
+                  {t("updated")}
                 </p>
               </div>
               <div className="rounded-lg border p-4 text-center">
@@ -158,9 +159,9 @@ export default function CustomerImportPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Wiersz</TableHead>
-                        <TableHead>Pole</TableHead>
-                        <TableHead>Komunikat</TableHead>
+                        <TableHead>{t("row")}</TableHead>
+                        <TableHead>{t("field")}</TableHead>
+                        <TableHead>{t("message")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -179,7 +180,7 @@ export default function CustomerImportPage() {
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={resetState}>
-                Importuj kolejny plik
+                {t("importAnotherFile")}
               </Button>
               <Button asChild>
                 <Link href="/customers">{t("wrocDoKlientow")}</Link>
@@ -194,7 +195,7 @@ export default function CustomerImportPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Plik CSV</CardTitle>
+              <CardTitle>{t("csvFile")}</CardTitle>
               <CardDescription>
                 {t("przeciagnijPlikCsvLubKliknijAbyWybrac")}
               </CardDescription>
@@ -256,7 +257,7 @@ export default function CustomerImportPage() {
               </div>
               {previewMutation.isPending && (
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Analizowanie pliku...
+                  {t("analyzingFile")}
                 </p>
               )}
             </CardContent>
@@ -268,25 +269,25 @@ export default function CustomerImportPage() {
               <CardHeader>
                 <CardTitle>{t("podgladImportu")}</CardTitle>
                 <CardDescription>
-                  Pierwsze 10 wierszy z pliku CSV
+                  {t("previewDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-4">
                   <Badge variant="outline" className="text-sm px-3 py-1">
-                    Łącznie: {preview.total_rows}
+                    {t("totalRows", { count: preview.total_rows })}
                   </Badge>
                   <Badge
                     variant="outline"
                     className="text-sm px-3 py-1 bg-success/15 text-success"
                   >
-                    Nowi klienci: {preview.new_count}
+                    {t("newCustomersCount", { count: preview.new_count })}
                   </Badge>
                   <Badge
                     variant="outline"
                     className="text-sm px-3 py-1 bg-info/15 text-info"
                   >
-                    Aktualizacje: {preview.update_count}
+                    {t("updatesCount", { count: preview.update_count })}
                   </Badge>
                 </div>
 
@@ -319,15 +320,15 @@ export default function CustomerImportPage() {
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={resetState}>
-                    Anuluj
+                    {tc("cancel")}
                   </Button>
                   <Button
                     onClick={handleImport}
                     disabled={importMutation.isPending}
                   >
                     {importMutation.isPending
-                      ? "Importowanie..."
-                      : `Importuj ${preview.total_rows} klientów`}
+                      ? t("importing")
+                      : t("importCustomers", { count: preview.total_rows })}
                   </Button>
                 </div>
               </CardContent>

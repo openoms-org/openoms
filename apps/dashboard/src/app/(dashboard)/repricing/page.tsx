@@ -29,37 +29,37 @@ import { getErrorMessage } from "@/lib/api-client";
 import type { RepricingRule } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const RULE_STATUSES: Record<string, { label: string; color: string }> = {
-  active: {
-    label: "Aktywna",
-    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  },
-  paused: {
-    label: "Wstrzymana",
-    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  },
-  archived: {
-    label: "Zarchiwizowana",
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-  },
-};
-
-const STRATEGY_LABELS: Record<string, string> = {
-  margin: "Marża",
-  competitive: "Konkurencja",
-  time_based: "Harmonogram",
-  stock_based: "Stan magazynowy",
-};
-
-const SCOPE_LABELS: Record<string, string> = {
-  all: "Wszystkie produkty",
-  category: "Kategoria",
-  tag: "Tag",
-  product_ids: "Wybrane produkty",
-};
-
 export default function RepricingPage() {
   const t = useTranslations("repricing");
+
+  const RULE_STATUSES: Record<string, { label: string; color: string }> = {
+    active: {
+      label: t("statusActive"),
+      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    },
+    paused: {
+      label: t("statusPaused"),
+      color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    },
+    archived: {
+      label: t("statusArchived"),
+      color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+    },
+  };
+
+  const STRATEGY_LABELS: Record<string, string> = {
+    margin: t("strategyMargin"),
+    competitive: t("strategyCompetitive"),
+    time_based: t("strategyTimeBased"),
+    stock_based: t("strategyStockBased"),
+  };
+
+  const SCOPE_LABELS: Record<string, string> = {
+    all: t("scopeAll"),
+    category: t("scopeCategory"),
+    tag: t("scopeTag"),
+    product_ids: t("scopeProductIds"),
+  };
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -94,7 +94,7 @@ export default function RepricingPage() {
     try {
       const result = await applyRules.mutateAsync();
       toast.success(
-        `Repricing wykonany: ${result.price_changes} zmian cen w ${result.products_affected} produktach`
+        t("repricingCompleted", { priceChanges: result.price_changes, productsAffected: result.products_affected })
       );
       refetch();
     } catch (error) {
@@ -104,12 +104,12 @@ export default function RepricingPage() {
 
   const columns: ColumnDef<RepricingRule>[] = [
     {
-      header: "Nazwa",
+      header: t("name"),
       accessorKey: "name",
       cell: (row) => <span className="font-medium">{row.name}</span>,
     },
     {
-      header: "Strategia",
+      header: t("strategy"),
       accessorKey: "strategy",
       cell: (row) => (
         <span className="text-sm">
@@ -118,7 +118,7 @@ export default function RepricingPage() {
       ),
     },
     {
-      header: "Zakres",
+      header: t("scope"),
       accessorKey: "scope_type",
       cell: (row) => (
         <span className="text-sm text-muted-foreground">
@@ -127,19 +127,19 @@ export default function RepricingPage() {
       ),
     },
     {
-      header: "Status",
+      header: t("status"),
       accessorKey: "status",
       cell: (row) => (
         <StatusBadge status={row.status} statusMap={RULE_STATUSES} />
       ),
     },
     {
-      header: "Priorytet",
+      header: t("priority"),
       accessorKey: "priority",
       cell: (row) => <span className="text-sm font-mono">{row.priority}</span>,
     },
     {
-      header: "Produkty",
+      header: t("products"),
       accessorKey: "products_affected",
       cell: (row) => <span className="text-sm">{row.products_affected}</span>,
     },
@@ -193,7 +193,7 @@ export default function RepricingPage() {
             disabled={applyRules.isPending}
           >
             <Zap className="mr-2 h-4 w-4" />
-            {applyRules.isPending ? "Wykonywanie..." : "Zastosuj teraz"}
+            {applyRules.isPending ? t("applying") : t("applyNow")}
           </Button>
           <Button asChild>
             <Link href="/repricing/new">{t("newRule")}</Link>
@@ -220,7 +220,7 @@ export default function RepricingPage() {
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-blue-500" />
                 <span className="text-sm text-muted-foreground">
-                  Zmiany dzisiaj
+                  {t("changesToday")}
                 </span>
               </div>
               <p className="mt-1 text-2xl font-bold">
@@ -246,7 +246,7 @@ export default function RepricingPage() {
               <div className="flex items-center gap-2">
                 <Hash className="h-4 w-4 text-orange-500" />
                 <span className="text-sm text-muted-foreground">
-                  Zmiany (tydzień)
+                  {t("changesWeek")}
                 </span>
               </div>
               <p className="mt-1 text-2xl font-bold">
@@ -270,10 +270,10 @@ export default function RepricingPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie</SelectItem>
-              <SelectItem value="active">Aktywne</SelectItem>
-              <SelectItem value="paused">Wstrzymane</SelectItem>
-              <SelectItem value="archived">Zarchiwizowane</SelectItem>
+              <SelectItem value="all">{t("filterAll")}</SelectItem>
+              <SelectItem value="active">{t("filterActive")}</SelectItem>
+              <SelectItem value="paused">{t("filterPaused")}</SelectItem>
+              <SelectItem value="archived">{t("filterArchived")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

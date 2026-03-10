@@ -69,9 +69,9 @@ export default function SuppliersPage() {
   return (
     <AdminGuard>
       <PageHeader
-        title="Dostawcy"
+        title={t("title")}
         description={t("zarzadzajDostawcamiISynchronizacjaFeedowProduktowy")}
-        action={{ label: "Nowy dostawca", href: "/suppliers/new" }}
+        action={{ label: t("newSupplier"), href: "/suppliers/new" }}
       />
 
       {isError && (
@@ -95,19 +95,19 @@ export default function SuppliersPage() {
           icon={Factory}
           title={t("brakDostawcow")}
           description={t("dodajPierwszegoDostawceAbyImportowacProduktyZFeedo")}
-          action={{ label: "Nowy dostawca", href: "/suppliers/new" }}
+          action={{ label: t("newSupplier"), href: "/suppliers/new" }}
         />
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>Kod</TableHead>
-                <TableHead>Format</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ostatnia synchronizacja</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{tc("name")}</TableHead>
+                <TableHead>{tc("code")}</TableHead>
+                <TableHead>{t("format")}</TableHead>
+                <TableHead>{tc("status")}</TableHead>
+                <TableHead>{t("lastSync")}</TableHead>
+                <TableHead>{tc("createdAt")}</TableHead>
                 <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
