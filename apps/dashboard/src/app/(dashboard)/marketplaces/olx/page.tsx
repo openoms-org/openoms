@@ -161,7 +161,6 @@ function OlxMainPage() {
             <h1 className="text-2xl font-bold">{t("olxIntegration")}</h1>
             <p className="text-muted-foreground">
               {t("połaczSwojeKontoOlxAbySynchronizowacOgłoszenia")}
-              transakcje
             </p>
           </div>
         </div>
@@ -302,7 +301,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         <CardContent className="space-y-4">
           <ol className="list-decimal list-inside space-y-2 text-sm">
             <li>
-              Przejdź do{" "}
+              {t("goTo")}{" "}
               <a
                 href="https://developer.olx.pl/"
                 target="_blank"
@@ -315,20 +314,18 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
             </li>
             <li>{t("zarejestrujNowaAplikacje")}</li>
             <li>
-              W polu <strong>Adres przekierowania (Redirect URI)</strong> wklej
-              {t("ponizszyAdres")}
+              {t("olxStep3RedirectUri")}
             </li>
           </ol>
 
           <CopyableField
-            label="Redirect URI (do wklejenia w ustawieniach aplikacji OLX)"
+            label={t("redirectUriOlxLabel")}
             value={redirectURI}
           />
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
             <p className="text-xs text-amber-800 dark:text-amber-200">
-              Redirect URI musi być <strong>{t("dokładnieTakiSam")}</strong> jak
-              {t("powyzejRoznicaWNawetJednymZnakuSpowoduje")}
+              {t("redirectUriMustBeExact")}
             </p>
           </div>
 
@@ -711,7 +708,6 @@ function CredentialsCard({
         <CardTitle>{t("zmienDaneAplikacji")}</CardTitle>
         <CardDescription>
           {t("zaktualizujClientIdIClientSecretPo")}
-          ponowna autoryzacja OAuth.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

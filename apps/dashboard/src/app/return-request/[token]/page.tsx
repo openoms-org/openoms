@@ -18,13 +18,22 @@ import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
-  requested: { label: "Zgłoszone", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200", icon: Clock },
-  approved: { label: "Zatwierdzone", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200", icon: CheckCircle2 },
-  received: { label: "Odebrane", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200", icon: Package },
-  refunded: { label: "Zwrócone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200", icon: CheckCircle2 },
-  rejected: { label: "Odrzucone", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200", icon: XCircle },
-  cancelled: { label: "Anulowane", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200", icon: XCircle },
+const STATUS_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  requested: Clock,
+  approved: CheckCircle2,
+  received: Package,
+  refunded: CheckCircle2,
+  rejected: XCircle,
+  cancelled: XCircle,
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  requested: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+  approved: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  received: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+  refunded: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  rejected: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
 };
 
 const STATUS_ORDER = ["requested", "approved", "received", "refunded"];
@@ -45,7 +54,7 @@ export default function PublicReturnStatusPage() {
         const res = await fetch(`${API_URL}/v1/public/returns/${token}/status`);
         if (!res.ok) {
           if (res.status === 404) {
-            setError("Nie znaleziono zwrotu o podanym tokenie.");
+            setError(t("returnNotFound"));
           } else {
             setError(t("wystapiłbładpodczasładowaniastatusuzwrotu"));
           }
@@ -84,7 +93,7 @@ export default function PublicReturnStatusPage() {
             <RotateCcw className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold">OpenOMS</span>
           </div>
-          <p className="text-muted-foreground">Status zwrotu</p>
+          <p className="text-muted-foreground">{t("returnStatus")}</p>
         </div>
 
         {isLoading && (
@@ -121,18 +130,13 @@ export default function PublicReturnStatusPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Zwrot #{data.id.slice(0, 8)}</CardTitle>
-                {(() => {
-                  const config = STATUS_CONFIG[data.status] || STATUS_CONFIG.requested;
-                  return (
-                    <Badge variant="outline" className={config.color}>
-                      {config.label}
-                    </Badge>
-                  );
-                })()}
+                <CardTitle>{t("returnLabel")} #{data.id.slice(0, 8)}</CardTitle>
+                <Badge variant="outline" className={STATUS_COLORS[data.status] || STATUS_COLORS.requested}>
+                  {t(`status.${data.status}`)}
+                </Badge>
               </div>
               <CardDescription>
-                Zgłoszono: {formatDate(data.created_at)}
+                {t("submittedAt")}: {formatDate(data.created_at)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -145,7 +149,6 @@ export default function PublicReturnStatusPage() {
                   <div className="flex items-center gap-1">
                     {STATUS_ORDER.map((status, index) => {
                       const isActive = index <= currentStatusIndex;
-                      const config = STATUS_CONFIG[status];
                       return (
                         <div key={status} className="flex-1 flex flex-col items-center">
                           <div
@@ -162,7 +165,7 @@ export default function PublicReturnStatusPage() {
                                 : "text-muted-foreground"
                             }`}
                           >
-                            {config.label}
+                            {t(`status.${status}`)}
                           </span>
                         </div>
                       );
@@ -193,7 +196,7 @@ export default function PublicReturnStatusPage() {
               {data.items && data.items.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                    Produkty do zwrotu
+                    {t("productsToReturn")}
                   </h3>
                   <div className="space-y-2">
                     {data.items.map((item, idx) => (
@@ -212,7 +215,7 @@ export default function PublicReturnStatusPage() {
               )}
 
               <div className="text-xs text-muted-foreground">
-                Ostatnia aktualizacja: {formatDate(data.updated_at)}
+                {t("lastUpdate")}: {formatDate(data.updated_at)}
               </div>
 
               <Button variant="outline" className="w-full" asChild>

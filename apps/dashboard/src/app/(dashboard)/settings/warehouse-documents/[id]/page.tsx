@@ -35,17 +35,7 @@ function ProductName({ productId }: { productId: string }) {
   return <span className="font-mono text-xs">{shortId(productId)}</span>;
 }
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  PZ: "PZ - Przyjęcie zewnętrzne",
-  WZ: "WZ - Wydanie zewnętrzne",
-  MM: "MM - Przesunięcie międzymagazynowe",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Szkic",
-  confirmed: "Zatwierdzony",
-  cancelled: "Anulowany",
-};
+// DOC_TYPE_LABELS and STATUS_LABELS moved inside component to use translations
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -57,6 +47,18 @@ export default function WarehouseDocumentDetailPage() {
   const t = useTranslations("warehouseDocuments");
   const params = useParams();
   const id = params.id as string;
+
+  const DOC_TYPE_LABELS: Record<string, string> = {
+    PZ: t("pzLabel"),
+    WZ: t("wzLabel"),
+    MM: t("mmLabel"),
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    draft: t("statusDraft"),
+    confirmed: t("statusConfirmed"),
+    cancelled: t("statusCancelled"),
+  };
 
   const { data: doc, isLoading, isError, refetch } = useWarehouseDocument(id);
   const confirmDoc = useConfirmWarehouseDocument();

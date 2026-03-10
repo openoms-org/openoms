@@ -27,34 +27,6 @@ import { shortId } from "@/lib/utils";
 import type { SyncJob } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const STATUS_OPTIONS = [
-  { value: "__all__", label: "Wszystkie" },
-  { value: "running", label: "W trakcie" },
-  { value: "completed", label: "Zakończone" },
-  { value: "failed", label: "Nieudane" },
-];
-
-const JOB_TYPE_OPTIONS = [
-  { value: "__all__", label: "Wszystkie" },
-  { value: "orders", label: "Zamówienia" },
-  { value: "products", label: "Produkty" },
-  { value: "stock", label: "Stany magazynowe" },
-  { value: "prices", label: "Ceny" },
-];
-
-function statusBadge(status: string) {
-  switch (status) {
-    case "running":
-      return <Badge variant="info">W trakcie</Badge>;
-    case "completed":
-      return <Badge variant="success">Zakończone</Badge>;
-    case "failed":
-      return <Badge variant="destructive">Nieudane</Badge>;
-    default:
-      return <Badge variant="secondary">{status}</Badge>;
-  }
-}
-
 function formatDate(dateStr?: string) {
   if (!dateStr) return <span className="text-muted-foreground">&mdash;</span>;
   return format(new Date(dateStr), "dd.MM.yyyy HH:mm:ss", { locale: pl });
@@ -62,6 +34,35 @@ function formatDate(dateStr?: string) {
 
 export default function SyncJobsPage() {
   const t = useTranslations("syncJobs");
+
+  const STATUS_OPTIONS = [
+    { value: "__all__", label: t("statusAll") },
+    { value: "running", label: t("statusRunning") },
+    { value: "completed", label: t("statusCompleted") },
+    { value: "failed", label: t("statusFailed") },
+  ];
+
+  const JOB_TYPE_OPTIONS = [
+    { value: "__all__", label: t("typeAll") },
+    { value: "orders", label: t("typeOrders") },
+    { value: "products", label: t("typeProducts") },
+    { value: "stock", label: t("typeStock") },
+    { value: "prices", label: t("typePrices") },
+  ];
+
+  function statusBadge(status: string) {
+    switch (status) {
+      case "running":
+        return <Badge variant="info">{t("statusRunning")}</Badge>;
+      case "completed":
+        return <Badge variant="success">{t("statusCompleted")}</Badge>;
+      case "failed":
+        return <Badge variant="destructive">{t("statusFailed")}</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  }
+
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [jobTypeFilter, setJobTypeFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -96,12 +97,12 @@ export default function SyncJobsPage() {
 
   const columns: ColumnDef<SyncJob>[] = [
     {
-      header: "Typ zadania",
+      header: t("columns.jobType"),
       accessorKey: "job_type",
       cell: (row) => row.job_type,
     },
     {
-      header: "Integracja",
+      header: t("columns.integration"),
       accessorKey: "integration_id",
       cell: (row) => (
         <span className="font-mono text-xs">{shortId(row.integration_id)}</span>
@@ -123,7 +124,7 @@ export default function SyncJobsPage() {
       cell: (row) => formatDate(row.finished_at),
     },
     {
-      header: "Przetworzone",
+      header: t("columns.processed"),
       accessorKey: "items_processed",
       cell: (row) => row.items_processed,
     },
@@ -138,7 +139,7 @@ export default function SyncJobsPage() {
         ),
     },
     {
-      header: "Komunikat",
+      header: t("columns.message"),
       accessorKey: "error_message",
       cell: (row) =>
         row.error_message ? (
@@ -155,7 +156,7 @@ export default function SyncJobsPage() {
     <AdminGuard>
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Historia synchronizacji</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1">
           {t("przegladWszystkichZadanSynchronizacjiZZewnetrznymi")}
         </p>
@@ -244,7 +245,7 @@ export default function SyncJobsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-muted-foreground">Typ zadania:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.jobType")}:</span>
                   <p>{selectedJob.job_type}</p>
                 </div>
                 <div>
@@ -252,11 +253,11 @@ export default function SyncJobsPage() {
                   <p className="mt-1">{statusBadge(selectedJob.status)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Integracja:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.integration")}:</span>
                   <p className="font-mono text-xs">{selectedJob.integration_id}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Utworzono:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.createdAt")}</span>
                   <p>{formatDate(selectedJob.created_at)}</p>
                 </div>
                 <div>
@@ -268,7 +269,7 @@ export default function SyncJobsPage() {
                   <p>{formatDate(selectedJob.finished_at)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Przetworzone:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.processed")}:</span>
                   <p>{selectedJob.items_processed}</p>
                 </div>
                 <div>
@@ -283,7 +284,7 @@ export default function SyncJobsPage() {
                 </div>
               )}
               <div>
-                <span className="font-medium text-muted-foreground text-sm">Metadane (JSON):</span>
+                <span className="font-medium text-muted-foreground text-sm">{t("metadataJson")}</span>
                 <pre className="mt-1 rounded-md bg-muted p-3 text-xs overflow-auto max-h-64">
                   {JSON.stringify(selectedJob.metadata, null, 2)}
                 </pre>

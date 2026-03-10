@@ -14,16 +14,7 @@ import { Trash2, Plus, ExternalLink } from "lucide-react";
 import type { WebhookEndpoint, WebhookConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const WEBHOOK_EVENTS: { value: string; label: string }[] = [
-  { value: "order.created", label: "Zamówienie utworzone" },
-  { value: "order.status_changed", label: "Status zamówienia zmieniony" },
-  { value: "order.deleted", label: "Zamówienie usunięte" },
-  { value: "product.created", label: "Produkt utworzony" },
-  { value: "product.updated", label: "Produkt zaktualizowany" },
-  { value: "product.deleted", label: "Produkt usunięty" },
-  { value: "shipment.created", label: "Przesyłka utworzona" },
-  { value: "shipment.updated", label: "Przesyłka zaktualizowana" },
-];
+// WEBHOOK_EVENTS moved inside component to use translations
 
 function createEmptyEndpoint(): WebhookEndpoint {
   return {
@@ -38,6 +29,19 @@ function createEmptyEndpoint(): WebhookEndpoint {
 
 export default function WebhooksPage() {
   const t = useTranslations("settings");
+  const tw = useTranslations("settings.webhooks");
+
+  const WEBHOOK_EVENTS: { value: string; label: string }[] = [
+    { value: "order.created", label: tw("eventOrderCreated") },
+    { value: "order.status_changed", label: tw("eventOrderStatusChanged") },
+    { value: "order.deleted", label: tw("eventOrderDeleted") },
+    { value: "product.created", label: tw("eventProductCreated") },
+    { value: "product.updated", label: tw("eventProductUpdated") },
+    { value: "product.deleted", label: tw("eventProductDeleted") },
+    { value: "shipment.created", label: tw("eventShipmentCreated") },
+    { value: "shipment.updated", label: tw("eventShipmentUpdated") },
+  ];
+
   const { data: config, isLoading } = useWebhookConfig();
   const updateConfig = useUpdateWebhookConfig();
 
@@ -86,7 +90,7 @@ export default function WebhooksPage() {
         return;
       }
       if (ep.events.length === 0) {
-        toast.error(`Endpoint "${ep.name}" musi mieć co najmniej jedno zdarzenie`);
+        toast.error(tw("endpointMustHaveEvent", { name: ep.name }));
         return;
       }
     }

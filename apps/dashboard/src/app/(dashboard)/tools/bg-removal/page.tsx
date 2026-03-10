@@ -123,9 +123,10 @@ export default function BGRemovalPage() {
               {t("usuwanieTłaNieJestSkonfigurowane")}
             </h2>
             <p className="text-sm text-muted-foreground max-w-md">
-              {t("abyKorzystacZTejFunkcjiAdministratorMusi")}
-              środowiskową <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">REMOVEBG_API_KEY</code> w
-              konfiguracji serwera. Klucz API można uzyskać na stronie{" "}
+              {t("abyKorzystacZTejFunkcjiAdministratorMusi")}{" "}
+              {t("envVarConfig")}{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">REMOVEBG_API_KEY</code>{" "}
+              {t("inServerConfig")}{" "}{t("apiKeyAvailableAt")}{" "}
               <a
                 href="https://www.remove.bg/api"
                 target="_blank"
@@ -171,11 +172,11 @@ export default function BGRemovalPage() {
                 {t("przeciagnijIUpuscZdjecie")}
               </p>
               <p className="text-xs text-muted-foreground mb-4">
-                lub kliknij, aby wybrać plik (JPEG, PNG, WEBP, maks. 10 MB)
+                {t("orClickToSelect")}
               </p>
               <Button variant="outline" size="sm" type="button">
                 <ImageIcon className="mr-2 h-4 w-4" />
-                Wybierz plik
+                {t("selectFile")}
               </Button>
               <input
                 ref={fileInputRef}
@@ -267,7 +268,7 @@ export default function BGRemovalPage() {
             ) : (
               <Button onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
-                Pobierz
+                {t("download")}
               </Button>
             )}
           </div>

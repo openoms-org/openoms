@@ -50,29 +50,29 @@ import {
 import type { UpdateLoyaltyProgramRequest } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const PROGRAM_TYPE_LABELS: Record<string, string> = {
-  points: "Punkty",
-  tier: "Poziomy",
-  discount_after_n: "Rabat po N zamówieniach",
-};
-
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  active: {
-    label: "Aktywny",
-    className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  },
-  paused: {
-    label: "Wstrzymany",
-    className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  },
-  ended: {
-    label: "Zakończony",
-    className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-  },
-};
-
 export default function LoyaltyProgramDetailPage() {
   const t = useTranslations("loyalty");
+
+  const PROGRAM_TYPE_LABELS: Record<string, string> = {
+    points: t("type.points"),
+    tier: t("type.tier"),
+    discount_after_n: t("type.discountAfterN"),
+  };
+
+  const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+    active: {
+      label: t("statusActive"),
+      className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    },
+    paused: {
+      label: t("statusPaused"),
+      className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    },
+    ended: {
+      label: t("zakonczony"),
+      className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+    },
+  };
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -118,7 +118,7 @@ export default function LoyaltyProgramDetailPage() {
   if (!program) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono programu</p>
+        <p className="text-muted-foreground">{t("programNotFound")}</p>
         <Button
           variant="outline"
           className="mt-4"
@@ -219,7 +219,7 @@ export default function LoyaltyProgramDetailPage() {
                 variant="outline"
                 onClick={() => setShowAwardDialog(true)}
               >
-                Przyznaj punkty
+                {t("awardPoints")}
               </Button>
               <Button
                 variant="outline"
@@ -241,11 +241,11 @@ export default function LoyaltyProgramDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Informacje</CardTitle>
+            <CardTitle>{t("information")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="text-sm text-muted-foreground">Typ</p>
+              <p className="text-sm text-muted-foreground">{t("type.label")}</p>
               <p className="mt-1 text-sm font-medium">
                 {PROGRAM_TYPE_LABELS[program.program_type]}
               </p>
@@ -260,14 +260,14 @@ export default function LoyaltyProgramDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">Aktywny</SelectItem>
-                  <SelectItem value="paused">Wstrzymany</SelectItem>
+                  <SelectItem value="active">{t("statusActive")}</SelectItem>
+                  <SelectItem value="paused">{t("statusPaused")}</SelectItem>
                   <SelectItem value="ended">{t("zakonczony")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Utworzono</p>
+              <p className="text-sm text-muted-foreground">{t("createdAt")}</p>
               <p className="mt-1 text-sm">{formatDate(program.created_at)}</p>
             </div>
           </CardContent>
@@ -275,7 +275,7 @@ export default function LoyaltyProgramDetailPage() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Konfiguracja</CardTitle>
+            <CardTitle>{t("configuration")}</CardTitle>
           </CardHeader>
           <CardContent>
             <pre className="rounded bg-muted p-3 text-sm font-mono overflow-auto">
@@ -310,12 +310,12 @@ export default function LoyaltyProgramDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[60px]">#</TableHead>
-                  <TableHead>Klient</TableHead>
-                  <TableHead className="text-right">Punkty</TableHead>
-                  <TableHead className="text-right">Wydano</TableHead>
+                  <TableHead>{t("customer")}</TableHead>
+                  <TableHead className="text-right">{t("points")}</TableHead>
+                  <TableHead className="text-right">{t("spent")}</TableHead>
                   <TableHead className="text-right">{t("zamowien")}</TableHead>
                   {program.program_type === "tier" && (
-                    <TableHead>Poziom</TableHead>
+                    <TableHead>{t("tierLevel")}</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -366,11 +366,11 @@ export default function LoyaltyProgramDetailPage() {
       <Dialog open={showAwardDialog} onOpenChange={setShowAwardDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Przyznaj punkty</DialogTitle>
+            <DialogTitle>{t("awardPoints")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Szukaj klienta</Label>
+              <Label>{t("searchCustomer")}</Label>
               <Input
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
@@ -383,7 +383,7 @@ export default function LoyaltyProgramDetailPage() {
                 onValueChange={setAwardCustomerId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz klienta" />
+                  <SelectValue placeholder={t("selectCustomer")} />
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
@@ -418,7 +418,7 @@ export default function LoyaltyProgramDetailPage() {
                 variant="outline"
                 onClick={() => setShowAwardDialog(false)}
               >
-                Anuluj
+                {t("cancel")}
               </Button>
               <Button
                 onClick={handleAward}
@@ -428,7 +428,7 @@ export default function LoyaltyProgramDetailPage() {
                   awardPointsValue <= 0
                 }
               >
-                {awardPoints.isPending ? "Przyznawanie..." : "Przyznaj"}
+                {awardPoints.isPending ? t("awarding") : t("award")}
               </Button>
             </div>
           </div>
@@ -443,7 +443,7 @@ export default function LoyaltyProgramDetailPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Szukaj klienta</Label>
+              <Label>{t("searchCustomer")}</Label>
               <Input
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
@@ -456,7 +456,7 @@ export default function LoyaltyProgramDetailPage() {
                 onValueChange={setRedeemCustomerId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz klienta" />
+                  <SelectValue placeholder={t("selectCustomer")} />
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
@@ -483,7 +483,7 @@ export default function LoyaltyProgramDetailPage() {
                 variant="outline"
                 onClick={() => setShowRedeemDialog(false)}
               >
-                Anuluj
+                {t("cancel")}
               </Button>
               <Button
                 onClick={handleRedeem}
@@ -493,7 +493,7 @@ export default function LoyaltyProgramDetailPage() {
                   redeemPointsValue <= 0
                 }
               >
-                {redeemPoints.isPending ? "Wymiana..." : t("wymien")}
+                {redeemPoints.isPending ? t("redeeming") : t("wymien")}
               </Button>
             </div>
           </div>
@@ -503,7 +503,7 @@ export default function LoyaltyProgramDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuwanie programu"
+        title={t("deleteProgram")}
         description={t("czyNaPewnoChceszUsunacTenProgramLojalnosciowyWszys")}
         confirmLabel={t("usunProgram")}
         variant="destructive"

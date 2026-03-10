@@ -182,7 +182,7 @@ export default function NewWarehouseDocumentPage() {
       },
       {
         onSuccess: (doc) => {
-          toast.success(`Dokument ${doc.document_number} został utworzony`);
+          toast.success(t("documentCreated", { number: doc.document_number }));
           router.push(`/settings/warehouse-documents/${doc.id}`);
         },
         onError: (error) => {

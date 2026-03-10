@@ -168,7 +168,7 @@ export default function PurchaseOrderDetailPage() {
             {canReceive && (
               <Button onClick={openReceiveDialog} variant="default">
                 <PackageCheck className="h-4 w-4 mr-2" />
-                Przyjmij towar
+                {t("receiveGoods")}
               </Button>
             )}
             {canCancel && (
@@ -330,9 +330,9 @@ export default function PurchaseOrderDetailPage() {
       <Dialog open={showReceiveDialog} onOpenChange={setShowReceiveDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Przyjmij towar</DialogTitle>
+            <DialogTitle>{t("receiveGoods")}</DialogTitle>
             <DialogDescription>
-              Wprowadź ilości przyjętych produktów dla zamówienia {po.po_number}.
+              {t("receiveDescription", { number: po.po_number })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 max-h-80 overflow-auto">
@@ -353,8 +353,8 @@ export default function PurchaseOrderDetailPage() {
                         {item.product_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Zamówiono: {item.quantity_ordered} | Przyjęto:{" "}
-                        {item.quantity_received} | Pozostało: {remaining}
+                        {t("ordered")}: {item.quantity_ordered} | {t("received")}:{" "}
+                        {item.quantity_received} | {t("remaining")}: {remaining}
                       </p>
                     </div>
                     <div className="w-20">

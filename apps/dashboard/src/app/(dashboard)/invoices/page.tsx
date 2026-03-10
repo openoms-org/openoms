@@ -89,10 +89,10 @@ export default function InvoicesPage() {
         eligibleForKSeF.map((inv) => inv.id)
       );
       toast.success(
-        `Wysłano ${result.sent} z ${result.total} faktur do KSeF`
+        t("ksefBulkSent", { sent: result.sent, total: result.total })
       );
       if (result.errors && result.errors.length > 0) {
-        toast.error(`Błędy: ${result.errors.join(", ")}`);
+        toast.error(t("ksefBulkErrors", { errors: result.errors.join(", ") }));
       }
       refetch();
     } catch (error) {
@@ -104,9 +104,9 @@ export default function InvoicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Faktury</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Lista wystawionych faktur
+            {t("subtitle")}
           </p>
         </div>
         {eligibleForKSeF.length > 0 && (
@@ -120,7 +120,7 @@ export default function InvoicesPage() {
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Wyślij do KSeF ({eligibleForKSeF.length})
+            {t("sendToKsef", { count: eligibleForKSeF.length })}
           </Button>
         )}
       </div>
@@ -135,7 +135,7 @@ export default function InvoicesPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie statusy</SelectItem>
+              <SelectItem value="all">{t("allStatuses")}</SelectItem>
               {Object.entries(INVOICE_STATUS_MAP).map(([key, { label }]) => (
                 <SelectItem key={key} value={key}>
                   {label}
@@ -150,10 +150,10 @@ export default function InvoicesPage() {
             onValueChange={handleProviderChange}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Dostawca" />
+              <SelectValue placeholder={t("provider")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszyscy dostawcy</SelectItem>
+              <SelectItem value="all">{t("allProviders")}</SelectItem>
               {Object.entries(INVOICING_PROVIDER_LABELS).map(([key, label]) => (
                 <SelectItem key={key} value={key}>
                   {label}
@@ -171,7 +171,7 @@ export default function InvoicesPage() {
               <SelectValue placeholder="Status KSeF" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie (KSeF)</SelectItem>
+              <SelectItem value="all">{t("allKsef")}</SelectItem>
               {Object.entries(KSEF_STATUS_MAP).map(([key, { label }]) => (
                 <SelectItem key={key} value={key}>
                   {label}

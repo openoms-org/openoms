@@ -89,11 +89,11 @@ export default function BTPWizardPage() {
 
   const onStartImport = () => {
     if (!name.trim()) {
-      toast.error("Nazwa dostawcy jest wymagana");
+      toast.error(t("btp.supplierNameRequired"));
       return;
     }
     if (!feedUrl.trim()) {
-      toast.error("URL pliku XML jest wymagany");
+      toast.error(t("btp.xmlUrlRequired"));
       return;
     }
 
@@ -126,11 +126,11 @@ export default function BTPWizardPage() {
   const onSubmitAPIKeys = (e: React.FormEvent) => {
     e.preventDefault();
     if (!publicKey.trim()) {
-      toast.error("Klucz publiczny jest wymagany");
+      toast.error(t("btp.publicKeyRequired"));
       return;
     }
     if (!privateKey.trim()) {
-      toast.error("Klucz prywatny jest wymagany");
+      toast.error(t("btp.privateKeyRequired"));
       return;
     }
 
@@ -142,7 +142,7 @@ export default function BTPWizardPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Klucze API zweryfikowane");
+          toast.success(t("btp.apiKeysVerified"));
           setCurrentStep(3);
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -164,7 +164,7 @@ export default function BTPWizardPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Dostawca BTP skonfigurowany");
+          toast.success(t("btp.supplierConfigured"));
           router.push(`/suppliers/${supplierId}`);
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -185,7 +185,7 @@ export default function BTPWizardPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">
-            Nowy dostawca — BTP.pro
+            {t("btp.newSupplierTitle")}
           </h1>
         </div>
 
@@ -239,21 +239,21 @@ export default function BTPWizardPage() {
                 <ol className="list-decimal list-inside space-y-1 pl-1">
                   <li>{t("zalogujSieDoPaneluB2bHurtowni")}</li>
                   <li>
-                    W menu bocznym kliknij{" "}
+                    {t("btp.clickSideMenu")}{" "}
                     <span className="font-medium text-foreground">
-                      Eksport danych XML
+                      {t("btp.xmlExport")}
                     </span>
                   </li>
                   <li>
-                    Znajdź pozycję{" "}
+                    {t("btp.findEntry")}{" "}
                     <span className="font-medium text-foreground">
-                      Plik w formacie Comarch EDI
+                      {t("btp.comarchEdiFormat")}
                     </span>
                   </li>
                   <li>
-                    Skopiuj link z kolumny{" "}
+                    {t("btp.copyLinkFromColumn")}{" "}
                     <span className="font-medium text-foreground">
-                      Link do pobierania automatycznego
+                      {t("btp.autoDownloadLink")}
                     </span>
                   </li>
                 </ol>
@@ -269,17 +269,17 @@ export default function BTPWizardPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="btp-name">Nazwa dostawcy *</Label>
+                  <Label htmlFor="btp-name">{t("btp.supplierNameLabel")}</Label>
                   <Input
                     id="btp-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="np. Hurtownia XYZ"
+                    placeholder={t("btp.supplierNamePlaceholder")}
                     disabled={importStarted}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="btp-feed-url">URL pliku XML *</Label>
+                  <Label htmlFor="btp-feed-url">{t("btp.xmlUrlLabel")}</Label>
                   <Input
                     id="btp-feed-url"
                     value={feedUrl}
@@ -301,12 +301,12 @@ export default function BTPWizardPage() {
                           <span className="font-medium tabular-nums">
                             {progress
                               ? `${progress.processed.toLocaleString("pl-PL")} / ${progress.total.toLocaleString("pl-PL")}`
-                              : "Rozpoczynanie..."}
+                              : t("btp.starting")}
                           </span>
                         </div>
                         <Progress value={importPercent} />
                         <p className="text-xs text-muted-foreground">
-                          {importPercent}% — nie zamykaj tej strony
+                          {importPercent}% — {t("btp.doNotCloseThisPage")}
                         </p>
                       </>
                     )}
@@ -315,9 +315,7 @@ export default function BTPWizardPage() {
                       <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
                         <Check className="h-4 w-4 shrink-0" />
                         <span>
-                          Import zakończony —{" "}
-                          {progress.processed.toLocaleString("pl-PL")} produktów
-                          zaimportowanych
+                          {t("btp.importCompleted", { count: progress.processed.toLocaleString("pl-PL") })}
                         </span>
                       </div>
                     )}
@@ -347,15 +345,15 @@ export default function BTPWizardPage() {
                       {startImport.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Rozpoczynanie...
+                          {t("btp.starting")}
                         </>
                       ) : (
-                        "Rozpocznij import"
+                        t("btp.startImport")
                       )}
                     </Button>
                   )}
                   {importDone && (
-                    <Button onClick={() => setCurrentStep(2)}>Dalej</Button>
+                    <Button onClick={() => setCurrentStep(2)}>{tc("next")}</Button>
                   )}
                   {(importFailed || progressError) && (
                     <Button variant="outline" onClick={onRetryImport}>
@@ -385,7 +383,7 @@ export default function BTPWizardPage() {
                 <ol className="list-decimal list-inside space-y-1 pl-1">
                   <li>{t("zalogujSieDoPaneluB2bHurtowni")}</li>
                   <li>
-                    Przejdź do{" "}
+                    {t("btp.goTo")}{" "}
                     <span className="font-medium text-foreground">
                       {t("mojProfilZakładkaKlucze")}
                     </span>
@@ -394,24 +392,22 @@ export default function BTPWizardPage() {
                 </ol>
                 <p className="text-xs">
                   {t("jesliZakładkaKluczeNieJestWidocznaSkontaktuj")}
-                  opiekunem handlowym — wymagane jest uprawnienie ClientApi.
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Klucze API</CardTitle>
+                <CardTitle>{t("btp.apiKeysTitle")}</CardTitle>
                 <CardDescription>
                   {t("podajKluczeDoSynchronizacjiStanowMagazynowychI")}
-                  czasie rzeczywistym
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={onSubmitAPIKeys} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="btp-public-key">
-                      Klucz publiczny (login) *
+                      {t("btp.publicKeyLabel")}
                     </Label>
                     <Input
                       id="btp-public-key"
@@ -422,7 +418,7 @@ export default function BTPWizardPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="btp-private-key">
-                      Klucz prywatny (hasło) *
+                      {t("btp.privateKeyLabel")}
                     </Label>
                     <div className="relative">
                       <Input
@@ -439,7 +435,7 @@ export default function BTPWizardPage() {
                         onClick={() => setShowPrivateKey((prev) => !prev)}
                         tabIndex={-1}
                         aria-label={
-                          showPrivateKey ? "Ukryj klucz" : t("pokazKlucz")
+                          showPrivateKey ? t("btp.hideKey") : t("pokazKlucz")
                         }
                       >
                         {showPrivateKey ? (
@@ -452,9 +448,9 @@ export default function BTPWizardPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="btp-base-url">
-                      Adres API hurtowni{" "}
+                      {t("btp.apiUrlLabel")}{" "}
                       <span className="text-muted-foreground font-normal">
-                        (opcjonalnie)
+                        ({tc("optional")})
                       </span>
                     </Label>
                     <Input
@@ -466,7 +462,6 @@ export default function BTPWizardPage() {
                     />
                     <p className="text-xs text-muted-foreground">
                       {t("pozostawPusteJesliNieZnaszSkonfigurujemy")}
-                      automatycznie.
                     </p>
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -474,10 +469,10 @@ export default function BTPWizardPage() {
                       {setAPIKeys.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Weryfikowanie...
+                          {t("btp.verifying")}
                         </>
                       ) : (
-                        "Weryfikuj i zapisz"
+                        t("btp.verifyAndSave")
                       )}
                     </Button>
                   </div>
@@ -508,21 +503,20 @@ export default function BTPWizardPage() {
                   <div className="rounded-lg border p-3 space-y-1">
                     <div className="flex items-center gap-1.5 font-medium text-foreground">
                       <FileText className="h-3.5 w-3.5" />
-                      Katalog XML
+                      {t("btp.xmlCatalog")}
                     </div>
                     <p className="text-xs">
                       {t("pełnaListaProduktowDodawanieIUsuwanieProdukty")}
                       {t("nieobecneWXmlZostanaUsunieteAIch")}
-                      wyzerowany.
                     </p>
                   </div>
                   <div className="rounded-lg border p-3 space-y-1">
                     <div className="flex items-center gap-1.5 font-medium text-foreground">
                       <KeyRound className="h-3.5 w-3.5" />
-                      API (stany i ceny)
+                      {t("btp.apiStockAndPrices")}
                     </div>
                     <p className="text-xs">
-                      Aktualne stany magazynowe i ceny w czasie rzeczywistym.
+                      {t("btp.realtimeStockAndPrices")}
                       {t("daneZApiMajaZawszePriorytetXml")}
                       {t("stanow")}
                     </p>
@@ -533,7 +527,7 @@ export default function BTPWizardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Ustawienia synchronizacji</CardTitle>
+                <CardTitle>{t("btp.syncSettingsTitle")}</CardTitle>
                 <CardDescription>
                   {t("ustawCzestotliwoscOdswiezaniaKataloguIStanow")}
                 </CardDescription>
@@ -546,9 +540,9 @@ export default function BTPWizardPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="12">Co 12 godzin</SelectItem>
-                      <SelectItem value="24">Co 24 godziny</SelectItem>
-                      <SelectItem value="48">Co 48 godzin</SelectItem>
+                      <SelectItem value="12">{t("btp.every12h")}</SelectItem>
+                      <SelectItem value="24">{t("btp.every24h")}</SelectItem>
+                      <SelectItem value="48">{t("btp.every48h")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
@@ -562,8 +556,8 @@ export default function BTPWizardPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="15">Co 15 minut</SelectItem>
-                      <SelectItem value="30">Co 30 minut</SelectItem>
+                      <SelectItem value="15">{t("btp.every15m")}</SelectItem>
+                      <SelectItem value="30">{t("btp.every30m")}</SelectItem>
                       <SelectItem value="60">{t("co1Godzine")}</SelectItem>
                     </SelectContent>
                   </Select>
@@ -579,7 +573,7 @@ export default function BTPWizardPage() {
                     {completeSyncSettings.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Zapisywanie...
+                        {tc("saving")}
                       </>
                     ) : (
                       t("zakonczKonfiguracje")

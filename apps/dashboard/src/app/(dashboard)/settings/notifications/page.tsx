@@ -47,6 +47,9 @@ const DEFAULT_EMAIL_SETTINGS: EmailSettings = {
   notify_on: ["confirmed", "shipped", "delivered", "cancelled", "refunded"],
 };
 
+// NOTE: These are Go text/template strings sent by the backend to customers.
+// They are NOT UI labels and should NOT be wrapped in t() calls.
+// Tenant-specific templates are stored server-side and edited here as raw text.
 const DEFAULT_TEMPLATES: Record<string, string> = {
   shipped:
     "Twoje zamówienie {{.OrderNumber}} zostało wysłane. Numer przesyłki: {{.TrackingNumber}}",

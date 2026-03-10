@@ -46,15 +46,6 @@ import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
 
-const DROPSHIP_STATUSES: Record<string, { label: string; color: string }> = {
-  pending: { label: "Oczekujace", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-  sent: { label: "Wysłane", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-  confirmed: { label: "Potwierdzone", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
-  shipped: { label: "W transporcie", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-  delivered: { label: "Dostarczone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-  cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-};
-
 interface StatusTimelineStep {
   status: string;
   label: string;
@@ -63,6 +54,15 @@ interface StatusTimelineStep {
 
 export default function DropshipOrderDetailPage() {
   const t = useTranslations("dropshipOrders");
+
+  const DROPSHIP_STATUSES: Record<string, { label: string; color: string }> = {
+    pending: { label: t("status.pending"), color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+    sent: { label: t("status.sent"), color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
+    confirmed: { label: t("status.confirmed"), color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
+    shipped: { label: t("status.shipped"), color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
+    delivered: { label: t("status.delivered"), color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
+    cancelled: { label: t("status.cancelled"), color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+  };
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -81,7 +81,7 @@ export default function DropshipOrderDetailPage() {
   ) => {
     try {
       await updateStatus.mutateAsync({ status, ...extra });
-      toast.success(`Status zmieniony na: ${DROPSHIP_STATUSES[status]?.label || status}`);
+      toast.success(t("statusChangedTo", { status: DROPSHIP_STATUSES[status]?.label || status }));
       setShowShippedDialog(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -91,7 +91,7 @@ export default function DropshipOrderDetailPage() {
   const handleCancel = async () => {
     try {
       await cancelOrder.mutateAsync(params.id);
-      toast.success("Zamowienie dropship zostalo anulowane");
+      toast.success(t("orderCancelled"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -112,20 +112,20 @@ export default function DropshipOrderDetailPage() {
   if (!order) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono zamowienia dropship</p>
+        <p className="text-muted-foreground">{t("orderNotFound")}</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/dropship-orders")}>
-          Wroc do listy
+          {t("backToList")}
         </Button>
       </div>
     );
   }
 
   const timelineSteps: StatusTimelineStep[] = [
-    { status: "pending", label: "Utworzone", date: order.created_at },
-    { status: "sent", label: t("order.shipped"), date: order.sent_at },
-    { status: "confirmed", label: "Potwierdzone", date: order.confirmed_at },
-    { status: "shipped", label: "W transporcie", date: order.shipped_at },
-    { status: "delivered", label: "Dostarczone", date: order.delivered_at },
+    { status: "pending", label: t("timeline.created"), date: order.created_at },
+    { status: "sent", label: t("status.sent"), date: order.sent_at },
+    { status: "confirmed", label: t("status.confirmed"), date: order.confirmed_at },
+    { status: "shipped", label: t("status.shipped"), date: order.shipped_at },
+    { status: "delivered", label: t("status.delivered"), date: order.delivered_at },
   ];
 
   const statusOrder = ["pending", "sent", "confirmed", "shipped", "delivered"];
@@ -143,7 +143,7 @@ export default function DropshipOrderDetailPage() {
             Dropship {shortId(order.id)}
           </h1>
           <p className="text-muted-foreground">
-            Dostawca: {order.supplier_name} | Zamowienie:{" "}
+            {t("supplier")}: {order.supplier_name} | {t("order.title")}:{" "}
             <Link href={`/orders/${order.order_id}`} className="text-primary hover:underline">
               {shortId(order.order_id)}
             </Link>
@@ -202,7 +202,7 @@ export default function DropshipOrderDetailPage() {
       {!isCancelled && order.status !== "delivered" && (
         <Card>
           <CardHeader>
-            <CardTitle>Akcje</CardTitle>
+            <CardTitle>{t("actions")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {order.status === "pending" && (
@@ -221,7 +221,7 @@ export default function DropshipOrderDetailPage() {
                   disabled={updateStatus.isPending}
                 >
                   <Check className="mr-2 h-4 w-4" />
-                  Potwierdzone przez dostawce
+                  {t("confirmedBySupplier")}
                 </Button>
                 <Button
                   variant="outline"
@@ -229,7 +229,7 @@ export default function DropshipOrderDetailPage() {
                   disabled={updateStatus.isPending}
                 >
                   <Truck className="mr-2 h-4 w-4" />
-                  Oznacz jako wysłane (z numerem sledzenia)
+                  {t("markAsShippedWithTracking")}
                 </Button>
               </>
             )}
@@ -239,7 +239,7 @@ export default function DropshipOrderDetailPage() {
                 disabled={updateStatus.isPending}
               >
                 <Truck className="mr-2 h-4 w-4" />
-                Oznacz jako w transporcie
+                {t("markAsInTransit")}
               </Button>
             )}
             {order.status === "shipped" && (
@@ -249,7 +249,7 @@ export default function DropshipOrderDetailPage() {
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Package className="mr-2 h-4 w-4" />
-                Oznacz jako dostarczone
+                {t("markAsDelivered")}
               </Button>
             )}
             <Button
@@ -258,7 +258,7 @@ export default function DropshipOrderDetailPage() {
               disabled={cancelOrder.isPending}
             >
               <X className="mr-2 h-4 w-4" />
-              Anuluj
+              {t("cancel")}
             </Button>
           </CardContent>
         </Card>
@@ -270,13 +270,13 @@ export default function DropshipOrderDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Factory className="h-4 w-4" />
-              Szczegoly
+              {t("details")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Dostawca</p>
+                <p className="text-muted-foreground">{t("supplier")}</p>
                 <p className="font-medium">
                   <Link href={`/suppliers/${order.supplier_id}`} className="text-primary hover:underline">
                     {order.supplier_name}
@@ -284,30 +284,30 @@ export default function DropshipOrderDetailPage() {
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground">Koszt calkowity</p>
+                <p className="text-muted-foreground">{t("totalCost")}</p>
                 <p className="font-medium">{formatCurrency(order.total_cost, order.currency)}</p>
               </div>
               {order.supplier_reference && (
                 <div>
-                  <p className="text-muted-foreground">Referencja dostawcy</p>
+                  <p className="text-muted-foreground">{t("supplierReference")}</p>
                   <p className="font-medium">{order.supplier_reference}</p>
                 </div>
               )}
               {order.tracking_number && (
                 <div>
-                  <p className="text-muted-foreground">Nr sledzenia</p>
+                  <p className="text-muted-foreground">{t("trackingNumber")}</p>
                   <p className="font-medium">{order.tracking_number}</p>
                 </div>
               )}
               {order.carrier && (
                 <div>
-                  <p className="text-muted-foreground">Przewoznik</p>
+                  <p className="text-muted-foreground">{t("carrier")}</p>
                   <p className="font-medium">{order.carrier}</p>
                 </div>
               )}
               {order.notes && (
                 <div className="col-span-2">
-                  <p className="text-muted-foreground">Notatki</p>
+                  <p className="text-muted-foreground">{t("notes")}</p>
                   <p className="mt-0.5">{order.notes}</p>
                 </div>
               )}
@@ -318,12 +318,12 @@ export default function DropshipOrderDetailPage() {
         {/* Dates */}
         <Card>
           <CardHeader>
-            <CardTitle>Daty</CardTitle>
+            <CardTitle>{t("dates")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Utworzone</p>
+                <p className="text-muted-foreground">{t("timeline.created")}</p>
                 <p className="font-medium">{formatDate(order.created_at)}</p>
               </div>
               {order.sent_at && (
@@ -334,19 +334,19 @@ export default function DropshipOrderDetailPage() {
               )}
               {order.confirmed_at && (
                 <div>
-                  <p className="text-muted-foreground">Potwierdzone</p>
+                  <p className="text-muted-foreground">{t("status.confirmed")}</p>
                   <p className="font-medium">{formatDate(order.confirmed_at)}</p>
                 </div>
               )}
               {order.shipped_at && (
                 <div>
-                  <p className="text-muted-foreground">W transporcie</p>
+                  <p className="text-muted-foreground">{t("status.shipped")}</p>
                   <p className="font-medium">{formatDate(order.shipped_at)}</p>
                 </div>
               )}
               {order.delivered_at && (
                 <div>
-                  <p className="text-muted-foreground">Dostarczone</p>
+                  <p className="text-muted-foreground">{t("status.delivered")}</p>
                   <p className="font-medium">{formatDate(order.delivered_at)}</p>
                 </div>
               )}
@@ -358,18 +358,18 @@ export default function DropshipOrderDetailPage() {
       {/* Items */}
       <Card>
         <CardHeader>
-          <CardTitle>Pozycje</CardTitle>
+          <CardTitle>{t("items")}</CardTitle>
         </CardHeader>
         <CardContent>
           {order.items && order.items.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produkt</TableHead>
+                  <TableHead>{t("product")}</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead className="text-right">Ilosc</TableHead>
-                  <TableHead className="text-right">Cena jedn.</TableHead>
-                  <TableHead className="text-right">Wartosc</TableHead>
+                  <TableHead className="text-right">{t("quantity")}</TableHead>
+                  <TableHead className="text-right">{t("unitPrice")}</TableHead>
+                  <TableHead className="text-right">{t("value")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -401,7 +401,7 @@ export default function DropshipOrderDetailPage() {
               <TableFooter>
                 <TableRow>
                   <TableCell colSpan={4} className="font-semibold">
-                    Razem
+                    {t("total")}
                   </TableCell>
                   <TableCell className="text-right font-semibold">
                     {formatCurrency(order.total_cost, order.currency)}
@@ -410,7 +410,7 @@ export default function DropshipOrderDetailPage() {
               </TableFooter>
             </Table>
           ) : (
-            <p className="text-sm text-muted-foreground">Brak pozycji</p>
+            <p className="text-sm text-muted-foreground">{t("noItems")}</p>
           )}
         </CardContent>
       </Card>
@@ -419,37 +419,37 @@ export default function DropshipOrderDetailPage() {
       <Dialog open={showShippedDialog} onOpenChange={setShowShippedDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Oznacz jako w transporcie</DialogTitle>
+            <DialogTitle>{t("markAsInTransit")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Nr sledzenia</Label>
+              <Label>{t("trackingNumber")}</Label>
               <Input
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="Opcjonalny numer sledzenia"
+                placeholder={t("optionalTrackingNumber")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Przewoznik</Label>
+              <Label>{t("carrier")}</Label>
               <Input
                 value={carrier}
                 onChange={(e) => setCarrier(e.target.value)}
-                placeholder="np. InPost, DHL, DPD"
+                placeholder={t("carrierPlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Referencja dostawcy</Label>
+              <Label>{t("supplierReference")}</Label>
               <Input
                 value={supplierRef}
                 onChange={(e) => setSupplierRef(e.target.value)}
-                placeholder="Opcjonalny numer zamowienia u dostawcy"
+                placeholder={t("optionalSupplierOrderNumber")}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowShippedDialog(false)}>
-              Anuluj
+              {t("cancel")}
             </Button>
             <Button
               disabled={updateStatus.isPending}
@@ -462,7 +462,7 @@ export default function DropshipOrderDetailPage() {
               }
             >
               {updateStatus.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Potwierdz
+              {t("confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -472,9 +472,9 @@ export default function DropshipOrderDetailPage() {
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
-        title="Anuluj zamowienie dropship"
-        description="Czy na pewno chcesz anulowac to zamowienie dropship? Ta operacja nie moze byc cofnieta."
-        confirmLabel="Anuluj zamowienie"
+        title={t("cancelOrderTitle")}
+        description={t("cancelOrderDescription")}
+        confirmLabel={t("cancelOrderConfirm")}
         variant="destructive"
         onConfirm={handleCancel}
       />

@@ -329,7 +329,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
           <ol className="list-decimal list-inside space-y-2 text-sm">
             <li>
-              Przejdź do{" "}
+              {t("goTo")}{" "}
               <a
                 href={devPortalURL}
                 target="_blank"
@@ -357,8 +357,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
             <p className="text-xs text-amber-800 dark:text-amber-200">
-              Redirect URI musi być <strong>{t("dokładnieTakiSam")}</strong> jak
-              {t("powyzejRoznicaWNawetJednymZnakuSpowoduje")}
+              {t("redirectUriMustBeExact")}
             </p>
           </div>
         </CardContent>
@@ -461,7 +460,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Label htmlFor="marketplace-id">Marketplace</Label>
               <Select value={marketplaceId} onValueChange={setMarketplaceId}>
                 <SelectTrigger id="marketplace-id" className="w-full">
-                  <SelectValue placeholder="Wybierz marketplace" />
+                  <SelectValue placeholder={t("selectMarketplace")} />
                 </SelectTrigger>
                 <SelectContent>
                   {MARKETPLACE_OPTIONS.map((opt) => (
@@ -816,7 +815,7 @@ function ConnectedState({
               <Label htmlFor="settings-marketplace-id">Marketplace</Label>
               <Select value={marketplaceId} onValueChange={setMarketplaceId}>
                 <SelectTrigger id="settings-marketplace-id" className="w-full">
-                  <SelectValue placeholder="Wybierz marketplace" />
+                  <SelectValue placeholder={t("selectMarketplace")} />
                 </SelectTrigger>
                 <SelectContent>
                   {MARKETPLACE_OPTIONS.map((opt) => (
@@ -919,7 +918,6 @@ function CredentialsCard({
         <CardTitle>{t("zmienDaneAplikacji")}</CardTitle>
         <CardDescription>
           {t("zaktualizujAppIdCertIdIDev")}
-          ponowna autoryzacja OAuth.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -24,17 +24,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useDropshipOrders } from "@/hooks/use-dropship-orders";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
-
-const DROPSHIP_STATUSES: Record<string, { label: string; color: string }> = {
-  pending: { label: "Oczekujace", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-  sent: { label: "Wysłane", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-  confirmed: { label: "Potwierdzone", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
-  shipped: { label: "W transporcie", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-  delivered: { label: "Dostarczone", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-  cancelled: { label: "Anulowane", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-};
+import { useTranslations } from "next-intl";
 
 export default function DropshipOrdersPage() {
+  const t = useTranslations("dropshipOrders");
+
+  const DROPSHIP_STATUSES: Record<string, { label: string; color: string }> = {
+    pending: { label: t("status.pending"), color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+    sent: { label: t("status.sent"), color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
+    confirmed: { label: t("status.confirmed"), color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
+    shipped: { label: t("status.shipped"), color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
+    delivered: { label: t("status.delivered"), color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
+    cancelled: { label: t("status.cancelled"), color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+  };
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(0);
   const limit = 20;
@@ -49,9 +51,9 @@ export default function DropshipOrdersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dropshipping</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Zamowienia przekazane do dostawcow
+            {t("subtitle")}
           </p>
         </div>
       </div>
@@ -65,10 +67,10 @@ export default function DropshipOrdersPage() {
           }}
         >
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filtruj po statusie" />
+            <SelectValue placeholder={t("filterByStatus")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">Wszystkie statusy</SelectItem>
+            <SelectItem value="__all__">{t("allStatuses")}</SelectItem>
             {Object.entries(DROPSHIP_STATUSES).map(([key, { label }]) => (
               <SelectItem key={key} value={key}>
                 {label}
@@ -82,7 +84,7 @@ export default function DropshipOrdersPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Factory className="h-5 w-5" />
-            Zamowienia dropship
+            {t("dropshipOrders")}
             {data && (
               <span className="text-sm font-normal text-muted-foreground">
                 ({data.total})
@@ -103,12 +105,12 @@ export default function DropshipOrdersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Dostawca</TableHead>
-                    <TableHead>Zamowienie</TableHead>
+                    <TableHead>{t("supplier")}</TableHead>
+                    <TableHead>{t("order.title")}</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Koszt</TableHead>
-                    <TableHead>Nr sledzenia</TableHead>
-                    <TableHead>Utworzono</TableHead>
+                    <TableHead>{t("cost")}</TableHead>
+                    <TableHead>{t("trackingNumber")}</TableHead>
+                    <TableHead>{t("createdAt")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -152,8 +154,7 @@ export default function DropshipOrdersPage() {
               </Table>
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Wyswietlanie {page * limit + 1}--
-                  {Math.min((page + 1) * limit, data.total)} z {data.total}
+                  {t("showing", { from: page * limit + 1, to: Math.min((page + 1) * limit, data.total), total: data.total })}
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -162,7 +163,7 @@ export default function DropshipOrdersPage() {
                     disabled={page === 0}
                     onClick={() => setPage((p) => p - 1)}
                   >
-                    Poprzednia
+                    {t("previous")}
                   </Button>
                   <Button
                     variant="outline"
@@ -170,7 +171,7 @@ export default function DropshipOrdersPage() {
                     disabled={(page + 1) * limit >= data.total}
                     onClick={() => setPage((p) => p + 1)}
                   >
-                    Nastepna
+                    {t("next")}
                   </Button>
                 </div>
               </div>
@@ -179,10 +180,10 @@ export default function DropshipOrdersPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Factory className="h-12 w-12 text-muted-foreground/50 mb-3" />
               <p className="text-muted-foreground">
-                Brak zamowien dropship.
+                {t("emptyTitle")}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Oznacz produkty jako dropship i uzywaj automatycznego routowania z poziomu zamowienia.
+                {t("emptyDescription")}
               </p>
             </div>
           )}
