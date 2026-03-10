@@ -2,24 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const ALLEGRO_TABS = [
-  { href: "/marketplaces/allegro/offers", label: "Oferty" },
-  { href: "/marketplaces/allegro/catalog", label: "Katalog" },
-  { href: "/marketplaces/allegro/promotions", label: "Promocje" },
-  { href: "/marketplaces/allegro/messages", label: "Wiadomości" },
-  { href: "/marketplaces/allegro/returns", label: "Zwroty" },
-  { href: "/marketplaces/allegro/disputes", label: "Spory" },
-  { href: "/marketplaces/allegro/delivery", label: "Dostawa" },
-  { href: "/marketplaces/allegro/policies", label: "Polityki" },
-  { href: "/marketplaces/allegro/finance", label: "Finanse" },
-  { href: "/marketplaces/allegro/ratings", label: "Oceny" },
-  { href: "/marketplaces/allegro/shipments", label: "Przesyłki" },
+  { href: "/marketplaces/allegro/offers", labelKey: "tabs.offers" },
+  { href: "/marketplaces/allegro/catalog", labelKey: "tabs.catalog" },
+  { href: "/marketplaces/allegro/promotions", labelKey: "tabs.promotions" },
+  { href: "/marketplaces/allegro/messages", labelKey: "tabs.messages" },
+  { href: "/marketplaces/allegro/returns", labelKey: "tabs.returns" },
+  { href: "/marketplaces/allegro/disputes", labelKey: "tabs.disputes" },
+  { href: "/marketplaces/allegro/delivery", labelKey: "tabs.delivery" },
+  { href: "/marketplaces/allegro/policies", labelKey: "tabs.policies" },
+  { href: "/marketplaces/allegro/finance", labelKey: "tabs.finance" },
+  { href: "/marketplaces/allegro/ratings", labelKey: "tabs.ratings" },
+  { href: "/marketplaces/allegro/shipments", labelKey: "tabs.shipments" },
 ] as const;
 
 export function AllegroTabNav() {
   const pathname = usePathname();
+  const t = useTranslations("marketplaces");
 
   return (
     <div className="overflow-x-auto">
@@ -40,7 +42,7 @@ export function AllegroTabNav() {
                   : "text-muted-foreground"
               )}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </Link>
           );
         })}

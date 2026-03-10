@@ -52,27 +52,32 @@ export class ApiClientError extends Error {
 /**
  * Returns a user-friendly error message based on the HTTP status code.
  */
+/**
+ * Returns an i18n error key for the given error.
+ * Components should translate the returned key via t().
+ * For backward compat, returns the server's error.message if available.
+ */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
     switch (error.status) {
       case 401:
-        return "Sesja wygasła. Zaloguj się ponownie.";
+        return "errors.sessionExpired";
       case 402:
-        return error.message || "Brak aktywnej subskrypcji.";
+        return error.message || "errors.noActiveSubscription";
       case 403:
-        return error.message || "Brak uprawnień do wykonania tej operacji.";
+        return error.message || "errors.noPermission";
       case 429:
-        return "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.";
+        return "errors.tooManyRequests";
       case 500:
-        return "Błąd serwera. Spróbuj ponownie później.";
+        return "errors.serverError";
       default:
-        return error.message || "Wystąpił nieoczekiwany błąd.";
+        return error.message || "errors.unexpected";
     }
   }
   if (error instanceof Error) {
     return error.message;
   }
-  return "Wystąpił nieoczekiwany błąd.";
+  return "errors.unexpected";
 }
 
 /**
@@ -87,7 +92,7 @@ export function isAuthError(error: unknown): boolean {
  * in the Zustand store and throwing an ApiClientError.
  */
 async function handlePaymentRequired(res: Response): Promise<never> {
-  const body = await res.json().catch(() => ({ message: "Brak aktywnej subskrypcji" }));
+  const body = await res.json().catch(() => ({ message: "errors.noActiveSubscription" }));
   const authState = useAuthStore.getState();
   if (authState.isAuthenticated && authState.token) {
     try {
@@ -102,7 +107,7 @@ async function handlePaymentRequired(res: Response): Promise<never> {
       // ignore — banner will show on next navigation
     }
   }
-  throw new ApiClientError(402, body.message || "Brak aktywnej subskrypcji");
+  throw new ApiClientError(402, body.message || "errors.noActiveSubscription");
 }
 
 export async function apiClient<T>(

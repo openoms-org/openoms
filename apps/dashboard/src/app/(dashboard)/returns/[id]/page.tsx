@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -28,20 +28,22 @@ import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
 
-const editSchema = z.object({
-  reason: z.string().min(1, "Powód jest wymagany"),
-  refund_amount: z.number().min(0, "Kwota musi być dodatnia"),
-  notes: z.string().optional(),
-});
+function createEditSchema(t: (key: string) => string) {
+  return z.object({
+    reason: z.string().min(1, t("validation.reasonRequired")),
+    refund_amount: z.number().min(0, t("validation.amountPositive")),
+    notes: z.string().optional(),
+  });
+}
 
-type EditFormValues = z.infer<typeof editSchema>;
+type EditFormValues = z.infer<ReturnType<typeof createEditSchema>>;
 
-const TRANSITION_LABELS: Record<string, string> = {
-  approved: "Zatwierdź",
-  rejected: "Odrzuć",
-  cancelled: "Anuluj",
-  received: "Oznacz jako odebrane",
-  refunded: "Zwróć środki",
+const TRANSITION_LABEL_KEYS: Record<string, string> = {
+  approved: "transitions.approved",
+  rejected: "transitions.rejected",
+  cancelled: "transitions.cancelled",
+  received: "transitions.received",
+  refunded: "transitions.refunded",
 };
 
 const TRANSITION_VARIANTS: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
@@ -60,6 +62,7 @@ export default function ReturnDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tokenCopied, setTokenCopied] = useState(false);
 
+  const editSchema = useMemo(() => createEditSchema(t), [t]);
   const { data: returnData, isLoading } = useReturn(params.id);
   const updateReturn = useUpdateReturn(params.id);
   const deleteReturn = useDeleteReturn();
@@ -92,7 +95,7 @@ export default function ReturnDetailPage() {
         refund_amount: data.refund_amount,
         notes: data.notes || undefined,
       });
-      toast.success(t("zwrotzostałzaktualizowany"));
+      toast.success(t("returnUpdated"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -102,7 +105,7 @@ export default function ReturnDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteReturn.mutateAsync(params.id);
-      toast.success(t("zwrotzostałusuniety"));
+      toast.success(t("returnDeleted"));
       router.push("/returns");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -112,7 +115,7 @@ export default function ReturnDetailPage() {
   const handleTransition = async (newStatus: string) => {
     try {
       await transitionStatus.mutateAsync({ status: newStatus });
-      toast.success(t("statuszwrotuzostałzmieniony"));
+      toast.success(t("statusChanged"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -134,7 +137,7 @@ export default function ReturnDetailPage() {
   if (!returnData) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono zwrotu</p>
+        <p className="text-muted-foreground">{t("notFound")}</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/returns")}>
           {t("detail.backToList")}
         </Button>
@@ -150,17 +153,17 @@ export default function ReturnDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">
-              Zwrot #{shortId(params.id)}
+              {t("returnTitle", { id: shortId(params.id) })}
             </h1>
             <StatusBadge status={returnData.status} statusMap={RETURN_STATUSES} />
           </div>
           <p className="text-muted-foreground mt-1">
-            Utworzony {formatDate(returnData.created_at)}
+            {t("createdOn", { date: formatDate(returnData.created_at) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleEdit}>
-            Edytuj
+            {t("edit")}
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
             {t("delete")}
@@ -171,7 +174,7 @@ export default function ReturnDetailPage() {
       {isEditing ? (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja zwrotu</CardTitle>
+            <CardTitle>{t("editReturn")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(handleUpdate)} className="space-y-4">
@@ -187,7 +190,7 @@ export default function ReturnDetailPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="refund_amount">Kwota zwrotu (PLN)</Label>
+                <Label htmlFor="refund_amount">{t("refundAmount")}</Label>
                 <Input
                   id="refund_amount"
                   type="number"
@@ -200,7 +203,7 @@ export default function ReturnDetailPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notatki</Label>
+                <Label htmlFor="notes">{t("notes")}</Label>
                 <Textarea
                   id="notes"
                   {...register("notes")}
@@ -212,10 +215,10 @@ export default function ReturnDetailPage() {
 
               <div className="flex items-center gap-2">
                 <Button type="submit" disabled={updateReturn.isPending}>
-                  {updateReturn.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
+                  {updateReturn.isPending ? t("saving") : t("saveChanges")}
                 </Button>
                 <Button variant="outline" type="button" onClick={() => setIsEditing(false)}>
-                  Anuluj
+                  {t("cancel")}
                 </Button>
               </div>
             </form>
@@ -226,7 +229,7 @@ export default function ReturnDetailPage() {
           <div className="md:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Dane zwrotu</CardTitle>
+                <CardTitle>{t("returnData")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -246,17 +249,17 @@ export default function ReturnDetailPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Kwota zwrotu</p>
+                    <p className="text-sm text-muted-foreground">{t("refundAmount")}</p>
                     <p className="mt-1 font-medium">
                       {formatCurrency(returnData.refund_amount)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Utworzono</p>
+                    <p className="text-sm text-muted-foreground">{t("created")}</p>
                     <p className="mt-1 text-sm">{formatDate(returnData.created_at)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Zaktualizowano</p>
+                    <p className="text-sm text-muted-foreground">{t("updated")}</p>
                     <p className="mt-1 text-sm">{formatDate(returnData.updated_at)}</p>
                   </div>
                 </div>
@@ -272,7 +275,7 @@ export default function ReturnDetailPage() {
                   <>
                     <Separator />
                     <div>
-                      <p className="text-sm text-muted-foreground">Notatki</p>
+                      <p className="text-sm text-muted-foreground">{t("notes")}</p>
                       <p className="mt-1 text-sm">{returnData.notes}</p>
                     </div>
                   </>
@@ -282,7 +285,7 @@ export default function ReturnDetailPage() {
                   <>
                     <Separator />
                     <div>
-                      <p className="text-sm text-muted-foreground">Email klienta (z formularza)</p>
+                      <p className="text-sm text-muted-foreground">{t("customerEmail")}</p>
                       <p className="mt-1 text-sm">{returnData.customer_email}</p>
                     </div>
                   </>
@@ -292,7 +295,7 @@ export default function ReturnDetailPage() {
                   <>
                     <Separator />
                     <div>
-                      <p className="text-sm text-muted-foreground">Uwagi klienta</p>
+                      <p className="text-sm text-muted-foreground">{t("customerNotes")}</p>
                       <p className="mt-1 text-sm">{returnData.customer_notes}</p>
                     </div>
                   </>
@@ -302,7 +305,7 @@ export default function ReturnDetailPage() {
                   <>
                     <Separator />
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">{t("linkDoSledzeniaDlaKlienta")}</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t("trackingLinkForCustomer")}</p>
                       <div className="flex items-center gap-2">
                         <code className="flex-1 rounded bg-muted px-2 py-1 text-xs font-mono break-all">
                           {typeof window !== "undefined"
@@ -349,7 +352,7 @@ export default function ReturnDetailPage() {
             {allowedTransitions.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Zmiana statusu</CardTitle>
+                  <CardTitle>{t("changeStatus")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
@@ -360,7 +363,7 @@ export default function ReturnDetailPage() {
                         onClick={() => handleTransition(status)}
                         disabled={transitionStatus.isPending}
                       >
-                        {TRANSITION_LABELS[status] || status}
+                        {TRANSITION_LABEL_KEYS[status] ? t(TRANSITION_LABEL_KEYS[status]) : status}
                       </Button>
                     ))}
                   </div>
@@ -374,9 +377,9 @@ export default function ReturnDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuwanie zwrotu"
-        description={t("czyNaPewnoChceszUsunacTenZwrotTaOperacjaJestNieodw")}
-        confirmLabel={t("usunZwrot")}
+        title={t("deleteReturn")}
+        description={t("deleteReturnConfirm")}
+        confirmLabel={t("deleteReturn")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteReturn.isPending}

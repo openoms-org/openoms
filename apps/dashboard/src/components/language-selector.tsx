@@ -13,8 +13,8 @@ import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
 
 const LANGUAGES = [
-  { code: "en", label: "English", flag: "\u{1F1EC}\u{1F1E7}" },
-  { code: "pl", label: "Polski", flag: "\u{1F1F5}\u{1F1F1}" },
+  { code: "en", label: "English", flag: "EN" },
+  { code: "pl", label: "Polski", flag: "PL" },
 ];
 
 export function LanguageSelector({ compact }: { compact?: boolean }) {
@@ -30,6 +30,7 @@ export function LanguageSelector({ compact }: { compact?: boolean }) {
           body: JSON.stringify({ language: newLocale }),
         });
       }
+      sessionStorage.setItem("locale-changing", "1");
       document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
       window.location.reload();
     } catch {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -15,21 +15,23 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 
-const registerSchema = z.object({
-  tenant_name: z.string().min(1, "Nazwa organizacji jest wymagana"),
-  tenant_slug: z
-    .string()
-    .min(1, "Slug organizacji jest wymagany")
-    .regex(/^[a-z0-9-]+$/, "Slug może zawierać tylko małe litery, cyfry i myślniki"),
-  name: z.string().min(1, "Imię i nazwisko jest wymagane"),
-  email: z.string().email("Nieprawidłowy adres email"),
-  password: z.string()
-    .min(8, "Hasło musi mieć minimum 8 znaków")
-    .regex(/[A-Z]/, "Hasło musi zawierać wielką literę")
-    .regex(/[0-9]/, "Hasło musi zawierać cyfrę"),
-});
+function createRegisterSchema(t: (key: string) => string) {
+  return z.object({
+    tenant_name: z.string().min(1, t("validation.orgNameRequired")),
+    tenant_slug: z
+      .string()
+      .min(1, t("validation.orgSlugRequired"))
+      .regex(/^[a-z0-9-]+$/, t("validation.slugFormat")),
+    name: z.string().min(1, t("validation.fullNameRequired")),
+    email: z.string().email(t("validation.emailInvalid")),
+    password: z.string()
+      .min(8, t("validation.passwordMinLength"))
+      .regex(/[A-Z]/, t("validation.passwordUppercase"))
+      .regex(/[0-9]/, t("validation.passwordDigit")),
+  });
+}
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type RegisterFormValues = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 function InviteRegisterForm() {
   const t = useTranslations("auth");
@@ -40,6 +42,8 @@ function InviteRegisterForm() {
   const licenseToken = searchParams.get("license_token") || "";
   const hasToken = inviteToken || licenseToken;
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const registerSchema = useMemo(() => createRegisterSchema(t), [t]);
 
   const {
     register,
@@ -53,22 +57,22 @@ function InviteRegisterForm() {
     return (
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Rejestracja</CardTitle>
-          <CardDescription>{t("dokonczRejestracjeZZaproszenia")}</CardDescription>
+          <CardTitle className="text-2xl">{t("register.title")}</CardTitle>
+          <CardDescription>{t("completeInviteRegistration")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
             <p className="text-sm text-destructive">
-              {t("brakTokenuUzyjLinkuOtrzymanegoWZaproszeniu")}
+              {t("missingTokenUseInviteLink")}
             </p>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Link href="/register" className="text-sm text-primary underline-offset-4 hover:underline">
-            Wybierz plan
+            {t("choosePlan")}
           </Link>
           <p className="text-sm text-muted-foreground">
-            Masz już konto?{" "}
+            {t("alreadyHaveAccount")}{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">
               {t("login.submit")}
             </Link>
@@ -96,13 +100,13 @@ function InviteRegisterForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Rejestracja</CardTitle>
-        <CardDescription>{t("dokonczRejestracjeZZaproszenia")}</CardDescription>
+        <CardTitle className="text-2xl">{t("register.title")}</CardTitle>
+        <CardDescription>{t("completeInviteRegistration")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tenant_name">Nazwa organizacji <span className="text-destructive">*</span></Label>
+            <Label htmlFor="tenant_name">{t("form.orgName")} <span className="text-destructive">*</span></Label>
             <Input
               id="tenant_name"
               placeholder="Moja Firma Sp. z o.o."
@@ -114,7 +118,7 @@ function InviteRegisterForm() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tenant_slug">Slug organizacji <span className="text-destructive">*</span></Label>
+            <Label htmlFor="tenant_slug">{t("form.orgSlug")} <span className="text-destructive">*</span></Label>
             <Input
               id="tenant_slug"
               placeholder="moja-firma"
@@ -166,10 +170,10 @@ function InviteRegisterForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Rejestracja..." : t("login.register")}
+            {isSubmitting ? t("registering") : t("login.register")}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Masz już konto?{" "}
+            {t("alreadyHaveAccount")}{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">
               {t("login.submit")}
             </Link>

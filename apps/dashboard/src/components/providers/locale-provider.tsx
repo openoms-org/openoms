@@ -7,6 +7,12 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
+    // Skip if user just changed locale via LanguageSelector (prevents loop)
+    if (sessionStorage.getItem("locale-changing") === "1") {
+      sessionStorage.removeItem("locale-changing");
+      return;
+    }
+
     if (user?.language) {
       const currentCookie = document.cookie
         .split("; ")

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,20 +17,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { CheckoutSessionStatus } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const registerSchema = z.object({
-  tenant_name: z.string().min(1, "Nazwa organizacji jest wymagana"),
-  tenant_slug: z
-    .string()
-    .min(1, "Slug organizacji jest wymagany")
-    .regex(/^[a-z0-9-]+$/, "Slug może zawierać tylko małe litery, cyfry i myślniki"),
-  name: z.string().min(1, "Imię i nazwisko jest wymagane"),
-  password: z.string()
-    .min(8, "Hasło musi mieć minimum 8 znaków")
-    .regex(/[A-Z]/, "Hasło musi zawierać wielką literę")
-    .regex(/[0-9]/, "Hasło musi zawierać cyfrę"),
-});
+function createRegisterSchema(t: (key: string) => string) {
+  return z.object({
+    tenant_name: z.string().min(1, t("validation.orgNameRequired")),
+    tenant_slug: z
+      .string()
+      .min(1, t("validation.orgSlugRequired"))
+      .regex(/^[a-z0-9-]+$/, t("validation.slugFormat")),
+    name: z.string().min(1, t("validation.fullNameRequired")),
+    password: z.string()
+      .min(8, t("validation.passwordMinLength"))
+      .regex(/[A-Z]/, t("validation.passwordUppercase"))
+      .regex(/[0-9]/, t("validation.passwordDigit")),
+  });
+}
 
-type CompleteFormValues = z.infer<typeof registerSchema>;
+type CompleteFormValues = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 function CompleteRegistrationForm() {
   const t = useTranslations("auth");
@@ -43,6 +45,8 @@ function CompleteRegistrationForm() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  const registerSchema = useMemo(() => createRegisterSchema(t), [t]);
 
   const {
     register,
@@ -128,7 +132,7 @@ function CompleteRegistrationForm() {
         </CardContent>
         <CardFooter className="justify-center">
           <Link href="/register">
-            <Button variant="outline">Wybierz plan</Button>
+            <Button variant="outline">{t("choosePlan")}</Button>
           </Link>
         </CardFooter>
       </Card>
@@ -149,7 +153,7 @@ function CompleteRegistrationForm() {
             {t("retry")}
           </Button>
           <Link href="/register" className="text-sm text-primary underline-offset-4 hover:underline">
-            Wybierz inny plan
+            {t("chooseAnotherPlan")}
           </Link>
         </CardFooter>
       </Card>
@@ -203,7 +207,7 @@ function CompleteRegistrationForm() {
             <Input value={session.email} disabled />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tenant_name">Nazwa organizacji <span className="text-destructive">*</span></Label>
+            <Label htmlFor="tenant_name">{t("form.orgName")} <span className="text-destructive">*</span></Label>
             <Input
               id="tenant_name"
               placeholder="Moja Firma Sp. z o.o."
@@ -215,7 +219,7 @@ function CompleteRegistrationForm() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="tenant_slug">Slug organizacji <span className="text-destructive">*</span></Label>
+            <Label htmlFor="tenant_slug">{t("form.orgSlug")} <span className="text-destructive">*</span></Label>
             <Input
               id="tenant_slug"
               placeholder="moja-firma"
@@ -254,10 +258,10 @@ function CompleteRegistrationForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Rejestracja..." : t("utworzKonto")}
+            {isSubmitting ? t("registering") : t("createAccount")}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Masz już konto?{" "}
+            {t("alreadyHaveAccount")}{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">
               {t("login.submit")}
             </Link>

@@ -388,6 +388,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Any authenticated user
 			r.Get("/users/me", deps.User.Me)
+			r.Patch("/users/me", deps.User.UpdateMe)
 
 			// Admin/owner only user management
 			r.Route("/users", func(r chi.Router) {

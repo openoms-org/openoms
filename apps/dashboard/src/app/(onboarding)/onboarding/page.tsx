@@ -20,20 +20,21 @@ import { useTranslations } from "next-intl";
 // ---------------------------------------------------------------------------
 // Step labels for the stepper
 // ---------------------------------------------------------------------------
-const STEPS = [
-  { number: 1, label: "Dane firmy" },
-  { number: 2, label: "Magazyn" },
-  { number: 3, label: "Integracja" },
-  { number: 4, label: "Zespół" },
+const STEP_LABEL_KEYS = [
+  { number: 1, labelKey: "stepTitles.companyData" },
+  { number: 2, labelKey: "stepTitles.defaultWarehouse" },
+  { number: 3, labelKey: "stepTitles.firstIntegration" },
+  { number: 4, labelKey: "stepTitles.inviteTeam" },
 ];
 
 // ---------------------------------------------------------------------------
 // Stepper header
 // ---------------------------------------------------------------------------
 function Stepper({ currentStep, completedSteps }: { currentStep: number; completedSteps: number[] }) {
+  const t = useTranslations("onboarding");
   return (
     <div className="flex items-center gap-2 mb-8">
-      {STEPS.map((step, idx) => {
+      {STEP_LABEL_KEYS.map((step, idx) => {
         const isCompleted = completedSteps.includes(step.number);
         const isActive = step.number === currentStep;
 
@@ -56,10 +57,10 @@ function Stepper({ currentStep, completedSteps }: { currentStep: number; complet
                   isActive ? "text-foreground font-medium" : "text-muted-foreground"
                 }`}
               >
-                {step.label}
+                {t(step.labelKey)}
               </span>
             </div>
-            {idx < STEPS.length - 1 && (
+            {idx < STEP_LABEL_KEYS.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mx-2 mt-[-1rem] ${
                   completedSteps.includes(step.number) ? "bg-primary" : "bg-muted"
@@ -102,15 +103,15 @@ function Step1Company({ onNext }: { onNext: () => void }) {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.company_name.trim()) e.company_name = "Nazwa firmy jest wymagana";
-    if (!form.nip.trim()) e.nip = "NIP jest wymagany";
-    else if (!validateNip(form.nip)) e.nip = "Podaj poprawny numer NIP";
+    if (!form.company_name.trim()) e.company_name = t("validation.companyNameRequired");
+    if (!form.nip.trim()) e.nip = t("validation.nipRequired");
+    else if (!validateNip(form.nip)) e.nip = t("validation.nipInvalid");
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      e.email = "Podaj poprawny adres email";
+      e.email = t("validation.emailInvalid");
     if (form.post_code && !/^\d{2}-\d{3}$/.test(form.post_code))
-      e.post_code = t("kodPocztowyMusiMiecFormatXxxxx");
+      e.post_code = t("validation.postCodeFormat");
     if (form.phone && !/^\+?[\d\s\-()]{7,20}$/.test(form.phone))
-      e.phone = "Podaj poprawny numer telefonu";
+      e.phone = t("validation.phoneInvalid");
     return e;
   };
 
@@ -146,7 +147,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="company_name">
-            Nazwa firmy <span className="text-destructive">*</span>
+            {t("form.companyName")} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="company_name"
@@ -172,7 +173,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
           {errors.nip && <p className="text-xs text-destructive">{errors.nip}</p>}
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="address">Ulica i numer</Label>
+          <Label htmlFor="address">{t("form.street")}</Label>
           <Input
             id="address"
             value={form.address}
@@ -181,7 +182,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="city">Miasto</Label>
+          <Label htmlFor="city">{t("form.city")}</Label>
           <Input
             id="city"
             value={form.city}
@@ -189,7 +190,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="post_code">Kod pocztowy</Label>
+          <Label htmlFor="post_code">{t("form.postCode")}</Label>
           <Input
             id="post_code"
             value={form.post_code}
@@ -198,7 +199,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">Telefon</Label>
+          <Label htmlFor="phone">{t("form.phone")}</Label>
           <Input
             id="phone"
             value={form.phone}
@@ -218,7 +219,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={updateStep.isPending}>
           {updateStep.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Dalej
+          {t("next")}
         </Button>
       </div>
     </form>
@@ -241,7 +242,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      toast.error("Nazwa magazynu jest wymagana");
+      toast.error(t("validation.warehouseNameRequired"));
       return;
     }
     try {
@@ -261,17 +262,17 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="wh_name">
-            Nazwa magazynu <span className="text-destructive">*</span>
+            {t("form.warehouseName")} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="wh_name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder={t("magazynGłowny")}
+            placeholder={t("form.mainWarehouse")}
           />
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="wh_address">Ulica i numer</Label>
+          <Label htmlFor="wh_address">{t("form.street")}</Label>
           <Input
             id="wh_address"
             value={form.address}
@@ -279,7 +280,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="wh_city">Miasto</Label>
+          <Label htmlFor="wh_city">{t("form.city")}</Label>
           <Input
             id="wh_city"
             value={form.city}
@@ -287,7 +288,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="wh_post_code">Kod pocztowy</Label>
+          <Label htmlFor="wh_post_code">{t("form.postCode")}</Label>
           <Input
             id="wh_post_code"
             value={form.post_code}
@@ -302,7 +303,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
         </Button>
         <Button type="submit" disabled={updateStep.isPending}>
           {updateStep.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Dalej
+          {t("next")}
         </Button>
       </div>
     </form>
@@ -333,7 +334,7 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!provider) {
-      toast.error(t("form.shipmentProviderPlaceholder"));
+      toast.error(t("validation.selectProvider"));
       return;
     }
     if (selectedProvider?.oauth) {
@@ -377,18 +378,18 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
       </div>
       {provider && selectedProvider?.oauth && (
         <p className="text-sm text-muted-foreground">
-          {t("allegroWymagaAutoryzacjiOauthPoKliknieciuQuotdalej")}
+          {t("oauthRedirectNotice")}
         </p>
       )}
       {provider && !selectedProvider?.oauth && (
         <div className="space-y-2">
-          <Label htmlFor="api_key">Klucz API</Label>
+          <Label htmlFor="api_key">{t("form.apiKey")}</Label>
           <Input
             id="api_key"
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Wklej klucz API"
+            placeholder={t("form.pasteApiKey")}
           />
         </div>
       )}
@@ -398,7 +399,7 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
         </Button>
         <Button type="submit" disabled={updateStep.isPending || !provider}>
           {updateStep.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Dalej
+          {t("next")}
         </Button>
       </div>
     </form>
@@ -426,7 +427,7 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
       });
       setInvited((prev) => [...prev, email]);
       setEmail("");
-      toast.success(t("zaproszenieWysłane"));
+      toast.success(t("inviteSent"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("error"));
     } finally {
@@ -451,11 +452,11 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="adres@email.pl"
+          placeholder={t("form.emailPlaceholder")}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleInvite(); } }}
         />
         <Button type="button" variant="outline" onClick={handleInvite} disabled={sending || !email.trim()}>
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Wyślij"}
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("sendInvite")}
         </Button>
       </div>
       {invited.length > 0 && (
@@ -492,7 +493,7 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
           {(updateStep.isPending || completeOnboarding.isPending) && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          {t("zakonczKonfiguracje")}
+          {t("finishSetup")}
         </Button>
       </div>
     </div>
@@ -511,13 +512,13 @@ function CompletionScreen() {
         <CheckCircle2 className="h-10 w-10 text-green-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold">Gotowe!</h2>
+        <h2 className="text-2xl font-bold">{t("allDone")}</h2>
         <p className="text-muted-foreground mt-1">
-          {t("konfiguracjaZakonczonaMozeszTerazKorzystacZSystemu")}
+          {t("setupCompleteMessage")}
         </p>
       </div>
       <Button size="lg" onClick={() => router.replace("/")}>
-        {t("przejdzDoPanelu")}
+        {t("goToDashboard")}
       </Button>
     </div>
   );
@@ -550,9 +551,9 @@ export default function OnboardingPage() {
     return (
       <div className="flex items-center justify-center py-24 text-center">
         <div className="space-y-2">
-          <p className="text-destructive font-medium">{t("nieudałosiezaładowacstatusukonfiguracji")}</p>
+          <p className="text-destructive font-medium">{t("failedToLoadStatus")}</p>
           <Button variant="outline" onClick={() => router.replace("/")}>
-            {t("wrocDoPanelu")}
+            {t("backToDashboard")}
           </Button>
         </div>
       </div>
@@ -586,7 +587,7 @@ export default function OnboardingPage() {
     try {
       await updateStep.mutateAsync({ step, action: "skipped" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("nieudałosiezapisacpominieciakroku"));
+      toast.error(err instanceof Error ? err.message : t("failedToSaveSkip"));
       return;
     }
     const next = step + 1;
@@ -607,25 +608,25 @@ export default function OnboardingPage() {
   };
 
   const stepTitles: Record<number, string> = {
-    1: "Dane firmy",
-    2: t("domyslnyMagazyn"),
-    3: "Pierwsza integracja",
-    4: t("zaproszespoł"),
+    1: t("stepTitles.companyData"),
+    2: t("stepTitles.defaultWarehouse"),
+    3: t("stepTitles.firstIntegration"),
+    4: t("stepTitles.inviteTeam"),
   };
 
   const stepDescriptions: Record<number, string> = {
-    1: t("uzupełnijdanefirmypotrzebnedofakturiwysyłek"),
-    2: t("dodajMagazynZKtoregoBedaRealizowaneZamowienia"),
-    3: t("połaczsiezplatformasprzedazowalubkurierem"),
-    4: t("zaprosczłonkowzespołudosystemu"),
+    1: t("stepDescriptions.companyData"),
+    2: t("stepDescriptions.defaultWarehouse"),
+    3: t("stepDescriptions.firstIntegration"),
+    4: t("stepDescriptions.inviteTeam"),
   };
 
   return (
     <div className="space-y-2">
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold">Konfiguracja systemu</h1>
+        <h1 className="text-2xl font-bold">{t("systemSetup")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          {t("skonfigurujSystemAbyMocWPełniZ")}
+          {t("setupSubtitle")}
         </p>
       </div>
 
@@ -661,7 +662,7 @@ export default function OnboardingPage() {
 
       <div className="flex justify-center pt-4">
         <Button variant="ghost" size="sm" onClick={handleFinishLater}>
-          {t("dokonczPozniej")}
+          {t("finishLater")}
         </Button>
       </div>
     </div>

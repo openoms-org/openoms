@@ -74,7 +74,32 @@ func (r *RegisterRequest) Validate() error {
 	if err := validateMaxLength("tenant_name", r.TenantName, MaxNameLength); err != nil {
 		return err
 	}
+	if r.Language != "" {
+		switch r.Language {
+		case "pl", "en":
+			// valid
+		default:
+			return errors.New("language must be one of: pl, en")
+		}
+	}
 	return validateSlug(r.TenantSlug)
+}
+
+// UpdateMeRequest is the body of PATCH /v1/users/me (self-service).
+type UpdateMeRequest struct {
+	Language *string `json:"language,omitempty"`
+}
+
+func (r *UpdateMeRequest) Validate() error {
+	if r.Language == nil {
+		return errors.New("language is required")
+	}
+	switch *r.Language {
+	case "pl", "en":
+		return nil
+	default:
+		return errors.New("language must be one of: pl, en")
+	}
 }
 
 // TokenResponse is returned by login and register endpoints.

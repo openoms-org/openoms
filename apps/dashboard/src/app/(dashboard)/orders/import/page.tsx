@@ -23,29 +23,31 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useImportPreview, useImportOrders } from "@/hooks/use-order-import";
 import { getErrorMessage } from "@/lib/api-client";
+import { useTranslations } from "next-intl";
 import type { ImportColumnMapping, ImportPreviewResponse, ImportResult } from "@/types/api";
 
-const ORDER_FIELDS: { value: string; label: string }[] = [
-  { value: "", label: "-- Pomi\u0144 --" },
-  { value: "customer_name", label: "Nazwa klienta" },
-  { value: "customer_email", label: "E-mail klienta" },
-  { value: "customer_phone", label: "Telefon klienta" },
-  { value: "total_amount", label: "Kwota" },
-  { value: "currency", label: "Waluta" },
-  { value: "source", label: "\u0179r\u00f3d\u0142o" },
-  { value: "external_id", label: "Zewn\u0119trzne ID" },
-  { value: "notes", label: "Notatki" },
-  { value: "status", label: "Status" },
-  { value: "ordered_at", label: "Data zam\u00f3wienia" },
-  { value: "payment_status", label: "Status p\u0142atno\u015bci" },
-  { value: "payment_method", label: "Metoda p\u0142atno\u015bci" },
-  { value: "items", label: "Pozycje (JSON)" },
-  { value: "tags", label: "Tagi (oddzielone przecinkiem)" },
-];
+const ORDER_FIELD_KEYS = [
+  { value: "", labelKey: "fields.skip" },
+  { value: "customer_name", labelKey: "fields.customerName" },
+  { value: "customer_email", labelKey: "fields.customerEmail" },
+  { value: "customer_phone", labelKey: "fields.customerPhone" },
+  { value: "total_amount", labelKey: "fields.amount" },
+  { value: "currency", labelKey: "fields.currency" },
+  { value: "source", labelKey: "fields.source" },
+  { value: "external_id", labelKey: "fields.externalId" },
+  { value: "notes", labelKey: "fields.notes" },
+  { value: "status", labelKey: "fields.status" },
+  { value: "ordered_at", labelKey: "fields.orderDate" },
+  { value: "payment_status", labelKey: "fields.paymentStatus" },
+  { value: "payment_method", labelKey: "fields.paymentMethod" },
+  { value: "items", labelKey: "fields.itemsJson" },
+  { value: "tags", labelKey: "fields.tagsComma" },
+] as const;
 
 type Step = 1 | 2 | 3 | 4;
 
 export default function ImportOrdersPage() {
+  const t = useTranslations("import");
   const [step, setStep] = useState<Step>(1);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
@@ -60,7 +62,7 @@ export default function ImportOrdersPage() {
   const handleFile = useCallback(
     async (selectedFile: File) => {
       if (!selectedFile.name.endsWith(".csv")) {
-        toast.error("Wybierz plik CSV");
+        toast.error(t("selectCsvFile"));
         return;
       }
       setFile(selectedFile);
@@ -141,18 +143,18 @@ export default function ImportOrdersPage() {
   };
 
   const stepLabels = [
-    "Wybierz plik",
-    "Mapowanie kolumn",
-    "Podgl\u0105d danych",
-    "Wynik importu",
+    t("steps.selectFile"),
+    t("steps.columnMapping"),
+    t("steps.dataPreview"),
+    t("steps.importResult"),
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Importuj zam\u00f3wienia</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1">
-          Zaimportuj zam\u00f3wienia z pliku CSV
+          {t("subtitle")}
         </p>
       </div>
 
@@ -198,9 +200,9 @@ export default function ImportOrdersPage() {
       {step === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>Wybierz plik CSV</CardTitle>
+            <CardTitle>{t("steps.selectFile")}</CardTitle>
             <CardDescription>
-              Przeci\u0105gnij plik CSV lub kliknij aby wybra\u0107
+              {t("dragOrClick")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -224,10 +226,10 @@ export default function ImportOrdersPage() {
               )}
               <div className="text-center">
                 <p className="text-sm font-medium">
-                  Przeci\u0105gnij plik CSV lub kliknij aby wybra\u0107
+                  {t("dragOrClick")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Maksymalny rozmiar: 10 MB
+                  {t("maxSize")}
                 </p>
               </div>
               <label>
@@ -245,7 +247,7 @@ export default function ImportOrdersPage() {
                 >
                   <span>
                     <FileSpreadsheet className="size-4" />
-                    Wybierz plik
+                    {t("steps.selectFile")}
                   </span>
                 </Button>
               </label>
@@ -258,10 +260,9 @@ export default function ImportOrdersPage() {
       {step === 2 && preview && (
         <Card>
           <CardHeader>
-            <CardTitle>Mapowanie kolumn</CardTitle>
+            <CardTitle>{t("steps.columnMapping")}</CardTitle>
             <CardDescription>
-              Przypisz kolumny CSV do p\u00f3l zam\u00f3wienia ({preview.total_rows}{" "}
-              wierszy w pliku)
+              {t("mapColumnsDescription", { rows: preview.total_rows })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -283,15 +284,15 @@ export default function ImportOrdersPage() {
                         onValueChange={(val) => updateMapping(header, val)}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="-- Pomi\u0144 --" />
+                          <SelectValue placeholder={t("fields.skip")} />
                         </SelectTrigger>
                         <SelectContent>
-                          {ORDER_FIELDS.map((f) => (
+                          {ORDER_FIELD_KEYS.map((f) => (
                             <SelectItem
                               key={f.value || "__skip__"}
                               value={f.value || "__skip__"}
                             >
-                              {f.label}
+                              {t(f.labelKey)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -312,13 +313,13 @@ export default function ImportOrdersPage() {
                 }}
               >
                 <ArrowLeft className="size-4" />
-                Wr\u00f3\u0107
+                {t("back")}
               </Button>
               <Button
                 onClick={() => setStep(3)}
                 disabled={activeMappings.length === 0}
               >
-                Dalej
+                {t("next")}
                 <ArrowRight className="size-4" />
               </Button>
             </div>
@@ -330,10 +331,9 @@ export default function ImportOrdersPage() {
       {step === 3 && preview && (
         <Card>
           <CardHeader>
-            <CardTitle>Podgl\u0105d danych</CardTitle>
+            <CardTitle>{t("steps.dataPreview")}</CardTitle>
             <CardDescription>
-              Sprawd\u017a zmapowane dane przed importem (pierwsze{" "}
-              {preview.sample_rows.length} z {preview.total_rows} wierszy)
+              {t("previewDescription", { sample: preview.sample_rows.length, total: preview.total_rows })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -343,12 +343,12 @@ export default function ImportOrdersPage() {
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
                     {activeMappings.map((m) => {
-                      const field = ORDER_FIELDS.find(
+                      const field = ORDER_FIELD_KEYS.find(
                         (f) => f.value === m.order_field
                       );
                       return (
                         <TableHead key={m.order_field}>
-                          {field?.label || m.order_field}
+                          {field ? t(field.labelKey) : m.order_field}
                         </TableHead>
                       );
                     })}
@@ -374,7 +374,7 @@ export default function ImportOrdersPage() {
             <div className="mt-6 flex gap-3">
               <Button variant="outline" onClick={() => setStep(2)}>
                 <ArrowLeft className="size-4" />
-                Wr\u00f3\u0107
+                {t("back")}
               </Button>
               <Button
                 onClick={handleImport}
@@ -385,7 +385,7 @@ export default function ImportOrdersPage() {
                 ) : (
                   <Check className="size-4" />
                 )}
-                Potwierd\u017a import
+                {t("confirmImport")}
               </Button>
             </div>
           </CardContent>
@@ -396,10 +396,9 @@ export default function ImportOrdersPage() {
       {step === 4 && result && (
         <Card>
           <CardHeader>
-            <CardTitle>Wynik importu</CardTitle>
+            <CardTitle>{t("steps.importResult")}</CardTitle>
             <CardDescription>
-              Zaimportowano {result.imported} zam\u00f3wie\u0144, pomini\u0119to{" "}
-              {result.skipped}, b\u0142\u0119dy: {result.errors.length}
+              {t("resultSummary", { imported: result.imported, skipped: result.skipped, errors: result.errors.length })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -409,7 +408,7 @@ export default function ImportOrdersPage() {
                   {result.imported}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Zaimportowano
+                  {t("imported")}
                 </div>
               </div>
               <div className="rounded-lg border p-4 text-center">
@@ -417,7 +416,7 @@ export default function ImportOrdersPage() {
                   {result.skipped}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Pomini\u0119to
+                  {t("skipped")}
                 </div>
               </div>
               <div className="rounded-lg border p-4 text-center">
@@ -425,7 +424,7 @@ export default function ImportOrdersPage() {
                   {result.errors.length}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  B\u0142\u0119dy
+                  {t("errorsLabel")}
                 </div>
               </div>
             </div>
@@ -434,15 +433,15 @@ export default function ImportOrdersPage() {
               <div className="space-y-2">
                 <h3 className="text-sm font-medium flex items-center gap-2">
                   <AlertCircle className="size-4 text-red-500" />
-                  Szczeg\u00f3\u0142y b\u0142\u0119d\u00f3w
+                  {t("errorDetails")}
                 </h3>
                 <div className="max-h-64 overflow-y-auto rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-16">Wiersz</TableHead>
-                        <TableHead className="w-32">Pole</TableHead>
-                        <TableHead>B\u0142\u0105d</TableHead>
+                        <TableHead className="w-16">{t("row")}</TableHead>
+                        <TableHead className="w-32">{t("field")}</TableHead>
+                        <TableHead>{t("error")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -478,12 +477,12 @@ export default function ImportOrdersPage() {
                   setResult(null);
                 }}
               >
-                Importuj kolejny plik
+                {t("importAnotherFile")}
               </Button>
               <Button
                 onClick={() => (window.location.href = "/orders")}
               >
-                Przejd\u017a do zam\u00f3wie\u0144
+                {t("goToOrders")}
               </Button>
             </div>
           </CardContent>

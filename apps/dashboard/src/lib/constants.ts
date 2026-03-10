@@ -115,7 +115,7 @@ export const PAYMENT_STATUSES: Record<string, { label: string; color: string }> 
   failed: { label: "failed", color: "bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-200" },
 };
 
-export const PAYMENT_METHODS = ["przelew", "pobranie", "karta", "PayU", "Przelewy24", "BLIK"] as const;
+export const PAYMENT_METHODS = ["transfer", "cod", "card", "PayU", "Przelewy24", "BLIK"] as const;
 export const SHIPMENT_PROVIDERS = ["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"] as const;
 export const INTEGRATION_PROVIDERS = ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik", "inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka", "fakturownia", "btp"] as const;
 

@@ -35,7 +35,7 @@ export function useRemoveBackground() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: "Request failed" }));
-        throw new Error(body.error || "Usuwanie tła nie powiodło się");
+        throw new Error(body.error || "Background removal failed");
       }
 
       return res.json();

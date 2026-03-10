@@ -56,7 +56,7 @@ export default function CompanySettingsPage() {
   const validateField = (field: string, value: string) => {
     let error = "";
     if (field === "company_name" && !value.trim()) {
-      error = "Nazwa firmy jest wymagana";
+      error = t("company.companyNameRequired");
     }
     if (field === "email" && value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
       error = t("company.emailInvalid");
@@ -76,23 +76,23 @@ export default function CompanySettingsPage() {
     // Validate required fields before saving
     const errors: Record<string, string> = {};
     if (!form.company_name.trim()) {
-      errors.company_name = "Nazwa firmy jest wymagana";
+      errors.company_name = t("company.companyNameRequired");
     }
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errors.email = t("company.emailInvalid");
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      toast.error(t("poprawbłedywformularzu"));
+      toast.error(t("company.fixFormErrors"));
       return;
     }
     setFieldErrors({});
     try {
       await updateSettings.mutateAsync(form);
-      toast.success("Dane firmy zapisane");
+      toast.success(t("company.dataSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieudałosiezapisacdanychfirmy");
+        err instanceof Error ? err.message : t("company.saveFailed");
       toast.error(message);
     }
   };
@@ -113,10 +113,10 @@ export default function CompanySettingsPage() {
     try {
       const result = await uploadFile(file);
       setForm({ ...form, logo_url: result.url });
-      toast.success("Logo wgrane");
+      toast.success(t("company.logoUploaded"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieudałosiewgraclogo");
+        err instanceof Error ? err.message : t("company.logoUploadFailed");
       toast.error(message);
     } finally {
       setUploading(false);
@@ -138,16 +138,16 @@ export default function CompanySettingsPage() {
     <AdminGuard>
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dane firmy</h1>
+        <h1 className="text-2xl font-bold">{t("company.title")}</h1>
         <p className="text-muted-foreground">
-          Informacje o firmie widoczne na dokumentach
+          {t("company.subtitle")}
         </p>
       </div>
 
       {/* Logo card */}
       <Card>
         <CardHeader>
-          <CardTitle>Logo firmy</CardTitle>
+          <CardTitle>{t("company.logo")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-6">
@@ -155,7 +155,7 @@ export default function CompanySettingsPage() {
               {form.logo_url ? (
                 <img
                   src={form.logo_url}
-                  alt="Logo firmy"
+                  alt={t("company.logo")}
                   className="h-full w-full rounded-lg object-contain"
                 />
               ) : (
@@ -180,7 +180,7 @@ export default function CompanySettingsPage() {
                 ) : (
                   <Upload className="h-4 w-4" />
                 )}
-                Wgraj logo
+                {t("company.uploadLogo")}
               </Button>
             </div>
           </div>
@@ -190,12 +190,12 @@ export default function CompanySettingsPage() {
       {/* Company info card */}
       <Card>
         <CardHeader>
-          <CardTitle>Informacje o firmie</CardTitle>
+          <CardTitle>{t("company.companyInfo")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Nazwa firmy <span className="text-destructive">*</span></Label>
+              <Label>{t("company.companyName")} <span className="text-destructive">*</span></Label>
               <Input
                 value={form.company_name}
                 aria-invalid={!!fieldErrors.company_name}
@@ -219,7 +219,7 @@ export default function CompanySettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Adres</Label>
+              <Label>{t("company.address")}</Label>
               <Input
                 value={form.address}
                 onChange={(e) =>
@@ -229,7 +229,7 @@ export default function CompanySettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Miasto</Label>
+              <Label>{t("company.city")}</Label>
               <Input
                 value={form.city}
                 onChange={(e) =>
@@ -238,7 +238,7 @@ export default function CompanySettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Kod pocztowy</Label>
+              <Label>{t("company.postCode")}</Label>
               <Input
                 value={form.post_code}
                 onChange={(e) =>
@@ -248,7 +248,7 @@ export default function CompanySettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Telefon</Label>
+              <Label>{t("company.phone")}</Label>
               <Input
                 value={form.phone}
                 onChange={(e) =>
@@ -272,7 +272,7 @@ export default function CompanySettingsPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label>Strona WWW</Label>
+              <Label>{t("company.website")}</Label>
               <Input
                 type="url"
                 value={form.website}
@@ -294,7 +294,7 @@ export default function CompanySettingsPage() {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          Zapisz dane firmy
+          {t("company.saveCompanyData")}
         </Button>
       </div>
 
@@ -303,11 +303,11 @@ export default function CompanySettingsPage() {
       {/* Export / Import settings */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("eksportImportUstawien")}</CardTitle>
+          <CardTitle>{t("company.exportImportSettings")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {t("eksportujWszystkieUstawieniaSystemuDoPlikuJson")}
+            {t("company.exportDescription")}
           </p>
           <div className="flex items-center gap-4">
             <Button
@@ -317,8 +317,8 @@ export default function CompanySettingsPage() {
                 try {
                   const res = await apiFetch("/v1/settings/export");
                   const blob = await res.blob();
-                  downloadBlob(blob, `ustawienia-${new Date().toISOString().slice(0, 10)}.json`);
-                  toast.success("Ustawienia wyeksportowane");
+                  downloadBlob(blob, `settings-${new Date().toISOString().slice(0, 10)}.json`);
+                  toast.success(t("company.settingsExported"));
                 } catch (err) {
                   toast.error(getErrorMessage(err));
                 } finally {
@@ -332,7 +332,7 @@ export default function CompanySettingsPage() {
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              Eksportuj ustawienia
+              {t("company.exportSettings")}
             </Button>
             <input
               ref={importFileInputRef}
@@ -350,7 +350,7 @@ export default function CompanySettingsPage() {
                     method: "POST",
                     body: JSON.stringify(data),
                   });
-                  toast.success(t("ustawieniaZaimportowanePomyslnie"));
+                  toast.success(t("company.settingsImported"));
                 } catch (err) {
                   toast.error(getErrorMessage(err));
                 } finally {
@@ -371,7 +371,7 @@ export default function CompanySettingsPage() {
               ) : (
                 <Upload className="mr-2 h-4 w-4" />
               )}
-              Importuj ustawienia
+              {t("company.importSettings")}
             </Button>
           </div>
         </CardContent>
