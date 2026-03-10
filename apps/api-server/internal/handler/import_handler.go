@@ -63,7 +63,7 @@ func (h *ImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 		count, err := h.importService.CountOrdersThisMonth(r.Context(), tenantID)
 		if err == nil && count >= limits.MaxOrdersMonthly {
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto miesięczny limit zamówień w planie (max: %d). Zmień plan aby zwiększyć limit.", limits.MaxOrdersMonthly))
+				"Monthly order limit reached for current plan (max: %d). Upgrade to increase.", limits.MaxOrdersMonthly))
 			return
 		}
 	}

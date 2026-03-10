@@ -107,12 +107,12 @@ func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.U
 }
 
 func (s *EmailService) SendTestEmail(ctx context.Context, settings model.EmailSettings, toEmail string) error {
-	subject := "OpenOMS — Testowy email"
+	subject := "OpenOMS — Email connection test"
 	body := `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-<h2 style="color:#1a1a1a;">Test polaczenia email</h2>
-<p>Jesli widzisz ta wiadomosc, konfiguracja SMTP dziala poprawnie.</p>
+<h2 style="color:#1a1a1a;">Email connection test</h2>
+<p>If you see this message, SMTP configuration is working correctly.</p>
 <p style="color:#666;font-size:12px;margin-top:30px;">— OpenOMS</p>
 </body></html>`
 
@@ -131,7 +131,7 @@ func renderEmailTemplate(order *model.Order, newStatus string, companyName strin
 		}
 	}
 
-	subject := fmt.Sprintf("Zamowienie #%s — %s", orderShort, statusLabel)
+	subject := fmt.Sprintf("Order #%s — %s", orderShort, statusLabel)
 
 	// Escape all tenant-controlled values before HTML interpolation
 	statusLabel = html.EscapeString(statusLabel)
@@ -149,13 +149,13 @@ func renderEmailTemplate(order *model.Order, newStatus string, companyName strin
 
 	var extraInfo string
 	if newStatus == "shipped" || newStatus == "in_transit" {
-		extraInfo = `<p style="margin-top:15px;padding:12px;background:#f0f9ff;border-radius:6px;">Twoje zamowienie jest w drodze. Sledz przesylke u swojego kuriera.</p>`
+		extraInfo = `<p style="margin-top:15px;padding:12px;background:#f0f9ff;border-radius:6px;">Your order is on its way. Track your shipment with your carrier.</p>`
 	}
 	if newStatus == "cancelled" {
-		extraInfo = `<p style="margin-top:15px;padding:12px;background:#fef2f2;border-radius:6px;">Jesli masz pytania dotyczace anulowania, skontaktuj sie z nami.</p>`
+		extraInfo = `<p style="margin-top:15px;padding:12px;background:#fef2f2;border-radius:6px;">If you have questions about the cancellation, please contact us.</p>`
 	}
 	if newStatus == "refunded" {
-		extraInfo = `<p style="margin-top:15px;padding:12px;background:#fffbeb;border-radius:6px;">Zwrot srodkow zostal zainicjowany. Pieniadze pojawia sie na Twoim koncie w ciagu kilku dni roboczych.</p>`
+		extraInfo = `<p style="margin-top:15px;padding:12px;background:#fffbeb;border-radius:6px;">A refund has been initiated. The funds will appear in your account within a few business days.</p>`
 	}
 
 	totalAmount := fmt.Sprintf("%.2f %s", order.TotalAmount, html.EscapeString(order.Currency))
@@ -164,19 +164,19 @@ func renderEmailTemplate(order *model.Order, newStatus string, companyName strin
 <html><head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f9fafb;">
 <div style="background:white;border-radius:8px;padding:30px;border:1px solid #e5e7eb;">
-<h2 style="color:#1a1a1a;margin-top:0;">Zamowienie #%s</h2>
-<p>Czesc %s,</p>
-<p>Status Twojego zamowienia zostal zmieniony na:</p>
+<h2 style="color:#1a1a1a;margin-top:0;">Order #%s</h2>
+<p>Hi %s,</p>
+<p>Your order status has been updated to:</p>
 <div style="text-align:center;margin:20px 0;">
 <span style="display:inline-block;padding:8px 20px;background:%s;color:white;border-radius:20px;font-weight:bold;font-size:16px;">%s</span>
 </div>
 <table style="width:100%%;border-collapse:collapse;margin-top:20px;">
-<tr><td style="padding:8px 0;color:#666;">Numer zamowienia:</td><td style="padding:8px 0;font-weight:bold;">#%s</td></tr>
-<tr><td style="padding:8px 0;color:#666;">Kwota:</td><td style="padding:8px 0;font-weight:bold;">%s</td></tr>
+<tr><td style="padding:8px 0;color:#666;">Order number:</td><td style="padding:8px 0;font-weight:bold;">#%s</td></tr>
+<tr><td style="padding:8px 0;color:#666;">Amount:</td><td style="padding:8px 0;font-weight:bold;">%s</td></tr>
 </table>
 %s
 </div>
-<p style="color:#999;font-size:12px;text-align:center;margin-top:20px;">%s — Wiadomosc wygenerowana automatycznie przez OpenOMS</p>
+<p style="color:#999;font-size:12px;text-align:center;margin-top:20px;">%s — Automated message from OpenOMS</p>
 </body></html>`,
 		orderShort, customerName, statusColor, strings.ToUpper(statusLabel),
 		orderShort, totalAmount, extraInfo, companyName)

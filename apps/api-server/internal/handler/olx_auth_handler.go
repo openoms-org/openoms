@@ -45,7 +45,7 @@ func (h *OlxAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "olx")
 	if err != nil {
 		slog.Error("olx OAuth: failed to get credentials", "error", err)
-		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji OLX (Client ID i Client Secret)")
+		writeError(w, http.StatusBadRequest, "Save OLX integration credentials first (Client ID and Client Secret)")
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *OlxAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(credJSON, &creds); err != nil || creds.ClientID == "" || creds.ClientSecret == "" {
 		slog.Error("olx OAuth: credential unmarshal failed", "error", err, "json_length", len(credJSON))
-		writeError(w, http.StatusBadRequest, "Integracja OLX nie ma poprawnych danych Client ID / Client Secret")
+		writeError(w, http.StatusBadRequest, "OLX integration missing valid Client ID / Client Secret")
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *OlxAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) 
 	tok, err := client.ExchangeCode(r.Context(), body.Code)
 	if err != nil {
 		slog.Error("olx OAuth: code exchange failed", "error", err)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wymienić kodu autoryzacji na tokeny")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to exchange authorization code for tokens")
 		return
 	}
 
@@ -184,7 +184,7 @@ func (h *OlxAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) 
 	result, err := h.integrationService.Create(r.Context(), tenantID, req, actorID, ip)
 	if err != nil {
 		if errors.Is(err, service.ErrDuplicateProvider) {
-			writeError(w, http.StatusConflict, "Integracja OLX już istnieje")
+			writeError(w, http.StatusConflict, "OLX integration already exists")
 			return
 		}
 		writeServerError(w, "failed to create integration", err)

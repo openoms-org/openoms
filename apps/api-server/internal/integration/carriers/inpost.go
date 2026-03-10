@@ -140,7 +140,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 	// Check for payment failures in transactions
 	for _, tx := range shipment.Transactions {
 		if tx.Status == "failure" {
-			return nil, fmt.Errorf("inpost: opłacenie przesyłki nie powiodło się — sprawdź rozliczenia konta InPost (ID przesyłki InPost: %d)", shipmentID)
+			return nil, fmt.Errorf("inpost: shipment payment failed — check InPost account billing (InPost shipment ID: %d)", shipmentID)
 		}
 	}
 
@@ -153,7 +153,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 			// Check transactions again after buy
 			for _, tx := range shipment.Transactions {
 				if tx.Status == "failure" {
-					return nil, fmt.Errorf("inpost: opłacenie przesyłki nie powiodło się — sprawdź rozliczenia konta InPost (ID przesyłki InPost: %d)", shipmentID)
+					return nil, fmt.Errorf("inpost: shipment payment failed — check InPost account billing (InPost shipment ID: %d)", shipmentID)
 				}
 			}
 		}
@@ -277,7 +277,7 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 			rates = append(rates, integration.Rate{
 				CarrierName:   "InPost",
 				CarrierCode:   "inpost",
-				ServiceName:   "Paczkomat A (mała)",
+				ServiceName:   "Parcel Locker A (small)",
 				Price:         price,
 				Currency:      "PLN",
 				EstimatedDays: 2,
@@ -292,7 +292,7 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 			rates = append(rates, integration.Rate{
 				CarrierName:   "InPost",
 				CarrierCode:   "inpost",
-				ServiceName:   "Paczkomat B (średnia)",
+				ServiceName:   "Parcel Locker B (medium)",
 				Price:         price,
 				Currency:      "PLN",
 				EstimatedDays: 2,
@@ -307,7 +307,7 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 			rates = append(rates, integration.Rate{
 				CarrierName:   "InPost",
 				CarrierCode:   "inpost",
-				ServiceName:   "Paczkomat C (duża)",
+				ServiceName:   "Parcel Locker C (large)",
 				Price:         price,
 				Currency:      "PLN",
 				EstimatedDays: 2,

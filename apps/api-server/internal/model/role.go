@@ -64,13 +64,13 @@ var AllPermissions = []string{
 
 // PermissionGroups maps display group names to their permissions (for frontend).
 var PermissionGroups = map[string][]string{
-	"Zamówienia":    {PermOrdersView, PermOrdersCreate, PermOrdersEdit, PermOrdersDelete, PermOrdersExport},
-	"Produkty":      {PermProductsView, PermProductsCreate, PermProductsEdit, PermProductsDelete},
-	"Przesyłki":     {PermShipmentsView, PermShipmentsCreate, PermShipmentsEdit, PermShipmentsDelete},
-	"Zwroty":        {PermReturnsView, PermReturnsCreate, PermReturnsEdit, PermReturnsDelete},
-	"Klienci":       {PermCustomersView, PermCustomersCreate, PermCustomersEdit, PermCustomersDelete},
-	"Faktury":       {PermInvoicesView, PermInvoicesCreate, PermInvoicesDelete},
-	"Administracja": {PermIntegrationsManage, PermSettingsManage, PermUsersManage, PermReportsView, PermAuditView, PermAutomationManage, PermWarehousesManage},
+	"Orders":         {PermOrdersView, PermOrdersCreate, PermOrdersEdit, PermOrdersDelete, PermOrdersExport},
+	"Products":       {PermProductsView, PermProductsCreate, PermProductsEdit, PermProductsDelete},
+	"Shipments":      {PermShipmentsView, PermShipmentsCreate, PermShipmentsEdit, PermShipmentsDelete},
+	"Returns":        {PermReturnsView, PermReturnsCreate, PermReturnsEdit, PermReturnsDelete},
+	"Customers":      {PermCustomersView, PermCustomersCreate, PermCustomersEdit, PermCustomersDelete},
+	"Invoices":       {PermInvoicesView, PermInvoicesCreate, PermInvoicesDelete},
+	"Administration": {PermIntegrationsManage, PermSettingsManage, PermUsersManage, PermReportsView, PermAuditView, PermAutomationManage, PermWarehousesManage},
 }
 
 // SystemRoleOwnerPermissions — full access.

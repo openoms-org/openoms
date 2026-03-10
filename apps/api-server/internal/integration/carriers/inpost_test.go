@@ -590,9 +590,9 @@ func TestInPostGetRates(t *testing.T) {
 			t.Fatalf("expected 4 rates for small parcel, got %d", len(rates))
 		}
 
-		// Verify Paczkomat A rate.
-		if rates[0].ServiceName != "Paczkomat A (mała)" {
-			t.Errorf("rates[0].ServiceName = %q, want %q", rates[0].ServiceName, "Paczkomat A (mała)")
+		// Verify Parcel Locker A rate.
+		if rates[0].ServiceName != "Parcel Locker A (small)" {
+			t.Errorf("rates[0].ServiceName = %q, want %q", rates[0].ServiceName, "Parcel Locker A (small)")
 		}
 		if rates[0].Price != 12.99 {
 			t.Errorf("rates[0].Price = %f, want 12.99", rates[0].Price)
@@ -604,17 +604,17 @@ func TestInPostGetRates(t *testing.T) {
 			t.Error("rates[0].PickupPoint should be true")
 		}
 
-		// Verify Paczkomat B rate.
-		if rates[1].ServiceName != "Paczkomat B (średnia)" {
-			t.Errorf("rates[1].ServiceName = %q, want %q", rates[1].ServiceName, "Paczkomat B (średnia)")
+		// Verify Parcel Locker B rate.
+		if rates[1].ServiceName != "Parcel Locker B (medium)" {
+			t.Errorf("rates[1].ServiceName = %q, want %q", rates[1].ServiceName, "Parcel Locker B (medium)")
 		}
 		if rates[1].Price != 13.99 {
 			t.Errorf("rates[1].Price = %f, want 13.99", rates[1].Price)
 		}
 
-		// Verify Paczkomat C rate.
-		if rates[2].ServiceName != "Paczkomat C (duża)" {
-			t.Errorf("rates[2].ServiceName = %q, want %q", rates[2].ServiceName, "Paczkomat C (duża)")
+		// Verify Parcel Locker C rate.
+		if rates[2].ServiceName != "Parcel Locker C (large)" {
+			t.Errorf("rates[2].ServiceName = %q, want %q", rates[2].ServiceName, "Parcel Locker C (large)")
 		}
 		if rates[2].Price != 15.49 {
 			t.Errorf("rates[2].Price = %f, want 15.49", rates[2].Price)
@@ -656,11 +656,11 @@ func TestInPostGetRates(t *testing.T) {
 			t.Fatalf("expected 3 rates for medium parcel, got %d", len(rates))
 		}
 
-		if rates[0].ServiceName != "Paczkomat B (średnia)" {
-			t.Errorf("rates[0].ServiceName = %q, want Paczkomat B", rates[0].ServiceName)
+		if rates[0].ServiceName != "Parcel Locker B (medium)" {
+			t.Errorf("rates[0].ServiceName = %q, want Parcel Locker B", rates[0].ServiceName)
 		}
-		if rates[1].ServiceName != "Paczkomat C (duża)" {
-			t.Errorf("rates[1].ServiceName = %q, want Paczkomat C", rates[1].ServiceName)
+		if rates[1].ServiceName != "Parcel Locker C (large)" {
+			t.Errorf("rates[1].ServiceName = %q, want Parcel Locker C", rates[1].ServiceName)
 		}
 		if rates[2].ServiceName != "Kurier Standard" {
 			t.Errorf("rates[2].ServiceName = %q, want Kurier Standard", rates[2].ServiceName)
@@ -729,9 +729,9 @@ func TestInPostGetRates(t *testing.T) {
 			t.Fatalf("expected 4 rates with COD, got %d", len(rates))
 		}
 
-		// Paczkomat A with COD: 12.99 + 3.50 = 16.49.
+		// Parcel Locker A with COD: 12.99 + 3.50 = 16.49.
 		if !floatClose(rates[0].Price, 16.49, 0.001) {
-			t.Errorf("Paczkomat A with COD: price = %f, want ~16.49", rates[0].Price)
+			t.Errorf("Parcel Locker A with COD: price = %f, want ~16.49", rates[0].Price)
 		}
 
 		// Courier with COD: 16.99 + 4.00 = 20.99.

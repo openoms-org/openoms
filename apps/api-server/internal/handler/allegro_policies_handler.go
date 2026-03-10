@@ -432,7 +432,7 @@ func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
 			// Allegro token expired/invalid — this is an integration error,
 			// NOT a user auth error. Return 422 so the frontend doesn't
 			// confuse it with a JWT 401 and enter a refresh loop.
-			writeError(w, status, "Token Allegro wygasł lub jest nieprawidłowy. Połącz ponownie konto Allegro w ustawieniach integracji.")
+			writeError(w, status, "Allegro token expired or invalid. Reconnect Allegro in integration settings.")
 			return
 		case apiErr.StatusCode == 403:
 			status = http.StatusForbidden

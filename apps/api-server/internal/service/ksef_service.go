@@ -118,7 +118,7 @@ func (s *KSeFService) TestConnection(ctx context.Context, tenantID uuid.UUID) (*
 	if !cfg.Enabled || cfg.NIP == "" || cfg.Token == "" {
 		return &KSeFTestResult{
 			Success: false,
-			Message: "KSeF nie jest skonfigurowany. Uzupełnij NIP i token.",
+			Message: "KSeF not configured. Set NIP and token.",
 		}, nil
 	}
 
@@ -129,13 +129,13 @@ func (s *KSeFService) TestConnection(ctx context.Context, tenantID uuid.UUID) (*
 	if err != nil {
 		return &KSeFTestResult{
 			Success: false,
-			Message: fmt.Sprintf("Błąd połączenia z KSeF: %v", err),
+			Message: fmt.Sprintf("KSeF connection error: %v", err),
 		}, nil
 	}
 
 	return &KSeFTestResult{
 		Success:   true,
-		Message:   "Połączenie z KSeF działa poprawnie.",
+		Message:   "KSeF connection OK.",
 		Timestamp: resp.Timestamp,
 		Challenge: resp.Challenge,
 	}, nil
@@ -619,7 +619,7 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 		return []ksef.InvoiceLineItem{
 			{
 				LineNumber: 1,
-				Name:       "Zamówienie",
+				Name:       "Order",
 				Quantity:   1,
 				Unit:       "szt.",
 				VATRate:    fmt.Sprintf("%d", taxRate),
@@ -639,7 +639,7 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 		return []ksef.InvoiceLineItem{
 			{
 				LineNumber: 1,
-				Name:       "Zamówienie",
+				Name:       "Order",
 				Quantity:   1,
 				Unit:       "szt.",
 				VATRate:    fmt.Sprintf("%d", taxRate),
@@ -675,7 +675,7 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 		return []ksef.InvoiceLineItem{
 			{
 				LineNumber: 1,
-				Name:       "Zamówienie",
+				Name:       "Order",
 				Quantity:   1,
 				Unit:       "szt.",
 				VATRate:    fmt.Sprintf("%d", taxRate),

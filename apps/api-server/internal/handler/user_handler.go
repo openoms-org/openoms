@@ -67,7 +67,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrUserLimitExceeded):
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto limit użytkowników w planie (max: %d). Zmień plan aby dodać więcej użytkowników.", req.MaxUsers))
+				"User limit reached for current plan (max: %d). Upgrade to add more.", req.MaxUsers))
 		case errors.Is(err, service.ErrDuplicateEmail):
 			writeError(w, http.StatusConflict, "email already exists in this tenant")
 		default:

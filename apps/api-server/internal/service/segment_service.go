@@ -327,12 +327,12 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 
 		// Auto-assign to RFM segments
 		rfmSegments := map[string][]model.CustomerRFM{
-			"Champions":           {},
-			"Lojalni klienci":     {},
-			"Potencjalni lojalni": {},
-			"Zagrożeni":           {},
-			"Utraceni":            {},
-			"Pozostali":           {},
+			"Champions":          {},
+			"Loyal Customers":    {},
+			"Potential Loyalists": {},
+			"At Risk":            {},
+			"Lost":               {},
+			"Others":             {},
 		}
 
 		for _, r := range results {
@@ -341,12 +341,12 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 
 		// Colors for auto-segments
 		segmentColors := map[string]string{
-			"Champions":           "#10b981",
-			"Lojalni klienci":     "#3b82f6",
-			"Potencjalni lojalni": "#8b5cf6",
-			"Zagrożeni":           "#f59e0b",
-			"Utraceni":            "#ef4444",
-			"Pozostali":           "#6b7280",
+			"Champions":          "#10b981",
+			"Loyal Customers":    "#3b82f6",
+			"Potential Loyalists": "#8b5cf6",
+			"At Risk":            "#f59e0b",
+			"Lost":               "#ef4444",
+			"Others":             "#6b7280",
 		}
 
 		for segName, customers := range rfmSegments {
@@ -435,31 +435,31 @@ func rfmSegmentLabel(rfm model.RFMScores) string {
 	}
 	// Loyal: frequency >= 4
 	if f >= 4 {
-		return "Lojalni klienci"
+		return "Loyal Customers"
 	}
 	// Potential loyalists: high recency, moderate frequency
 	if r >= 4 && f >= 2 {
-		return "Potencjalni lojalni"
+		return "Potential Loyalists"
 	}
 	// At risk: low recency, moderate+ frequency
 	if r <= 2 && f >= 3 {
-		return "Zagrożeni"
+		return "At Risk"
 	}
 	// Lost: low recency, low frequency
 	if r == 1 && f == 1 {
-		return "Utraceni"
+		return "Lost"
 	}
-	return "Pozostali"
+	return "Others"
 }
 
 func rfmSegmentDescription(name string) string {
 	descriptions := map[string]string{
-		"Champions":           "Najlepsi klienci — kupują często, ostatnio i za duże kwoty",
-		"Lojalni klienci":     "Klienci kupujący regularnie",
-		"Potencjalni lojalni": "Ostatnio kupili, mogą stać się lojalnymi",
-		"Zagrożeni":           "Kiedyś kupowali regularnie, ale dawno ich nie było",
-		"Utraceni":            "Dawno nie kupowali i kupowali rzadko",
-		"Pozostali":           "Klienci nie pasujący do innych segmentów",
+		"Champions":          "Best customers — buy frequently, recently, and at high value",
+		"Loyal Customers":    "Customers who buy regularly",
+		"Potential Loyalists": "Recent buyers who may become loyal",
+		"At Risk":            "Used to buy regularly but haven't been seen in a while",
+		"Lost":               "Haven't bought in a long time and bought rarely",
+		"Others":             "Customers that don't fit other segments",
 	}
 	if d, ok := descriptions[name]; ok {
 		return d

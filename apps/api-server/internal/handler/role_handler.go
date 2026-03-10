@@ -159,13 +159,13 @@ func (h *RoleHandler) ListPermissions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	groups := []permissionGroup{
-		{Group: "Zamówienia", Permissions: model.PermissionGroups["Zamówienia"]},
-		{Group: "Produkty", Permissions: model.PermissionGroups["Produkty"]},
-		{Group: "Przesyłki", Permissions: model.PermissionGroups["Przesyłki"]},
-		{Group: "Zwroty", Permissions: model.PermissionGroups["Zwroty"]},
-		{Group: "Klienci", Permissions: model.PermissionGroups["Klienci"]},
-		{Group: "Faktury", Permissions: model.PermissionGroups["Faktury"]},
-		{Group: "Administracja", Permissions: model.PermissionGroups["Administracja"]},
+		{Group: "Orders", Permissions: model.PermissionGroups["Orders"]},
+		{Group: "Products", Permissions: model.PermissionGroups["Products"]},
+		{Group: "Shipments", Permissions: model.PermissionGroups["Shipments"]},
+		{Group: "Returns", Permissions: model.PermissionGroups["Returns"]},
+		{Group: "Customers", Permissions: model.PermissionGroups["Customers"]},
+		{Group: "Invoices", Permissions: model.PermissionGroups["Invoices"]},
+		{Group: "Administration", Permissions: model.PermissionGroups["Administration"]},
 	}
 
 	writeJSON(w, http.StatusOK, groups)

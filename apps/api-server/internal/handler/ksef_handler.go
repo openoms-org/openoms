@@ -133,7 +133,7 @@ func (h *KSeFHandler) SendToKSeF(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"message": "Faktura wysłana do KSeF"})
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Invoice sent to KSeF"})
 }
 
 // CheckKSeFStatus checks the KSeF status of an invoice.

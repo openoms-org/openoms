@@ -581,7 +581,7 @@ func (s *ForecastService) GetSeasonalityAnalysis(ctx context.Context, tenantID, 
 		}
 
 		// Day-of-week analysis
-		dayNames := []string{"Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"}
+		dayNames := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 		daySums := make([]float64, 7)
 		dayCounts := make([]int, 7)
 
@@ -623,8 +623,8 @@ func (s *ForecastService) GetSeasonalityAnalysis(ctx context.Context, tenantID, 
 
 		// Month analysis
 		monthNames := []string{
-			"Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-			"Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień",
+			"January", "February", "March", "April", "May", "June",
+			"July", "August", "September", "October", "November", "December",
 		}
 		monthSums := make([]float64, 12)
 		monthDays := make([]int, 12)
@@ -806,7 +806,7 @@ func (s *ForecastService) UpdateForecastConfig(ctx context.Context, tenantID uui
 }
 
 func makeEmptyDayOfWeek() []model.DayOfWeekSales {
-	names := []string{"Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"}
+	names := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 	result := make([]model.DayOfWeekSales, 7)
 	for i, name := range names {
 		result[i] = model.DayOfWeekSales{Day: name, AvgSales: 0, Index: 0}
@@ -816,8 +816,8 @@ func makeEmptyDayOfWeek() []model.DayOfWeekSales {
 
 func makeEmptyMonths() []model.MonthSales {
 	names := []string{
-		"Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec",
-		"Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień",
+		"January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December",
 	}
 	result := make([]model.MonthSales, 12)
 	for i, name := range names {

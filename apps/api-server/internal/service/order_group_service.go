@@ -79,7 +79,7 @@ func (s *OrderGroupService) MergeOrders(ctx context.Context, tenantID, userID uu
 			e0 := orders[0].CustomerEmail
 			ei := orders[i].CustomerEmail
 			if (e0 == nil) != (ei == nil) || (e0 != nil && *e0 != *ei) {
-				return NewValidationError(fmt.Errorf("wszystkie zamówienia muszą być od tego samego klienta"))
+				return NewValidationError(fmt.Errorf("all orders must belong to the same customer"))
 			}
 		}
 

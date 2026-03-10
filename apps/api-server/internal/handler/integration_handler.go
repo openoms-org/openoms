@@ -86,7 +86,7 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrIntegrationLimitExceeded):
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto limit integracji w planie (max: %d). Zmień plan aby dodać więcej integracji.", req.MaxIntegrations))
+				"Integration limit reached for current plan (max: %d). Upgrade to add more.", req.MaxIntegrations))
 		case errors.Is(err, service.ErrDuplicateProvider):
 			writeError(w, http.StatusConflict, "integration for this provider already exists")
 		default:

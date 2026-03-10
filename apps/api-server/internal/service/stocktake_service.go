@@ -316,7 +316,7 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 				return fmt.Errorf("next PZ number: %w", err)
 			}
 			docNumber := fmt.Sprintf("PZ/%d/%03d", year, seq)
-			notes := fmt.Sprintf("Inwentaryzacja: %s - nadwyżki", existing.Name)
+			notes := fmt.Sprintf("Stocktake: %s - surplus", existing.Name)
 
 			doc := &model.WarehouseDocument{
 				ID:             uuid.New(),
@@ -364,7 +364,7 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 				return fmt.Errorf("next WZ number: %w", err)
 			}
 			docNumber := fmt.Sprintf("WZ/%d/%03d", year, seq)
-			notes := fmt.Sprintf("Inwentaryzacja: %s - niedobory", existing.Name)
+			notes := fmt.Sprintf("Stocktake: %s - shortages", existing.Name)
 
 			doc := &model.WarehouseDocument{
 				ID:             uuid.New(),

@@ -287,7 +287,7 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 				slog.Error("label generation failed", "error", err)
 				// Extract carrier API error details for better user feedback
 				errMsg := err.Error()
-				if strings.Contains(errMsg, "opłacenie przesyłki") || strings.Contains(errMsg, "debt_collection") {
+				if strings.Contains(errMsg, "shipment payment failed") || strings.Contains(errMsg, "debt_collection") {
 					writeError(w, http.StatusUnprocessableEntity, errMsg)
 				} else if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Token is missing or invalid") {
 					writeError(w, http.StatusUnprocessableEntity, "Carrier authorization error — check login credentials in integration settings")

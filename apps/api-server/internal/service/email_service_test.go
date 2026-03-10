@@ -37,7 +37,7 @@ func TestRenderEmailTemplate_ShippedStatus(t *testing.T) {
 
 	_, body := renderEmailTemplate(order, "shipped", "TestShop", nil)
 
-	assert.Contains(t, body, "w drodze")
+	assert.Contains(t, body, "on its way")
 }
 
 func TestRenderEmailTemplate_CancelledStatus(t *testing.T) {
@@ -50,7 +50,7 @@ func TestRenderEmailTemplate_CancelledStatus(t *testing.T) {
 
 	_, body := renderEmailTemplate(order, "cancelled", "Shop", nil)
 
-	assert.Contains(t, body, "anulowania")
+	assert.Contains(t, body, "cancellation")
 }
 
 func TestRenderEmailTemplate_RefundedStatus(t *testing.T) {
@@ -63,7 +63,7 @@ func TestRenderEmailTemplate_RefundedStatus(t *testing.T) {
 
 	_, body := renderEmailTemplate(order, "refunded", "Shop", nil)
 
-	assert.Contains(t, body, "Zwrot")
+	assert.Contains(t, body, "refund")
 }
 
 func TestRenderEmailTemplate_WithStatusConfig(t *testing.T) {
@@ -76,15 +76,15 @@ func TestRenderEmailTemplate_WithStatusConfig(t *testing.T) {
 
 	cfg := &model.OrderStatusConfig{
 		Statuses: []model.StatusDef{
-			{Key: "new", Label: "Now", Color: "blue", Position: 1},
-			{Key: "confirmed", Label: "Potwierdzone", Color: "green", Position: 2},
+			{Key: "new", Label: "New", Color: "blue", Position: 1},
+			{Key: "confirmed", Label: "Confirmed", Color: "green", Position: 2},
 		},
 	}
 
 	subject, body := renderEmailTemplate(order, "confirmed", "Shop", cfg)
 
-	assert.Contains(t, subject, "Potwierdzone")
-	assert.Contains(t, body, "POTWIERDZONE")
+	assert.Contains(t, subject, "Confirmed")
+	assert.Contains(t, body, "CONFIRMED")
 }
 
 func TestRenderEmailTemplate_CompanyName(t *testing.T) {

@@ -531,7 +531,7 @@ func (s *InvoiceService) buildInvoiceItems(order *model.Order, taxRate int) []in
 		totalNet := order.TotalAmount / (1 + float64(taxRate)/100)
 		return []integration.InvoiceItem{
 			{
-				Name:     "Zamówienie " + order.ID.String()[:8],
+				Name:     "Order " + order.ID.String()[:8],
 				Quantity: 1,
 				NetPrice: totalNet,
 				TaxRate:  taxRate,
@@ -552,7 +552,7 @@ func (s *InvoiceService) buildInvoiceItems(order *model.Order, taxRate int) []in
 		totalNet := order.TotalAmount / (1 + float64(taxRate)/100)
 		return []integration.InvoiceItem{
 			{
-				Name:     "Zamówienie " + order.ID.String()[:8],
+				Name:     "Order " + order.ID.String()[:8],
 				Quantity: 1,
 				NetPrice: totalNet,
 				TaxRate:  taxRate,
@@ -581,7 +581,7 @@ func (s *InvoiceService) buildInvoiceItems(order *model.Order, taxRate int) []in
 		totalNet := order.TotalAmount / (1 + float64(taxRate)/100)
 		return []integration.InvoiceItem{
 			{
-				Name:     "Zamówienie " + order.ID.String()[:8],
+				Name:     "Order " + order.ID.String()[:8],
 				Quantity: 1,
 				NetPrice: totalNet,
 				TaxRate:  taxRate,

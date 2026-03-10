@@ -45,7 +45,7 @@ func (h *EbayAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "ebay")
 	if err != nil {
 		slog.Error("ebay OAuth: failed to get credentials", "error", err)
-		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji eBay (App ID i Cert ID)")
+		writeError(w, http.StatusBadRequest, "Save eBay integration credentials first (App ID and Cert ID)")
 		return
 	}
 
@@ -57,7 +57,7 @@ func (h *EbayAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.Unmarshal(credJSON, &creds); err != nil || creds.AppID == "" || creds.CertID == "" {
 		slog.Error("ebay OAuth: credential unmarshal failed", "error", err, "json_length", len(credJSON))
-		writeError(w, http.StatusBadRequest, "Integracja eBay nie ma poprawnych danych App ID / Cert ID")
+		writeError(w, http.StatusBadRequest, "eBay integration missing valid App ID / Cert ID")
 		return
 	}
 
@@ -141,7 +141,7 @@ func (h *EbayAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request)
 	tok, err := client.ExchangeCode(r.Context(), body.Code)
 	if err != nil {
 		slog.Error("ebay OAuth: code exchange failed", "error", err)
-		writeError(w, http.StatusUnprocessableEntity, "Nie udało się wymienić kodu autoryzacji na tokeny")
+		writeError(w, http.StatusUnprocessableEntity, "Failed to exchange authorization code for tokens")
 		return
 	}
 
@@ -200,7 +200,7 @@ func (h *EbayAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request)
 	result, err := h.integrationService.Create(r.Context(), tenantID, req, actorID, ip)
 	if err != nil {
 		if errors.Is(err, service.ErrDuplicateProvider) {
-			writeError(w, http.StatusConflict, "Integracja eBay już istnieje")
+			writeError(w, http.StatusConflict, "eBay integration already exists")
 			return
 		}
 		writeServerError(w, "failed to create integration", err)

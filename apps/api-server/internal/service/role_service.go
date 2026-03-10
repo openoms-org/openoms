@@ -44,18 +44,18 @@ func (s *RoleService) EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID)
 			Permissions []string
 		}{
 			{
-				Name:        "Właściciel",
-				Description: "Pełen dostęp do systemu",
+				Name:        "Owner",
+				Description: "Full system access",
 				Permissions: model.SystemRoleOwnerPermissions,
 			},
 			{
 				Name:        "Administrator",
-				Description: "Zarządzanie systemem i danymi",
+				Description: "System and data management",
 				Permissions: model.SystemRoleAdminPermissions,
 			},
 			{
-				Name:        "Pracownik",
-				Description: "Podstawowy dostęp do operacji",
+				Name:        "Employee",
+				Description: "Basic operational access",
 				Permissions: model.SystemRoleMemberPermissions,
 			},
 		}

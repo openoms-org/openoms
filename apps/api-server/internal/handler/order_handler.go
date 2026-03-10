@@ -113,7 +113,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrOrderLimitExceeded):
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto miesięczny limit zamówień w planie (max: %d). Zmień plan aby zwiększyć limit.", req.MaxOrdersMonthly))
+				"Monthly order limit reached for current plan (max: %d). Upgrade to increase.", req.MaxOrdersMonthly))
 		default:
 			if isValidationError(err) {
 				writeError(w, http.StatusBadRequest, err.Error())
@@ -347,7 +347,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrOrderLimitExceeded):
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto miesięczny limit zamówień w planie (max: %d). Zmień plan aby zwiększyć limit.", maxOrdersMonthly))
+				"Monthly order limit reached for current plan (max: %d). Upgrade to increase.", maxOrdersMonthly))
 		case err.Error() == "order not found":
 			writeError(w, http.StatusNotFound, "order not found")
 		default:
@@ -399,16 +399,16 @@ func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	// Load custom field definitions
 	cfConfig := h.loadCustomFieldsConfig(r.Context(), tenantID)
 
-	filename := fmt.Sprintf("zamowienia-%s.csv", time.Now().Format("2006-01-02"))
+	filename := fmt.Sprintf("orders-%s.csv", time.Now().Format("2006-01-02"))
 	writeCSVHeaders(w, filename)
 
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
 	header := []string{
-		"ID", "Klient", "Email", "Telefon", "Źródło", "Status",
-		"Status płatności", "Metoda płatności", "Kwota", "Waluta",
-		"Data zamówienia", "Data opłacenia", "Tagi",
+		"ID", "Customer", "Email", "Phone", "Source", "Status",
+		"Payment Status", "Payment Method", "Amount", "Currency",
+		"Order Date", "Paid Date", "Tags",
 	}
 	for _, f := range cfConfig.Fields {
 		header = append(header, f.Label)
