@@ -44,6 +44,7 @@ import {
 } from "@/hooks/use-dropship-orders";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
+import { useTranslations } from "next-intl";
 
 const DROPSHIP_STATUSES: Record<string, { label: string; color: string }> = {
   pending: { label: "Oczekujace", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
@@ -61,6 +62,7 @@ interface StatusTimelineStep {
 }
 
 export default function DropshipOrderDetailPage() {
+  const t = useTranslations("dropshipOrders");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -120,7 +122,7 @@ export default function DropshipOrderDetailPage() {
 
   const timelineSteps: StatusTimelineStep[] = [
     { status: "pending", label: "Utworzone", date: order.created_at },
-    { status: "sent", label: "Wysłane", date: order.sent_at },
+    { status: "sent", label: t("order.shipped"), date: order.sent_at },
     { status: "confirmed", label: "Potwierdzone", date: order.confirmed_at },
     { status: "shipped", label: "W transporcie", date: order.shipped_at },
     { status: "delivered", label: "Dostarczone", date: order.delivered_at },
@@ -209,7 +211,7 @@ export default function DropshipOrderDetailPage() {
                 disabled={updateStatus.isPending}
               >
                 <Send className="mr-2 h-4 w-4" />
-                Oznacz jako wysłane
+                {t("oznaczJakoWysłane")}
               </Button>
             )}
             {order.status === "sent" && (
@@ -326,7 +328,7 @@ export default function DropshipOrderDetailPage() {
               </div>
               {order.sent_at && (
                 <div>
-                  <p className="text-muted-foreground">Wysłane</p>
+                  <p className="text-muted-foreground">{t("order.shipped")}</p>
                   <p className="font-medium">{formatDate(order.sent_at)}</p>
                 </div>
               )}

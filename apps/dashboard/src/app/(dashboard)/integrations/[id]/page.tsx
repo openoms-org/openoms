@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "next-intl";
 
 const DEDICATED_PAGES: Record<string, string> = {
   allegro: "/marketplaces/allegro",
@@ -60,6 +61,7 @@ const DEDICATED_PAGES: Record<string, string> = {
 };
 
 export default function IntegrationDetailPage() {
+  const t = useTranslations("integrations");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { data: integration, isLoading } = useIntegration(params.id);
@@ -88,7 +90,7 @@ export default function IntegrationDetailPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Nie znaleziono integracji</h1>
         <Button asChild variant="outline">
-          <Link href="/integrations">Wróć do listy</Link>
+          <Link href="/integrations">{t("detail.backToList")}</Link>
         </Button>
       </div>
     );
@@ -114,13 +116,13 @@ export default function IntegrationDetailPage() {
       { status: newStatus as "active" | "inactive" | "error" },
       {
         onSuccess: () => {
-          toast.success("Status integracji został zmieniony");
+          toast.success(t("statusIntegracjiZostałZmieniony"));
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas zmiany statusu"
+              : t("bulk.statusChangeError")
           );
         },
       }
@@ -142,19 +144,19 @@ export default function IntegrationDetailPage() {
     }
 
     if (Object.keys(payload).length === 0) {
-      toast.info("Nie wprowadzono żadnych zmian");
+      toast.info(t("nieWprowadzonoZadnychZmian"));
       return;
     }
 
     updateIntegration.mutate(payload, {
       onSuccess: () => {
-        toast.success("Dane integracji zostały zaktualizowane");
+        toast.success(t("daneIntegracjiZostałyZaktualizowane"));
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Błąd podczas aktualizacji danych"
+            : t("bładPodczasAktualizacjiDanych")
         );
       },
     });
@@ -163,14 +165,14 @@ export default function IntegrationDetailPage() {
   const handleDelete = () => {
     deleteIntegration.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Integracja została usunięta");
+        toast.success(t("integracjaZostałaUsunieta"));
         router.push(backLink);
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Błąd podczas usuwania integracji"
+            : t("bładPodczasUsuwaniaIntegracji")
         );
       },
     });
@@ -199,7 +201,7 @@ export default function IntegrationDetailPage() {
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
           >
-            Usuń
+            {t("delete")}
           </Button>
         </div>
       </div>
@@ -207,7 +209,7 @@ export default function IntegrationDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Szczegóły</CardTitle>
+            <CardTitle>{t("details")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -232,7 +234,7 @@ export default function IntegrationDetailPage() {
               )}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Dane uwierzytelniające
+                  {t("daneUwierzytelniajace")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.has_credentials ? "Skonfigurowane" : "Brak"}
@@ -272,7 +274,7 @@ export default function IntegrationDetailPage() {
 
             {integration.status === "error" && integration.error_message && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-                <p className="text-sm font-medium text-destructive">Błąd integracji</p>
+                <p className="text-sm font-medium text-destructive">{t("bładIntegracji")}</p>
                 <p className="mt-1 text-sm text-destructive/80">
                   {integration.error_message}
                 </p>
@@ -285,7 +287,7 @@ export default function IntegrationDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Zmień status</CardTitle>
+              <CardTitle>{t("bulk.changeStatus")}</CardTitle>
             </CardHeader>
             <CardContent>
               <Select
@@ -329,13 +331,13 @@ export default function IntegrationDetailPage() {
               { settings: newSettings },
               {
                 onSuccess: () => {
-                  toast.success("Ustawienia przesyłek zostały zapisane");
+                  toast.success(t("ustawieniaPrzesyłekZostałyZapisane"));
                 },
                 onError: (error) => {
                   toast.error(
                     error instanceof Error
                       ? error.message
-                      : "Błąd podczas zapisywania ustawień przesyłek"
+                      : t("bładPodczasZapisywaniaUstawienPrzesyłek")
                   );
                 },
               }
@@ -352,9 +354,9 @@ export default function IntegrationDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuń integrację"
-        description="Czy na pewno chcesz usunąć tę integrację? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={t("usunIntegracje")}
+        description={t("czyNaPewnoChceszUsunacTeIntegracjeTaOperacjaJestNi")}
+        confirmLabel={t("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteIntegration.isPending}
@@ -365,6 +367,7 @@ export default function IntegrationDetailPage() {
 }
 
 function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: string }) {
+  const t = useTranslations("integrations");
   const { data: categoryMappings } = useMarketplaceCategoryMappings(integrationId);
   const upsertMapping = useUpsertMarketplaceCategoryMapping(integrationId);
   const deleteMapping = useDeleteMarketplaceCategoryMapping(integrationId);
@@ -374,20 +377,20 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
       <CardHeader>
         <CardTitle>Mapowanie kategorii marketplace</CardTitle>
         <CardDescription>
-          Powiązania między kategoriami z marketplace a kategoriami OMS
+          {t("powiazaniaMiedzyKategoriamiZMarketplaceAKategoriam")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {!categoryMappings || categoryMappings.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
-            Brak mapowań. Import ofert z marketplace utworzy mapowania automatycznie.
+            {t("brakMapowanImportOfertZMarketplaceUtworzy")}
           </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Kategoria marketplace</TableHead>
-                <TableHead>ID zewnętrzne</TableHead>
+                <TableHead>{t("detail.externalId")}</TableHead>
                 <TableHead>Kategoria OMS</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">Akcje</TableHead>
@@ -419,7 +422,7 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
                           }
                         );
                       }}
-                      placeholder="Przypisz kategorię..."
+                      placeholder={t("przypiszKategorie")}
                       className="w-[220px]"
                     />
                   </TableCell>
@@ -445,7 +448,7 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0"
-                          title="Potwierdź"
+                          title={t("confirm")}
                           onClick={() => {
                             upsertMapping.mutate(
                               {
@@ -468,10 +471,10 @@ function MarketplaceCategoryMappingSection({ integrationId }: { integrationId: s
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0"
-                        title="Usuń"
+                        title={t("delete")}
                         onClick={() => {
                           deleteMapping.mutate(mapping.id, {
-                            onSuccess: () => toast.success("Mapowanie usunięte"),
+                            onSuccess: () => toast.success(t("mapowanieUsuniete")),
                             onError: (error) => toast.error(getErrorMessage(error)),
                           });
                         }}

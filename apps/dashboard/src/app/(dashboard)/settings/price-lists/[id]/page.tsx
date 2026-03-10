@@ -46,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const discountTypeLabels: Record<string, string> = {
   percentage: "Procentowy",
@@ -54,6 +55,8 @@ const discountTypeLabels: Record<string, string> = {
 };
 
 export default function PriceListDetailPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -91,7 +94,7 @@ export default function PriceListDetailPage() {
           className="mt-4"
           onClick={() => router.push("/settings/price-lists")}
         >
-          Powrót do listy
+          {t("powrotDoListy")}
         </Button>
       </div>
     );
@@ -176,7 +179,7 @@ export default function PriceListDetailPage() {
     if (!deleteItemId) return;
     deleteItem.mutate(deleteItemId, {
       onSuccess: () => {
-        toast.success("Pozycja usunięta z cennika");
+        toast.success(t("pozycjaUsunietaZCennika"));
         setDeleteItemId(null);
       },
       onError: (err) => toast.error(getErrorMessage(err)),
@@ -197,14 +200,14 @@ export default function PriceListDetailPage() {
           onClick={() => router.push("/settings/price-lists")}
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Powrót
+          {t("powrot")}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Szczegóły cennika</CardTitle>
+            <CardTitle>{t("szczegołycennika")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -311,17 +314,17 @@ export default function PriceListDetailPage() {
               />
             </div>
             {priceList.is_default && (
-              <Badge variant="default">Domyślny cennik</Badge>
+              <Badge variant="default">{t("domyslnyCennik")}</Badge>
             )}
             {priceList.valid_from && (
               <div>
-                <Label>Ważny od</Label>
+                <Label>{t("waznyOd")}</Label>
                 <p className="text-sm">{formatDate(priceList.valid_from)}</p>
               </div>
             )}
             {priceList.valid_to && (
               <div>
-                <Label>Ważny do</Label>
+                <Label>{t("waznyDo")}</Label>
                 <p className="text-sm">{formatDate(priceList.valid_to)}</p>
               </div>
             )}
@@ -344,7 +347,7 @@ export default function PriceListDetailPage() {
               <DialogHeader>
                 <DialogTitle>Dodaj produkt do cennika</DialogTitle>
                 <DialogDescription>
-                  Wybierz produkt i ustaw rabat lub cenę
+                  {t("wybierzProduktIUstawRabatLubCene")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -398,7 +401,7 @@ export default function PriceListDetailPage() {
                 )}
 
                 <div className="space-y-2">
-                  <Label>Minimalna ilość</Label>
+                  <Label>{t("minimalnaIlosc")}</Label>
                   <Input
                     type="number"
                     min="1"
@@ -429,7 +432,7 @@ export default function PriceListDetailPage() {
             <LoadingSkeleton />
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              Brak pozycji w cenniku. Dodaj produkty, aby ustawić ceny.
+              {t("brakPozycjiWCennikuDodajProduktyAby")}
             </p>
           ) : (
             <div className="rounded-md border">
@@ -442,7 +445,7 @@ export default function PriceListDetailPage() {
                         ? "Cena"
                         : "Rabat"}
                     </TableHead>
-                    <TableHead>Min. ilość</TableHead>
+                    <TableHead>{t("minIlosc")}</TableHead>
                     <TableHead>Dodano</TableHead>
                     <TableHead className="w-[60px]" />
                   </TableRow>
@@ -487,9 +490,9 @@ export default function PriceListDetailPage() {
       <ConfirmDialog
         open={!!deleteItemId}
         onOpenChange={(open) => !open && setDeleteItemId(null)}
-        title="Usuń pozycję"
-        description="Czy na pewno chcesz usunąć tę pozycję z cennika?"
-        confirmLabel="Usuń"
+        title={t("usunPozycje")}
+        description={t("czyNaPewnoChceszUsunacTePozycjeZCennika")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDeleteItem}
         isLoading={deleteItem.isPending}

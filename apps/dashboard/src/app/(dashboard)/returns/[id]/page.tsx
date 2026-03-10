@@ -26,6 +26,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RETURN_STATUSES, RETURN_TRANSITIONS } from "@/lib/constants";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
+import { useTranslations } from "next-intl";
 
 const editSchema = z.object({
   reason: z.string().min(1, "Powód jest wymagany"),
@@ -52,6 +53,7 @@ const TRANSITION_VARIANTS: Record<string, "default" | "destructive" | "outline" 
 };
 
 export default function ReturnDetailPage() {
+  const t = useTranslations("returns");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -90,7 +92,7 @@ export default function ReturnDetailPage() {
         refund_amount: data.refund_amount,
         notes: data.notes || undefined,
       });
-      toast.success("Zwrot został zaktualizowany");
+      toast.success(t("zwrotzostałzaktualizowany"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -100,7 +102,7 @@ export default function ReturnDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteReturn.mutateAsync(params.id);
-      toast.success("Zwrot został usunięty");
+      toast.success(t("zwrotzostałusuniety"));
       router.push("/returns");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -110,7 +112,7 @@ export default function ReturnDetailPage() {
   const handleTransition = async (newStatus: string) => {
     try {
       await transitionStatus.mutateAsync({ status: newStatus });
-      toast.success("Status zwrotu został zmieniony");
+      toast.success(t("statuszwrotuzostałzmieniony"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -134,7 +136,7 @@ export default function ReturnDetailPage() {
       <div className="flex flex-col items-center justify-center py-12">
         <p className="text-muted-foreground">Nie znaleziono zwrotu</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/returns")}>
-          Wróć do listy
+          {t("detail.backToList")}
         </Button>
       </div>
     );
@@ -161,7 +163,7 @@ export default function ReturnDetailPage() {
             Edytuj
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            Usuń
+            {t("delete")}
           </Button>
         </div>
       </div>
@@ -174,7 +176,7 @@ export default function ReturnDetailPage() {
           <CardContent>
             <form onSubmit={handleSubmit(handleUpdate)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="reason">Powód</Label>
+                <Label htmlFor="reason">{t("columns.reason")}</Label>
                 <Textarea
                   id="reason"
                   {...register("reason")}
@@ -229,7 +231,7 @@ export default function ReturnDetailPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Zamówienie</p>
+                    <p className="text-sm text-muted-foreground">{t("columns.order")}</p>
                     <Link
                       href={`/orders/${returnData.order_id}`}
                       className="mt-1 font-mono text-sm text-primary hover:underline"
@@ -262,7 +264,7 @@ export default function ReturnDetailPage() {
                 <Separator />
 
                 <div>
-                  <p className="text-sm text-muted-foreground">Powód</p>
+                  <p className="text-sm text-muted-foreground">{t("columns.reason")}</p>
                   <p className="mt-1 text-sm">{returnData.reason}</p>
                 </div>
 
@@ -300,7 +302,7 @@ export default function ReturnDetailPage() {
                   <>
                     <Separator />
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Link do śledzenia (dla klienta)</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t("linkDoSledzeniaDlaKlienta")}</p>
                       <div className="flex items-center gap-2">
                         <code className="flex-1 rounded bg-muted px-2 py-1 text-xs font-mono break-all">
                           {typeof window !== "undefined"
@@ -373,8 +375,8 @@ export default function ReturnDetailPage() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="Usuwanie zwrotu"
-        description="Czy na pewno chcesz usunąć ten zwrot? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń zwrot"
+        description={t("czyNaPewnoChceszUsunacTenZwrotTaOperacjaJestNieodw")}
+        confirmLabel={t("usunZwrot")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteReturn.isPending}

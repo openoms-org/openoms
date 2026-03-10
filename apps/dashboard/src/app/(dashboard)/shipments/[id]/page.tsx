@@ -38,6 +38,7 @@ import {
 import { useOrder } from "@/hooks/use-orders";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { formatDate, shortId, sanitizeUrl } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const SENDING_METHOD_LABELS: Record<string, string> = {
   dispatch_order: "Kurier odbierze",
@@ -49,6 +50,7 @@ const SENDING_METHOD_LABELS: Record<string, string> = {
 };
 
 export default function ShipmentDetailPage() {
+  const t = useTranslations("shipments");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -72,11 +74,11 @@ export default function ShipmentDetailPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Przesyłka została zaktualizowana");
+          toast.success(t("przesyłkaZostałaZaktualizowana"));
           setIsEditing(false);
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udało się zaktualizować przesyłki");
+          toast.error(error.message || t("nieUdałoSieZaktualizowacPrzesyłki"));
         },
       }
     );
@@ -85,11 +87,11 @@ export default function ShipmentDetailPage() {
   const handleDelete = () => {
     deleteShipment.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Przesyłka została usunięta");
+        toast.success(t("przesyłkaZostałaUsunieta"));
         router.push("/shipments");
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się usunąć przesyłki");
+        toast.error(error.message || t("nieUdałoSieUsunacPrzesyłki"));
       },
     });
   };
@@ -99,10 +101,10 @@ export default function ShipmentDetailPage() {
       { status },
       {
         onSuccess: () => {
-          toast.success("Status przesyłki został zmieniony");
+          toast.success(t("statusPrzesyłkiZostałZmieniony"));
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udało się zmienić statusu");
+          toast.error(error.message || t("nieUdałoSieZmienicStatusu"));
         },
       }
     );
@@ -120,9 +122,9 @@ export default function ShipmentDetailPage() {
   if (!shipment) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Nie znaleziono przesyłki</h1>
+        <h1 className="text-2xl font-bold">{t("nieZnalezionoPrzesyłki")}</h1>
         <Button asChild variant="outline">
-          <Link href="/shipments">Wróć do listy</Link>
+          <Link href="/shipments">{t("detail.backToList")}</Link>
         </Button>
       </div>
     );
@@ -161,7 +163,7 @@ export default function ShipmentDetailPage() {
             <Button variant="outline" size="sm" asChild>
               <a href={sanitizeUrl(shipment.label_url)} target="_blank" rel="noopener noreferrer">
                 <FileDown className="h-4 w-4" />
-                Pobierz etykietę
+                {t("pobierzEtykiete")}
               </a>
             </Button>
           )}
@@ -183,7 +185,7 @@ export default function ShipmentDetailPage() {
             onClick={() => setIsEditing(!isEditing)}
           >
             <Pencil className="h-4 w-4" />
-            {isEditing ? "Anuluj edycję" : "Edytuj"}
+            {isEditing ? t("anulujEdycje") : "Edytuj"}
           </Button>
           <Button
             variant="destructive"
@@ -191,7 +193,7 @@ export default function ShipmentDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Usuń
+            {t("delete")}
        </Button>
         </div>
       </div>
@@ -199,7 +201,7 @@ export default function ShipmentDetailPage() {
       {isEditing ? (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja przesyłki</CardTitle>
+            <CardTitle>{t("edycjaPrzesyłki")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ShipmentForm
@@ -213,7 +215,7 @@ export default function ShipmentDetailPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Szczegóły przesyłki</CardTitle>
+              <CardTitle>{t("szczegołyPrzesyłki")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -221,7 +223,7 @@ export default function ShipmentDetailPage() {
                 <p className="font-mono text-sm">{shipment.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Zamówienie</p>
+                <p className="text-sm text-muted-foreground">{t("columns.order")}</p>
                 <Link
                   href={`/orders/${shipment.order_id}`}
                   className="inline-flex items-center gap-1 font-mono text-sm text-primary hover:underline"
@@ -246,7 +248,7 @@ export default function ShipmentDetailPage() {
                 <p className="text-sm font-medium">Paczka #{shipment.package_number}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Numer śledzenia</p>
+                <p className="text-sm text-muted-foreground">{t("columns.trackingNumber")}</p>
                 <p className="text-sm">
                   {shipment.tracking_number || "-"}
                 </p>
@@ -260,7 +262,7 @@ export default function ShipmentDetailPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                   >
-                    Otwórz etykietę
+                    {t("otworzEtykiete")}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
@@ -347,7 +349,7 @@ export default function ShipmentDetailPage() {
             <CardHeader>
               <CardTitle>Zmiana statusu</CardTitle>
               <CardDescription>
-                Dostępne przejścia statusu dla tej przesyłki
+                {t("dostepnePrzejsciaStatusuDlaTejPrzesyłki")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -368,7 +370,7 @@ export default function ShipmentDetailPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Route className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Śledzenie przesyłki</CardTitle>
+                <CardTitle>{t("sledzeniePrzesyłki")}</CardTitle>
               </div>
               {shipment.tracking_number && (
                 <span className="text-xs font-mono text-muted-foreground">
@@ -394,9 +396,9 @@ export default function ShipmentDetailPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Usuń przesyłkę</DialogTitle>
+            <DialogTitle>{t("usunPrzesyłke")}</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz usunąć tę przesyłkę? Ta operacja jest
+              {t("czyNaPewnoChceszUsunacTePrzesyłke")}
               nieodwracalna.
             </DialogDescription>
           </DialogHeader>
@@ -412,7 +414,7 @@ export default function ShipmentDetailPage() {
               onClick={handleDelete}
               disabled={deleteShipment.isPending}
             >
-              {deleteShipment.isPending ? "Usuwanie..." : "Usuń"}
+              {deleteShipment.isPending ? "Usuwanie..." : t("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

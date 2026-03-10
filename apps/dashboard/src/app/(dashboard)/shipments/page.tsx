@@ -17,10 +17,12 @@ import { SHIPMENT_STATUSES } from "@/lib/constants";
 import { formatDate, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { Shipment } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_LIMIT = 20;
 
 export default function ShipmentsPage() {
+  const t = useTranslations("shipments");
   const [filters, setFilters] = useState<{
     status?: string;
     provider?: string;
@@ -63,7 +65,7 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Zamówienie",
+      header: t("columns.order"),
       accessorKey: "order_id" as const,
       cell: (shipment: Shipment) => (
         <Link
@@ -91,7 +93,7 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Numer śledzenia",
+      header: t("columns.trackingNumber"),
       accessorKey: "tracking_number" as const,
       cell: (shipment: Shipment) => (
         <span className="text-sm">
@@ -115,9 +117,9 @@ export default function ShipmentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Przesyłki</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Zarządzaj przesyłkami zamówień
+            {t("subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -164,7 +166,7 @@ export default function ShipmentsPage() {
           <Button asChild>
             <Link href="/shipments/new">
               <Plus className="h-4 w-4" />
-              Nowa przesyłka
+              {t("newShipment")}
             </Link>
           </Button>
         </div>
@@ -181,7 +183,7 @@ export default function ShipmentsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -189,7 +191,7 @@ export default function ShipmentsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -201,9 +203,9 @@ export default function ShipmentsPage() {
         emptyState={
           <EmptyState
             icon={Truck}
-            title="Brak przesyłek"
-            description="Nie znaleziono przesyłek do wyświetlenia."
-            action={{ label: "Nowa przesyłka", href: "/shipments/new" }}
+            title={t("empty.title")}
+            description={t("empty.description")}
+            action={{ label: t("newShipment"), href: "/shipments/new" }}
           />
         }
         sortBy={sortBy}

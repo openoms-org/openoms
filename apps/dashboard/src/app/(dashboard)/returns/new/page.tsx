@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 import type { Order, OrderItem } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const returnSchema = z.object({
   order_id: z.string().min(1, "ID zamówienia jest wymagane"),
@@ -36,6 +37,7 @@ interface SelectedItem {
 }
 
 export default function NewReturnPage() {
+  const t = useTranslations("returns");
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultOrderId = searchParams.get("order_id") ?? "";
@@ -125,7 +127,7 @@ export default function NewReturnPage() {
         notes: data.notes || undefined,
         items: selectedItems.length > 0 ? selectedItems : undefined,
       });
-      toast.success("Zwrot został utworzony");
+      toast.success(t("zwrotzostałutworzony"));
       router.push(`/returns/${result.id}`);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -143,7 +145,7 @@ export default function NewReturnPage() {
         <div>
           <h1 className="text-2xl font-bold">Nowy zwrot</h1>
           <p className="text-muted-foreground">
-            Wypełnij formularz, aby zgłosić nowy zwrot
+            {t("wypełnijFormularzAbyZgłosicNowyZwrot")}
           </p>
         </div>
       </div>
@@ -155,7 +157,7 @@ export default function NewReturnPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label>Zamówienie</Label>
+              <Label>{t("columns.order")}</Label>
               <OrderSearchCombobox
                 value={watch("order_id")}
                 onValueChange={(id) =>
@@ -173,11 +175,11 @@ export default function NewReturnPage() {
                 {loadingItems ? (
                   <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Wczytywanie pozycji zamówienia...
+                    {t("wczytywaniePozycjiZamowienia")}
                   </div>
                 ) : orderItems.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-2">
-                    Brak pozycji w zamówieniu
+                    {t("brakPozycjiWZamowieniu")}
                   </p>
                 ) : (
                   <div className="rounded-md border">
@@ -185,7 +187,7 @@ export default function NewReturnPage() {
                       <div className="contents font-medium text-muted-foreground border-b">
                         <div className="px-3 py-2" />
                         <div className="px-3 py-2">Produkt</div>
-                        <div className="px-3 py-2 text-center">W zamówieniu</div>
+                        <div className="px-3 py-2 text-center">{t("wZamowieniu")}</div>
                         <div className="px-3 py-2 text-center">Do zwrotu</div>
                       </div>
                       {orderItems.map((item, index) => (
@@ -231,10 +233,10 @@ export default function NewReturnPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Powód</Label>
+              <Label htmlFor="reason">{t("columns.reason")}</Label>
               <Textarea
                 id="reason"
-                placeholder="Podaj powód zwrotu"
+                placeholder={t("podajPowodZwrotu")}
                 {...register("reason")}
               />
               {errors.reason && (
@@ -270,7 +272,7 @@ export default function NewReturnPage() {
 
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={createReturn.isPending}>
-                {createReturn.isPending ? "Tworzenie..." : "Utwórz zwrot"}
+                {createReturn.isPending ? "Tworzenie..." : t("utworzZwrot")}
               </Button>
               <Button variant="outline" type="button" onClick={() => router.push("/returns")}>
                 Anuluj

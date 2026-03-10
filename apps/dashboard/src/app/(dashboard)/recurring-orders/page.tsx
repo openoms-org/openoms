@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_LIMIT = 20;
 
@@ -62,6 +63,7 @@ const frequencyLabels: Record<string, string> = {
 };
 
 export default function RecurringOrdersPage() {
+  const t = useTranslations("recurringOrders");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
@@ -172,7 +174,7 @@ export default function RecurringOrdersPage() {
         <EmptyState
           icon={Repeat}
           title="Brak subskrypcji"
-          description="Utwórz pierwsza subskrypcje, aby automatycznie generowac zamowienia cykliczne."
+          description={t("utworzPierwszaSubskrypcjeAbyAutomatycznieGenerowac")}
           action={{ label: "Nowa subskrypcja", href: "/recurring-orders/new" }}
         />
       ) : (

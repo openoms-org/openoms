@@ -52,6 +52,7 @@ import type {
   CreateStockSyncChannelRequest,
 } from "@/types/api";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const channelTypeLabels: Record<string, string> = {
   allegro: "Allegro",
@@ -84,6 +85,7 @@ function ChannelStatusIndicator({ status }: { status: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations("stockSync");
   const variants: Record<string, string> = {
     ok: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     warning:
@@ -94,8 +96,8 @@ function StatusBadge({ status }: { status: string }) {
   const labels: Record<string, string> = {
     ok: "OK",
     warning: "Brak synchronizacji",
-    error: "Błąd",
-    disabled: "Wyłączony",
+    error: t("invoice.error"),
+    disabled: t("wyłaczony"),
   };
 
   return (
@@ -106,6 +108,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function AddChannelDialog() {
+  const t = useTranslations("stockSync");
   const [open, setOpen] = useState(false);
   const [channelType, setChannelType] = useState("allegro");
   const [syncMode, setSyncMode] = useState("realtime");
@@ -135,16 +138,16 @@ function AddChannelDialog() {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Dodaj kanał
+          {t("dodajKanał")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nowy kanał synchronizacji</DialogTitle>
+          <DialogTitle>{t("nowykanałsynchronizacji")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Typ kanału</Label>
+            <Label>{t("typkanału")}</Label>
             <Select value={channelType} onValueChange={setChannelType}>
               <SelectTrigger>
                 <SelectValue />
@@ -174,7 +177,7 @@ function AddChannelDialog() {
             </Select>
           </div>
           <div>
-            <Label>Bufor bezpieczeństwa (szt.)</Label>
+            <Label>{t("buforBezpieczenstwaSzt")}</Label>
             <Input
               type="number"
               min={0}
@@ -182,7 +185,7 @@ function AddChannelDialog() {
               onChange={(e) => setStockBuffer(Number(e.target.value))}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Ilość sztuk rezerwowana jako zapas bezpieczeństwa na tym kanale
+              {t("iloscSztukRezerwowanaJakoZapasBezpieczenstwaNa")}
             </p>
           </div>
           <div>
@@ -202,7 +205,7 @@ function AddChannelDialog() {
             Anuluj
           </Button>
           <Button onClick={handleSubmit} disabled={createChannel.isPending}>
-            {createChannel.isPending ? "Tworzenie..." : "Utwórz"}
+            {createChannel.isPending ? "Tworzenie..." : t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -211,6 +214,7 @@ function AddChannelDialog() {
 }
 
 function ChannelCard({ channel }: { channel: ChannelSummary }) {
+  const t = useTranslations("stockSync");
   const deleteChannel = useDeleteStockSyncChannel();
   const updateChannel = useUpdateStockSyncChannel(channel.id);
   const pushChannel = usePushChannelStock();
@@ -220,7 +224,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
   };
 
   const handleDelete = async () => {
-    if (confirm("Czy na pewno chcesz usunąć ten kanał?")) {
+    if (confirm(t("czyNaPewnoChceszUsunacTenKanał"))) {
       await deleteChannel.mutateAsync(channel.id);
     }
   };
@@ -244,7 +248,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
             size="icon"
             onClick={handlePush}
             disabled={pushChannel.isPending || !channel.enabled}
-            title="Synchronizuj kanał"
+            title={t("synchronizujKanał")}
           >
             <RefreshCw
               className={`h-4 w-4 text-muted-foreground ${pushChannel.isPending ? "animate-spin" : ""}`}
@@ -253,7 +257,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
           <Switch
             checked={channel.enabled}
             onCheckedChange={handleToggle}
-            aria-label="Włącz/wyłącz kanał"
+            aria-label={t("właczwyłaczKanał")}
           />
           <Button
             variant="ghost"
@@ -280,13 +284,13 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
             <span>{channel.stock_buffer} szt.</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Błędy (24h)</span>
+            <span className="text-muted-foreground">{t("błedy24h")}</span>
             <span className={channel.error_count > 0 ? "text-red-600 font-medium" : ""}>
               {channel.error_count}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Zsync. produktów</span>
+            <span className="text-muted-foreground">{t("zsyncProduktow")}</span>
             <span>{channel.items_synced}</span>
           </div>
           {channel.last_sync_at && (
@@ -307,6 +311,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
 }
 
 export default function StockSyncPage() {
+  const t = useTranslations("stockSync");
   const { data: dashboard, isLoading: dashLoading, dataUpdatedAt } = useStockSyncDashboard();
   const { isLoading: channelsLoading } =
     useStockSyncChannels({ limit: 100 });
@@ -324,7 +329,7 @@ export default function StockSyncPage() {
               Sync magazynu
             </h1>
             <p className="text-muted-foreground">
-              Synchronizacja stanów magazynowych z kanałami sprzedaży w czasie
+              {t("synchronizacjaStanowMagazynowychZKanałamiSprzedazy")}
               rzeczywistym
             </p>
             {dataUpdatedAt > 0 && (
@@ -342,7 +347,7 @@ export default function StockSyncPage() {
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${pushAll.isPending ? "animate-spin" : ""}`}
               />
-              {pushAll.isPending ? "Synchronizuję..." : "Synchronizuj wszystko"}
+              {pushAll.isPending ? t("synchronizuje") : "Synchronizuj wszystko"}
             </Button>
             <AddChannelDialog />
           </div>
@@ -370,7 +375,7 @@ export default function StockSyncPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    Aktywne kanały
+                    {t("aktywneKanały")}
                   </CardTitle>
                   <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -420,7 +425,7 @@ export default function StockSyncPage() {
             {dashboard?.channel_summaries &&
             dashboard.channel_summaries.length > 0 ? (
               <div>
-                <h2 className="text-lg font-semibold mb-4">Kanały synchronizacji</h2>
+                <h2 className="text-lg font-semibold mb-4">{t("kanałysynchronizacji")}</h2>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {dashboard.channel_summaries.map((ch) => (
                     <ChannelCard key={ch.id} channel={ch} />
@@ -430,8 +435,8 @@ export default function StockSyncPage() {
             ) : (
               <EmptyState
                 icon={RefreshCw}
-                title="Brak kanałów synchronizacji"
-                description="Dodaj kanał sprzedaży, aby rozpocząć synchronizację stanów magazynowych"
+                title={t("brakkanałowsynchronizacji")}
+                description={t("dodajkanałsprzedazyabyrozpoczacsynchronizacjestano")}
               />
             )}
 
@@ -439,7 +444,7 @@ export default function StockSyncPage() {
             <div className="flex justify-end">
               <Link href="/stock-sync/events">
                 <Button variant="outline">
-                  Historia zdarzeń
+                  {t("historiaZdarzen")}
                 </Button>
               </Link>
             </div>

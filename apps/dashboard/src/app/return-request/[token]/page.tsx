@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { PublicReturnStatus } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -29,6 +30,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
 const STATUS_ORDER = ["requested", "approved", "received", "refunded"];
 
 export default function PublicReturnStatusPage() {
+  const t = useTranslations("returnRequest");
   const params = useParams();
   const token = params.token as string;
   const [data, setData] = useState<PublicReturnStatus | null>(null);
@@ -45,14 +47,14 @@ export default function PublicReturnStatusPage() {
           if (res.status === 404) {
             setError("Nie znaleziono zwrotu o podanym tokenie.");
           } else {
-            setError("Wystąpił błąd podczas ładowania statusu zwrotu.");
+            setError(t("wystapiłbładpodczasładowaniastatusuzwrotu"));
           }
           return;
         }
         const statusData: PublicReturnStatus = await res.json();
         setData(statusData);
       } catch {
-        setError("Nie udało się połączyć z serwerem.");
+        setError(t("nieudałosiepołaczyczserwerem"));
       } finally {
         setIsLoading(false);
       }
@@ -92,7 +94,7 @@ export default function PublicReturnStatusPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
               </div>
               <p className="text-center mt-4 text-muted-foreground">
-                Ładowanie...
+                {t("loading")}
               </p>
             </CardContent>
           </Card>
@@ -107,7 +109,7 @@ export default function PublicReturnStatusPage() {
                 <Button variant="outline" className="mt-4" asChild>
                   <Link href="/return-request">
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Powrót do formularza
+                    {t("powrotDoFormularza")}
                   </Link>
                 </Button>
               </div>
@@ -138,7 +140,7 @@ export default function PublicReturnStatusPage() {
               {!isTerminal && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-muted-foreground">
-                    Postęp
+                    {t("postep")}
                   </h3>
                   <div className="flex items-center gap-1">
                     {STATUS_ORDER.map((status, index) => {
@@ -173,8 +175,8 @@ export default function PublicReturnStatusPage() {
                 <div className="rounded-md bg-destructive/15 border border-destructive/30 p-4">
                   <p className="text-sm text-destructive">
                     {data.status === "rejected"
-                      ? "Twoje zgłoszenie zwrotu zostało odrzucone."
-                      : "Zwrot został anulowany."}
+                      ? t("twojezgłoszeniezwrotuzostałoodrzucone")
+                      : t("zwrotzostałanulowany")}
                   </p>
                 </div>
               )}
@@ -182,7 +184,7 @@ export default function PublicReturnStatusPage() {
               {/* Reason */}
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  Powód zwrotu
+                  {t("powodZwrotu")}
                 </h3>
                 <p className="text-sm">{data.reason}</p>
               </div>
@@ -216,7 +218,7 @@ export default function PublicReturnStatusPage() {
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/return-request">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Zgłoś kolejny zwrot
+                  {t("zgłosKolejnyZwrot")}
                 </Link>
               </Button>
             </CardContent>

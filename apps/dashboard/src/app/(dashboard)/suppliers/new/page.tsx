@@ -38,6 +38,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -79,6 +80,7 @@ const providers = [
 // ---------------------------------------------------------------------------
 
 export default function NewSupplierPage() {
+  const t = useTranslations("suppliers");
   const router = useRouter();
   const [step, setStep] = useState<Step>("pick");
 
@@ -116,7 +118,7 @@ export default function NewSupplierPage() {
     if (!hasBtpCreds) {
       createSupplier.mutate(data, {
         onSuccess: () => {
-          toast.success("Dostawca został utworzony");
+          toast.success(t("dostawcazostałutworzony"));
           router.push("/suppliers");
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -142,7 +144,7 @@ export default function NewSupplierPage() {
         integration_id: integration.id,
       });
 
-      toast.success("Dostawca został utworzony (tryb hybrydowy XML + API)");
+      toast.success(t("dostawcazostałutworzonytrybhybrydowyxmlapi"));
       router.push("/suppliers");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -225,7 +227,7 @@ export default function NewSupplierPage() {
             <CardHeader>
               <CardTitle>Dane dostawcy</CardTitle>
               <CardDescription>
-                Dodaj dostawcę importującego produkty z pliku lub URL
+                {t("dodajDostawceImportujacegoProduktyZPlikuLub")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -255,7 +257,7 @@ export default function NewSupplierPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="feed_url">URL feeda produktów</Label>
+                  <Label htmlFor="feed_url">{t("urlFeedaProduktow")}</Label>
                   <Input
                     id="feed_url"
                     {...register("feed_url")}
@@ -283,7 +285,7 @@ export default function NewSupplierPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="sync_interval_minutes">
-                      Interwał synchronizacji
+                      {t("interwałSynchronizacji")}
                     </Label>
                     <Select
                       defaultValue="60"
@@ -297,7 +299,7 @@ export default function NewSupplierPage() {
                       <SelectContent>
                         <SelectItem value="15">Co 15 minut</SelectItem>
                         <SelectItem value="30">Co 30 minut</SelectItem>
-                        <SelectItem value="60">Co 1 godzinę</SelectItem>
+                        <SelectItem value="60">{t("co1Godzine")}</SelectItem>
                         <SelectItem value="120">Co 2 godziny</SelectItem>
                         <SelectItem value="360">Co 6 godzin</SelectItem>
                         <SelectItem value="720">Co 12 godzin</SelectItem>
@@ -328,9 +330,9 @@ export default function NewSupplierPage() {
                     {xmlApiExpanded && (
                       <div className="border-t px-3 pb-3 pt-3 space-y-3">
                         <p className="text-xs text-muted-foreground">
-                          Podaj klucze API z panelu BTP, aby włączyć tryb
-                          hybrydowy — pełny katalog z XML + aktualizacje stanów
-                          przez API między synchronizacjami.
+                          {t("podajKluczeApiZPaneluBtpAby")}
+                          {t("hybrydowyPełnyKatalogZXmlAktualizacjeStanow")}
+                          {t("przezApiMiedzySynchronizacjami")}
                         </p>
                         <div className="space-y-2">
                           <Label htmlFor="xml-public-key">
@@ -366,7 +368,7 @@ export default function NewSupplierPage() {
                               aria-label={
                                 showXmlPrivateKey
                                   ? "Ukryj klucz"
-                                  : "Pokaż klucz"
+                                  : t("pokazKlucz")
                               }
                             >
                               {showXmlPrivateKey ? (
@@ -407,7 +409,7 @@ export default function NewSupplierPage() {
                         Tworzenie...
                       </>
                     ) : (
-                      "Utwórz dostawcę"
+                      t("utworzDostawce")
                     )}
                   </Button>
                   <Button

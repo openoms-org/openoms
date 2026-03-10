@@ -57,6 +57,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 
 function findCategoryById(categories: ProductCategory[], id: string): ProductCategory | undefined {
   for (const cat of categories) {
@@ -70,6 +71,8 @@ function findCategoryById(categories: ProductCategory[], id: string): ProductCat
 }
 
 export default function SupplierDetailPage() {
+  const t = useTranslations("suppliers");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -129,7 +132,7 @@ export default function SupplierDetailPage() {
 
   const handleSync = () => {
     syncSupplier.mutate(id, {
-      onSuccess: () => toast.success("Synchronizacja zakończona"),
+      onSuccess: () => toast.success(t("synchronizacjaZakonczona")),
       onError: (error) =>
         toast.error(getErrorMessage(error)),
     });
@@ -206,14 +209,14 @@ export default function SupplierDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Interwał synchronizacji</Label>
+              <Label>{t("interwałsynchronizacji")}</Label>
               <Select value={syncInterval} onValueChange={setSyncInterval}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5">Co 5 minut</SelectItem>
                   <SelectItem value="15">Co 15 minut</SelectItem>
                   <SelectItem value="30">Co 30 minut</SelectItem>
-                  <SelectItem value="60">Co 1 godzinę</SelectItem>
+                  <SelectItem value="60">{t("co1Godzine")}</SelectItem>
                   <SelectItem value="120">Co 2 godziny</SelectItem>
                   <SelectItem value="360">Co 6 godzin</SelectItem>
                   <SelectItem value="720">Co 12 godzin</SelectItem>
@@ -222,15 +225,15 @@ export default function SupplierDetailPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Domyślna kategoria</Label>
+              <Label>{t("domyslnaKategoria")}</Label>
               <CategoryTreePicker
                 value={defaultCategoryId}
                 onChange={setDefaultCategoryId}
-                placeholder="Wybierz domyślną kategorię..."
+                placeholder={t("wybierzDomyslnaKategorie")}
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                Produkty bez mapowania kategorii trafią do tej kategorii
+                {t("produktyBezMapowaniaKategoriiTrafiaDoTej")}
               </p>
             </div>
             <Button onClick={handleUpdate} disabled={updateSupplier.isPending} className="w-full">
@@ -249,7 +252,7 @@ export default function SupplierDetailPage() {
               <span>{supplier.last_sync_at ? formatDate(supplier.last_sync_at) : "Nigdy"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Interwał synca</span>
+              <span className="text-muted-foreground">{t("interwałsynca")}</span>
               <span>{supplier.sync_interval_minutes >= 60 ? `${supplier.sync_interval_minutes / 60}h` : `${supplier.sync_interval_minutes} min`}</span>
             </div>
             <div className="flex justify-between">
@@ -257,7 +260,7 @@ export default function SupplierDetailPage() {
               <span>{productsData?.total ?? 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Powiązane z OMS</span>
+              <span className="text-muted-foreground">{t("powiazaneZOms")}</span>
               <span>{products.filter((p) => p.product_id).length}</span>
             </div>
             <div className="flex justify-between">
@@ -361,19 +364,19 @@ export default function SupplierDetailPage() {
         <CardHeader>
           <CardTitle>Mapowanie kategorii</CardTitle>
           <CardDescription>
-            Powiązania między kategoriami z feeda dostawcy a kategoriami OMS
+            {t("powiazaniaMiedzyKategoriamiZFeedaDostawcyA")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!categoryMappings || categoryMappings.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Brak mapowań kategorii. Uruchom synchronizację — mapowania zostaną utworzone automatycznie.
+              {t("brakMapowanKategoriiUruchomSynchronizacjeMapowania")}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Kategoria źródłowa</TableHead>
+                  <TableHead>{t("kategoriazrodłowa")}</TableHead>
                   <TableHead>Kategoria OMS</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[100px]">Akcje</TableHead>
@@ -405,7 +408,7 @@ export default function SupplierDetailPage() {
                               }
                             );
                           }}
-                          placeholder="Przypisz kategorię..."
+                          placeholder={t("przypiszKategorie")}
                           className="w-[220px]"
                         />
                       </TableCell>
@@ -431,7 +434,7 @@ export default function SupplierDetailPage() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              title="Potwierdź"
+                              title={tc("confirm")}
                               onClick={() => {
                                 upsertMapping.mutate(
                                   {
@@ -453,10 +456,10 @@ export default function SupplierDetailPage() {
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0"
-                            title="Usuń"
+                            title={tc("delete")}
                             onClick={() => {
                               deleteMapping.mutate(mapping.id, {
-                                onSuccess: () => toast.success("Mapowanie usunięte"),
+                                onSuccess: () => toast.success(t("mapowanieUsuniete")),
                                 onError: (error) => toast.error(getErrorMessage(error)),
                               });
                             }}
@@ -487,22 +490,22 @@ export default function SupplierDetailPage() {
             variant="outline"
             onClick={() => router.push(`/suppliers/${id}/products`)}
           >
-            Zarządzaj produktami
+            {t("zarzadzajProduktami")}
           </Button>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-2xl font-bold">{productsData?.total ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Łącznie</p>
+              <p className="text-xs text-muted-foreground">{t("łacznie1")}</p>
             </div>
             <div>
               <p className="text-2xl font-bold">{products.filter((p) => p.product_id).length}</p>
-              <p className="text-xs text-muted-foreground">Powiązane</p>
+              <p className="text-xs text-muted-foreground">{t("powiazane")}</p>
             </div>
             <div>
               <p className="text-2xl font-bold">{products.filter((p) => !p.product_id).length}</p>
-              <p className="text-xs text-muted-foreground">Niepowiązane</p>
+              <p className="text-xs text-muted-foreground">{t("niepowiazane")}</p>
             </div>
           </div>
         </CardContent>

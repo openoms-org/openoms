@@ -24,8 +24,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { ProductImportPreview, ProductImportResult } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function ProductImportPage() {
+  const t = useTranslations("products");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ProductImportPreview | null>(null);
   const [result, setResult] = useState<ProductImportResult | null>(null);
@@ -96,7 +98,7 @@ export default function ProductImportPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Import produktów CSV
+            {t("importProduktowCsv")}
           </h1>
           <p className="text-muted-foreground">
             Importuj produkty z pliku CSV. Istniejące produkty (dopasowane po SKU) zostaną zaktualizowane.
@@ -110,7 +112,7 @@ export default function ProductImportPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Import zakończony
+              {t("importZakonczony")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -136,14 +138,14 @@ export default function ProductImportPage() {
                   {result.errors.length}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Błędy
+                  {t("błedy")}
                 </p>
               </div>
             </div>
 
             {result.errors.length > 0 && (
               <div className="space-y-2">
-                <h3 className="font-medium text-destructive">Błędy importu:</h3>
+                <h3 className="font-medium text-destructive">{t("błedyImportu")}</h3>
                 <div className="max-h-60 overflow-y-auto rounded-md border">
                   <Table>
                     <TableHeader>
@@ -172,7 +174,7 @@ export default function ProductImportPage() {
                 Importuj kolejny plik
               </Button>
               <Button asChild>
-                <Link href="/products">Wróć do produktów</Link>
+                <Link href="/products">{t("wrocDoProduktow")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -186,7 +188,7 @@ export default function ProductImportPage() {
             <CardHeader>
               <CardTitle>Plik CSV</CardTitle>
               <CardDescription>
-                Przeciągnij plik CSV lub kliknij, aby wybrać. Wymagane kolumny: name. Opcjonalne: sku, ean, price, stock_quantity, category, tags, weight, width, height, length, short_description.
+                {t("przeciagnijPlikCsvLubKliknijAbyWybrac")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -229,17 +231,17 @@ export default function ProductImportPage() {
                         resetState();
                       }}
                     >
-                      Zmień
+                      {t("zmien")}
                     </Button>
                   </div>
                 ) : (
                   <>
                     <Upload className="mb-4 h-10 w-10 text-muted-foreground" />
                     <p className="text-sm font-medium">
-                      Przeciągnij plik CSV tutaj
+                      {t("przeciagnijPlikCsvTutaj")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      lub kliknij, aby wybrać plik
+                      {t("lubKliknijAbyWybracPlik")}
                     </p>
                   </>
                 )}
@@ -256,7 +258,7 @@ export default function ProductImportPage() {
           {preview && (
             <Card>
               <CardHeader>
-                <CardTitle>Podgląd importu</CardTitle>
+                <CardTitle>{t("podgladImportu")}</CardTitle>
                 <CardDescription>
                   Pierwsze 10 wierszy z pliku CSV
                 </CardDescription>

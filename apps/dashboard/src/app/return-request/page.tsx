@@ -15,10 +15,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { PublicReturnRequest, PublicReturnResponse } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 function PublicReturnForm() {
+  const t = useTranslations("returnRequest");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<"form" | "success">("form");
@@ -57,8 +59,8 @@ function PublicReturnForm() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Wystąpił błąd" }));
-        setError(data.error || "Wystąpił błąd podczas składania zwrotu");
+        const data = await res.json().catch(() => ({ error: t("error") }));
+        setError(data.error || t("wystapiłBładPodczasSkładaniaZwrotu"));
         return;
       }
 
@@ -66,7 +68,7 @@ function PublicReturnForm() {
       setReturnToken(data.return_token);
       setStep("success");
     } catch {
-      setError("Nie udało się połączyć z serwerem. Spróbuj ponownie.");
+      setError(t("nieUdałoSiePołaczycZSerweremSprobujPonownie"));
     } finally {
       setIsSubmitting(false);
     }
@@ -77,17 +79,17 @@ function PublicReturnForm() {
       {step === "form" && (
         <Card>
           <CardHeader>
-            <CardTitle>Zgłoś zwrot</CardTitle>
+            <CardTitle>{t("detail.reportReturn")}</CardTitle>
             <CardDescription>
-              Wypełnij formularz, aby zgłosić zwrot zamówienia.
-              Podaj numer zamówienia i adres email, który został
-              użyty przy składaniu zamówienia.
+              {t("wypełnijFormularzAbyZgłosicZwrotZamowienia")}
+              {t("podajNumerZamowieniaIAdresEmailKtory")}
+              {t("uzytyPrzySkładaniuZamowienia")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="order-id">Numer zamówienia (ID)</Label>
+                <Label htmlFor="order-id">{t("numerZamowieniaId")}</Label>
                 <Input
                   id="order-id"
                   value={orderId}
@@ -108,12 +110,12 @@ function PublicReturnForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reason">Powód zwrotu</Label>
+                <Label htmlFor="reason">{t("powodZwrotu")}</Label>
                 <Textarea
                   id="reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="Opisz powód zwrotu..."
+                  placeholder={t("opiszPowodZwrotu")}
                   rows={3}
                   required
                 />
@@ -140,7 +142,7 @@ function PublicReturnForm() {
                 className="w-full"
                 disabled={isSubmitting || !orderId || !email || !reason}
               >
-                {isSubmitting ? "Wysyłanie..." : "Zgłoś zwrot"}
+                {isSubmitting ? t("wysyłanie") : t("detail.reportReturn")}
                 {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
@@ -151,16 +153,16 @@ function PublicReturnForm() {
       {step === "success" && returnToken && (
         <Card>
           <CardHeader>
-            <CardTitle>Zwrot został zgłoszony</CardTitle>
+            <CardTitle>{t("zwrotZostałZgłoszony")}</CardTitle>
             <CardDescription>
-              Twoje zgłoszenie zwrotu zostało przyjęte. Możesz śledzić
-              jego status pod poniższym linkiem.
+              {t("twojeZgłoszenieZwrotuZostałoPrzyjeteMozeszSledzic")}
+              {t("jegoStatusPodPonizszymLinkiem")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-md bg-success/15 border border-success/30 p-4">
               <p className="text-sm text-success">
-                Twoje zgłoszenie zostało zarejestrowane. Otrzymasz informacje o zmianach statusu.
+                {t("twojeZgłoszenieZostałoZarejestrowaneOtrzymaszInfor")}
               </p>
             </div>
 
@@ -168,7 +170,7 @@ function PublicReturnForm() {
               className="w-full"
               onClick={() => router.push(`/return-request/${returnToken}`)}
             >
-              Sprawdź status zwrotu
+              {t("sprawdzStatusZwrotu")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>
@@ -179,6 +181,7 @@ function PublicReturnForm() {
 }
 
 export default function PublicReturnPage() {
+  const t = useTranslations("returnRequest");
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -198,7 +201,7 @@ export default function PublicReturnPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                 </div>
                 <p className="text-center mt-4 text-muted-foreground">
-                  Ładowanie...
+                  {t("loading")}
                 </p>
               </CardContent>
             </Card>

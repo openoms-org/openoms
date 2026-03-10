@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
+import { useTranslations } from "next-intl";
 
 export interface CarrierFieldValues {
   service_type?: string;
@@ -62,6 +63,7 @@ function ParcelDimensionFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
@@ -78,7 +80,7 @@ function ParcelDimensionFields({
         />
       </div>
       <div className="space-y-2">
-        <Label>Szerokość (cm)</Label>
+        <Label>{t("addPackage.width")}</Label>
         <Input
           type="number"
           step="1"
@@ -91,7 +93,7 @@ function ParcelDimensionFields({
         />
       </div>
       <div className="space-y-2">
-        <Label>Wysokość (cm)</Label>
+        <Label>{t("addPackage.height")}</Label>
         <Input
           type="number"
           step="1"
@@ -104,7 +106,7 @@ function ParcelDimensionFields({
         />
       </div>
       <div className="space-y-2">
-        <Label>Głębokość (cm)</Label>
+        <Label>{t("form.depth")}</Label>
         <Input
           type="number"
           step="1"
@@ -127,6 +129,7 @@ function InPostFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   const serviceType = values.service_type ?? "inpost_locker_standard";
   const isLocker = serviceType === "inpost_locker_standard";
   const targetPoint = (values.target_point as string) ?? "";
@@ -135,7 +138,7 @@ function InPostFields({
     <>
       {/* Service type */}
       <div className="space-y-2">
-        <Label>Typ usługi</Label>
+        <Label>{t("typUsługi")}</Label>
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -188,20 +191,20 @@ function InPostFields({
           onValueChange={(v) => onChange("sending_method", v === "__default__" ? undefined : v)}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Domyślna (z ustawień integracji)" />
+            <SelectValue placeholder={t("domyslnaZUstawienIntegracji")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__default__">Domyślna (z ustawień integracji)</SelectItem>
+            <SelectItem value="__default__">{t("domyslnaZUstawienIntegracji")}</SelectItem>
             <SelectItem value="dispatch_order">Kurier odbierze (zlecenie odbioru)</SelectItem>
             <SelectItem value="parcel_locker">Nadam w paczkomacie</SelectItem>
             <SelectItem value="pop">Nadam w PaczkoPunkcie (POP)</SelectItem>
             <SelectItem value="any_point">Dowolny punkt (paczkomat/POP)</SelectItem>
-            <SelectItem value="pok">Punkt Obsługi Klienta (POK)</SelectItem>
-            <SelectItem value="branch">Oddział InPost</SelectItem>
+            <SelectItem value="pok">{t("inpost.sendingMethods.pok")}</SelectItem>
+            <SelectItem value="branch">{t("inpost.sendingMethods.branch")}</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          Jak paczka trafi do sieci InPost. Pozostaw puste, aby użyć domyślnej metody z ustawień integracji.
+          {t("jakPaczkaTrafiDoSieciInpostPozostaw")}
         </p>
       </div>
 
@@ -216,9 +219,9 @@ function InPostFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="small">Mały (A: 8×38×64cm)</SelectItem>
-            <SelectItem value="medium">Średni (B: 19×38×64cm)</SelectItem>
-            <SelectItem value="large">Duży (C: 41×38×64cm)</SelectItem>
+            <SelectItem value="small">{t("małyA83864cm")}</SelectItem>
+            <SelectItem value="medium">{t("sredniB193864cm")}</SelectItem>
+            <SelectItem value="large">{t("duzyC413864cm")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -233,10 +236,11 @@ function DHLFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <>
       <div className="space-y-2">
-        <Label>Typ usługi</Label>
+        <Label>{t("typUsługi")}</Label>
         <Select
           value={(values.service_type as string) ?? "dhl_parcel"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -264,10 +268,11 @@ function DPDFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <>
       <div className="space-y-2">
-        <Label>Typ usługi</Label>
+        <Label>{t("typUsługi")}</Label>
         <Select
           value={(values.service_type as string) ?? "dpd_classic"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -294,6 +299,7 @@ function CODAndInsuranceFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
@@ -310,7 +316,7 @@ function CODAndInsuranceFields({
         />
       </div>
       <div className="space-y-2">
-        <Label>Wartość ubezpieczenia (PLN)</Label>
+        <Label>{t("wartoscUbezpieczeniaPln")}</Label>
         <Input
           type="number"
           step="0.01"
@@ -333,10 +339,11 @@ function GLSFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <>
       <div className="space-y-2">
-        <Label>Typ usługi</Label>
+        <Label>{t("typUsługi")}</Label>
         <Select
           value={(values.service_type as string) ?? "standard"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -365,10 +372,11 @@ function UPSFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <>
       <div className="space-y-2">
-        <Label>Typ usługi</Label>
+        <Label>{t("typUsługi")}</Label>
         <Select
           value={(values.service_type as string) ?? "11"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -397,10 +405,11 @@ function FedExFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <>
       <div className="space-y-2">
-        <Label>Typ usługi</Label>
+        <Label>{t("typUsługi")}</Label>
         <Select
           value={(values.service_type as string) ?? "FEDEX_INTERNATIONAL_PRIORITY"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -428,10 +437,11 @@ function PocztaPolskaFields({
   values: CarrierFieldValues;
   onChange: (field: string, value: unknown) => void;
 }) {
+  const t = useTranslations("shipments");
   return (
     <>
       <div className="space-y-2">
-        <Label>Typ usługi</Label>
+        <Label>{t("typUsługi")}</Label>
         <Select
           value={(values.service_type as string) ?? "POCZTEX_KURIER_48"}
           onValueChange={(v) => onChange("service_type", v)}

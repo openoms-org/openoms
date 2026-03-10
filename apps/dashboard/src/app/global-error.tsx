@@ -2,6 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 export default function GlobalError({
   error,
@@ -10,6 +11,7 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("errors");
   useEffect(() => {
     Sentry.captureException(error);
   }, [error]);
@@ -18,9 +20,9 @@ export default function GlobalError({
     <html>
       <body>
         <div style={{ padding: "2rem", textAlign: "center" }}>
-          <h2>Wystąpił nieoczekiwany błąd</h2>
+          <h2>{t("wystapiłNieoczekiwanyBład")}</h2>
           <p style={{ color: "#666", marginTop: "0.5rem" }}>
-            Błąd został automatycznie zgłoszony. Spróbuj ponownie.
+            {t("bładZostałAutomatycznieZgłoszonySprobujPonownie")}
           </p>
           <button
             onClick={reset}
@@ -30,7 +32,7 @@ export default function GlobalError({
               cursor: "pointer",
             }}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </button>
         </div>
       </body>

@@ -4,6 +4,7 @@ import { Package, PackagePlus, Truck, PackageCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { OrderCounts } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface StatCardsProps {
   orderCounts?: OrderCounts;
@@ -38,10 +39,11 @@ function StatCard({ title, value, icon, isLoading }: StatCardProps) {
 }
 
 export function StatCards({ orderCounts, isLoading }: StatCardsProps) {
+  const t = useTranslations("dashboard");
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        title="Wszystkie zamówienia"
+        title={t("stats.totalOrders")}
         value={orderCounts?.total}
         icon={<Package className="h-4 w-4 text-muted-foreground" />}
         isLoading={isLoading}

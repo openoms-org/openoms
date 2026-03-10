@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { useStockSyncEvents } from "@/hooks/use-stock-sync";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const triggerTypeLabels: Record<string, string> = {
   order_placed: "Złożenie zamówienia",
@@ -48,6 +49,7 @@ const triggerTypeVariants: Record<string, string> = {
 };
 
 export default function StockSyncEventsPage() {
+  const t = useTranslations("stockSync");
   const [triggerFilter, setTriggerFilter] = useState<string>("");
   const [offset, setOffset] = useState(0);
   const limit = 20;
@@ -76,16 +78,16 @@ export default function StockSyncEventsPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                Historia zdarzeń synchronizacji
+                {t("historiaZdarzenSynchronizacji")}
               </h1>
               <p className="text-muted-foreground">
-                Dziennik zmian stanów magazynowych i synchronizacji z kanałami
+                {t("dziennikZmianStanowMagazynowychISynchronizacjiZ")}
               </p>
             </div>
           </div>
           <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Odśwież
+            {t("refresh")}
           </Button>
         </div>
 
@@ -117,8 +119,8 @@ export default function StockSyncEventsPage() {
         ) : events.length === 0 ? (
           <EmptyState
             icon={RefreshCw}
-            title="Brak zdarzeń synchronizacji"
-            description="Zdarzenia pojawią się po zmianach stanów magazynowych"
+            title={t("brakZdarzenSynchronizacji")}
+            description={t("zdarzeniaPojawiaSiePoZmianachStanowMagazynowych")}
           />
         ) : (
           <>
@@ -131,11 +133,11 @@ export default function StockSyncEventsPage() {
                     <TableHead>SKU</TableHead>
                     <TableHead className="text-right">Poprzedni stan</TableHead>
                     <TableHead className="text-right">Nowy stan</TableHead>
-                    <TableHead className="text-right">Dostępny</TableHead>
+                    <TableHead className="text-right">{t("dostepny")}</TableHead>
                     <TableHead className="text-right">
-                      Kanały powiadomione
+                      {t("kanałyPowiadomione")}
                     </TableHead>
-                    <TableHead className="text-right">Błędy</TableHead>
+                    <TableHead className="text-right">{t("błedy1")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -216,7 +218,7 @@ export default function StockSyncEventsPage() {
                   disabled={!hasNext}
                   onClick={() => setOffset(offset + limit)}
                 >
-                  Następna
+                  {t("next")}
                 </Button>
               </div>
             </div>

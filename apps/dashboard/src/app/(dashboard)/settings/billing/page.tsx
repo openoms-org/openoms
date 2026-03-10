@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const STATUS_LABELS: Record<string, string> = {
   trialing: "Okres próbny",
@@ -43,6 +44,7 @@ function computeDaysLeft(trialEnd: string): number {
 }
 
 export default function BillingSettingsPage() {
+  const t = useTranslations("subscription");
   const { data: subscription, isLoading } = useSubscription();
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
 
@@ -68,11 +70,11 @@ export default function BillingSettingsPage() {
         <div className="mx-auto max-w-4xl space-y-6">
           <div>
             <h1 className="text-2xl font-bold">Subskrypcja</h1>
-            <p className="text-muted-foreground">Zarządzaj planem i płatnościami</p>
+            <p className="text-muted-foreground">{t("zarzadzajPlanemIPłatnosciami")}</p>
           </div>
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              Nie udało się załadować danych subskrypcji.
+              {t("nieUdałoSieZaładowacDanychSubskrypcji")}
             </CardContent>
           </Card>
         </div>
@@ -85,13 +87,13 @@ export default function BillingSettingsPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Subskrypcja</h1>
-          <p className="text-muted-foreground">Zarządzaj planem i płatnościami</p>
+          <p className="text-muted-foreground">{t("zarzadzajPlanemIPłatnosciami")}</p>
         </div>
 
         {/* Plan & Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Twój plan</CardTitle>
+            <CardTitle>{t("twojPlan")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
@@ -162,7 +164,7 @@ export default function BillingSettingsPage() {
                       {subscription.limits.max_users}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Maks. użytkowników
+                      {t("maksUzytkownikow")}
                     </p>
                   </div>
                 )}
@@ -172,7 +174,7 @@ export default function BillingSettingsPage() {
                       {subscription.limits.max_orders_monthly}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Zamówień / miesiąc
+                      {t("zamowienMiesiac")}
                     </p>
                   </div>
                 )}
@@ -190,7 +192,7 @@ export default function BillingSettingsPage() {
                   !subscription.limits.max_orders_monthly &&
                   !subscription.limits.max_integrations && (
                     <p className="col-span-3 text-sm text-muted-foreground">
-                      Brak limitów w bieżącym planie.
+                      {t("brakLimitowWBiezacymPlanie")}
                     </p>
                   )}
               </div>

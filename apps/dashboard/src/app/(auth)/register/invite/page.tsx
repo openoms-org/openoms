@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
 const registerSchema = z.object({
   tenant_name: z.string().min(1, "Nazwa organizacji jest wymagana"),
@@ -31,6 +32,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 function InviteRegisterForm() {
+  const t = useTranslations("auth");
   const { register: registerUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,12 +54,12 @@ function InviteRegisterForm() {
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Rejestracja</CardTitle>
-          <CardDescription>Dokończ rejestrację z zaproszenia</CardDescription>
+          <CardDescription>{t("dokonczRejestracjeZZaproszenia")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
             <p className="text-sm text-destructive">
-              Brak tokenu. Użyj linku otrzymanego w zaproszeniu lub po zakupie subskrypcji.
+              {t("brakTokenuUzyjLinkuOtrzymanegoWZaproszeniu")}
             </p>
           </div>
         </CardContent>
@@ -68,7 +70,7 @@ function InviteRegisterForm() {
           <p className="text-sm text-muted-foreground">
             Masz już konto?{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-              Zaloguj się
+              {t("login.submit")}
             </Link>
           </p>
         </CardFooter>
@@ -95,7 +97,7 @@ function InviteRegisterForm() {
     <Card>
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">Rejestracja</CardTitle>
-        <CardDescription>Dokończ rejestrację z zaproszenia</CardDescription>
+        <CardDescription>{t("dokonczRejestracjeZZaproszenia")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
@@ -124,7 +126,7 @@ function InviteRegisterForm() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="name">Imię i nazwisko <span className="text-destructive">*</span></Label>
+            <Label htmlFor="name">{t("form.fullName")}<span className="text-destructive">*</span></Label>
             <Input
               id="name"
               placeholder="Jan Kowalski"
@@ -149,11 +151,11 @@ function InviteRegisterForm() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Hasło <span className="text-destructive">*</span></Label>
+            <Label htmlFor="password">{t("login.password")}<span className="text-destructive">*</span></Label>
             <Input
               id="password"
               type="password"
-              placeholder="Minimum 8 znaków"
+              placeholder={t("minimum8Znakow")}
               aria-invalid={!!errors.password}
               {...register("password")}
             />
@@ -164,12 +166,12 @@ function InviteRegisterForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Rejestracja..." : "Zarejestruj się"}
+            {isSubmitting ? "Rejestracja..." : t("login.register")}
           </Button>
           <p className="text-sm text-muted-foreground">
             Masz już konto?{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-              Zaloguj się
+              {t("login.submit")}
             </Link>
           </p>
         </CardFooter>

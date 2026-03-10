@@ -43,10 +43,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const CURRENCIES = ["PLN", "EUR", "USD", "GBP", "CZK", "CHF", "SEK", "NOK", "DKK", "HUF"];
 
 export default function CurrenciesPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data, isLoading, isError, refetch } = useExchangeRates({ limit: 100 });
   const deleteRate = useDeleteExchangeRate();
   const createRate = useCreateExchangeRate();
@@ -68,7 +71,7 @@ export default function CurrenciesPage() {
     if (!deleteId) return;
     deleteRate.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Kurs został usunięty");
+        toast.success(t("kurszostałusuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -80,7 +83,7 @@ export default function CurrenciesPage() {
   const handleCreate = () => {
     const rateNum = parseFloat(rate);
     if (!rateNum || rateNum <= 0) {
-      toast.error("Kurs musi być liczbą dodatnią");
+      toast.error(t("kursMusiBycLiczbaDodatnia"));
       return;
     }
     createRate.mutate(
@@ -92,7 +95,7 @@ export default function CurrenciesPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Kurs został dodany");
+          toast.success(t("kurszostałdodany"));
           setShowCreate(false);
           setRate("");
         },
@@ -120,7 +123,7 @@ export default function CurrenciesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Waluty i kursy wymiany</h1>
           <p className="text-muted-foreground">
-            Zarządzaj kursami walut i przeliczaj kwoty
+            {t("zarzadzajKursamiWalutIPrzeliczajKwoty")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -139,7 +142,7 @@ export default function CurrenciesPage() {
               <DialogHeader>
                 <DialogTitle>Nowy kurs wymiany</DialogTitle>
                 <DialogDescription>
-                  Dodaj ręcznie kurs wymiany walut
+                  {t("dodajRecznieKursWymianyWalut")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -206,7 +209,7 @@ export default function CurrenciesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -214,7 +217,7 @@ export default function CurrenciesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -222,8 +225,8 @@ export default function CurrenciesPage() {
       {rates.length === 0 ? (
         <EmptyState
           icon={Coins}
-          title="Brak kursów walut"
-          description="Dodaj pierwszy kurs ręcznie lub pobierz kursy z NBP."
+          title={t("brakKursowWalut")}
+          description={t("dodajPierwszyKursRecznieLubPobierzKursyZNbp")}
         />
       ) : (
         <div className="rounded-md border">
@@ -233,7 +236,7 @@ export default function CurrenciesPage() {
                 <TableHead>Waluta bazowa</TableHead>
                 <TableHead>Waluta docelowa</TableHead>
                 <TableHead>Kurs</TableHead>
-                <TableHead>Źródło</TableHead>
+                <TableHead>{t("columns.source")}</TableHead>
                 <TableHead>Pobrano</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
@@ -259,7 +262,7 @@ export default function CurrenciesPage() {
                           : ""
                       }
                     >
-                      {exchangeRate.source === "nbp" ? "NBP" : "Ręczny"}
+                      {exchangeRate.source === "nbp" ? "NBP" : t("reczny")}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDate(exchangeRate.fetched_at)}</TableCell>
@@ -282,9 +285,9 @@ export default function CurrenciesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń kurs"
-        description="Czy na pewno chcesz usunąć ten kurs wymiany?"
-        confirmLabel="Usuń"
+        title={t("usunKurs")}
+        description={t("czyNaPewnoChceszUsunacTenKursWymiany")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteRate.isPending}

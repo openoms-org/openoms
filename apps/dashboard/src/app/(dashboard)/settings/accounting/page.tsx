@@ -34,6 +34,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { INVOICING_PROVIDER_LABELS } from "@/lib/constants";
+import { useTranslations } from "next-intl";
 
 interface ProviderInfo {
   name: string;
@@ -98,6 +99,7 @@ const PROVIDER_INFO: Record<string, ProviderInfo> = {
 };
 
 export default function AccountingSettingsPage() {
+  const t = useTranslations("settings");
   const { data: config, isLoading } = useAccountingSettings();
   const updateSettings = useUpdateAccountingSettings();
   const testConnection = useTestAccountingConnection();
@@ -129,10 +131,10 @@ export default function AccountingSettingsPage() {
   const handleSave = async () => {
     try {
       await updateSettings.mutateAsync({ provider, credentials });
-      toast.success("Ustawienia księgowości zapisane");
+      toast.success(t("ustawieniaKsiegowosciZapisane"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
       toast.error(message);
     }
   };
@@ -159,7 +161,7 @@ export default function AccountingSettingsPage() {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udało się przetestować połączenia";
+          : t("nieudałosieprzetestowacpołaczenia");
       toast.error(message);
       setTestResult({ success: false, message });
     }
@@ -179,9 +181,9 @@ export default function AccountingSettingsPage() {
     <AdminGuard>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Integracje księgowe</h1>
+          <h1 className="text-2xl font-bold">{t("integracjeKsiegowe")}</h1>
           <p className="text-muted-foreground">
-            Połącz OpenOMS z systemem fakturowania: Fakturownia, wFirma lub
+            {t("połaczOpenomsZSystememFakturowaniaFakturowniaWfirm")}
             inFakt
           </p>
         </div>
@@ -189,9 +191,9 @@ export default function AccountingSettingsPage() {
         {/* Provider selection */}
         <Card>
           <CardHeader>
-            <CardTitle>Dostawca usług księgowych</CardTitle>
+            <CardTitle>{t("dostawcausługksiegowych")}</CardTitle>
             <CardDescription>
-              Wybierz system księgowy, z którym chcesz zintegrować OpenOMS
+              {t("wybierzSystemKsiegowyZKtorymChceszZintegrowac")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -202,7 +204,7 @@ export default function AccountingSettingsPage() {
                 onValueChange={handleProviderChange}
               >
                 <SelectTrigger className="w-full max-w-xs">
-                  <SelectValue placeholder="Wybierz dostawcę" />
+                  <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Brak</SelectItem>
@@ -275,9 +277,9 @@ export default function AccountingSettingsPage() {
         {provider && (
           <Card>
             <CardHeader>
-              <CardTitle>Test połączenia</CardTitle>
+              <CardTitle>{t("testpołaczenia")}</CardTitle>
               <CardDescription>
-                Sprawdź czy dane dostępowe są poprawne
+                {t("sprawdzCzyDaneDostepoweSaPoprawne")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -291,7 +293,7 @@ export default function AccountingSettingsPage() {
                 ) : (
                   <TestTube className="mr-2 h-4 w-4" />
                 )}
-                Testuj połączenie
+                {t("testujPołaczenie")}
               </Button>
 
               {testResult && (

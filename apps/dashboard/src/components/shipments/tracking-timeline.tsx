@@ -2,6 +2,7 @@
 
 import { Package, MapPin, Clock, CheckCircle2, Truck, AlertCircle } from "lucide-react";
 import type { TrackingEvent } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const STATUS_CONFIG: Record<string, { icon: typeof Package; color: string; label: string }> = {
   created: { icon: Package, color: "text-blue-500", label: "Utworzona" },
@@ -53,11 +54,12 @@ interface TrackingTimelineProps {
 }
 
 export function TrackingTimeline({ events }: TrackingTimelineProps) {
+  const t = useTranslations("shipments");
   if (events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-        <p className="text-sm text-muted-foreground">Brak danych śledzenia. Informacje pojawią się po nadaniu przesyłki.</p>
+        <p className="text-sm text-muted-foreground">{t("brakDanychSledzeniaInformacjePojawiaSiePo")}</p>
       </div>
     );
   }

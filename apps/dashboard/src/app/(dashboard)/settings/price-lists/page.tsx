@@ -43,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const discountTypeLabels: Record<string, string> = {
   percentage: "Procentowy",
@@ -51,6 +52,8 @@ const discountTypeLabels: Record<string, string> = {
 };
 
 export default function PriceListsPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { data, isLoading, isError, refetch } = usePriceLists();
   const deletePriceList = useDeletePriceList();
@@ -73,7 +76,7 @@ export default function PriceListsPage() {
     if (!deleteId) return;
     deletePriceList.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Cennik został usunięty");
+        toast.success(t("cennikzostałusuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -93,7 +96,7 @@ export default function PriceListsPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Cennik został utworzony");
+          toast.success(t("cennikzostałutworzony"));
           setShowCreate(false);
           setNewName("");
           setNewDescription("");
@@ -113,7 +116,7 @@ export default function PriceListsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Cenniki B2B</h1>
           <p className="text-muted-foreground">
-            Zarządzaj cennikami i rabatami dla klientów biznesowych
+            {t("zarzadzajCennikamiIRabatamiDlaKlientowBiznesowych")}
           </p>
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -127,7 +130,7 @@ export default function PriceListsPage() {
             <DialogHeader>
               <DialogTitle>Nowy cennik</DialogTitle>
               <DialogDescription>
-                Utwórz nowy cennik z rabatami dla klientów
+                {t("utworzNowyCennikZRabatamiDlaKlientow")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -186,7 +189,7 @@ export default function PriceListsPage() {
                 onClick={handleCreate}
                 disabled={!newName.trim() || createPriceList.isPending}
               >
-                {createPriceList.isPending ? "Tworzenie..." : "Utwórz"}
+                {createPriceList.isPending ? "Tworzenie..." : tc("create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -196,7 +199,7 @@ export default function PriceListsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -204,7 +207,7 @@ export default function PriceListsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -212,8 +215,8 @@ export default function PriceListsPage() {
       {priceLists.length === 0 ? (
         <EmptyState
           icon={BadgePercent}
-          title="Brak cenników"
-          description="Utwórz pierwszy cennik, aby oferować indywidualne ceny dla klientów biznesowych."
+          title={t("brakCennikow")}
+          description={t("utworzPierwszyCennikAbyOferowacIndywidualneCenyDla")}
         />
       ) : (
         <div className="rounded-md border">
@@ -223,7 +226,7 @@ export default function PriceListsPage() {
                 <TableHead>Nazwa</TableHead>
                 <TableHead>Typ rabatu</TableHead>
                 <TableHead>Waluta</TableHead>
-                <TableHead>Domyślny</TableHead>
+                <TableHead>{tc("default")}</TableHead>
                 <TableHead>Aktywny</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[80px]" />
@@ -299,9 +302,9 @@ export default function PriceListsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń cennik"
-        description="Czy na pewno chcesz usunąć ten cennik? Wszystkie przypisane pozycje cennikowe zostaną usunięte."
-        confirmLabel="Usuń"
+        title={t("usunCennik")}
+        description={t("czyNaPewnoChceszUsunacTenCennikWszystkiePrzypisane")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deletePriceList.isPending}

@@ -22,6 +22,7 @@ import {
 import { SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { useShippingRates } from "@/hooks/use-shipping-rates";
 import type { ShippingRate } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const rateFormSchema = z.object({
   from_postal_code: z.string().min(1, "Kod pocztowy nadawcy jest wymagany"),
@@ -56,6 +57,7 @@ export function RateShopping({
   defaultLength,
   onSelectRate,
 }: RateShoppingProps) {
+  const t = useTranslations("shipments");
   const [isExpanded, setIsExpanded] = useState(false);
   const [rates, setRates] = useState<ShippingRate[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -107,7 +109,7 @@ export function RateShopping({
           setHasSearched(true);
         },
         onError: (err) => {
-          setError(err instanceof Error ? err.message : "Nie udało się pobrać stawek");
+          setError(err instanceof Error ? err.message : t("nieUdałoSiePobracStawek"));
           setHasSearched(true);
         },
       }

@@ -33,8 +33,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 export default function PurchaseOrdersPage() {
+  const t = useTranslations("purchaseOrders");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { data, isLoading, isError, refetch } = usePurchaseOrders({
@@ -54,7 +57,7 @@ export default function PurchaseOrdersPage() {
     if (!deleteId) return;
     deletePO.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Zamówienie zakupu zostało usunięte");
+        toast.success(t("zamowieniezakupuzostałousuniete"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -66,9 +69,9 @@ export default function PurchaseOrdersPage() {
   return (
     <AdminGuard>
       <PageHeader
-        title="Zamówienia zakupu"
-        description="Zarządzaj zamówieniami zakupu do dostawców"
-        action={{ label: "Nowe zamówienie", href: "/purchase-orders/new" }}
+        title={t("purchaseOrders")}
+        description={t("zarzadzajZamowieniamiZakupuDoDostawcow")}
+        action={{ label: t("newOrder"), href: "/purchase-orders/new" }}
       />
 
       <div className="flex items-center gap-4 mb-4">
@@ -79,8 +82,8 @@ export default function PurchaseOrdersPage() {
           <SelectContent>
             <SelectItem value="all">Wszystkie statusy</SelectItem>
             <SelectItem value="draft">Szkic</SelectItem>
-            <SelectItem value="sent">Wysłane</SelectItem>
-            <SelectItem value="partially_received">Częściowo odebrane</SelectItem>
+            <SelectItem value="sent">{t("order.shipped")}</SelectItem>
+            <SelectItem value="partially_received">{t("purchaseOrder.partially_received")}</SelectItem>
             <SelectItem value="received">Odebrane</SelectItem>
             <SelectItem value="cancelled">Anulowane</SelectItem>
           </SelectContent>
@@ -90,7 +93,7 @@ export default function PurchaseOrdersPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -98,7 +101,7 @@ export default function PurchaseOrdersPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -106,9 +109,9 @@ export default function PurchaseOrdersPage() {
       {orders.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="Brak zamówień zakupu"
-          description="Utwórz pierwsze zamówienie zakupu, aby rozpocząć zamawianie od dostawców."
-          action={{ label: "Nowe zamówienie", href: "/purchase-orders/new" }}
+          title={t("brakZamowienZakupu")}
+          description={t("utworzPierwszeZamowienieZakupuAbyRozpoczacZamawian")}
+          action={{ label: t("newOrder"), href: "/purchase-orders/new" }}
         />
       ) : (
         <div className="rounded-md border">
@@ -174,9 +177,9 @@ export default function PurchaseOrdersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń zamówienie zakupu"
-        description="Czy na pewno chcesz usunąć to zamówienie zakupu? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={t("usunZamowienieZakupu")}
+        description={t("czyNaPewnoChceszUsunacToZamowienieZakupuTaOperacja")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deletePO.isPending}

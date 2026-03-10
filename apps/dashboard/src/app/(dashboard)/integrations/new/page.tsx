@@ -18,15 +18,17 @@ import { DevelopmentBadge } from "@/components/shared/development-banner";
 import { isInDevelopment } from "@/lib/integration-status";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { CreateIntegrationRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function NewIntegrationPage() {
+  const t = useTranslations("integrations");
   const router = useRouter();
   const createIntegration = useCreateIntegration();
 
   const handleSubmit = (data: CreateIntegrationRequest) => {
     createIntegration.mutate(data, {
       onSuccess: () => {
-        toast.success("Integracja została utworzona");
+        toast.success(t("integracjazostałautworzona"));
         router.push("/integrations");
       },
       onError: (error) => {
@@ -41,7 +43,7 @@ export default function NewIntegrationPage() {
     <AdminGuard>
       <PageHeader
         title="Nowa integracja"
-        description="Dodaj nowe połączenie z zewnętrznym serwisem"
+        description={t("dodajnowepołaczeniezzewnetrznymserwisem")}
       />
 
       {dedicatedEntries.length > 0 && (
@@ -49,7 +51,7 @@ export default function NewIntegrationPage() {
           <CardHeader>
             <CardTitle className="text-base">Integracje z dedykowanym kreatorem</CardTitle>
             <CardDescription>
-              Poniższe integracje wymagają autoryzacji OAuth i mają własną stronę konfiguracji.
+              {t("ponizszeIntegracjeWymagajaAutoryzacjiOauthIMaja")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">

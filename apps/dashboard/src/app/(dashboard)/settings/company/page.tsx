@@ -22,6 +22,7 @@ import { getErrorMessage } from "@/lib/api-client";
 import { Loader2, Save, Upload, Download, Building2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import type { CompanySettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_SETTINGS: CompanySettings = {
   company_name: "",
@@ -36,6 +37,7 @@ const DEFAULT_SETTINGS: CompanySettings = {
 };
 
 export default function CompanySettingsPage() {
+  const t = useTranslations("settings");
   const { data: settings, isLoading } = useCompanySettings();
   const updateSettings = useUpdateCompanySettings();
 
@@ -57,7 +59,7 @@ export default function CompanySettingsPage() {
       error = "Nazwa firmy jest wymagana";
     }
     if (field === "email" && value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      error = "Nieprawidłowy adres email";
+      error = t("company.emailInvalid");
     }
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -77,11 +79,11 @@ export default function CompanySettingsPage() {
       errors.company_name = "Nazwa firmy jest wymagana";
     }
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = "Nieprawidłowy adres email";
+      errors.email = t("company.emailInvalid");
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      toast.error("Popraw błędy w formularzu");
+      toast.error(t("poprawbłedywformularzu"));
       return;
     }
     setFieldErrors({});
@@ -90,7 +92,7 @@ export default function CompanySettingsPage() {
       toast.success("Dane firmy zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać danych firmy";
+        err instanceof Error ? err.message : t("nieudałosiezapisacdanychfirmy");
       toast.error(message);
     }
   };
@@ -100,7 +102,7 @@ export default function CompanySettingsPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Plik jest za duży. Maksymalny rozmiar: 5 MB.");
+      toast.error(t("form.fileTooLarge"));
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -114,7 +116,7 @@ export default function CompanySettingsPage() {
       toast.success("Logo wgrane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się wgrać logo";
+        err instanceof Error ? err.message : t("nieudałosiewgraclogo");
       toast.error(message);
     } finally {
       setUploading(false);
@@ -223,7 +225,7 @@ export default function CompanySettingsPage() {
                 onChange={(e) =>
                   setForm({ ...form, address: e.target.value })
                 }
-                placeholder="ul. Przykładowa 1"
+                placeholder={t("form.streetPlaceholder")}
               />
             </div>
             <div className="space-y-2">
@@ -301,11 +303,11 @@ export default function CompanySettingsPage() {
       {/* Export / Import settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Eksport / Import ustawień</CardTitle>
+          <CardTitle>{t("eksportImportUstawien")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Eksportuj wszystkie ustawienia systemu do pliku JSON lub zaimportuj wcześniej wyeksportowane ustawienia.
+            {t("eksportujWszystkieUstawieniaSystemuDoPlikuJson")}
           </p>
           <div className="flex items-center gap-4">
             <Button
@@ -348,7 +350,7 @@ export default function CompanySettingsPage() {
                     method: "POST",
                     body: JSON.stringify(data),
                   });
-                  toast.success("Ustawienia zaimportowane pomyślnie");
+                  toast.success(t("ustawieniaZaimportowanePomyslnie"));
                 } catch (err) {
                   toast.error(getErrorMessage(err));
                 } finally {

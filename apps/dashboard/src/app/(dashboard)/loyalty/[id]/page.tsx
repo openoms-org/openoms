@@ -48,6 +48,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { UpdateLoyaltyProgramRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const PROGRAM_TYPE_LABELS: Record<string, string> = {
   points: "Punkty",
@@ -71,6 +72,7 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 };
 
 export default function LoyaltyProgramDetailPage() {
+  const t = useTranslations("loyalty");
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -122,7 +124,7 @@ export default function LoyaltyProgramDetailPage() {
           className="mt-4"
           onClick={() => router.push("/loyalty")}
         >
-          Wróć do listy
+          {t("detail.backToList")}
         </Button>
       </div>
     );
@@ -133,7 +135,7 @@ export default function LoyaltyProgramDetailPage() {
   const handleStatusChange = async (status: string) => {
     try {
       await updateProgram.mutateAsync({ status: status as UpdateLoyaltyProgramRequest["status"] });
-      toast.success("Status programu został zmieniony");
+      toast.success(t("statusprogramuzostałzmieniony"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -142,7 +144,7 @@ export default function LoyaltyProgramDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteProgram.mutateAsync(params.id);
-      toast.success("Program został usunięty");
+      toast.success(t("programzostałusuniety"));
       router.push("/loyalty");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -156,7 +158,7 @@ export default function LoyaltyProgramDetailPage() {
         points: awardPointsValue,
         reason: awardReason,
       });
-      toast.success("Punkty zostały przyznane");
+      toast.success(t("punktyzostałyprzyznane"));
       setShowAwardDialog(false);
       setAwardCustomerId("");
       setAwardPointsValue(0);
@@ -173,7 +175,7 @@ export default function LoyaltyProgramDetailPage() {
         customer_id: redeemCustomerId,
         points: redeemPointsValue,
       });
-      toast.success("Punkty zostały wymienione");
+      toast.success(t("punktyzostaływymienione"));
       setShowRedeemDialog(false);
       setRedeemCustomerId("");
       setRedeemPointsValue(0);
@@ -223,7 +225,7 @@ export default function LoyaltyProgramDetailPage() {
                 variant="outline"
                 onClick={() => setShowRedeemDialog(true)}
               >
-                Wymień punkty
+                {t("wymienPunkty")}
               </Button>
             </>
           )}
@@ -231,7 +233,7 @@ export default function LoyaltyProgramDetailPage() {
             variant="destructive"
             onClick={() => setShowDeleteDialog(true)}
           >
-            Usuń
+            {t("delete")}
           </Button>
         </div>
       </div>
@@ -260,7 +262,7 @@ export default function LoyaltyProgramDetailPage() {
                 <SelectContent>
                   <SelectItem value="active">Aktywny</SelectItem>
                   <SelectItem value="paused">Wstrzymany</SelectItem>
-                  <SelectItem value="ended">Zakończony</SelectItem>
+                  <SelectItem value="ended">{t("zakonczony")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -300,7 +302,7 @@ export default function LoyaltyProgramDetailPage() {
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Award className="h-8 w-8 text-muted-foreground/50 mb-2" />
               <p className="text-sm text-muted-foreground">
-                Brak uczestników w tym programie.
+                {t("brakUczestnikowWTymProgramie")}
               </p>
             </div>
           ) : (
@@ -311,7 +313,7 @@ export default function LoyaltyProgramDetailPage() {
                   <TableHead>Klient</TableHead>
                   <TableHead className="text-right">Punkty</TableHead>
                   <TableHead className="text-right">Wydano</TableHead>
-                  <TableHead className="text-right">Zamówień</TableHead>
+                  <TableHead className="text-right">{t("zamowien")}</TableHead>
                   {program.program_type === "tier" && (
                     <TableHead>Poziom</TableHead>
                   )}
@@ -372,7 +374,7 @@ export default function LoyaltyProgramDetailPage() {
               <Input
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
-                placeholder="Wpisz imię lub e-mail..."
+                placeholder={t("wpiszImieLubEmail")}
               />
             </div>
             {customers.length > 0 && (
@@ -393,7 +395,7 @@ export default function LoyaltyProgramDetailPage() {
               </Select>
             )}
             <div className="space-y-2">
-              <Label>Liczba punktów</Label>
+              <Label>{t("liczbaPunktow")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -404,11 +406,11 @@ export default function LoyaltyProgramDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Powód</Label>
+              <Label>{t("detail.reason")}</Label>
               <Input
                 value={awardReason}
                 onChange={(e) => setAwardReason(e.target.value)}
-                placeholder="np. Bonus za lojalność"
+                placeholder={t("npBonusZaLojalnosc")}
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -437,7 +439,7 @@ export default function LoyaltyProgramDetailPage() {
       <Dialog open={showRedeemDialog} onOpenChange={setShowRedeemDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Wymień punkty</DialogTitle>
+            <DialogTitle>{t("wymienPunkty")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -445,7 +447,7 @@ export default function LoyaltyProgramDetailPage() {
               <Input
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
-                placeholder="Wpisz imię lub e-mail..."
+                placeholder={t("wpiszImieLubEmail")}
               />
             </div>
             {customers.length > 0 && (
@@ -466,7 +468,7 @@ export default function LoyaltyProgramDetailPage() {
               </Select>
             )}
             <div className="space-y-2">
-              <Label>Liczba punktów do wymiany</Label>
+              <Label>{t("liczbaPunktowDoWymiany")}</Label>
               <Input
                 type="number"
                 min={1}
@@ -491,7 +493,7 @@ export default function LoyaltyProgramDetailPage() {
                   redeemPointsValue <= 0
                 }
               >
-                {redeemPoints.isPending ? "Wymiana..." : "Wymień"}
+                {redeemPoints.isPending ? "Wymiana..." : t("wymien")}
               </Button>
             </div>
           </div>
@@ -502,8 +504,8 @@ export default function LoyaltyProgramDetailPage() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="Usuwanie programu"
-        description="Czy na pewno chcesz usunąć ten program lojalnościowy? Wszystkie dane uczestników zostaną utracone."
-        confirmLabel="Usuń program"
+        description={t("czyNaPewnoChceszUsunacTenProgramLojalnosciowyWszys")}
+        confirmLabel={t("usunProgram")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteProgram.isPending}

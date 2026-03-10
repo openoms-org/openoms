@@ -34,6 +34,7 @@ import { Loader2, Send, Save } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
 import type { EmailSettings } from "@/types/api";
 import type { SMSSettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const EMAIL_NOTIFICATION_STATUSES = [
   { value: "confirmed", label: "Potwierdzenie zamówienia" },
@@ -82,6 +83,7 @@ const DEFAULT_SMS_SETTINGS: SMSSettings = {
 };
 
 export default function NotificationsPage() {
+  const t = useTranslations("settings");
   const { data: emailSettings, isLoading: emailLoading } = useEmailSettings();
   const updateEmailSettings = useUpdateEmailSettings();
   const sendTestEmail = useSendTestEmail();
@@ -115,7 +117,7 @@ export default function NotificationsPage() {
       toast.success("Ustawienia zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
       toast.error(message);
     }
   };
@@ -123,10 +125,10 @@ export default function NotificationsPage() {
   const handleTestEmail = async () => {
     try {
       await sendTestEmail.mutateAsync(testEmail);
-      toast.success("Testowy email wysłany");
+      toast.success(t("testowyemailwysłany"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się wysłać testowego emaila";
+        err instanceof Error ? err.message : t("nieudałosiewysłactestowegoemaila");
       toast.error(message);
     }
   };
@@ -139,7 +141,7 @@ export default function NotificationsPage() {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udało się zapisać ustawień SMS";
+          : t("nieudałosiezapisacustawiensms");
       toast.error(message);
     }
   };
@@ -147,12 +149,12 @@ export default function NotificationsPage() {
   const handleTestSMS = async () => {
     try {
       await sendTestSMS.mutateAsync(testPhone);
-      toast.success("Testowy SMS wysłany");
+      toast.success(t("testowysmswysłany"));
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udało się wysłać testowego SMS";
+          : t("nieudałosiewysłactestowegosms");
       toast.error(message);
     }
   };
@@ -171,7 +173,7 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold">Powiadomienia</h1>
           <p className="text-muted-foreground">
-            Konfiguracja kanałów powiadomień do klientów
+            {t("konfiguracjaKanałowPowiadomienDoKlientow")}
           </p>
         </div>
 
@@ -194,7 +196,7 @@ export default function NotificationsPage() {
                     <div>
                       <p className="font-medium">Powiadomienia email</p>
                       <p className="text-sm text-muted-foreground">
-                        Wysyłaj automatyczne emaile przy zmianie statusu zamówienia
+                        {t("wysyłajAutomatyczneEmailePrzyZmianieStatusuZamowie")}
                       </p>
                     </div>
                     <Switch
@@ -237,7 +239,7 @@ export default function NotificationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Użytkownik</Label>
+                      <Label>{t("uzytkownik")}</Label>
                       <Input
                         value={emailForm.smtp_user}
                         onChange={(e) =>
@@ -247,7 +249,7 @@ export default function NotificationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Hasło</Label>
+                      <Label>{t("dhl.password")}</Label>
                       <Input
                         type="password"
                         value={emailForm.smtp_pass}
@@ -264,7 +266,7 @@ export default function NotificationsPage() {
                         onChange={(e) =>
                           setEmailForm({ ...emailForm, from_email: e.target.value })
                         }
-                        placeholder="zamówienia@firma.pl"
+                        placeholder={t("zamowieniafirmapl")}
                       />
                     </div>
                     <div className="space-y-2">
@@ -287,7 +289,7 @@ export default function NotificationsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Wybierz przy jakich zmianach statusu wysyłać email do klienta
+                    {t("wybierzPrzyJakichZmianachStatusuWysyłacEmail")}
                   </p>
                   <div className="space-y-3">
                     {EMAIL_NOTIFICATION_STATUSES.map(({ value, label }) => (
@@ -337,7 +339,7 @@ export default function NotificationsPage() {
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      Wyślij
+                      {t("allegro.send")}
                     </Button>
                   </div>
                 </CardContent>
@@ -367,7 +369,7 @@ export default function NotificationsPage() {
                     <div>
                       <p className="font-medium">Powiadomienia SMS</p>
                       <p className="text-sm text-muted-foreground">
-                        Wysyłaj automatyczne SMS-y przy zmianie statusu zamówienia
+                        {t("wysyłajAutomatyczneSmsyPrzyZmianieStatusuZamowieni")}
                       </p>
                     </div>
                     <Switch
@@ -421,7 +423,7 @@ export default function NotificationsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Wybierz przy jakich zmianach statusu wysyłać SMS do klienta
+                    {t("wybierzPrzyJakichZmianachStatusuWysyłacSms")}
                   </p>
                   <div className="space-y-3">
                     {SMS_NOTIFICATION_STATUSES.map(({ value, label }) => (
@@ -451,7 +453,7 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Szablony wiadomości</CardTitle>
+                  <CardTitle>{t("szablonyWiadomosci")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
@@ -517,7 +519,7 @@ export default function NotificationsPage() {
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      Wyślij
+                      {t("allegro.send")}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">

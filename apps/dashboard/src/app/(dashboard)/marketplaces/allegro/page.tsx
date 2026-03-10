@@ -50,6 +50,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import type { Integration } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -73,6 +74,7 @@ export default function AllegroIntegrationPage() {
 }
 
 function OAuthCallback({ code, state }: { code: string; state: string }) {
+  const t = useTranslations("marketplaces");
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading"
   );
@@ -94,7 +96,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
       .catch((err) => {
         setStatus("error");
         setErrorMsg(
-          err instanceof Error ? err.message : "Autoryzacja nie powiodła się"
+          err instanceof Error ? err.message : t("autoryzacjaNiePowiodłaSie")
         );
       });
   }, [code, state]);
@@ -107,7 +109,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Łączenie z Allegro...
+                {t("łaczenieZAllegro")}
               </p>
             </>
           )}
@@ -115,7 +117,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <p className="text-sm font-medium">
-                Połączono z Allegro! Okno zamknie się automatycznie.
+                {t("połaczonoZAllegroOknoZamknieSieAutomatycznie")}
               </p>
             </>
           )}
@@ -139,6 +141,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
 }
 
 function AllegroMainPage() {
+  const t = useTranslations("marketplaces");
   const { data: integrations, isLoading, refetch } = useIntegrations();
 
   const allegro = useMemo(
@@ -167,7 +170,7 @@ function AllegroMainPage() {
           <div>
             <h1 className="text-2xl font-bold">Integracja Allegro</h1>
             <p className="text-muted-foreground">
-              Połącz swoje konto Allegro, aby synchronizować zamówienia i
+              {t("połaczSwojeKontoAllegroAbySynchronizowacZamowienia")}
               produkty
             </p>
           </div>
@@ -218,6 +221,7 @@ function CopyableField({ label, value }: { label: string; value: string }) {
 }
 
 function SetupState({ onCreated }: { onCreated: () => void }) {
+  const t = useTranslations("marketplaces");
   const createIntegration = useCreateIntegration();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -247,7 +251,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
       if (!popup) {
         toast.error(
-          "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna i spróbuj ponownie."
+          t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac")
         );
         setIsAuthorizing(false);
         onDone();
@@ -262,7 +266,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         }
       }, 500);
     } catch {
-      toast.error("Nie udało się pobrać adresu autoryzacji Allegro");
+      toast.error(t("nieUdałoSiePobracAdresuAutoryzacjiAllegro"));
       setIsAuthorizing(false);
       onDone();
     }
@@ -270,7 +274,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
   const handleSave = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
-      toast.error("Client ID i Client Secret są wymagane");
+      toast.error(t("clientIdIClientSecretSaWymagane"));
       return;
     }
 
@@ -294,7 +298,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas zapisywania danych"
+              : t("bładPodczasZapisywaniaDanych")
           );
         },
       }
@@ -306,9 +310,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       {/* Step 1: Prerequisites */}
       <Card>
         <CardHeader>
-          <CardTitle>Krok 1: Zarejestruj aplikację w Allegro</CardTitle>
+          <CardTitle>{t("krok1ZarejestrujAplikacjeWAllegro")}</CardTitle>
           <CardDescription>
-            Przed połączeniem musisz utworzyć aplikację w panelu deweloperskim
+            {t("przedPołaczeniemMusiszUtworzycAplikacjeWPanelu")}
             Allegro.
           </CardDescription>
         </CardHeader>
@@ -348,9 +352,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 <ExternalLink className="h-3 w-3" />
               </a>
             </li>
-            <li>Kliknij &quot;Zarejestruj aplikację&quot;</li>
+            <li>{t("kliknijQuotzarejestrujAplikacjequot")}</li>
             <li>
-              W polu <strong>Redirect URI</strong> wklej poniższy adres:
+              W polu <strong>Redirect URI</strong>{t("wklejPonizszyAdres")}
             </li>
           </ol>
 
@@ -358,9 +362,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
             <p className="text-xs text-amber-800 dark:text-amber-200">
-              Redirect URI musi być <strong>dokładnie taki sam</strong> jak
+              Redirect URI musi być <strong>{t("dokładnieTakiSam")}</strong> jak
               powyżej. Różnica w nawet jednym znaku (np. trailing slash)
-              spowoduje błąd autoryzacji.
+              {t("spowodujeBładAutoryzacji")}
             </p>
           </div>
 
@@ -373,7 +377,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       {/* Step 2: Enter credentials */}
       <Card>
         <CardHeader>
-          <CardTitle>Krok 2: Wprowadź dane aplikacji</CardTitle>
+          <CardTitle>{t("krok2WprowadzDaneAplikacji")}</CardTitle>
           <CardDescription>
             Wklej Client ID i Client Secret z panelu deweloperskiego Allegro.
           </CardDescription>
@@ -427,7 +431,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             <Save className="mr-2 h-4 w-4" />
-            Zapisz i przejdź do autoryzacji
+            {t("zapiszIPrzejdzDoAutoryzacji")}
           </Button>
         </CardContent>
       </Card>
@@ -442,6 +446,7 @@ function ConnectedState({
   integration: Integration;
   onRefetch: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
   const deleteIntegration = useDeleteIntegration();
   const [isReauthorizing, setIsReauthorizing] = useState(false);
@@ -451,14 +456,14 @@ function ConnectedState({
       { status: "inactive" },
       {
         onSuccess: () => {
-          toast.success("Integracja Allegro została dezaktywowana");
+          toast.success(t("integracjaAllegroZostałaDezaktywowana"));
           onRefetch();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas dezaktywacji integracji"
+              : t("bładPodczasDezaktywacjiIntegracji")
           );
         },
       }
@@ -468,21 +473,21 @@ function ConnectedState({
   const handleDelete = () => {
     if (
       !confirm(
-        "Czy na pewno chcesz usunąć integrację Allegro? Ta operacja jest nieodwracalna."
+        t("czyNaPewnoChceszUsunacIntegracjeAllegroTaOperacjaJ")
       )
     ) {
       return;
     }
     deleteIntegration.mutate(integration.id, {
       onSuccess: () => {
-        toast.success("Integracja Allegro została usunięta");
+        toast.success(t("integracjaAllegroZostałaUsunieta"));
         onRefetch();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Błąd podczas usuwania integracji"
+            : t("bładPodczasUsuwaniaIntegracji")
         );
       },
     });
@@ -517,7 +522,7 @@ function ConnectedState({
 
         if (!popup) {
           toast.error(
-            "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna."
+            t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac1")
           );
           setIsReauthorizing(false);
           return;
@@ -531,7 +536,7 @@ function ConnectedState({
           }
         }, 500);
       } catch {
-        toast.error("Nie udało się pobrać adresu autoryzacji");
+        toast.error(t("nieUdałoSiePobracAdresuAutoryzacji"));
         setIsReauthorizing(false);
       }
     };
@@ -549,15 +554,15 @@ function ConnectedState({
           <CardHeader>
             <CardTitle>Autoryzacja OAuth</CardTitle>
             <CardDescription>
-              Dane aplikacji zostały zapisane. Kliknij poniżej, aby autoryzować
-              dostęp do konta Allegro. Otworzy się okno popup z logowaniem
+              {t("daneAplikacjiZostałyZapisaneKliknijPonizejAby")}
+              {t("dostepDoKontaAllegroOtworzySieOkno")}
               Allegro.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <CopyableField
-                label="Redirect URI (musi być zarejestrowany w Allegro)"
+                label={t("redirectUriMusiBycZarejestrowanyWAllegro")}
                 value={getRedirectURI()}
               />
               <Button
@@ -570,7 +575,7 @@ function ConnectedState({
                 ) : (
                   <ExternalLink className="mr-2 h-4 w-4" />
                 )}
-                Połącz z Allegro
+                {t("steps.integration.title")}
               </Button>
             </div>
           </CardContent>
@@ -583,13 +588,13 @@ function ConnectedState({
           <CardHeader>
             <CardTitle className="text-sm">Diagnostyka OAuth</CardTitle>
             <CardDescription>
-              Jeśli Allegro pokazuje błąd, sprawdź czy poniższe dane zgadzają
-              się z konfiguracją aplikacji w Developer Center.
+              {t("jesliAllegroPokazujeBładSprawdzCzyPonizsze")}
+              {t("sieZKonfiguracjaAplikacjiWDeveloperCenter")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <CopyableField
-              label="Redirect URI wysłany do Allegro"
+              label={t("redirectUriWysłanyDoAllegro")}
               value={debugInfo.redirect_uri}
             />
             <div className="space-y-1">
@@ -602,20 +607,20 @@ function ConnectedState({
             </div>
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                <strong>Częste przyczyny błędu:</strong>
+                <strong>{t("czestePrzyczynyBłedu")}</strong>
               </p>
               <ul className="mt-1 list-disc list-inside text-xs text-amber-800 dark:text-amber-200 space-y-1">
                 <li>
-                  Client ID z <strong>produkcji</strong> użyty w trybie{" "}
+                  Client ID z <strong>produkcji</strong>{t("uzytyWTrybie")}{" "}
                   <strong>sandbox</strong> (lub odwrotnie) — konto i
-                  aplikacja muszą być z tego samego środowiska
+                  {t("aplikacjaMuszaBycZTegoSamegoSrodowiska")}
                 </li>
                 <li>
                   Redirect URI niezarejestrowany w aplikacji Allegro — musi być{" "}
                   <strong>identyczny</strong> (bez trailing slash)
                 </li>
                 <li>
-                  Aplikacja nie ma włączonego &quot;Browser access&quot; w
+                  {t("aplikacjaNieMaWłaczonegoQuotbrowserAccessquotW")}
                   ustawieniach
                 </li>
               </ul>
@@ -634,7 +639,7 @@ function ConnectedState({
         {/* Status card */}
         <Card>
           <CardHeader>
-            <CardTitle>Status połączenia</CardTitle>
+            <CardTitle>{t("statusPołaczenia")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -649,7 +654,7 @@ function ConnectedState({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Dane uwierzytelniające
+                  {t("daneUwierzytelniajace")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.has_credentials ? "Skonfigurowane" : "Brak"}
@@ -696,7 +701,7 @@ function ConnectedState({
             {integration.status === "error" && integration.error_message && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
                 <p className="text-sm font-medium text-destructive">
-                  Błąd integracji
+                  {t("bładIntegracji")}
                 </p>
                 <p className="mt-1 text-sm text-destructive/80">
                   {integration.error_message}
@@ -724,7 +729,7 @@ function ConnectedState({
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Odśwież token
+                {t("odswiezToken")}
               </Button>
             )}
             {integration.status === "active" && (
@@ -762,7 +767,7 @@ function ConnectedState({
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Usuń integrację
+              {t("usunIntegracje")}
             </Button>
           </CardContent>
         </Card>
@@ -785,14 +790,14 @@ function ConnectedState({
             { settings: newSettings },
             {
               onSuccess: () => {
-                toast.success("Ustawienia przesyłek zostały zapisane");
+                toast.success(t("ustawieniaPrzesyłekZostałyZapisane"));
                 onRefetch();
               },
               onError: (error) => {
                 toast.error(
                   error instanceof Error
                     ? error.message
-                    : "Błąd podczas zapisywania ustawień przesyłek"
+                    : t("bładPodczasZapisywaniaUstawienPrzesyłek")
                 );
               },
             }
@@ -879,6 +884,7 @@ function CredentialsCard({
   integrationId: string;
   onUpdated: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integrationId);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -887,7 +893,7 @@ function CredentialsCard({
 
   const handleUpdateCredentials = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
-      toast.error("Client ID i Client Secret są wymagane");
+      toast.error(t("clientIdIClientSecretSaWymagane"));
       return;
     }
 
@@ -902,7 +908,7 @@ function CredentialsCard({
       {
         onSuccess: () => {
           toast.success(
-            "Dane zaktualizowane. Kliknij 'Połącz z Allegro' aby ponownie autoryzować."
+            t("daneZaktualizowaneKliknijPołaczZAllegroAbyPonownie")
           );
           setClientId("");
           setClientSecret("");
@@ -912,7 +918,7 @@ function CredentialsCard({
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas aktualizacji danych"
+              : t("bładPodczasAktualizacjiDanych")
           );
         },
       }
@@ -922,9 +928,9 @@ function CredentialsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zmień dane aplikacji</CardTitle>
+        <CardTitle>{t("zmienDaneAplikacji")}</CardTitle>
         <CardDescription>
-          Zaktualizuj Client ID i Client Secret. Po zmianie konieczna będzie
+          {t("zaktualizujClientIdIClientSecretPo")}
           ponowna autoryzacja OAuth.
         </CardDescription>
       </CardHeader>

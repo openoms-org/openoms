@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 
 interface AllegroErrorCardProps {
   error: Error | null;
@@ -11,6 +12,7 @@ interface AllegroErrorCardProps {
 }
 
 export function AllegroErrorCard({ error, onRetry }: AllegroErrorCardProps) {
+  const t = useTranslations("integrations");
   if (!error) return null;
 
   const msg = error.message || "";
@@ -23,8 +25,8 @@ export function AllegroErrorCard({ error, onRetry }: AllegroErrorCardProps) {
         <div className="space-y-2">
           <p className="text-sm text-destructive">
             {isTokenError
-              ? "Token Allegro wygasł lub jest nieprawidłowy. Połącz ponownie konto Allegro w ustawieniach integracji."
-              : "Nie udało się pobrać danych z Allegro. Sprawdź połączenie z kontem."}
+              ? t("tokenAllegroWygasłLubJestNieprawidłowyPołaczPonown")
+              : t("nieUdałoSiePobracDanychZAllegroSprawdzPołaczenieZK")}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>
@@ -32,7 +34,7 @@ export function AllegroErrorCard({ error, onRetry }: AllegroErrorCardProps) {
             </Button>
             {onRetry && (
               <Button variant="ghost" size="sm" onClick={onRetry}>
-                Spróbuj ponownie
+                {t("retry")}
               </Button>
             )}
           </div>

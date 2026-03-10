@@ -28,6 +28,7 @@ import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { apiClient } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import type { FreshdeskSettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_SETTINGS: FreshdeskSettings = {
   domain: "",
@@ -50,6 +51,7 @@ const FRESHDESK_PRIORITY_LABELS: Record<number, string> = {
 };
 
 export default function HelpdeskSettingsPage() {
+  const t = useTranslations("settings");
   const { data: ticketsData, isLoading: ticketsLoading } = useAllTickets();
   const { data: companySettings } = useCompanySettings();
 
@@ -72,7 +74,7 @@ export default function HelpdeskSettingsPage() {
       toast.success("Ustawienia Freshdesk zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -85,7 +87,7 @@ export default function HelpdeskSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">Helpdesk (Freshdesk)</h1>
           <p className="text-muted-foreground">
-            Integracja z Freshdesk do obsługi zgłoszeń klientów
+            {t("integracjaZFreshdeskDoObsługiZgłoszenKlientow")}
           </p>
         </div>
 
@@ -101,7 +103,7 @@ export default function HelpdeskSettingsPage() {
               <div>
                 <p className="font-medium">Aktywna integracja</p>
                 <p className="text-sm text-muted-foreground">
-                  Włącz tworzenie zgłoszeń w Freshdesk z poziomu zamówień
+                  {t("właczTworzenieZgłoszenWFreshdeskZPoziomu")}
                 </p>
               </div>
               <Switch
@@ -156,7 +158,7 @@ export default function HelpdeskSettingsPage() {
         {/* Recent tickets card */}
         <Card>
           <CardHeader>
-            <CardTitle>Ostatnie zgłoszenia</CardTitle>
+            <CardTitle>{t("ostatniezgłoszenia")}</CardTitle>
           </CardHeader>
           <CardContent>
             {ticketsLoading ? (
@@ -202,7 +204,7 @@ export default function HelpdeskSettingsPage() {
               </Table>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Brak zgłoszeń. Skonfiguruj Freshdesk aby zobaczyć zgłoszenia.
+                {t("brakZgłoszenSkonfigurujFreshdeskAbyZobaczycZgłosze")}
               </p>
             )}
           </CardContent>

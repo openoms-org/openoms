@@ -26,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EbayTabNav } from "../_components/ebay-tab-nav";
+import { useTranslations } from "next-intl";
 
 interface EbayOffer {
   offerId: string;
@@ -103,6 +104,7 @@ function useEbayOffers(
 }
 
 export default function EbayOffersPage() {
+  const t = useTranslations("marketplaces");
   const { data: integrations, isLoading: integrationsLoading } =
     useIntegrations();
 
@@ -137,7 +139,7 @@ export default function EbayOffersPage() {
           <div>
             <h1 className="text-2xl font-bold">eBay</h1>
             <p className="text-muted-foreground">
-              Zarządzaj ofertami i konfiguracją eBay
+              {t("zarzadzajOfertamiIKonfiguracjaEbay")}
             </p>
           </div>
         </div>
@@ -159,7 +161,7 @@ export default function EbayOffersPage() {
                   href="/marketplaces/ebay"
                   className="text-primary underline"
                 >
-                  Skonfiguruj integrację
+                  {t("skonfigurujIntegracje")}
                 </Link>
               </p>
             </CardContent>
@@ -172,7 +174,7 @@ export default function EbayOffersPage() {
                   <p className="text-sm text-destructive">
                     {error instanceof Error
                       ? error.message
-                      : "Nie udało się pobrać ofert z eBay"}
+                      : t("nieudałosiepobracofertzebay")}
                   </p>
                 </CardContent>
               </Card>
@@ -225,7 +227,7 @@ export default function EbayOffersPage() {
                   </div>
                 ) : !data?.offers?.length ? (
                   <p className="py-8 text-center text-muted-foreground">
-                    Brak ofert do wyświetlenia
+                    {t("brakOfertDoWyswietlenia")}
                   </p>
                 ) : (
                   <>
@@ -270,7 +272,7 @@ export default function EbayOffersPage() {
                           disabled={(page + 1) * PAGE_SIZE >= data.total}
                           onClick={() => setPage((p) => p + 1)}
                         >
-                          Następna
+                          {t("next")}
                         </Button>
                       </div>
                     </div>

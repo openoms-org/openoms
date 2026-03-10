@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ROLES } from "@/lib/constants";
+import { useTranslations } from "next-intl";
 
 const createUserSchema = z.object({
   email: z.string().email("Nieprawidłowy adres email"),
@@ -42,6 +43,7 @@ export function UserForm({
   isLoading = false,
   onCancel,
 }: UserFormProps) {
+  const t = useTranslations("users");
   const isEdit = mode === "edit";
 
   const {
@@ -100,7 +102,7 @@ export function UserForm({
           }
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz rolę" />
+            <SelectValue placeholder={t("wybierzRole")} />
           </SelectTrigger>
           <SelectContent>
             {Object.entries(ROLES).map(([value, label]) => (
@@ -126,7 +128,7 @@ export function UserForm({
             ? "Zapisywanie..."
             : isEdit
               ? "Zapisz zmiany"
-              : "Utwórz użytkownika"}
+              : t("utworzUzytkownika")}
         </Button>
       </div>
     </form>

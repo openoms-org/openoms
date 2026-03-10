@@ -24,6 +24,7 @@ import { Loader2, Save, RefreshCw, Send } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { apiClient } from "@/lib/api-client";
 import type { MailchimpSettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_SETTINGS: MailchimpSettings = {
   api_key: "",
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: MailchimpSettings = {
 };
 
 export default function MarketingSettingsPage() {
+  const t = useTranslations("settings");
   const { data: status, isLoading: statusLoading } = useMarketingStatus();
   const syncCustomers = useSyncCustomers();
   const createCampaign = useCreateCampaign();
@@ -73,7 +75,7 @@ export default function MarketingSettingsPage() {
       toast.success("Ustawienia Mailchimp zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -86,7 +88,7 @@ export default function MarketingSettingsPage() {
       toast.success(`Synchronizacja zakończona: ${result.synced} zsynchronizowanych, ${result.failed} błędów`);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zsynchronizować";
+        err instanceof Error ? err.message : t("nieudałosiezsynchronizowac");
       toast.error(message);
     }
   };
@@ -98,7 +100,7 @@ export default function MarketingSettingsPage() {
       setCampaignForm({ name: "", subject: "", content: "" });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się utworzyć kampanii";
+        err instanceof Error ? err.message : t("nieudałosieutworzyckampanii");
       toast.error(message);
     }
   };
@@ -117,7 +119,7 @@ export default function MarketingSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">Marketing (Mailchimp)</h1>
           <p className="text-muted-foreground">
-            Synchronizuj klientów z Mailchimp i tworzenie kampanii email
+            {t("synchronizujKlientowZMailchimpITworzenieKampanii")}
           </p>
         </div>
 
@@ -147,7 +149,7 @@ export default function MarketingSettingsPage() {
                   }`}
                 />
                 <span className="text-sm">
-                  {status?.enabled ? "Włączony" : "Wyłączony"}
+                  {status?.enabled ? t("właczony") : t("wyłaczony1")}
                 </span>
               </div>
             </div>
@@ -164,7 +166,7 @@ export default function MarketingSettingsPage() {
               <div>
                 <p className="font-medium">Aktywna integracja</p>
                 <p className="text-sm text-muted-foreground">
-                  Włącz synchronizację klientów z Mailchimp
+                  {t("właczSynchronizacjeKlientowZMailchimp")}
                 </p>
               </div>
               <Switch
@@ -219,11 +221,11 @@ export default function MarketingSettingsPage() {
         {/* Sync card */}
         <Card>
           <CardHeader>
-            <CardTitle>Synchronizacja klientów</CardTitle>
+            <CardTitle>{t("synchronizacjaKlientow")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Synchronizuj wszystkich klientów z adresem email do listy Mailchimp.
+              {t("synchronizujWszystkichKlientowZAdresemEmailDo")}
             </p>
             <Button
               onClick={handleSync}
@@ -258,7 +260,7 @@ export default function MarketingSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Temat wiadomości</Label>
+                <Label>{t("tematWiadomosci")}</Label>
                 <Input
                   value={campaignForm.subject}
                   onChange={(e) =>
@@ -269,13 +271,13 @@ export default function MarketingSettingsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Treść HTML</Label>
+              <Label>{t("trescHtml")}</Label>
               <Textarea
                 value={campaignForm.content}
                 onChange={(e) =>
                   setCampaignForm({ ...campaignForm, content: e.target.value })
                 }
-                placeholder="<html><body>Treść kampanii...</body></html>"
+                placeholder="<html><body>...</body></html>"
                 rows={6}
                 className="font-mono text-sm"
               />
@@ -295,7 +297,7 @@ export default function MarketingSettingsPage() {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Utwórz kampanię
+                {t("utworzKampanie")}
               </Button>
             </div>
           </CardContent>

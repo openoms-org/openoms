@@ -47,7 +47,7 @@ function createProductSchema(t: (key: string) => string) {
     price: z.number().min(0, t("priceMin")),
     stock_quantity: z
       .number()
-      .int(t("quantityInteger"))
+      .int("quantityInteger")
       .min(0, t("quantityMin")),
     source: z.enum(["manual", "allegro", "woocommerce"]),
     description_short: z.string().optional(),

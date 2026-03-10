@@ -29,8 +29,10 @@ import {
   Download,
   Loader2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function InvoiceDetailPage() {
+  const t = useTranslations("invoices");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -43,7 +45,7 @@ export default function InvoiceDetailPage() {
   const handleCancel = async () => {
     try {
       await cancelInvoice.mutateAsync(params.id);
-      toast.success("Faktura została anulowana");
+      toast.success(t("fakturazostałaanulowana"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -60,7 +62,7 @@ export default function InvoiceDetailPage() {
   const handleSendToKSeF = async () => {
     try {
       await sendToKSeF.mutateAsync(params.id);
-      toast.success("Faktura wysłana do KSeF");
+      toast.success(t("fakturawysłanadoksef"));
       refetch();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -109,7 +111,7 @@ export default function InvoiceDetailPage() {
           className="mt-4"
           onClick={() => router.push("/invoices")}
         >
-          Wróć do listy
+          {t("detail.backToList")}
         </Button>
       </div>
     );
@@ -158,7 +160,7 @@ export default function InvoiceDetailPage() {
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Wyślij do KSeF
+              {t("wyslijDoKsef")}
             </Button>
           )}
           {hasPDF && (
@@ -201,7 +203,7 @@ export default function InvoiceDetailPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Zamówienie</p>
+                  <p className="text-sm text-muted-foreground">{t("columns.order")}</p>
                   <Link
                     href={`/orders/${invoice.order_id}`}
                     className="mt-1 font-mono text-sm text-primary hover:underline"
@@ -243,7 +245,7 @@ export default function InvoiceDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Termin płatności
+                    {t("terminPłatnosci")}
                   </p>
                   <p className="mt-1 text-sm">
                     {invoice.due_date ? formatDate(invoice.due_date) : "-"}
@@ -255,7 +257,7 @@ export default function InvoiceDetailPage() {
                 <>
                   <Separator />
                   <div>
-                    <p className="text-sm text-muted-foreground">Błąd</p>
+                    <p className="text-sm text-muted-foreground">{t("invoice.error")}</p>
                     <p className="mt-1 text-sm text-destructive">
                       {invoice.error_message}
                     </p>
@@ -292,7 +294,7 @@ export default function InvoiceDetailPage() {
                 {invoice.ksef_sent_at && (
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Data wysłania
+                      {t("dataWysłania")}
                     </p>
                     <p className="mt-1 text-sm">
                       {formatDate(invoice.ksef_sent_at)}
@@ -313,7 +315,7 @@ export default function InvoiceDetailPage() {
                     ) : (
                       <Send className="mr-2 h-4 w-4" />
                     )}
-                    Wyślij do KSeF
+                    {t("wyslijDoKsef")}
                   </Button>
                 )}
                 {canCheckKSeFStatus && (
@@ -328,7 +330,7 @@ export default function InvoiceDetailPage() {
                     ) : (
                       <RefreshCw className="mr-2 h-4 w-4" />
                     )}
-                    Sprawdź status
+                    {t("sprawdzStatus")}
                   </Button>
                 )}
                 {canDownloadUPO && (
@@ -358,7 +360,7 @@ export default function InvoiceDetailPage() {
               </div>
               {invoice.external_id && (
                 <div>
-                  <p className="text-sm text-muted-foreground">ID zewnętrzne</p>
+                  <p className="text-sm text-muted-foreground">{t("detail.externalId")}</p>
                   <p className="mt-1 font-mono text-xs">
                     {invoice.external_id}
                   </p>
@@ -385,8 +387,8 @@ export default function InvoiceDetailPage() {
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
         title="Anulowanie faktury"
-        description="Czy na pewno chcesz anulować tę fakturę? Ta operacja jest nieodwracalna."
-        confirmLabel="Anuluj fakturę"
+        description={t("czyNaPewnoChceszAnulowacTeFaktureTaOperacjaJestNie")}
+        confirmLabel={t("anulujFakture")}
         variant="destructive"
         onConfirm={handleCancel}
         isLoading={cancelInvoice.isPending}

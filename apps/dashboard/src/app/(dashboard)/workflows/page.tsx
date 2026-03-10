@@ -21,8 +21,10 @@ import {
 } from "@/lib/constants";
 import { Plus, Trash2, Zap, GitBranch, Pencil } from "lucide-react";
 import type { AutomationRule } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function WorkflowsPage() {
+  const t = useTranslations("workflows");
   const router = useRouter();
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
@@ -150,7 +152,7 @@ export default function WorkflowsPage() {
                 <Zap className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-medium">Brak workflow</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Utwórz swój pierwszy wizualny workflow automatyzacji
+                  {t("utworzSwojPierwszyWizualnyWorkflowAutomatyzacji")}
                 </p>
                 <Button className="mt-4" onClick={() => router.push("/workflows/new")}>
                   <Plus className="h-4 w-4" />

@@ -24,6 +24,7 @@ import { useGenerateLabel } from "@/hooks/use-shipments";
 import { CarrierFields, type CarrierFieldValues } from "@/components/shipments/carrier-fields";
 import { SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import type { Order, Shipment, GenerateLabelRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface GenerateLabelDialogProps {
   shipmentId: string;
@@ -67,6 +68,7 @@ export function GenerateLabelDialog({
   open,
   onOpenChange,
 }: GenerateLabelDialogProps) {
+  const t = useTranslations("shipments");
   const generateLabel = useGenerateLabel(shipmentId);
 
   const [carrierValues, setCarrierValues] = useState<CarrierFieldValues>(
@@ -107,7 +109,7 @@ export function GenerateLabelDialog({
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się wygenerować etykiety");
+        toast.error(error.message || t("nieUdałoSieWygenerowacEtykiety"));
       },
     });
   };
@@ -120,7 +122,7 @@ export function GenerateLabelDialog({
         <DialogHeader>
           <DialogTitle>{getDialogTitle(provider)}</DialogTitle>
           <DialogDescription>
-            Wypełnij dane przesyłki, aby wygenerować etykietę.
+            {t("wypełnijDanePrzesyłkiAbyWygenerowacEtykiete")}
           </DialogDescription>
         </DialogHeader>
 
@@ -156,7 +158,7 @@ export function GenerateLabelDialog({
               <Label>Odbiorca</Label>
               <div className="space-y-1 text-sm">
                 <p>
-                  <span className="text-muted-foreground">Imię i nazwisko: </span>
+                  <span className="text-muted-foreground">{t("imieINazwisko")} </span>
                   {order.customer_name}
                 </p>
                 <p>
@@ -169,7 +171,7 @@ export function GenerateLabelDialog({
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Dane odbiorcy pobrane z zamówienia
+                {t("daneOdbiorcyPobraneZZamowienia")}
               </p>
             </div>
           )}
@@ -183,7 +185,7 @@ export function GenerateLabelDialog({
             {generateLabel.isPending && (
               <Loader2 className="h-4 w-4 animate-spin" />
             )}
-            Generuj etykietę
+            {t("generujEtykiete")}
           </Button>
         </DialogFooter>
       </DialogContent>

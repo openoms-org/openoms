@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
 import type { WebhookDelivery } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const EVENT_LABELS: Record<string, string> = {
   "order.created": "Zamówienie utworzone",
@@ -49,6 +50,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function WebhookDeliveriesPage() {
+  const t = useTranslations("settings");
   const [eventType, setEventType] = useState<string>("");
   const [status, setStatus] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -107,7 +109,7 @@ export default function WebhookDeliveriesPage() {
         <Badge
           variant={row.status === "success" ? "default" : "destructive"}
         >
-          {row.status === "success" ? "Sukces" : "Błąd"}
+          {row.status === "success" ? "Sukces" : t("invoice.error")}
         </Badge>
       ),
     },
@@ -120,7 +122,7 @@ export default function WebhookDeliveriesPage() {
         ),
     },
     {
-      header: "Błąd",
+      header: t("invoice.error"),
       accessorKey: "error",
       cell: (row) =>
         row.error ? (
@@ -140,13 +142,13 @@ export default function WebhookDeliveriesPage() {
         <Link href="/settings/webhooks">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Powrót
+            {t("powrot")}
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Log dostarczeń webhooków</h1>
+          <h1 className="text-2xl font-bold">{t("logDostarczenWebhookow")}</h1>
           <p className="text-muted-foreground mt-1">
-            Historia dostarczeń powiadomień do zewnętrznych systemów
+            {t("historiaDostarczenPowiadomienDoZewnetrznychSystemo")}
           </p>
         </div>
       </div>
@@ -190,7 +192,7 @@ export default function WebhookDeliveriesPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak dostarczeń webhooków"
+          emptyMessage={t("brakDostarczenWebhookow")}
           rowId={(row) => row.id}
         />
       </div>

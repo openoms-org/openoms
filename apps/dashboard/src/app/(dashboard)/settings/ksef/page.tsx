@@ -30,6 +30,7 @@ import { Loader2, Save, TestTube, CheckCircle, XCircle } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { KSEF_ENVIRONMENTS } from "@/lib/constants";
 import type { KSeFSettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_SETTINGS: KSeFSettings = {
   enabled: false,
@@ -45,6 +46,7 @@ const DEFAULT_SETTINGS: KSeFSettings = {
 };
 
 export default function KSeFSettingsPage() {
+  const t = useTranslations("ksef");
   const { data: settings, isLoading } = useKSeFSettings();
   const updateSettings = useUpdateKSeFSettings();
   const testConnection = useTestKSeFConnection();
@@ -70,7 +72,7 @@ export default function KSeFSettingsPage() {
       toast.success("Ustawienia KSeF zapisane");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
       toast.error(message);
     }
   };
@@ -87,7 +89,7 @@ export default function KSeFSettingsPage() {
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się przetestować połączenia";
+        err instanceof Error ? err.message : t("nieudałosieprzetestowacpołaczenia");
       toast.error(message);
       setTestResult({ success: false, message });
     }
@@ -118,7 +120,7 @@ export default function KSeFSettingsPage() {
           <CardHeader>
             <CardTitle>Status integracji</CardTitle>
             <CardDescription>
-              Włącz lub wyłącz wysyłanie faktur do KSeF
+              {t("właczLubWyłaczWysyłanieFakturDoKsef")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -130,7 +132,7 @@ export default function KSeFSettingsPage() {
                 }
               />
               <span className="text-sm">
-                {form.enabled ? "KSeF włączony" : "KSeF wyłączony"}
+                {form.enabled ? t("ksefWłaczony") : t("ksefwyłaczony")}
               </span>
             </div>
           </CardContent>
@@ -139,9 +141,9 @@ export default function KSeFSettingsPage() {
         {/* Auto-send */}
         <Card>
           <CardHeader>
-            <CardTitle>Automatyczne wysyłanie</CardTitle>
+            <CardTitle>{t("automatycznewysyłanie")}</CardTitle>
             <CardDescription>
-              Automatycznie wysyłaj nowo utworzone faktury do KSeF.
+              {t("automatycznieWysyłajNowoUtworzoneFakturyDoKsef")}
               Nieudane wysyłki będą automatycznie ponawiane (maks. 3 próby).
             </CardDescription>
           </CardHeader>
@@ -155,12 +157,12 @@ export default function KSeFSettingsPage() {
                 disabled={!form.enabled}
               />
               <span className="text-sm">
-                {form.auto_send ? "Auto-send włączony" : "Auto-send wyłączony"}
+                {form.auto_send ? t("autosendWłaczony") : t("autosendwyłaczony")}
               </span>
             </div>
             {!form.enabled && form.auto_send && (
               <p className="text-xs text-muted-foreground mt-2">
-                Włącz integrację KSeF, aby korzystać z automatycznego wysyłania.
+                {t("właczIntegracjeKsefAbyKorzystacZAutomatycznego")}
               </p>
             )}
           </CardContent>
@@ -169,14 +171,14 @@ export default function KSeFSettingsPage() {
         {/* Environment */}
         <Card>
           <CardHeader>
-            <CardTitle>Środowisko</CardTitle>
+            <CardTitle>{t("srodowisko")}</CardTitle>
             <CardDescription>
               Wybierz środowisko KSeF (testowe do testów, produkcyjne do wysyłki prawdziwych faktur)
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-w-sm">
-              <Label>Środowisko</Label>
+              <Label>{t("srodowisko")}</Label>
               <Select
                 value={form.environment || "test"}
                 onValueChange={(value) =>
@@ -184,7 +186,7 @@ export default function KSeFSettingsPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz środowisko" />
+                  <SelectValue placeholder={t("wybierzSrodowisko")} />
                 </SelectTrigger>
                 <SelectContent>
                   {KSEF_ENVIRONMENTS.map((env) => (
@@ -244,7 +246,7 @@ export default function KSeFSettingsPage() {
           <CardHeader>
             <CardTitle>Dane firmy (sprzedawca)</CardTitle>
             <CardDescription>
-              Dane firmy używane w fakturach strukturalnych KSeF
+              {t("daneFirmyUzywaneWFakturachStrukturalnychKsef")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -266,7 +268,7 @@ export default function KSeFSettingsPage() {
                   onChange={(e) =>
                     setForm({ ...form, company_street: e.target.value })
                   }
-                  placeholder="ul. Przykładowa 1"
+                  placeholder={t("form.streetPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
@@ -307,9 +309,9 @@ export default function KSeFSettingsPage() {
         {/* Test connection */}
         <Card>
           <CardHeader>
-            <CardTitle>Test połączenia</CardTitle>
+            <CardTitle>{t("testpołaczenia")}</CardTitle>
             <CardDescription>
-              Sprawdź czy połączenie z KSeF działa poprawnie
+              {t("sprawdzCzyPołaczenieZKsefDziałaPoprawnie")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -323,7 +325,7 @@ export default function KSeFSettingsPage() {
               ) : (
                 <TestTube className="mr-2 h-4 w-4" />
               )}
-              Testuj połączenie
+              {t("testujPołaczenie")}
             </Button>
 
             {testResult && (

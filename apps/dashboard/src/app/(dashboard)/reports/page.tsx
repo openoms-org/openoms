@@ -37,6 +37,7 @@ import {
   useOrderTrends,
   usePaymentMethodStats,
 } from "@/hooks/use-reports";
+import { useTranslations } from "next-intl";
 
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
@@ -47,6 +48,7 @@ const CHART_COLORS = [
 ];
 
 function RevenueBySourceChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useRevenueBySource(30);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -61,7 +63,7 @@ function RevenueBySourceChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Przychód wg źródła (ostatnie 30 dni)</CardTitle>
+        <CardTitle>{t("przychodWgZrodłaOstatnie30Dni")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -92,7 +94,7 @@ function RevenueBySourceChart() {
                 // @ts-expect-error Recharts formatter type mismatch
                 formatter={(value: number | string) => [
                   formatCurrency(Number(value), "PLN"),
-                  "Przychód",
+                  t("przychod"),
                 ]}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -135,6 +137,7 @@ function fillTrendGaps(data: { date: string; count: number; avg_value: number }[
 }
 
 function DailyRevenueTrendChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useOrderTrends(30);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -146,7 +149,7 @@ function DailyRevenueTrendChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trend zamówień (ostatnie 30 dni)</CardTitle>
+        <CardTitle>{t("trendZamowienOstatnie30Dni")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -178,7 +181,7 @@ function DailyRevenueTrendChart() {
                 formatter={(value: number | string, name: string) => {
                   const v = Number(value);
                   if (name === "avg_value")
-                    return [formatCurrency(v, "PLN"), "Średnia wartość"];
+                    return [formatCurrency(v, "PLN"), t("sredniaWartosc")];
                   return [v, "Liczba"];
                 }}
                 contentStyle={{
@@ -190,8 +193,8 @@ function DailyRevenueTrendChart() {
               />
               <Legend
                 formatter={(value: string) => {
-                  if (value === "avg_value") return "Średnia wartość";
-                  return "Liczba zamówień";
+                  if (value === "avg_value") return t("sredniaWartosc");
+                  return t("liczbaZamowien");
                 }}
               />
               <Line
@@ -210,6 +213,7 @@ function DailyRevenueTrendChart() {
 }
 
 function TopProductsTable() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useTopProducts(10);
 
   return (
@@ -230,8 +234,8 @@ function TopProductsTable() {
               <TableRow>
                 <TableHead>Nazwa</TableHead>
                 <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Ilość</TableHead>
-                <TableHead className="text-right">Przychód</TableHead>
+                <TableHead className="text-right">{t("quantity")}</TableHead>
+                <TableHead className="text-right">{t("przychod")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -258,6 +262,7 @@ function TopProductsTable() {
 }
 
 function OrderTrendsChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useOrderTrends(30);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -269,7 +274,7 @@ function OrderTrendsChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trend zamówień</CardTitle>
+        <CardTitle>{t("trendZamowien")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -310,8 +315,8 @@ function OrderTrendsChart() {
                 formatter={(value: number | string, name: string) => {
                   const v = Number(value);
                   if (name === "avg_value")
-                    return [formatCurrency(v, "PLN"), "Średnia wartość"];
-                  return [v, "Liczba zamówień"];
+                    return [formatCurrency(v, "PLN"), t("sredniaWartosc")];
+                  return [v, t("liczbaZamowien")];
                 }}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -322,8 +327,8 @@ function OrderTrendsChart() {
               />
               <Legend
                 formatter={(value: string) => {
-                  if (value === "avg_value") return "Średnia wartość";
-                  return "Liczba zamówień";
+                  if (value === "avg_value") return t("sredniaWartosc");
+                  return t("liczbaZamowien");
                 }}
               />
               <Bar
@@ -349,6 +354,7 @@ function OrderTrendsChart() {
 }
 
 function PaymentMethodChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = usePaymentMethodStats();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -366,7 +372,7 @@ function PaymentMethodChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Metody płatności</CardTitle>
+        <CardTitle>{t("metodyPłatnosci")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -417,13 +423,14 @@ function PaymentMethodChart() {
 }
 
 export default function ReportsPage() {
+  const t = useTranslations("reports");
   return (
     <AdminGuard>
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Raporty</h1>
         <p className="text-muted-foreground mt-1">
-          Szczegółowe statystyki i analizy sprzedaży
+          {t("szczegołoweStatystykiIAnalizySprzedazy")}
         </p>
       </div>
 
@@ -432,7 +439,7 @@ export default function ReportsPage() {
           <TabsTrigger value="revenue">Przychody</TabsTrigger>
           <TabsTrigger value="products">Produkty</TabsTrigger>
           <TabsTrigger value="trends">Trendy</TabsTrigger>
-          <TabsTrigger value="payments">Płatności</TabsTrigger>
+          <TabsTrigger value="payments">{t("płatnosci")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="space-y-6">

@@ -8,19 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductForm } from "@/components/products/product-form";
 import { useCreateProduct } from "@/hooks/use-products";
+import { useTranslations } from "next-intl";
 
 export default function NewProductPage() {
+  const t = useTranslations("products");
   const router = useRouter();
   const createProduct = useCreateProduct();
 
   const handleSubmit = (data: Parameters<typeof createProduct.mutate>[0]) => {
     createProduct.mutate(data, {
       onSuccess: (product) => {
-        toast.success("Produkt został utworzony");
+        toast.success(t("created"));
         router.push(`/products/${product.id}`);
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się utworzyć produktu");
+        toast.error(error.message || t("createError"));
       },
     });
   };

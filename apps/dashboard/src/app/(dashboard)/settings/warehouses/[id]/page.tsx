@@ -51,8 +51,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslations } from "next-intl";
 
 export default function WarehouseDetailPage() {
+  const t = useTranslations("warehouses");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -170,7 +172,7 @@ export default function WarehouseDetailPage() {
             {formatDate(warehouse.created_at)}
           </p>
         </div>
-        {warehouse.is_default && <Badge variant="default">Domyślny</Badge>}
+        {warehouse.is_default && <Badge variant="default">{t("columns.default")}</Badge>}
         {warehouse.active ? (
           <Badge
             variant="outline"
@@ -219,7 +221,7 @@ export default function WarehouseDetailPage() {
                   onCheckedChange={setIsDefault}
                   id="is-default"
                 />
-                <Label htmlFor="is-default">Domyślny</Label>
+                <Label htmlFor="is-default">{t("columns.default")}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
@@ -266,7 +268,7 @@ export default function WarehouseDetailPage() {
           <div>
             <CardTitle>Stan magazynowy ({stockData?.total ?? 0})</CardTitle>
             <CardDescription>
-              Stany magazynowe produktów w tym magazynie
+              {t("stanyMagazynoweProduktowWTymMagazynie")}
             </CardDescription>
           </div>
           <Dialog open={showAddStock} onOpenChange={setShowAddStock}>
@@ -305,7 +307,7 @@ export default function WarehouseDetailPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="stock-qty">Ilość</Label>
+                    <Label htmlFor="stock-qty">{t("quantity")}</Label>
                     <Input
                       id="stock-qty"
                       type="number"
@@ -358,17 +360,17 @@ export default function WarehouseDetailPage() {
             <LoadingSkeleton />
           ) : stocks.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Brak stanów magazynowych. Dodaj produkt, aby rozpocząć
-              zarządzanie stanem.
+              {t("brakStanowMagazynowychDodajProduktAbyRozpoczac")}
+              {t("zarzadzanieStanem")}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Produkt</TableHead>
-                  <TableHead className="text-right">Ilość</TableHead>
+                  <TableHead className="text-right">{t("quantity")}</TableHead>
                   <TableHead className="text-right">Zarezerwowane</TableHead>
-                  <TableHead className="text-right">Dostępne</TableHead>
+                  <TableHead className="text-right">{t("dostepne")}</TableHead>
                   <TableHead className="text-right">Min. stan</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>

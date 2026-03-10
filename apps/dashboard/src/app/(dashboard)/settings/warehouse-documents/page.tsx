@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Szkic",
@@ -46,6 +47,8 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function WarehouseDocumentsPage() {
+  const t = useTranslations("warehouseDocuments");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -68,7 +71,7 @@ export default function WarehouseDocumentsPage() {
     if (!deleteId) return;
     deleteDocument.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Dokument został usunięty");
+        toast.success(t("deleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -85,7 +88,7 @@ export default function WarehouseDocumentsPage() {
             Dokumenty magazynowe
           </h1>
           <p className="text-muted-foreground">
-            Zarządzaj dokumentami PZ, WZ i MM
+            {t("zarzadzajDokumentamiPzWzIMm")}
           </p>
         </div>
         <Button asChild>
@@ -125,7 +128,7 @@ export default function WarehouseDocumentsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -133,7 +136,7 @@ export default function WarehouseDocumentsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -141,8 +144,8 @@ export default function WarehouseDocumentsPage() {
       {documents.length === 0 ? (
         <EmptyState
           icon={ClipboardList}
-          title="Brak dokumentów magazynowych"
-          description="Utwórz pierwszy dokument PZ, WZ lub MM, aby zarządzać ruchem towarów."
+          title={t("brakDokumentowMagazynowych")}
+          description={t("utworzPierwszyDokumentPzWzLubMmAbyZarzadzacRuchemT")}
           action={{
             label: "Nowy dokument",
             href: "/settings/warehouse-documents/new",
@@ -214,9 +217,9 @@ export default function WarehouseDocumentsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń dokument"
-        description="Czy na pewno chcesz usunąć ten dokument magazynowy?"
-        confirmLabel="Usuń"
+        title={t("usunDokument")}
+        description={t("czyNaPewnoChceszUsunacTenDokumentMagazynowy")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteDocument.isPending}

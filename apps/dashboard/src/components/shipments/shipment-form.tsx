@@ -19,6 +19,7 @@ import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
 import type { Shipment } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const shipmentSchema = z.object({
   order_id: z.string().min(1, "ID zamówienia jest wymagane"),
@@ -43,6 +44,7 @@ export function ShipmentForm({
   onSubmit,
   isLoading,
 }: ShipmentFormProps) {
+  const t = useTranslations("shipments");
   const existingTargetPoint =
     (shipment?.carrier_data?.target_point as string | undefined) ??
     (defaultValues?.carrier_data?.target_point as string | undefined) ??
@@ -81,7 +83,7 @@ export function ShipmentForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label>Zamówienie</Label>
+        <Label>{t("columns.order")}</Label>
         <OrderSearchCombobox
           value={watch("order_id")}
           onValueChange={(id) =>
@@ -105,7 +107,7 @@ export function ShipmentForm({
           }
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz dostawcę" />
+            <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {SHIPMENT_PROVIDERS.map((provider) => (
@@ -138,10 +140,10 @@ export function ShipmentForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="tracking_number">Numer śledzenia</Label>
+        <Label htmlFor="tracking_number">{t("columns.trackingNumber")}</Label>
         <Input
           id="tracking_number"
-          placeholder="Opcjonalny numer śledzenia"
+          placeholder={t("opcjonalnyNumerSledzenia")}
           {...register("tracking_number")}
         />
       </div>
@@ -156,7 +158,7 @@ export function ShipmentForm({
       </div>
 
       <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Zapisywanie..." : shipment ? "Zapisz zmiany" : "Utwórz przesyłkę"}
+        {isLoading ? "Zapisywanie..." : shipment ? "Zapisz zmiany" : t("utworzPrzesyłke")}
       </Button>
     </form>
   );

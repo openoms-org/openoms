@@ -28,8 +28,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 export default function IntegrationsPage() {
+  const t = useTranslations("integrations");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { data: integrations, isLoading, isError, refetch } = useIntegrations();
   const deleteIntegration = useDeleteIntegration();
@@ -44,7 +47,7 @@ export default function IntegrationsPage() {
     if (!deleteId) return;
     deleteIntegration.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Integracja została usunięta");
+        toast.success(t("integracjazostałausunieta"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -56,8 +59,8 @@ export default function IntegrationsPage() {
   return (
     <AdminGuard>
       <PageHeader
-        title="Połączenia"
-        description="Zarządzaj połączeniami z zewnętrznymi serwisami"
+        title={t("integrations")}
+        description={t("zarzadzajpołaczeniamizzewnetrznymiserwisami")}
         action={{ label: "Nowa integracja", href: "/integrations/new" }}
       />
 
@@ -70,7 +73,7 @@ export default function IntegrationsPage() {
             <Link href="/marketplaces" className="font-medium underline">Marketplace</Link>{" "}
             i{" "}
             <Link href="/invoicing" className="font-medium underline">Fakturowanie</Link>{" "}
-            mają teraz własne sekcje w menu.
+            {t("majaTerazWłasneSekcjeWMenu")}
           </p>
         </CardContent>
       </Card>
@@ -78,7 +81,7 @@ export default function IntegrationsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -86,7 +89,7 @@ export default function IntegrationsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -95,7 +98,7 @@ export default function IntegrationsPage() {
         <EmptyState
           icon={Plug}
           title="Brak integracji"
-          description="Dodaj pierwszą integrację, aby połączyć się z zewnętrznymi serwisami."
+          description={t("dodajpierwszaintegracjeabypołaczycsiezzewnetrznymi")}
           action={{ label: "Nowa integracja", href: "/integrations/new" }}
         />
       ) : (
@@ -105,7 +108,7 @@ export default function IntegrationsPage() {
               <TableRow>
                 <TableHead>Dostawca</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Dane uwierzytelniające</TableHead>
+                <TableHead>{t("daneUwierzytelniajace")}</TableHead>
                 <TableHead>Ostatnia synchronizacja</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[60px]" />
@@ -182,9 +185,9 @@ export default function IntegrationsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń integrację"
-        description="Czy na pewno chcesz usunąć tę integrację? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={t("usunIntegracje")}
+        description={t("czyNaPewnoChceszUsunacTeIntegracjeTaOperacjaJestNi")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteIntegration.isPending}

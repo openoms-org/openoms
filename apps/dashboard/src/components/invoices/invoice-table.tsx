@@ -8,6 +8,7 @@ import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import type { Invoice } from "@/types/api";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FileText } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface InvoiceTableProps {
   data: Invoice[];
@@ -88,6 +89,7 @@ export const invoiceColumns: ColumnDef<Invoice>[] = [
 ];
 
 export function InvoiceTable({ data, isLoading, onRowClick }: InvoiceTableProps) {
+  const t = useTranslations("invoices");
   return (
     <DataTable<Invoice>
       columns={invoiceColumns}
@@ -97,7 +99,7 @@ export function InvoiceTable({ data, isLoading, onRowClick }: InvoiceTableProps)
         <EmptyState
           icon={FileText}
           title="Brak faktur"
-          description="Nie znaleziono faktur do wyświetlenia."
+          description={t("nieZnalezionoFakturDoWyswietlenia")}
         />
       }
       onRowClick={onRowClick}

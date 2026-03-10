@@ -45,6 +45,7 @@ import {
   useDeleteMessageTemplate,
 } from "@/hooks/use-message-templates";
 import type { MessageTemplate } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const CHANNEL_LABELS: Record<string, string> = {
   allegro: "Allegro",
@@ -91,6 +92,8 @@ function templateToForm(t: MessageTemplate): FormState {
 }
 
 export default function MessageTemplatesPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data, isLoading, isError, refetch } = useMessageTemplates();
   const createTemplate = useCreateMessageTemplate();
   const deleteTemplate = useDeleteMessageTemplate();
@@ -145,7 +148,7 @@ export default function MessageTemplatesPage() {
     if (editingTemplate) {
       updateTemplate.mutate(payload, {
         onSuccess: () => {
-          toast.success("Szablon został zaktualizowany");
+          toast.success(t("szablonzostałzaktualizowany"));
           closeDialog();
         },
         onError: (error) => {
@@ -155,7 +158,7 @@ export default function MessageTemplatesPage() {
     } else {
       createTemplate.mutate(payload, {
         onSuccess: () => {
-          toast.success("Szablon został utworzony");
+          toast.success(t("szablonzostałutworzony"));
           closeDialog();
         },
         onError: (error) => {
@@ -169,7 +172,7 @@ export default function MessageTemplatesPage() {
     if (!deleteId) return;
     deleteTemplate.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Szablon został usunięty");
+        toast.success(t("szablonzostałusuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -191,10 +194,10 @@ export default function MessageTemplatesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Szablony wiadomości
+            {t("szablonyWiadomosci")}
           </h1>
           <p className="text-muted-foreground">
-            Zarządzaj szablonami wiadomości dla automatyzacji i komunikacji
+            {t("zarzadzajSzablonamiWiadomosciDlaAutomatyzacjiIKomu")}
             z klientami
           </p>
         </div>
@@ -207,8 +210,8 @@ export default function MessageTemplatesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4 mb-6">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć
-            stronę.
+            {t("wystapiłBładPodczasŁadowaniaDanychSprobujOdswiezyc")}
+            {t("strone")}
           </p>
           <Button
             variant="outline"
@@ -216,7 +219,7 @@ export default function MessageTemplatesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -224,8 +227,8 @@ export default function MessageTemplatesPage() {
       {templates.length === 0 ? (
         <EmptyState
           icon={MessageSquare}
-          title="Brak szablonów"
-          description="Utwórz pierwszy szablon wiadomości, aby używać go w automatyzacjach i komunikacji z klientami."
+          title={t("brakSzablonow")}
+          description={t("utworzPierwszySzablonWiadomosciAbyUzywacGoWAutomat")}
         />
       ) : (
         <div className="rounded-md border">
@@ -233,7 +236,7 @@ export default function MessageTemplatesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nazwa</TableHead>
-                <TableHead>Kanał</TableHead>
+                <TableHead>{t("kanał1")}</TableHead>
                 <TableHead>Temat</TableHead>
                 <TableHead>Aktywny</TableHead>
                 <TableHead>Utworzono</TableHead>
@@ -318,8 +321,8 @@ export default function MessageTemplatesPage() {
             </DialogTitle>
             <DialogDescription>
               {editingTemplate
-                ? "Zaktualizuj szczegóły szablonu wiadomości"
-                : "Dodaj nowy szablon wiadomości do systemu"}
+                ? t("zaktualizujszczegołyszablonuwiadomosci")
+                : t("dodajNowySzablonWiadomosciDoSystemu")}
             </DialogDescription>
           </DialogHeader>
 
@@ -332,12 +335,12 @@ export default function MessageTemplatesPage() {
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, name: e.target.value }))
                 }
-                placeholder="np. Potwierdzenie wysyłki"
+                placeholder={t("nppotwierdzeniewysyłki")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tpl-channel">Kanał</Label>
+              <Label htmlFor="tpl-channel">{t("kanał1")}</Label>
               <Select
                 value={form.channel}
                 onValueChange={(value) =>
@@ -345,7 +348,7 @@ export default function MessageTemplatesPage() {
                 }
               >
                 <SelectTrigger id="tpl-channel">
-                  <SelectValue placeholder="Wybierz kanał" />
+                  <SelectValue placeholder={t("wybierzkanał")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="allegro">Allegro</SelectItem>
@@ -367,20 +370,20 @@ export default function MessageTemplatesPage() {
                       subject: e.target.value,
                     }))
                   }
-                  placeholder="np. Zamówienie {{order_number}} — aktualizacja"
+                  placeholder={t("npZamowienieOrder_numberAktualizacja")}
                 />
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="tpl-body">Treść</Label>
+              <Label htmlFor="tpl-body">{t("tresc")}</Label>
               <Textarea
                 id="tpl-body"
                 value={form.body}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, body: e.target.value }))
                 }
-                placeholder="Treść wiadomości..."
+                placeholder={t("trescWiadomosci")}
                 rows={5}
               />
             </div>
@@ -431,7 +434,7 @@ export default function MessageTemplatesPage() {
                 ? "Zapisywanie..."
                 : editingTemplate
                   ? "Zapisz"
-                  : "Utwórz"}
+                  : tc("create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -441,9 +444,9 @@ export default function MessageTemplatesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń szablon"
-        description="Czy na pewno chcesz usunąć ten szablon wiadomości? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={t("usunSzablon")}
+        description={t("czyNaPewnoChceszUsunacTenSzablonWiadomosciTaOperac")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteTemplate.isPending}

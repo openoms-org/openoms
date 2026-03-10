@@ -23,8 +23,10 @@ import {
 import { getErrorMessage } from "@/lib/api-client";
 import { Send, Loader2 } from "lucide-react";
 import type { Invoice } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function InvoicesPage() {
+  const t = useTranslations("invoices");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [providerFilter, setProviderFilter] = useState<string>("");
@@ -183,7 +185,7 @@ export default function InvoicesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -191,7 +193,7 @@ export default function InvoicesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}

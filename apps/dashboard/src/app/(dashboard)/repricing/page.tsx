@@ -27,6 +27,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { RepricingRule } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const RULE_STATUSES: Record<string, { label: string; color: string }> = {
   active: {
@@ -58,6 +59,7 @@ const SCOPE_LABELS: Record<string, string> = {
 };
 
 export default function RepricingPage() {
+  const t = useTranslations("repricing");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -79,8 +81,8 @@ export default function RepricingPage() {
       await updateRule.mutateAsync({ status: newStatus });
       toast.success(
         newStatus === "active"
-          ? "Reguła aktywowana"
-          : "Reguła wstrzymana"
+          ? t("regułaaktywowana")
+          : t("reguławstrzymana")
       );
       refetch();
     } catch (error) {
@@ -142,7 +144,7 @@ export default function RepricingPage() {
       cell: (row) => <span className="text-sm">{row.products_affected}</span>,
     },
     {
-      header: "Ostatni wpływ",
+      header: t("ostatniwpływ"),
       accessorKey: "last_applied_at",
       cell: (row) =>
         row.last_applied_at ? (
@@ -181,7 +183,7 @@ export default function RepricingPage() {
         <div>
           <h1 className="text-2xl font-bold">Repricing</h1>
           <p className="text-muted-foreground mt-1">
-            Dynamiczne zarządzanie cenami produktów
+            {t("dynamiczneZarzadzanieCenamiProduktow")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -194,7 +196,7 @@ export default function RepricingPage() {
             {applyRules.isPending ? "Wykonywanie..." : "Zastosuj teraz"}
           </Button>
           <Button asChild>
-            <Link href="/repricing/new">Nowa reguła</Link>
+            <Link href="/repricing/new">{t("newRule")}</Link>
           </Button>
         </div>
       </div>
@@ -207,7 +209,7 @@ export default function RepricingPage() {
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-green-500" />
                 <span className="text-sm text-muted-foreground">
-                  Aktywne reguły
+                  {t("aktywneReguły")}
                 </span>
               </div>
               <p className="mt-1 text-2xl font-bold">{summary.active_rules}</p>
@@ -231,7 +233,7 @@ export default function RepricingPage() {
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-purple-500" />
                 <span className="text-sm text-muted-foreground">
-                  Średnia zmiana %
+                  {t("sredniaZmiana")}
                 </span>
               </div>
               <p className="mt-1 text-2xl font-bold">
@@ -280,7 +282,7 @@ export default function RepricingPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych.
+            {t("wystapiłBładPodczasŁadowaniaDanych")}
           </p>
           <Button
             variant="outline"
@@ -288,7 +290,7 @@ export default function RepricingPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -301,9 +303,9 @@ export default function RepricingPage() {
           emptyState={
             <EmptyState
               icon={TrendingUp}
-              title="Brak reguł repricing"
-              description="Utwórz pierwszą regułę dynamicznego ustalania cen."
-              action={{ label: "Nowa reguła", href: "/repricing/new" }}
+              title={t("brakregułrepricing")}
+              description={t("utworzpierwszaregułedynamicznegoustalaniacen")}
+              action={{ label: t("newRule"), href: "/repricing/new" }}
             />
           }
           onRowClick={(row) => router.push(`/repricing/${row.id}`)}

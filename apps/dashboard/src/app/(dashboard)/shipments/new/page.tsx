@@ -11,6 +11,7 @@ import { ShipmentForm } from "@/components/shipments/shipment-form";
 import { RateShopping } from "@/components/shipping/rate-shopping";
 import { useCreateShipment } from "@/hooks/use-shipments";
 import type { ShippingRate } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 type ProviderValue = "inpost" | "dhl" | "dpd" | "gls" | "ups" | "poczta_polska" | "orlen_paczka" | "fedex" | "manual";
 
@@ -19,6 +20,7 @@ const VALID_PROVIDERS: ProviderValue[] = [
 ];
 
 export default function NewShipmentPage() {
+  const t = useTranslations("shipments");
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultOrderId = searchParams.get("order_id") ?? undefined;
@@ -44,11 +46,11 @@ export default function NewShipmentPage() {
   const handleSubmit = (data: Parameters<typeof createShipment.mutate>[0]) => {
     createShipment.mutate(data, {
       onSuccess: (shipment) => {
-        toast.success("Przesyłka została utworzona");
+        toast.success(t("przesyłkaZostałaUtworzona"));
         router.push(`/shipments/${shipment.id}`);
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się utworzyć przesyłki");
+        toast.error(error.message || t("nieUdałoSieUtworzycPrzesyłki"));
       },
     });
   };
@@ -66,9 +68,9 @@ export default function NewShipmentPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Nowa przesyłka</h1>
+          <h1 className="text-2xl font-bold">{t("newShipment")}</h1>
           <p className="text-muted-foreground">
-            Utwórz nową przesyłkę dla zamówienia
+            {t("utworzNowaPrzesyłkeDlaZamowienia")}
           </p>
         </div>
       </div>
@@ -77,7 +79,7 @@ export default function NewShipmentPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Dane przesyłki</CardTitle>
+          <CardTitle>{t("danePrzesyłki")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ShipmentForm

@@ -36,6 +36,7 @@ import {
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { SimulationResult } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const RULE_STATUSES: Record<string, { label: string; color: string }> = {
   active: {
@@ -67,6 +68,8 @@ const SCOPE_LABELS: Record<string, string> = {
 };
 
 export default function RepricingRuleDetailPage() {
+  const t = useTranslations("repricing");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -98,9 +101,9 @@ export default function RepricingRuleDetailPage() {
   if (!rule) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Reguła nie znaleziona</p>
+        <p className="text-muted-foreground">{t("regułanieznaleziona")}</p>
         <Button asChild className="mt-4">
-          <Link href="/repricing">Powrót do listy</Link>
+          <Link href="/repricing">{t("powrotDoListy")}</Link>
         </Button>
       </div>
     );
@@ -111,7 +114,7 @@ export default function RepricingRuleDetailPage() {
     try {
       await updateRule.mutateAsync({ status: newStatus });
       toast.success(
-        newStatus === "active" ? "Reguła aktywowana" : "Reguła wstrzymana"
+        newStatus === "active" ? t("regułaAktywowana") : t("reguławstrzymana")
       );
       refetch();
     } catch (error) {
@@ -122,7 +125,7 @@ export default function RepricingRuleDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteRule.mutateAsync(params.id);
-      toast.success("Reguła usunięta");
+      toast.success(t("regułausunieta"));
       router.push("/repricing");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -211,7 +214,7 @@ export default function RepricingRuleDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Usuń
+            {t("delete")}
           </Button>
         </div>
       </div>
@@ -236,7 +239,7 @@ export default function RepricingRuleDetailPage() {
               <>
                 <Separator />
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Wartość zakresu</span>
+                  <span className="text-muted-foreground">{t("wartoscZakresu")}</span>
                   <span className="max-w-[200px] truncate text-right">
                     {typeof rule.scope_value === "string"
                       ? rule.scope_value
@@ -306,7 +309,7 @@ export default function RepricingRuleDetailPage() {
               </div>
             ))}
             {Object.keys(ruleParams).length === 0 && (
-              <p className="text-sm text-muted-foreground">Brak parametrów</p>
+              <p className="text-sm text-muted-foreground">{t("brakParametrow")}</p>
             )}
           </CardContent>
         </Card>
@@ -326,7 +329,7 @@ export default function RepricingRuleDetailPage() {
                   <TableHead>Stara cena</TableHead>
                   <TableHead>Nowa cena</TableHead>
                   <TableHead>Zmiana</TableHead>
-                  <TableHead>Powód</TableHead>
+                  <TableHead>{t("detail.reason")}</TableHead>
                   <TableHead>Data</TableHead>
                 </TableRow>
               </TableHeader>
@@ -375,7 +378,7 @@ export default function RepricingRuleDetailPage() {
             </Table>
           ) : (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              Brak zmian cen dla tej reguły
+              {t("brakZmianCenDlaTejReguły")}
             </p>
           )}
         </CardContent>
@@ -396,7 +399,7 @@ export default function RepricingRuleDetailPage() {
                   <TableHead>Stara cena</TableHead>
                   <TableHead>Nowa cena</TableHead>
                   <TableHead>Zmiana</TableHead>
-                  <TableHead>Powód</TableHead>
+                  <TableHead>{t("detail.reason")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -432,8 +435,8 @@ export default function RepricingRuleDetailPage() {
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">
               {rule.strategy === "competitive"
-                ? "Strategia konkurencyjna jest w przygotowaniu. Dane o cenach konkurencji nie są jeszcze dostępne."
-                : "Brak zmian do zastosowania - wszystkie ceny są aktualne."}
+                ? t("strategiaKonkurencyjnaJestWPrzygotowaniuDaneOCenac")
+                : t("brakZmianDoZastosowaniaWszystkieCenySaAktualne")}
             </p>
           )}
         </DialogContent>
@@ -443,9 +446,9 @@ export default function RepricingRuleDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usunąć regułę?"
+        title={t("usunacregułe")}
         description={`Reguła "${rule.name}" zostanie trwale usunięta wraz z historią zmian cen.`}
-        confirmLabel="Usuń"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
       />

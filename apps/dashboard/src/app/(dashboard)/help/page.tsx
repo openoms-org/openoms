@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, HelpCircle, MessageCircle, Bug, Mail } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const helpLinks = [
   {
@@ -36,11 +37,12 @@ const helpLinks = [
 ];
 
 export default function HelpPage() {
+  const t = useTranslations("help");
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Pomoc</h1>
-        <p className="text-muted-foreground mt-1">Zasoby i wsparcie dla użytkowników OpenOMS.</p>
+        <p className="text-muted-foreground mt-1">{t("zasobyIWsparcieDlaUzytkownikowOpenoms")}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

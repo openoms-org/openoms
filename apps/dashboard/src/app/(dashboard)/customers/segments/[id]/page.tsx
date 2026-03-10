@@ -48,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslations } from "next-intl";
 
 const SEGMENT_TYPE_LABELS: Record<string, string> = {
   manual: "Ręczny",
@@ -56,6 +57,8 @@ const SEGMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function SegmentDetailPage() {
+  const t = useTranslations("customers");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [memberPagination, setMemberPagination] = useState({
@@ -107,7 +110,7 @@ export default function SegmentDetailPage() {
           className="mt-4"
           onClick={() => router.push("/customers/segments")}
         >
-          Wróć do listy
+          {t("detail.backToList")}
         </Button>
       </div>
     );
@@ -127,7 +130,7 @@ export default function SegmentDetailPage() {
         description: editDescription,
         color: editColor,
       });
-      toast.success("Segment został zaktualizowany");
+      toast.success(t("segmentzostałzaktualizowany"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -137,7 +140,7 @@ export default function SegmentDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteSegment.mutateAsync(params.id);
-      toast.success("Segment został usunięty");
+      toast.success(t("segmentzostałusuniety"));
       router.push("/customers/segments");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -148,7 +151,7 @@ export default function SegmentDetailPage() {
     if (!selectedCustomerId) return;
     try {
       await addMember.mutateAsync({ customer_id: selectedCustomerId });
-      toast.success("Klient został dodany do segmentu");
+      toast.success(t("klientzostałdodanydosegmentu"));
       setShowAddMemberDialog(false);
       setSelectedCustomerId("");
       setCustomerSearch("");
@@ -161,7 +164,7 @@ export default function SegmentDetailPage() {
     if (!removeCustomerId) return;
     removeMember.mutate(removeCustomerId, {
       onSuccess: () => {
-        toast.success("Klient został usunięty z segmentu");
+        toast.success(t("klientzostałusunietyzsegmentu"));
         setRemoveCustomerId(null);
       },
       onError: (error) => {
@@ -197,7 +200,7 @@ export default function SegmentDetailPage() {
             variant="destructive"
             onClick={() => setShowDeleteDialog(true)}
           >
-            Usuń
+            {t("delete")}
           </Button>
         </div>
       </div>
@@ -278,7 +281,7 @@ export default function SegmentDetailPage() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Klientów</p>
+              <p className="text-sm text-muted-foreground">{t("klientow")}</p>
               <p className="mt-1 text-2xl font-bold">
                 {segment.customer_count}
               </p>
@@ -293,7 +296,7 @@ export default function SegmentDetailPage() {
         {segment.rules && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Reguły</CardTitle>
+              <CardTitle>{t("reguły1")}</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="rounded bg-muted p-3 text-sm font-mono overflow-auto">
@@ -306,7 +309,7 @@ export default function SegmentDetailPage() {
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle>Członkowie</CardTitle>
+          <CardTitle>{t("członkowie1")}</CardTitle>
           {segment.segment_type === "manual" && (
             <Button
               size="sm"
@@ -327,7 +330,7 @@ export default function SegmentDetailPage() {
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
               <p className="text-sm text-muted-foreground">
-                Brak klientów w tym segmencie.
+                {t("brakKlientowWTymSegmencie")}
               </p>
             </div>
           ) : (
@@ -337,7 +340,7 @@ export default function SegmentDetailPage() {
                   <TableRow>
                     <TableHead>Klient</TableHead>
                     <TableHead>E-mail</TableHead>
-                    <TableHead className="text-right">Zamówień</TableHead>
+                    <TableHead className="text-right">{t("zamowien")}</TableHead>
                     <TableHead className="text-right">Wydano</TableHead>
                     <TableHead>Dodano</TableHead>
                     <TableHead className="w-[60px]" />
@@ -414,7 +417,7 @@ export default function SegmentDetailPage() {
               <Input
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
-                placeholder="Wpisz imię lub e-mail..."
+                placeholder={t("wpiszImieLubEmail")}
               />
             </div>
             {customers.length > 0 && (
@@ -456,8 +459,8 @@ export default function SegmentDetailPage() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="Usuwanie segmentu"
-        description="Czy na pewno chcesz usunąć ten segment?"
-        confirmLabel="Usuń segment"
+        description={t("czyNaPewnoChceszUsunacTenSegment")}
+        confirmLabel={t("usunSegment")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteSegment.isPending}
@@ -466,9 +469,9 @@ export default function SegmentDetailPage() {
       <ConfirmDialog
         open={!!removeCustomerId}
         onOpenChange={(open) => !open && setRemoveCustomerId(null)}
-        title="Usuń z segmentu"
-        description="Czy na pewno chcesz usunąć tego klienta z segmentu?"
-        confirmLabel="Usuń"
+        title={t("usunZSegmentu")}
+        description={t("czyNaPewnoChceszUsunacTegoKlientaZSegmentu")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleRemoveMember}
         isLoading={removeMember.isPending}

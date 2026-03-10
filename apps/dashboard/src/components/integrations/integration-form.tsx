@@ -29,6 +29,7 @@ import {
 } from "@/lib/constants";
 import type { CredentialField } from "@/lib/constants";
 import { isInDevelopment } from "@/lib/integration-status";
+import { useTranslations } from "next-intl";
 
 const integrationSchema = z.object({
   provider: z.string().min(1, "Dostawca jest wymagany"),
@@ -67,6 +68,7 @@ export function IntegrationForm({
   editProvider,
   existingSettings,
 }: IntegrationFormProps) {
+  const t = useTranslations("integrations");
   const isEditMode = !!editProvider;
 
   const {
@@ -140,7 +142,7 @@ export function IntegrationForm({
           try {
             new URL(urlVal);
           } catch {
-            newErrors[field.key] = "Podaj prawidłowy adres URL";
+            newErrors[field.key] = t("podajPrawidłowyAdresUrl");
           }
         }
       }
@@ -264,7 +266,7 @@ export function IntegrationForm({
           <Input
             id={`cred-${field.key}`}
             type={inputType}
-            placeholder={isEditMode ? "Pozostaw puste, aby nie zmieniać" : field.placeholderKey}
+            placeholder={isEditMode ? t("pozostawPusteAbyNieZmieniac") : field.placeholderKey}
             value={(credentialValues[field.key] as string) ?? ""}
             onChange={(e) => handleCredentialChange(field.key, e.target.value)}
             className={isPassword ? "pr-10" : ""}
@@ -285,7 +287,7 @@ export function IntegrationForm({
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="sr-only">
-                {isVisible ? "Ukryj" : "Pokaż"} {field.labelKey.toLowerCase()}
+                {isVisible ? "Ukryj" : t("pokaz")} {field.labelKey.toLowerCase()}
               </span>
             </Button>
           )}
@@ -311,7 +313,7 @@ export function IntegrationForm({
             onValueChange={handleProviderChange}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Wybierz dostawcę" />
+              <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {categoryEntries.map(([catKey, category], catIndex) => (
@@ -339,12 +341,12 @@ export function IntegrationForm({
       {selectedProvider && fields.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-foreground">
-            {isEditMode ? "Aktualizuj dane" : "Dane uwierzytelniające"} &mdash;{" "}
+            {isEditMode ? "Aktualizuj dane" : t("daneUwierzytelniajace")} &mdash;{" "}
             {INTEGRATION_PROVIDER_LABELS[selectedProvider] ?? selectedProvider}
           </h3>
           {isEditMode && (
             <p className="text-sm text-muted-foreground">
-              Wypełnij tylko pola, które chcesz zmienić. Puste pola nie zostaną nadpisane.
+              {t("wypełnijTylkoPolaKtoreChceszZmienicPuste")}
             </p>
           )}
 
@@ -377,7 +379,7 @@ export function IntegrationForm({
           ) : (
             <ChevronRight className="h-4 w-4" />
           )}
-          Pokaż zaawansowane
+          {t("pokazZaawansowane")}
         </button>
         {showAdvanced && (
           <div className="space-y-2 pt-2">
@@ -399,7 +401,7 @@ export function IntegrationForm({
         <Button type="submit" disabled={isLoading}>
           {isLoading
             ? isEditMode ? "Aktualizowanie..." : "Tworzenie..."
-            : isEditMode ? "Zapisz zmiany" : "Utwórz integrację"
+            : isEditMode ? "Zapisz zmiany" : t("utworzIntegracje")
           }
         </Button>
       </div>

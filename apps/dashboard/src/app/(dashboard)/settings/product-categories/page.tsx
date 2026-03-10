@@ -24,6 +24,7 @@ import {
   FolderPlus,
 } from "lucide-react";
 import type { ProductCategory, UpdateCategoryRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface EditState {
   id: string;
@@ -54,6 +55,7 @@ function CategoryRow({
   onCancelEdit: () => void;
   onEditChange: (field: "name" | "color", value: string) => void;
 }) {
+  const t = useTranslations("settings");
   const hasChildren = category.children && category.children.length > 0;
   const isExpanded = expanded.has(category.id);
   const isEditing = editState?.id === category.id;
@@ -119,7 +121,7 @@ function CategoryRow({
                   size="sm"
                   className="h-7 w-7 p-0"
                   onClick={() => onAddChild(category.id)}
-                  title="Dodaj podkategorię"
+                  title={t("dodajPodkategorie")}
                 >
                   <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -138,7 +140,7 @@ function CategoryRow({
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => onDelete(category.id)}
-                title="Usuń"
+                title={t("delete")}
               >
                 <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
@@ -168,6 +170,8 @@ function CategoryRow({
 }
 
 export default function ProductCategoriesPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data: tree, isLoading } = useCategoryTree();
   const createCategory = useCreateCategory();
   const deleteCategory = useDeleteCategory();
@@ -218,7 +222,7 @@ export default function ProductCategoriesPage() {
       toast.success("Kategoria zaktualizowana");
       setEditState(null);
     } catch {
-      toast.error("Błąd podczas aktualizacji kategorii");
+      toast.error(t("bładpodczasaktualizacjikategorii"));
     }
   };
 
@@ -235,9 +239,9 @@ export default function ProductCategoriesPage() {
   const handleDelete = async (id: string) => {
     try {
       await deleteCategory.mutateAsync(id);
-      toast.success("Kategoria usunięta");
+      toast.success(t("kategoriaUsunieta"));
     } catch {
-      toast.error("Błąd podczas usuwania kategorii");
+      toast.error(t("bładpodczasusuwaniakategorii"));
     }
   };
 
@@ -268,12 +272,12 @@ export default function ProductCategoriesPage() {
       setNewCategoryColor("#6b7280");
       setShowAddForm(false);
     } catch {
-      toast.error("Błąd podczas tworzenia kategorii");
+      toast.error(t("bładpodczastworzeniakategorii"));
     }
   };
 
   if (isLoading) {
-    return <div className="p-6">Ładowanie...</div>;
+    return <div className="p-6">{tc("loading")}</div>;
   }
 
   return (
@@ -281,9 +285,9 @@ export default function ProductCategoriesPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Kategorie produktów</h1>
+            <h1 className="text-2xl font-bold">{t("kategorieProduktow")}</h1>
             <p className="text-muted-foreground mt-1">
-              Zarządzaj hierarchicznym drzewem kategorii
+              {t("zarzadzajHierarchicznymDrzewemKategorii")}
             </p>
           </div>
           <Button onClick={handleAddRoot} size="sm">
@@ -322,7 +326,7 @@ export default function ProductCategoriesPage() {
                   onClick={handleCreateCategory}
                   disabled={createCategory.isPending}
                 >
-                  {createCategory.isPending ? "Tworzenie..." : "Utwórz"}
+                  {createCategory.isPending ? "Tworzenie..." : tc("create")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -334,7 +338,7 @@ export default function ProductCategoriesPage() {
               </div>
               {addingParentId && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  Dodajesz podkategorię
+                  {t("dodajeszPodkategorie")}
                 </p>
               )}
             </CardContent>
@@ -348,7 +352,7 @@ export default function ProductCategoriesPage() {
           <CardContent>
             {!tree || tree.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Brak kategorii. Kliknij &quot;Nowa kategoria&quot; aby dodać pierwszą.
+                {t("brakKategoriiKliknijQuotnowaKategoriaquotAbyDodac")}
               </p>
             ) : (
               <div className="space-y-0.5">

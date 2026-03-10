@@ -30,8 +30,10 @@ import {
 } from "@/lib/constants";
 import { Plus, Trash2 } from "lucide-react";
 import type { AutomationRule } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function AutomationRulesPage() {
+  const t = useTranslations("automation");
   const router = useRouter();
   const [triggerFilter, setTriggerFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -52,12 +54,12 @@ export default function AutomationRulesPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("Czy na pewno chcesz usunąć tę regułę?")) return;
+    if (!confirm(t("czynapewnochceszusunacteregułe"))) return;
     try {
       await deleteRule.mutateAsync(id);
-      toast.success("Reguła została usunięta");
+      toast.success(t("regułazostałausunieta"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nie udało się usunąć reguły";
+      const message = err instanceof Error ? err.message : t("nieudałosieusunacreguły");
       toast.error(message);
     }
   };
@@ -69,7 +71,7 @@ export default function AutomationRulesPage() {
         <div>
           <h1 className="text-2xl font-bold">Automatyzacja</h1>
           <p className="text-muted-foreground mt-1">
-            Reguły automatycznego przetwarzania zdarzeń
+            {t("regułyAutomatycznegoPrzetwarzaniaZdarzen")}
           </p>
           <p className="text-sm text-muted-foreground">
             Reguły automatyzacji wykonują wewnętrzne akcje (zmiana statusu, wysyłka powiadomień) gdy spełnione są warunki.
@@ -77,7 +79,7 @@ export default function AutomationRulesPage() {
         </div>
         <Button onClick={() => router.push("/settings/automation/new")}>
           <Plus className="h-4 w-4" />
-          Nowa reguła
+          {t("newRule")}
         </Button>
       </div>
 
@@ -85,7 +87,7 @@ export default function AutomationRulesPage() {
         <div className="w-[280px]">
           <Select value={triggerFilter || "all"} onValueChange={handleTriggerChange}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Zdarzenie wyzwalające" />
+              <SelectValue placeholder={t("zdarzenieWyzwalajace")} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie zdarzenia</SelectItem>
@@ -102,10 +104,10 @@ export default function AutomationRulesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -157,7 +159,7 @@ export default function AutomationRulesPage() {
                             : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                         }
                       >
-                        {rule.enabled ? "Aktywna" : "Wyłączona"}
+                        {rule.enabled ? "Aktywna" : t("wyłaczona1")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">{rule.fire_count}</TableCell>
@@ -176,7 +178,7 @@ export default function AutomationRulesPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    Brak reguł automatyzacji
+                    {t("brakRegułAutomatyzacji")}
                   </TableCell>
                 </TableRow>
               )}

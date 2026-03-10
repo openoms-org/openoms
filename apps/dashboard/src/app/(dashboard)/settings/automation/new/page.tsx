@@ -34,8 +34,10 @@ import {
 } from "@/lib/constants";
 import { ArrowLeft, Save, Plus, Trash2, Loader2 } from "lucide-react";
 import type { AutomationCondition, AutomationAction } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function NewAutomationRulePage() {
+  const t = useTranslations("automation");
   const router = useRouter();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const createRule = useCreateAutomationRule();
@@ -84,11 +86,11 @@ export default function NewAutomationRulePage() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Nazwa reguły jest wymagana");
+      toast.error(t("nazwaregułyjestwymagana"));
       return;
     }
     if (!triggerEvent) {
-      toast.error("Zdarzenie wyzwalające jest wymagane");
+      toast.error(t("zdarzenieWyzwalajaceJestWymagane"));
       return;
     }
 
@@ -102,10 +104,10 @@ export default function NewAutomationRulePage() {
         conditions,
         actions,
       });
-      toast.success("Reguła została utworzona");
+      toast.success(t("regułazostałautworzona"));
       router.push("/settings/automation");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nie udało się utworzyć reguły";
+      const message = err instanceof Error ? err.message : t("nieudałosieutworzycreguły");
       toast.error(message);
     }
   };
@@ -115,12 +117,12 @@ export default function NewAutomationRulePage() {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push("/settings/automation")}>
           <ArrowLeft className="h-4 w-4" />
-          Wróć
+          {t("wroc")}
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Nowa reguła</h1>
+          <h1 className="text-2xl font-bold">{t("newRule")}</h1>
           <p className="text-muted-foreground">
-            Utwórz nową regułę automatyzacji
+            {t("utworzNowaRegułeAutomatyzacji")}
           </p>
         </div>
       </div>
@@ -137,7 +139,7 @@ export default function NewAutomationRulePage() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Np. Auto-potwierdzenie zamówień Allegro"
+                placeholder={t("npAutopotwierdzenieZamowienAllegro")}
               />
             </div>
             <div className="space-y-2">
@@ -158,13 +160,13 @@ export default function NewAutomationRulePage() {
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Opcjonalny opis reguły..."
+              placeholder={t("opcjonalnyopisreguły")}
               rows={2}
             />
           </div>
           <div className="flex items-center gap-3">
             <Switch checked={enabled} onCheckedChange={setEnabled} />
-            <Label>Reguła aktywna</Label>
+            <Label>{t("regułaaktywna")}</Label>
           </div>
         </CardContent>
       </Card>
@@ -172,7 +174,7 @@ export default function NewAutomationRulePage() {
       {/* Trigger */}
       <Card>
         <CardHeader>
-          <CardTitle>Zdarzenie wyzwalające *</CardTitle>
+          <CardTitle>{t("zdarzenieWyzwalajace1")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Select value={triggerEvent || "none"} onValueChange={(v) => setTriggerEvent(v === "none" ? "" : v)}>
@@ -205,7 +207,7 @@ export default function NewAutomationRulePage() {
         <CardContent className="space-y-4">
           {conditions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Brak warunków - reguła uruchomi się przy każdym zdarzeniu wybranego typu.
+              {t("brakWarunkowRegułaUruchomiSiePrzyKazdym")}
             </p>
           ) : (
             conditions.map((condition, index) => (
@@ -238,11 +240,11 @@ export default function NewAutomationRulePage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Wartość</Label>
+                    <Label className="text-xs">{t("detail.value")}</Label>
                     <Input
                       value={String(condition.value ?? "")}
                       onChange={(e) => updateCondition(index, { value: e.target.value })}
-                      placeholder="wartość"
+                      placeholder={t("wartosc")}
                     />
                   </div>
                 </div>
@@ -267,14 +269,14 @@ export default function NewAutomationRulePage() {
             <CardTitle>Akcje</CardTitle>
             <Button variant="outline" size="sm" onClick={addAction}>
               <Plus className="h-4 w-4" />
-              Dodaj akcję
+              {t("dodajAkcje")}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {actions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Brak akcji - dodaj co najmniej jedną akcję do wykonania.
+              {t("brakAkcjiDodajCoNajmniejJednaAkcje")}
             </p>
           ) : (
             actions.map((action, index) => (
@@ -394,7 +396,7 @@ export default function NewAutomationRulePage() {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          Utwórz regułę
+          {t("utworzRegułe")}
         </Button>
       </div>
     </div>

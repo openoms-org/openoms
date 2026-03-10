@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { useTranslations } from "next-intl";
 
 const PERMISSION_LABELS: Record<string, string> = {
   "orders.view": "Podgląd",
@@ -49,6 +50,7 @@ const PERMISSION_LABELS: Record<string, string> = {
 };
 
 export default function RoleDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations("roles");
   const { id } = use(params);
   const router = useRouter();
   const { data: role, isLoading } = useRole(id);
@@ -109,7 +111,7 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
       },
       {
         onSuccess: () => {
-          toast.success("Rola została zapisana");
+          toast.success(t("rolaZostałaZapisana"));
           setDirty(false);
         },
         onError: (error) => {

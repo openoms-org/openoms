@@ -25,8 +25,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
 export default function NewStocktakePage() {
+  const t = useTranslations("stocktakes");
   const router = useRouter();
   const { data: warehousesData, isLoading: warehousesLoading } = useWarehouses({
     limit: 100,
@@ -43,7 +45,7 @@ export default function NewStocktakePage() {
     e.preventDefault();
 
     if (!warehouseId || !name.trim()) {
-      toast.error("Wypełnij wymagane pola");
+      toast.error(t("wypełnijwymaganepola"));
       return;
     }
 
@@ -55,7 +57,7 @@ export default function NewStocktakePage() {
       },
       {
         onSuccess: (data) => {
-          toast.success("Inwentaryzacja została utworzona");
+          toast.success(t("inwentaryzacjazostałautworzona"));
           router.push(`/stocktakes/${data.id}`);
         },
         onError: (error) => {
@@ -73,7 +75,7 @@ export default function NewStocktakePage() {
           Nowa inwentaryzacja
         </h1>
         <p className="text-muted-foreground">
-          Utwórz nową inwentaryzację dla wybranego magazynu
+          {t("utworzNowaInwentaryzacjeDlaWybranegoMagazynu")}
         </p>
       </div>
 
@@ -81,7 +83,7 @@ export default function NewStocktakePage() {
         <CardHeader>
           <CardTitle>Dane inwentaryzacji</CardTitle>
           <CardDescription>
-            Po utworzeniu inwentaryzacji, do pozycji zostaną automatycznie
+            {t("poUtworzeniuInwentaryzacjiDoPozycjiZostanaAutomaty")}
             dodane wszystkie produkty z wybranego magazynu wraz z ich aktualnymi
             stanami magazynowymi.
           </CardDescription>
@@ -145,7 +147,7 @@ export default function NewStocktakePage() {
               >
                 {createStocktake.isPending
                   ? "Tworzenie..."
-                  : "Utwórz inwentaryzację"}
+                  : t("utworzInwentaryzacje")}
               </Button>
             </div>
           </form>

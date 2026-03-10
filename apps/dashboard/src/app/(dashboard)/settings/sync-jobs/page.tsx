@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { shortId } from "@/lib/utils";
 import type { SyncJob } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const STATUS_OPTIONS = [
   { value: "__all__", label: "Wszystkie" },
@@ -60,6 +61,7 @@ function formatDate(dateStr?: string) {
 }
 
 export default function SyncJobsPage() {
+  const t = useTranslations("syncJobs");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [jobTypeFilter, setJobTypeFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -111,12 +113,12 @@ export default function SyncJobsPage() {
       cell: (row) => statusBadge(row.status),
     },
     {
-      header: "Rozpoczęto",
+      header: t("rozpoczeto"),
       accessorKey: "started_at",
       cell: (row) => formatDate(row.started_at),
     },
     {
-      header: "Zakończono",
+      header: t("zakonczono"),
       accessorKey: "finished_at",
       cell: (row) => formatDate(row.finished_at),
     },
@@ -126,7 +128,7 @@ export default function SyncJobsPage() {
       cell: (row) => row.items_processed,
     },
     {
-      header: "Błędy",
+      header: t("błedy1"),
       accessorKey: "items_failed",
       cell: (row) =>
         row.items_failed > 0 ? (
@@ -155,7 +157,7 @@ export default function SyncJobsPage() {
       <div>
         <h1 className="text-2xl font-bold">Historia synchronizacji</h1>
         <p className="text-muted-foreground mt-1">
-          Przegląd wszystkich zadań synchronizacji z zewnętrznymi integracjami
+          {t("przegladWszystkichZadanSynchronizacjiZZewnetrznymi")}
         </p>
       </div>
 
@@ -196,7 +198,7 @@ export default function SyncJobsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -204,7 +206,7 @@ export default function SyncJobsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -214,7 +216,7 @@ export default function SyncJobsPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak zadań synchronizacji"
+          emptyMessage={t("brakZadanSynchronizacji")}
           rowId={(row) => row.id}
           onRowClick={(row) => setSelectedJob(row)}
         />
@@ -233,7 +235,7 @@ export default function SyncJobsPage() {
       <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Szczegóły synchronizacji</DialogTitle>
+            <DialogTitle>{t("szczegołysynchronizacji")}</DialogTitle>
             <DialogDescription>
               ID: {selectedJob?.id}
             </DialogDescription>
@@ -258,11 +260,11 @@ export default function SyncJobsPage() {
                   <p>{formatDate(selectedJob.created_at)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Rozpoczęto:</span>
+                  <span className="font-medium text-muted-foreground">{t("rozpoczeto1")}</span>
                   <p>{formatDate(selectedJob.started_at)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Zakończono:</span>
+                  <span className="font-medium text-muted-foreground">{t("zakonczono1")}</span>
                   <p>{formatDate(selectedJob.finished_at)}</p>
                 </div>
                 <div>
@@ -270,13 +272,13 @@ export default function SyncJobsPage() {
                   <p>{selectedJob.items_processed}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Błędy:</span>
+                  <span className="font-medium text-muted-foreground">{t("błedy1")}</span>
                   <p>{selectedJob.items_failed}</p>
                 </div>
               </div>
               {selectedJob.error_message && (
                 <div>
-                  <span className="font-medium text-muted-foreground text-sm">Komunikat błędu:</span>
+                  <span className="font-medium text-muted-foreground text-sm">{t("komunikatbłedu")}</span>
                   <p className="text-destructive text-sm mt-1">{selectedJob.error_message}</p>
                 </div>
               )}

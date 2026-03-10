@@ -32,8 +32,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 export default function RolesPage() {
+  const t = useTranslations("roles");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useRoles({ limit: 100 });
   const deleteRole = useDeleteRole();
@@ -54,7 +57,7 @@ export default function RolesPage() {
     if (!deleteId) return;
     deleteRole.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Rola została usunięta");
+        toast.success(t("rolazostałausunieta"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -73,7 +76,7 @@ export default function RolesPage() {
       },
       {
         onSuccess: (role) => {
-          toast.success("Rola została utworzona");
+          toast.success(t("rolazostałautworzona"));
           setShowCreate(false);
           setNewName("");
           setNewDesc("");
@@ -92,7 +95,7 @@ export default function RolesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Role</h1>
           <p className="text-muted-foreground">
-            Zarządzaj rolami i uprawnieniami użytkowników
+            {t("zarzadzajRolamiIUprawnieniamiUzytkownikow")}
           </p>
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -106,7 +109,7 @@ export default function RolesPage() {
             <DialogHeader>
               <DialogTitle>Nowa rola</DialogTitle>
               <DialogDescription>
-                Utwórz nową rolę i przypisz uprawnienia
+                {t("utworzNowaRoleIPrzypiszUprawnienia")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -140,7 +143,7 @@ export default function RolesPage() {
                 onClick={handleCreate}
                 disabled={!newName.trim() || createRole.isPending}
               >
-                {createRole.isPending ? "Tworzenie..." : "Utwórz"}
+                {createRole.isPending ? "Tworzenie..." : tc("create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -150,7 +153,7 @@ export default function RolesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4 mb-6">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -158,7 +161,7 @@ export default function RolesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -166,8 +169,8 @@ export default function RolesPage() {
       {roles.length === 0 ? (
         <EmptyState
           icon={Shield}
-          title="Brak ról"
-          description="Utwórz pierwszą rolę, aby zarządzać uprawnieniami użytkowników."
+          title={t("brakRol")}
+          description={t("utworzPierwszaRoleAbyZarzadzacUprawnieniamiUzytkow")}
         />
       ) : (
         <div className="rounded-md border">
@@ -242,9 +245,9 @@ export default function RolesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń rolę"
-        description="Czy na pewno chcesz usunąć tę rolę? Użytkownicy z tą rolą stracą przypisane uprawnienia."
-        confirmLabel="Usuń"
+        title={t("usunRole")}
+        description={t("czyNaPewnoChceszUsunacTeRoleUzytkownicyZTaRolaStra")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteRole.isPending}

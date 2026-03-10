@@ -25,10 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const KNOWN_PROVIDERS = ["allegro", "amazon", "olx", "shoper", "prestashop", "shopify"];
 
 export default function MarketplacesPage() {
+  const t = useTranslations("marketplaces");
   const router = useRouter();
   const { marketplaces, isLoading, isError, refetch } = useIntegrationsByCategory();
   const deleteIntegration = useDeleteIntegration();
@@ -64,7 +66,7 @@ export default function MarketplacesPage() {
     <AdminGuard>
       <PageHeader
         title="Marketplace"
-        description="Zarządzaj połączeniami z platformami sprzedażowymi"
+        description={t("zarzadzajpołaczeniamizplatformamisprzedazowymi")}
         action={{ label: "Dodaj marketplace", href: "/marketplaces/new" }}
       />
 
@@ -88,7 +90,7 @@ export default function MarketplacesPage() {
         <EmptyState
           icon={Store}
           title="Brak marketplace"
-          description="Dodaj pierwszą platformę sprzedażową, aby synchronizować zamówienia i produkty."
+          description={t("dodajPierwszaPlatformeSprzedazowaAbySynchronizowac")}
           action={{ label: "Dodaj marketplace", href: "/marketplaces/new" }}
         />
       ) : (
@@ -99,7 +101,7 @@ export default function MarketplacesPage() {
                 <TableHead>Platforma</TableHead>
                 <TableHead>Etykieta</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Dane uwierzytelniające</TableHead>
+                <TableHead>{t("daneUwierzytelniajace")}</TableHead>
                 <TableHead>Ostatnia synchronizacja</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[60px]" />

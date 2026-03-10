@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
 const loginSchema = z.object({
   tenant_slug: z.string().min(1, "Slug organizacji jest wymagany"),
@@ -24,6 +25,7 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const t = useTranslations("auth");
   const { login, verify2FALogin } = useAuth();
   const config = usePublicConfig();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,7 +98,7 @@ export default function LoginPage() {
             </div>
             <CardTitle className="text-2xl">Weryfikacja 2FA</CardTitle>
             <CardDescription>
-              Kod z aplikacji uwierzytelniającej
+              {t("twoFa.subtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -116,7 +118,7 @@ export default function LoginPage() {
                 disabled={isVerifying2FA}
               />
               <p className="text-xs text-muted-foreground text-center">
-                Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej
+                {t("twoFa.codeHint")}
               </p>
             </div>
           </CardContent>
@@ -137,7 +139,7 @@ export default function LoginPage() {
                 setTotpCode("");
               }}
             >
-              Wróć do logowania
+              {t("twoFa.backToLogin")}
             </button>
           </CardFooter>
         </Card>
@@ -154,7 +156,7 @@ export default function LoginPage() {
       <Card className="w-full">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Logowanie</CardTitle>
-          <CardDescription>Zaloguj się do panelu OpenOMS</CardDescription>
+          <CardDescription>{t("login.subtitle")}</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
@@ -184,7 +186,7 @@ export default function LoginPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Hasło <span className="text-destructive">*</span></Label>
+              <Label htmlFor="password">{t("login.password")}<span className="text-destructive">*</span></Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -198,7 +200,7 @@ export default function LoginPage() {
                   className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowPassword((prev) => !prev)}
                   tabIndex={-1}
-                  aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
+                  aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -214,13 +216,13 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Logowanie..." : "Zaloguj się"}
+              {isSubmitting ? "Logowanie..." : t("login.submit")}
             </Button>
             {(config.registration_mode === "open" || (config.registration_mode === "invite" && config.license_enabled)) && (
               <p className="text-sm text-muted-foreground">
                 Nie masz konta?{" "}
                 <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-                  Zarejestruj się
+                  {t("login.register")}
                 </Link>
               </p>
             )}

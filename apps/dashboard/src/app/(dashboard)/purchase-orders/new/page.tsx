@@ -43,12 +43,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { CreatePurchaseOrderItemReq } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface ItemRow extends CreatePurchaseOrderItemReq {
   _key: string;
 }
 
 export default function NewPurchaseOrderPage() {
+  const t = useTranslations("purchaseOrders");
+  const tc = useTranslations("common");
   const router = useRouter();
   const createPO = useCreatePurchaseOrder();
   const sendPO = useSendPurchaseOrder();
@@ -118,7 +121,7 @@ export default function NewPurchaseOrderPage() {
       return;
     }
     if (items.length === 0) {
-      toast.error("Dodaj przynajmniej jedną pozycję");
+      toast.error(t("dodajPrzynajmniejJednaPozycje"));
       return;
     }
 
@@ -137,7 +140,7 @@ export default function NewPurchaseOrderPage() {
         if (sendAfterCreate) {
           sendPO.mutate(po.id, {
             onSuccess: () => {
-              toast.success("Zamówienie zakupu zostało utworzone i wysłane");
+              toast.success(t("zamowieniezakupuzostałoutworzoneiwysłane"));
               router.push(`/purchase-orders/${po.id}`);
             },
             onError: (error) => {
@@ -146,7 +149,7 @@ export default function NewPurchaseOrderPage() {
             },
           });
         } else {
-          toast.success("Zamówienie zakupu zostało utworzone");
+          toast.success(t("zamowieniezakupuzostałoutworzone"));
           router.push(`/purchase-orders/${po.id}`);
         }
       },
@@ -168,7 +171,7 @@ export default function NewPurchaseOrderPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">
-            Nowe zamówienie zakupu
+            {t("noweZamowienieZakupu")}
           </h1>
         </div>
 
@@ -176,14 +179,14 @@ export default function NewPurchaseOrderPage() {
           <Card>
             <CardHeader>
               <CardTitle>Dostawca</CardTitle>
-              <CardDescription>Wybierz dostawcę lub wpisz nazwę</CardDescription>
+              <CardDescription>{t("wybierzDostawceLubWpiszNazwe")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Dostawca z listy</Label>
                 <Select value={supplierID} onValueChange={handleSupplierChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Wybierz dostawcę..." />
+                    <SelectValue placeholder={t("allegro.selectProvider")} />
                   </SelectTrigger>
                   <SelectContent>
                     {suppliers.map((s) => (
@@ -208,9 +211,9 @@ export default function NewPurchaseOrderPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Szczegóły</CardTitle>
+              <CardTitle>{tc("details")}</CardTitle>
               <CardDescription>
-                Dodatkowe informacje o zamówieniu
+                {t("dodatkoweInformacjeOZamowieniu")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -260,7 +263,7 @@ export default function NewPurchaseOrderPage() {
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Notatki do zamówienia..."
+                  placeholder={t("notatkiDoZamowienia")}
                   rows={3}
                 />
               </div>
@@ -272,9 +275,9 @@ export default function NewPurchaseOrderPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Pozycje zamówienia</CardTitle>
+                <CardTitle>{t("form.orderItems")}</CardTitle>
                 <CardDescription>
-                  Dodaj produkty do zamówienia zakupu
+                  {t("dodajProduktyDoZamowieniaZakupu")}
                 </CardDescription>
               </div>
               <div className="flex gap-2">
@@ -292,7 +295,7 @@ export default function NewPurchaseOrderPage() {
                   onClick={() => addItem()}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Dodaj pozycję
+                  {t("form.addItem")}
                 </Button>
               </div>
             </div>
@@ -300,7 +303,7 @@ export default function NewPurchaseOrderPage() {
           <CardContent>
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Dodaj pozycje do zamówienia klikając przyciski powyżej.
+                {t("dodajPozycjeDoZamowieniaKlikajacPrzyciskiPowyzej")}
               </p>
             ) : (
               <Table>
@@ -308,9 +311,9 @@ export default function NewPurchaseOrderPage() {
                   <TableRow>
                     <TableHead>Produkt</TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead className="w-[100px]">Ilość</TableHead>
+                    <TableHead className="w-[100px]">{tc("quantity")}</TableHead>
                     <TableHead className="w-[120px]">Cena jedn.</TableHead>
-                    <TableHead className="text-right w-[120px]">Wartość</TableHead>
+                    <TableHead className="text-right w-[120px]">{t("detail.value")}</TableHead>
                     <TableHead className="w-[60px]" />
                   </TableRow>
                 </TableHeader>
@@ -418,7 +421,7 @@ export default function NewPurchaseOrderPage() {
           >
             {createPO.isPending || sendPO.isPending
               ? "Tworzenie..."
-              : "Zapisz i wyślij"}
+              : t("zapiszIWyslij")}
           </Button>
         </div>
       </div>
@@ -464,8 +467,8 @@ export default function NewPurchaseOrderPage() {
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {productSearch
-                    ? "Brak wyników"
-                    : "Wpisz nazwę, aby wyszukać"}
+                    ? tc("noResultsFound")
+                    : t("wpiszNazweAbyWyszukac")}
                 </p>
               )}
             </div>

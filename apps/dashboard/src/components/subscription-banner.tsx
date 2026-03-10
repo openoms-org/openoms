@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuthStore } from "@/lib/auth";
 import { useSubscription } from "@/hooks/use-billing";
 import { AlertTriangle, Clock, XCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 function computeDaysLeft(trialEnd: string): number {
   return Math.max(
@@ -16,6 +17,7 @@ function computeDaysLeft(trialEnd: string): number {
 }
 
 export function SubscriptionBanner() {
+  const t = useTranslations("shared");
   const tenant = useAuthStore((s) => s.tenant);
   const { data: subscription } = useSubscription();
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
@@ -34,7 +36,7 @@ export function SubscriptionBanner() {
     return (
       <div className="bg-destructive text-destructive-foreground px-4 py-3 text-center text-sm font-medium">
         <XCircle className="mr-2 inline h-4 w-4" />
-        Subskrypcja została zawieszona. Odnów płatność aby kontynuować korzystanie z systemu.
+        {t("suspended")}
       </div>
     );
   }
@@ -43,7 +45,7 @@ export function SubscriptionBanner() {
     return (
       <div className="bg-orange-500 text-white px-4 py-3 text-center text-sm font-medium">
         <AlertTriangle className="mr-2 inline h-4 w-4" />
-        Płatność zaległa. Tworzenie nowych zasobów zostało zablokowane do momentu uregulowania należności.
+        {t("pastDue")}
       </div>
     );
   }
@@ -54,7 +56,7 @@ export function SubscriptionBanner() {
         <Clock className="mr-2 inline h-4 w-4" />
         Okres próbny — pozostało {daysLeft} dni.{" "}
         <Link href="/settings/billing" className="underline hover:no-underline">
-          Zarządzaj subskrypcją →
+          {t("zarzadzajSubskrypcja")}
         </Link>
       </div>
     );
@@ -67,7 +69,7 @@ export function SubscriptionBanner() {
         <AlertTriangle className="mr-2 inline h-4 w-4" />
         Subskrypcja anulowana. Dostęp wygasa {expiresAt}.{" "}
         <Link href="/settings/billing" className="underline hover:no-underline">
-          Odnów subskrypcję →
+          {t("odnowSubskrypcje")}
         </Link>
       </div>
     );

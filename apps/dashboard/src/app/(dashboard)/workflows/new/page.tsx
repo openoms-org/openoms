@@ -15,8 +15,10 @@ import {
 import { ArrowLeft, Plus, FileText } from "lucide-react";
 import type { WorkflowTemplate } from "@/types/api";
 import { createEmptyWorkflow } from "@/lib/workflow-types";
+import { useTranslations } from "next-intl";
 
 export default function NewWorkflowPage() {
+  const t = useTranslations("workflows");
   const router = useRouter();
   const { data: templates, isLoading } = useWorkflowTemplates();
 
@@ -46,7 +48,7 @@ export default function NewWorkflowPage() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.push("/workflows")}>
             <ArrowLeft className="h-4 w-4" />
-            Wróc
+            {t("wroc")}
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Nowy workflow</h1>

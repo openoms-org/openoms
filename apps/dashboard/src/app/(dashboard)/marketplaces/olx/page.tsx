@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Integration } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 function getRedirectURI() {
   if (typeof window !== "undefined") {
@@ -63,6 +64,7 @@ export default function OlxIntegrationPage() {
 }
 
 function OAuthCallback({ code, state }: { code: string; state: string }) {
+  const t = useTranslations("marketplaces");
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading"
   );
@@ -84,7 +86,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
       .catch((err) => {
         setStatus("error");
         setErrorMsg(
-          err instanceof Error ? err.message : "Autoryzacja nie powiodła się"
+          err instanceof Error ? err.message : t("autoryzacjaNiePowiodłaSie")
         );
       });
   }, [code, state]);
@@ -97,7 +99,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Łączenie z OLX...
+                {t("łaczenieZOlx")}
               </p>
             </>
           )}
@@ -105,7 +107,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <p className="text-sm font-medium">
-                Połączono z OLX! Okno zamknie się automatycznie.
+                {t("połaczonoZOlxOknoZamknieSieAutomatycznie")}
               </p>
             </>
           )}
@@ -129,6 +131,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
 }
 
 function OlxMainPage() {
+  const t = useTranslations("marketplaces");
   const { data: integrations, isLoading, refetch } = useIntegrations();
 
   const olx = useMemo(
@@ -157,7 +160,7 @@ function OlxMainPage() {
           <div>
             <h1 className="text-2xl font-bold">Integracja OLX</h1>
             <p className="text-muted-foreground">
-              Połącz swoje konto OLX, aby synchronizować ogłoszenia i
+              {t("połaczSwojeKontoOlxAbySynchronizowacOgłoszenia")}
               transakcje
             </p>
           </div>
@@ -208,6 +211,7 @@ function CopyableField({ label, value }: { label: string; value: string }) {
 }
 
 function SetupState({ onCreated }: { onCreated: () => void }) {
+  const t = useTranslations("marketplaces");
   const createIntegration = useCreateIntegration();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -233,7 +237,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
       if (!popup) {
         toast.error(
-          "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna i spróbuj ponownie."
+          t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac")
         );
         setIsAuthorizing(false);
         onDone();
@@ -248,7 +252,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         }
       }, 500);
     } catch {
-      toast.error("Nie udało się pobrać adresu autoryzacji OLX");
+      toast.error(t("nieUdałoSiePobracAdresuAutoryzacjiOlx"));
       setIsAuthorizing(false);
       onDone();
     }
@@ -256,7 +260,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
   const handleSave = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
-      toast.error("Client ID i Client Secret są wymagane");
+      toast.error(t("clientIdIClientSecretSaWymagane"));
       return;
     }
 
@@ -278,7 +282,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas zapisywania danych"
+              : t("bładPodczasZapisywaniaDanych")
           );
         },
       }
@@ -289,9 +293,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Krok 1: Zarejestruj aplikację w OLX</CardTitle>
+          <CardTitle>{t("krok1ZarejestrujAplikacjeWOlx")}</CardTitle>
           <CardDescription>
-            Przed połączeniem musisz utworzyć aplikację w panelu deweloperskim
+            {t("przedPołaczeniemMusiszUtworzycAplikacjeWPanelu")}
             OLX.
           </CardDescription>
         </CardHeader>
@@ -309,10 +313,10 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 <ExternalLink className="h-3 w-3" />
               </a>
             </li>
-            <li>Zarejestruj nową aplikację</li>
+            <li>{t("zarejestrujNowaAplikacje")}</li>
             <li>
               W polu <strong>Adres przekierowania (Redirect URI)</strong> wklej
-              poniższy adres:
+              {t("ponizszyAdres")}
             </li>
           </ol>
 
@@ -323,8 +327,8 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
             <p className="text-xs text-amber-800 dark:text-amber-200">
-              Redirect URI musi być <strong>dokładnie taki sam</strong> jak
-              powyżej. Różnica w nawet jednym znaku spowoduje błąd autoryzacji.
+              Redirect URI musi być <strong>{t("dokładnieTakiSam")}</strong> jak
+              {t("powyzejRoznicaWNawetJednymZnakuSpowoduje")}
             </p>
           </div>
 
@@ -336,7 +340,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Krok 2: Wprowadź dane aplikacji</CardTitle>
+          <CardTitle>{t("krok2WprowadzDaneAplikacji")}</CardTitle>
           <CardDescription>
             Wklej Client ID i Client Secret z panelu deweloperskiego OLX.
           </CardDescription>
@@ -391,7 +395,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             <Save className="mr-2 h-4 w-4" />
-            Zapisz i przejdź do autoryzacji
+            {t("zapiszIPrzejdzDoAutoryzacji")}
           </Button>
         </CardContent>
       </Card>
@@ -406,6 +410,7 @@ function ConnectedState({
   integration: Integration;
   onRefetch: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
   const deleteIntegration = useDeleteIntegration();
   const [isReauthorizing, setIsReauthorizing] = useState(false);
@@ -415,14 +420,14 @@ function ConnectedState({
       { status: "inactive" },
       {
         onSuccess: () => {
-          toast.success("Integracja OLX została dezaktywowana");
+          toast.success(t("integracjaOlxZostałaDezaktywowana"));
           onRefetch();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas dezaktywacji integracji"
+              : t("bładPodczasDezaktywacjiIntegracji")
           );
         },
       }
@@ -432,21 +437,21 @@ function ConnectedState({
   const handleDelete = () => {
     if (
       !confirm(
-        "Czy na pewno chcesz usunąć integrację OLX? Ta operacja jest nieodwracalna."
+        t("czyNaPewnoChceszUsunacIntegracjeOlxTaOperacjaJestN")
       )
     ) {
       return;
     }
     deleteIntegration.mutate(integration.id, {
       onSuccess: () => {
-        toast.success("Integracja OLX została usunięta");
+        toast.success(t("integracjaOlxZostałaUsunieta"));
         onRefetch();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Błąd podczas usuwania integracji"
+            : t("bładPodczasUsuwaniaIntegracji")
         );
       },
     });
@@ -470,7 +475,7 @@ function ConnectedState({
 
         if (!popup) {
           toast.error(
-            "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna."
+            t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac1")
           );
           setIsReauthorizing(false);
           return;
@@ -484,7 +489,7 @@ function ConnectedState({
           }
         }, 500);
       } catch {
-        toast.error("Nie udało się pobrać adresu autoryzacji");
+        toast.error(t("nieUdałoSiePobracAdresuAutoryzacji"));
         setIsReauthorizing(false);
       }
     };
@@ -501,14 +506,14 @@ function ConnectedState({
           <CardHeader>
             <CardTitle>Autoryzacja OAuth</CardTitle>
             <CardDescription>
-              Dane aplikacji zostały zapisane. Kliknij poniżej, aby autoryzować
-              dostęp do konta OLX. Otworzy się okno popup z logowaniem OLX.
+              {t("daneAplikacjiZostałyZapisaneKliknijPonizejAby")}
+              {t("dostepDoKontaOlxOtworzySieOkno")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <CopyableField
-                label="Redirect URI (musi być zarejestrowany w OLX)"
+                label={t("redirectUriMusiBycZarejestrowanyWOlx")}
                 value={getRedirectURI()}
               />
               <Button
@@ -521,7 +526,7 @@ function ConnectedState({
                 ) : (
                   <ExternalLink className="mr-2 h-4 w-4" />
                 )}
-                Połącz z OLX
+                {t("połaczZOlx")}
               </Button>
             </div>
           </CardContent>
@@ -531,7 +536,7 @@ function ConnectedState({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Status połączenia</CardTitle>
+            <CardTitle>{t("statusPołaczenia")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -546,7 +551,7 @@ function ConnectedState({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Dane uwierzytelniające
+                  {t("daneUwierzytelniajace")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.has_credentials ? "Skonfigurowane" : "Brak"}
@@ -583,7 +588,7 @@ function ConnectedState({
             {integration.status === "error" && integration.error_message && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
                 <p className="text-sm font-medium text-destructive">
-                  Błąd integracji
+                  {t("bładIntegracji")}
                 </p>
                 <p className="mt-1 text-sm text-destructive/80">
                   {integration.error_message}
@@ -610,7 +615,7 @@ function ConnectedState({
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Odśwież token
+                {t("odswiezToken")}
               </Button>
             )}
             <Button
@@ -640,7 +645,7 @@ function ConnectedState({
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Usuń integrację
+              {t("usunIntegracje")}
             </Button>
           </CardContent>
         </Card>
@@ -661,6 +666,7 @@ function CredentialsCard({
   integrationId: string;
   onUpdated: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integrationId);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -668,7 +674,7 @@ function CredentialsCard({
 
   const handleUpdateCredentials = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
-      toast.error("Client ID i Client Secret są wymagane");
+      toast.error(t("clientIdIClientSecretSaWymagane"));
       return;
     }
 
@@ -682,7 +688,7 @@ function CredentialsCard({
       {
         onSuccess: () => {
           toast.success(
-            "Dane zaktualizowane. Kliknij 'Połącz z OLX' aby ponownie autoryzować."
+            t("daneZaktualizowaneKliknijPołaczZOlxAbyPonownieAuto")
           );
           setClientId("");
           setClientSecret("");
@@ -692,7 +698,7 @@ function CredentialsCard({
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas aktualizacji danych"
+              : t("bładPodczasAktualizacjiDanych")
           );
         },
       }
@@ -702,9 +708,9 @@ function CredentialsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zmień dane aplikacji</CardTitle>
+        <CardTitle>{t("zmienDaneAplikacji")}</CardTitle>
         <CardDescription>
-          Zaktualizuj Client ID i Client Secret. Po zmianie konieczna będzie
+          {t("zaktualizujClientIdIClientSecretPo")}
           ponowna autoryzacja OAuth.
         </CardDescription>
       </CardHeader>

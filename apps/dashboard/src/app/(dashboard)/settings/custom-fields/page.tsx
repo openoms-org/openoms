@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Trash2, Plus } from "lucide-react";
 import type { CustomFieldDef, CustomFieldsConfig } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const TYPE_OPTIONS: { value: CustomFieldDef["type"]; label: string }[] = [
   { value: "text", label: "Tekst" },
@@ -28,6 +29,7 @@ const TYPE_OPTIONS: { value: CustomFieldDef["type"]; label: string }[] = [
 ];
 
 export default function CustomFieldsPage() {
+  const t = useTranslations("settings");
   const { data: config, isLoading } = useCustomFields();
   const updateCustomFields = useUpdateCustomFields();
 
@@ -70,14 +72,14 @@ export default function CustomFieldsPage() {
   const handleSave = async () => {
     for (const f of fields) {
       if (!f.key || !f.label) {
-        toast.error("Wszystkie pola muszą mieć klucz i etykietę");
+        toast.error(t("wszystkiePolaMuszaMiecKluczIEtykiete"));
         return;
       }
     }
 
     const keys = fields.map((f) => f.key);
     if (new Set(keys).size !== keys.length) {
-      toast.error("Klucze pól muszą być unikalne");
+      toast.error(t("kluczePolMuszaBycUnikalne"));
       return;
     }
 
@@ -87,16 +89,16 @@ export default function CustomFieldsPage() {
 
     try {
       await updateCustomFields.mutateAsync(configToSave);
-      toast.success("Pola dodatkowe zostały zapisane");
+      toast.success(t("poladodatkowezostałyzapisane"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Błąd podczas zapisywania"
+        error instanceof Error ? error.message : t("bładpodczaszapisywania")
       );
     }
   };
 
   if (isLoading) {
-    return <div className="p-6">Ładowanie...</div>;
+    return <div className="p-6">{t("loading")}</div>;
   }
 
   return (
@@ -105,7 +107,7 @@ export default function CustomFieldsPage() {
       <div>
         <h1 className="text-2xl font-bold">Pola dodatkowe</h1>
         <p className="text-muted-foreground mt-1">
-          Zdefiniuj dodatkowe pola dla zamówień.
+          {t("zdefiniujDodatkowePolaDlaZamowien")}
         </p>
       </div>
 

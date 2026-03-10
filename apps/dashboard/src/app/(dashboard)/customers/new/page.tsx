@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
 const customerSchema = z.object({
   name: z.string().min(1, "Imię i nazwisko jest wymagane"),
@@ -32,6 +33,7 @@ const customerSchema = z.object({
 type CustomerForm = z.infer<typeof customerSchema>;
 
 export default function NewCustomerPage() {
+  const t = useTranslations("customers");
   const router = useRouter();
   const createCustomer = useCreateCustomer();
 
@@ -55,7 +57,7 @@ export default function NewCustomerPage() {
 
     createCustomer.mutate(payload, {
       onSuccess: () => {
-        toast.success("Klient został utworzony");
+        toast.success(t("created"));
         router.push("/customers");
       },
       onError: (error) => {
@@ -81,7 +83,7 @@ export default function NewCustomerPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Imię i nazwisko <span className="text-destructive">*</span></Label>
+              <Label htmlFor="name">{t("form.fullName")}<span className="text-destructive">*</span></Label>
               <Input id="name" aria-invalid={!!errors.name} {...register("name")} placeholder="np. Jan Kowalski" />
               {errors.name && (
                 <p className="text-destructive text-xs mt-1">{errors.name.message}</p>
@@ -131,7 +133,7 @@ export default function NewCustomerPage() {
             </div>
             <div className="flex gap-2 pt-4">
               <Button type="submit" disabled={createCustomer.isPending}>
-                {createCustomer.isPending ? "Tworzenie..." : "Utwórz klienta"}
+                {createCustomer.isPending ? "Tworzenie..." : t("form.submitCreate")}
               </Button>
               <Button type="button" variant="outline" onClick={() => router.push("/customers")}>
                 Anuluj

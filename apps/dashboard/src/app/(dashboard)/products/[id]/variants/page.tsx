@@ -48,6 +48,7 @@ import type {
   CreateVariantRequest,
   UpdateVariantRequest,
 } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface AttributeEntry {
   key: string;
@@ -61,6 +62,7 @@ function AttributeEditor({
   attributes: AttributeEntry[];
   onChange: (attrs: AttributeEntry[]) => void;
 }) {
+  const t = useTranslations("products");
   const addAttribute = () => {
     onChange([...attributes, { key: "", value: "" }]);
   };
@@ -91,7 +93,7 @@ function AttributeEditor({
             className="flex-1"
           />
           <Input
-            placeholder="Wartość (np. Czerwony)"
+            placeholder={t("wartoscNpCzerwony")}
             value={attr.value}
             onChange={(e) => updateAttribute(i, "value", e.target.value)}
             className="flex-1"
@@ -135,6 +137,7 @@ function entriesToAttributes(
 }
 
 export default function ProductVariantsPage() {
+  const t = useTranslations("products");
   const params = useParams<{ id: string }>();
   const productId = params.id;
 
@@ -205,7 +208,7 @@ export default function ProductVariantsPage() {
 
     createVariant.mutate(data, {
       onSuccess: () => {
-        toast.success("Wariant został dodany");
+        toast.success(t("wariantZostałDodany"));
         setShowCreateDialog(false);
         resetCreateForm();
       },
@@ -219,7 +222,7 @@ export default function ProductVariantsPage() {
     if (!deleteVariantId) return;
     deleteVariant.mutate(deleteVariantId, {
       onSuccess: () => {
-        toast.success("Wariant został usunięty");
+        toast.success(t("wariantZostałUsuniety"));
         setDeleteVariantId(null);
       },
       onError: (error) => {
@@ -242,7 +245,7 @@ export default function ProductVariantsPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Nie znaleziono produktu</h1>
         <Button asChild variant="outline">
-          <Link href="/products">Wróć do listy</Link>
+          <Link href="/products">{t("detail.backToList")}</Link>
         </Button>
       </div>
     );
@@ -276,8 +279,8 @@ export default function ProductVariantsPage() {
       ) : !hasVariants ? (
         <EmptyState
           icon={Layers}
-          title="Brak wariantów"
-          description="Ten produkt nie posiada jeszcze wariantów. Dodaj warianty, aby zarządzać rozmiarami, kolorami itp."
+          title={t("brakWariantow")}
+          description={t("tenProduktNiePosiadaJeszczeWariantowDodajWariantyA")}
         />
       ) : (
         <Card>
@@ -535,9 +538,9 @@ export default function ProductVariantsPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteVariantId(null);
         }}
-        title="Usuń wariant"
-        description="Czy na pewno chcesz usunąć ten wariant? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={t("usunWariant")}
+        description={t("czyNaPewnoChceszUsunacTenWariantTaOperacjaJestNieo")}
+        confirmLabel={t("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteVariant.isPending}
@@ -557,6 +560,7 @@ function EditVariantDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("products");
   const updateVariant = useUpdateVariant(productId, variant.id);
 
   const [form, setForm] = useState({
@@ -605,7 +609,7 @@ function EditVariantDialog({
 
     updateVariant.mutate(data, {
       onSuccess: () => {
-        toast.success("Wariant został zaktualizowany");
+        toast.success(t("wariantZostałZaktualizowany"));
         onOpenChange(false);
       },
       onError: (error) => {

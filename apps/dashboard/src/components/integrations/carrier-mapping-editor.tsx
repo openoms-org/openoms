@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
+import { useTranslations } from "next-intl";
 
 interface CarrierMappingEditorProps {
   value: Record<string, string>;
@@ -18,6 +19,7 @@ interface CarrierMappingEditorProps {
 }
 
 export function CarrierMappingEditor({ value, onChange }: CarrierMappingEditorProps) {
+  const t = useTranslations("integrations");
   const entries = Object.entries(value);
 
   const handleKeyChange = (oldKey: string, newKey: string) => {
@@ -45,7 +47,7 @@ export function CarrierMappingEditor({ value, onChange }: CarrierMappingEditorPr
     <div className="space-y-2">
       {entries.length === 0 && (
         <p className="text-sm text-muted-foreground py-4 text-center">
-          Brak mapowań. Dodaj mapowanie, aby automatycznie przypisywać kuriera do zamówień.
+          {t("brakMapowanDodajMapowanieAbyAutomatyczniePrzypisyw")}
         </p>
       )}
       {entries.map(([key, val], index) => (

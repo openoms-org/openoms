@@ -28,8 +28,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { User, CreateUserRequest, UpdateUserRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function UsersPage() {
+  const t = useTranslations("users");
+  const tc = useTranslations("common");
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -48,7 +51,7 @@ export default function UsersPage() {
   const handleCreate = (formData: CreateUserRequest | UpdateUserRequest) => {
     createUser.mutate(formData as CreateUserRequest, {
       onSuccess: () => {
-        toast.success("Użytkownik został utworzony");
+        toast.success(t("created"));
         setCreateOpen(false);
       },
       onError: (error) => {
@@ -65,7 +68,7 @@ export default function UsersPage() {
     };
     updateUser.mutate(updateData, {
       onSuccess: () => {
-        toast.success("Użytkownik został zaktualizowany");
+        toast.success(t("updated"));
         setEditUser(null);
       },
       onError: (error) => {
@@ -78,7 +81,7 @@ export default function UsersPage() {
     if (!deleteId) return;
     deleteUser.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Użytkownik został usunięty");
+        toast.success(t("deleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -91,18 +94,18 @@ export default function UsersPage() {
     <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Użytkownicy</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Zarządzaj użytkownikami w organizacji
+            {t("subtitle")}
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>Nowy użytkownik</Button>
+        <Button onClick={() => setCreateOpen(true)}>{t("newUser")}</Button>
       </div>
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4 mb-6">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -110,7 +113,7 @@ export default function UsersPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -118,8 +121,8 @@ export default function UsersPage() {
       {users.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="Brak użytkowników"
-          description="Dodaj pierwszego użytkownika do organizacji."
+          title={t("empty.title")}
+          description={t("empty.description")}
         />
       ) : (
         <>
@@ -180,7 +183,7 @@ export default function UsersPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nowy użytkownik</DialogTitle>
+            <DialogTitle>{t("newUser")}</DialogTitle>
           </DialogHeader>
           <UserForm
             mode="create"
@@ -195,7 +198,7 @@ export default function UsersPage() {
       <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edytuj użytkownika</DialogTitle>
+            <DialogTitle>{t("editUser")}</DialogTitle>
           </DialogHeader>
           {editUser && (
             <UserForm
@@ -217,9 +220,9 @@ export default function UsersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń użytkownika"
-        description="Czy na pewno chcesz usunąć tego użytkownika? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={t("deleteConfirm.title")}
+        description={t("deleteConfirm.description")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteUser.isPending}

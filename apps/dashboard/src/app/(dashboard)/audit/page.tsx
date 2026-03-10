@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { shortId } from "@/lib/utils";
 import type { AuditLogEntry } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const ACTION_LABELS: Record<string, string> = {
   "order.created": "Utworzono zamówienie",
@@ -119,6 +120,8 @@ const ENTITY_TYPE_OPTIONS = [
 ];
 
 export default function AuditPage() {
+  const t = useTranslations("audit");
+  const tc = useTranslations("common");
   const [entityType, setEntityType] = useState<string>("");
   const [actionFilter, setActionFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -158,7 +161,7 @@ export default function AuditPage() {
         format(new Date(row.created_at), "dd.MM.yyyy HH:mm", { locale: pl }),
     },
     {
-      header: "Użytkownik",
+      header: t("uzytkownik"),
       accessorKey: "user_name",
       cell: (row) => row.user_name || "System",
     },
@@ -184,7 +187,7 @@ export default function AuditPage() {
       ),
     },
     {
-      header: "Szczegóły",
+      header: tc("details"),
       accessorKey: "changes",
       cell: (row) => {
         if (!row.changes || Object.keys(row.changes).length === 0) {
@@ -208,9 +211,9 @@ export default function AuditPage() {
     <AdminGuard>
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dziennik aktywności</h1>
+        <h1 className="text-2xl font-bold">{t("auditLog")}</h1>
         <p className="text-muted-foreground mt-1">
-          Historia zmian i działań w systemie
+          {t("historiaZmianIDziałanWSystemie")}
         </p>
       </div>
 
@@ -242,7 +245,7 @@ export default function AuditPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -250,7 +253,7 @@ export default function AuditPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -260,7 +263,7 @@ export default function AuditPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak wpisów w dzienniku"
+          emptyMessage={t("brakWpisowWDzienniku")}
           rowId={(row) => String(row.id)}
         />
       </div>

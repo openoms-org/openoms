@@ -14,10 +14,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import Link from "next/link";
 import { ShoppingCart, Package, Settings, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const QUICKSTART_DISMISSED_KEY = "openoms_quickstart_dismissed";
 
 function QuickStartCard() {
+  const t = useTranslations("common");
   const { allCompleted } = useOnboarding();
   const [dismissed, setDismissed] = useState<boolean | null>(null);
 
@@ -40,7 +42,7 @@ function QuickStartCard() {
           <div>
             <h3 className="font-semibold">Twoje konto jest gotowe!</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Oto co możesz zrobić dalej:
+              {t("otoCoMozeszZrobicDalej")}
             </p>
           </div>
           <Button
@@ -56,7 +58,7 @@ function QuickStartCard() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/orders/new">
               <ShoppingCart className="mr-2 h-4 w-4" />
-              Dodaj zamówienie
+              {t("empty.addOrder")}
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
@@ -68,7 +70,7 @@ function QuickStartCard() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/integrations">
               <Settings className="mr-2 h-4 w-4" />
-              Połącz Allegro
+              {t("empty.connectAllegro")}
             </Link>
           </Button>
         </div>
@@ -78,13 +80,14 @@ function QuickStartCard() {
 }
 
 export default function DashboardPage() {
+  const t = useTranslations("common");
   const { data: stats, isLoading, isError, refetch } = useDashboardStats();
   const user = useAuthStore((s) => s.user);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Panel główny</h1>
+        <h1 className="text-2xl font-bold">{t("panelGłowny")}</h1>
         {user?.name && (
           <p className="text-muted-foreground mt-1">Witaj, {user.name}!</p>
         )}
@@ -93,7 +96,7 @@ export default function DashboardPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -101,7 +104,7 @@ export default function DashboardPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}

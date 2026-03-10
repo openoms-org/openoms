@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { CarrierMappingEditor } from "./carrier-mapping-editor";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_ALLEGRO_MAPPING: Record<string, string> = {
   "Paczkomaty": "inpost",
@@ -45,6 +46,7 @@ export function MarketplaceShipmentSettings({
   onSave,
   isLoading,
 }: MarketplaceShipmentSettingsProps) {
+  const t = useTranslations("integrations");
   const [autoCreate, setAutoCreate] = useState(
     (settings.auto_create_shipment as boolean) ?? false
   );
@@ -83,9 +85,9 @@ export function MarketplaceShipmentSettings({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ustawienia przesyłek</CardTitle>
+        <CardTitle>{t("ustawieniaPrzesyłek")}</CardTitle>
         <CardDescription>
-          Konfiguruj automatyczne tworzenie przesyłek dla zamówień z tego marketplace.
+          {t("konfigurujAutomatyczneTworzeniePrzesyłekDlaZamowie")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -100,7 +102,7 @@ export function MarketplaceShipmentSettings({
             }}
           />
           <Label htmlFor="auto_create_shipment" className="font-normal cursor-pointer">
-            Automatycznie twórz przesyłkę dla nowych zamówień
+            {t("automatycznieTworzPrzesyłkeDlaNowychZamowien")}
           </Label>
         </div>
 
@@ -122,7 +124,7 @@ export function MarketplaceShipmentSettings({
 
         {/* Default carrier */}
         <div className="space-y-2">
-          <Label>Domyślny dostawca</Label>
+          <Label>{t("domyslnyDostawca")}</Label>
           <Select
             value={defaultCarrier || "__none__"}
             onValueChange={(v) => setDefaultCarrier(v === "__none__" ? "" : v)}
@@ -140,7 +142,7 @@ export function MarketplaceShipmentSettings({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Używany gdy metoda dostawy z marketplace nie pasuje do żadnego mapowania.
+            {t("uzywanyGdyMetodaDostawyZMarketplaceNie")}
           </p>
         </div>
 
@@ -148,7 +150,7 @@ export function MarketplaceShipmentSettings({
         <div className="space-y-2">
           <Label>Mapowanie metod dostawy</Label>
           <p className="text-xs text-muted-foreground mb-2">
-            Przypisz nazwy metod dostawy z marketplace do dostawców w OpenOMS.
+            {t("przypiszNazwyMetodDostawyZMarketplaceDo")}
             Dopasowanie działa na podstawie fragmentu nazwy (np. &quot;Paczkomaty&quot; pasuje do &quot;Paczkomaty 24/7&quot;).
           </p>
           <CarrierMappingEditor value={carrierMapping} onChange={setCarrierMapping} />
@@ -158,7 +160,7 @@ export function MarketplaceShipmentSettings({
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={isLoading}>
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-            Zapisz ustawienia przesyłek
+            {t("zapiszUstawieniaPrzesyłek")}
           </Button>
         </div>
       </CardContent>

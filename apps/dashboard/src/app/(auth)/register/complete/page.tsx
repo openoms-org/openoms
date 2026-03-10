@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CheckoutSessionStatus } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const registerSchema = z.object({
   tenant_name: z.string().min(1, "Nazwa organizacji jest wymagana"),
@@ -32,6 +33,7 @@ const registerSchema = z.object({
 type CompleteFormValues = z.infer<typeof registerSchema>;
 
 function CompleteRegistrationForm() {
+  const t = useTranslations("auth");
   const { register: registerUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,7 +54,7 @@ function CompleteRegistrationForm() {
 
   useEffect(() => {
     if (!sessionId) {
-      setError("Brak identyfikatora sesji płatności");
+      setError(t("brakIdentyfikatoraSesjiPłatnosci"));
       return;
     }
 
@@ -71,15 +73,15 @@ function CompleteRegistrationForm() {
           });
           if (!res.ok) {
             if (res.status === 404) {
-              setError("Sesja płatności nie została znaleziona");
+              setError(t("sesjaPłatnosciNieZostałaZnaleziona"));
               return;
             }
-            throw new Error("Błąd serwera");
+            throw new Error(t("errorBoundary.serverError"));
           }
           const data: CheckoutSessionStatus = await res.json();
 
           if (data.status === "registered") {
-            setError("Ta sesja płatności została już wykorzystana");
+            setError(t("taSesjaPłatnosciZostałaJuzWykorzystana"));
             return;
           }
 
@@ -95,7 +97,7 @@ function CompleteRegistrationForm() {
         } catch (err) {
           if (cancelled || (err instanceof DOMException && err.name === "AbortError")) return;
           if (attempt === maxAttempts - 1) {
-            setError("Nie udało się zweryfikować płatności. Spróbuj ponownie za chwilę.");
+            setError(t("nieUdałoSieZweryfikowacPłatnosciSprobujPonownieZaC"));
             return;
           }
           await new Promise((r) => setTimeout(r, intervalMs));
@@ -103,7 +105,7 @@ function CompleteRegistrationForm() {
       }
 
       if (!cancelled) {
-        setError("Płatność nie została jeszcze potwierdzona. Spróbuj odświeżyć stronę za chwilę.");
+        setError(t("płatnoscNieZostałaJeszczePotwierdzonaSprobujOdswie"));
       }
     };
 
@@ -119,10 +121,10 @@ function CompleteRegistrationForm() {
     return (
       <Card className="max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle>Błąd</CardTitle>
+          <CardTitle>{t("invoice.error")}</CardTitle>
         </CardHeader>
         <CardContent className="text-center text-muted-foreground">
-          <p>Brak identyfikatora sesji. Wróć na stronę wyboru planu.</p>
+          <p>{t("brakIdentyfikatoraSesjiWrocNaStroneWyboruPlanu")}</p>
         </CardContent>
         <CardFooter className="justify-center">
           <Link href="/register">
@@ -137,14 +139,14 @@ function CompleteRegistrationForm() {
     return (
       <Card className="max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle>Błąd</CardTitle>
+          <CardTitle>{t("invoice.error")}</CardTitle>
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-destructive">{error}</p>
         </CardContent>
         <CardFooter className="flex flex-col gap-2 items-center">
           <Button variant="outline" onClick={() => { setError(null); setRetryCount((c) => c + 1); }}>
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
           <Link href="/register" className="text-sm text-primary underline-offset-4 hover:underline">
             Wybierz inny plan
@@ -158,8 +160,8 @@ function CompleteRegistrationForm() {
     return (
       <Card className="max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle>Weryfikacja płatności...</CardTitle>
-          <CardDescription>Sprawdzamy status Twojej płatności</CardDescription>
+          <CardTitle>{t("weryfikacjaPłatnosci")}</CardTitle>
+          <CardDescription>{t("sprawdzamyStatusTwojejPłatnosci")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-10 w-full" />
@@ -189,7 +191,7 @@ function CompleteRegistrationForm() {
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Dokończ rejestrację</CardTitle>
+        <CardTitle className="text-2xl">{t("dokonczRejestracje")}</CardTitle>
         <CardDescription>
           Plan: <span className="font-medium text-foreground">{session.plan}</span>
         </CardDescription>
@@ -225,7 +227,7 @@ function CompleteRegistrationForm() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="name">Imię i nazwisko <span className="text-destructive">*</span></Label>
+            <Label htmlFor="name">{t("form.fullName")}<span className="text-destructive">*</span></Label>
             <Input
               id="name"
               placeholder="Jan Kowalski"
@@ -237,11 +239,11 @@ function CompleteRegistrationForm() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Hasło <span className="text-destructive">*</span></Label>
+            <Label htmlFor="password">{t("login.password")}<span className="text-destructive">*</span></Label>
             <Input
               id="password"
               type="password"
-              placeholder="Minimum 8 znaków"
+              placeholder={t("minimum8Znakow")}
               aria-invalid={!!errors.password}
               {...register("password")}
             />
@@ -252,12 +254,12 @@ function CompleteRegistrationForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Rejestracja..." : "Utwórz konto"}
+            {isSubmitting ? "Rejestracja..." : t("utworzKonto")}
           </Button>
           <p className="text-sm text-muted-foreground">
             Masz już konto?{" "}
             <Link href="/login" className="text-primary underline-offset-4 hover:underline">
-              Zaloguj się
+              {t("login.submit")}
             </Link>
           </p>
         </CardFooter>

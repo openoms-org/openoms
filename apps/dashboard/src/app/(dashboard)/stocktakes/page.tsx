@@ -27,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Stocktake } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const statusLabels: Record<string, string> = {
   draft: "Szkic",
@@ -53,6 +54,7 @@ function StocktakeStatusBadge({ status }: { status: string }) {
 }
 
 export default function StocktakesPage() {
+  const t = useTranslations("stocktakes");
   const router = useRouter();
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -78,7 +80,7 @@ export default function StocktakesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Inwentaryzacja</h1>
           <p className="text-muted-foreground">
-            Zarządzaj procesami inwentaryzacji magazynów
+            {t("zarzadzajProcesamiInwentaryzacjiMagazynow")}
           </p>
         </div>
         <Button onClick={() => router.push("/stocktakes/new")}>
@@ -110,7 +112,7 @@ export default function StocktakesPage() {
             <SelectItem value="all">Wszystkie statusy</SelectItem>
             <SelectItem value="draft">Szkic</SelectItem>
             <SelectItem value="in_progress">W trakcie</SelectItem>
-            <SelectItem value="completed">Zakończona</SelectItem>
+            <SelectItem value="completed">{t("stocktake.completed")}</SelectItem>
             <SelectItem value="cancelled">Anulowana</SelectItem>
           </SelectContent>
         </Select>
@@ -119,7 +121,7 @@ export default function StocktakesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -127,7 +129,7 @@ export default function StocktakesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -136,7 +138,7 @@ export default function StocktakesPage() {
         <EmptyState
           icon={ClipboardCheck}
           title="Brak inwentaryzacji"
-          description="Utwórz nową inwentaryzację, aby rozpocząć liczenie stanów magazynowych."
+          description={t("utworzNowaInwentaryzacjeAbyRozpoczacLiczenieStanow")}
         />
       ) : (
         <div className="rounded-md border">
@@ -147,7 +149,7 @@ export default function StocktakesPage() {
                 <TableHead>Magazyn</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Pozycje</TableHead>
-                <TableHead>Rozbieżności</TableHead>
+                <TableHead>{t("rozbieznosci")}</TableHead>
                 <TableHead>Utworzono</TableHead>
               </TableRow>
             </TableHeader>

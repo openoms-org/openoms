@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Trash2, Plus } from "lucide-react";
 import type { StatusDef, OrderStatusConfig } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const COLOR_OPTIONS = Object.entries(COLOR_PRESETS).map(([key, classes]) => ({
   key,
@@ -24,6 +25,7 @@ const COLOR_OPTIONS = Object.entries(COLOR_PRESETS).map(([key, classes]) => ({
 }));
 
 export default function OrderStatusesPage() {
+  const t = useTranslations("settings");
   const { data: config, isLoading } = useOrderStatuses();
   const updateStatuses = useUpdateOrderStatuses();
 
@@ -76,14 +78,14 @@ export default function OrderStatusesPage() {
     // Validate
     for (const s of statuses) {
       if (!s.key || !s.label) {
-        toast.error("Wszystkie statusy muszą mieć klucz i etykietę");
+        toast.error(t("wszystkieStatusyMuszaMiecKluczIEtykiete"));
         return;
       }
     }
 
     const keys = statuses.map((s) => s.key);
     if (new Set(keys).size !== keys.length) {
-      toast.error("Klucze statusów muszą być unikalne");
+      toast.error(t("kluczeStatusowMuszaBycUnikalne"));
       return;
     }
 
@@ -94,25 +96,25 @@ export default function OrderStatusesPage() {
 
     try {
       await updateStatuses.mutateAsync(configToSave);
-      toast.success("Statusy zamówień zostały zapisane");
+      toast.success(t("statusyzamowienzostałyzapisane"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Błąd podczas zapisywania"
+        error instanceof Error ? error.message : t("bładpodczaszapisywania")
       );
     }
   };
 
   if (isLoading) {
-    return <div className="p-6">Ładowanie...</div>;
+    return <div className="p-6">{t("loading")}</div>;
   }
 
   return (
     <AdminGuard>
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Statusy zamówień</h1>
+        <h1 className="text-2xl font-bold">{t("orderStatuses")}</h1>
         <p className="text-muted-foreground mt-1">
-          Zdefiniuj statusy i przejścia dla zamówień
+          {t("zdefiniujStatusyIPrzejsciaDlaZamowien")}
         </p>
       </div>
 
@@ -172,7 +174,7 @@ export default function OrderStatusesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Przejścia</CardTitle>
+          <CardTitle>{t("przejscia")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
