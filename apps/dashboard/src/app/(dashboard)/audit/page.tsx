@@ -21,103 +21,34 @@ import { shortId } from "@/lib/utils";
 import type { AuditLogEntry } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const ACTION_LABELS: Record<string, string> = {
-  "order.created": "Utworzono zamówienie",
-  "order.updated": "Zaktualizowano zamówienie",
-  "order.deleted": "Usunięto zamówienie",
-  "order.status_changed": "Zmieniono status",
-  "product.created": "Utworzono produkt",
-  "product.updated": "Zaktualizowano produkt",
-  "product.deleted": "Usunięto produkt",
-  "user.created": "Utworzono użytkownika",
-  "user.updated": "Zaktualizowano użytkownika",
-  "user.deleted": "Usunięto użytkownika",
-  "shipment.created": "Utworzono przesyłkę",
-  "shipment.updated": "Zaktualizowano przesyłkę",
-  "shipment.deleted": "Usunięto przesyłkę",
-  "shipment.status_changed": "Zmieniono status przesyłki",
-  "integration.created": "Utworzono integrację",
-  "integration.updated": "Zaktualizowano integrację",
-  "integration.deleted": "Usunięto integrację",
-  "settings.updated": "Zaktualizowano ustawienia",
-  "warehouse.created": "Utworzono magazyn",
-  "warehouse.updated": "Zaktualizowano magazyn",
-  "warehouse.deleted": "Usunięto magazyn",
-  "supplier.created": "Utworzono dostawcę",
-  "supplier.updated": "Zaktualizowano dostawcę",
-  "supplier.deleted": "Usunięto dostawcę",
-  "return.created": "Utworzono zwrot",
-  "return.updated": "Zaktualizowano zwrot",
-  "return.status_changed": "Zmieniono status zwrotu",
-  "role.created": "Utworzono rolę",
-  "role.updated": "Zaktualizowano rolę",
-  "role.deleted": "Usunięto rolę",
-  "automation_rule.created": "Utworzono regułę automatyzacji",
-  "automation_rule.updated": "Zaktualizowano regułę automatyzacji",
-  "automation_rule.deleted": "Usunięto regułę automatyzacji",
-  "exchange_rate.updated": "Zaktualizowano kurs walut",
-  "customer.created": "Utworzono klienta",
-  "customer.updated": "Zaktualizowano klienta",
-  "customer.deleted": "Usunięto klienta",
-  "invoice.created": "Utworzono fakturę",
-  "invoice.updated": "Zaktualizowano fakturę",
-  "invoice.deleted": "Usunięto fakturę",
-  "variant.created": "Utworzono wariant",
-  "variant.updated": "Zaktualizowano wariant",
-  "variant.deleted": "Usunięto wariant",
-  "price_list.created": "Utworzono cennik",
-  "price_list.updated": "Zaktualizowano cennik",
-  "price_list.deleted": "Usunięto cennik",
-  "warehouse_document.created": "Utworzono dokument magazynowy",
-  "warehouse_document.updated": "Zaktualizowano dokument magazynowy",
-  "stocktake.created": "Utworzono inwentaryzację",
-  "stocktake.updated": "Zaktualizowano inwentaryzację",
-  "auth.login": "Logowanie",
-  "auth.logout": "Wylogowanie",
-};
+const ACTION_KEYS = [
+  "order.created", "order.updated", "order.deleted", "order.status_changed",
+  "product.created", "product.updated", "product.deleted",
+  "user.created", "user.updated", "user.deleted",
+  "shipment.created", "shipment.updated", "shipment.deleted", "shipment.status_changed",
+  "integration.created", "integration.updated", "integration.deleted",
+  "settings.updated",
+  "warehouse.created", "warehouse.updated", "warehouse.deleted",
+  "supplier.created", "supplier.updated", "supplier.deleted",
+  "return.created", "return.updated", "return.status_changed",
+  "role.created", "role.updated", "role.deleted",
+  "automation_rule.created", "automation_rule.updated", "automation_rule.deleted",
+  "exchange_rate.updated",
+  "customer.created", "customer.updated", "customer.deleted",
+  "invoice.created", "invoice.updated", "invoice.deleted",
+  "variant.created", "variant.updated", "variant.deleted",
+  "price_list.created", "price_list.updated", "price_list.deleted",
+  "warehouse_document.created", "warehouse_document.updated",
+  "stocktake.created", "stocktake.updated",
+  "auth.login", "auth.logout",
+] as const;
 
-const ENTITY_TYPE_LABELS: Record<string, string> = {
-  order: "zamówienie",
-  product: "produkt",
-  user: "użytkownik",
-  shipment: "przesyłka",
-  integration: "integracja",
-  settings: "ustawienia",
-  warehouse: "magazyn",
-  supplier: "dostawca",
-  return: "zwrot",
-  role: "rola",
-  automation_rule: "reguła automatyzacji",
-  exchange_rate: "kurs walut",
-  customer: "klient",
-  invoice: "faktura",
-  variant: "wariant",
-  price_list: "cennik",
-  warehouse_document: "dokument magazynowy",
-  stocktake: "inwentaryzacja",
-};
-
-const ENTITY_TYPE_OPTIONS = [
-  { value: "__all__", label: "Wszystkie" },
-  { value: "order", label: "Zamówienia" },
-  { value: "product", label: "Produkty" },
-  { value: "user", label: "Użytkownicy" },
-  { value: "shipment", label: "Przesyłki" },
-  { value: "integration", label: "Integracje" },
-  { value: "settings", label: "Ustawienia" },
-  { value: "warehouse", label: "Magazyny" },
-  { value: "supplier", label: "Dostawcy" },
-  { value: "return", label: "Zwroty" },
-  { value: "role", label: "Role" },
-  { value: "automation_rule", label: "Reguły automatyzacji" },
-  { value: "exchange_rate", label: "Kursy walut" },
-  { value: "customer", label: "Klienci" },
-  { value: "invoice", label: "Faktury" },
-  { value: "variant", label: "Warianty" },
-  { value: "price_list", label: "Cenniki" },
-  { value: "warehouse_document", label: "Dokumenty magazynowe" },
-  { value: "stocktake", label: "Inwentaryzacje" },
-];
+const ENTITY_TYPE_KEYS = [
+  "order", "product", "user", "shipment", "integration", "settings",
+  "warehouse", "supplier", "return", "role", "automation_rule",
+  "exchange_rate", "customer", "invoice", "variant", "price_list",
+  "warehouse_document", "stocktake",
+] as const;
 
 export default function AuditPage() {
   const t = useTranslations("audit");
@@ -153,34 +84,48 @@ export default function AuditPage() {
     setOffset(newOffset);
   };
 
+  const getActionLabel = (action: string): string => {
+    if (ACTION_KEYS.includes(action as (typeof ACTION_KEYS)[number])) {
+      return t(`actions.${action}` as Parameters<typeof t>[0]);
+    }
+    return action;
+  };
+
+  const getEntityTypeLabel = (type: string): string => {
+    if (ENTITY_TYPE_KEYS.includes(type as (typeof ENTITY_TYPE_KEYS)[number])) {
+      return t(`entityTypes.${type}` as Parameters<typeof t>[0]);
+    }
+    return type;
+  };
+
   const columns: ColumnDef<AuditLogEntry>[] = [
     {
-      header: "Czas",
+      header: t("time"),
       accessorKey: "created_at",
       cell: (row) =>
         format(new Date(row.created_at), "dd.MM.yyyy HH:mm", { locale: pl }),
     },
     {
-      header: t("uzytkownik"),
+      header: t("user"),
       accessorKey: "user_name",
       cell: (row) => row.user_name || "System",
     },
     {
-      header: "Akcja",
+      header: t("action"),
       accessorKey: "action",
-      cell: (row) => ACTION_LABELS[row.action] || row.action,
+      cell: (row) => getActionLabel(row.action),
     },
     {
-      header: "Typ",
+      header: t("type"),
       accessorKey: "entity_type",
       cell: (row) => (
         <Badge variant="secondary">
-          {ENTITY_TYPE_LABELS[row.entity_type] || row.entity_type}
+          {getEntityTypeLabel(row.entity_type)}
         </Badge>
       ),
     },
     {
-      header: "ID encji",
+      header: t("entityId"),
       accessorKey: "entity_id",
       cell: (row) => (
         <span className="font-mono text-xs">{shortId(row.entity_id)}</span>
@@ -213,7 +158,7 @@ export default function AuditPage() {
       <div>
         <h1 className="text-2xl font-bold">{t("auditLog")}</h1>
         <p className="text-muted-foreground mt-1">
-          {t("historiaZmianIDziałanWSystemie")}
+          {t("subtitle")}
         </p>
       </div>
 
@@ -223,19 +168,20 @@ export default function AuditPage() {
           onValueChange={handleEntityTypeChange}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Typ encji" />
+            <SelectValue placeholder={t("entityTypePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            {ENTITY_TYPE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+            <SelectItem value="__all__">{t("entityTypeOptions.all")}</SelectItem>
+            {ENTITY_TYPE_KEYS.map((key) => (
+              <SelectItem key={key} value={key}>
+                {t(`entityTypeOptions.${key}` as Parameters<typeof t>[0])}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         <Input
-          placeholder="Filtruj po akcji..."
+          placeholder={t("filterByAction")}
           value={actionFilter}
           onChange={handleActionFilterChange}
           className="max-w-xs"
@@ -263,7 +209,7 @@ export default function AuditPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage={t("brakWpisowWDzienniku")}
+          emptyMessage={t("emptyLog")}
           rowId={(row) => String(row.id)}
         />
       </div>

@@ -41,6 +41,7 @@ import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { apiClient } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Product, ProductCategory, SupplierProductWithSupplier } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_LIMIT = 20;
 
@@ -63,15 +64,17 @@ function findCategoryById(categories: ProductCategory[], id: string): ProductCat
 }
 
 export default function ProductsPage() {
+  const t = useTranslations("products");
+  const tl = useTranslations("products.list");
   const [activeTab, setActiveTab] = useState("my-products");
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Produkty</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Zarządzaj katalogiem produktów
+            {tl("manageCatalog")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -81,8 +84,8 @@ export default function ProductsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="my-products">Moje produkty</TabsTrigger>
-          <TabsTrigger value="supplier-catalog">Katalog dostawców</TabsTrigger>
+          <TabsTrigger value="my-products">{tl("myProducts")}</TabsTrigger>
+          <TabsTrigger value="supplier-catalog">{tl("supplierCatalog")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="my-products" className="space-y-4 mt-4">
@@ -100,6 +103,8 @@ export default function ProductsPage() {
 // ─── My Products Tab (existing functionality) ───
 
 function MyProductsTab() {
+  const t = useTranslations("products.list");
+  const tc = useTranslations("common");
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [localTagFilter, setLocalTagFilter] = useState("");
@@ -213,7 +218,7 @@ function MyProductsTab() {
       ),
     },
     {
-      header: "Nazwa",
+      header: t("name"),
       accessorKey: "name" as const,
       sortable: true,
       cell: (product: Product) => (
@@ -234,7 +239,7 @@ function MyProductsTab() {
       ),
     },
     {
-      header: "Cena",
+      header: t("price"),
       accessorKey: "price" as const,
       sortable: true,
       cell: (product: Product) => (
@@ -242,7 +247,7 @@ function MyProductsTab() {
       ),
     },
     {
-      header: "Stan",
+      header: t("stock"),
       accessorKey: "stock_quantity" as const,
       sortable: true,
       cell: (product: Product) => (
@@ -260,7 +265,7 @@ function MyProductsTab() {
       ),
     },
     {
-      header: "Źródło",
+      header: t("source"),
       accessorKey: "source" as const,
       cell: (product: Product) => (
         <span className="text-sm">
@@ -288,7 +293,7 @@ function MyProductsTab() {
       },
     },
     {
-      header: "Kategoria",
+      header: t("category"),
       accessorKey: "category" as const,
       cell: (product: Product) => {
         const cat = product.category_id ? findCategoryById(categoryTree ?? [], product.category_id) : null;
@@ -316,7 +321,7 @@ function MyProductsTab() {
       },
     },
     {
-      header: "Tagi",
+      header: t("tags"),
       accessorKey: "tags" as const,
       cell: (product: Product) => (
         <div className="flex flex-wrap gap-1">
@@ -329,7 +334,7 @@ function MyProductsTab() {
       ),
     },
     {
-      header: "Data utworzenia",
+      header: t("createdAt"),
       accessorKey: "created_at" as const,
       sortable: true,
       cell: (product: Product) => (
@@ -364,7 +369,7 @@ function MyProductsTab() {
         <div className="relative w-[280px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Szukaj po nazwie, SKU lub EAN..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -374,7 +379,7 @@ function MyProductsTab() {
           />
         </div>
         <Input
-          placeholder="Filtruj po tagu..."
+          placeholder={t("filterByTag")}
           value={localTagFilter}
           onChange={(e) => handleTagFilterChange(e.target.value)}
           className="w-[160px]"
@@ -385,7 +390,7 @@ function MyProductsTab() {
             setCategoryIdFilter(value);
             setPagination((prev) => ({ ...prev, offset: 0 }));
           }}
-          placeholder="Kategoria..."
+          placeholder={t("categoryPlaceholder")}
           className="w-[200px]"
         />
         <Select
@@ -396,10 +401,10 @@ function MyProductsTab() {
           }}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Dostawca..." />
+            <SelectValue placeholder={t("supplierPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">Wszyscy dostawcy</SelectItem>
+            <SelectItem value="__all__">{t("allSuppliers")}</SelectItem>
             {suppliersData?.items?.map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.name}
@@ -415,10 +420,10 @@ function MyProductsTab() {
           }}
         >
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Źródło..." />
+            <SelectValue placeholder={t("sourcePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">Wszystkie źródła</SelectItem>
+            <SelectItem value="__all__">{t("allSources")}</SelectItem>
             {Object.entries(ORDER_SOURCE_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label}
@@ -437,8 +442,8 @@ function MyProductsTab() {
             <SelectValue placeholder="Marketplace..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">Wszystkie</SelectItem>
-            <SelectItem value="none">Niewystawione</SelectItem>
+            <SelectItem value="__all__">{t("allMarketplaces")}</SelectItem>
+            <SelectItem value="none">{t("notListed")}</SelectItem>
             {Object.entries(MARKETPLACE_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key}>
                 {label}
@@ -456,11 +461,11 @@ function MyProductsTab() {
                     onSuccess: (data) => {
                       const succeeded = data.results.filter((r) => !r.error).length;
                       const failed = data.results.filter((r) => r.error).length;
-                      toast.success(`Auto-kategoryzacja: ${succeeded} sukces, ${failed} błędów`);
+                      toast.success(t("autoCategorizeResult", { succeeded, failed }));
                       setSelectedProducts(new Set());
                     },
                     onError: (error) => {
-                      toast.error(error instanceof Error ? error.message : "Błąd auto-kategoryzacji");
+                      toast.error(error instanceof Error ? error.message : t("autoCategorizeError"));
                     },
                   });
                 }}
@@ -471,14 +476,14 @@ function MyProductsTab() {
                 ) : (
                   <Sparkles className="h-4 w-4" />
                 )}
-                Auto-kategoryzacja ({selectedProducts.size})
+                {t("autoCategorize")} ({selectedProducts.size})
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => setShowBulkDelete(true)}
               >
                 <Trash2 className="h-4 w-4" />
-                Usuń ({selectedProducts.size})
+                {t("deleteCount", { count: selectedProducts.size })}
               </Button>
             </>
           )}
@@ -488,7 +493,7 @@ function MyProductsTab() {
               redownloadImages.mutate(undefined, {
                 onSuccess: (data) => {
                   toast.success(
-                    `Pobrano ${data.downloaded} zdjęć, pominięto ${data.skipped}, błędy: ${data.failed}`
+                    t("photosDownloaded", { downloaded: data.downloaded, skipped: data.skipped, failed: data.failed })
                   );
                 },
                 onError: (error) => {
@@ -503,7 +508,7 @@ function MyProductsTab() {
             ) : (
               <ImageIcon className="h-4 w-4" />
             )}
-            Pobierz zdjęcia
+            {t("downloadPhotos")}
           </Button>
           <Button
             variant="outline"
@@ -512,25 +517,25 @@ function MyProductsTab() {
                 const res = await apiFetch("/v1/products/export");
                 const blob = await res.blob();
                 downloadBlob(blob, `products_${new Date().toISOString().slice(0, 10)}.csv`);
-                toast.success("Eksport CSV rozpoczęty");
+                toast.success(t("csvExportStarted"));
               } catch {
-                toast.error("Błąd eksportu CSV");
+                toast.error(t("csvExportError"));
               }
             }}
           >
             <Download className="h-4 w-4" />
-            Eksportuj CSV
+            {t("exportCsv")}
           </Button>
           <Button variant="outline" asChild>
             <Link href="/products/import">
               <Upload className="h-4 w-4" />
-              Import CSV
+              {t("importCsv")}
             </Link>
           </Button>
           <Button asChild>
             <Link href="/products/new">
               <Plus className="h-4 w-4" />
-              Nowy produkt
+              {t("addProduct")}
             </Link>
           </Button>
         </div>
@@ -539,7 +544,7 @@ function MyProductsTab() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -547,7 +552,7 @@ function MyProductsTab() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("tryAgain")}
           </Button>
         </div>
       )}
@@ -559,10 +564,10 @@ function MyProductsTab() {
         emptyState={
           <EmptyState
             icon={Package}
-            title="Brak produktów"
-            description="Importuj produkty z Allegro lub dodaj je ręcznie."
-            action={{ label: "Importuj z Allegro", href: "/integrations" }}
-            secondaryAction={{ label: "Dodaj produkt", href: "/products/new" }}
+            title={t("noProducts")}
+            description={t("noProductsHint")}
+            action={{ label: t("importFromAllegro"), href: "/integrations" }}
+            secondaryAction={{ label: t("addProduct"), href: "/products/new" }}
           />
         }
         sortBy={sortBy}
@@ -591,15 +596,15 @@ function MyProductsTab() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń produkt"
-        description="Czy na pewno chcesz usunąć ten produkt? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={tc("delete")}
+        description={t("deleteConfirm")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={() => {
           if (!deleteId) return;
           deleteProduct.mutate(deleteId, {
             onSuccess: () => {
-              toast.success("Produkt został usunięty");
+              toast.success(t("productDeleted"));
               setDeleteId(null);
             },
             onError: (error) => {
@@ -613,9 +618,9 @@ function MyProductsTab() {
       <ConfirmDialog
         open={showBulkDelete}
         onOpenChange={(open) => !open && setShowBulkDelete(false)}
-        title={`Usuń ${selectedProducts.size} produktów`}
-        description="Czy na pewno chcesz usunąć zaznaczone produkty? Ta operacja jest nieodwracalna. Powiązane listingi marketplace również zostaną usunięte."
-        confirmLabel={bulkDeleting ? "Usuwanie..." : "Usuń wszystkie"}
+        title={t("deleteProducts", { count: selectedProducts.size })}
+        description={t("bulkDeleteConfirm")}
+        confirmLabel={bulkDeleting ? t("deleting") : t("deleteAll")}
         variant="destructive"
         onConfirm={async () => {
           setBulkDeleting(true);
@@ -634,9 +639,9 @@ function MyProductsTab() {
           setShowBulkDelete(false);
           setSelectedProducts(new Set());
           if (failed === 0) {
-            toast.success(`Usunięto ${succeeded} produktów`);
+            toast.success(t("bulkDeleteResult", { succeeded }));
           } else {
-            toast.warning(`Usunięto ${succeeded}, błędów: ${failed}`);
+            toast.warning(t("bulkDeletePartial", { succeeded, failed }));
           }
         }}
         isLoading={bulkDeleting}
@@ -648,6 +653,8 @@ function MyProductsTab() {
 // ─── Supplier Catalog Tab ───
 
 function SupplierCatalogTab() {
+  const t = useTranslations("products.list");
+  const tc = useTranslations("common");
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -704,18 +711,18 @@ function SupplierCatalogTab() {
         `/v1/suppliers/${sp.supplier_id}/products/${sp.id}/import-single`,
         { method: "POST" }
       );
-      toast.success("Produkt zaimportowany do katalogu");
+      toast.success(t("productImported"));
       router.push(`/products/${product.id}/listings?listing=new`);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
       setImportingId(null);
     }
-  }, [router]);
+  }, [router, t]);
 
   const handleImportOnly = useCallback(async (sp: SupplierProductWithSupplier) => {
     if (sp.product_id) {
-      toast.info("Produkt jest już w katalogu");
+      toast.info(t("alreadyInCatalog"));
       return;
     }
     setImportingId(sp.id);
@@ -724,19 +731,19 @@ function SupplierCatalogTab() {
         `/v1/suppliers/${sp.supplier_id}/products/${sp.id}/import-single`,
         { method: "POST" }
       );
-      toast.success("Produkt zaimportowany do katalogu");
+      toast.success(t("productImported"));
       queryClient.invalidateQueries({ queryKey: ["supplier-products"] });
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
       setImportingId(null);
     }
-  }, [queryClient]);
+  }, [queryClient, t]);
 
   const handleBulkImport = useCallback(async () => {
     const selected = items.filter((sp) => selectedIds.has(sp.id) && !sp.product_id);
     if (selected.length === 0) {
-      toast.info("Brak niezaimportowanych produktów w zaznaczeniu");
+      toast.info(t("noUnimportedSelected"));
       return;
     }
     setBulkImporting(true);
@@ -758,10 +765,10 @@ function SupplierCatalogTab() {
     queryClient.invalidateQueries({ queryKey: ["supplier-products"] });
     queryClient.invalidateQueries({ queryKey: ["products"] });
     const parts: string[] = [];
-    if (imported > 0) parts.push(`Zaimportowano: ${imported}`);
-    if (errors > 0) parts.push(`Błędy: ${errors}`);
+    if (imported > 0) parts.push(t("bulkImportResult", { imported }));
+    if (errors > 0) parts.push(t("bulkImportErrors", { errors }));
     toast.success(parts.join(", "));
-  }, [selectedIds, items, queryClient]);
+  }, [selectedIds, items, queryClient, t]);
 
   const selectedUnimported = useMemo(() => {
     return items.filter((sp) => selectedIds.has(sp.id) && !sp.product_id).length;
@@ -794,7 +801,7 @@ function SupplierCatalogTab() {
       },
     },
     {
-      header: "Produkt",
+      header: t("product"),
       accessorKey: "name" as const,
       sortable: true,
       cell: (sp: SupplierProductWithSupplier) => {
@@ -815,7 +822,7 @@ function SupplierCatalogTab() {
       },
     },
     {
-      header: "Kategoria",
+      header: t("category"),
       accessorKey: "source_category" as const,
       cell: (sp: SupplierProductWithSupplier) => (
         <span className="text-sm text-muted-foreground truncate max-w-[160px] block">
@@ -824,7 +831,7 @@ function SupplierCatalogTab() {
       ),
     },
     {
-      header: "Cena",
+      header: t("price"),
       accessorKey: "price" as const,
       sortable: true,
       className: "text-right",
@@ -840,7 +847,7 @@ function SupplierCatalogTab() {
       ),
     },
     {
-      header: "Stan",
+      header: t("stock"),
       accessorKey: "stock_quantity" as const,
       sortable: true,
       className: "text-right",
@@ -855,7 +862,7 @@ function SupplierCatalogTab() {
       ),
     },
     {
-      header: "Dostawca",
+      header: t("supplier"),
       accessorKey: "supplier_name" as const,
       cell: (sp: SupplierProductWithSupplier) => (
         <span className="text-sm">{sp.supplier_name}</span>
@@ -868,10 +875,10 @@ function SupplierCatalogTab() {
         sp.product_id ? (
           <Badge variant="outline" className="gap-1">
             <Link2 className="h-3 w-3" />
-            W katalogu
+            {t("inCatalog")}
           </Badge>
         ) : (
-          <Badge variant="secondary">Niezaimportowany</Badge>
+          <Badge variant="secondary">{t("notImported")}</Badge>
         )
       ),
     },
@@ -885,7 +892,7 @@ function SupplierCatalogTab() {
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            title="Podgląd"
+            title={t("preview")}
             onClick={() => { setDetailProduct(sp); setSelectedImageIndex(0); }}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -894,7 +901,7 @@ function SupplierCatalogTab() {
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            title="Wystaw na marketplace"
+            title={t("listOnMarketplace")}
             disabled={importingId === sp.id}
             onClick={() => handleListOnMarketplace(sp)}
           >
@@ -909,7 +916,7 @@ function SupplierCatalogTab() {
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              title="Importuj do katalogu"
+              title={t("importToCatalog")}
               disabled={importingId === sp.id}
               onClick={() => handleImportOnly(sp)}
             >
@@ -927,7 +934,7 @@ function SupplierCatalogTab() {
         <div className="relative w-[280px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Szukaj po nazwie, EAN lub SKU..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -941,10 +948,10 @@ function SupplierCatalogTab() {
           }}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Dostawca..." />
+            <SelectValue placeholder={t("supplierPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">Wszyscy dostawcy</SelectItem>
+            <SelectItem value="__all__">{t("allSuppliers")}</SelectItem>
             {suppliersData?.items?.map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.name}
@@ -964,8 +971,8 @@ function SupplierCatalogTab() {
                 <Download className="h-4 w-4" />
               )}
               {bulkImporting
-                ? "Importowanie..."
-                : `Importuj (${selectedUnimported})`}
+                ? t("importing")
+                : t("importCount", { count: selectedUnimported })}
             </Button>
           </div>
         )}
@@ -978,9 +985,9 @@ function SupplierCatalogTab() {
         emptyState={
           <EmptyState
             icon={Package}
-            title="Brak produktów dostawców"
-            description="Dodaj dostawcę i zaimportuj produkty z XML lub API."
-            action={{ label: "Dodaj dostawcę", href: "/suppliers/new" }}
+            title={t("noSupplierProducts")}
+            description={t("noSupplierProductsHint")}
+            action={{ label: t("addSupplier"), href: "/suppliers/new" }}
           />
         }
         sortBy={sortBy}
@@ -1116,10 +1123,10 @@ function SupplierCatalogTab() {
                     {detailProduct.product_id ? (
                       <Badge variant="outline" className="gap-1">
                         <Link2 className="h-3 w-3" />
-                        W katalogu
+                        {t("inCatalog")}
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">Niezaimportowany</Badge>
+                      <Badge variant="secondary">{t("notImported")}</Badge>
                     )}
                   </div>
                 </div>
