@@ -25,8 +25,8 @@ export function AllegroErrorCard({ error, onRetry }: AllegroErrorCardProps) {
         <div className="space-y-2">
           <p className="text-sm text-destructive">
             {isTokenError
-              ? t("tokenAllegroWygasłLubJestNieprawidłowyPołaczPonown")
-              : t("nieUdałoSiePobracDanychZAllegroSprawdzPołaczenieZK")}
+              ? t("allegroTokenExpired")
+              : t("allegroLoadError")}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" asChild>

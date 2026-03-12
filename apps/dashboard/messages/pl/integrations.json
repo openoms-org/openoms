@@ -1,0 +1,497 @@
+{
+  "integrations": {
+    "title": "Integracje",
+    "subtitle": "Połącz z zewnętrznymi serwisami",
+    "newIntegration": "Nowa integracja",
+    "statusIntegracjiZostałZmieniony": "Status integracji został zmieniony",
+    "nieWprowadzonoZadnychZmian": "Nie wprowadzono żadnych zmian",
+    "daneIntegracjiZostałyZaktualizowane": "Dane integracji zostały zaktualizowane",
+    "bładPodczasAktualizacjiDanych": "Błąd podczas aktualizacji danych",
+    "integracjaZostałaUsunieta": "Integracja została usunięta",
+    "bładPodczasUsuwaniaIntegracji": "Błąd podczas usuwania integracji",
+    "ustawieniaPrzesyłekZostałyZapisane": "Ustawienia przesyłek zostały zapisane",
+    "bładPodczasZapisywaniaUstawienPrzesyłek": "Błąd podczas zapisywania ustawień przesyłek",
+    "usunIntegracje": "Usuń integrację",
+    "czyNaPewnoChceszUsunacTeIntegracjeTaOperacjaJestNi": "Czy na pewno chcesz usunąć tę integrację? Ta operacja jest nieodwracalna.",
+    "przypiszKategorie": "Przypisz kategorię...",
+    "mapowanieUsuniete": "Mapowanie usunięte",
+    "integracjaZostałaUtworzona": "Integracja została utworzona",
+    "dodajNowePołaczenieZZewnetrznymSerwisem": "Dodaj nowe połączenie z zewnętrznym serwisem",
+    "zarzadzajPołaczeniamiZZewnetrznymiSerwisami": "Zarządzaj połączeniami z zewnętrznymi serwisami",
+    "dodajPierwszaIntegracjeAbyPołaczycSieZZewnetrznymi": "Dodaj pierwszą integrację, aby połączyć się z zewnętrznymi serwisami.",
+    "allegroTokenExpired": "Token Allegro wygasł lub jest nieprawidłowy. Połącz ponownie konto Allegro w ustawieniach integracji.",
+    "allegroLoadError": "Nie udało się pobrać danych z Allegro. Sprawdź połączenie z kontem.",
+    "selectDeliveryService": "Wybierz usługę dostawy",
+    "allegroShipmentCreated": "Przesyłka została utworzona w Allegro",
+    "labelDownloaded": "Etykieta została pobrana",
+    "downloadLabel": "Pobierz etykietę",
+    "selectDeliveryServicePlaceholder": "Wybierz usługę dostawy...",
+    "createShipment": "Utwórz przesyłkę",
+    "invalidUrl": "Podaj prawidłowy adres URL",
+    "leaveEmptyToKeep": "Pozostaw puste, aby nie zmieniać",
+    "show": "Pokaż",
+    "hide": "Ukryj",
+    "credentialFields": "Dane uwierzytelniające",
+    "create": "Utwórz integrację",
+    "creating": "Tworzenie...",
+    "saveChanges": "Zapisz zmiany",
+    "updating": "Aktualizowanie...",
+    "updateData": "Zaktualizuj dane",
+    "provider": "Dostawca",
+    "selectProviderPlaceholder": "Wybierz dostawcę...",
+    "inDevelopment": "w przygotowaniu",
+    "notSet": "Nie ustawiono",
+    "fieldRequired": "Pole \"{field}\" jest wymagane",
+    "additionalSettingsJson": "Dodatkowe ustawienia (JSON)",
+    "deliveryService": "Usługa dostawy",
+    "bładIntegracji": "Błąd integracji",
+    "shipmentSettings": "Ustawienia przesyłek",
+    "defaultCarrier": "Domyślny dostawca",
+    "majaTerazWłasneSekcjeWMenu": "mają teraz własne sekcje w menu.",
+    "ponizszeIntegracjeWymagajaAutoryzacjiOauthIMaja": "Poniższe integracje wymagają autoryzacji OAuth i mają własną stronę konfiguracji.",
+    "powiazaniaMiedzyKategoriamiZMarketplaceAKategoriam": "Powiązania między kategoriami z marketplace a kategoriami OMS",
+    "brakMapowanImportOfertZMarketplaceUtworzy": "Brak mapowań. Import ofert z marketplace utworzy mapowania automatycznie.",
+    "editModeHint": "Wypełnij tylko pola, które chcesz zmienić. Puste pola nie zostaną nadpisane.",
+    "showAdvanced": "Pokaż zaawansowane",
+    "brakMapowanDodajMapowanieAbyAutomatyczniePrzypisyw": "Brak mapowań. Dodaj mapowanie, aby automatycznie przypisywać kuriera do zamówień.",
+    "shipmentAutoCreateDesc": "Konfiguruj automatyczne tworzenie przesyłek dla zamówień z tego marketplace.",
+    "shipmentAutoCreate": "Automatycznie twórz przesyłkę dla nowych zamówień",
+    "defaultCarrierHint": "Używany gdy metoda dostawy z marketplace nie pasuje do żadnego mapowania.",
+    "carrierMappingDesc": "Przypisz nazwy metod dostawy z marketplace do dostawców w OpenOMS.",
+    "saveShipmentSettings": "Zapisz ustawienia przesyłek",
+    "allegroSendTitle": "Wyślij z Allegro",
+    "allegroCreateShipmentDesc": "Utwórz przesyłkę i wygeneruj etykietę kurierską przez Allegro.",
+    "loadingDeliveryServices": "Ładowanie usług dostawy...",
+    "noDeliveryServices": "Brak dostępnych usług dostawy. Sprawdź konfigurację Allegro."
+  },
+  "providers": {
+    "orderSource": {
+      "manual": "Ręczne",
+      "supplier": "Dostawca",
+      "allegro": "Allegro",
+      "amazon": "Amazon",
+      "empik": "Empik",
+      "erli": "Erli",
+      "ebay": "eBay",
+      "kaufland": "Kaufland",
+      "olx": "OLX",
+      "woocommerce": "WooCommerce",
+      "shopify": "Shopify",
+      "other": "Inne"
+    },
+    "shipment": {
+      "inpost": "InPost",
+      "dhl": "DHL",
+      "dpd": "DPD",
+      "gls": "GLS",
+      "ups": "UPS",
+      "poczta_polska": "Poczta Polska",
+      "orlen_paczka": "Orlen Paczka",
+      "fedex": "FedEx",
+      "manual": "Ręczna"
+    },
+    "integration": {
+      "allegro": "Allegro",
+      "amazon": "Amazon",
+      "empik": "Empik",
+      "erli": "Erli",
+      "ebay": "eBay",
+      "kaufland": "Kaufland",
+      "olx": "OLX",
+      "inpost": "InPost",
+      "dhl": "DHL",
+      "dpd": "DPD",
+      "woocommerce": "WooCommerce",
+      "gls": "GLS",
+      "ups": "UPS",
+      "fedex": "FedEx",
+      "poczta_polska": "Poczta Polska",
+      "orlen_paczka": "Orlen Paczka",
+      "fakturownia": "Fakturownia",
+      "btp": "BTP.pro"
+    },
+    "invoicing": {
+      "fakturownia": "Fakturownia",
+      "wfirma": "wFirma",
+      "infakt": "inFakt"
+    },
+    "category": {
+      "marketplace": "Marketplace",
+      "carrier": "Kurierzy",
+      "invoicing": "Fakturowanie",
+      "supplier": "Hurtownie"
+    },
+    "allegro": {
+      "description": "Największa platforma e-commerce w Polsce"
+    },
+    "amazon": {
+      "description": "Globalny marketplace"
+    },
+    "woocommerce": {
+      "description": "Platforma e-commerce na WordPress"
+    },
+    "shopify": {
+      "description": "Platforma e-commerce SaaS"
+    },
+    "prestashop": {
+      "description": "Open-source e-commerce"
+    },
+    "shoper": {
+      "description": "Polska platforma sklepowa"
+    },
+    "ebay": {
+      "description": "Globalny marketplace aukcyjny"
+    },
+    "kaufland": {
+      "description": "Marketplace Kaufland (PL, DE, CZ)"
+    },
+    "olx": {
+      "description": "Polska platforma ogłoszeniowa"
+    },
+    "erli": {
+      "description": "Polski marketplace"
+    },
+    "empik": {
+      "description": "Empik Marketplace na platformie Mirakl"
+    },
+    "inpost": {
+      "description": "Paczkomaty i kurier InPost"
+    },
+    "dhl": {
+      "description": "Kurier DHL Express i Parcel"
+    },
+    "dpd": {
+      "description": "Kurier DPD Polska"
+    },
+    "gls": {
+      "description": "Kurier GLS Poland"
+    },
+    "ups": {
+      "description": "Kurier UPS Polska"
+    },
+    "fedex": {
+      "description": "Kurier FedEx Express"
+    },
+    "poczta_polska": {
+      "description": "Elektroniczny Nadawca"
+    },
+    "orlen_paczka": {
+      "description": "Automaty paczkowe Orlen"
+    },
+    "fakturownia": {
+      "description": "System fakturowania online"
+    },
+    "wfirma": {
+      "description": "Księgowość i fakturowanie online"
+    },
+    "infakt": {
+      "description": "Fakturowanie i księgowość"
+    },
+    "btp": {
+      "description": "Hurtownia BTP — integracja API"
+    }
+  },
+  "credentials": {
+    "allegro": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Twój Client ID z apps.developer.allegro.pl",
+      "clientIdHelp": "Znajdziesz w panelu deweloperskim Allegro: apps.developer.allegro.pl",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Twój Client Secret",
+      "accessToken": "Access Token",
+      "accessTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2",
+      "refreshToken": "Refresh Token",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "amazon": {
+      "applicationId": "Application ID",
+      "applicationIdHelp": "ID aplikacji z Amazon Developer Console (wymagane do OAuth)",
+      "clientId": "Client ID (LWA)",
+      "clientIdHelp": "Login with Amazon credentials z Seller Central > Develop Apps",
+      "clientSecret": "Client Secret (LWA)",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2",
+      "marketplaceId": "Marketplace ID",
+      "marketplaceIdHelp": "Amazon.pl: A1C3SOZRARQ6R3, Amazon.de: A1PA6795UKMFR9",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "woocommerce": {
+      "storeUrl": "Adres sklepu",
+      "storeUrlPlaceholder": "https://twoj-sklep.pl",
+      "storeUrlHelp": "Pełny adres URL Twojego sklepu WooCommerce",
+      "consumerKey": "Consumer Key",
+      "consumerKeyPlaceholder": "ck_...",
+      "consumerKeyHelp": "WooCommerce > Ustawienia > Zaawansowane > REST API > Dodaj klucz",
+      "consumerSecret": "Consumer Secret",
+      "consumerSecretPlaceholder": "cs_..."
+    },
+    "ebay": {
+      "appId": "App ID (Client ID)",
+      "appIdPlaceholder": "Twój App ID z developer.ebay.com",
+      "appIdHelp": "Znajdziesz w eBay Developer Program: developer.ebay.com",
+      "certId": "Cert ID (Client Secret)",
+      "devId": "Dev ID",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Wygeneruj przez eBay OAuth flow",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "kaufland": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API Kaufland",
+      "apiKeyHelp": "Seller Portal Kaufland > Ustawienia > API",
+      "secretKey": "Klucz Secret",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "olx": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Twój Client ID z OLX API",
+      "clientIdHelp": "Zarejestruj aplikację na developer.olx.pl",
+      "clientSecret": "Client Secret",
+      "accessToken": "Access Token",
+      "accessTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Zostanie pobrany automatycznie po autoryzacji OAuth2"
+    },
+    "erli": {
+      "apiToken": "Token API",
+      "apiTokenPlaceholder": "Twój token API Erli",
+      "apiTokenHelp": "Panel sprzedawcy Erli > Ustawienia > API",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "empik": {
+      "baseUrl": "Adres API Mirakl",
+      "baseUrlHelp": "URL platformy Mirakl dla Empik Marketplace",
+      "apiKey": "Klucz API",
+      "apiKeyHelp": "Mój Profil > Klucze API w panelu Mirakl"
+    },
+    "inpost": {
+      "apiToken": "Token API",
+      "apiTokenPlaceholder": "Twój token API InPost",
+      "apiTokenHelp": "Manager Paczek InPost > Ustawienia > API",
+      "organizationId": "ID organizacji",
+      "organizationIdPlaceholder": "Twój numer organizacji InPost",
+      "geowidgetToken": "Token GeoWidget (mapa)",
+      "geowidgetTokenPlaceholder": "Twój token GeoWidget InPost",
+      "geowidgetTokenHelp": "Token do wyświetlania mapy paczkomatów. Wygeneruj na manager.paczkomaty.pl > API > GeoWidget. WAŻNE: token jest przypisany do domeny — dla dev wpisz 'localhost', dla produkcji domenę sklepu.",
+      "sandbox": "Tryb testowy (Sandbox)",
+      "defaultSendingMethod": "Domyślna metoda nadania",
+      "defaultSendingMethodHelp": "Metoda nadania używana domyślnie przy generowaniu etykiety InPost",
+      "sendingMethods": {
+        "dispatch_order": "Kurier odbierze (zlecenie odbioru)",
+        "parcel_locker": "Nadam w paczkomacie",
+        "pop": "Nadam w PaczkoPunkcie (POP)",
+        "any_point": "Dowolny punkt (paczkomat/POP)",
+        "pok": "Punkt Obsługi Klienta (POK)",
+        "branch": "Oddział InPost"
+      }
+    },
+    "dhl": {
+      "username": "Nazwa użytkownika",
+      "usernamePlaceholder": "Login do DHL WebAPI",
+      "password": "Hasło",
+      "accountNumber": "Numer konta DHL",
+      "accountNumberPlaceholder": "Twój numer konta nadawczego",
+      "accountNumberHelp": "Numer konta nadawczego DHL (SAP)",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "dpd": {
+      "login": "Login",
+      "loginPlaceholder": "Login do DPD WebAPI",
+      "password": "Hasło",
+      "masterFid": "Master FID",
+      "masterFidPlaceholder": "Numer Master FID",
+      "masterFidHelp": "Numer identyfikacyjny nadawcy DPD",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "gls": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API GLS",
+      "apiKeyHelp": "GLS Poland > Konto firmowe > API",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "ups": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Twój Client ID z developer.ups.com",
+      "clientIdHelp": "UPS Developer Kit: developer.ups.com",
+      "clientSecret": "Client Secret",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "fedex": {
+      "clientId": "Client ID (API Key)",
+      "clientIdPlaceholder": "Twój Client ID z developer.fedex.com",
+      "clientIdHelp": "FedEx Developer Portal: developer.fedex.com",
+      "clientSecret": "Client Secret (Secret Key)",
+      "accountNumber": "Numer konta FedEx",
+      "accountNumberPlaceholder": "Twój 9-cyfrowy numer konta",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "poczta_polska": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API Poczta Polska",
+      "apiKeyHelp": "Elektroniczny Nadawca > Ustawienia > API",
+      "partnerId": "ID Partnera",
+      "partnerIdPlaceholder": "Twój identyfikator partnera",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "orlen_paczka": {
+      "apiKey": "Klucz API",
+      "apiKeyPlaceholder": "Twój klucz API Orlen Paczka",
+      "apiKeyHelp": "Panel Orlen Paczka > Ustawienia > Dostęp API",
+      "partnerId": "ID Partnera",
+      "partnerIdPlaceholder": "Twój identyfikator partnera",
+      "sandbox": "Tryb testowy (Sandbox)"
+    },
+    "fakturownia": {
+      "apiToken": "Token API",
+      "apiTokenPlaceholder": "Twój token API Fakturownia",
+      "apiTokenHelp": "Ustawienia > Ustawienia konta > Integracja > Kod autoryzacyjny API",
+      "subdomain": "Subdomena",
+      "subdomainPlaceholder": "twoja-firma",
+      "subdomainHelp": "Nazwa Twojego konta, np. 'twoja-firma' z twoja-firma.fakturownia.pl"
+    },
+    "btp": {
+      "username": "Klucz publiczny (login)",
+      "usernamePlaceholder": "Twój klucz publiczny z panelu BTP",
+      "usernameHelp": "Znajdziesz go w panelu B2B → Profil użytkownika → zakładka Klucze",
+      "password": "Klucz prywatny (hasło)",
+      "passwordPlaceholder": "Twój klucz prywatny z panelu BTP",
+      "passwordHelp": "Para kluczy służy do uwierzytelnienia Basic Auth w API BTP",
+      "baseUrl": "Adres API hurtowni",
+      "baseUrlPlaceholder": "https://twoja-hurtownia.btp.pro",
+      "baseUrlHelp": "Adres Swagger API Twojej hurtowni, np. https://nazwa.btp.pro"
+    }
+  },
+  "marketplaces": {
+    "tabs": {
+      "offers": "Oferty",
+      "catalog": "Katalog",
+      "promotions": "Promocje",
+      "messages": "Wiadomości",
+      "returns": "Zwroty",
+      "disputes": "Spory",
+      "delivery": "Dostawa",
+      "policies": "Polityki",
+      "finance": "Finanse",
+      "ratings": "Oceny",
+      "shipments": "Przesyłki"
+    },
+    "powiazane": "Powiązane",
+    "pominiete": "Pominięte",
+    "błedy": "Błędy",
+    "powiazany": "Powiązany",
+    "pominiety": "Pominięty",
+    "wiadomoscWysłana": "Wiadomość wysłana",
+    "nieUdałoSieWysłacWiadomosci": "Nie udało się wysłać wiadomości",
+    "napiszWiadomoscEnterAbyWysłacShiftenterNowaLinia": "Napisz wiadomość... (Enter aby wysłać, Shift+Enter nowa linia)",
+    "nieUdałoSieDezaktywowacOferty": "Nie udało się dezaktywować oferty",
+    "nieUdałoSieAktywowacOferty": "Nie udało się aktywować oferty",
+    "nieprawidłowaWartoscStanu": "Nieprawidłowa wartość stanu",
+    "nieUdałoSieZaktualizowacStanu": "Nie udało się zaktualizować stanu",
+    "nieprawidłowaWartoscCeny": "Nieprawidłowa wartość ceny",
+    "nieUdałoSieZaktualizowacCeny": "Nie udało się zaktualizować ceny",
+    "autoryzacjaNiePowiodłaSie": "Autoryzacja nie powiodła się",
+    "przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac": "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna i spróbuj ponownie.",
+    "nieUdałoSiePobracAdresuAutoryzacjiAllegro": "Nie udało się pobrać adresu autoryzacji Allegro",
+    "clientIdIClientSecretSaWymagane": "Client ID i Client Secret są wymagane",
+    "bładPodczasZapisywaniaDanych": "Błąd podczas zapisywania danych",
+    "integracjaAllegroZostałaDezaktywowana": "Integracja Allegro została dezaktywowana",
+    "bładPodczasDezaktywacjiIntegracji": "Błąd podczas dezaktywacji integracji",
+    "czyNaPewnoChceszUsunacIntegracjeAllegroTaOperacjaJ": "Czy na pewno chcesz usunąć integrację Allegro? Ta operacja jest nieodwracalna.",
+    "integracjaAllegroZostałaUsunieta": "Integracja Allegro została usunięta",
+    "przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac1": "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna.",
+    "nieUdałoSiePobracAdresuAutoryzacji": "Nie udało się pobrać adresu autoryzacji",
+    "redirectUriMusiBycZarejestrowanyWAllegro": "Redirect URI (musi być zarejestrowany w Allegro)",
+    "redirectUriWysłanyDoAllegro": "Redirect URI wysłany do Allegro",
+    "daneZaktualizowaneKliknijPołaczZAllegroAbyPonownie": "Dane zaktualizowane. Kliknij 'Połącz z Allegro' aby ponownie autoryzować.",
+    "nieZnalezionoZwrotowDoWyswietleniaNaAllegro": "Nie znaleziono zwrotów do wyświetlenia na Allegro.",
+    "podajPowodOdrzucenia": "Podaj powód odrzucenia",
+    "zwrotZostałOdrzucony": "Zwrot został odrzucony",
+    "nieUdałoSieOdrzucicZwrotu": "Nie udało się odrzucić zwrotu",
+    "opiszPowodOdrzuceniaZwrotu": "Opisz powód odrzucenia zwrotu...",
+    "podajPowodZwrotuPieniedzy": "Podaj powód zwrotu pieniędzy",
+    "podajIdPłatnosci": "Podaj ID płatności",
+    "zwrotPieniedzyZostałUtworzony": "Zwrot pieniędzy został utworzony",
+    "nieUdałoSieUtworzycZwrotuPieniedzy": "Nie udało się utworzyć zwrotu pieniędzy",
+    "nieUdałoSiePobracOfertZEbay": "Nie udało się pobrać ofert z eBay",
+    "nieUdałoSiePobracAdresuAutoryzacjiEbay": "Nie udało się pobrać adresu autoryzacji eBay",
+    "appIdCertIdIDevIdSaWymagane": "App ID, Cert ID i Dev ID są wymagane",
+    "wybierzWalute": "Wybierz walutę",
+    "integracjaEbayZostałaDezaktywowana": "Integracja eBay została dezaktywowana",
+    "czyNaPewnoChceszUsunacIntegracjeEbayTaOperacjaJest": "Czy na pewno chcesz usunąć integrację eBay? Ta operacja jest nieodwracalna.",
+    "integracjaEbayZostałaUsunieta": "Integracja eBay została usunięta",
+    "bładPodczasZapisywaniaUstawien": "Błąd podczas zapisywania ustawień",
+    "daneZaktualizowaneKliknijPołaczZEbayAbyPonownieAut": "Dane zaktualizowane. Kliknij 'Połącz z eBay' aby ponownie autoryzować.",
+    "połaczZEbay": "Połącz z eBay",
+    "nieUdałoSiePobracAdresuAutoryzacjiOlx": "Nie udało się pobrać adresu autoryzacji OLX",
+    "integracjaOlxZostałaDezaktywowana": "Integracja OLX została dezaktywowana",
+    "czyNaPewnoChceszUsunacIntegracjeOlxTaOperacjaJestN": "Czy na pewno chcesz usunąć integrację OLX? Ta operacja jest nieodwracalna.",
+    "integracjaOlxZostałaUsunieta": "Integracja OLX została usunięta",
+    "redirectUriMusiBycZarejestrowanyWOlx": "Redirect URI (musi być zarejestrowany w OLX)",
+    "daneZaktualizowaneKliknijPołaczZOlxAbyPonownieAuto": "Dane zaktualizowane. Kliknij 'Połącz z OLX' aby ponownie autoryzować.",
+    "połaczZOlx": "Połącz z OLX",
+    "zarzadzajPołaczeniamiZPlatformamiSprzedazowymi": "Zarządzaj połączeniami z platformami sprzedażowymi",
+    "dodajPierwszaPlatformeSprzedazowaAbySynchronizowac": "Dodaj pierwszą platformę sprzedażową, aby synchronizować zamówienia i produkty.",
+    "zdjecie": "Zdjęcie",
+    "wiadomosciAllegro": "Wiadomości Allegro",
+    "wybierzWatekAbyWyswietlicWiadomosci": "Wybierz wątek, aby wyświetlić wiadomości",
+    "szczegołyImportu": "Szczegóły importu",
+    "przejdzDoProduktow": "Przejdź do produktów",
+    "krok1ZarejestrujAplikacjeWOlx": "Krok 1: Zarejestruj aplikację w OLX",
+    "zarejestrujNowaAplikacje": "Zarejestruj nową aplikację",
+    "dokładnieTakiSam": "dokładnie taki sam",
+    "krok2WprowadzDaneAplikacji": "Krok 2: Wprowadź dane aplikacji",
+    "statusPołaczenia": "Status połączenia",
+    "zmienDaneAplikacji": "Zmień dane aplikacji",
+    "krok1ZarejestrujAplikacjeWEbayDeveloper": "Krok 1: Zarejestruj aplikację w eBay Developer Program",
+    "krok1ZarejestrujAplikacjeWAllegro": "Krok 1: Zarejestruj aplikację w Allegro",
+    "kliknijQuotzarejestrujAplikacjequot": "Kliknij &quot;Zarejestruj aplikację&quot;",
+    "wklejPonizszyAdres": "wklej poniższy adres:",
+    "czestePrzyczynyBłedu": "Częste przyczyny błędu:",
+    "bładŁadowaniaWatkow": "Błąd ładowania wątków",
+    "brakWatkow": "Brak wątków",
+    "bładŁadowaniaWiadomosci": "Błąd ładowania wiadomości",
+    "odrzucZwrot": "Odrzuć zwrot",
+    "powodOdrzucenia": "Powód odrzucenia",
+    "zwrotPieniedzy": "Zwrot pieniędzy",
+    "łaczenieZOlx": "Łączenie z OLX...",
+    "połaczonoZOlxOknoZamknieSieAutomatycznie": "Połączono z OLX! Okno zamknie się automatycznie.",
+    "połaczSwojeKontoOlxAbySynchronizowacOgłoszenia": "Połącz swoje konto OLX, aby synchronizować ogłoszenia i",
+    "przedPołaczeniemMusiszUtworzycAplikacjeWPanelu": "Przed połączeniem musisz utworzyć aplikację w panelu deweloperskim",
+    "ponizszyAdres": "poniższy adres:",
+    "powyzejRoznicaWNawetJednymZnakuSpowoduje": "powyżej. Różnica w nawet jednym znaku spowoduje błąd autoryzacji.",
+    "zapiszIPrzejdzDoAutoryzacji": "Zapisz i przejdź do autoryzacji",
+    "daneAplikacjiZostałyZapisaneKliknijPonizejAby": "Dane aplikacji zostały zapisane. Kliknij poniżej, aby autoryzować",
+    "dostepDoKontaOlxOtworzySieOkno": "dostęp do konta OLX. Otworzy się okno popup z logowaniem OLX.",
+    "odswiezToken": "Odśwież token",
+    "zaktualizujClientIdIClientSecretPo": "Zaktualizuj Client ID i Client Secret. Po zmianie konieczna będzie",
+    "łaczenieZEbay": "Łączenie z eBay...",
+    "połaczonoZEbayOknoZamknieSieAutomatycznie": "Połączono z eBay! Okno zamknie się automatycznie.",
+    "połaczSwojeKontoEbayAbySynchronizowacZamowienia": "Połącz swoje konto eBay, aby synchronizować zamówienia i produkty",
+    "dostepDoKontaEbayOtworzySieOkno": "dostęp do konta eBay. Otworzy się okno popup z logowaniem eBay.",
+    "wybierzRynekEbayIWaluteDoSynchronizacji": "Wybierz rynek eBay i walutę do synchronizacji.",
+    "zaktualizujAppIdCertIdIDev": "Zaktualizuj App ID, Cert ID i Dev ID. Po zmianie konieczna będzie",
+    "zarzadzajOfertamiIKonfiguracjaEbay": "Zarządzaj ofertami i konfiguracją eBay",
+    "skonfigurujIntegracje": "Skonfiguruj integrację",
+    "brakOfertDoWyswietlenia": "Brak ofert do wyświetlenia",
+    "łaczenieZAllegro": "Łączenie z Allegro...",
+    "połaczonoZAllegroOknoZamknieSieAutomatycznie": "Połączono z Allegro! Okno zamknie się automatycznie.",
+    "połaczSwojeKontoAllegroAbySynchronizowacZamowienia": "Połącz swoje konto Allegro, aby synchronizować zamówienia i",
+    "spowodujeBładAutoryzacji": "spowoduje błąd autoryzacji.",
+    "dostepDoKontaAllegroOtworzySieOkno": "dostęp do konta Allegro. Otworzy się okno popup z logowaniem",
+    "jesliAllegroPokazujeBładSprawdzCzyPonizsze": "Jeśli Allegro pokazuje błąd, sprawdź czy poniższe dane zgadzają",
+    "sieZKonfiguracjaAplikacjiWDeveloperCenter": "się z konfiguracją aplikacji w Developer Center.",
+    "aplikacjaMuszaBycZTegoSamegoSrodowiska": "aplikacja muszą być z tego samego środowiska",
+    "aplikacjaNieMaWłaczonegoQuotbrowserAccessquotW": "Aplikacja nie ma włączonego &quot;Browser access&quot; w",
+    "zarzadzajSwoimiOfertamiNaAllegro": "Zarządzaj swoimi ofertami na Allegro",
+    "odpowiadajNaWiadomosciOdKupujacych": "Odpowiadaj na wiadomości od kupujących",
+    "zarzadzajZwrotamiOdKupujacychNaAllegro": "Zarządzaj zwrotami od kupujących na Allegro",
+    "paczkaWysłana": "Paczka wysłana",
+    "zwrocPieniadze": "Zwróć pieniądze",
+    "odrzuc": "Odrzuć",
+    "pobierzSwojeOfertyZAllegroIUtworz": "Pobierz swoje oferty z Allegro i utwórz produkty w systemie",
+    "jePoSkuDoIstniejacychProduktowLub": "je po SKU do istniejących produktów lub tworzy nowe. Oferty już",
+    "powiazaneZostanaPominiete": "powiązane zostaną pominięte.",
+    "uzytyWTrybie": "użyty w trybie",
+    "kupujacy": "Kupujący:"
+  }
+}

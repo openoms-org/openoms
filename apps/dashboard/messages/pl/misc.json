@@ -1,0 +1,78 @@
+{
+  "tools": {
+    "nieobsługiwanyTypPlikuDozwoloneJpegPngWebp": "Nieobsługiwany typ pliku. Dozwolone: JPEG, PNG, WEBP.",
+    "plikJestZaDuzyMaksymalnyRozmiar10Mb": "Plik jest za duży. Maksymalny rozmiar: 10 MB.",
+    "tłoZostałoUsuniete": "Tło zostało usunięte",
+    "oryginalneZdjecie": "Oryginalne zdjęcie",
+    "usunTło": "Usuń tło\\",
+    "zdjecieBezTła": "Zdjęcie bez tła",
+    "bgRemoval": {
+      "done": "Gotowe",
+      "clickToProcess": "Kliknij \"Usuń tło\" aby przetworzyć"
+    },
+    "oryginał": "Oryginał",
+    "bezTła": "Bez tła",
+    "wynikPojawiSieTutaj": "Wynik pojawi się tutaj",
+    "automatyczneUsuwanieTłaZeZdjecProduktowych": "Automatyczne usuwanie tła ze zdjęć produktowych",
+    "usuwanieTłaNieJestSkonfigurowane": "Usuwanie tła nie jest skonfigurowane",
+    "abyKorzystacZTejFunkcjiAdministratorMusi": "Aby korzystać z tej funkcji, administrator musi ustawić zmienną",
+    "automatyczneUsuwanieTłaZeZdjecProduktowychPowered": "Automatyczne usuwanie tła ze zdjęć produktowych. Powered by remove.bg",
+    "przeciagnijIUpuscZdjecie": "Przeciągnij i upuść zdjęcie",
+    "noweZdjecie": "Nowe zdjęcie",
+    "usunTło1": "Usuń tło"
+  },
+  "help": {
+    "title": "Pomoc",
+    "subtitle": "Zasoby i wsparcie dla użytkowników OpenOMS",
+    "userGuide": "Poradnik użytkownika",
+    "userGuideDescription": "Krok po kroku: od rejestracji do pierwszego zamówienia.",
+    "faq": "FAQ — Pytania i odpowiedzi",
+    "faqDescription": "Najczęściej zadawane pytania przez sprzedawców.",
+    "discordCommunity": "Społeczność Discord",
+    "discordDescription": "Dołącz do społeczności, zadawaj pytania, dziel się pomysłami.",
+    "reportBug": "Zgłoś problem",
+    "reportBugDescription": "Znalazłeś błąd? Otwórz issue na GitHubie.",
+    "needDirectHelp": "Potrzebujesz bezpośredniej pomocy?"
+  },
+  "reports": {
+    "przychodWgZrodłaOstatnie30Dni": "Przychód wg źródła (ostatnie 30 dni)",
+    "przychod": "Przychód",
+    "trendZamowienOstatnie30Dni": "Trend zamówień (ostatnie 30 dni)",
+    "sredniaWartosc": "Średnia wartość",
+    "liczbaZamowien": "Liczba zamówień",
+    "trendZamowien": "Trend zamówień",
+    "metodyPłatnosci": "Metody płatności",
+    "płatnosci": "Płatności",
+    "szczegołoweStatystykiIAnalizySprzedazy": "Szczegółowe statystyki i analizy sprzedaży"
+  },
+  "workflows": {
+    "utworzSwojPierwszyWizualnyWorkflowAutomatyzacji": "Utwórz swój pierwszy wizualny workflow automatyzacji",
+    "wroc": "Wróc"
+  },
+  "loyalty": {
+    "statusProgramuZostałZmieniony": "Status programu został zmieniony",
+    "programZostałUsuniety": "Program został usunięty",
+    "punktyZostałyPrzyznane": "Punkty zostały przyznane",
+    "punktyZostałyWymienione": "Punkty zostały wymienione",
+    "npBonusZaLojalnosc": "np. Bonus za lojalność",
+    "wymien": "Wymień",
+    "czyNaPewnoChceszUsunacTenProgramLojalnosciowyWszys": "Czy na pewno chcesz usunąć ten program lojalnościowy? Wszystkie dane uczestników zostaną utracone.",
+    "usunProgram": "Usuń program",
+    "nieprawidłowyFormatJsonWKonfiguracji": "Nieprawidłowy format JSON w konfiguracji",
+    "programLojalnosciowyZostałUtworzony": "Program lojalnościowy został utworzony",
+    "points_per_plnIlePunktowZa1PlnRedemption_rateIlePu": "points_per_pln: ile punktów za 1 PLN; redemption_rate: ile punktów wymienić; redemption_value: wartość w PLN",
+    "tiersListaPoziomowZProgamiMin_spentIRabatamiDiscou": "tiers: lista poziomów z progami min_spent i rabatami discount_pct",
+    "orders_requiredIleZamowienPotrzebaDiscount_pctProc": "orders_required: ile zamówień potrzeba; discount_pct: procent rabatu",
+    "brakProgramowLojalnosciowych": "Brak programów lojalnościowych",
+    "utworzPierwszyProgramAbyNagradzacKlientowZaZakupy": "Utwórz pierwszy program, aby nagradzać klientów za zakupy.",
+    "czyNaPewnoChceszUsunacTenProgramLojalnosciowyWszys1": "Czy na pewno chcesz usunąć ten program lojalnościowy? Wszystkie dane punktowe zostaną utracone.",
+    "nowyProgramLojalnosciowy": "Nowy program lojalnościowy",
+    "zakonczony": "Zakończony",
+    "liczbaPunktow": "Liczba punktów",
+    "wymienPunkty": "Wymień punkty",
+    "liczbaPunktowDoWymiany": "Liczba punktów do wymiany",
+    "zarzadzajProgramamiPunktowymiPoziomamiIRabatami": "Zarządzaj programami punktowymi, poziomami i rabatami",
+    "rabatPoNZamowieniach": "Rabat po N zamówieniach",
+    "brakUczestnikowWTymProgramie": "Brak uczestników w tym programie."
+  }
+}

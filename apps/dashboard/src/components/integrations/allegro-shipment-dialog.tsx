@@ -76,7 +76,7 @@ export function AllegroShipmentDialog({
 
   const handleCreateShipment = async () => {
     if (!selectedServiceId) {
-      toast.error(t("wybierzUsługeDostawy"));
+      toast.error(t("selectDeliveryService"));
       return;
     }
 
@@ -128,7 +128,7 @@ export function AllegroShipmentDialog({
 
       setCreatedShipmentId(result.shipmentId);
       setStep("result");
-      toast.success(t("przesyłkaZostałaUtworzonaWAllegro"));
+      toast.success(t("allegroShipmentCreated"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -139,7 +139,7 @@ export function AllegroShipmentDialog({
     setIsDownloading(true);
     try {
       await downloadAllegroLabel(createdShipmentId);
-      toast.success(t("etykietaZostałaPobrana"));
+      toast.success(t("labelDownloaded"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -153,25 +153,25 @@ export function AllegroShipmentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            {t("wyslijZAllegro")}
+            {t("allegroSendTitle")}
           </DialogTitle>
           <DialogDescription>
-            {t("utworzPrzesyłkeIWygenerujEtykieteKurierskaPrzez")}
+            {t("allegroCreateShipmentDesc")}
           </DialogDescription>
         </DialogHeader>
 
         {step === "select-service" && (
           <div className="space-y-4">
             <div>
-              <Label>{t("usługaDostawy")}</Label>
+              <Label>{t("deliveryService")}</Label>
               {isLoadingServices ? (
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("ładowanieUsługDostawy")}
+                  {t("loadingDeliveryServices")}
                 </div>
               ) : deliveryServices.length === 0 ? (
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {t("brakDostepnychUsługDostawySprawdzKonfiguracjeAlleg")}
+                  {t("noDeliveryServices")}
                 </p>
               ) : (
                 <Select
@@ -179,7 +179,7 @@ export function AllegroShipmentDialog({
                   onValueChange={setSelectedServiceId}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={t("wybierzUsługeDostawy1")} />
+                    <SelectValue placeholder={t("selectDeliveryServicePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {deliveryServices.map((svc) => (
@@ -286,7 +286,7 @@ export function AllegroShipmentDialog({
                     {t("creating")}
                   </>
                 ) : (
-                  t("utworzPrzesyłke")
+                  t("createShipment")
                 )}
               </Button>
             </DialogFooter>
@@ -313,7 +313,7 @@ export function AllegroShipmentDialog({
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              {t("pobierzEtykiete")}
+              {t("downloadLabel")}
             </Button>
 
             <DialogFooter>

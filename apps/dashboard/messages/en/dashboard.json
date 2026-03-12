@@ -1,0 +1,120 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "totalOrders": "Total orders",
+      "new": "New",
+      "inTransit": "In transit",
+      "delivered": "Delivered"
+    },
+    "recentOrders": "Recent orders",
+    "noOrders": "No orders",
+    "ordersBySource": "Orders by source",
+    "ordersByStatus": "Orders by status"
+  },
+  "onboarding": {
+    "title": "Getting started",
+    "progress": "{completed} of {total} completed",
+    "dismiss": "Skip",
+    "steps": {
+      "company": {
+        "title": "Complete company details",
+        "description": "Add company name and tax ID — needed for invoices and shipments."
+      },
+      "integration": {
+        "title": "Connect with Allegro",
+        "description": "Import orders and products from Allegro."
+      },
+      "product": {
+        "title": "Add your first product",
+        "description": "Manually or via CSV import."
+      },
+      "order": {
+        "title": "First order",
+        "description": "Will arrive automatically from Allegro or add manually."
+      }
+    },
+    "companyData": "Company data",
+    "warehouse": "Warehouse",
+    "integration": "Integration",
+    "team": "Team",
+    "next": "Next",
+    "error": "An error occurred",
+    "sendInvite": "Send invite",
+    "inviteSent": "Invitation sent",
+    "finishSetup": "Finish setup",
+    "finishLater": "Complete later",
+    "allDone": "All done!",
+    "setupCompleteMessage": "Configuration complete — you can now use the system.",
+    "goToDashboard": "Go to dashboard",
+    "backToDashboard": "Back to dashboard",
+    "failedToLoadStatus": "Failed to load configuration status",
+    "failedToSaveSkip": "Failed to save step skip",
+    "systemSetup": "System setup",
+    "setupSubtitle": "Configure the system to take full advantage of it.",
+    "oauthRedirectNotice": "This provider requires OAuth authorization — after clicking \"Next\" you will be redirected to the integrations page.",
+    "stepTitles": {
+      "companyData": "Company data",
+      "defaultWarehouse": "Default warehouse",
+      "firstIntegration": "First integration",
+      "inviteTeam": "Invite team"
+    },
+    "stepDescriptions": {
+      "companyData": "Fill in company data needed for invoices and shipments.",
+      "defaultWarehouse": "Add a warehouse for order fulfillment.",
+      "firstIntegration": "Connect to a sales platform or carrier.",
+      "inviteTeam": "Invite team members to the system."
+    },
+    "validation": {
+      "companyNameRequired": "Company name is required",
+      "nipRequired": "Tax ID (NIP) is required",
+      "nipInvalid": "Enter a valid NIP number",
+      "emailInvalid": "Enter a valid email address",
+      "postCodeFormat": "Postal code must be in XX-XXX format",
+      "phoneInvalid": "Enter a valid phone number",
+      "warehouseNameRequired": "Warehouse name is required",
+      "selectProvider": "Select a provider"
+    },
+    "form": {
+      "companyName": "Company name",
+      "street": "Street and number",
+      "streetPlaceholder": "e.g. Main St. 10",
+      "city": "City",
+      "postCode": "Postal code",
+      "phone": "Phone",
+      "warehouseName": "Warehouse name",
+      "mainWarehouse": "Main warehouse",
+      "apiKey": "API key",
+      "pasteApiKey": "Paste API key",
+      "emailPlaceholder": "email@example.com"
+    }
+  },
+  "subscription": {
+    "suspended": "Subscription has been suspended. Renew your payment to continue using the system.",
+    "pastDue": "Payment overdue. Creating new resources has been blocked until the outstanding payment is settled.",
+    "trial": "Trial period — {days} days remaining.",
+    "manageSubscription": "Manage subscription",
+    "canceled": "Subscription canceled. Access expires {date}.",
+    "renewSubscription": "Renew subscription",
+    "zarzadzajPlanemIPłatnosciami": "Manage plan and payments",
+    "twojPlan": "Your plan",
+    "nieUdałoSieZaładowacDanychSubskrypcji": "Failed to load subscription data",
+    "maksUzytkownikow": "Max users",
+    "zamowienMiesiac": "Orders / month",
+    "brakLimitowWBiezacymPlanie": "No limits in current plan",
+    "title": "Subscription",
+    "statusTrialing": "Trial period",
+    "statusActive": "Active",
+    "statusPastDue": "Overdue payment",
+    "statusCanceled": "Canceled",
+    "statusSuspended": "Suspended",
+    "intervalMonth": "Monthly",
+    "intervalYear": "Yearly",
+    "trialEndsIn": "Trial period ends in",
+    "days": "{count} days",
+    "accessExpires": "Access expires:",
+    "nextRenewal": "Next renewal:",
+    "planLimits": "Plan limits",
+    "maxIntegrations": "Max. integrations"
+  }
+}

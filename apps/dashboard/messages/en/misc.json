@@ -1,0 +1,78 @@
+{
+  "tools": {
+    "nieobsługiwanyTypPlikuDozwoloneJpegPngWebp": "Unsupported file type. Allowed: JPEG, PNG, WEBP.",
+    "plikJestZaDuzyMaksymalnyRozmiar10Mb": "File is too large. Maximum size: 10 MB.",
+    "tłoZostałoUsuniete": "Background has been removed",
+    "oryginalneZdjecie": "Original photo",
+    "usunTło": "Remove background",
+    "zdjecieBezTła": "Photo without background",
+    "bgRemoval": {
+      "done": "Done",
+      "clickToProcess": "Click \"Remove background\" to process"
+    },
+    "oryginał": "Original",
+    "bezTła": "Without background",
+    "wynikPojawiSieTutaj": "Result will appear here",
+    "automatyczneUsuwanieTłaZeZdjecProduktowych": "Automatic background removal from product photos",
+    "usuwanieTłaNieJestSkonfigurowane": "Background removal is not configured",
+    "abyKorzystacZTejFunkcjiAdministratorMusi": "To use this feature, the administrator must",
+    "automatyczneUsuwanieTłaZeZdjecProduktowychPowered": "Automatic background removal from product photos — powered",
+    "przeciagnijIUpuscZdjecie": "Drag and drop a photo",
+    "noweZdjecie": "New photo",
+    "usunTło1": "Remove background"
+  },
+  "help": {
+    "title": "Help",
+    "subtitle": "Resources and support for OpenOMS users",
+    "userGuide": "User guide",
+    "userGuideDescription": "Step by step: from registration to your first order.",
+    "faq": "FAQ",
+    "faqDescription": "Frequently asked questions by sellers.",
+    "discordCommunity": "Discord community",
+    "discordDescription": "Join the community, ask questions, share ideas.",
+    "reportBug": "Report a bug",
+    "reportBugDescription": "Found a bug? Open an issue on GitHub.",
+    "needDirectHelp": "Need direct help?"
+  },
+  "reports": {
+    "przychodWgZrodłaOstatnie30Dni": "Revenue by source (last 30 days)",
+    "przychod": "Revenue",
+    "trendZamowienOstatnie30Dni": "Order trend (last 30 days)",
+    "sredniaWartosc": "Average value",
+    "liczbaZamowien": "Number of orders",
+    "trendZamowien": "Order trend",
+    "metodyPłatnosci": "Payment methods",
+    "płatnosci": "Payments",
+    "szczegołoweStatystykiIAnalizySprzedazy": "Detailed statistics and sales analysis"
+  },
+  "workflows": {
+    "utworzSwojPierwszyWizualnyWorkflowAutomatyzacji": "Create your first visual automation workflow",
+    "wroc": "Back"
+  },
+  "loyalty": {
+    "statusProgramuZostałZmieniony": "Program status has been changed",
+    "programZostałUsuniety": "Program has been deleted",
+    "punktyZostałyPrzyznane": "Points have been awarded",
+    "punktyZostałyWymienione": "Points have been redeemed",
+    "npBonusZaLojalnosc": "e.g. Loyalty bonus",
+    "wymien": "Redeem",
+    "czyNaPewnoChceszUsunacTenProgramLojalnosciowyWszys": "Are you sure you want to delete this loyalty program? All participant data will be lost.",
+    "usunProgram": "Delete program",
+    "nieprawidłowyFormatJsonWKonfiguracji": "Invalid JSON format in configuration",
+    "programLojalnosciowyZostałUtworzony": "Loyalty program has been created",
+    "points_per_plnIlePunktowZa1PlnRedemption_rateIlePu": "points_per_pln: points per 1 PLN, redemption_rate: points per",
+    "tiersListaPoziomowZProgamiMin_spentIRabatamiDiscou": "tiers: list of levels with min_spent thresholds and discount",
+    "orders_requiredIleZamowienPotrzebaDiscount_pctProc": "orders_required: number of orders needed, discount_pct: percent",
+    "brakProgramowLojalnosciowych": "No loyalty programs",
+    "utworzPierwszyProgramAbyNagradzacKlientowZaZakupy": "Create your first program to reward customers for purchases.",
+    "czyNaPewnoChceszUsunacTenProgramLojalnosciowyWszys1": "Are you sure you want to delete this loyalty program? All points data will be lost.",
+    "nowyProgramLojalnosciowy": "New loyalty program",
+    "zakonczony": "Completed",
+    "liczbaPunktow": "Number of points",
+    "wymienPunkty": "Redeem points",
+    "liczbaPunktowDoWymiany": "Points to redeem",
+    "zarzadzajProgramamiPunktowymiPoziomamiIRabatami": "Manage points programs, tiers and discounts",
+    "rabatPoNZamowieniach": "Discount after N orders",
+    "brakUczestnikowWTymProgramie": "No participants in this program"
+  }
+}

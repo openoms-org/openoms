@@ -29,6 +29,7 @@ interface OrderFiltersProps {
 
 export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
   const t = useTranslations("orders");
+  const tStatuses = useTranslations("statuses");
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
 
@@ -100,11 +101,19 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("filters.allStatuses")}</SelectItem>
-            {Object.entries(orderStatuses).map(([key, config]) => (
-              <SelectItem key={key} value={key}>
-                {config.label}
-              </SelectItem>
-            ))}
+            {Object.entries(orderStatuses).map(([key, config]) => {
+              let label: string;
+              try {
+                label = tStatuses(`order.${key}` as never);
+              } catch {
+                label = config.label;
+              }
+              return (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -142,11 +151,19 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("filters.allPayments")}</SelectItem>
-            {Object.entries(PAYMENT_STATUSES).map(([key, { label }]) => (
-              <SelectItem key={key} value={key}>
-                {label}
-              </SelectItem>
-            ))}
+            {Object.entries(PAYMENT_STATUSES).map(([key, { label: rawLabel }]) => {
+              let label: string;
+              try {
+                label = tStatuses(`payment.${key}` as never);
+              } catch {
+                label = rawLabel;
+              }
+              return (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

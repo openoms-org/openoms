@@ -85,9 +85,9 @@ export function MarketplaceShipmentSettings({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("ustawieniaPrzesyłek")}</CardTitle>
+        <CardTitle>{t("shipmentSettings")}</CardTitle>
         <CardDescription>
-          {t("konfigurujAutomatyczneTworzeniePrzesyłekDlaZamowie")}
+          {t("shipmentAutoCreateDesc")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -102,7 +102,7 @@ export function MarketplaceShipmentSettings({
             }}
           />
           <Label htmlFor="auto_create_shipment" className="font-normal cursor-pointer">
-            {t("automatycznieTworzPrzesyłkeDlaNowychZamowien")}
+            {t("shipmentAutoCreate")}
           </Label>
         </div>
 
@@ -124,7 +124,7 @@ export function MarketplaceShipmentSettings({
 
         {/* Default carrier */}
         <div className="space-y-2">
-          <Label>{t("domyslnyDostawca")}</Label>
+          <Label>{t("defaultCarrier")}</Label>
           <Select
             value={defaultCarrier || "__none__"}
             onValueChange={(v) => setDefaultCarrier(v === "__none__" ? "" : v)}
@@ -142,7 +142,7 @@ export function MarketplaceShipmentSettings({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {t("uzywanyGdyMetodaDostawyZMarketplaceNie")}
+            {t("defaultCarrierHint")}
           </p>
         </div>
 
@@ -150,8 +150,7 @@ export function MarketplaceShipmentSettings({
         <div className="space-y-2">
           <Label>{t("deliveryMethodMapping")}</Label>
           <p className="text-xs text-muted-foreground mb-2">
-            {t("przypiszNazwyMetodDostawyZMarketplaceDo")}
-            Dopasowanie działa na podstawie fragmentu nazwy (np. &quot;Paczkomaty&quot; pasuje do &quot;Paczkomaty 24/7&quot;).
+            {t("carrierMappingDesc")}
           </p>
           <CarrierMappingEditor value={carrierMapping} onChange={setCarrierMapping} />
         </div>
@@ -160,7 +159,7 @@ export function MarketplaceShipmentSettings({
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={isLoading}>
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t("zapiszUstawieniaPrzesyłek")}
+            {t("saveShipmentSettings")}
           </Button>
         </div>
       </CardContent>

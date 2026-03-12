@@ -1,0 +1,497 @@
+{
+  "integrations": {
+    "title": "Integrations",
+    "subtitle": "Connect with external services",
+    "newIntegration": "New integration",
+    "statusIntegracjiZostałZmieniony": "Integration status has been changed",
+    "nieWprowadzonoZadnychZmian": "No changes were made",
+    "daneIntegracjiZostałyZaktualizowane": "Integration data has been updated",
+    "bładPodczasAktualizacjiDanych": "Error updating data",
+    "integracjaZostałaUsunieta": "Integration has been deleted",
+    "bładPodczasUsuwaniaIntegracji": "Error deleting integration",
+    "ustawieniaPrzesyłekZostałyZapisane": "Shipment settings have been saved",
+    "bładPodczasZapisywaniaUstawienPrzesyłek": "Error saving shipment settings",
+    "usunIntegracje": "Delete integration",
+    "czyNaPewnoChceszUsunacTeIntegracjeTaOperacjaJestNi": "Are you sure you want to delete this integration? This action is irreversible.",
+    "przypiszKategorie": "Assign category...",
+    "mapowanieUsuniete": "Mapping deleted",
+    "integracjaZostałaUtworzona": "Integration has been created",
+    "dodajNowePołaczenieZZewnetrznymSerwisem": "Add a new connection to an external service",
+    "zarzadzajPołaczeniamiZZewnetrznymiSerwisami": "Manage connections to external services",
+    "dodajPierwszaIntegracjeAbyPołaczycSieZZewnetrznymi": "Add your first integration to connect to external services.",
+    "allegroTokenExpired": "Allegro token expired or invalid. Reconnect your Allegro account in integration settings.",
+    "allegroLoadError": "Failed to load Allegro data. Check your account connection.",
+    "selectDeliveryService": "Select delivery service",
+    "allegroShipmentCreated": "Shipment created in Allegro",
+    "labelDownloaded": "Label has been downloaded",
+    "downloadLabel": "Download label",
+    "selectDeliveryServicePlaceholder": "Select delivery service...",
+    "createShipment": "Create shipment",
+    "invalidUrl": "Enter a valid URL",
+    "leaveEmptyToKeep": "Leave empty to keep unchanged",
+    "show": "Show",
+    "hide": "Hide",
+    "credentialFields": "Authentication credentials",
+    "create": "Create integration",
+    "creating": "Creating...",
+    "saveChanges": "Save changes",
+    "updating": "Updating...",
+    "updateData": "Update data",
+    "provider": "Provider",
+    "selectProviderPlaceholder": "Select provider...",
+    "inDevelopment": "in development",
+    "notSet": "Not set",
+    "fieldRequired": "Field \"{field}\" is required",
+    "additionalSettingsJson": "Additional settings (JSON)",
+    "deliveryService": "Delivery service",
+    "bładIntegracji": "Integration error",
+    "shipmentSettings": "Shipment settings",
+    "defaultCarrier": "Default provider",
+    "majaTerazWłasneSekcjeWMenu": "now have their own menu sections",
+    "ponizszeIntegracjeWymagajaAutoryzacjiOauthIMaja": "The following integrations require OAuth authorization and have",
+    "powiazaniaMiedzyKategoriamiZMarketplaceAKategoriam": "Mappings between marketplace categories and local categories",
+    "brakMapowanImportOfertZMarketplaceUtworzy": "No mappings — marketplace offer import will create",
+    "editModeHint": "Fill in only the fields you want to change — empty fields will not be overwritten.",
+    "showAdvanced": "Show advanced",
+    "brakMapowanDodajMapowanieAbyAutomatyczniePrzypisyw": "No mappings — add a mapping to automatically assign",
+    "shipmentAutoCreateDesc": "Configure automatic shipment creation for orders",
+    "shipmentAutoCreate": "Automatically create shipment for new orders",
+    "defaultCarrierHint": "Used when the delivery method from marketplace does not match any mapping.",
+    "carrierMappingDesc": "Map marketplace delivery method names to providers in OpenOMS.",
+    "saveShipmentSettings": "Save shipment settings",
+    "allegroSendTitle": "Send via Allegro",
+    "allegroCreateShipmentDesc": "Create shipment and generate courier label via Allegro.",
+    "loadingDeliveryServices": "Loading delivery services",
+    "noDeliveryServices": "No available delivery services — check Allegro configuration"
+  },
+  "providers": {
+    "orderSource": {
+      "manual": "Manual",
+      "supplier": "Supplier",
+      "allegro": "Allegro",
+      "amazon": "Amazon",
+      "empik": "Empik",
+      "erli": "Erli",
+      "ebay": "eBay",
+      "kaufland": "Kaufland",
+      "olx": "OLX",
+      "woocommerce": "WooCommerce",
+      "shopify": "Shopify",
+      "other": "Other"
+    },
+    "shipment": {
+      "inpost": "InPost",
+      "dhl": "DHL",
+      "dpd": "DPD",
+      "gls": "GLS",
+      "ups": "UPS",
+      "poczta_polska": "Poczta Polska",
+      "orlen_paczka": "Orlen Paczka",
+      "fedex": "FedEx",
+      "manual": "Manual"
+    },
+    "integration": {
+      "allegro": "Allegro",
+      "amazon": "Amazon",
+      "empik": "Empik",
+      "erli": "Erli",
+      "ebay": "eBay",
+      "kaufland": "Kaufland",
+      "olx": "OLX",
+      "inpost": "InPost",
+      "dhl": "DHL",
+      "dpd": "DPD",
+      "woocommerce": "WooCommerce",
+      "gls": "GLS",
+      "ups": "UPS",
+      "fedex": "FedEx",
+      "poczta_polska": "Poczta Polska",
+      "orlen_paczka": "Orlen Paczka",
+      "fakturownia": "Fakturownia",
+      "btp": "BTP.pro"
+    },
+    "invoicing": {
+      "fakturownia": "Fakturownia",
+      "wfirma": "wFirma",
+      "infakt": "inFakt"
+    },
+    "category": {
+      "marketplace": "Marketplace",
+      "carrier": "Carriers",
+      "invoicing": "Invoicing",
+      "supplier": "Wholesalers"
+    },
+    "allegro": {
+      "description": "The largest e-commerce platform in Poland"
+    },
+    "amazon": {
+      "description": "Global marketplace"
+    },
+    "woocommerce": {
+      "description": "E-commerce platform for WordPress"
+    },
+    "shopify": {
+      "description": "SaaS e-commerce platform"
+    },
+    "prestashop": {
+      "description": "Open-source e-commerce"
+    },
+    "shoper": {
+      "description": "Polish e-commerce platform"
+    },
+    "ebay": {
+      "description": "Global auction marketplace"
+    },
+    "kaufland": {
+      "description": "Kaufland Marketplace (PL, DE, CZ)"
+    },
+    "olx": {
+      "description": "Polish classifieds platform"
+    },
+    "erli": {
+      "description": "Polish marketplace"
+    },
+    "empik": {
+      "description": "Empik Marketplace on Mirakl platform"
+    },
+    "inpost": {
+      "description": "Parcel lockers and InPost courier"
+    },
+    "dhl": {
+      "description": "DHL Express and Parcel courier"
+    },
+    "dpd": {
+      "description": "DPD courier"
+    },
+    "gls": {
+      "description": "GLS courier"
+    },
+    "ups": {
+      "description": "UPS courier"
+    },
+    "fedex": {
+      "description": "FedEx Express courier"
+    },
+    "poczta_polska": {
+      "description": "Electronic Sender (Poczta Polska)"
+    },
+    "orlen_paczka": {
+      "description": "Orlen parcel lockers"
+    },
+    "fakturownia": {
+      "description": "Online invoicing system"
+    },
+    "wfirma": {
+      "description": "Accounting and invoicing online"
+    },
+    "infakt": {
+      "description": "Invoicing and accounting"
+    },
+    "btp": {
+      "description": "BTP wholesaler — API integration"
+    }
+  },
+  "credentials": {
+    "allegro": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Your Client ID from apps.developer.allegro.pl",
+      "clientIdHelp": "Found in Allegro Developer panel: apps.developer.allegro.pl",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "Your Client Secret",
+      "accessToken": "Access Token",
+      "accessTokenHelp": "Will be fetched automatically after OAuth2 authorization",
+      "refreshToken": "Refresh Token",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "amazon": {
+      "applicationId": "Application ID",
+      "applicationIdHelp": "Application ID from Amazon Developer Console (required for OAuth)",
+      "clientId": "Client ID (LWA)",
+      "clientIdHelp": "Login with Amazon credentials from Seller Central > Develop Apps",
+      "clientSecret": "Client Secret (LWA)",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Will be fetched automatically after OAuth2 authorization",
+      "marketplaceId": "Marketplace ID",
+      "marketplaceIdHelp": "Amazon.pl: A1C3SOZRARQ6R3, Amazon.de: A1PA6795UKMFR9",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "woocommerce": {
+      "storeUrl": "Store URL",
+      "storeUrlPlaceholder": "https://your-store.com",
+      "storeUrlHelp": "Full URL of your WooCommerce store",
+      "consumerKey": "Consumer Key",
+      "consumerKeyPlaceholder": "ck_...",
+      "consumerKeyHelp": "WooCommerce > Settings > Advanced > REST API > Add key",
+      "consumerSecret": "Consumer Secret",
+      "consumerSecretPlaceholder": "cs_..."
+    },
+    "ebay": {
+      "appId": "App ID (Client ID)",
+      "appIdPlaceholder": "Your App ID from developer.ebay.com",
+      "appIdHelp": "Found in eBay Developer Program: developer.ebay.com",
+      "certId": "Cert ID (Client Secret)",
+      "devId": "Dev ID",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Generate via eBay OAuth flow",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "kaufland": {
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Your Kaufland API key",
+      "apiKeyHelp": "Kaufland Seller Portal > Settings > API",
+      "secretKey": "Secret Key",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "olx": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Your Client ID from OLX API",
+      "clientIdHelp": "Register your app at developer.olx.pl",
+      "clientSecret": "Client Secret",
+      "accessToken": "Access Token",
+      "accessTokenHelp": "Will be fetched automatically after OAuth2 authorization",
+      "refreshToken": "Refresh Token",
+      "refreshTokenHelp": "Will be fetched automatically after OAuth2 authorization"
+    },
+    "erli": {
+      "apiToken": "API Token",
+      "apiTokenPlaceholder": "Your Erli API token",
+      "apiTokenHelp": "Erli Seller Panel > Settings > API",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "empik": {
+      "baseUrl": "Mirakl API URL",
+      "baseUrlHelp": "Mirakl platform URL for Empik Marketplace",
+      "apiKey": "API Key",
+      "apiKeyHelp": "My Profile > API Keys in Mirakl panel"
+    },
+    "inpost": {
+      "apiToken": "API Token",
+      "apiTokenPlaceholder": "Your InPost API token",
+      "apiTokenHelp": "InPost Shipment Manager > Settings > API",
+      "organizationId": "Organization ID",
+      "organizationIdPlaceholder": "Your InPost organization number",
+      "geowidgetToken": "GeoWidget Token (map)",
+      "geowidgetTokenPlaceholder": "Your InPost GeoWidget token",
+      "geowidgetTokenHelp": "Token for displaying parcel locker map. Generate at manager.paczkomaty.pl > API > GeoWidget. IMPORTANT: token is bound to domain — use 'localhost' for dev, your store domain for production.",
+      "sandbox": "Test mode (Sandbox)",
+      "defaultSendingMethod": "Default sending method",
+      "defaultSendingMethodHelp": "Sending method used by default when generating InPost labels",
+      "sendingMethods": {
+        "dispatch_order": "Courier pickup (dispatch order)",
+        "parcel_locker": "Drop off at parcel locker",
+        "pop": "Drop off at PaczkoPunkt (POP)",
+        "any_point": "Any point (locker/POP)",
+        "pok": "Customer Service Point (POK)",
+        "branch": "InPost branch"
+      }
+    },
+    "dhl": {
+      "username": "Username",
+      "usernamePlaceholder": "DHL WebAPI login",
+      "password": "Password",
+      "accountNumber": "DHL Account Number",
+      "accountNumberPlaceholder": "Your sender account number",
+      "accountNumberHelp": "DHL sender account number (SAP)",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "dpd": {
+      "login": "Login",
+      "loginPlaceholder": "DPD WebAPI login",
+      "password": "Password",
+      "masterFid": "Master FID",
+      "masterFidPlaceholder": "Master FID number",
+      "masterFidHelp": "DPD sender identification number",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "gls": {
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Your GLS API key",
+      "apiKeyHelp": "GLS Poland > Business account > API",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "ups": {
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "Your Client ID from developer.ups.com",
+      "clientIdHelp": "UPS Developer Kit: developer.ups.com",
+      "clientSecret": "Client Secret",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "fedex": {
+      "clientId": "Client ID (API Key)",
+      "clientIdPlaceholder": "Your Client ID from developer.fedex.com",
+      "clientIdHelp": "FedEx Developer Portal: developer.fedex.com",
+      "clientSecret": "Client Secret (Secret Key)",
+      "accountNumber": "FedEx Account Number",
+      "accountNumberPlaceholder": "Your 9-digit account number",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "poczta_polska": {
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Your Poczta Polska API key",
+      "apiKeyHelp": "Elektroniczny Nadawca > Settings > API",
+      "partnerId": "Partner ID",
+      "partnerIdPlaceholder": "Your partner identifier",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "orlen_paczka": {
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "Your Orlen Paczka API key",
+      "apiKeyHelp": "Orlen Paczka Panel > Settings > API Access",
+      "partnerId": "Partner ID",
+      "partnerIdPlaceholder": "Your partner identifier",
+      "sandbox": "Test mode (Sandbox)"
+    },
+    "fakturownia": {
+      "apiToken": "API Token",
+      "apiTokenPlaceholder": "Your Fakturownia API token",
+      "apiTokenHelp": "Settings > Account Settings > Integration > API Authorization Code",
+      "subdomain": "Subdomain",
+      "subdomainPlaceholder": "your-company",
+      "subdomainHelp": "Your account name, e.g. 'your-company' from your-company.fakturownia.pl"
+    },
+    "btp": {
+      "username": "Public key (login)",
+      "usernamePlaceholder": "Your public key from BTP panel",
+      "usernameHelp": "Found in B2B panel > User Profile > Keys tab",
+      "password": "Private key (password)",
+      "passwordPlaceholder": "Your private key from BTP panel",
+      "passwordHelp": "Key pair is used for Basic Auth authentication in BTP API",
+      "baseUrl": "Wholesaler API URL",
+      "baseUrlPlaceholder": "https://your-wholesaler.btp.pro",
+      "baseUrlHelp": "Swagger API URL for your wholesaler, e.g. https://name.btp.pro"
+    }
+  },
+  "marketplaces": {
+    "tabs": {
+      "offers": "Offers",
+      "catalog": "Catalog",
+      "promotions": "Promotions",
+      "messages": "Messages",
+      "returns": "Returns",
+      "disputes": "Disputes",
+      "delivery": "Delivery",
+      "policies": "Policies",
+      "finance": "Finance",
+      "ratings": "Ratings",
+      "shipments": "Shipments"
+    },
+    "powiazane": "Linked",
+    "pominiete": "Skipped",
+    "błedy": "Errors",
+    "powiazany": "Linked",
+    "pominiety": "Skipped",
+    "wiadomoscWysłana": "Message sent",
+    "nieUdałoSieWysłacWiadomosci": "Failed to send message",
+    "napiszWiadomoscEnterAbyWysłacShiftenterNowaLinia": "Type a message... (Enter to send, Shift+Enter new line)",
+    "nieUdałoSieDezaktywowacOferty": "Failed to deactivate offer",
+    "nieUdałoSieAktywowacOferty": "Failed to activate offer",
+    "nieprawidłowaWartoscStanu": "Invalid stock value",
+    "nieUdałoSieZaktualizowacStanu": "Failed to update stock",
+    "nieprawidłowaWartoscCeny": "Invalid price value",
+    "nieUdałoSieZaktualizowacCeny": "Failed to update price",
+    "autoryzacjaNiePowiodłaSie": "Authorization failed",
+    "przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac": "Browser blocked the popup window. Allow popups and try again.",
+    "nieUdałoSiePobracAdresuAutoryzacjiAllegro": "Failed to get Allegro authorization URL",
+    "clientIdIClientSecretSaWymagane": "Client ID and Client Secret are required",
+    "bładPodczasZapisywaniaDanych": "Error saving data",
+    "integracjaAllegroZostałaDezaktywowana": "Allegro integration has been deactivated",
+    "bładPodczasDezaktywacjiIntegracji": "Error deactivating integration",
+    "czyNaPewnoChceszUsunacIntegracjeAllegroTaOperacjaJ": "Are you sure you want to delete the Allegro integration? This action is irreversible.",
+    "integracjaAllegroZostałaUsunieta": "Allegro integration has been deleted",
+    "przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac1": "Browser blocked the popup window. Allow popups.",
+    "nieUdałoSiePobracAdresuAutoryzacji": "Failed to get authorization URL",
+    "redirectUriMusiBycZarejestrowanyWAllegro": "Redirect URI (must be registered in Allegro)",
+    "redirectUriWysłanyDoAllegro": "Redirect URI sent to Allegro",
+    "daneZaktualizowaneKliknijPołaczZAllegroAbyPonownie": "Data updated. Click 'Connect to Allegro' to re-authorize.",
+    "nieZnalezionoZwrotowDoWyswietleniaNaAllegro": "No returns found to display from Allegro.",
+    "podajPowodOdrzucenia": "Enter rejection reason",
+    "zwrotZostałOdrzucony": "Return has been rejected",
+    "nieUdałoSieOdrzucicZwrotu": "Failed to reject return",
+    "opiszPowodOdrzuceniaZwrotu": "Describe the reason for rejecting the return...",
+    "podajPowodZwrotuPieniedzy": "Enter refund reason",
+    "podajIdPłatnosci": "Enter payment ID",
+    "zwrotPieniedzyZostałUtworzony": "Refund has been created",
+    "nieUdałoSieUtworzycZwrotuPieniedzy": "Failed to create refund",
+    "nieUdałoSiePobracOfertZEbay": "Failed to load eBay offers",
+    "nieUdałoSiePobracAdresuAutoryzacjiEbay": "Failed to get eBay authorization URL",
+    "appIdCertIdIDevIdSaWymagane": "App ID, Cert ID and Dev ID are required",
+    "wybierzWalute": "Select currency",
+    "integracjaEbayZostałaDezaktywowana": "eBay integration has been deactivated",
+    "czyNaPewnoChceszUsunacIntegracjeEbayTaOperacjaJest": "Are you sure you want to delete eBay integration? This action is irreversible.",
+    "integracjaEbayZostałaUsunieta": "eBay integration has been deleted",
+    "bładPodczasZapisywaniaUstawien": "Error saving settings",
+    "daneZaktualizowaneKliknijPołaczZEbayAbyPonownieAut": "Data updated. Click 'Connect to eBay' to re-authorize.",
+    "połaczZEbay": "Connect with eBay",
+    "nieUdałoSiePobracAdresuAutoryzacjiOlx": "Failed to get OLX authorization URL",
+    "integracjaOlxZostałaDezaktywowana": "OLX integration has been deactivated",
+    "czyNaPewnoChceszUsunacIntegracjeOlxTaOperacjaJestN": "Are you sure you want to delete OLX integration? This action is irreversible.",
+    "integracjaOlxZostałaUsunieta": "OLX integration has been deleted",
+    "redirectUriMusiBycZarejestrowanyWOlx": "Redirect URI (must be registered in OLX)",
+    "daneZaktualizowaneKliknijPołaczZOlxAbyPonownieAuto": "Data updated. Click 'Connect to OLX' to re-authorize.",
+    "połaczZOlx": "Connect with OLX",
+    "zarzadzajPołaczeniamiZPlatformamiSprzedazowymi": "Manage connections to sales platforms",
+    "dodajPierwszaPlatformeSprzedazowaAbySynchronizowac": "Add your first sales platform to sync orders and products.",
+    "zdjecie": "Photo",
+    "wiadomosciAllegro": "Allegro messages",
+    "wybierzWatekAbyWyswietlicWiadomosci": "Select a thread to display messages",
+    "szczegołyImportu": "Import details",
+    "przejdzDoProduktow": "Go to products",
+    "krok1ZarejestrujAplikacjeWOlx": "Step 1: Register an application in OLX",
+    "zarejestrujNowaAplikacje": "Register a new application",
+    "dokładnieTakiSam": "Exactly the same",
+    "krok2WprowadzDaneAplikacji": "Step 2: Enter application details",
+    "statusPołaczenia": "Connection status",
+    "zmienDaneAplikacji": "Change application details",
+    "krok1ZarejestrujAplikacjeWEbayDeveloper": "Step 1: Register an application in eBay Developer",
+    "krok1ZarejestrujAplikacjeWAllegro": "Step 1: Register an application in Allegro",
+    "kliknijQuotzarejestrujAplikacjequot": "Click \"Register application\"",
+    "wklejPonizszyAdres": "Paste the address below",
+    "czestePrzyczynyBłedu": "Common error causes",
+    "bładŁadowaniaWatkow": "Error loading threads",
+    "brakWatkow": "No threads",
+    "bładŁadowaniaWiadomosci": "Error loading messages",
+    "odrzucZwrot": "Reject return",
+    "powodOdrzucenia": "Rejection reason",
+    "zwrotPieniedzy": "Refund",
+    "łaczenieZOlx": "Connecting to OLX",
+    "połaczonoZOlxOknoZamknieSieAutomatycznie": "Connected to OLX — window will close automatically",
+    "połaczSwojeKontoOlxAbySynchronizowacOgłoszenia": "Connect your OLX account to synchronize listings",
+    "przedPołaczeniemMusiszUtworzycAplikacjeWPanelu": "Before connecting, you must create an application in the panel",
+    "ponizszyAdres": "the address below",
+    "powyzejRoznicaWNawetJednymZnakuSpowoduje": "Above — even a single character difference will cause",
+    "zapiszIPrzejdzDoAutoryzacji": "Save and proceed to authorization",
+    "daneAplikacjiZostałyZapisaneKliknijPonizejAby": "Application details saved — click below to",
+    "dostepDoKontaOlxOtworzySieOkno": "Access to OLX account — a window will open",
+    "odswiezToken": "Refresh token",
+    "zaktualizujClientIdIClientSecretPo": "Update Client ID and Client Secret after",
+    "łaczenieZEbay": "Connecting to eBay",
+    "połaczonoZEbayOknoZamknieSieAutomatycznie": "Connected to eBay — window will close automatically",
+    "połaczSwojeKontoEbayAbySynchronizowacZamowienia": "Connect your eBay account to synchronize orders",
+    "dostepDoKontaEbayOtworzySieOkno": "Access to eBay account — a window will open",
+    "wybierzRynekEbayIWaluteDoSynchronizacji": "Select eBay marketplace and currency for synchronization",
+    "zaktualizujAppIdCertIdIDev": "Update App ID, Cert ID and Dev",
+    "zarzadzajOfertamiIKonfiguracjaEbay": "Manage offers and eBay configuration",
+    "skonfigurujIntegracje": "Configure integration",
+    "brakOfertDoWyswietlenia": "No offers to display",
+    "łaczenieZAllegro": "Connecting to Allegro",
+    "połaczonoZAllegroOknoZamknieSieAutomatycznie": "Connected to Allegro — window will close automatically",
+    "połaczSwojeKontoAllegroAbySynchronizowacZamowienia": "Connect your Allegro account to synchronize orders",
+    "spowodujeBładAutoryzacji": "will cause an authorization error",
+    "dostepDoKontaAllegroOtworzySieOkno": "Access to Allegro account — a window will open",
+    "jesliAllegroPokazujeBładSprawdzCzyPonizsze": "If Allegro shows an error, check the following",
+    "sieZKonfiguracjaAplikacjiWDeveloperCenter": "matches the app configuration in Developer Center",
+    "aplikacjaMuszaBycZTegoSamegoSrodowiska": "Application must be from the same environment",
+    "aplikacjaNieMaWłaczonegoQuotbrowserAccessquotW": "Application does not have \"Browser Access\" enabled in",
+    "zarzadzajSwoimiOfertamiNaAllegro": "Manage your offers on Allegro",
+    "odpowiadajNaWiadomosciOdKupujacych": "Reply to messages from buyers",
+    "zarzadzajZwrotamiOdKupujacychNaAllegro": "Manage returns from buyers on Allegro",
+    "paczkaWysłana": "Parcel sent",
+    "zwrocPieniadze": "Refund money",
+    "odrzuc": "Reject",
+    "pobierzSwojeOfertyZAllegroIUtworz": "Fetch your offers from Allegro and create",
+    "jePoSkuDoIstniejacychProduktowLub": "them by SKU to existing products or",
+    "powiazaneZostanaPominiete": "Linked items will be skipped",
+    "uzytyWTrybie": "Used in mode",
+    "kupujacy": "Buyer"
+  }
+}

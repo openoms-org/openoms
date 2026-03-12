@@ -142,7 +142,7 @@ export function IntegrationForm({
           try {
             new URL(urlVal);
           } catch {
-            newErrors[field.key] = t("podajPrawidłowyAdresUrl");
+            newErrors[field.key] = t("invalidUrl");
           }
         }
       }
@@ -266,7 +266,7 @@ export function IntegrationForm({
           <Input
             id={`cred-${field.key}`}
             type={inputType}
-            placeholder={isEditMode ? t("pozostawPusteAbyNieZmieniac") : field.placeholderKey}
+            placeholder={isEditMode ? t("leaveEmptyToKeep") : field.placeholderKey}
             value={(credentialValues[field.key] as string) ?? ""}
             onChange={(e) => handleCredentialChange(field.key, e.target.value)}
             className={isPassword ? "pr-10" : ""}
@@ -287,7 +287,7 @@ export function IntegrationForm({
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="sr-only">
-                {isVisible ? t("hide") : t("pokaz")} {field.labelKey.toLowerCase()}
+                {isVisible ? t("hide") : t("show")} {field.labelKey.toLowerCase()}
               </span>
             </Button>
           )}
@@ -313,7 +313,7 @@ export function IntegrationForm({
             onValueChange={handleProviderChange}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
+              <SelectValue placeholder={t("selectProviderPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {categoryEntries.map(([catKey, category], catIndex) => (
@@ -341,12 +341,12 @@ export function IntegrationForm({
       {selectedProvider && fields.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-foreground">
-            {isEditMode ? t("updateData") : t("daneUwierzytelniajace")} &mdash;{" "}
+            {isEditMode ? t("updateData") : t("credentialFields")} &mdash;{" "}
             {INTEGRATION_PROVIDER_LABELS[selectedProvider] ?? selectedProvider}
           </h3>
           {isEditMode && (
             <p className="text-sm text-muted-foreground">
-              {t("wypełnijTylkoPolaKtoreChceszZmienicPuste")}
+              {t("editModeHint")}
             </p>
           )}
 
@@ -379,7 +379,7 @@ export function IntegrationForm({
           ) : (
             <ChevronRight className="h-4 w-4" />
           )}
-          {t("pokazZaawansowane")}
+          {t("showAdvanced")}
         </button>
         {showAdvanced && (
           <div className="space-y-2 pt-2">
@@ -401,7 +401,7 @@ export function IntegrationForm({
         <Button type="submit" disabled={isLoading}>
           {isLoading
             ? isEditMode ? t("updating") : t("creating")
-            : isEditMode ? t("saveChanges") : t("utworzIntegracje")
+            : isEditMode ? t("saveChanges") : t("create")
           }
         </Button>
       </div>

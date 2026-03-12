@@ -582,7 +582,7 @@ function ConnectedState({
       {debugInfo && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Diagnostyka OAuth</CardTitle>
+            <CardTitle className="text-sm">{t("oauthDiagnostics")}</CardTitle>
             <CardDescription>
               {t("jesliAllegroPokazujeBładSprawdzCzyPonizsze")}
               {t("sieZKonfiguracjaAplikacjiWDeveloperCenter")}
@@ -595,7 +595,7 @@ function ConnectedState({
             />
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">
-                Auth URL (otwierany w popup)
+                {t("authUrlOpenedInPopup")}
               </Label>
               <code className="block rounded bg-muted px-3 py-2 text-xs font-mono break-all max-h-24 overflow-auto">
                 {debugInfo.auth_url}
@@ -935,7 +935,7 @@ function CredentialsCard({
           <Label htmlFor="edit-client-id">Client ID</Label>
           <Input
             id="edit-client-id"
-            placeholder="Nowy Client ID"
+            placeholder={t("newClientId")}
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
           />
@@ -946,7 +946,7 @@ function CredentialsCard({
             <Input
               id="edit-client-secret"
               type={showSecret ? "text" : "password"}
-              placeholder="Nowy Client Secret"
+              placeholder={t("newClientSecret")}
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
               className="pr-10"
@@ -973,7 +973,7 @@ function CredentialsCard({
             onCheckedChange={setSandbox}
           />
           <Label htmlFor="edit-sandbox" className="cursor-pointer">
-            Tryb sandbox (testowy)
+            {t("sandboxMode")}
           </Label>
         </div>
 
@@ -990,7 +990,7 @@ function CredentialsCard({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           <Save className="mr-2 h-4 w-4" />
-          Zaktualizuj dane
+          {t("updateCredentials")}
         </Button>
       </CardContent>
     </Card>

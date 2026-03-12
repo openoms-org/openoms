@@ -1,0 +1,234 @@
+{
+  "layout": {
+    "logout": "Log out",
+    "theme": {
+      "toggle": "Toggle theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "connection": {
+      "connected": "Connection active",
+      "disconnected": "No connection to server"
+    }
+  },
+  "shared": {
+    "sidebar": {
+      "mainMenu": "Main menu",
+      "expandMenu": "Expand menu (Ctrl+B)",
+      "collapseMenu": "Collapse menu"
+    },
+    "mobileNav": {
+      "openMenu": "Open menu"
+    },
+    "tableDensity": {
+      "compact": "Compact",
+      "comfortable": "Comfortable",
+      "spacious": "Spacious"
+    },
+    "editableCell": {
+      "saving": "Saving...",
+      "saveError": "Failed to save changes",
+      "doubleClickToEdit": "Double-click to edit"
+    },
+    "tagInput": {
+      "placeholder": "Add tag..."
+    },
+    "orderSearch": {
+      "placeholder": "Select order...",
+      "searchPlaceholder": "Search order...",
+      "noResults": "No orders found."
+    },
+    "categoryPicker": {
+      "placeholder": "Select category...",
+      "searchPlaceholder": "Search category...",
+      "noCategory": "No category"
+    },
+    "paczkomat": {
+      "showMap": "Show parcel locker map",
+      "showOnMap": "Show on map",
+      "selectPoint": "Select InPost parcel locker",
+      "tokenError": "GeoWidget token error",
+      "tokenHelp": "GeoWidget token is bound to a specific domain. Check in the",
+      "inpostPanel": "InPost panel",
+      "tokenDomain": "if the token was generated for domain:",
+      "closeAndSearch": "Close the dialog and use the text search.",
+      "selected": "Parcel locker: {name}",
+      "placeholder": "Select parcel locker...",
+      "searchPlaceholder": "Enter city or parcel locker code...",
+      "minChars": "Enter at least 2 characters to search",
+      "noResults": "No parcel lockers found"
+    },
+    "errorBoundary": {
+      "sessionExpired": "Session expired",
+      "sessionExpiredMessage": "Session expired. Please log in again.",
+      "tooManyRequests": "Too many requests",
+      "tooManyRequestsMessage": "Too many requests. Please wait a moment and try again.",
+      "serverError": "Server error",
+      "serverErrorMessage": "Server error. Please try again later.",
+      "genericError": "Something went wrong",
+      "genericErrorMessage": "An unexpected error occurred. Try refreshing the page.",
+      "tryAgain": "Try again",
+      "logIn": "Log in"
+    },
+    "developmentBanner": {
+      "title": "Under construction",
+      "message": "This integration is under construction and has not been verified in production. Use at your own risk.",
+      "badge": "Under construction"
+    },
+    "noData": "No data",
+    "nieprawidłow": "Invalid",
+    "zarzadzajSubskrypcja": "Manage subscription",
+    "odnowSubskrypcje": "Renew subscription"
+  },
+  "breadcrumbs": {
+    "orders": "Orders",
+    "shipments": "Shipments",
+    "products": "Products",
+    "integrations": "Integrations",
+    "settings": "Settings",
+    "users": "Users",
+    "returns": "Returns",
+    "audit": "Activity log",
+    "company": "Company",
+    "email": "Email",
+    "order-statuses": "Statuses",
+    "custom-fields": "Fields",
+    "product-categories": "Categories",
+    "webhooks": "Webhooks",
+    "allegro": "Allegro",
+    "amazon": "Amazon",
+    "offers": "Offers",
+    "messages": "Messages",
+    "catalog": "Catalog",
+    "promotions": "Promotions",
+    "disputes": "Disputes",
+    "delivery": "Delivery",
+    "policies": "Policies",
+    "finance": "Finance",
+    "ratings": "Ratings",
+    "listings": "Marketplace listings",
+    "suppliers": "Suppliers",
+    "deliveries": "Deliveries",
+    "new": "New",
+    "import": "Import",
+    "warehouse-documents": "Warehouse documents",
+    "price-lists": "Price lists",
+    "sync-jobs": "Synchronization",
+    "webhook-deliveries": "Webhook deliveries",
+    "reports": "Reports",
+    "packing": "Packing",
+    "marketing": "Marketing",
+    "helpdesk": "Helpdesk",
+    "sms": "SMS",
+    "notifications": "Notifications",
+    "currencies": "Currencies",
+    "print-templates": "Print templates",
+    "categories": "Categories",
+    "automation": "Automation",
+    "variants": "Variants",
+    "bundles": "Bundles",
+    "return-request": "Return request",
+    "customers": "Customers",
+    "invoices": "Invoices",
+    "invoicing": "Invoicing",
+    "ksef": "KSeF",
+    "roles": "Roles",
+    "warehouses": "Warehouses",
+    "stocktakes": "Stocktaking",
+    "security": "Security",
+    "inventory": "Inventory control",
+    "details": "Details"
+  },
+  "commandPalette": {
+    "title": "Command palette",
+    "placeholder": "Search for a page or action...",
+    "noResults": "No results found.",
+    "navigation": "Navigation",
+    "quickActions": "Actions",
+    "newOrder": "New order",
+    "newProduct": "New product",
+    "newShipment": "New shipment",
+    "newCustomer": "New customer"
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "subtitle": "Log in to the OpenOMS panel",
+      "organization": "Organization",
+      "organizationPlaceholder": "my-company",
+      "email": "Email",
+      "password": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "submit": "Log in",
+      "submitting": "Logging in...",
+      "noAccount": "Don't have an account?",
+      "register": "Register"
+    },
+    "register": {
+      "title": "Choose a plan for your business",
+      "trialDays": "{days} days free",
+      "trialDescription": "All plans with full access for {days} days. No card to start. Cancel anytime.",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "perMonth": "/mo",
+      "yearlyTotal": "{price} yearly",
+      "freeTrialStart": "{days} days free to start",
+      "mostPopular": "Most popular",
+      "startFree": "Start for free",
+      "redirecting": "Redirecting",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Log in",
+      "haveInvite": "Have an invitation token?",
+      "registerWithInvite": "Register with invitation",
+      "noPlans": "No plans available",
+      "plansNotConfigured": "Pricing plans are not yet configured.",
+      "loadError": "Failed to load plans"
+    },
+    "twoFa": {
+      "title": "2FA Verification",
+      "subtitle": "Code from your authenticator app",
+      "codeLabel": "Verification code",
+      "codeHint": "Enter the 6-digit code from your authenticator app",
+      "verify": "Verify",
+      "verifying": "Verifying...",
+      "backToLogin": "Back to login"
+    },
+    "logout": "Log out",
+    "validation": {
+      "orgRequired": "Organization slug is required",
+      "orgNameRequired": "Organization name is required",
+      "orgSlugRequired": "Organization slug is required",
+      "slugFormat": "Slug can only contain lowercase letters, digits, and hyphens",
+      "fullNameRequired": "Full name is required",
+      "emailInvalid": "Invalid email address",
+      "passwordRequired": "Password is required",
+      "passwordMinLength": "Password must be at least 8 characters",
+      "passwordUppercase": "Password must contain an uppercase letter",
+      "passwordDigit": "Password must contain a digit"
+    },
+    "form": {
+      "fullName": "Full name",
+      "orgName": "Organization name",
+      "orgSlug": "Organization slug"
+    },
+    "brakIdentyfikatoraSesjiPłatnosci": "Missing payment session ID",
+    "sesjaPłatnosciNieZostałaZnaleziona": "Payment session not found",
+    "taSesjaPłatnosciZostałaJuzWykorzystana": "This payment session has already been used",
+    "nieUdałoSieZweryfikowacPłatnosciSprobujPonownieZaC": "Failed to verify payment. Please try again in a moment.",
+    "płatnoscNieZostałaJeszczePotwierdzonaSprobujOdswie": "Payment has not been confirmed yet. Try refreshing the page.",
+    "brakIdentyfikatoraSesjiWrocNaStroneWyboruPlanu": "Missing session ID — go back to the plan selection page",
+    "weryfikacjaPłatnosci": "Payment verification",
+    "sprawdzamyStatusTwojejPłatnosci": "Checking your payment status",
+    "dokonczRejestracje": "Complete registration",
+    "minimum8Znakow": "Minimum 8 characters",
+    "createAccount": "Create account",
+    "registering": "Registering...",
+    "alreadyHaveAccount": "Already have an account?",
+    "choosePlan": "Choose a plan",
+    "chooseAnotherPlan": "Choose another plan",
+    "completeInviteRegistration": "Complete registration with invitation",
+    "missingTokenUseInviteLink": "Missing token — use the link from your invitation"
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "statuses": {
+    "order": {
+      "new": "Nowe",
+      "confirmed": "Potwierdzone",
+      "processing": "W realizacji",
+      "ready_to_ship": "Gotowe do wysyłki",
+      "shipped": "Wysłane",
+      "in_transit": "W transporcie",
+      "out_for_delivery": "W doręczeniu",
+      "delivered": "Dostarczone",
+      "completed": "Zakończone",
+      "on_hold": "Wstrzymane",
+      "cancelled": "Anulowane",
+      "refunded": "Zwrócone",
+      "merged": "Scalone",
+      "split": "Rozdzielone"
+    },
+    "shipment": {
+      "created": "Utworzona",
+      "label_ready": "Etykieta gotowa",
+      "picked_up": "Odebrana",
+      "in_transit": "W transporcie",
+      "out_for_delivery": "W doręczeniu",
+      "delivered": "Dostarczona",
+      "returned": "Zwrócona",
+      "failed": "Nieudana"
+    },
+    "return": {
+      "requested": "Zgłoszone",
+      "approved": "Zatwierdzone",
+      "received": "Odebrane",
+      "refunded": "Zwrócone",
+      "rejected": "Odrzucone",
+      "cancelled": "Anulowane"
+    },
+    "invoice": {
+      "draft": "Szkic",
+      "issued": "Wystawiona",
+      "sent": "Wysłana",
+      "paid": "Opłacona",
+      "partially_paid": "Częściowo opłacona",
+      "cancelled": "Anulowana",
+      "error": "Błąd"
+    },
+    "payment": {
+      "pending": "Oczekuje",
+      "paid": "Opłacone",
+      "partially_paid": "Częściowo",
+      "refunded": "Zwrócone",
+      "failed": "Nieudane"
+    },
+    "ksef": {
+      "not_sent": "Nie wysłano",
+      "pending": "Oczekuje",
+      "accepted": "Zaakceptowana",
+      "rejected": "Odrzucona"
+    },
+    "purchaseOrder": {
+      "draft": "Szkic",
+      "sent": "Wysłane",
+      "partially_received": "Częściowo odebrane",
+      "received": "Odebrane",
+      "cancelled": "Anulowane"
+    },
+    "supplier": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "error": "Błąd"
+    },
+    "integration": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna",
+      "error": "Błąd"
+    },
+    "warehouseDocument": {
+      "draft": "Szkic",
+      "confirmed": "Zatwierdzony",
+      "cancelled": "Anulowany"
+    },
+    "stocktake": {
+      "draft": "Szkic",
+      "in_progress": "W trakcie",
+      "completed": "Zakończona",
+      "cancelled": "Anulowana"
+    },
+    "syncJob": {
+      "running": "W trakcie",
+      "completed": "Zakończone",
+      "failed": "Nieudane"
+    }
+  },
+  "priorities": {
+    "urgent": "Pilne",
+    "high": "Wysoki",
+    "normal": "Normalny",
+    "low": "Niski"
+  },
+  "roles": {
+    "owner": "Właściciel",
+    "member": "Członek",
+    "rolaZostałaZapisana": "Rola została zapisana",
+    "rolaZostałaUsunieta": "Rola została usunięta",
+    "rolaZostałaUtworzona": "Rola została utworzona",
+    "brakRol": "Brak ról",
+    "utworzPierwszaRoleAbyZarzadzacUprawnieniamiUzytkow": "Utwórz pierwszą rolę, aby zarządzać uprawnieniami użytkowników.",
+    "usunRole": "Usuń rolę",
+    "czyNaPewnoChceszUsunacTeRoleUzytkownicyZTaRolaStra": "Czy na pewno chcesz usunąć tę rolę? Użytkownicy z tą rolą stracą przypisane uprawnienia.",
+    "zarzadzajRolamiIUprawnieniamiUzytkownikow": "Zarządzaj rolami i uprawnieniami użytkowników",
+    "utworzNowaRoleIPrzypiszUprawnienia": "Utwórz nową rolę i przypisz uprawnienia",
+    "title": "Role",
+    "newRole": "Nowa rola",
+    "newRoleDialog": "Nowa rola",
+    "nameLabel": "Nazwa",
+    "namePlaceholder": "np. Magazynier",
+    "descriptionLabel": "Opis",
+    "descriptionPlaceholder": "Opcjonalny opis roli",
+    "cancelButton": "Anuluj",
+    "creating": "Tworzenie...",
+    "columns": {
+      "name": "Nazwa",
+      "description": "Opis",
+      "permissions": "Uprawnienia",
+      "type": "Typ",
+      "createdAt": "Utworzono"
+    },
+    "permissionsCount": "{count} uprawnień",
+    "systemRole": "Systemowa",
+    "customRole": "Niestandardowa",
+    "detail": {
+      "systemRole": "Rola systemowa",
+      "customRole": "Rola niestandardowa",
+      "notFound": "Nie znaleziono roli",
+      "saving": "Zapisywanie...",
+      "saveButton": "Zapisz",
+      "nameLabel": "Nazwa",
+      "descriptionLabel": "Opis",
+      "descriptionPlaceholder": "Opcjonalny opis roli",
+      "permissions": "Uprawnienia",
+      "permView": "Podgląd",
+      "permCreate": "Tworzenie",
+      "permEdit": "Edycja",
+      "permDelete": "Usuwanie",
+      "permExport": "Eksport",
+      "permManageIntegrations": "Zarządzanie integracjami",
+      "permManageSettings": "Zarządzanie ustawieniami",
+      "permManageUsers": "Zarządzanie użytkownikami",
+      "permViewReports": "Podgląd raportów",
+      "permViewAudit": "Podgląd dziennika",
+      "permManageAutomation": "Zarządzanie automatyzacją",
+      "permManageWarehouses": "Zarządzanie magazynami"
+    }
+  },
+  "invoiceTypes": {
+    "standard": "Standardowa",
+    "vat": "Faktura VAT",
+    "proforma": "Proforma",
+    "correction": "Korekta",
+    "receipt": "Paragon"
+  },
+  "paymentMethods": {
+    "transfer": "Przelew",
+    "cod": "Pobranie",
+    "card": "Karta",
+    "PayU": "PayU",
+    "Przelewy24": "Przelewy24",
+    "BLIK": "BLIK"
+  }
+}

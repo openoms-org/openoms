@@ -16,13 +16,15 @@ import {
 import { ROLES } from "@/lib/constants";
 import { useTranslations } from "next-intl";
 
-const createUserSchema = z.object({
-  email: z.string().email("Nieprawidłowy adres email"),
-  name: z.string().min(1, "Nazwa jest wymagana"),
-  role: z.enum(["owner", "admin", "member"], "Rola jest wymagana"),
-});
+function createUserSchema(t: (key: string) => string) {
+  return z.object({
+    email: z.string().email(t("invalidEmail")),
+    name: z.string().min(1, t("nameRequired")),
+    role: z.enum(["owner", "admin", "member"], { message: t("roleRequired") }),
+  });
+}
 
-type CreateUserFormValues = z.infer<typeof createUserSchema>;
+type CreateUserFormValues = z.infer<ReturnType<typeof createUserSchema>>;
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -53,7 +55,7 @@ export function UserForm({
     watch,
     formState: { errors },
   } = useForm<CreateUserFormValues>({
-    resolver: zodResolver(createUserSchema),
+    resolver: zodResolver(createUserSchema(t)),
     defaultValues: {
       email: defaultValues?.email || "",
       name: defaultValues?.name || "",

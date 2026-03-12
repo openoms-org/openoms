@@ -1,0 +1,63 @@
+{
+  "invoices": {
+    "title": "Invoices",
+    "subtitle": "List of issued invoices",
+    "sendToKsef": "Send to KSeF ({count})",
+    "ksefSent": "Sent {sent} of {total} invoices to KSeF",
+    "ksefErrors": "Errors: {errors}",
+    "filters": {
+      "allStatuses": "All statuses",
+      "allProviders": "All providers",
+      "allKsef": "All (KSeF)"
+    },
+    "fakturaZostałaAnulowana": "Invoice has been cancelled",
+    "fakturaWysłanaDoKsef": "Invoice sent to KSeF",
+    "czyNaPewnoChceszAnulowacTeFaktureTaOperacjaJestNie": "Are you sure you want to cancel this invoice? This action is irreversible.",
+    "anulujFakture": "Cancel invoice",
+    "nieZnalezionoFakturDoWyswietlenia": "No invoices found to display.",
+    "wyslijDoKsef": "Send to KSeF",
+    "terminPłatnosci": "Payment due date",
+    "dataWysłania": "Date sent",
+    "sprawdzStatus": "Check status"
+  },
+  "ksef": {
+    "environments": {
+      "test": "Test (ksef-test.mf.gov.pl)",
+      "production": "Production (ksef.mf.gov.pl)"
+    },
+    "ksefWłaczony": "KSeF enabled",
+    "ksefWyłaczony": "KSeF disabled",
+    "autosendWłaczony": "Auto-send enabled",
+    "autosendWyłaczony": "Auto-send disabled",
+    "wybierzSrodowisko": "Select environment",
+    "automatyczneWysyłanie": "Automatic sending",
+    "srodowisko": "Environment",
+    "właczLubWyłaczWysyłanieFakturDoKsef": "Enable or disable sending invoices to KSeF",
+    "automatycznieWysyłajNowoUtworzoneFakturyDoKsef": "Automatically send newly created invoices to KSeF",
+    "właczIntegracjeKsefAbyKorzystacZAutomatycznego": "Enable KSeF integration to use automatic",
+    "daneFirmyUzywaneWFakturachStrukturalnychKsef": "Company data used in KSeF structured invoices",
+    "sprawdzCzyPołaczenieZKsefDziałaPoprawnie": "Check if the KSeF connection is working properly",
+    "title": "KSeF - National e-Invoice System",
+    "subtitle": "Configure integration with the National e-Invoice System",
+    "integrationStatus": "Integration status",
+    "settingsSaved": "KSeF settings saved",
+    "autoSendRetry": "Failed sends will be retried automatically (max 3 attempts).",
+    "environmentDescription": "Select KSeF environment (test for testing, production for real invoices)",
+    "authData": "Authentication data",
+    "authDescription": "Company NIP and authorization token from KSeF portal",
+    "nipHint": "10-digit tax identification number",
+    "authToken": "Authorization token",
+    "authTokenPlaceholder": "Token from KSeF portal",
+    "generateTokenHint": "Generate a token in the {portal} portal",
+    "companyData": "Company data (seller)",
+    "companyName": "Company name",
+    "companyNamePlaceholder": "Company Name Ltd.",
+    "street": "Street",
+    "city": "City",
+    "postalCode": "Postal code",
+    "country": "Country",
+    "testpołaczenia": "Test connection",
+    "nieudałosiezapisacustawien": "Failed to save settings",
+    "nieudałosieprzetestowacpołaczenia": "Failed to test connection"
+  }
+}

@@ -205,6 +205,7 @@ function KanbanColumn({
 
 export function KanbanBoard({ filters }: KanbanBoardProps) {
   const t = useTranslations("orders");
+  const tStatuses = useTranslations("statuses");
   const { data: statusConfig, isLoading: statusLoading } = useOrderStatuses();
   const queryClient = useQueryClient();
 
@@ -223,14 +224,17 @@ export function KanbanBoard({ filters }: KanbanBoardProps) {
           colorClass: COLOR_PRESETS[s.color] || COLOR_PRESETS.gray,
         }));
     }
-    // Fallback: use default ORDER_STATUSES
-    return Object.entries(ORDER_STATUSES).map(([key, val]) => ({
-      key,
-      label: val.label,
-      color: "gray",
-      colorClass: val.color,
-    }));
-  }, [statusConfig]);
+    // Fallback: use default ORDER_STATUSES with i18n labels
+    return Object.entries(ORDER_STATUSES).map(([key, val]) => {
+      let label: string;
+      try {
+        label = tStatuses(`order.${key}` as never);
+      } catch {
+        label = val.label;
+      }
+      return { key, label, color: "gray", colorClass: val.color };
+    });
+  }, [statusConfig, tStatuses]);
 
   // If a status filter is active, only show that column
   const visibleStatuses = useMemo(() => {

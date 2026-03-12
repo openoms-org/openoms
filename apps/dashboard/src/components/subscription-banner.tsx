@@ -54,7 +54,7 @@ export function SubscriptionBanner() {
     return (
       <div className="bg-blue-500 text-white px-4 py-3 text-center text-sm font-medium">
         <Clock className="mr-2 inline h-4 w-4" />
-        Okres próbny — pozostało {daysLeft} dni.{" "}
+        {t("trialDaysLeft", { days: daysLeft })}{" "}
         <Link href="/settings/billing" className="underline hover:no-underline">
           {t("zarzadzajSubskrypcja")}
         </Link>
@@ -67,7 +67,7 @@ export function SubscriptionBanner() {
     return (
       <div className="bg-orange-500 text-white px-4 py-3 text-center text-sm font-medium">
         <AlertTriangle className="mr-2 inline h-4 w-4" />
-        Subskrypcja anulowana. Dostęp wygasa {expiresAt}.{" "}
+        {t("subscriptionCancelled", { date: expiresAt })}{" "}
         <Link href="/settings/billing" className="underline hover:no-underline">
           {t("odnowSubskrypcje")}
         </Link>

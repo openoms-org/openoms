@@ -157,7 +157,7 @@ export default function OrdersPage() {
     {
       header: t("columns.status"),
       accessorKey: "status",
-      cell: (row) => <StatusBadge status={row.status} statusMap={orderStatuses} />,
+      cell: (row) => <StatusBadge status={row.status} statusMap={orderStatuses} translationPrefix="order" />,
       sortable: true,
     },
     {
@@ -185,7 +185,7 @@ export default function OrdersPage() {
     {
       header: t("columns.payment"),
       accessorKey: "payment_status",
-      cell: (row) => <StatusBadge status={row.payment_status} statusMap={PAYMENT_STATUSES} />,
+      cell: (row) => <StatusBadge status={row.payment_status} statusMap={PAYMENT_STATUSES} translationPrefix="payment" />,
       sortable: true,
       className: "hidden lg:table-cell",
     },
