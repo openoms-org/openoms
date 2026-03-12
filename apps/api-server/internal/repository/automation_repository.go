@@ -197,7 +197,7 @@ func (r *AutomationRuleRepository) Update(ctx context.Context, tx pgx.Tx, id uui
 		}
 		query.WriteString(clause)
 	}
-	query.WriteString(fmt.Sprintf(" WHERE id = $%d", argIdx))
+	fmt.Fprintf(&query, " WHERE id = $%d", argIdx)
 	args = append(args, id)
 
 	ct, err := tx.Exec(ctx, query.String(), args...)
