@@ -13,14 +13,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// InvoiceHandler handles HTTP requests for invoice management.
 type InvoiceHandler struct {
 	invoiceService *service.InvoiceService
 }
 
+// NewInvoiceHandler creates a new InvoiceHandler.
 func NewInvoiceHandler(invoiceService *service.InvoiceService) *InvoiceHandler {
 	return &InvoiceHandler{invoiceService: invoiceService}
 }
 
+// List returns a paginated list of invoices.
 func (h *InvoiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -51,6 +54,7 @@ func (h *InvoiceHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single invoice by ID.
 func (h *InvoiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -72,6 +76,7 @@ func (h *InvoiceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, inv)
 }
 
+// Create issues a new invoice.
 func (h *InvoiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -94,6 +99,7 @@ func (h *InvoiceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, inv)
 }
 
+// Cancel marks an invoice as cancelled.
 func (h *InvoiceHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -116,6 +122,7 @@ func (h *InvoiceHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Faktura anulowana"})
 }
 
+// GetPDF streams the invoice as a PDF file.
 func (h *InvoiceHandler) GetPDF(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -138,7 +145,7 @@ func (h *InvoiceHandler) GetPDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=invoice.pdf")
 	w.WriteHeader(http.StatusOK)
-	w.Write(pdfData)
+	_, _ = w.Write(pdfData) //nolint:gosec
 }
 
 // ListByOrder returns all invoices for a specific order.

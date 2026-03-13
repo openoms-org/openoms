@@ -77,7 +77,7 @@ func (h *AllegroPoliciesHandler) GetReturnPolicy(w http.ResponseWriter, r *http.
 
 	result, err := client.AfterSales.GetReturnPolicy(r.Context(), policyID)
 	if err != nil {
-		slog.Error("allegro policies: failed to get return policy", "error", err, "policy_id", policyID)
+		slog.Error("allegro policies: failed to get return policy", "error", err, "policy_id", policyID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac polityki zwrotow", err)
 		return
 	}
@@ -137,7 +137,7 @@ func (h *AllegroPoliciesHandler) UpdateReturnPolicy(w http.ResponseWriter, r *ht
 
 	result, err := client.AfterSales.UpdateReturnPolicy(r.Context(), policyID, body)
 	if err != nil {
-		slog.Error("allegro policies: failed to update return policy", "error", err, "policy_id", policyID)
+		slog.Error("allegro policies: failed to update return policy", "error", err, "policy_id", policyID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie zaktualizowac polityki zwrotow", err)
 		return
 	}
@@ -187,7 +187,7 @@ func (h *AllegroPoliciesHandler) GetWarranty(w http.ResponseWriter, r *http.Requ
 
 	result, err := client.AfterSales.GetWarranty(r.Context(), warrantyID)
 	if err != nil {
-		slog.Error("allegro policies: failed to get warranty", "error", err, "warranty_id", warrantyID)
+		slog.Error("allegro policies: failed to get warranty", "error", err, "warranty_id", warrantyID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac rekojmi", err)
 		return
 	}
@@ -247,7 +247,7 @@ func (h *AllegroPoliciesHandler) UpdateWarranty(w http.ResponseWriter, r *http.R
 
 	result, err := client.AfterSales.UpdateWarranty(r.Context(), warrantyID, body)
 	if err != nil {
-		slog.Error("allegro policies: failed to update warranty", "error", err, "warranty_id", warrantyID)
+		slog.Error("allegro policies: failed to update warranty", "error", err, "warranty_id", warrantyID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie zaktualizowac rekojmi", err)
 		return
 	}
@@ -297,7 +297,7 @@ func (h *AllegroPoliciesHandler) GetSizeTable(w http.ResponseWriter, r *http.Req
 
 	result, err := client.SizeTables.Get(r.Context(), tableID)
 	if err != nil {
-		slog.Error("allegro policies: failed to get size table", "error", err, "table_id", tableID)
+		slog.Error("allegro policies: failed to get size table", "error", err, "table_id", tableID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac tabeli rozmiarow", err)
 		return
 	}
@@ -357,7 +357,7 @@ func (h *AllegroPoliciesHandler) UpdateSizeTable(w http.ResponseWriter, r *http.
 
 	result, err := client.SizeTables.Update(r.Context(), tableID, body)
 	if err != nil {
-		slog.Error("allegro policies: failed to update size table", "error", err, "table_id", tableID)
+		slog.Error("allegro policies: failed to update size table", "error", err, "table_id", tableID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie zaktualizowac tabeli rozmiarow", err)
 		return
 	}
@@ -383,7 +383,7 @@ func (h *AllegroPoliciesHandler) DeleteSizeTable(w http.ResponseWriter, r *http.
 	defer client.Close()
 
 	if err := client.SizeTables.Delete(r.Context(), tableID); err != nil {
-		slog.Error("allegro policies: failed to delete size table", "error", err, "table_id", tableID)
+		slog.Error("allegro policies: failed to delete size table", "error", err, "table_id", tableID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie usunac tabeli rozmiarow", err)
 		return
 	}

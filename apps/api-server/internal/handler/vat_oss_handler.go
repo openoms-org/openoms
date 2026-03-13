@@ -27,7 +27,7 @@ func NewVATOSSHandler(vatOSSSvc *service.VATOSSService) *VATOSSHandler {
 
 // GetAllRates returns VAT rates for all EU countries.
 // Route: GET /v1/vat-oss/rates
-func (h *VATOSSHandler) GetAllRates(w http.ResponseWriter, r *http.Request) {
+func (h *VATOSSHandler) GetAllRates(w http.ResponseWriter, _ *http.Request) {
 	rates := h.vatOSSSvc.GetAllRates()
 	writeJSON(w, http.StatusOK, rates)
 }
@@ -188,7 +188,7 @@ func (h *VATOSSHandler) GetReportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Summary row
-	_, _ = fmt.Fprintf(w, "RAZEM;;%d;%.2f;;%.2f\n",
+	_, _ = fmt.Fprintf(w, "RAZEM;;%d;%.2f;;%.2f\n", // #nosec G705
 		h.sumOrderCount(report.ByCountry),
 		report.TotalSales,
 		report.TotalVAT,

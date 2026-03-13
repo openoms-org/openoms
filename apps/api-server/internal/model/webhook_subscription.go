@@ -12,6 +12,7 @@ type WebhookConfig struct {
 	Endpoints []WebhookEndpoint `json:"endpoints"`
 }
 
+// WebhookEndpoint defines a URL that receives outgoing webhook event payloads.
 type WebhookEndpoint struct {
 	ID     string   `json:"id"`
 	Name   string   `json:"name"`
@@ -21,6 +22,7 @@ type WebhookEndpoint struct {
 	Active bool     `json:"active"`
 }
 
+// DefaultWebhookConfig returns an empty WebhookConfig with an initialised endpoints slice.
 func DefaultWebhookConfig() WebhookConfig {
 	return WebhookConfig{Endpoints: []WebhookEndpoint{}}
 }
@@ -38,6 +40,7 @@ type WebhookDelivery struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
+// WebhookDeliveryFilter holds query parameters for listing webhook deliveries.
 type WebhookDeliveryFilter struct {
 	EventType *string
 	Status    *string

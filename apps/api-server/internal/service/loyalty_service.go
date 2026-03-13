@@ -17,10 +17,13 @@ import (
 )
 
 var (
+	// ErrLoyaltyProgramNotFound is returned when a loyalty program does not exist.
 	ErrLoyaltyProgramNotFound = errors.New("loyalty program not found")
+	// ErrInsufficientPoints is returned when a customer has too few loyalty points.
 	ErrInsufficientPoints     = errors.New("insufficient points")
 )
 
+// LoyaltyService handles business logic for loyalty programs and points.
 type LoyaltyService struct {
 	loyaltyRepo *repository.LoyaltyRepository
 	auditRepo   repository.AuditRepo
@@ -28,6 +31,7 @@ type LoyaltyService struct {
 	logger      *slog.Logger
 }
 
+// NewLoyaltyService creates a new LoyaltyService.
 func NewLoyaltyService(
 	loyaltyRepo *repository.LoyaltyRepository,
 	auditRepo repository.AuditRepo,
@@ -42,6 +46,7 @@ func NewLoyaltyService(
 	}
 }
 
+// ListPrograms returns a paginated list of loyalty programs.
 func (s *LoyaltyService) ListPrograms(ctx context.Context, tenantID uuid.UUID, filter model.LoyaltyProgramListFilter) (model.ListResponse[model.LoyaltyProgram], error) {
 	var resp model.ListResponse[model.LoyaltyProgram]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -63,6 +68,7 @@ func (s *LoyaltyService) ListPrograms(ctx context.Context, tenantID uuid.UUID, f
 	return resp, err
 }
 
+// GetProgram returns a single loyalty program by ID.
 func (s *LoyaltyService) GetProgram(ctx context.Context, tenantID, programID uuid.UUID) (*model.LoyaltyProgram, error) {
 	var program *model.LoyaltyProgram
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -79,6 +85,7 @@ func (s *LoyaltyService) GetProgram(ctx context.Context, tenantID, programID uui
 	return program, nil
 }
 
+// CreateProgram inserts a new loyalty program.
 func (s *LoyaltyService) CreateProgram(ctx context.Context, tenantID uuid.UUID, req model.CreateLoyaltyProgramRequest, actorID uuid.UUID, ip string) (*model.LoyaltyProgram, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -110,6 +117,7 @@ func (s *LoyaltyService) CreateProgram(ctx context.Context, tenantID uuid.UUID, 
 	return program, err
 }
 
+// UpdateProgram modifies an existing loyalty program.
 func (s *LoyaltyService) UpdateProgram(ctx context.Context, tenantID, programID uuid.UUID, req model.UpdateLoyaltyProgramRequest, actorID uuid.UUID, ip string) (*model.LoyaltyProgram, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -146,6 +154,7 @@ func (s *LoyaltyService) UpdateProgram(ctx context.Context, tenantID, programID 
 	return program, err
 }
 
+// DeleteProgram removes a loyalty program by ID.
 func (s *LoyaltyService) DeleteProgram(ctx context.Context, tenantID, programID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.loyaltyRepo.FindProgramByID(ctx, tx, programID)

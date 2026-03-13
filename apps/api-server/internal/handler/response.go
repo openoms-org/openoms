@@ -22,7 +22,7 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	if status >= 500 {
-		slog.Error("server error response", "status", status, "message", message)
+		slog.Error("server error response", "status", status, "message", message) //nolint:gosec
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

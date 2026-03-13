@@ -1,3 +1,4 @@
+// Package ebay implements the eBay marketplace provider.
 package ebay
 
 import (
@@ -28,8 +29,8 @@ var (
 	_ integration.ListingActivator   = (*Provider)(nil)
 )
 
-// EbayCredentials is the JSON structure stored in encrypted integration credentials.
-type EbayCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	AppID        string `json:"app_id"`
 	CertID       string `json:"cert_id"`
 	DevID        string `json:"dev_id"`
@@ -46,7 +47,7 @@ type Provider struct {
 
 // NewProvider creates an eBay MarketplaceProvider from encrypted credentials.
 func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds EbayCredentials
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("ebay: parse credentials: %w", err)
 	}
@@ -88,6 +89,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "ebay" }
 
 // Client returns the underlying eBay SDK client for direct API calls.

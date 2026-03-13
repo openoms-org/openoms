@@ -19,16 +19,16 @@ const (
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$`)
 
-func validateMaxLength(field, value string, max int) error {
-	if len(value) > max {
-		return fmt.Errorf("%s exceeds maximum length of %d characters", field, max)
+func validateMaxLength(field, value string, maxLen int) error {
+	if len(value) > maxLen {
+		return fmt.Errorf("%s exceeds maximum length of %d characters", field, maxLen)
 	}
 	return nil
 }
 
-func validateMaxLengthPtr(field string, value *string, max int) error {
-	if value != nil && len(*value) > max {
-		return fmt.Errorf("%s exceeds maximum length of %d characters", field, max)
+func validateMaxLengthPtr(field string, value *string, maxLen int) error {
+	if value != nil && len(*value) > maxLen {
+		return fmt.Errorf("%s exceeds maximum length of %d characters", field, maxLen)
 	}
 	return nil
 }

@@ -41,7 +41,7 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(http.StatusOK) // Always return 200 to Allegro
 		return
 	}
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 
 	// Reject requests if webhook secret is not configured
 	if h.webhookSecret == "" {

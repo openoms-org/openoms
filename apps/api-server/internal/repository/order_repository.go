@@ -11,8 +11,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// OrderRepository handles persistence for orders.
 type OrderRepository struct{}
 
+// NewOrderRepository creates a new OrderRepository.
 func NewOrderRepository() *OrderRepository {
 	return &OrderRepository{}
 }
@@ -43,6 +45,7 @@ func scanOrder(row pgx.Row) (model.Order, error) {
 	return o, err
 }
 
+// List returns a paginated list of orders matching the filter.
 func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.OrderListFilter) ([]model.Order, int, error) {
 	qb := NewQueryBuilder()
 
@@ -110,6 +113,7 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 	return orders, total, rows.Err()
 }
 
+// FindByID returns an order by its ID.
 func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Order, error) {
 	o, err := scanOrder(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM orders WHERE id = $1`, orderSelectColumns), id,
@@ -123,6 +127,7 @@ func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 	return &o, nil
 }
 
+// Create inserts a new order.
 func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Order) error {
 	tags := order.Tags
 	if tags == nil {
@@ -149,6 +154,7 @@ func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Or
 	).Scan(&order.CreatedAt, &order.UpdatedAt)
 }
 
+// Update applies partial updates to an order.
 func (r *OrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateOrderRequest) error {
 	setClauses := []string{}
 	args := []any{}
@@ -270,6 +276,7 @@ func (r *OrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, r
 	return nil
 }
 
+// UpdateStatus sets the status and optional timestamps of an order.
 func (r *OrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, shippedAt, deliveredAt *time.Time) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE orders SET status = $1, shipped_at = COALESCE($2, shipped_at),
@@ -286,6 +293,7 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.U
 	return nil
 }
 
+// FindByExternalID returns the order matching the given source and external ID.
 func (r *OrderRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, source, externalID string) (*model.Order, error) {
 	o, err := scanOrder(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM orders WHERE source = $1 AND external_id = $2`, orderSelectColumns), source, externalID,
@@ -299,6 +307,7 @@ func (r *OrderRepository) FindByExternalID(ctx context.Context, tx pgx.Tx, sourc
 	return &o, nil
 }
 
+// Delete removes an order by its ID.
 func (r *OrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM orders WHERE id = $1", id)
 	if err != nil {

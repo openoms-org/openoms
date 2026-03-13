@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Integration represents a marketplace or carrier integration for a tenant.
 type Integration struct {
 	ID             uuid.UUID       `json:"id"`
 	TenantID       uuid.UUID       `json:"tenant_id"`
@@ -29,6 +30,7 @@ type IntegrationWithCreds struct {
 	EncryptedCredentials string
 }
 
+// CreateIntegrationRequest is the payload for creating a new integration.
 type CreateIntegrationRequest struct {
 	Provider    string          `json:"provider"`
 	Label       *string         `json:"label,omitempty"`
@@ -39,6 +41,7 @@ type CreateIntegrationRequest struct {
 	MaxIntegrations int `json:"-"`
 }
 
+// Validate validates the create integration request.
 func (r *CreateIntegrationRequest) Validate() error {
 	if r.Provider == "" {
 		return errors.New("provider is required")
@@ -55,6 +58,7 @@ func (r *CreateIntegrationRequest) Validate() error {
 	return nil
 }
 
+// UpdateIntegrationRequest is the payload for updating an existing integration.
 type UpdateIntegrationRequest struct {
 	Label        *string          `json:"label,omitempty"`
 	Status       *string          `json:"status,omitempty"`
@@ -64,6 +68,7 @@ type UpdateIntegrationRequest struct {
 	ErrorMessage *string          `json:"error_message,omitempty"`
 }
 
+// Validate validates the update integration request.
 func (r *UpdateIntegrationRequest) Validate() error {
 	if r.Status == nil && r.Credentials == nil && r.Settings == nil &&
 		r.Label == nil && r.SyncCursor == nil && r.ErrorMessage == nil {

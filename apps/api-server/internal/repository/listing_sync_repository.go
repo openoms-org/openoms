@@ -14,12 +14,14 @@ import (
 // ListingSyncRepository handles persistence for listing sync configs and logs.
 type ListingSyncRepository struct{}
 
+// NewListingSyncRepository creates a new ListingSyncRepository.
 func NewListingSyncRepository() *ListingSyncRepository {
 	return &ListingSyncRepository{}
 }
 
 // --- Configs ---
 
+// CreateConfig inserts a new listing sync configuration.
 func (r *ListingSyncRepository) CreateConfig(ctx context.Context, tx pgx.Tx, cfg *model.ListingSyncConfig) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO listing_sync_configs (
@@ -34,6 +36,7 @@ func (r *ListingSyncRepository) CreateConfig(ctx context.Context, tx pgx.Tx, cfg
 	).Scan(&cfg.CreatedAt, &cfg.UpdatedAt)
 }
 
+// UpdateConfig applies partial updates to a listing sync configuration.
 func (r *ListingSyncRepository) UpdateConfig(ctx context.Context, tx pgx.Tx, id uuid.UUID, req *model.UpdateListingSyncConfigRequest) error {
 	var setClauses []string
 	var args []any
@@ -99,6 +102,7 @@ func (r *ListingSyncRepository) UpdateConfig(ctx context.Context, tx pgx.Tx, id 
 	return nil
 }
 
+// GetConfigByID returns a listing sync configuration by its ID.
 func (r *ListingSyncRepository) GetConfigByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ListingSyncConfig, error) {
 	var c model.ListingSyncConfig
 	err := tx.QueryRow(ctx,
@@ -128,6 +132,7 @@ func (r *ListingSyncRepository) GetConfigByID(ctx context.Context, tx pgx.Tx, id
 	return &c, nil
 }
 
+// GetConfigByIntegration returns the listing sync config for the given integration.
 func (r *ListingSyncRepository) GetConfigByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID) (*model.ListingSyncConfig, error) {
 	var c model.ListingSyncConfig
 	err := tx.QueryRow(ctx,
@@ -157,6 +162,7 @@ func (r *ListingSyncRepository) GetConfigByIntegration(ctx context.Context, tx p
 	return &c, nil
 }
 
+// ListConfigs returns a paginated list of listing sync configs matching the filter.
 func (r *ListingSyncRepository) ListConfigs(ctx context.Context, tx pgx.Tx, filter model.ListingSyncConfigFilter) ([]model.ListingSyncConfig, int, error) {
 	var conditions []string
 	var args []any
@@ -226,6 +232,7 @@ func (r *ListingSyncRepository) ListConfigs(ctx context.Context, tx pgx.Tx, filt
 	return configs, total, rows.Err()
 }
 
+// DeleteConfig removes a listing sync configuration by its ID.
 func (r *ListingSyncRepository) DeleteConfig(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM listing_sync_configs WHERE id = $1", id)
 	if err != nil {
@@ -237,6 +244,7 @@ func (r *ListingSyncRepository) DeleteConfig(ctx context.Context, tx pgx.Tx, id 
 	return nil
 }
 
+// UpdateLastSync records the last sync timestamp and optional error for a config.
 func (r *ListingSyncRepository) UpdateLastSync(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastError *string) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE listing_sync_configs SET last_sync_at = NOW(), last_error = $1, updated_at = NOW() WHERE id = $2`,
@@ -247,6 +255,7 @@ func (r *ListingSyncRepository) UpdateLastSync(ctx context.Context, tx pgx.Tx, i
 
 // --- Logs ---
 
+// CreateLog inserts a new listing sync log entry.
 func (r *ListingSyncRepository) CreateLog(ctx context.Context, tx pgx.Tx, log *model.ListingSyncLog) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO listing_sync_log (
@@ -259,6 +268,7 @@ func (r *ListingSyncRepository) CreateLog(ctx context.Context, tx pgx.Tx, log *m
 	).Scan(&log.CreatedAt)
 }
 
+// ListLogs returns paginated listing sync log entries matching the filter.
 func (r *ListingSyncRepository) ListLogs(ctx context.Context, tx pgx.Tx, filter model.ListingSyncLogFilter) ([]model.ListingSyncLog, int, error) {
 	var conditions []string
 	var args []any

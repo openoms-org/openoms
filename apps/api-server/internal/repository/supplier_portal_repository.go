@@ -13,10 +13,12 @@ import (
 // SupplierPortalTokenRepository handles persistence for supplier portal tokens.
 type SupplierPortalTokenRepository struct{}
 
+// NewSupplierPortalTokenRepository creates a new SupplierPortalTokenRepository.
 func NewSupplierPortalTokenRepository() *SupplierPortalTokenRepository {
 	return &SupplierPortalTokenRepository{}
 }
 
+// Create inserts a new supplier portal token.
 func (r *SupplierPortalTokenRepository) Create(ctx context.Context, tx pgx.Tx, token *model.SupplierPortalToken) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO supplier_portal_tokens (id, tenant_id, supplier_id, token_hash, expires_at)
@@ -26,6 +28,7 @@ func (r *SupplierPortalTokenRepository) Create(ctx context.Context, tx pgx.Tx, t
 	).Scan(&token.CreatedAt)
 }
 
+// FindByHash returns a supplier portal token by its hash.
 func (r *SupplierPortalTokenRepository) FindByHash(ctx context.Context, tx pgx.Tx, tokenHash string) (*model.SupplierPortalToken, error) {
 	var t model.SupplierPortalToken
 	err := tx.QueryRow(ctx,
@@ -42,6 +45,7 @@ func (r *SupplierPortalTokenRepository) FindByHash(ctx context.Context, tx pgx.T
 	return &t, nil
 }
 
+// UpdateLastUsed records the current time as last_used_at for the token.
 func (r *SupplierPortalTokenRepository) UpdateLastUsed(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE supplier_portal_tokens SET last_used_at = NOW() WHERE id = $1`, id,
@@ -52,6 +56,7 @@ func (r *SupplierPortalTokenRepository) UpdateLastUsed(ctx context.Context, tx p
 	return nil
 }
 
+// DeleteBySupplier removes all portal tokens for the given supplier.
 func (r *SupplierPortalTokenRepository) DeleteBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) error {
 	_, err := tx.Exec(ctx,
 		`DELETE FROM supplier_portal_tokens WHERE supplier_id = $1`, supplierID,
@@ -62,6 +67,7 @@ func (r *SupplierPortalTokenRepository) DeleteBySupplier(ctx context.Context, tx
 	return nil
 }
 
+// DeleteExpired removes all expired portal tokens and returns the count deleted.
 func (r *SupplierPortalTokenRepository) DeleteExpired(ctx context.Context, tx pgx.Tx) (int64, error) {
 	ct, err := tx.Exec(ctx,
 		`DELETE FROM supplier_portal_tokens WHERE expires_at < $1`, time.Now(),
@@ -72,6 +78,7 @@ func (r *SupplierPortalTokenRepository) DeleteExpired(ctx context.Context, tx pg
 	return ct.RowsAffected(), nil
 }
 
+// FindBySupplier returns all portal tokens for the given supplier.
 func (r *SupplierPortalTokenRepository) FindBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]model.SupplierPortalToken, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, supplier_id, token_hash, expires_at, last_used_at, created_at
@@ -97,10 +104,12 @@ func (r *SupplierPortalTokenRepository) FindBySupplier(ctx context.Context, tx p
 // SupplierMessageRepository handles persistence for supplier messages.
 type SupplierMessageRepository struct{}
 
+// NewSupplierMessageRepository creates a new SupplierMessageRepository.
 func NewSupplierMessageRepository() *SupplierMessageRepository {
 	return &SupplierMessageRepository{}
 }
 
+// Create inserts a new supplier message.
 func (r *SupplierMessageRepository) Create(ctx context.Context, tx pgx.Tx, msg *model.SupplierMessage) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO supplier_messages (id, tenant_id, purchase_order_id, supplier_id, user_id, message, is_from_supplier)
@@ -110,6 +119,7 @@ func (r *SupplierMessageRepository) Create(ctx context.Context, tx pgx.Tx, msg *
 	).Scan(&msg.CreatedAt)
 }
 
+// ListByPO returns all messages for the given purchase order.
 func (r *SupplierMessageRepository) ListByPO(ctx context.Context, tx pgx.Tx, poID uuid.UUID) ([]model.SupplierMessage, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, purchase_order_id, supplier_id, user_id, message, is_from_supplier, created_at

@@ -71,7 +71,7 @@ func TestPollOrders(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/transactions", r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"data": [
 				{
 					"id": "tx-100",
@@ -141,7 +141,7 @@ func TestPollOrders(t *testing.T) {
 func TestPollOrdersEmpty(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":[],"links":{"self":"/transactions"}}`)
+		_, _ = fmt.Fprint(w, `{"data":[],"links":{"self":"/transactions"}}`)
 	}))
 	defer srv.Close()
 
@@ -160,7 +160,7 @@ func TestPollOrdersEmpty(t *testing.T) {
 func TestGetOrder(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"data": [
 				{
 					"id": "tx-200",
@@ -210,7 +210,7 @@ func TestGetOrder(t *testing.T) {
 func TestGetOrderNotFound(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{
+		_, _ = fmt.Fprint(w, `{
 			"data": [
 				{
 					"id": "tx-300",
@@ -253,7 +253,7 @@ func TestPushOffer(t *testing.T) {
 		_ = json.Unmarshal(body, &receivedBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"data":{"id":99999,"title":"Test Product","status":"new"}}`)
+		_, _ = fmt.Fprint(w, `{"data":{"id":99999,"title":"Test Product","status":"new"}}`)
 	}))
 	defer srv.Close()
 
@@ -365,7 +365,7 @@ func TestUpdatePrice(t *testing.T) {
 
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/adverts/12345":
-			fmt.Fprint(w, `{
+			_, _ = fmt.Fprint(w, `{
 				"data": {
 					"id": 12345,
 					"title": "Existing Product",
@@ -391,7 +391,7 @@ func TestUpdatePrice(t *testing.T) {
 			assert.Equal(t, "Existing Product", req["title"])
 			assert.Equal(t, float64(200), req["category_id"])
 
-			fmt.Fprint(w, `{
+			_, _ = fmt.Fprint(w, `{
 				"data": {
 					"id": 12345,
 					"title": "Existing Product",

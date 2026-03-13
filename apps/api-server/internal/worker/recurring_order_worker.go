@@ -18,6 +18,7 @@ type RecurringOrderWorker struct {
 	logger                *slog.Logger
 }
 
+// NewRecurringOrderWorker creates a new RecurringOrderWorker.
 func NewRecurringOrderWorker(
 	pool *pgxpool.Pool,
 	recurringOrderService *service.RecurringOrderService,
@@ -30,14 +31,17 @@ func NewRecurringOrderWorker(
 	}
 }
 
+// Name returns the unique name of this worker.
 func (w *RecurringOrderWorker) Name() string {
 	return "recurring_order_processor"
 }
 
+// Interval returns how often this worker should run.
 func (w *RecurringOrderWorker) Interval() time.Duration {
 	return 1 * time.Hour
 }
 
+// Run processes due recurring orders and creates new order instances.
 func (w *RecurringOrderWorker) Run(ctx context.Context) error {
 	// Get all tenant IDs (bypasses RLS — runs on workerPool)
 	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")

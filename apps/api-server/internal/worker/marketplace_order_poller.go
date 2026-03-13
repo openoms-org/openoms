@@ -58,6 +58,7 @@ type MarketplaceOrderPollerConfig struct {
 	MapOrder       OrderMapper
 }
 
+// NewMarketplaceOrderPoller creates a new MarketplaceOrderPoller from the given config.
 func NewMarketplaceOrderPoller(cfg MarketplaceOrderPollerConfig) *MarketplaceOrderPoller {
 	return &MarketplaceOrderPoller{
 		pool:           cfg.Pool,
@@ -73,14 +74,17 @@ func NewMarketplaceOrderPoller(cfg MarketplaceOrderPollerConfig) *MarketplaceOrd
 	}
 }
 
+// Name returns the unique name of this worker.
 func (p *MarketplaceOrderPoller) Name() string {
 	return p.providerName + "_order_poller"
 }
 
+// Interval returns how often this worker should run.
 func (p *MarketplaceOrderPoller) Interval() time.Duration {
 	return p.interval
 }
 
+// Run polls the marketplace for new orders and imports them.
 func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 	tis, err := ListActiveIntegrations(ctx, p.pool, p.providerName)
 	if err != nil {

@@ -1,3 +1,4 @@
+// Package carriers provides implementations of the carrier shipping provider interface.
 package carriers
 
 import (
@@ -34,7 +35,7 @@ type DHLProvider struct {
 }
 
 // NewDHLProvider creates a DHL CarrierProvider from encrypted credentials.
-func NewDHLProvider(credentials json.RawMessage, settings json.RawMessage) (*DHLProvider, error) {
+func NewDHLProvider(credentials json.RawMessage, _ json.RawMessage) (*DHLProvider, error) {
 	var creds DHLCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("dhl: parse credentials: %w", err)
@@ -52,8 +53,10 @@ func NewDHLProvider(credentials json.RawMessage, settings json.RawMessage) (*DHL
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *DHLProvider) ProviderName() string { return "dhl" }
 
+// CreateShipment creates a DHL shipment and returns the response with tracking info.
 func (p *DHLProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	svcType, err := mapDHLServiceType(req.ServiceType)
 	if err != nil {
@@ -179,10 +182,12 @@ func splitStreetHouseNo(address string) (street, houseNo string) {
 	return address, ""
 }
 
-func (p *DHLProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
+// GetLabel downloads the shipping label for the given DHL shipment.
+func (p *DHLProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
 	return p.client.Shipments.GetLabel(ctx, externalID)
 }
 
+// GetTracking returns tracking events for the given DHL shipment.
 func (p *DHLProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
 	if err != nil {
@@ -202,14 +207,17 @@ func (p *DHLProvider) GetTracking(ctx context.Context, trackingNumber string) ([
 	return events, nil
 }
 
+// CancelShipment cancels a DHL shipment by its external ID.
 func (p *DHLProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return p.client.Shipments.Cancel(ctx, externalID)
 }
 
+// MapStatus maps a DHL carrier status to the internal shipment status.
 func (p *DHLProvider) MapStatus(carrierStatus string) (string, bool) {
 	return dhlsdk.MapStatus(carrierStatus)
 }
 
+// GetRates returns estimated shipping rates for DHL.
 func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// DHL Poland domestic rate estimation based on weight tiers.
 	// Real integration would use the DHL Rating API.
@@ -303,8 +311,10 @@ func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) (
 	return rates, nil
 }
 
+// SupportsPickupPoints reports that DHL does not support pickup point delivery.
 func (p *DHLProvider) SupportsPickupPoints() bool { return false }
 
-func (p *DHLProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
+// SearchPickupPoints is not supported by DHL and always returns nil.
+func (p *DHLProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
 	return nil, nil
 }

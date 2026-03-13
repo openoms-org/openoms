@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// ShipmentRepository handles persistence for shipments.
 type ShipmentRepository struct{}
 
+// NewShipmentRepository creates a new ShipmentRepository.
 func NewShipmentRepository() *ShipmentRepository {
 	return &ShipmentRepository{}
 }
@@ -38,6 +40,7 @@ func scanShipment(row interface{ Scan(dest ...any) error }) (model.Shipment, err
 	return s, err
 }
 
+// List returns a paginated list of shipments matching the filter.
 func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.ShipmentListFilter) ([]model.Shipment, int, error) {
 	qb := NewQueryBuilder()
 
@@ -93,6 +96,7 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 	return shipments, total, rows.Err()
 }
 
+// FindByID returns a shipment by its ID.
 func (r *ShipmentRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Shipment, error) {
 	row := tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM shipments WHERE id = $1`, shipmentColumns), id,
@@ -134,6 +138,7 @@ func (r *ShipmentRepository) CountByOrder(ctx context.Context, tx pgx.Tx, orderI
 	return count, nil
 }
 
+// Create inserts a new shipment.
 func (r *ShipmentRepository) Create(ctx context.Context, tx pgx.Tx, shipment *model.Shipment) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO shipments (
@@ -152,6 +157,7 @@ func (r *ShipmentRepository) Create(ctx context.Context, tx pgx.Tx, shipment *mo
 	).Scan(&shipment.CreatedAt, &shipment.UpdatedAt)
 }
 
+// Update applies partial updates to a shipment.
 func (r *ShipmentRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateShipmentRequest) error {
 	setClauses := []string{}
 	args := []any{}
@@ -218,6 +224,7 @@ func (r *ShipmentRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return nil
 }
 
+// UpdateStatus sets the status of a shipment.
 func (r *ShipmentRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error {
 	ct, err := tx.Exec(ctx,
 		"UPDATE shipments SET status = $1, updated_at = NOW() WHERE id = $2",
@@ -232,6 +239,7 @@ func (r *ShipmentRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// Delete removes a shipment by its ID.
 func (r *ShipmentRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM shipments WHERE id = $1", id)
 	if err != nil {

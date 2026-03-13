@@ -17,11 +17,13 @@ import (
 	smsapi "github.com/openoms-org/openoms/packages/smsapi-go-sdk"
 )
 
+// SMSService sends SMS notifications for order events.
 type SMSService struct {
 	tenantRepo repository.TenantRepo
 	pool       *pgxpool.Pool
 }
 
+// NewSMSService creates a new SMSService.
 func NewSMSService(tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *SMSService {
 	return &SMSService{tenantRepo: tenantRepo, pool: pool}
 }
@@ -38,7 +40,7 @@ func (s *SMSService) loadSMSSettings(ctx context.Context, tenantID uuid.UUID) *m
 		}
 		var allSettings map[string]json.RawMessage
 		if err := json.Unmarshal(settings, &allSettings); err != nil {
-			return nil
+			return err
 		}
 		raw, ok := allSettings["sms"]
 		if !ok {
@@ -46,7 +48,7 @@ func (s *SMSService) loadSMSSettings(ctx context.Context, tenantID uuid.UUID) *m
 		}
 		var parsed model.SMSSettings
 		if err := json.Unmarshal(raw, &parsed); err != nil {
-			return nil
+			return err
 		}
 		cfg = &parsed
 		return nil
@@ -57,7 +59,7 @@ func (s *SMSService) loadSMSSettings(ctx context.Context, tenantID uuid.UUID) *m
 }
 
 // SendOrderStatusSMS sends an SMS notification when order status changes.
-func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID, order *model.Order, oldStatus, newStatus string) {
+func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID, order *model.Order, _ string, newStatus string) {
 	if order.CustomerPhone == nil || *order.CustomerPhone == "" {
 		slog.Debug("sms: no customer phone number, skipping", "order_id", order.ID)
 		return

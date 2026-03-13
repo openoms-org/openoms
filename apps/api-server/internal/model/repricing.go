@@ -45,28 +45,33 @@ type RepricingLog struct {
 
 // Strategy parameter structs.
 
+// MarginParams holds margin-based repricing strategy parameters.
 type MarginParams struct {
 	MinMarginPct    float64 `json:"min_margin_pct"`
 	TargetMarginPct float64 `json:"target_margin_pct"`
 	CostField       string  `json:"cost_field"`
 }
 
+// CompetitiveParams holds configuration for the competitive repricing strategy.
 type CompetitiveParams struct {
 	Position    string  `json:"position"`
 	UndercutPct float64 `json:"undercut_pct"`
 	MinPrice    float64 `json:"min_price"`
 }
 
+// TimeBasedParams holds configuration for the time-based repricing strategy.
 type TimeBasedParams struct {
 	Schedule []TimeScheduleEntry `json:"schedule"`
 }
 
+// TimeScheduleEntry defines a discount for a specific time window.
 type TimeScheduleEntry struct {
 	Days        string  `json:"days"`
 	Hours       string  `json:"hours,omitempty"`
 	DiscountPct float64 `json:"discount_pct"`
 }
 
+// StockBasedParams holds configuration for the stock-based repricing strategy.
 type StockBasedParams struct {
 	LowStockThreshold    int     `json:"low_stock_threshold"`
 	LowStockMarkupPct    float64 `json:"low_stock_markup_pct"`
@@ -80,6 +85,7 @@ var validStrategies = []string{"margin", "competitive", "time_based", "stock_bas
 var validStatuses = []string{"active", "paused", "archived"}
 var validScopeTypes = []string{"all", "category", "tag", "product_ids"}
 
+// CreateRepricingRuleRequest is the payload for creating a new repricing rule.
 type CreateRepricingRuleRequest struct {
 	Name       string          `json:"name"`
 	Strategy   string          `json:"strategy"`
@@ -92,6 +98,7 @@ type CreateRepricingRuleRequest struct {
 	Channels   json.RawMessage `json:"channels,omitempty"`
 }
 
+// Validate validates the create repricing rule request.
 func (r CreateRepricingRuleRequest) Validate() error {
 	if r.Name == "" {
 		return errors.New("name is required")
@@ -120,6 +127,7 @@ func (r CreateRepricingRuleRequest) Validate() error {
 	return nil
 }
 
+// UpdateRepricingRuleRequest is the payload for updating an existing repricing rule.
 type UpdateRepricingRuleRequest struct {
 	Name       *string          `json:"name,omitempty"`
 	Status     *string          `json:"status,omitempty"`
@@ -133,6 +141,7 @@ type UpdateRepricingRuleRequest struct {
 	Channels   *json.RawMessage `json:"channels,omitempty"`
 }
 
+// Validate validates the update repricing rule request.
 func (r UpdateRepricingRuleRequest) Validate() error {
 	if r.Name == nil && r.Status == nil && r.Strategy == nil && r.Priority == nil &&
 		r.ScopeType == nil && r.ScopeValue == nil && r.Params == nil &&
@@ -157,6 +166,7 @@ func (r UpdateRepricingRuleRequest) Validate() error {
 	return nil
 }
 
+// RepricingRuleListFilter holds query parameters for listing repricing rules.
 type RepricingRuleListFilter struct {
 	Status   *string
 	Strategy *string

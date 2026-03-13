@@ -18,10 +18,12 @@ type UserWithPassword struct {
 	TOTPEnabled  bool
 }
 
+// UserRepository handles persistence of user records.
 type UserRepository struct {
 	pool *pgxpool.Pool
 }
 
+// NewUserRepository creates a new UserRepository backed by the given connection pool.
 func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{pool: pool}
 }

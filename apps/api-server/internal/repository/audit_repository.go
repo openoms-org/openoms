@@ -11,8 +11,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// AuditRepository handles persistence for audit log entries.
 type AuditRepository struct{}
 
+// NewAuditRepository creates a new AuditRepository.
 func NewAuditRepository() *AuditRepository {
 	return &AuditRepository{}
 }

@@ -1,3 +1,4 @@
+// Package database provides PostgreSQL connection helpers.
 package database
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// Connect opens a pgx connection pool for the given PostgreSQL URL.
 func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {

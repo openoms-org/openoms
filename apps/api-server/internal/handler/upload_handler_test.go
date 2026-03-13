@@ -27,8 +27,8 @@ func TestUploadHandler_Upload_MissingFile(t *testing.T) {
 	// Create a multipart request without a file field
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
-	writer.WriteField("other", "value")
-	writer.Close()
+	_ = writer.WriteField("other", "value")
+	_ = writer.Close()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/upload", &buf)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -57,8 +57,8 @@ func TestUploadHandler_Upload_UnsupportedFileType(t *testing.T) {
 	writer := multipart.NewWriter(&buf)
 	part, err := writer.CreateFormFile("file", "test.txt")
 	require.NoError(t, err)
-	part.Write([]byte("This is a plain text file, not an image"))
-	writer.Close()
+	_, _ = part.Write([]byte("This is a plain text file, not an image"))
+	_ = writer.Close()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/upload", &buf)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -100,9 +100,9 @@ func TestUploadHandler_Upload_ValidPNG(t *testing.T) {
 	writer := multipart.NewWriter(&buf)
 	part, err := writer.CreateFormFile("file", "image.png")
 	require.NoError(t, err)
-	part.Write(pngHeader)
-	part.Write(ihdr)
-	writer.Close()
+	_, _ = part.Write(pngHeader)
+	_, _ = part.Write(ihdr)
+	_ = writer.Close()
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/upload", &buf)
 	req.Header.Set("Content-Type", writer.FormDataContentType())

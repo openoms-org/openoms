@@ -50,6 +50,7 @@ type CreatePriceListRequest struct {
 	ValidTo      *time.Time `json:"valid_to,omitempty"`
 }
 
+// Validate validates the create price list request.
 func (r *CreatePriceListRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -86,6 +87,7 @@ type UpdatePriceListRequest struct {
 	ValidTo      *time.Time `json:"valid_to,omitempty"`
 }
 
+// Validate validates the update price list request.
 func (r *UpdatePriceListRequest) Validate() error {
 	if r.Name == nil && r.Description == nil && r.Currency == nil &&
 		r.IsDefault == nil && r.DiscountType == nil && r.Active == nil &&
@@ -120,6 +122,7 @@ type CreatePriceListItemRequest struct {
 	MinQuantity int        `json:"min_quantity"`
 }
 
+// Validate validates the create price list item request.
 func (r *CreatePriceListItemRequest) Validate() error {
 	if r.ProductID == uuid.Nil {
 		return errors.New("product_id is required")

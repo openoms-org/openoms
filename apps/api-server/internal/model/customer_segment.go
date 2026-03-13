@@ -73,6 +73,7 @@ type CreateSegmentRequest struct {
 	Rules       json.RawMessage `json:"rules,omitempty"`
 }
 
+// Validate validates the create segment request.
 func (r *CreateSegmentRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -98,6 +99,7 @@ type UpdateSegmentRequest struct {
 	Rules       json.RawMessage `json:"rules,omitempty"`
 }
 
+// Validate validates the update segment request.
 func (r *UpdateSegmentRequest) Validate() error {
 	if r.Name != nil && strings.TrimSpace(*r.Name) == "" {
 		return errors.New("name cannot be empty")
@@ -115,6 +117,7 @@ type AddSegmentMemberRequest struct {
 	CustomerID uuid.UUID `json:"customer_id"`
 }
 
+// Validate validates the add segment member request.
 func (r *AddSegmentMemberRequest) Validate() error {
 	if r.CustomerID == uuid.Nil {
 		return errors.New("customer_id is required")
@@ -179,6 +182,7 @@ type CreateLoyaltyProgramRequest struct {
 	Config      json.RawMessage `json:"config"`
 }
 
+// Validate validates the create loyalty program request.
 func (r *CreateLoyaltyProgramRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -203,6 +207,7 @@ type UpdateLoyaltyProgramRequest struct {
 	Config json.RawMessage `json:"config,omitempty"`
 }
 
+// Validate validates the update loyalty program request.
 func (r *UpdateLoyaltyProgramRequest) Validate() error {
 	if r.Name != nil && strings.TrimSpace(*r.Name) == "" {
 		return errors.New("name cannot be empty")
@@ -223,6 +228,7 @@ type AwardPointsRequest struct {
 	Reason     string    `json:"reason"`
 }
 
+// Validate validates the award points request.
 func (r *AwardPointsRequest) Validate() error {
 	if r.CustomerID == uuid.Nil {
 		return errors.New("customer_id is required")
@@ -239,6 +245,7 @@ type RedeemPointsRequest struct {
 	Points     int       `json:"points"`
 }
 
+// Validate validates the redeem points request.
 func (r *RedeemPointsRequest) Validate() error {
 	if r.CustomerID == uuid.Nil {
 		return errors.New("customer_id is required")

@@ -9,12 +9,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// SyncJobRepository handles persistence of background sync job records.
 type SyncJobRepository struct{}
 
+// NewSyncJobRepository creates a new SyncJobRepository.
 func NewSyncJobRepository() *SyncJobRepository {
 	return &SyncJobRepository{}
 }
 
+// Create inserts a new sync job record and sets its CreatedAt timestamp.
 func (r *SyncJobRepository) Create(ctx context.Context, tx pgx.Tx, job *model.SyncJob) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO sync_jobs (
@@ -27,6 +30,7 @@ func (r *SyncJobRepository) Create(ctx context.Context, tx pgx.Tx, job *model.Sy
 	).Scan(&job.CreatedAt)
 }
 
+// UpdateStatus updates the status, counters and optional error message of a sync job.
 func (r *SyncJobRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, itemsProcessed, itemsFailed int, errorMsg *string) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE sync_jobs
@@ -44,6 +48,7 @@ func (r *SyncJobRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid
 	return nil
 }
 
+// GetByID returns the sync job with the given ID, or nil if not found.
 func (r *SyncJobRepository) GetByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.SyncJob, error) {
 	var j model.SyncJob
 	err := tx.QueryRow(ctx,
@@ -65,6 +70,7 @@ func (r *SyncJobRepository) GetByID(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return &j, nil
 }
 
+// ListByIntegration returns the most recent sync jobs for a given integration, newest first.
 func (r *SyncJobRepository) ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID, limit int) ([]*model.SyncJob, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, integration_id, job_type, status,
@@ -93,6 +99,7 @@ func (r *SyncJobRepository) ListByIntegration(ctx context.Context, tx pgx.Tx, in
 	return jobs, rows.Err()
 }
 
+// List returns a filtered, paginated list of sync jobs and the total count.
 func (r *SyncJobRepository) List(ctx context.Context, tx pgx.Tx, filter model.SyncJobListFilter) ([]*model.SyncJob, int, error) {
 	qb := NewQueryBuilder()
 

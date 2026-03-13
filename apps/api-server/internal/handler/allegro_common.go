@@ -25,7 +25,7 @@ type allegroCredentials struct {
 
 // buildAllegroClient creates an authenticated Allegro SDK client from the request context.
 // It includes a token refresh callback that persists refreshed tokens to the database.
-func buildAllegroClient(r *http.Request, integrationService *service.IntegrationService, encryptionKey []byte) (*allegrosdk.Client, error) {
+func buildAllegroClient(r *http.Request, integrationService *service.IntegrationService, _ []byte) (*allegrosdk.Client, error) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
 	credJSON, _, err := integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
@@ -56,7 +56,7 @@ func buildAllegroClient(r *http.Request, integrationService *service.Integration
 				TokenExpiry:  exp.Format(time.RFC3339),
 				Sandbox:      creds.Sandbox,
 			}
-			newJSON, err := json.Marshal(newCreds)
+			newJSON, err := json.Marshal(newCreds) // #nosec G117
 			if err != nil {
 				slog.Error("allegro: failed to marshal refreshed credentials", "error", err)
 				return

@@ -26,6 +26,7 @@ var (
 	ErrOrderLimitExceeded = errors.New("monthly order limit exceeded")
 )
 
+// OrderService handles business logic for order management.
 type OrderService struct {
 	orderRepo          repository.OrderRepo
 	auditRepo          repository.AuditRepo
@@ -42,6 +43,7 @@ type OrderService struct {
 	stockSyncService   *StockSyncService
 }
 
+// NewOrderService creates a new OrderService.
 func NewOrderService(
 	orderRepo repository.OrderRepo,
 	auditRepo repository.AuditRepo,
@@ -138,6 +140,7 @@ func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID
 	return &cfg, nil
 }
 
+// List returns a paginated list of orders for a tenant.
 func (s *OrderService) List(ctx context.Context, tenantID uuid.UUID, filter model.OrderListFilter) (model.ListResponse[model.Order], error) {
 	var resp model.ListResponse[model.Order]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -159,6 +162,7 @@ func (s *OrderService) List(ctx context.Context, tenantID uuid.UUID, filter mode
 	return resp, err
 }
 
+// Get returns a single order by ID.
 func (s *OrderService) Get(ctx context.Context, tenantID, orderID uuid.UUID) (*model.Order, error) {
 	var order *model.Order
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -175,6 +179,7 @@ func (s *OrderService) Get(ctx context.Context, tenantID, orderID uuid.UUID) (*m
 	return order, nil
 }
 
+// Create inserts a new order.
 func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateOrderRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -342,6 +347,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	return order, nil
 }
 
+// Update modifies an existing order.
 func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, req model.UpdateOrderRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -388,6 +394,7 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 	return order, err
 }
 
+// Delete removes an order by ID.
 func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		order, err := s.orderRepo.FindByID(ctx, tx, orderID)
@@ -422,6 +429,7 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 	return err
 }
 
+// TransitionStatus moves an order to a new status, enforcing allowed transitions.
 func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID uuid.UUID, req model.StatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -450,9 +458,7 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 
 		var setShippedAt, setDeliveredAt *time.Time
 
-		if req.Force {
-			// Force mode: skip transition validation
-		} else {
+		if !req.Force {
 			if !config.IsValidStatus(existing.Status) {
 				return fmt.Errorf("%w: current %q", ErrUnknownStatus, existing.Status)
 			}
@@ -528,6 +534,7 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 	return order, err
 }
 
+// BulkTransitionStatus transitions multiple orders to a new status.
 func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.UUID, req model.BulkStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.BulkStatusTransitionResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -574,15 +581,11 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 
 			var setShippedAt, setDeliveredAt *time.Time
 
-			if req.Force {
-				// Force mode: skip transition validation
-			} else {
-				if !config.CanTransition(existing.Status, req.Status) {
-					result.Error = fmt.Sprintf("invalid transition: %s -> %s", existing.Status, req.Status)
-					resp.Results = append(resp.Results, result)
-					resp.Failed++
-					continue
-				}
+			if !req.Force && !config.CanTransition(existing.Status, req.Status) {
+				result.Error = fmt.Sprintf("invalid transition: %s -> %s", existing.Status, req.Status)
+				resp.Results = append(resp.Results, result)
+				resp.Failed++
+				continue
 			}
 
 			if req.Status == "shipped" {
@@ -675,6 +678,7 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 	return resp, nil
 }
 
+// GetAudit returns the audit log for an order.
 func (s *OrderService) GetAudit(ctx context.Context, tenantID, orderID uuid.UUID) ([]model.AuditLogEntry, error) {
 	var entries []model.AuditLogEntry
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

@@ -10,11 +10,13 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 )
 
+// UploadHandler handles file upload requests.
 type UploadHandler struct {
 	storage storage.ObjectStorage
 	maxSize int64
 }
 
+// NewUploadHandler creates a new UploadHandler.
 func NewUploadHandler(store storage.ObjectStorage, maxSize int64) *UploadHandler {
 	return &UploadHandler{
 		storage: store,
@@ -28,6 +30,7 @@ var allowedMimeTypes = map[string]string{
 	"image/webp": ".webp",
 }
 
+// Upload handles multipart file upload and stores the file in object storage.
 func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -38,14 +41,14 @@ func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Read first 512 bytes to detect content type
 	buf := make([]byte, 512)
@@ -64,7 +67,10 @@ func (h *UploadHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	// Seek back to beginning
 	if seeker, ok := file.(io.Seeker); ok {
-		seeker.Seek(0, io.SeekStart)
+		if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+			writeServerError(w, "failed to reset file position", err)
+			return
+		}
 	}
 
 	// Generate unique filename and storage key

@@ -16,8 +16,11 @@ import (
 )
 
 var (
+	// ErrWarehouseNotFound is returned when a warehouse does not exist.
 	ErrWarehouseNotFound      = errors.New("warehouse not found")
+	// ErrStockEntryNotFound is returned when a warehouse stock entry does not exist.
 	ErrStockEntryNotFound     = errors.New("stock entry not found")
+	// ErrStrictInventoryControl is returned when direct stock changes are blocked by strict inventory control.
 	ErrStrictInventoryControl = errors.New("strict inventory control is enabled — stock changes allowed only via warehouse documents")
 )
 
@@ -65,7 +68,7 @@ func (s *WarehouseService) isStrictInventoryMode(ctx context.Context, tx pgx.Tx,
 
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return false, nil
+		return false, err
 	}
 
 	raw, ok := allSettings["inventory"]
@@ -75,7 +78,7 @@ func (s *WarehouseService) isStrictInventoryMode(ctx context.Context, tx pgx.Tx,
 
 	var inventoryCfg model.InventorySettings
 	if err := json.Unmarshal(raw, &inventoryCfg); err != nil {
-		return false, nil
+		return false, err
 	}
 
 	return inventoryCfg.StrictMode, nil

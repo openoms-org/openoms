@@ -25,7 +25,7 @@ func RequireRole(minRole string) func(http.Handler) http.Handler {
 			if claims == nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":"authentication required"}`))
+				_, _ = w.Write([]byte(`{"error":"authentication required"}`))
 				return
 			}
 
@@ -33,7 +33,7 @@ func RequireRole(minRole string) func(http.Handler) http.Handler {
 			if userLevel < minLevel {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte(`{"error":"insufficient permissions"}`))
+				_, _ = w.Write([]byte(`{"error":"insufficient permissions"}`))
 				return
 			}
 
@@ -59,7 +59,7 @@ func RequirePermission(permission string, roleFinder RoleFinder) func(http.Handl
 			if claims == nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":"authentication required"}`))
+				_, _ = w.Write([]byte(`{"error":"authentication required"}`))
 				return
 			}
 
@@ -70,14 +70,14 @@ func RequirePermission(permission string, roleFinder RoleFinder) func(http.Handl
 				if err != nil || role == nil {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusForbidden)
-					w.Write([]byte(`{"error":"insufficient permissions"}`))
+					_, _ = w.Write([]byte(`{"error":"insufficient permissions"}`))
 					return
 				}
 
 				if !role.HasPermission(permission) {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusForbidden)
-					w.Write([]byte(`{"error":"insufficient permissions"}`))
+					_, _ = w.Write([]byte(`{"error":"insufficient permissions"}`))
 					return
 				}
 
@@ -94,7 +94,7 @@ func RequirePermission(permission string, roleFinder RoleFinder) func(http.Handl
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte(`{"error":"insufficient permissions"}`))
+			_, _ = w.Write([]byte(`{"error":"insufficient permissions"}`))
 		})
 	}
 }

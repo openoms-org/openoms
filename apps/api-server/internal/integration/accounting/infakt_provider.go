@@ -28,7 +28,7 @@ type InFaktProvider struct {
 }
 
 // NewInFaktProvider creates a new inFakt invoicing provider.
-func NewInFaktProvider(credentials json.RawMessage, settings json.RawMessage) (*InFaktProvider, error) {
+func NewInFaktProvider(credentials json.RawMessage, _ json.RawMessage) (*InFaktProvider, error) {
 	var creds InFaktCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("infakt: invalid credentials: %w", err)
@@ -42,10 +42,12 @@ func NewInFaktProvider(credentials json.RawMessage, settings json.RawMessage) (*
 	return &InFaktProvider{client: client}, nil
 }
 
+// ProviderName returns the provider identifier for inFakt.
 func (p *InFaktProvider) ProviderName() string {
 	return "infakt"
 }
 
+// CreateInvoice creates a new invoice in inFakt.
 func (p *InFaktProvider) CreateInvoice(ctx context.Context, req integration.InvoiceRequest) (*integration.InvoiceResult, error) {
 	services := make([]sdk.InvoiceService_, 0, len(req.Items))
 	for _, item := range req.Items {
@@ -86,6 +88,7 @@ func (p *InFaktProvider) CreateInvoice(ctx context.Context, req integration.Invo
 	}, nil
 }
 
+// GetInvoice retrieves an invoice by its inFakt ID.
 func (p *InFaktProvider) GetInvoice(ctx context.Context, externalID string) (*integration.InvoiceResult, error) {
 	id, err := sdk.ParseExternalID(externalID)
 	if err != nil {
@@ -104,6 +107,7 @@ func (p *InFaktProvider) GetInvoice(ctx context.Context, externalID string) (*in
 	}, nil
 }
 
+// GetPDF downloads the PDF for the invoice with the given external ID.
 func (p *InFaktProvider) GetPDF(ctx context.Context, externalID string) ([]byte, error) {
 	id, err := sdk.ParseExternalID(externalID)
 	if err != nil {
@@ -118,7 +122,8 @@ func (p *InFaktProvider) GetPDF(ctx context.Context, externalID string) ([]byte,
 	return data, nil
 }
 
-func (p *InFaktProvider) CancelInvoice(ctx context.Context, externalID string) error {
+// CancelInvoice is not supported by inFakt; use correction invoices instead.
+func (p *InFaktProvider) CancelInvoice(_ context.Context, _ string) error {
 	// inFakt does not expose a direct cancel endpoint.
 	// Invoices should be corrected instead.
 	return fmt.Errorf("infakt: cancel not supported, use correction invoice instead")

@@ -17,6 +17,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// AmazonAuthHandler handles Amazon SP-API OAuth flow for the tenant.
 type AmazonAuthHandler struct {
 	cfg                *config.Config
 	integrationService *service.IntegrationService

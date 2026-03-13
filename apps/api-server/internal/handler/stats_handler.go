@@ -8,14 +8,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// StatsHandler handles HTTP requests for dashboard statistics.
 type StatsHandler struct {
 	statsService *service.StatsService
 }
 
+// NewStatsHandler creates a new StatsHandler.
 func NewStatsHandler(statsService *service.StatsService) *StatsHandler {
 	return &StatsHandler{statsService: statsService}
 }
 
+// GetDashboard returns aggregated dashboard statistics.
 func (h *StatsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -27,6 +30,7 @@ func (h *StatsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
+// GetTopProducts returns the best-selling products for the tenant.
 func (h *StatsHandler) GetTopProducts(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -45,6 +49,7 @@ func (h *StatsHandler) GetTopProducts(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, products)
 }
 
+// GetRevenueBySource returns revenue broken down by sales channel.
 func (h *StatsHandler) GetRevenueBySource(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -63,6 +68,7 @@ func (h *StatsHandler) GetRevenueBySource(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, revenue)
 }
 
+// GetOrderTrends returns order volume trends over time.
 func (h *StatsHandler) GetOrderTrends(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -81,6 +87,7 @@ func (h *StatsHandler) GetOrderTrends(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, trends)
 }
 
+// GetPaymentMethodStats returns order counts grouped by payment method.
 func (h *StatsHandler) GetPaymentMethodStats(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

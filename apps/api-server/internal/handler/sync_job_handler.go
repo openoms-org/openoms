@@ -14,15 +14,18 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// SyncJobHandler handles HTTP requests for sync job monitoring.
 type SyncJobHandler struct {
 	syncJobRepo repository.SyncJobRepo
 	pool        *pgxpool.Pool
 }
 
+// NewSyncJobHandler creates a new SyncJobHandler.
 func NewSyncJobHandler(syncJobRepo repository.SyncJobRepo, pool *pgxpool.Pool) *SyncJobHandler {
 	return &SyncJobHandler{syncJobRepo: syncJobRepo, pool: pool}
 }
 
+// List returns a paginated list of sync jobs.
 func (h *SyncJobHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -70,6 +73,7 @@ func (h *SyncJobHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Get returns a single sync job by ID.
 func (h *SyncJobHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

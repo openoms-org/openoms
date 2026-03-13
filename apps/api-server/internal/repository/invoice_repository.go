@@ -9,8 +9,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// InvoiceRepository handles persistence for invoices.
 type InvoiceRepository struct{}
 
+// NewInvoiceRepository creates a new InvoiceRepository.
 func NewInvoiceRepository() *InvoiceRepository {
 	return &InvoiceRepository{}
 }
@@ -50,6 +52,7 @@ func scanInvoices(rows pgx.Rows) ([]model.Invoice, error) {
 	return invoices, rows.Err()
 }
 
+// List returns a paginated list of invoices matching the filter.
 func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.InvoiceListFilter) ([]model.Invoice, int, error) {
 	qb := NewQueryBuilder()
 
@@ -101,6 +104,7 @@ func (r *InvoiceRepository) List(ctx context.Context, tx pgx.Tx, filter model.In
 	return invoices, total, nil
 }
 
+// FindByID returns an invoice by its ID.
 func (r *InvoiceRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Invoice, error) {
 	inv, err := scanInvoice(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM invoices WHERE id = $1`, invoiceSelectColumns), id,
@@ -114,6 +118,7 @@ func (r *InvoiceRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return &inv, nil
 }
 
+// FindByOrderID returns all invoices for the given order.
 func (r *InvoiceRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.Invoice, error) {
 	rows, err := tx.Query(ctx,
 		fmt.Sprintf(`SELECT %s FROM invoices WHERE order_id = $1 ORDER BY created_at DESC`, invoiceSelectColumns), orderID,
@@ -130,6 +135,7 @@ func (r *InvoiceRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderI
 	return invoices, nil
 }
 
+// Create inserts a new invoice.
 func (r *InvoiceRepository) Create(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO invoices (
@@ -148,6 +154,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, tx pgx.Tx, inv *model.In
 	).Scan(&inv.CreatedAt, &inv.UpdatedAt)
 }
 
+// Update overwrites mutable fields on an invoice.
 func (r *InvoiceRepository) Update(ctx context.Context, tx pgx.Tx, inv *model.Invoice) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE invoices SET
@@ -171,6 +178,7 @@ func (r *InvoiceRepository) Update(ctx context.Context, tx pgx.Tx, inv *model.In
 	return nil
 }
 
+// Delete removes an invoice by its ID.
 func (r *InvoiceRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM invoices WHERE id = $1", id)
 	if err != nil {

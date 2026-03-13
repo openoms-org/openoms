@@ -13,10 +13,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// UserHandler handles HTTP requests for user management within a tenant.
 type UserHandler struct {
 	userService *service.UserService
 }
 
+// NewUserHandler creates a new UserHandler.
 func NewUserHandler(userService *service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }

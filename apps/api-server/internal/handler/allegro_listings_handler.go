@@ -230,7 +230,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 
 	offer, err := client.Offers.Create(ctx, payload)
 	if err != nil {
-		slog.Error("allegro listings: failed to create offer", "error", err, "product_id", productID)
+		slog.Error("allegro listings: failed to create offer", "error", err, "product_id", productID) //nolint:gosec
 		writeError(w, http.StatusUnprocessableEntity, allegroErrorMessage("Failed to create offer on Allegro", err))
 		return
 	}
@@ -442,7 +442,7 @@ func (h *AllegroListingsHandler) uploadImageToAllegro(ctx context.Context, clien
 			return "", fmt.Errorf("path traversal blocked: %s escapes upload dir", relPath)
 		}
 
-		data, err := os.ReadFile(filePath)
+		data, err := os.ReadFile(filePath) // #nosec G304
 		if err != nil {
 			return "", fmt.Errorf("read local image %s: %w", filePath, err)
 		}
@@ -855,7 +855,7 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 	// Get the product
 	product, err := h.productService.Get(ctx, tenantID, productID)
 	if err != nil {
-		slog.Error("allegro listings: failed to get product for sync", "error", err, "product_id", productID)
+		slog.Error("allegro listings: failed to get product for sync", "error", err, "product_id", productID) //nolint:gosec
 		writeError(w, http.StatusNotFound, "product not found")
 		return
 	}

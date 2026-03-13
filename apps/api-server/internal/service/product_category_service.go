@@ -16,12 +16,17 @@ import (
 )
 
 var (
+	// ErrCategoryNotFound is returned when a product category does not exist.
 	ErrCategoryNotFound   = errors.New("category not found")
+	// ErrCategoryDepthLimit is returned when the maximum category nesting depth is exceeded.
 	ErrCategoryDepthLimit = errors.New("maximum category depth exceeded")
+	// ErrCircularReference is returned when a category update would create a circular parent chain.
 	ErrCircularReference  = errors.New("circular parent reference detected")
+	// ErrDuplicateSlug is returned when a category slug is already in use.
 	ErrDuplicateSlug      = errors.New("duplicate category slug")
 )
 
+// ProductCategoryService handles business logic for product categories.
 type ProductCategoryService struct {
 	categoryRepo           repository.ProductCategoryRepo
 	marketplaceMappingRepo repository.MarketplaceCategoryMappingRepo
@@ -30,6 +35,7 @@ type ProductCategoryService struct {
 	logger                 *slog.Logger
 }
 
+// NewProductCategoryService creates a new ProductCategoryService.
 func NewProductCategoryService(
 	categoryRepo repository.ProductCategoryRepo,
 	marketplaceMappingRepo repository.MarketplaceCategoryMappingRepo,
@@ -45,6 +51,7 @@ func NewProductCategoryService(
 	}
 }
 
+// List returns the product category tree for a tenant.
 func (s *ProductCategoryService) List(ctx context.Context, tenantID uuid.UUID, filter model.CategoryListFilter) ([]model.ProductCategory, error) {
 	var categories []model.ProductCategory
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -63,6 +70,7 @@ func (s *ProductCategoryService) List(ctx context.Context, tenantID uuid.UUID, f
 	return categories, nil
 }
 
+// Get returns a single product category by ID.
 func (s *ProductCategoryService) Get(ctx context.Context, tenantID, id uuid.UUID) (*model.ProductCategory, error) {
 	var category *model.ProductCategory
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -79,6 +87,7 @@ func (s *ProductCategoryService) Get(ctx context.Context, tenantID, id uuid.UUID
 	return category, nil
 }
 
+// Create inserts a new product category.
 func (s *ProductCategoryService) Create(ctx context.Context, tenantID, actorID uuid.UUID, req model.CreateCategoryRequest) (*model.ProductCategory, error) {
 	category := &model.ProductCategory{
 		ID:       uuid.New(),
@@ -137,6 +146,7 @@ func (s *ProductCategoryService) Create(ctx context.Context, tenantID, actorID u
 	return category, nil
 }
 
+// Update modifies an existing product category.
 func (s *ProductCategoryService) Update(ctx context.Context, tenantID, actorID, id uuid.UUID, req model.UpdateCategoryRequest) (*model.ProductCategory, error) {
 	var category *model.ProductCategory
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -235,6 +245,7 @@ func (s *ProductCategoryService) Update(ctx context.Context, tenantID, actorID, 
 	return category, nil
 }
 
+// Delete removes a product category by ID.
 func (s *ProductCategoryService) Delete(ctx context.Context, tenantID, actorID, id uuid.UUID) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		category, err := s.categoryRepo.FindByID(ctx, tx, id)
@@ -263,6 +274,7 @@ func (s *ProductCategoryService) Delete(ctx context.Context, tenantID, actorID, 
 	return nil
 }
 
+// GetDescendantIDs returns all descendant category IDs for the given category.
 func (s *ProductCategoryService) GetDescendantIDs(ctx context.Context, tenantID, id uuid.UUID) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

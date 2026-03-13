@@ -122,7 +122,7 @@ func (h *AllegroDeliveryHandler) GetShippingRate(w http.ResponseWriter, r *http.
 
 	rate, err := client.DeliverySettings.GetShippingRate(r.Context(), rateID)
 	if err != nil {
-		slog.Error("allegro delivery: failed to get shipping rate", "error", err, "rate_id", rateID)
+		slog.Error("allegro delivery: failed to get shipping rate", "error", err, "rate_id", rateID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac cennika wysylki", err)
 		return
 	}
@@ -182,7 +182,7 @@ func (h *AllegroDeliveryHandler) UpdateShippingRate(w http.ResponseWriter, r *ht
 
 	rate, err := client.DeliverySettings.UpdateShippingRate(r.Context(), rateID, body)
 	if err != nil {
-		slog.Error("allegro delivery: failed to update shipping rate", "error", err, "rate_id", rateID)
+		slog.Error("allegro delivery: failed to update shipping rate", "error", err, "rate_id", rateID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie zaktualizowac cennika wysylki", err)
 		return
 	}
@@ -310,20 +310,19 @@ func (h *AllegroDeliveryHandler) AutoGenerateShippingRate(w http.ResponseWriter,
 		var basePrice float64
 		if m.isLocker {
 			// Best paczkomat price (smallest fitting size)
-			if fitsA {
+			switch {
+			case fitsA:
 				basePrice = 12.99
-			} else if fitsB {
+			case fitsB:
 				basePrice = 13.99
-			} else if fitsC {
+			case fitsC:
 				basePrice = 15.49
 			}
-		} else {
+		} else if w2 <= 25 {
 			// Courier
-			if w2 <= 25 {
-				basePrice = 16.99
-				if w2 > 10 {
-					basePrice = 19.99
-				}
+			basePrice = 16.99
+			if w2 > 10 {
+				basePrice = 19.99
 			}
 		}
 		if basePrice == 0 {

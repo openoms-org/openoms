@@ -7,12 +7,14 @@ import (
 	"strings"
 )
 
+// Pagination defaults and limits.
 const (
 	DefaultLimit = 20
 	MaxLimit     = 100
 	MaxOffset    = 100000
 )
 
+// ListResponse is a generic paginated list response.
 type ListResponse[T any] struct {
 	Items  []T `json:"items"`
 	Total  int `json:"total"`
@@ -20,6 +22,7 @@ type ListResponse[T any] struct {
 	Offset int `json:"offset"`
 }
 
+// PaginationParams holds parsed limit, offset and sort parameters.
 type PaginationParams struct {
 	Limit     int
 	Offset    int
@@ -27,6 +30,7 @@ type PaginationParams struct {
 	SortOrder string
 }
 
+// ParsePagination extracts pagination parameters from an HTTP request's query string.
 func ParsePagination(r *http.Request) PaginationParams {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))

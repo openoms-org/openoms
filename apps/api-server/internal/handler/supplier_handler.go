@@ -13,14 +13,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// SupplierHandler handles HTTP requests for supplier management.
 type SupplierHandler struct {
 	supplierService *service.SupplierService
 }
 
+// NewSupplierHandler creates a new SupplierHandler.
 func NewSupplierHandler(supplierService *service.SupplierService) *SupplierHandler {
 	return &SupplierHandler{supplierService: supplierService}
 }
 
+// List returns a paginated list of suppliers.
 func (h *SupplierHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -40,6 +43,7 @@ func (h *SupplierHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single supplier by ID.
 func (h *SupplierHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -61,6 +65,7 @@ func (h *SupplierHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, supplier)
 }
 
+// Create inserts a new supplier.
 func (h *SupplierHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -83,6 +88,7 @@ func (h *SupplierHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, supplier)
 }
 
+// Update modifies an existing supplier.
 func (h *SupplierHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -116,6 +122,7 @@ func (h *SupplierHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, supplier)
 }
 
+// Delete removes a supplier by ID.
 func (h *SupplierHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -139,6 +146,7 @@ func (h *SupplierHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Sync triggers a product feed sync for a supplier.
 func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -163,6 +171,7 @@ func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "feed synced successfully"})
 }
 
+// ListProducts returns a paginated list of products for a supplier.
 func (h *SupplierHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -303,6 +312,7 @@ func (h *SupplierHandler) UnlinkProduct(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "product unlinked"})
 }
 
+// LinkProduct links a supplier product to a catalog product.
 func (h *SupplierHandler) LinkProduct(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -337,6 +347,7 @@ func (h *SupplierHandler) LinkProduct(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "product linked"})
 }
 
+// ListCategoryMappings returns supplier-to-catalog category mappings.
 func (h *SupplierHandler) ListCategoryMappings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -358,6 +369,7 @@ func (h *SupplierHandler) ListCategoryMappings(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, mappings)
 }
 
+// UpsertCategoryMapping creates or updates a supplier category mapping.
 func (h *SupplierHandler) UpsertCategoryMapping(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -424,6 +436,7 @@ func (h *SupplierHandler) ImportProducts(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// DeleteCategoryMapping removes a supplier category mapping.
 func (h *SupplierHandler) DeleteCategoryMapping(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

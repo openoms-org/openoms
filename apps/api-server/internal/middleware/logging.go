@@ -34,6 +34,7 @@ func (w *wrappedWriter) Flush() {
 	}
 }
 
+// Logging returns middleware that logs the method, path, status code, and duration of each request.
 func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -41,7 +42,7 @@ func Logging(next http.Handler) http.Handler {
 
 		next.ServeHTTP(wrapped, r)
 
-		slog.Info("http request",
+		slog.Info("http request", // #nosec G706 -- r.URL.Path is logged as a structured field, not interpolated
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", wrapped.statusCode,

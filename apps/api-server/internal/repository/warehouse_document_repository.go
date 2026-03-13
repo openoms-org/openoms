@@ -18,6 +18,7 @@ func NewWarehouseDocumentRepository() *WarehouseDocumentRepository {
 	return &WarehouseDocumentRepository{}
 }
 
+// List returns a paginated list of warehouse documents matching the filter.
 func (r *WarehouseDocumentRepository) List(ctx context.Context, tx pgx.Tx, filter model.WarehouseDocumentListFilter) ([]model.WarehouseDocument, int, error) {
 	qb := NewQueryBuilder()
 
@@ -77,6 +78,7 @@ func (r *WarehouseDocumentRepository) List(ctx context.Context, tx pgx.Tx, filte
 	return docs, total, rows.Err()
 }
 
+// FindByID returns a warehouse document by its ID.
 func (r *WarehouseDocumentRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.WarehouseDocument, error) {
 	var d model.WarehouseDocument
 	err := tx.QueryRow(ctx,
@@ -98,6 +100,7 @@ func (r *WarehouseDocumentRepository) FindByID(ctx context.Context, tx pgx.Tx, i
 	return &d, nil
 }
 
+// Create inserts a new warehouse document.
 func (r *WarehouseDocumentRepository) Create(ctx context.Context, tx pgx.Tx, doc *model.WarehouseDocument) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO warehouse_documents
@@ -110,6 +113,7 @@ func (r *WarehouseDocumentRepository) Create(ctx context.Context, tx pgx.Tx, doc
 	).Scan(&doc.CreatedAt, &doc.UpdatedAt)
 }
 
+// Update applies partial updates to a warehouse document.
 func (r *WarehouseDocumentRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateWarehouseDocumentRequest) error {
 	var setClauses []string
 	var args []any
@@ -140,6 +144,7 @@ func (r *WarehouseDocumentRepository) Update(ctx context.Context, tx pgx.Tx, id 
 	return nil
 }
 
+// Delete removes a warehouse document by its ID.
 func (r *WarehouseDocumentRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM warehouse_documents WHERE id = $1", id)
 	if err != nil {
@@ -151,6 +156,7 @@ func (r *WarehouseDocumentRepository) Delete(ctx context.Context, tx pgx.Tx, id 
 	return nil
 }
 
+// Confirm transitions a draft warehouse document to confirmed status.
 func (r *WarehouseDocumentRepository) Confirm(ctx context.Context, tx pgx.Tx, id uuid.UUID, confirmedBy uuid.UUID) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE warehouse_documents SET status = 'confirmed', confirmed_at = NOW(), confirmed_by = $1, updated_at = NOW()
@@ -166,6 +172,7 @@ func (r *WarehouseDocumentRepository) Confirm(ctx context.Context, tx pgx.Tx, id
 	return nil
 }
 
+// Cancel transitions a draft warehouse document to cancelled status.
 func (r *WarehouseDocumentRepository) Cancel(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE warehouse_documents SET status = 'cancelled', updated_at = NOW()
@@ -181,6 +188,7 @@ func (r *WarehouseDocumentRepository) Cancel(ctx context.Context, tx pgx.Tx, id 
 	return nil
 }
 
+// NextDocumentNumber returns the next sequential document number for the given type and year.
 func (r *WarehouseDocumentRepository) NextDocumentNumber(ctx context.Context, tx pgx.Tx, docType string, year int) (int, error) {
 	var count int
 	err := tx.QueryRow(ctx,
@@ -202,6 +210,7 @@ func NewWarehouseDocItemRepository() *WarehouseDocItemRepository {
 	return &WarehouseDocItemRepository{}
 }
 
+// ListByDocumentID returns all items for the given warehouse document.
 func (r *WarehouseDocItemRepository) ListByDocumentID(ctx context.Context, tx pgx.Tx, documentID uuid.UUID) ([]model.WarehouseDocItem, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, document_id, product_id, variant_id, quantity, unit_price, notes, created_at
@@ -228,6 +237,7 @@ func (r *WarehouseDocItemRepository) ListByDocumentID(ctx context.Context, tx pg
 	return items, rows.Err()
 }
 
+// Create inserts a new warehouse document item.
 func (r *WarehouseDocItemRepository) Create(ctx context.Context, tx pgx.Tx, item *model.WarehouseDocItem) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO warehouse_document_items

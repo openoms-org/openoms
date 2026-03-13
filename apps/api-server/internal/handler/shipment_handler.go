@@ -18,11 +18,13 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// ShipmentHandler handles HTTP requests for shipment management.
 type ShipmentHandler struct {
 	shipmentService *service.ShipmentService
 	labelService    *service.LabelService
 }
 
+// NewShipmentHandler creates a new ShipmentHandler.
 func NewShipmentHandler(shipmentService *service.ShipmentService, labelService *service.LabelService) *ShipmentHandler {
 	return &ShipmentHandler{shipmentService: shipmentService, labelService: labelService}
 }
@@ -82,6 +84,7 @@ func (h *ShipmentHandler) CreateForOrder(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusCreated, shipment)
 }
 
+// List returns a paginated list of shipments.
 func (h *ShipmentHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -112,6 +115,7 @@ func (h *ShipmentHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single shipment by ID.
 func (h *ShipmentHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -133,6 +137,7 @@ func (h *ShipmentHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, shipment)
 }
 
+// Create inserts a new shipment.
 func (h *ShipmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -160,6 +165,7 @@ func (h *ShipmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, shipment)
 }
 
+// Update modifies an existing shipment.
 func (h *ShipmentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -193,6 +199,7 @@ func (h *ShipmentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, shipment)
 }
 
+// Delete removes a shipment by ID.
 func (h *ShipmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -216,6 +223,7 @@ func (h *ShipmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// TransitionStatus moves a shipment to a new status.
 func (h *ShipmentHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -253,6 +261,7 @@ func (h *ShipmentHandler) TransitionStatus(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, shipment)
 }
 
+// GenerateLabel creates a carrier label for a shipment.
 func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -287,14 +296,15 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 				slog.Error("label generation failed", "error", err)
 				// Extract carrier API error details for better user feedback
 				errMsg := err.Error()
-				if strings.Contains(errMsg, "shipment payment failed") || strings.Contains(errMsg, "debt_collection") {
+				switch {
+				case strings.Contains(errMsg, "shipment payment failed") || strings.Contains(errMsg, "debt_collection"):
 					writeError(w, http.StatusUnprocessableEntity, errMsg)
-				} else if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Token is missing or invalid") {
+				case strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Token is missing or invalid"):
 					writeError(w, http.StatusUnprocessableEntity, "Carrier authorization error — check login credentials in integration settings")
-				} else if strings.Contains(errMsg, "api error 4") {
+				case strings.Contains(errMsg, "api error 4"):
 					// 4xx from carrier — pass through the carrier message
 					writeError(w, http.StatusUnprocessableEntity, "Carrier API error: "+errMsg)
-				} else {
+				default:
 					writeServerError(w, "Failed to generate label — try again or check integration settings", err)
 				}
 			}
@@ -304,6 +314,7 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, shipment)
 }
 
+// GetTracking returns the tracking status from the carrier for a shipment.
 func (h *ShipmentHandler) GetTracking(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -397,7 +408,11 @@ func (h *ShipmentHandler) BatchLabels(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "attachment; filename=labels.zip")
 
 	zipWriter := zip.NewWriter(w)
-	defer zipWriter.Close()
+	defer func() {
+		if err := zipWriter.Close(); err != nil {
+			slog.Error("shipment: failed to close zip writer", "error", err)
+		}
+	}()
 
 	for i, label := range labels {
 		filename := fmt.Sprintf("label_%s.pdf", label.ShipmentID[:8])

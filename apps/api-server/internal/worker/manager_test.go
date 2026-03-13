@@ -221,7 +221,7 @@ func TestGuardedRun_SkipsOverlappingExecution(t *testing.T) {
 	go m.guardedRun(context.Background(), w, &running)
 
 	// Wait for the first run to start
-	require.Eventually(t, func() bool { return started.Load() }, time.Second, 5*time.Millisecond)
+	require.Eventually(t, started.Load, time.Second, 5*time.Millisecond)
 
 	// Second call while first is running: should be skipped (no-op)
 	secondRan := false

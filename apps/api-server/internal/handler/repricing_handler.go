@@ -14,14 +14,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// RepricingHandler handles HTTP requests for dynamic repricing rule management.
 type RepricingHandler struct {
 	repricingService *service.RepricingService
 }
 
+// NewRepricingHandler creates a new RepricingHandler.
 func NewRepricingHandler(repricingService *service.RepricingService) *RepricingHandler {
 	return &RepricingHandler{repricingService: repricingService}
 }
 
+// ListRules returns a paginated list of repricing rules.
 func (h *RepricingHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -44,6 +47,7 @@ func (h *RepricingHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// GetRule returns a single repricing rule by ID.
 func (h *RepricingHandler) GetRule(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -65,6 +69,7 @@ func (h *RepricingHandler) GetRule(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rule)
 }
 
+// CreateRule inserts a new repricing rule.
 func (h *RepricingHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -87,6 +92,7 @@ func (h *RepricingHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, rule)
 }
 
+// UpdateRule modifies an existing repricing rule.
 func (h *RepricingHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -120,6 +126,7 @@ func (h *RepricingHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rule)
 }
 
+// DeleteRule removes a repricing rule by ID.
 func (h *RepricingHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -143,6 +150,7 @@ func (h *RepricingHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// SimulateRule runs a repricing rule against current products without saving changes.
 func (h *RepricingHandler) SimulateRule(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -164,6 +172,7 @@ func (h *RepricingHandler) SimulateRule(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, results)
 }
 
+// ApplyRules executes all active repricing rules for the tenant.
 func (h *RepricingHandler) ApplyRules(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -175,6 +184,7 @@ func (h *RepricingHandler) ApplyRules(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+// ListLog returns a paginated repricing execution log.
 func (h *RepricingHandler) ListLog(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -230,6 +240,7 @@ func (h *RepricingHandler) ListLog(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// GetSummary returns aggregated repricing statistics for the tenant.
 func (h *RepricingHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

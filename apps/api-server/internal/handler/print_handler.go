@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -217,7 +216,7 @@ func (h *PrintHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenant
 	}
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return nil
+		return err
 	}
 	raw, ok := allSettings[key]
 	if !ok {
@@ -252,13 +251,13 @@ func (h *PrintHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, ten
 
 func (h *PrintHandler) loadCompanySettings(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) model.CompanySettings {
 	var cs model.CompanySettings
-	h.getSettingsSection(ctx, tx, tenantID, "company", &cs) //nolint:errcheck
+	h.getSettingsSection(ctx, tx, tenantID, "company", &cs) //nolint:errcheck,gosec
 	return cs
 }
 
 func (h *PrintHandler) loadPrintTemplates(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) PrintTemplatesConfig {
 	var cfg PrintTemplatesConfig
-	h.getSettingsSection(ctx, tx, tenantID, "print_templates", &cfg) //nolint:errcheck
+	h.getSettingsSection(ctx, tx, tenantID, "print_templates", &cfg) //nolint:errcheck,gosec
 	return cfg
 }
 
@@ -355,7 +354,7 @@ func writeHTML(w http.ResponseWriter, html []byte) {
 	w.Header().Set("Content-Security-Policy", "script-src 'none'; object-src 'none'")
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.WriteHeader(http.StatusOK)
-	w.Write(html) //nolint:errcheck
+	_, _ = w.Write(html)
 }
 
 func shortUUID(id uuid.UUID) string {
@@ -366,12 +365,6 @@ func shortUUID(id uuid.UUID) string {
 	return s
 }
 
-func formatTime(t *time.Time) string {
-	if t == nil {
-		return ""
-	}
-	return t.Format("2006-01-02 15:04")
-}
 
 func derefStr(s *string) string {
 	if s == nil {

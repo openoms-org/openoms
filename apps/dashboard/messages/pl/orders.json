@@ -253,7 +253,7 @@
     },
     "filters": {
       "searchPlaceholder": "Szukaj klienta (imię, email, telefon)...",
-      "status": "Status:",
+      "status": "Status",
       "source": "Źródło:",
       "payment": "Płatność:",
       "priority": "Priorytet:",

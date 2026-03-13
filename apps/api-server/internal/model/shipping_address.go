@@ -1,5 +1,6 @@
 package model
 
+// ShippingAddress holds the delivery address for an order or shipment.
 type ShippingAddress struct {
 	Name       string  `json:"name"`
 	Company    *string `json:"company,omitempty"`

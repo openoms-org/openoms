@@ -23,7 +23,7 @@ func NewRedisOAuthStateStore(client *redis.Client) *RedisOAuthStateStore {
 
 // Save stores the OAuth state data in Redis with the given TTL.
 func (r *RedisOAuthStateStore) Save(ctx context.Context, state string, data *OAuthState, ttl time.Duration) error {
-	val, err := json.Marshal(data)
+	val, err := json.Marshal(data) // #nosec G117
 	if err != nil {
 		return err
 	}

@@ -45,7 +45,7 @@ func TestMarketplaceOrderPoller_Interval(t *testing.T) {
 	assert.Equal(t, 2*time.Minute, p.Interval())
 }
 
-func TestMarketplaceOrderPoller_ImplementsWorkerInterface(t *testing.T) {
+func TestMarketplaceOrderPoller_ImplementsWorkerInterface(_ *testing.T) {
 	p := NewMarketplaceOrderPoller(MarketplaceOrderPollerConfig{
 		ProviderName: "test",
 		Interval:     time.Second,

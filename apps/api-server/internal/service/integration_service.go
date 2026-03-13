@@ -21,6 +21,7 @@ var (
 	ErrIntegrationLimitExceeded = errors.New("integration limit exceeded")
 )
 
+// IntegrationService handles business logic for marketplace and carrier integrations.
 type IntegrationService struct {
 	integrationRepo repository.IntegrationRepo
 	auditRepo       repository.AuditRepo
@@ -28,6 +29,7 @@ type IntegrationService struct {
 	encryptionKey   []byte
 }
 
+// NewIntegrationService creates a new IntegrationService.
 func NewIntegrationService(
 	integrationRepo repository.IntegrationRepo,
 	auditRepo repository.AuditRepo,
@@ -42,6 +44,7 @@ func NewIntegrationService(
 	}
 }
 
+// List returns all integrations for the given tenant.
 func (s *IntegrationService) List(ctx context.Context, tenantID uuid.UUID) ([]model.Integration, error) {
 	var result []model.Integration
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -59,6 +62,7 @@ func (s *IntegrationService) List(ctx context.Context, tenantID uuid.UUID) ([]mo
 	return result, err
 }
 
+// Get returns a single integration by ID.
 func (s *IntegrationService) Get(ctx context.Context, tenantID, integrationID uuid.UUID) (*model.Integration, error) {
 	var result *model.Integration
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -128,6 +132,7 @@ func (s *IntegrationService) GetDecryptedCredentialsByID(ctx context.Context, te
 	return credJSON, err
 }
 
+// Create adds a new marketplace or carrier integration for a tenant.
 func (s *IntegrationService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateIntegrationRequest, actorID uuid.UUID, ip string) (*model.Integration, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -187,6 +192,7 @@ func (s *IntegrationService) Create(ctx context.Context, tenantID uuid.UUID, req
 	return integration, nil
 }
 
+// Update modifies an existing integration.
 func (s *IntegrationService) Update(ctx context.Context, tenantID, integrationID uuid.UUID, req model.UpdateIntegrationRequest, actorID uuid.UUID, ip string) (*model.Integration, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -255,6 +261,7 @@ func (s *IntegrationService) UpdateCredentialsByProvider(ctx context.Context, te
 	})
 }
 
+// Delete removes an integration by ID.
 func (s *IntegrationService) Delete(ctx context.Context, tenantID, integrationID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		wc, err := s.integrationRepo.FindByID(ctx, tx, integrationID)

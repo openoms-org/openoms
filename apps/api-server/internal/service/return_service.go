@@ -17,10 +17,13 @@ import (
 )
 
 var (
+	// ErrReturnNotFound is returned when a return does not exist.
 	ErrReturnNotFound          = errors.New("return not found")
+	// ErrInvalidReturnTransition is returned for an invalid return status transition.
 	ErrInvalidReturnTransition = errors.New("invalid return status transition")
 )
 
+// ReturnService handles business logic for order returns.
 type ReturnService struct {
 	returnRepo        repository.ReturnRepo
 	orderRepo         repository.OrderRepo
@@ -35,6 +38,7 @@ func (s *ReturnService) SetAutomationService(automationSvc *AutomationService) {
 	s.automationService = automationSvc
 }
 
+// NewReturnService creates a new ReturnService.
 func NewReturnService(
 	returnRepo repository.ReturnRepo,
 	orderRepo repository.OrderRepo,
@@ -51,6 +55,7 @@ func NewReturnService(
 	}
 }
 
+// List returns a paginated list of returns for a tenant.
 func (s *ReturnService) List(ctx context.Context, tenantID uuid.UUID, filter model.ReturnListFilter) (model.ListResponse[model.Return], error) {
 	var resp model.ListResponse[model.Return]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -72,6 +77,7 @@ func (s *ReturnService) List(ctx context.Context, tenantID uuid.UUID, filter mod
 	return resp, err
 }
 
+// Get returns a single return by ID.
 func (s *ReturnService) Get(ctx context.Context, tenantID, returnID uuid.UUID) (*model.Return, error) {
 	var ret *model.Return
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -88,6 +94,7 @@ func (s *ReturnService) Get(ctx context.Context, tenantID, returnID uuid.UUID) (
 	return ret, nil
 }
 
+// Create inserts a new return.
 func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateReturnRequest, actorID uuid.UUID, ip string) (*model.Return, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -151,6 +158,7 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 	return ret, nil
 }
 
+// Update modifies an existing return.
 func (s *ReturnService) Update(ctx context.Context, tenantID, returnID uuid.UUID, req model.UpdateReturnRequest, actorID uuid.UUID, ip string) (*model.Return, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -192,6 +200,7 @@ func (s *ReturnService) Update(ctx context.Context, tenantID, returnID uuid.UUID
 	return ret, err
 }
 
+// TransitionStatus moves a return to a new status.
 func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID uuid.UUID, req model.ReturnStatusRequest, actorID uuid.UUID, ip string) (*model.Return, error) {
 	if req.Status == "" {
 		return nil, NewValidationError(errors.New("status is required"))
@@ -259,6 +268,7 @@ func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID
 	return ret, err
 }
 
+// Delete removes a return by ID.
 func (s *ReturnService) Delete(ctx context.Context, tenantID, returnID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		ret, err := s.returnRepo.FindByID(ctx, tx, returnID)

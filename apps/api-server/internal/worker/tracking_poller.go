@@ -40,7 +40,8 @@ type TrackingPoller struct {
 	logger          *slog.Logger
 }
 
-func NewTrackingPoller(pool *pgxpool.Pool, encryptionKey []byte, shipmentRepo repository.ShipmentRepo, shipmentService ShipmentStatusTransitioner, logger *slog.Logger) *TrackingPoller {
+// NewTrackingPoller creates a new TrackingPoller worker.
+func NewTrackingPoller(pool *pgxpool.Pool, encryptionKey []byte, _ repository.ShipmentRepo, shipmentService ShipmentStatusTransitioner, logger *slog.Logger) *TrackingPoller {
 	// Note: shipmentRepo is accepted for backward compatibility but status transitions
 	// now go through shipmentService to ensure webhooks, audit, and order sync fire.
 	return &TrackingPoller{
@@ -51,14 +52,17 @@ func NewTrackingPoller(pool *pgxpool.Pool, encryptionKey []byte, shipmentRepo re
 	}
 }
 
+// Name returns the worker identifier.
 func (w *TrackingPoller) Name() string {
 	return "tracking_poller"
 }
 
+// Interval returns how frequently the worker should run.
 func (w *TrackingPoller) Interval() time.Duration {
 	return 10 * time.Minute
 }
 
+// Run polls carrier APIs for tracking status updates on active shipments.
 func (w *TrackingPoller) Run(ctx context.Context) error {
 	w.logger.Info("tracking poller: checking shipments")
 

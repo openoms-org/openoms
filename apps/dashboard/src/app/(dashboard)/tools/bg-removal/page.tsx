@@ -111,7 +111,7 @@ export default function BGRemovalPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">{t("bgRemoval")}</h1>
+          <h1 className="text-2xl font-bold">{t("bgRemovalTitle")}</h1>
           <p className="text-muted-foreground">
             {t("automatyczneUsuwanieTłaZeZdjecProduktowych")}
           </p>
@@ -146,7 +146,7 @@ export default function BGRemovalPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t("bgRemoval")}</h1>
+        <h1 className="text-2xl font-bold">{t("bgRemovalTitle")}</h1>
         <p className="text-muted-foreground">
           {t("automatyczneUsuwanieTłaZeZdjecProduktowychPowered")}
         </p>

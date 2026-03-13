@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	// ErrListingSyncConfigNotFound is returned when a listing sync configuration does not exist.
 	ErrListingSyncConfigNotFound = errors.New("listing sync config not found")
 )
 

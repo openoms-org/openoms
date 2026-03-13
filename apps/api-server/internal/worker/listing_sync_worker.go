@@ -34,14 +34,17 @@ func NewListingSyncWorker(
 	}
 }
 
+// Name returns the worker identifier.
 func (w *ListingSyncWorker) Name() string {
 	return "listing_sync"
 }
 
+// Interval returns how frequently the worker should run.
 func (w *ListingSyncWorker) Interval() time.Duration {
 	return 5 * time.Minute
 }
 
+// Run synchronises marketplace listings for all tenants with auto-sync enabled.
 func (w *ListingSyncWorker) Run(ctx context.Context) error {
 	// Query all auto-sync configs across all tenants (bypasses RLS via workerPool).
 	tx, err := w.pool.Begin(ctx)

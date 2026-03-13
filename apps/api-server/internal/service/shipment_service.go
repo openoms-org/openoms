@@ -22,10 +22,13 @@ import (
 )
 
 var (
+	// ErrShipmentNotFound is returned when a shipment does not exist.
 	ErrShipmentNotFound         = errors.New("shipment not found")
+	// ErrOrderNotFoundForShipment is returned when a shipment's associated order cannot be found.
 	ErrOrderNotFoundForShipment = errors.New("order not found for shipment")
 )
 
+// ShipmentService handles business logic for shipment management.
 type ShipmentService struct {
 	shipmentRepo      repository.ShipmentRepo
 	orderRepo         repository.OrderRepo
@@ -55,6 +58,7 @@ func (s *ShipmentService) SetAllegroSyncService(allegroSync *AllegroSyncService)
 	s.allegroSync = allegroSync
 }
 
+// NewShipmentService creates a new ShipmentService.
 func NewShipmentService(
 	shipmentRepo repository.ShipmentRepo,
 	orderRepo repository.OrderRepo,
@@ -96,6 +100,7 @@ func (s *ShipmentService) ListByOrder(ctx context.Context, tenantID, orderID uui
 	return shipments, err
 }
 
+// List returns a paginated list of shipments for a tenant.
 func (s *ShipmentService) List(ctx context.Context, tenantID uuid.UUID, filter model.ShipmentListFilter) (model.ListResponse[model.Shipment], error) {
 	var resp model.ListResponse[model.Shipment]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -117,6 +122,7 @@ func (s *ShipmentService) List(ctx context.Context, tenantID uuid.UUID, filter m
 	return resp, err
 }
 
+// Get returns a single shipment by ID.
 func (s *ShipmentService) Get(ctx context.Context, tenantID, shipmentID uuid.UUID) (*model.Shipment, error) {
 	var shipment *model.Shipment
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -133,6 +139,7 @@ func (s *ShipmentService) Get(ctx context.Context, tenantID, shipmentID uuid.UUI
 	return shipment, nil
 }
 
+// Create inserts a new shipment.
 func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateShipmentRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -221,6 +228,7 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	return shipment, nil
 }
 
+// Update modifies an existing shipment.
 func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.UpdateShipmentRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -289,6 +297,7 @@ func (s *ShipmentService) Update(ctx context.Context, tenantID, shipmentID uuid.
 	return shipment, err
 }
 
+// Delete removes a shipment by ID.
 func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		shipment, err := s.shipmentRepo.FindByID(ctx, tx, shipmentID)
@@ -323,6 +332,7 @@ func (s *ShipmentService) Delete(ctx context.Context, tenantID, shipmentID, acto
 	return err
 }
 
+// TransitionStatus moves a shipment to a new carrier status.
 func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.ShipmentStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -576,7 +586,7 @@ func (s *ShipmentService) calculateOrderWeight(ctx context.Context, tx pgx.Tx, o
 func (s *ShipmentService) estimateCarbon(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, shipment *model.Shipment, order *model.Order) {
 	// Parse destination postal code from order's shipping address
 	destPostalCode := ""
-	if order.ShippingAddress != nil && len(order.ShippingAddress) > 0 {
+	if len(order.ShippingAddress) > 0 {
 		var addr model.ShippingAddress
 		if err := json.Unmarshal(order.ShippingAddress, &addr); err == nil {
 			destPostalCode = addr.PostalCode

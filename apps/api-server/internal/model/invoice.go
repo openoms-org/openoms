@@ -47,6 +47,7 @@ type CreateInvoiceRequest struct {
 	Notes         string    `json:"notes,omitempty"`
 }
 
+// Validate validates the create invoice request.
 func (r *CreateInvoiceRequest) Validate() error {
 	if r.OrderID == uuid.Nil {
 		return errors.New("order_id is required")

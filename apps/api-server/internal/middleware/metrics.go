@@ -197,7 +197,7 @@ func (mc *MetricsCollector) getOrCreateHistogram(key string) *histogramData {
 // Handler returns an http.HandlerFunc that serves the /metrics endpoint
 // in Prometheus text exposition format.
 func (mc *MetricsCollector) Handler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 
 		var b strings.Builder
@@ -278,7 +278,7 @@ func (mc *MetricsCollector) Handler() http.HandlerFunc {
 		b.WriteString("# TYPE openoms_http_response_bytes_total counter\n")
 		fmt.Fprintf(&b, "openoms_http_response_bytes_total %d\n", mc.responseBytesTotal.Load())
 
-		w.Write([]byte(b.String())) //nolint:errcheck
+		_, _ = w.Write([]byte(b.String()))
 	}
 }
 

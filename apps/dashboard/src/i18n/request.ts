@@ -1,7 +1,5 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
-import { readdir, readFile } from "fs/promises";
-import { join } from "path";
 
 const SUPPORTED_LOCALES = ["en", "pl"] as const;
 const DEFAULT_LOCALE = "en";
@@ -48,19 +46,34 @@ function deepMerge(
   return result;
 }
 
-async function loadMessages(locale: SupportedLocale): Promise<Record<string, unknown>> {
-  const messagesDir = join(process.cwd(), "messages", locale);
-  const files = (await readdir(messagesDir))
-    .filter((f) => f.endsWith(".json"))
-    .sort();
+const MODULES = [
+  "automation",
+  "common",
+  "customers",
+  "dashboard",
+  "integrations",
+  "invoices",
+  "layout",
+  "misc",
+  "operations",
+  "orders",
+  "products",
+  "returns",
+  "settings",
+  "shipments",
+  "statuses",
+  "suppliers",
+  "warehouses",
+] as const;
+
+async function loadMessages(
+  locale: SupportedLocale
+): Promise<Record<string, unknown>> {
   const chunks = await Promise.all(
-    files.map(async (f) => {
-      const content = await readFile(join(messagesDir, f), "utf-8");
-      return JSON.parse(content) as Record<string, unknown>;
-    })
+    MODULES.map((mod) => import(`../../messages/${locale}/${mod}.json`))
   );
   return chunks.reduce<Record<string, unknown>>(
-    (acc, chunk) => deepMerge(acc, chunk),
+    (acc, chunk) => deepMerge(acc, chunk.default ?? chunk),
     {}
   );
 }

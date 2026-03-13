@@ -33,7 +33,7 @@ type FedExProvider struct {
 }
 
 // NewFedExProvider creates a FedEx CarrierProvider from encrypted credentials.
-func NewFedExProvider(credentials json.RawMessage, settings json.RawMessage) (*FedExProvider, error) {
+func NewFedExProvider(credentials json.RawMessage, _ json.RawMessage) (*FedExProvider, error) {
 	var creds FedExCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("fedex: parse credentials: %w", err)
@@ -52,8 +52,10 @@ func NewFedExProvider(credentials json.RawMessage, settings json.RawMessage) (*F
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *FedExProvider) ProviderName() string { return "fedex" }
 
+// CreateShipment creates a FedEx shipment and returns the response with tracking info.
 func (p *FedExProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	svcType := req.ServiceType
 	if svcType == "" {
@@ -165,7 +167,8 @@ func (p *FedExProvider) CreateShipment(ctx context.Context, req integration.Carr
 	return result, nil
 }
 
-func (p *FedExProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
+// GetLabel downloads the shipping label for the given FedEx shipment.
+func (p *FedExProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
 	data, err := p.client.Shipments.GetLabel(ctx, externalID)
 	if err != nil {
 		return nil, fmt.Errorf("fedex: get label: %w", err)
@@ -173,6 +176,7 @@ func (p *FedExProvider) GetLabel(ctx context.Context, externalID string, format 
 	return data, nil
 }
 
+// GetTracking returns tracking events for the given FedEx shipment.
 func (p *FedExProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
 	if err != nil {
@@ -201,14 +205,17 @@ func (p *FedExProvider) GetTracking(ctx context.Context, trackingNumber string) 
 	return events, nil
 }
 
+// CancelShipment cancels a FedEx shipment by its external ID.
 func (p *FedExProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return p.client.Shipments.Cancel(ctx, externalID)
 }
 
+// MapStatus maps a FedEx carrier status to the internal shipment status.
 func (p *FedExProvider) MapStatus(carrierStatus string) (string, bool) {
 	return fedexsdk.MapStatus(carrierStatus)
 }
 
+// GetRates returns estimated shipping rates for FedEx.
 func (p *FedExProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// TODO: Implement real FedEx Rate API integration.
 	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
@@ -245,8 +252,10 @@ func (p *FedExProvider) GetRates(_ context.Context, req integration.RateRequest)
 	return rates, nil
 }
 
+// SupportsPickupPoints reports that FedEx does not support pickup point delivery.
 func (p *FedExProvider) SupportsPickupPoints() bool { return false }
 
-func (p *FedExProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
+// SearchPickupPoints is not supported by FedEx and always returns nil.
+func (p *FedExProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
 	return nil, nil
 }

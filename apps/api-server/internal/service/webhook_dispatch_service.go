@@ -26,6 +26,7 @@ import (
 
 type wsBroadcastFunc func(tenantID uuid.UUID, eventType string, payload any)
 
+// WebhookDispatchService dispatches outgoing webhook events to tenant-configured endpoints.
 type WebhookDispatchService struct {
 	tenantRepo   repository.TenantRepo
 	deliveryRepo repository.WebhookDeliveryRepo
@@ -39,6 +40,7 @@ func noPrivateDialer() func(ctx context.Context, network, addr string) (net.Conn
 	return netutil.NoPrivateDialer()
 }
 
+// NewWebhookDispatchService creates a new WebhookDispatchService.
 func NewWebhookDispatchService(
 	tenantRepo repository.TenantRepo,
 	deliveryRepo repository.WebhookDeliveryRepo,
@@ -166,7 +168,7 @@ func (s *WebhookDispatchService) trySendWebhook(ctx context.Context, tenantID uu
 		}
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20)) // drain body (max 1MB)
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {

@@ -187,7 +187,7 @@ func (h *KSeFHandler) GetUPO(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml")
 	w.Header().Set("Content-Disposition", "attachment; filename=upo.xml")
 	w.WriteHeader(http.StatusOK)
-	w.Write(upoData)
+	_, _ = w.Write(upoData) //nolint:gosec
 }
 
 // BulkSendToKSeF sends multiple invoices to KSeF.

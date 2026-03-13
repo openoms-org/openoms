@@ -58,7 +58,6 @@ uploads/
 # Binary output
 /bin/
 tmp/
-server
 apps/api-server/server
 
 # Script artifacts

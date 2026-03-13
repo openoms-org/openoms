@@ -18,11 +18,13 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// EmailService sends transactional email notifications for order events.
 type EmailService struct {
 	tenantRepo repository.TenantRepo
 	pool       *pgxpool.Pool
 }
 
+// NewEmailService creates a new EmailService.
 func NewEmailService(tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *EmailService {
 	return &EmailService{tenantRepo: tenantRepo, pool: pool}
 }
@@ -55,7 +57,8 @@ func (s *EmailService) loadStatusConfig(ctx context.Context, tenantID uuid.UUID)
 	return config
 }
 
-func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.UUID, order *model.Order, oldStatus, newStatus string) {
+// SendOrderStatusEmail sends a status-change notification email to the customer.
+func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.UUID, order *model.Order, _ string, newStatus string) {
 	if order.CustomerEmail == nil || *order.CustomerEmail == "" {
 		return
 	}
@@ -106,7 +109,8 @@ func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.U
 	}
 }
 
-func (s *EmailService) SendTestEmail(ctx context.Context, settings model.EmailSettings, toEmail string) error {
+// SendTestEmail sends a test message to verify email configuration.
+func (s *EmailService) SendTestEmail(_ context.Context, settings model.EmailSettings, toEmail string) error {
 	subject := "OpenOMS — Email connection test"
 	body := `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>

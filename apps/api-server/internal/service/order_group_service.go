@@ -17,9 +17,11 @@ import (
 )
 
 var (
+	// ErrOrderGroupNotFound is returned when an order group does not exist.
 	ErrOrderGroupNotFound = errors.New("order group not found")
 )
 
+// OrderGroupService handles order merge and split operations.
 type OrderGroupService struct {
 	orderGroupRepo *repository.OrderGroupRepository
 	orderRepo      repository.OrderRepo
@@ -27,6 +29,7 @@ type OrderGroupService struct {
 	pool           *pgxpool.Pool
 }
 
+// NewOrderGroupService creates a new OrderGroupService.
 func NewOrderGroupService(
 	orderGroupRepo *repository.OrderGroupRepository,
 	orderRepo repository.OrderRepo,
@@ -41,6 +44,7 @@ func NewOrderGroupService(
 	}
 }
 
+// MergeOrders combines multiple orders into a single order group.
 func (s *OrderGroupService) MergeOrders(ctx context.Context, tenantID, userID uuid.UUID, req model.MergeOrdersRequest) (*model.OrderGroup, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -174,6 +178,7 @@ func (s *OrderGroupService) MergeOrders(ctx context.Context, tenantID, userID uu
 	return group, nil
 }
 
+// SplitOrder divides an order into multiple sub-orders and creates an order group.
 func (s *OrderGroupService) SplitOrder(ctx context.Context, tenantID, userID uuid.UUID, orderID uuid.UUID, req model.SplitOrderRequest) (*model.OrderGroup, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -293,6 +298,7 @@ func (s *OrderGroupService) SplitOrder(ctx context.Context, tenantID, userID uui
 	return group, nil
 }
 
+// ListByOrderID returns all order groups that contain the given order.
 func (s *OrderGroupService) ListByOrderID(ctx context.Context, tenantID, orderID uuid.UUID) ([]model.OrderGroup, error) {
 	var groups []model.OrderGroup
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

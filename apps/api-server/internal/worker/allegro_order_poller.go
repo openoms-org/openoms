@@ -1,3 +1,4 @@
+// Package worker contains background worker implementations for polling and scheduled tasks.
 package worker
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// NewAllegroOrderPoller creates a MarketplaceOrderPoller configured for the Allegro marketplace.
 func NewAllegroOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repository.OrderRepo, shipmentRepo repository.ShipmentRepo, auditRepo repository.AuditRepo, labelGen LabelGenerator, logger *slog.Logger) *MarketplaceOrderPoller {
 	return NewMarketplaceOrderPoller(MarketplaceOrderPollerConfig{
 		Pool:           pool,

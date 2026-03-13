@@ -12,14 +12,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// ExchangeRateHandler handles HTTP requests for exchange rate management.
 type ExchangeRateHandler struct {
 	exchangeRateService *service.ExchangeRateService
 }
 
+// NewExchangeRateHandler creates a new ExchangeRateHandler.
 func NewExchangeRateHandler(exchangeRateService *service.ExchangeRateService) *ExchangeRateHandler {
 	return &ExchangeRateHandler{exchangeRateService: exchangeRateService}
 }
 
+// List handles GET /v1/exchange-rates
 func (h *ExchangeRateHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -50,6 +53,7 @@ func (h *ExchangeRateHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Get handles GET /v1/exchange-rates/{id}
 func (h *ExchangeRateHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -71,6 +75,7 @@ func (h *ExchangeRateHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rate)
 }
 
+// Create handles POST /v1/exchange-rates
 func (h *ExchangeRateHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -93,6 +98,7 @@ func (h *ExchangeRateHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, rate)
 }
 
+// Update handles PUT /v1/exchange-rates/{id}
 func (h *ExchangeRateHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -126,6 +132,7 @@ func (h *ExchangeRateHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rate)
 }
 
+// Delete handles DELETE /v1/exchange-rates/{id}
 func (h *ExchangeRateHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -149,6 +156,7 @@ func (h *ExchangeRateHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// FetchNBP handles POST /v1/exchange-rates/fetch-nbp
 func (h *ExchangeRateHandler) FetchNBP(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -165,6 +173,7 @@ func (h *ExchangeRateHandler) FetchNBP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Convert handles POST /v1/exchange-rates/convert
 func (h *ExchangeRateHandler) Convert(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

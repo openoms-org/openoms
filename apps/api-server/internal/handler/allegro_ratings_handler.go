@@ -80,7 +80,7 @@ func (h *AllegroRatingsHandler) GetAnswer(w http.ResponseWriter, r *http.Request
 
 	result, err := client.Ratings.GetAnswer(r.Context(), ratingID)
 	if err != nil {
-		slog.Error("allegro ratings: failed to get answer", "error", err, "ratingId", ratingID)
+		slog.Error("allegro ratings: failed to get answer", "error", err, "ratingId", ratingID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac odpowiedzi na ocene", err)
 		return
 	}
@@ -121,7 +121,7 @@ func (h *AllegroRatingsHandler) CreateAnswer(w http.ResponseWriter, r *http.Requ
 		Text: body.Text,
 	})
 	if err != nil {
-		slog.Error("allegro ratings: failed to create answer", "error", err, "ratingId", ratingID)
+		slog.Error("allegro ratings: failed to create answer", "error", err, "ratingId", ratingID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie zapisac odpowiedzi na ocene", err)
 		return
 	}
@@ -148,7 +148,7 @@ func (h *AllegroRatingsHandler) DeleteAnswer(w http.ResponseWriter, r *http.Requ
 
 	err = client.Ratings.DeleteAnswer(r.Context(), ratingID)
 	if err != nil {
-		slog.Error("allegro ratings: failed to delete answer", "error", err, "ratingId", ratingID)
+		slog.Error("allegro ratings: failed to delete answer", "error", err, "ratingId", ratingID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie usunac odpowiedzi na ocene", err)
 		return
 	}
@@ -187,7 +187,7 @@ func (h *AllegroRatingsHandler) RequestRemoval(w http.ResponseWriter, r *http.Re
 
 	err = client.Ratings.RequestRemoval(r.Context(), ratingID, body.Reason)
 	if err != nil {
-		slog.Error("allegro ratings: failed to request removal", "error", err, "ratingId", ratingID)
+		slog.Error("allegro ratings: failed to request removal", "error", err, "ratingId", ratingID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie zglosic oceny do usuniecia", err)
 		return
 	}

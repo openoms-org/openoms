@@ -17,7 +17,9 @@ import (
 )
 
 var (
+	// ErrWarehouseDocumentNotFound is returned when a warehouse document does not exist.
 	ErrWarehouseDocumentNotFound = errors.New("warehouse document not found")
+	// ErrDocumentNotDraft is returned when an operation requires a document in draft status.
 	ErrDocumentNotDraft          = errors.New("document is not in draft status")
 )
 

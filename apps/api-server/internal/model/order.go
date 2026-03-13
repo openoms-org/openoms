@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Order represents a customer order in the system.
 type Order struct {
 	ID              uuid.UUID       `json:"id"`
 	TenantID        uuid.UUID       `json:"tenant_id"`
@@ -45,6 +46,7 @@ type Order struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
+// CreateOrderRequest is the payload for creating a new order.
 type CreateOrderRequest struct {
 	ExternalID      *string         `json:"external_id,omitempty"`
 	Source          string          `json:"source"`
@@ -80,10 +82,12 @@ var validPriorities = map[string]bool{
 	"low": true, "normal": true, "high": true, "urgent": true,
 }
 
+// IsValidPriority reports whether p is a recognised order priority string.
 func IsValidPriority(p string) bool {
 	return validPriorities[p]
 }
 
+// Validate validates the create order request.
 func (r *CreateOrderRequest) Validate() error {
 	if strings.TrimSpace(r.CustomerName) == "" {
 		return errors.New("customer_name is required")
@@ -139,6 +143,7 @@ func (r *CreateOrderRequest) Validate() error {
 	return nil
 }
 
+// UpdateOrderRequest is the payload for updating an existing order.
 type UpdateOrderRequest struct {
 	ExternalID      *string         `json:"external_id,omitempty"`
 	CustomerName    *string         `json:"customer_name,omitempty"`
@@ -161,6 +166,7 @@ type UpdateOrderRequest struct {
 	Priority        *string         `json:"priority,omitempty"`
 }
 
+// Validate validates the update order request.
 func (r *UpdateOrderRequest) Validate() error {
 	if r.ExternalID == nil && r.CustomerName == nil && r.CustomerEmail == nil &&
 		r.CustomerPhone == nil && r.ShippingAddress == nil && r.BillingAddress == nil &&
@@ -207,11 +213,13 @@ func (r *UpdateOrderRequest) Validate() error {
 	return nil
 }
 
+// StatusTransitionRequest is the payload for transitioning a single order status.
 type StatusTransitionRequest struct {
 	Status string `json:"status"`
 	Force  bool   `json:"force,omitempty"`
 }
 
+// Validate validates the status transition request.
 func (r *StatusTransitionRequest) Validate() error {
 	if strings.TrimSpace(r.Status) == "" {
 		return errors.New("status is required")
@@ -219,6 +227,7 @@ func (r *StatusTransitionRequest) Validate() error {
 	return nil
 }
 
+// OrderListFilter holds query parameters for listing orders.
 type OrderListFilter struct {
 	Status        *string
 	Source        *string
@@ -229,12 +238,14 @@ type OrderListFilter struct {
 	PaginationParams
 }
 
+// BulkStatusTransitionRequest is the payload for bulk-transitioning multiple order statuses.
 type BulkStatusTransitionRequest struct {
 	OrderIDs []uuid.UUID `json:"order_ids"`
 	Status   string      `json:"status"`
 	Force    bool        `json:"force,omitempty"`
 }
 
+// Validate validates the bulk status transition request.
 func (r *BulkStatusTransitionRequest) Validate() error {
 	if len(r.OrderIDs) == 0 {
 		return errors.New("at least one order_id is required")
@@ -248,12 +259,14 @@ func (r *BulkStatusTransitionRequest) Validate() error {
 	return nil
 }
 
+// BulkStatusResult holds the outcome of a single order in a bulk status transition.
 type BulkStatusResult struct {
 	OrderID uuid.UUID `json:"order_id"`
 	Success bool      `json:"success"`
 	Error   string    `json:"error,omitempty"`
 }
 
+// BulkStatusTransitionResponse is returned after a bulk status transition operation.
 type BulkStatusTransitionResponse struct {
 	Results       []BulkStatusResult `json:"results"`
 	Succeeded     int                `json:"succeeded"`
@@ -263,6 +276,7 @@ type BulkStatusTransitionResponse struct {
 
 // --- Custom Order Statuses ---
 
+// StatusDef defines a single order status with its display properties.
 type StatusDef struct {
 	Key      string `json:"key"`
 	Label    string `json:"label"`
@@ -270,11 +284,13 @@ type StatusDef struct {
 	Position int    `json:"position"`
 }
 
+// OrderStatusConfig holds the custom order statuses and allowed transitions for a tenant.
 type OrderStatusConfig struct {
 	Statuses    []StatusDef         `json:"statuses"`
 	Transitions map[string][]string `json:"transitions"`
 }
 
+// IsValidStatus reports whether the given status key exists in the config.
 func (c *OrderStatusConfig) IsValidStatus(key string) bool {
 	for _, s := range c.Statuses {
 		if s.Key == key {
@@ -284,6 +300,7 @@ func (c *OrderStatusConfig) IsValidStatus(key string) bool {
 	return false
 }
 
+// CanTransition reports whether a transition from one status to another is allowed.
 func (c *OrderStatusConfig) CanTransition(from, to string) bool {
 	targets, ok := c.Transitions[from]
 	if !ok {
@@ -292,6 +309,7 @@ func (c *OrderStatusConfig) CanTransition(from, to string) bool {
 	return slices.Contains(targets, to)
 }
 
+// GetStatusDef returns the StatusDef for the given key, or nil if not found.
 func (c *OrderStatusConfig) GetStatusDef(key string) *StatusDef {
 	for _, s := range c.Statuses {
 		if s.Key == key {
@@ -301,6 +319,7 @@ func (c *OrderStatusConfig) GetStatusDef(key string) *StatusDef {
 	return nil
 }
 
+// ColorPresetHex maps color preset names to their hex values.
 var ColorPresetHex = map[string]string{
 	"blue":       "#3b82f6",
 	"indigo":     "#6366f1",
@@ -317,6 +336,7 @@ var ColorPresetHex = map[string]string{
 
 // --- Custom Fields on Orders ---
 
+// CustomFieldDef defines a single custom field on orders.
 type CustomFieldDef struct {
 	Key      string   `json:"key"`
 	Label    string   `json:"label"`
@@ -326,6 +346,7 @@ type CustomFieldDef struct {
 	Options  []string `json:"options,omitempty"` // only for type="select"
 }
 
+// CustomFieldsConfig holds the tenant-level custom fields configuration for orders.
 type CustomFieldsConfig struct {
 	Fields []CustomFieldDef `json:"fields"`
 }
@@ -334,12 +355,14 @@ var validFieldTypes = map[string]bool{
 	"text": true, "number": true, "select": true, "date": true, "checkbox": true,
 }
 
+// IsValidFieldType reports whether t is a valid custom field type.
 func IsValidFieldType(t string) bool {
 	return validFieldTypes[t]
 }
 
 // --- Product Categories ---
 
+// CategoryDef defines a single product category with display properties.
 type CategoryDef struct {
 	Key      string `json:"key"`
 	Label    string `json:"label"`
@@ -347,16 +370,19 @@ type CategoryDef struct {
 	Position int    `json:"position"`
 }
 
+// ProductCategoriesConfig holds the tenant-level product categories configuration.
 type ProductCategoriesConfig struct {
 	Categories []CategoryDef `json:"categories"`
 }
 
+// DefaultProductCategoriesConfig returns an empty product categories configuration.
 func DefaultProductCategoriesConfig() ProductCategoriesConfig {
 	return ProductCategoriesConfig{
 		Categories: []CategoryDef{},
 	}
 }
 
+// DefaultOrderStatusConfig returns the default order statuses and transitions.
 func DefaultOrderStatusConfig() OrderStatusConfig {
 	return OrderStatusConfig{
 		Statuses: []StatusDef{

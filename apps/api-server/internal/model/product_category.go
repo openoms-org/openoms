@@ -13,8 +13,10 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+// MaxCategoryDepth is the maximum nesting depth for product categories.
 const MaxCategoryDepth = 5
 
+// ProductCategory represents a hierarchical category for organizing products.
 type ProductCategory struct {
 	ID        uuid.UUID         `json:"id"`
 	TenantID  uuid.UUID         `json:"tenant_id"`
@@ -30,6 +32,7 @@ type ProductCategory struct {
 	UpdatedAt time.Time         `json:"updated_at"`
 }
 
+// CreateCategoryRequest is the payload for creating a new product category.
 type CreateCategoryRequest struct {
 	Name     string     `json:"name"`
 	ParentID *uuid.UUID `json:"parent_id,omitempty"`
@@ -37,6 +40,7 @@ type CreateCategoryRequest struct {
 	Icon     *string    `json:"icon,omitempty"`
 }
 
+// Validate validates the create category request.
 func (r *CreateCategoryRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -50,6 +54,7 @@ func (r *CreateCategoryRequest) Validate() error {
 	return nil
 }
 
+// UpdateCategoryRequest is the payload for updating an existing product category.
 type UpdateCategoryRequest struct {
 	Name     *string    `json:"name,omitempty"`
 	ParentID *uuid.UUID `json:"parent_id,omitempty"`
@@ -58,6 +63,7 @@ type UpdateCategoryRequest struct {
 	Position *int       `json:"position,omitempty"`
 }
 
+// Validate validates the update category request.
 func (r *UpdateCategoryRequest) Validate() error {
 	if r.Name == nil && r.ParentID == nil && r.Color == nil && r.Icon == nil && r.Position == nil {
 		return errors.New("at least one field must be provided")
@@ -73,6 +79,7 @@ func (r *UpdateCategoryRequest) Validate() error {
 	return nil
 }
 
+// CategoryListFilter holds query parameters for listing product categories.
 type CategoryListFilter struct {
 	ParentID    *uuid.UUID
 	IncludeTree bool

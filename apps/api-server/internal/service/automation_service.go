@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 
@@ -16,10 +15,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
-var (
-	ErrAutomationRuleNotFound = errors.New("automation rule not found")
-)
+// ErrAutomationRuleNotFound is returned when an automation rule does not exist.
+var ErrAutomationRuleNotFound = errors.New("automation rule not found")
 
+// AutomationService handles business logic for automation rules and logs.
 type AutomationService struct {
 	ruleRepo    repository.AutomationRuleRepo
 	logRepo     repository.AutomationRuleLogRepo
@@ -29,6 +28,7 @@ type AutomationService struct {
 	logger      *slog.Logger
 }
 
+// NewAutomationService creates a new AutomationService.
 func NewAutomationService(
 	ruleRepo repository.AutomationRuleRepo,
 	logRepo repository.AutomationRuleLogRepo,
@@ -50,6 +50,7 @@ func (s *AutomationService) SetDelayedActionRepo(repo repository.DelayedActionRe
 	s.delayedRepo = repo
 }
 
+// List returns a paginated list of automation rules.
 func (s *AutomationService) List(ctx context.Context, tenantID uuid.UUID, filter model.AutomationRuleListFilter) (model.ListResponse[model.AutomationRule], error) {
 	var resp model.ListResponse[model.AutomationRule]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -71,6 +72,7 @@ func (s *AutomationService) List(ctx context.Context, tenantID uuid.UUID, filter
 	return resp, err
 }
 
+// Get returns a single automation rule by ID.
 func (s *AutomationService) Get(ctx context.Context, tenantID, ruleID uuid.UUID) (*model.AutomationRule, error) {
 	var rule *model.AutomationRule
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -87,6 +89,7 @@ func (s *AutomationService) Get(ctx context.Context, tenantID, ruleID uuid.UUID)
 	return rule, nil
 }
 
+// Create inserts a new automation rule.
 func (s *AutomationService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateAutomationRuleRequest) (*model.AutomationRule, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -128,6 +131,7 @@ func (s *AutomationService) Create(ctx context.Context, tenantID uuid.UUID, req 
 	return rule, nil
 }
 
+// Update modifies an existing automation rule.
 func (s *AutomationService) Update(ctx context.Context, tenantID, ruleID uuid.UUID, req model.UpdateAutomationRuleRequest) (*model.AutomationRule, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -162,6 +166,7 @@ func (s *AutomationService) Update(ctx context.Context, tenantID, ruleID uuid.UU
 	return rule, err
 }
 
+// Delete removes an automation rule by ID.
 func (s *AutomationService) Delete(ctx context.Context, tenantID, ruleID uuid.UUID) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.ruleRepo.FindByID(ctx, tx, ruleID)
@@ -175,6 +180,7 @@ func (s *AutomationService) Delete(ctx context.Context, tenantID, ruleID uuid.UU
 	})
 }
 
+// GetLogs returns execution logs for an automation rule.
 func (s *AutomationService) GetLogs(ctx context.Context, tenantID, ruleID uuid.UUID, limit, offset int) (model.ListResponse[model.AutomationRuleLog], error) {
 	var resp model.ListResponse[model.AutomationRuleLog]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -273,6 +279,3 @@ func (s *AutomationService) ListDelayed(ctx context.Context, tenantID uuid.UUID)
 	}
 	return actions, nil
 }
-
-// Ensure unused import is suppressed
-var _ = json.Marshal

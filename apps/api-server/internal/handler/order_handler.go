@@ -23,12 +23,14 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// OrderHandler handles HTTP requests for order management.
 type OrderHandler struct {
 	orderService *service.OrderService
 	tenantRepo   repository.TenantRepo
 	pool         *pgxpool.Pool
 }
 
+// NewOrderHandler creates a new OrderHandler.
 func NewOrderHandler(orderService *service.OrderService, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *OrderHandler {
 	return &OrderHandler{orderService: orderService, tenantRepo: tenantRepo, pool: pool}
 }
@@ -57,6 +59,7 @@ func parseOrderFilter(r *http.Request) model.OrderListFilter {
 	return filter
 }
 
+// List returns a paginated list of orders.
 func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -72,6 +75,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single order by ID.
 func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -93,6 +97,7 @@ func (h *OrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, order)
 }
 
+// Create inserts a new order.
 func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -126,6 +131,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, order)
 }
 
+// Update modifies an existing order.
 func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -159,6 +165,7 @@ func (h *OrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, order)
 }
 
+// Delete removes an order by ID.
 func (h *OrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -182,6 +189,7 @@ func (h *OrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// TransitionStatus moves an order to a new status.
 func (h *OrderHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -217,6 +225,7 @@ func (h *OrderHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, order)
 }
 
+// BulkTransitionStatus moves multiple orders to a new status in one operation.
 func (h *OrderHandler) BulkTransitionStatus(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -240,6 +249,7 @@ func (h *OrderHandler) BulkTransitionStatus(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// GetAudit returns the audit trail for an order.
 func (h *OrderHandler) GetAudit(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	orderID, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -256,6 +266,7 @@ func (h *OrderHandler) GetAudit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, entries)
 }
 
+// DuplicateOrder creates a copy of an existing order.
 func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -358,7 +369,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 
 	// Dispatch webhook for the duplicated order (async, best-effort)
 	if wd := h.orderService.WebhookDispatch(); wd != nil {
-		go wd.Dispatch(context.Background(), tenantID, "order.created", newOrder)
+		go wd.Dispatch(context.Background(), tenantID, "order.created", newOrder) // #nosec G118
 	}
 
 	writeJSON(w, http.StatusCreated, newOrder)
@@ -391,6 +402,7 @@ func (h *OrderHandler) loadCustomFieldsConfig(ctx context.Context, tenantID uuid
 	return config
 }
 
+// ExportCSV streams a CSV export of orders matching the current filter.
 func (h *OrderHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

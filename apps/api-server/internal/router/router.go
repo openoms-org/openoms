@@ -1,3 +1,4 @@
+// Package router wires HTTP routes to handler implementations.
 package router
 
 import (
@@ -18,7 +19,7 @@ import (
 )
 
 // RouterDeps holds all dependencies needed to construct the router.
-type RouterDeps struct {
+type RouterDeps struct { //nolint:revive
 	Pool                       *pgxpool.Pool
 	Config                     *config.Config
 	TokenSvc                   *service.TokenService
@@ -117,6 +118,7 @@ type RouterDeps struct {
 	EbayListings               *handler.EbayListingsHandler
 }
 
+// New constructs the chi router with all routes registered.
 func New(deps RouterDeps) *chi.Mux {
 	r := chi.NewRouter()
 

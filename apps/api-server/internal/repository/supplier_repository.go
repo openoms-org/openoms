@@ -12,12 +12,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// SupplierRepository handles persistence for suppliers.
 type SupplierRepository struct{}
 
+// NewSupplierRepository creates a new SupplierRepository.
 func NewSupplierRepository() *SupplierRepository {
 	return &SupplierRepository{}
 }
 
+// List returns a paginated list of suppliers matching the filter.
 func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.SupplierListFilter) ([]model.Supplier, int, error) {
 	var conditions []string
 	var args []any
@@ -76,6 +79,7 @@ func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 	return suppliers, total, rows.Err()
 }
 
+// FindByID returns a supplier by its ID.
 func (r *SupplierRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Supplier, error) {
 	var s model.Supplier
 	err := tx.QueryRow(ctx,
@@ -96,6 +100,7 @@ func (r *SupplierRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 	return &s, nil
 }
 
+// Create inserts a new supplier.
 func (r *SupplierRepository) Create(ctx context.Context, tx pgx.Tx, supplier *model.Supplier) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO suppliers (id, tenant_id, name, code, feed_url, feed_format, status, settings, sync_interval_minutes, integration_id)
@@ -107,6 +112,7 @@ func (r *SupplierRepository) Create(ctx context.Context, tx pgx.Tx, supplier *mo
 	).Scan(&supplier.CreatedAt, &supplier.UpdatedAt)
 }
 
+// Update applies partial updates to a supplier.
 func (r *SupplierRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateSupplierRequest) error {
 	var setClauses []string
 	var args []any
@@ -187,6 +193,7 @@ func (r *SupplierRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return nil
 }
 
+// Delete removes a supplier by its ID.
 func (r *SupplierRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM suppliers WHERE id = $1", id)
 	if err != nil {
@@ -198,6 +205,7 @@ func (r *SupplierRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return nil
 }
 
+// UpdateSyncStatus records the last sync time and any error for the supplier.
 func (r *SupplierRepository) UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastSyncAt time.Time, errorMessage *string) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE suppliers SET last_sync_at = $1, error_message = $2, updated_at = NOW() WHERE id = $3`,
@@ -240,10 +248,10 @@ func (r *SupplierRepository) UpdateSettingsKeys(ctx context.Context, tx pgx.Tx, 
 	return nil
 }
 
-// SupplierProductRepository
-
+// SupplierProductRepository handles persistence for supplier products.
 type SupplierProductRepository struct{}
 
+// NewSupplierProductRepository creates a new SupplierProductRepository.
 func NewSupplierProductRepository() *SupplierProductRepository {
 	return &SupplierProductRepository{}
 }
@@ -261,6 +269,7 @@ func scanSupplierProduct(row interface{ Scan(dest ...any) error }) (*model.Suppl
 	return &sp, err
 }
 
+// List returns a paginated list of supplier products matching the filter.
 func (r *SupplierProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.SupplierProductListFilter) ([]model.SupplierProduct, int, error) {
 	var conditions []string
 	var args []any
@@ -336,6 +345,7 @@ func (r *SupplierProductRepository) List(ctx context.Context, tx pgx.Tx, filter 
 	return products, total, rows.Err()
 }
 
+// FindByID returns a supplier product by its ID.
 func (r *SupplierProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.SupplierProduct, error) {
 	sp, err := scanSupplierProduct(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM supplier_products WHERE id = $1", supplierProductColumns), id,
@@ -349,6 +359,7 @@ func (r *SupplierProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id 
 	return sp, nil
 }
 
+// Create inserts a new supplier product.
 func (r *SupplierProductRepository) Create(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, source_category, metadata, last_synced_at)
@@ -359,6 +370,7 @@ func (r *SupplierProductRepository) Create(ctx context.Context, tx pgx.Tx, sp *m
 	).Scan(&sp.CreatedAt, &sp.UpdatedAt)
 }
 
+// Update overwrites mutable fields on a supplier product.
 func (r *SupplierProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string, ean, sku *string, price *float64, stock int, metadata []byte, syncedAt *time.Time) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE supplier_products SET name = $1, ean = $2, sku = $3, price = $4,
@@ -375,6 +387,7 @@ func (r *SupplierProductRepository) Update(ctx context.Context, tx pgx.Tx, id uu
 	return nil
 }
 
+// Delete removes a supplier product by its ID.
 func (r *SupplierProductRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM supplier_products WHERE id = $1", id)
 	if err != nil {
@@ -386,6 +399,7 @@ func (r *SupplierProductRepository) Delete(ctx context.Context, tx pgx.Tx, id uu
 	return nil
 }
 
+// FindByEAN returns the first supplier product with the given EAN.
 func (r *SupplierProductRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.SupplierProduct, error) {
 	sp, err := scanSupplierProduct(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM supplier_products WHERE ean = $1 LIMIT 1", supplierProductColumns), ean,
@@ -399,6 +413,7 @@ func (r *SupplierProductRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ea
 	return sp, nil
 }
 
+// FindBySupplierAndExternalID returns the supplier product matching supplier and external ID.
 func (r *SupplierProductRepository) FindBySupplierAndExternalID(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, externalID string) (*model.SupplierProduct, error) {
 	sp, err := scanSupplierProduct(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM supplier_products WHERE supplier_id = $1 AND external_id = $2", supplierProductColumns),
@@ -413,6 +428,7 @@ func (r *SupplierProductRepository) FindBySupplierAndExternalID(ctx context.Cont
 	return sp, nil
 }
 
+// UpsertByExternalID inserts or updates a supplier product matched by external ID.
 func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, source_category, metadata, last_synced_at)
@@ -462,6 +478,7 @@ func (r *SupplierProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, id
 	return products, rows.Err()
 }
 
+// LinkToProduct associates a supplier product with an internal product.
 func (r *SupplierProductRepository) LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE supplier_products SET product_id = $1, updated_at = NOW() WHERE id = $2`,

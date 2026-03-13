@@ -1,3 +1,4 @@
+// Package handler implements HTTP request handlers for the API server.
 package handler
 
 import (
@@ -185,7 +186,7 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 
 		var allSettings map[string]json.RawMessage
 		if err := json.Unmarshal(settings, &allSettings); err != nil {
-			return nil
+			return err
 		}
 
 		if raw, ok := allSettings["invoicing"]; ok {
@@ -269,7 +270,7 @@ func (h *AccountingHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, t
 
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return nil
+		return err
 	}
 
 	raw, ok := allSettings[key]

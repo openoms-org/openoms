@@ -86,7 +86,7 @@ func (h *AllegroPromotionsHandler) GetPromotion(w http.ResponseWriter, r *http.R
 
 	promotion, err := client.Promotions.Get(r.Context(), promotionID)
 	if err != nil {
-		slog.Error("allegro promotions: failed to get promotion", "error", err, "promotion_id", promotionID)
+		slog.Error("allegro promotions: failed to get promotion", "error", err, "promotion_id", promotionID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac promocji", err)
 		return
 	}
@@ -146,7 +146,7 @@ func (h *AllegroPromotionsHandler) UpdatePromotion(w http.ResponseWriter, r *htt
 
 	promotion, err := client.Promotions.Update(r.Context(), promotionID, body)
 	if err != nil {
-		slog.Error("allegro promotions: failed to update promotion", "error", err, "promotion_id", promotionID)
+		slog.Error("allegro promotions: failed to update promotion", "error", err, "promotion_id", promotionID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie zaktualizowac promocji", err)
 		return
 	}
@@ -172,7 +172,7 @@ func (h *AllegroPromotionsHandler) DeletePromotion(w http.ResponseWriter, r *htt
 	defer client.Close()
 
 	if err := client.Promotions.Delete(r.Context(), promotionID); err != nil {
-		slog.Error("allegro promotions: failed to delete promotion", "error", err, "promotion_id", promotionID)
+		slog.Error("allegro promotions: failed to delete promotion", "error", err, "promotion_id", promotionID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie usunac promocji", err)
 		return
 	}

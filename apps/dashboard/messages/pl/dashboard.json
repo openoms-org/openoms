@@ -1,120 +1,134 @@
 {
   "dashboard": {
-    "title": "Pulpit",
-    "stats": {
-      "totalOrders": "Wszystkie zamówienia",
-      "new": "Nowe",
-      "inTransit": "W transporcie",
-      "delivered": "Dostarczone"
-    },
-    "recentOrders": "Ostatnie zamówienia",
     "noOrders": "Brak zamówień",
     "ordersBySource": "Zamówienia według źródła",
-    "ordersByStatus": "Zamówienia według statusu"
+    "ordersByStatus": "Zamówienia według statusu",
+    "recentOrders": "Ostatnie zamówienia",
+    "stats": {
+      "delivered": "Dostarczone",
+      "inTransit": "W transporcie",
+      "new": "Nowe",
+      "totalOrders": "Wszystkie zamówienia"
+    },
+    "title": "Pulpit"
   },
   "onboarding": {
-    "title": "Pierwsze kroki",
-    "progress": "{completed} z {total} ukończone",
-    "dismiss": "Pomiń",
-    "steps": {
-      "company": {
-        "title": "Uzupełnij dane firmy",
-        "description": "Dodaj nazwę firmy i NIP — potrzebne do faktur i przesyłek."
-      },
-      "integration": {
-        "title": "Połącz z Allegro",
-        "description": "Zaimportuj zamówienia i produkty z Allegro."
-      },
-      "product": {
-        "title": "Dodaj pierwszy produkt",
-        "description": "Ręcznie lub przez import CSV."
-      },
-      "order": {
-        "title": "Pierwsze zamówienie",
-        "description": "Przyjdzie automatycznie z Allegro lub dodaj ręcznie."
-      }
-    },
-    "companyData": "Dane firmy",
-    "warehouse": "Magazyn",
-    "integration": "Integracja",
-    "team": "Zespół",
-    "next": "Dalej",
-    "error": "Wystąpił błąd",
-    "sendInvite": "Wyślij zaproszenie",
-    "inviteSent": "Zaproszenie wysłane",
-    "finishSetup": "Zakończ konfigurację",
-    "finishLater": "Dokończ później",
     "allDone": "Gotowe!",
-    "setupCompleteMessage": "Konfiguracja zakończona. Możesz teraz korzystać z systemu.",
-    "goToDashboard": "Przejdź do panelu",
     "backToDashboard": "Wróć do panelu",
+    "companyData": "Dane firmy",
+    "dismiss": "Pomiń",
+    "error": "Wystąpił błąd",
     "failedToLoadStatus": "Nie udało się załadować statusu konfiguracji",
     "failedToSaveSkip": "Nie udało się zapisać pominięcia kroku",
-    "systemSetup": "Konfiguracja systemu",
-    "setupSubtitle": "Skonfiguruj system, aby móc w pełni z niego korzystać.",
-    "oauthRedirectNotice": "Ten dostawca wymaga autoryzacji OAuth. Po kliknięciu \"Dalej\" zostaniesz przekierowany do strony integracji.",
-    "stepTitles": {
-      "companyData": "Dane firmy",
-      "defaultWarehouse": "Domyślny magazyn",
-      "firstIntegration": "Pierwsza integracja",
-      "inviteTeam": "Zaproś zespół"
+    "finishLater": "Dokończ później",
+    "finishSetup": "Zakończ konfigurację",
+    "form": {
+      "apiKey": "Klucz API",
+      "city": "Miasto",
+      "companyName": "Nazwa firmy",
+      "emailPlaceholder": "adres@email.pl",
+      "mainWarehouse": "Magazyn główny",
+      "pasteApiKey": "Wklej klucz API",
+      "phone": "Telefon",
+      "postCode": "Kod pocztowy",
+      "street": "Ulica i numer",
+      "streetPlaceholder": "np. ul. Główna 10",
+      "warehouseName": "Nazwa magazynu"
     },
+    "goToDashboard": "Przejdź do panelu",
+    "integration": "Integracja",
+    "inviteSent": "Zaproszenie wysłane",
+    "next": "Dalej",
+    "oauthRedirectNotice": "Ten dostawca wymaga autoryzacji OAuth. Po kliknięciu \"Dalej\" zostaniesz przekierowany do strony integracji.",
+    "progress": "{completed} z {total} ukończone",
+    "sendInvite": "Wyślij zaproszenie",
+    "setupCompleteMessage": "Konfiguracja zakończona. Możesz teraz korzystać z systemu.",
+    "setupSubtitle": "Skonfiguruj system, aby móc w pełni z niego korzystać.",
     "stepDescriptions": {
       "companyData": "Uzupełnij dane firmy potrzebne do faktur i wysyłek.",
       "defaultWarehouse": "Dodaj magazyn, z którego będą realizowane zamówienia.",
       "firstIntegration": "Połącz się z platformą sprzedażową lub kurierem.",
       "inviteTeam": "Zaproś członków zespołu do systemu."
     },
+    "stepTitles": {
+      "companyData": "Dane firmy",
+      "defaultWarehouse": "Domyślny magazyn",
+      "firstIntegration": "Pierwsza integracja",
+      "inviteTeam": "Zaproś zespół"
+    },
+    "steps": {
+      "company": {
+        "description": "Dodaj nazwę firmy i NIP — potrzebne do faktur i przesyłek.",
+        "title": "Uzupełnij dane firmy"
+      },
+      "integration": {
+        "description": "Zaimportuj zamówienia i produkty z Allegro.",
+        "title": "Połącz z Allegro"
+      },
+      "order": {
+        "description": "Przyjdzie automatycznie z Allegro lub dodaj ręcznie.",
+        "title": "Pierwsze zamówienie"
+      },
+      "product": {
+        "description": "Ręcznie lub przez import CSV.",
+        "title": "Dodaj pierwszy produkt"
+      }
+    },
+    "systemSetup": "Konfiguracja systemu",
+    "team": "Zespół",
+    "title": "Pierwsze kroki",
     "validation": {
       "companyNameRequired": "Nazwa firmy jest wymagana",
-      "nipRequired": "NIP jest wymagany",
-      "nipInvalid": "Podaj poprawny numer NIP",
       "emailInvalid": "Podaj poprawny adres email",
-      "postCodeFormat": "Kod pocztowy musi mieć format XX-XXX",
+      "nipInvalid": "Podaj poprawny numer NIP",
+      "nipRequired": "NIP jest wymagany",
       "phoneInvalid": "Podaj poprawny numer telefonu",
-      "warehouseNameRequired": "Nazwa magazynu jest wymagana",
-      "selectProvider": "Wybierz dostawcę"
+      "postCodeFormat": "Kod pocztowy musi mieć format XX-XXX",
+      "selectProvider": "Wybierz dostawcę",
+      "warehouseNameRequired": "Nazwa magazynu jest wymagana"
     },
-    "form": {
-      "companyName": "Nazwa firmy",
-      "street": "Ulica i numer",
-      "streetPlaceholder": "np. ul. Główna 10",
-      "city": "Miasto",
-      "postCode": "Kod pocztowy",
-      "phone": "Telefon",
-      "warehouseName": "Nazwa magazynu",
-      "mainWarehouse": "Magazyn główny",
-      "apiKey": "Klucz API",
-      "pasteApiKey": "Wklej klucz API",
-      "emailPlaceholder": "adres@email.pl"
-    }
+    "warehouse": "Magazyn"
+  },
+  "reports": {
+    "count": "Ilość",
+    "name": "Nazwa",
+    "noData": "Brak danych",
+    "products": "Produkty",
+    "quantity": "Ilość",
+    "reports": "Raporty",
+    "revenue": "Przychód",
+    "sku": "SKU",
+    "topProducts": "Najlepsze produkty",
+    "trends": "Trendy",
+    "unknown": "Nieznany",
+    "unknownFeminine": "Nieznana"
   },
   "subscription": {
-    "suspended": "Subskrypcja została zawieszona. Odnów płatność aby kontynuować korzystanie z systemu.",
-    "pastDue": "Płatność zaległa. Tworzenie nowych zasobów zostało zablokowane do momentu uregulowania należności.",
-    "trial": "Okres próbny — pozostało {days} dni.",
-    "manageSubscription": "Zarządzaj subskrypcją",
-    "canceled": "Subskrypcja anulowana. Dostęp wygasa {date}.",
-    "renewSubscription": "Odnów subskrypcję",
-    "zarzadzajPlanemIPłatnosciami": "Zarządzaj planem i płatnościami",
-    "twojPlan": "Twój plan",
-    "nieUdałoSieZaładowacDanychSubskrypcji": "Nie udało się załadować danych subskrypcji.",
-    "maksUzytkownikow": "Maks. użytkowników",
-    "zamowienMiesiac": "Zamówień / miesiąc",
+    "accessExpires": "Dostęp wygasa:",
     "brakLimitowWBiezacymPlanie": "Brak limitów w bieżącym planie.",
-    "title": "Subskrypcja",
-    "statusTrialing": "Okres próbny",
-    "statusActive": "Aktywna",
-    "statusPastDue": "Zaległa płatność",
-    "statusCanceled": "Anulowana",
-    "statusSuspended": "Zawieszona",
+    "canceled": "Subskrypcja anulowana. Dostęp wygasa {date}.",
+    "days": "{count} dni",
     "intervalMonth": "Miesięcznie",
     "intervalYear": "Rocznie",
-    "trialEndsIn": "Okres próbny kończy się za",
-    "days": "{count} dni",
-    "accessExpires": "Dostęp wygasa:",
+    "maksUzytkownikow": "Maks. użytkowników",
+    "manageSubscription": "Zarządzaj subskrypcją",
+    "maxIntegrations": "Maks. integracji",
     "nextRenewal": "Następne odnowienie:",
+    "nieUdałoSieZaładowacDanychSubskrypcji": "Nie udało się załadować danych subskrypcji.",
+    "pastDue": "Płatność zaległa. Tworzenie nowych zasobów zostało zablokowane do momentu uregulowania należności.",
     "planLimits": "Limity planu",
-    "maxIntegrations": "Maks. integracji"
+    "renewSubscription": "Odnów subskrypcję",
+    "statusActive": "Aktywna",
+    "statusCanceled": "Anulowana",
+    "statusPastDue": "Zaległa płatność",
+    "statusSuspended": "Zawieszona",
+    "statusTrialing": "Okres próbny",
+    "suspended": "Subskrypcja została zawieszona. Odnów płatność aby kontynuować korzystanie z systemu.",
+    "title": "Subskrypcja",
+    "trial": "Okres próbny — pozostało {days} dni.",
+    "trialEndsIn": "Okres próbny kończy się za",
+    "twojPlan": "Twój plan",
+    "zamowienMiesiac": "Zamówień / miesiąc",
+    "zarzadzajPlanemIPłatnosciami": "Zarządzaj planem i płatnościami"
   }
 }

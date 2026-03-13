@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// CustomerRepository handles persistence for customers.
 type CustomerRepository struct{}
 
+// NewCustomerRepository creates a new CustomerRepository.
 func NewCustomerRepository() *CustomerRepository {
 	return &CustomerRepository{}
 }
@@ -30,6 +32,7 @@ func scanCustomer(row interface{ Scan(dest ...any) error }) (*model.Customer, er
 	return &c, err
 }
 
+// List returns a paginated list of customers matching the filter.
 func (r *CustomerRepository) List(ctx context.Context, tx pgx.Tx, filter model.CustomerListFilter) ([]model.Customer, int, error) {
 	qb := NewQueryBuilder()
 
@@ -80,6 +83,7 @@ func (r *CustomerRepository) List(ctx context.Context, tx pgx.Tx, filter model.C
 	return customers, total, rows.Err()
 }
 
+// FindByID returns a customer by its ID.
 func (r *CustomerRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Customer, error) {
 	c, err := scanCustomer(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM customers WHERE id = $1", customerColumns), id,
@@ -93,6 +97,7 @@ func (r *CustomerRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UU
 	return c, nil
 }
 
+// FindByEmail returns a customer by email address.
 func (r *CustomerRepository) FindByEmail(ctx context.Context, tx pgx.Tx, email string) (*model.Customer, error) {
 	c, err := scanCustomer(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM customers WHERE email = $1 LIMIT 1", customerColumns), email,
@@ -106,6 +111,7 @@ func (r *CustomerRepository) FindByEmail(ctx context.Context, tx pgx.Tx, email s
 	return c, nil
 }
 
+// Create inserts a new customer.
 func (r *CustomerRepository) Create(ctx context.Context, tx pgx.Tx, customer *model.Customer) error {
 	tags := customer.Tags
 	if tags == nil {
@@ -123,6 +129,7 @@ func (r *CustomerRepository) Create(ctx context.Context, tx pgx.Tx, customer *mo
 	).Scan(&customer.CreatedAt, &customer.UpdatedAt)
 }
 
+// Update applies partial updates to a customer.
 func (r *CustomerRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateCustomerRequest) error {
 	var setClauses []string
 	var args []any
@@ -198,6 +205,7 @@ func (r *CustomerRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return nil
 }
 
+// Delete removes a customer by its ID.
 func (r *CustomerRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM customers WHERE id = $1", id)
 	if err != nil {
@@ -209,6 +217,7 @@ func (r *CustomerRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return nil
 }
 
+// IncrementOrderStats increments total_orders and total_spent for the given customer.
 func (r *CustomerRepository) IncrementOrderStats(ctx context.Context, tx pgx.Tx, id uuid.UUID, amount float64) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + $1, updated_at = NOW() WHERE id = $2`,
@@ -220,6 +229,7 @@ func (r *CustomerRepository) IncrementOrderStats(ctx context.Context, tx pgx.Tx,
 	return nil
 }
 
+// ListOrdersByCustomerID returns paginated orders for the given customer.
 func (r *CustomerRepository) ListOrdersByCustomerID(ctx context.Context, tx pgx.Tx, customerID uuid.UUID, filter model.OrderListFilter) ([]model.Order, int, error) {
 	where := "WHERE customer_id = $1"
 	args := []any{customerID}

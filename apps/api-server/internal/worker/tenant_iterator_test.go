@@ -137,20 +137,20 @@ func TestCloseProvider_ImplementsCloser(t *testing.T) {
 	assert.True(t, closed, "Close() should have been called")
 }
 
-func TestCloseProvider_DoesNotImplementCloser_String(t *testing.T) {
+func TestCloseProvider_DoesNotImplementCloser_String(_ *testing.T) {
 	// Should not panic when passed a type without Close().
 	closeProvider("just a string")
 }
 
-func TestCloseProvider_DoesNotImplementCloser_Int(t *testing.T) {
+func TestCloseProvider_DoesNotImplementCloser_Int(_ *testing.T) {
 	closeProvider(42)
 }
 
-func TestCloseProvider_DoesNotImplementCloser_Nil(t *testing.T) {
+func TestCloseProvider_DoesNotImplementCloser_Nil(_ *testing.T) {
 	closeProvider(nil)
 }
 
-func TestCloseProvider_DoesNotImplementCloser_Struct(t *testing.T) {
+func TestCloseProvider_DoesNotImplementCloser_Struct(_ *testing.T) {
 	closeProvider(struct{}{})
 }
 

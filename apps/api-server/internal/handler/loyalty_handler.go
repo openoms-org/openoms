@@ -13,14 +13,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// LoyaltyHandler handles HTTP requests for loyalty program management.
 type LoyaltyHandler struct {
 	loyaltyService *service.LoyaltyService
 }
 
+// NewLoyaltyHandler creates a new LoyaltyHandler.
 func NewLoyaltyHandler(loyaltyService *service.LoyaltyService) *LoyaltyHandler {
 	return &LoyaltyHandler{loyaltyService: loyaltyService}
 }
 
+// ListPrograms returns all loyalty programs for the tenant.
 func (h *LoyaltyHandler) ListPrograms(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -37,6 +40,7 @@ func (h *LoyaltyHandler) ListPrograms(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// GetProgram returns a single loyalty program by ID.
 func (h *LoyaltyHandler) GetProgram(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -58,6 +62,7 @@ func (h *LoyaltyHandler) GetProgram(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, program)
 }
 
+// CreateProgram inserts a new loyalty program.
 func (h *LoyaltyHandler) CreateProgram(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -80,6 +85,7 @@ func (h *LoyaltyHandler) CreateProgram(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, program)
 }
 
+// UpdateProgram modifies an existing loyalty program.
 func (h *LoyaltyHandler) UpdateProgram(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -113,6 +119,7 @@ func (h *LoyaltyHandler) UpdateProgram(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, program)
 }
 
+// DeleteProgram removes a loyalty program by ID.
 func (h *LoyaltyHandler) DeleteProgram(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -136,6 +143,7 @@ func (h *LoyaltyHandler) DeleteProgram(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetCustomerLoyaltyStatus returns a customer's current points and tier.
 func (h *LoyaltyHandler) GetCustomerLoyaltyStatus(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -153,6 +161,7 @@ func (h *LoyaltyHandler) GetCustomerLoyaltyStatus(w http.ResponseWriter, r *http
 	writeJSON(w, http.StatusOK, results)
 }
 
+// AwardPoints manually grants loyalty points to a customer.
 func (h *LoyaltyHandler) AwardPoints(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -186,6 +195,7 @@ func (h *LoyaltyHandler) AwardPoints(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// RedeemPoints redeems loyalty points for a discount or reward.
 func (h *LoyaltyHandler) RedeemPoints(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -221,6 +231,7 @@ func (h *LoyaltyHandler) RedeemPoints(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// GetLeaderboard returns the top customers ranked by loyalty points.
 func (h *LoyaltyHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

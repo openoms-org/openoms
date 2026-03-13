@@ -26,6 +26,7 @@ type LoginRequest struct {
 	TenantSlug string `json:"tenant_slug"`
 }
 
+// Validate validates the login request.
 func (r *LoginRequest) Validate() error {
 	if strings.TrimSpace(r.Email) == "" {
 		return errors.New("email is required")
@@ -55,6 +56,7 @@ type RegisterRequest struct {
 	CheckoutSessionInterval string         `json:"-"` // set internally from checkout session
 }
 
+// Validate validates the register request.
 func (r *RegisterRequest) Validate() error {
 	if err := validateEmail(r.Email); err != nil {
 		return err
@@ -90,6 +92,7 @@ type UpdateMeRequest struct {
 	Language *string `json:"language,omitempty"`
 }
 
+// Validate validates the update-me request.
 func (r *UpdateMeRequest) Validate() error {
 	if r.Language == nil {
 		return errors.New("language is required")
@@ -162,6 +165,7 @@ type CreateUserRequest struct {
 	MaxUsers int `json:"-"`
 }
 
+// Validate validates the create user request.
 func (r *CreateUserRequest) Validate() error {
 	if err := validateEmail(r.Email); err != nil {
 		return err
@@ -186,6 +190,7 @@ type UpdateUserRequest struct {
 	Language *string    `json:"language,omitempty"`
 }
 
+// Validate validates the update user request.
 func (r *UpdateUserRequest) Validate() error {
 	if r.Name == nil && r.Role == nil && r.RoleID == nil && r.Language == nil {
 		return errors.New("at least one field (name, role, role_id, or language) must be provided")

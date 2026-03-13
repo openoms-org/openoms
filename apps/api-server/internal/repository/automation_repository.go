@@ -14,10 +14,12 @@ import (
 // AutomationRuleRepository implements AutomationRuleRepo.
 type AutomationRuleRepository struct{}
 
+// NewAutomationRuleRepository creates a new AutomationRuleRepository.
 func NewAutomationRuleRepository() *AutomationRuleRepository {
 	return &AutomationRuleRepository{}
 }
 
+// List returns a paginated list of automation rules matching the filter.
 func (r *AutomationRuleRepository) List(ctx context.Context, tx pgx.Tx, filter model.AutomationRuleListFilter) ([]model.AutomationRule, int, error) {
 	qb := NewQueryBuilder()
 
@@ -77,6 +79,7 @@ func (r *AutomationRuleRepository) List(ctx context.Context, tx pgx.Tx, filter m
 	return rules, total, rows.Err()
 }
 
+// FindByID returns an automation rule by its ID.
 func (r *AutomationRuleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.AutomationRule, error) {
 	var rule model.AutomationRule
 	err := tx.QueryRow(ctx,
@@ -99,6 +102,7 @@ func (r *AutomationRuleRepository) FindByID(ctx context.Context, tx pgx.Tx, id u
 	return &rule, nil
 }
 
+// FindByTenantAndEvent returns enabled automation rules for the given trigger event.
 func (r *AutomationRuleRepository) FindByTenantAndEvent(ctx context.Context, tx pgx.Tx, event string) ([]model.AutomationRule, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, name, description, enabled, priority,
@@ -129,6 +133,7 @@ func (r *AutomationRuleRepository) FindByTenantAndEvent(ctx context.Context, tx 
 	return rules, rows.Err()
 }
 
+// Create inserts a new automation rule.
 func (r *AutomationRuleRepository) Create(ctx context.Context, tx pgx.Tx, rule *model.AutomationRule) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO automation_rules (
@@ -142,6 +147,7 @@ func (r *AutomationRuleRepository) Create(ctx context.Context, tx pgx.Tx, rule *
 	).Scan(&rule.CreatedAt, &rule.UpdatedAt)
 }
 
+// Update applies partial updates to an automation rule.
 func (r *AutomationRuleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateAutomationRuleRequest) error {
 	setClauses := []string{}
 	args := []any{}
@@ -210,6 +216,7 @@ func (r *AutomationRuleRepository) Update(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// Delete removes an automation rule by its ID.
 func (r *AutomationRuleRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM automation_rules WHERE id = $1", id)
 	if err != nil {
@@ -221,6 +228,7 @@ func (r *AutomationRuleRepository) Delete(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// IncrementFireCount increments the fire count and records the last fired timestamp.
 func (r *AutomationRuleRepository) IncrementFireCount(ctx context.Context, tx pgx.Tx, id uuid.UUID, firedAt time.Time) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE automation_rules SET fire_count = fire_count + 1, last_fired_at = $2 WHERE id = $1`,
@@ -235,10 +243,12 @@ func (r *AutomationRuleRepository) IncrementFireCount(ctx context.Context, tx pg
 // AutomationRuleLogRepository implements AutomationRuleLogRepo.
 type AutomationRuleLogRepository struct{}
 
+// NewAutomationRuleLogRepository creates a new AutomationRuleLogRepository.
 func NewAutomationRuleLogRepository() *AutomationRuleLogRepository {
 	return &AutomationRuleLogRepository{}
 }
 
+// Create inserts a new automation rule log entry.
 func (r *AutomationRuleLogRepository) Create(ctx context.Context, tx pgx.Tx, log *model.AutomationRuleLog) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO automation_rule_logs (
@@ -252,6 +262,7 @@ func (r *AutomationRuleLogRepository) Create(ctx context.Context, tx pgx.Tx, log
 	).Scan(&log.ExecutedAt)
 }
 
+// ListByRuleID returns paginated log entries for a given automation rule.
 func (r *AutomationRuleLogRepository) ListByRuleID(ctx context.Context, tx pgx.Tx, ruleID uuid.UUID, limit, offset int) ([]model.AutomationRuleLog, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM automation_rule_logs WHERE rule_id = $1", ruleID).Scan(&total); err != nil {

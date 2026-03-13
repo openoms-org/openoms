@@ -152,7 +152,7 @@ func (h *RoleHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListPermissions returns all available permissions with group metadata.
-func (h *RoleHandler) ListPermissions(w http.ResponseWriter, r *http.Request) {
+func (h *RoleHandler) ListPermissions(w http.ResponseWriter, _ *http.Request) {
 	type permissionGroup struct {
 		Group       string   `json:"group"`
 		Permissions []string `json:"permissions"`

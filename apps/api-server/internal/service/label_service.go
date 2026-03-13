@@ -22,11 +22,15 @@ import (
 )
 
 var (
+	// ErrShipmentNotCreated is returned when a shipment is not in 'created' status.
 	ErrShipmentNotCreated   = errors.New("shipment must be in 'created' status to generate label")
+	// ErrNoCarrierIntegration is returned when no active carrier integration exists for the provider.
 	ErrNoCarrierIntegration = errors.New("no active carrier integration found for provider")
+	// ErrNoCustomerContact is returned when an order lacks customer contact information.
 	ErrNoCustomerContact    = errors.New("order has no customer email or phone")
 )
 
+// LabelService handles carrier label generation for shipments.
 type LabelService struct {
 	shipmentRepo    repository.ShipmentRepo
 	orderRepo       repository.OrderRepo
@@ -40,6 +44,7 @@ type LabelService struct {
 	baseURL         string
 }
 
+// NewLabelService creates a new LabelService.
 func NewLabelService(
 	shipmentRepo repository.ShipmentRepo,
 	orderRepo repository.OrderRepo,
@@ -66,6 +71,7 @@ func NewLabelService(
 	}
 }
 
+// GenerateLabel calls the carrier API to generate a shipping label and attaches it to the shipment.
 func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.GenerateLabelRequest, actorID uuid.UUID, ip string) (*model.Shipment, error) {
 	// First transaction: load all required data from the database
 	var shipment *model.Shipment
@@ -263,13 +269,13 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		return nil, fmt.Errorf("unsupported label format")
 	}
 	labelDir := filepath.Join(s.uploadDir, tenantID.String())
-	if err := os.MkdirAll(labelDir, 0755); err != nil {
+	if err := os.MkdirAll(labelDir, 0750); err != nil {
 		return nil, fmt.Errorf("creating label directory: %w", err)
 	}
 
 	filename := uuid.New().String() + "." + ext
 	labelPath := filepath.Join(labelDir, filename)
-	if err := os.WriteFile(labelPath, labelBytes, 0644); err != nil {
+	if err := os.WriteFile(labelPath, labelBytes, 0600); err != nil {
 		return nil, fmt.Errorf("saving label file: %w", err)
 	}
 

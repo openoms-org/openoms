@@ -13,10 +13,12 @@ import (
 // VariantRepository implements VariantRepo.
 type VariantRepository struct{}
 
+// NewVariantRepository creates a new VariantRepository.
 func NewVariantRepository() *VariantRepository {
 	return &VariantRepository{}
 }
 
+// List returns a paginated list of product variants matching the filter.
 func (r *VariantRepository) List(ctx context.Context, tx pgx.Tx, filter model.VariantListFilter) ([]model.ProductVariant, int, error) {
 	qb := NewQueryBuilder()
 
@@ -75,6 +77,7 @@ func (r *VariantRepository) List(ctx context.Context, tx pgx.Tx, filter model.Va
 	return variants, total, rows.Err()
 }
 
+// FindByID returns a product variant by its ID.
 func (r *VariantRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ProductVariant, error) {
 	var v model.ProductVariant
 	err := tx.QueryRow(ctx,
@@ -96,6 +99,7 @@ func (r *VariantRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return &v, nil
 }
 
+// FindBySKU returns all product variants with the given SKU.
 func (r *VariantRepository) FindBySKU(ctx context.Context, tx pgx.Tx, sku string) ([]model.ProductVariant, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, sku, ean, name, attributes, price_override, stock_quantity,
@@ -123,6 +127,7 @@ func (r *VariantRepository) FindBySKU(ctx context.Context, tx pgx.Tx, sku string
 	return variants, rows.Err()
 }
 
+// FindByEAN returns all product variants with the given EAN barcode.
 func (r *VariantRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string) ([]model.ProductVariant, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, sku, ean, name, attributes, price_override, stock_quantity,
@@ -150,6 +155,7 @@ func (r *VariantRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string
 	return variants, rows.Err()
 }
 
+// Create inserts a new product variant.
 func (r *VariantRepository) Create(ctx context.Context, tx pgx.Tx, variant *model.ProductVariant) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO product_variants (id, tenant_id, product_id, sku, ean, name, attributes, price_override, stock_quantity, weight, image_url, position, active)
@@ -161,6 +167,7 @@ func (r *VariantRepository) Create(ctx context.Context, tx pgx.Tx, variant *mode
 	).Scan(&variant.CreatedAt, &variant.UpdatedAt)
 }
 
+// Update applies partial updates to a product variant.
 func (r *VariantRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateVariantRequest) error {
 	var setClauses []string
 	var args []any
@@ -236,6 +243,7 @@ func (r *VariantRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID,
 	return nil
 }
 
+// Delete removes a product variant by its ID.
 func (r *VariantRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM product_variants WHERE id = $1", id)
 	if err != nil {
@@ -247,6 +255,7 @@ func (r *VariantRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 	return nil
 }
 
+// CountByProductID returns the number of variants for the given product.
 func (r *VariantRepository) CountByProductID(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (int, error) {
 	var count int
 	err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM product_variants WHERE product_id = $1", productID).Scan(&count)

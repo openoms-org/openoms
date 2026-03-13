@@ -7,10 +7,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// AccountingProvider defines the interface for accounting/invoicing integrations
+// Provider defines the interface for accounting/invoicing integrations
 // beyond the core InvoicingProvider. It supports richer invoice data models
 // (buyer address, per-item VAT rates) needed by wFirma and inFakt.
-type AccountingProvider interface {
+type Provider interface {
 	Name() string
 	CreateInvoice(ctx context.Context, invoice InvoiceData) (*InvoiceResult, error)
 	GetInvoice(ctx context.Context, externalID string) (*InvoiceResult, error)

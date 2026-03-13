@@ -1,3 +1,4 @@
+// Package service implements the business logic for the API server.
 package service
 
 import (
@@ -100,7 +101,7 @@ func (s *AIService) callOpenAI(ctx context.Context, systemPrompt, userPrompt str
 	if err != nil {
 		return "", fmt.Errorf("openai request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -166,7 +167,7 @@ Zwroc JSON: {"categories": ["klucz1", "klucz2"]}`,
 		Categories []string `json:"categories"`
 	}
 	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-		return []string{}, nil
+		return []string{}, err
 	}
 	return parsed.Categories, nil
 }
@@ -192,7 +193,7 @@ Zwroc JSON: {"tags": ["tag1", "tag2", "tag3"]}`,
 		Tags []string `json:"tags"`
 	}
 	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-		return []string{}, nil
+		return []string{}, err
 	}
 	return parsed.Tags, nil
 }
@@ -455,7 +456,7 @@ Zwroc JSON: {"description": "poprawiony opis"}`,
 		Description string `json:"description"`
 	}
 	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-		return result, nil
+		return result, err
 	}
 	return parsed.Description, nil
 }
@@ -492,7 +493,7 @@ Zwroc JSON: {"description": "przetlumaczony opis"}`,
 		Description string `json:"description"`
 	}
 	if err := json.Unmarshal([]byte(result), &parsed); err != nil {
-		return result, nil
+		return result, err
 	}
 	return parsed.Description, nil
 }

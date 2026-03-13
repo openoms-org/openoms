@@ -32,7 +32,7 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(http.StatusOK) // Always return 200 to InPost
 		return
 	}
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 
 	// Reject requests if webhook secret is not configured
 	if h.webhookSecret == "" {

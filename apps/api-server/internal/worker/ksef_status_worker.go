@@ -27,14 +27,17 @@ func NewKSeFStatusWorker(pool *pgxpool.Pool, ksefService *service.KSeFService, l
 	}
 }
 
+// Name returns the worker identifier.
 func (w *KSeFStatusWorker) Name() string {
 	return "ksef_status_checker"
 }
 
+// Interval returns how frequently the worker should run.
 func (w *KSeFStatusWorker) Interval() time.Duration {
 	return 5 * time.Minute
 }
 
+// Run polls the KSeF API for invoice submission status updates.
 func (w *KSeFStatusWorker) Run(ctx context.Context) error {
 	// Get all tenant IDs
 	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")

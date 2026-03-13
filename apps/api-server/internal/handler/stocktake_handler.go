@@ -35,11 +35,12 @@ func (h *StocktakeHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	stocktake, err := h.svc.CreateStocktake(r.Context(), tenantID, req, actorID, clientIP(r))
 	if err != nil {
-		if isValidationError(err) {
+		switch {
+		case isValidationError(err):
 			writeError(w, http.StatusBadRequest, err.Error())
-		} else if service.IsForeignKeyError(err) {
+		case service.IsForeignKeyError(err):
 			writeError(w, http.StatusBadRequest, "referenced warehouse or product does not exist")
-		} else {
+		default:
 			writeServerError(w, "failed to create stocktake", err)
 		}
 		return

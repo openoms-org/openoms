@@ -21,21 +21,33 @@ import (
 )
 
 var (
+	// ErrSlugTaken is returned when the requested tenant slug is already in use.
 	ErrSlugTaken          = errors.New("tenant slug is already taken")
+	// ErrInvalidCredentials is returned when email or password does not match.
 	ErrInvalidCredentials = errors.New("invalid email or password")
+	// ErrTenantNotFound is returned when a tenant does not exist.
 	ErrTenantNotFound     = errors.New("tenant not found")
+	// ErrUserNotFound is returned when a user does not exist.
 	ErrUserNotFound       = errors.New("user not found")
+	// ErrInvalid2FACode is returned when a TOTP code is incorrect.
 	ErrInvalid2FACode     = errors.New("invalid 2FA code")
+	// ErrInvalid2FAToken is returned when a 2FA token is invalid or expired.
 	ErrInvalid2FAToken    = errors.New("invalid or expired 2FA token")
+	// Err2FANotEnabled is returned when a 2FA operation is requested but 2FA is not enabled.
 	Err2FANotEnabled      = errors.New("2FA is not enabled")
+	// Err2FAAlreadyEnabled is returned when attempting to enable already-active 2FA.
 	Err2FAAlreadyEnabled  = errors.New("2FA is already enabled")
+	// Err2FANotSetup is returned when 2FA verification is attempted before setup.
 	Err2FANotSetup        = errors.New("2FA has not been set up yet")
+	// ErrAccountLocked is returned when an account is locked after too many failed login attempts.
 	ErrAccountLocked      = errors.New("account temporarily locked due to too many failed attempts")
+	// ErrRefreshTokenReuse is returned when a refresh token is used more than once.
 	ErrRefreshTokenReuse  = errors.New("refresh token reuse detected")
 )
 
 const refreshTokenTTL = 30 * 24 * time.Hour
 
+// AuthService handles authentication, token issuance, and 2FA.
 type AuthService struct {
 	userRepo      repository.UserRepo
 	tenantRepo    repository.TenantRepo
@@ -58,6 +70,7 @@ func (s *AuthService) SetRefreshTokenStore(store RefreshTokenStore) {
 	s.refreshStore = store
 }
 
+// NewAuthService creates a new AuthService.
 func NewAuthService(
 	userRepo repository.UserRepo,
 	tenantRepo repository.TenantRepo,
@@ -552,11 +565,13 @@ func (s *AuthService) Get2FAStatus(ctx context.Context, userID, tenantID uuid.UU
 	return resp, nil
 }
 
+// RefreshTokenInfo holds the parsed claims from a refresh token.
 type RefreshTokenInfo struct {
 	UserID   uuid.UUID
 	TenantID uuid.UUID
 }
 
+// ValidateRefreshToken parses and validates a JWT refresh token.
 func (s *AuthService) ValidateRefreshToken(tokenStr string) (*RefreshTokenInfo, error) {
 	claims, err := s.tokenService.ValidateToken(tokenStr)
 	if err != nil {
@@ -572,6 +587,7 @@ func (s *AuthService) ValidateRefreshToken(tokenStr string) (*RefreshTokenInfo, 
 	return &RefreshTokenInfo{UserID: userID, TenantID: claims.TenantID}, nil
 }
 
+// Logout records the logout timestamp for the user.
 func (s *AuthService) Logout(ctx context.Context, userID, tenantID uuid.UUID) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		return s.userRepo.UpdateLastLogout(ctx, tx, userID)

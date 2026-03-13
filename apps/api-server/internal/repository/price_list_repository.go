@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// PriceListRepository handles persistence for price lists and their items.
 type PriceListRepository struct{}
 
+// NewPriceListRepository creates a new PriceListRepository.
 func NewPriceListRepository() *PriceListRepository {
 	return &PriceListRepository{}
 }
@@ -28,6 +30,7 @@ func scanPriceList(row interface{ Scan(dest ...any) error }) (*model.PriceList, 
 	return &pl, err
 }
 
+// List returns a paginated list of price lists matching the filter.
 func (r *PriceListRepository) List(ctx context.Context, tx pgx.Tx, filter model.PriceListListFilter) ([]model.PriceList, int, error) {
 	var conditions []string
 	var args []any
@@ -79,6 +82,7 @@ func (r *PriceListRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 	return priceLists, total, rows.Err()
 }
 
+// FindByID returns a price list by its ID.
 func (r *PriceListRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PriceList, error) {
 	pl, err := scanPriceList(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM price_lists WHERE id = $1", priceListColumns), id,
@@ -92,6 +96,7 @@ func (r *PriceListRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.U
 	return pl, nil
 }
 
+// Create inserts a new price list.
 func (r *PriceListRepository) Create(ctx context.Context, tx pgx.Tx, pl *model.PriceList) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO price_lists (id, tenant_id, name, description, currency, is_default, discount_type, active, valid_from, valid_to)
@@ -102,6 +107,7 @@ func (r *PriceListRepository) Create(ctx context.Context, tx pgx.Tx, pl *model.P
 	).Scan(&pl.CreatedAt, &pl.UpdatedAt)
 }
 
+// Update applies partial updates to a price list.
 func (r *PriceListRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdatePriceListRequest) error {
 	var setClauses []string
 	var args []any
@@ -167,6 +173,7 @@ func (r *PriceListRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return nil
 }
 
+// Delete removes a price list by its ID.
 func (r *PriceListRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM price_lists WHERE id = $1", id)
 	if err != nil {
@@ -192,6 +199,7 @@ func scanPriceListItem(row interface{ Scan(dest ...any) error }) (*model.PriceLi
 	return &item, err
 }
 
+// ListItems returns paginated items belonging to a price list.
 func (r *PriceListRepository) ListItems(ctx context.Context, tx pgx.Tx, priceListID uuid.UUID, limit, offset int) ([]model.PriceListItem, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx,
@@ -221,6 +229,7 @@ func (r *PriceListRepository) ListItems(ctx context.Context, tx pgx.Tx, priceLis
 	return items, total, rows.Err()
 }
 
+// CreateItem inserts a new price list item.
 func (r *PriceListRepository) CreateItem(ctx context.Context, tx pgx.Tx, item *model.PriceListItem) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO price_list_items (id, tenant_id, price_list_id, product_id, variant_id, price, discount, min_quantity)
@@ -231,6 +240,7 @@ func (r *PriceListRepository) CreateItem(ctx context.Context, tx pgx.Tx, item *m
 	).Scan(&item.CreatedAt, &item.UpdatedAt)
 }
 
+// DeleteItem removes a price list item by its ID.
 func (r *PriceListRepository) DeleteItem(ctx context.Context, tx pgx.Tx, itemID uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM price_list_items WHERE id = $1", itemID)
 	if err != nil {
@@ -242,6 +252,7 @@ func (r *PriceListRepository) DeleteItem(ctx context.Context, tx pgx.Tx, itemID 
 	return nil
 }
 
+// FindItemsByProduct returns price list items matching product, variant, and quantity tier.
 func (r *PriceListRepository) FindItemsByProduct(ctx context.Context, tx pgx.Tx, priceListID, productID uuid.UUID, variantID *uuid.UUID, quantity int) ([]model.PriceListItem, error) {
 	query := fmt.Sprintf(
 		`SELECT %s FROM price_list_items

@@ -35,7 +35,7 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 			key := fmt.Sprintf("rl:%s:%s:%d", ip, route, maxRequests)
 			allowed, err := limiter.Allow(r.Context(), key, maxRequests, window)
 			if err != nil {
-				slog.Error("rate limiter error, failing open", "error", err, "ip", ip)
+				slog.Error("rate limiter error, failing open", "error", err, "ip", ip) // #nosec G706 -- ip is logged as a structured field, not interpolated
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -44,7 +44,7 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 				w.Header().Set("Content-Type", "application/json")
 				w.Header().Set("Retry-After", "60")
 				w.WriteHeader(http.StatusTooManyRequests)
-				w.Write([]byte(`{"error":"too many requests"}`))
+				_, _ = w.Write([]byte(`{"error":"too many requests"}`))
 				return
 			}
 

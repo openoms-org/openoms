@@ -15,13 +15,13 @@ import (
 )
 
 // AutomationRuleRepo is the interface needed by the engine for rule persistence.
-type AutomationRuleRepo interface {
+type AutomationRuleRepo interface { //nolint:revive
 	FindByTenantAndEvent(ctx context.Context, tx pgx.Tx, event string) ([]model.AutomationRule, error)
 	IncrementFireCount(ctx context.Context, tx pgx.Tx, id uuid.UUID, firedAt time.Time) error
 }
 
 // AutomationRuleLogRepo is the interface needed by the engine for log persistence.
-type AutomationRuleLogRepo interface {
+type AutomationRuleLogRepo interface { //nolint:revive
 	Create(ctx context.Context, tx pgx.Tx, log *model.AutomationRuleLog) error
 }
 

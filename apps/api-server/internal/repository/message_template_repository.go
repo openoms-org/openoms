@@ -18,6 +18,7 @@ func NewMessageTemplateRepository() *MessageTemplateRepository {
 	return &MessageTemplateRepository{}
 }
 
+// List returns a paginated list of message templates matching the filter.
 func (r *MessageTemplateRepository) List(ctx context.Context, tx pgx.Tx, filter model.MessageTemplateListFilter) ([]model.MessageTemplate, int, error) {
 	var whereClauses []string
 	var args []any
@@ -80,6 +81,7 @@ func (r *MessageTemplateRepository) List(ctx context.Context, tx pgx.Tx, filter 
 	return templates, total, rows.Err()
 }
 
+// FindByID returns a message template by its ID.
 func (r *MessageTemplateRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.MessageTemplate, error) {
 	var t model.MessageTemplate
 	err := tx.QueryRow(ctx,
@@ -99,6 +101,7 @@ func (r *MessageTemplateRepository) FindByID(ctx context.Context, tx pgx.Tx, id 
 	return &t, nil
 }
 
+// Create inserts a new message template.
 func (r *MessageTemplateRepository) Create(ctx context.Context, tx pgx.Tx, template *model.MessageTemplate) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO message_templates (id, tenant_id, name, channel, subject, body, variables,
@@ -110,6 +113,7 @@ func (r *MessageTemplateRepository) Create(ctx context.Context, tx pgx.Tx, templ
 	).Scan(&template.CreatedAt, &template.UpdatedAt)
 }
 
+// Update applies partial updates to a message template.
 func (r *MessageTemplateRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateMessageTemplateRequest) error {
 	var setClauses []string
 	var args []any
@@ -176,6 +180,7 @@ func (r *MessageTemplateRepository) Update(ctx context.Context, tx pgx.Tx, id uu
 	return nil
 }
 
+// Delete removes a message template by its ID.
 func (r *MessageTemplateRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM message_templates WHERE id = $1", id)
 	if err != nil {

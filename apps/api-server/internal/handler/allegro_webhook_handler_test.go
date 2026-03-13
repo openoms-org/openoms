@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testWebhookSecret = "test-webhook-secret-key-12345"
+const testWebhookSecret = "test-webhook-secret-key-12345" // #nosec G101
 
 // computeHMAC computes the HMAC-SHA256 signature for the given body using the secret.
 func computeHMAC(secret string, body []byte) string {

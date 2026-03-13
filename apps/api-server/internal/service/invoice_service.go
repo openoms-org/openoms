@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	// ErrInvoiceNotFound is returned when an invoice does not exist.
 	ErrInvoiceNotFound = errors.New("invoice not found")
 )
 
@@ -32,6 +33,7 @@ type InvoicingSettings struct {
 	PaymentDays        int      `json:"payment_days"`
 }
 
+// InvoiceService handles business logic for invoicing.
 type InvoiceService struct {
 	invoiceRepo repository.InvoiceRepo
 	orderRepo   repository.OrderRepo
@@ -47,6 +49,7 @@ func (s *InvoiceService) SetKSeFService(ksefSvc *KSeFService) {
 	s.ksefService = ksefSvc
 }
 
+// NewInvoiceService creates a new InvoiceService.
 func NewInvoiceService(
 	invoiceRepo repository.InvoiceRepo,
 	orderRepo repository.OrderRepo,
@@ -65,6 +68,7 @@ func NewInvoiceService(
 	}
 }
 
+// List returns a paginated list of invoices for a tenant.
 func (s *InvoiceService) List(ctx context.Context, tenantID uuid.UUID, filter model.InvoiceListFilter) (model.ListResponse[model.Invoice], error) {
 	var resp model.ListResponse[model.Invoice]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -86,6 +90,7 @@ func (s *InvoiceService) List(ctx context.Context, tenantID uuid.UUID, filter mo
 	return resp, err
 }
 
+// Get returns a single invoice by ID.
 func (s *InvoiceService) Get(ctx context.Context, tenantID, invoiceID uuid.UUID) (*model.Invoice, error) {
 	var inv *model.Invoice
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -102,6 +107,7 @@ func (s *InvoiceService) Get(ctx context.Context, tenantID, invoiceID uuid.UUID)
 	return inv, nil
 }
 
+// ListByOrderID returns all invoices linked to a specific order.
 func (s *InvoiceService) ListByOrderID(ctx context.Context, tenantID, orderID uuid.UUID) ([]model.Invoice, error) {
 	var invoices []model.Invoice
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -115,6 +121,7 @@ func (s *InvoiceService) ListByOrderID(ctx context.Context, tenantID, orderID uu
 	return invoices, err
 }
 
+// Create generates a new invoice, calling the configured invoicing provider.
 func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateInvoiceRequest, actorID uuid.UUID, ip string) (*model.Invoice, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -254,6 +261,7 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 	return inv, err
 }
 
+// Cancel voids an existing invoice via the invoicing provider.
 func (s *InvoiceService) Cancel(ctx context.Context, tenantID, invoiceID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		inv, err := s.invoiceRepo.FindByID(ctx, tx, invoiceID)
@@ -291,6 +299,7 @@ func (s *InvoiceService) Cancel(ctx context.Context, tenantID, invoiceID, actorI
 	return err
 }
 
+// GetPDF retrieves the PDF binary for an invoice.
 func (s *InvoiceService) GetPDF(ctx context.Context, tenantID, invoiceID uuid.UUID) ([]byte, error) {
 	var pdfData []byte
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -387,7 +396,7 @@ func (s *InvoiceService) HandleOrderStatusChange(ctx context.Context, tenantID u
 			invoice.ErrorMessage = &errMsg
 			invoice.Status = "error"
 			_ = s.invoiceRepo.Update(ctx, tx, invoice)
-			return nil
+			return nil //nolint:nilerr // provider error recorded in invoice.ErrorMessage; returning nil commits the invoice with error status
 		}
 
 		customerEmail := ""
@@ -473,7 +482,7 @@ func (s *InvoiceService) loadInvoicingSettings(ctx context.Context, tx pgx.Tx, t
 
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	raw, ok := allSettings["invoicing"]
@@ -483,7 +492,7 @@ func (s *InvoiceService) loadInvoicingSettings(ctx context.Context, tx pgx.Tx, t
 
 	var cfg InvoicingSettings
 	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return nil, nil
+		return nil, err
 	}
 	return &cfg, nil
 }

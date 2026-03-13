@@ -18,10 +18,13 @@ import (
 )
 
 var (
+	// ErrSegmentNotFound is returned when a customer segment does not exist.
 	ErrSegmentNotFound = errors.New("segment not found")
+	// ErrMemberNotFound is returned when a member does not exist in a segment.
 	ErrMemberNotFound  = errors.New("member not found in segment")
 )
 
+// SegmentService handles business logic for customer segments.
 type SegmentService struct {
 	segmentRepo *repository.CustomerSegmentRepository
 	auditRepo   repository.AuditRepo
@@ -29,6 +32,7 @@ type SegmentService struct {
 	logger      *slog.Logger
 }
 
+// NewSegmentService creates a new SegmentService.
 func NewSegmentService(
 	segmentRepo *repository.CustomerSegmentRepository,
 	auditRepo repository.AuditRepo,
@@ -43,6 +47,7 @@ func NewSegmentService(
 	}
 }
 
+// List returns a paginated list of customer segments.
 func (s *SegmentService) List(ctx context.Context, tenantID uuid.UUID, filter model.SegmentListFilter) (model.ListResponse[model.CustomerSegment], error) {
 	var resp model.ListResponse[model.CustomerSegment]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -64,6 +69,7 @@ func (s *SegmentService) List(ctx context.Context, tenantID uuid.UUID, filter mo
 	return resp, err
 }
 
+// Get returns a single customer segment by ID.
 func (s *SegmentService) Get(ctx context.Context, tenantID, segmentID uuid.UUID) (*model.CustomerSegment, error) {
 	var segment *model.CustomerSegment
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -80,6 +86,7 @@ func (s *SegmentService) Get(ctx context.Context, tenantID, segmentID uuid.UUID)
 	return segment, nil
 }
 
+// Create inserts a new customer segment.
 func (s *SegmentService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateSegmentRequest, actorID uuid.UUID, ip string) (*model.CustomerSegment, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -112,6 +119,7 @@ func (s *SegmentService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 	return segment, err
 }
 
+// Update modifies an existing customer segment.
 func (s *SegmentService) Update(ctx context.Context, tenantID, segmentID uuid.UUID, req model.UpdateSegmentRequest, actorID uuid.UUID, ip string) (*model.CustomerSegment, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -148,6 +156,7 @@ func (s *SegmentService) Update(ctx context.Context, tenantID, segmentID uuid.UU
 	return segment, err
 }
 
+// Delete removes a customer segment by ID.
 func (s *SegmentService) Delete(ctx context.Context, tenantID, segmentID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.segmentRepo.FindByID(ctx, tx, segmentID)
@@ -174,6 +183,7 @@ func (s *SegmentService) Delete(ctx context.Context, tenantID, segmentID uuid.UU
 	})
 }
 
+// ListMembers returns a paginated list of members in a segment.
 func (s *SegmentService) ListMembers(ctx context.Context, tenantID, segmentID uuid.UUID, limit, offset int) (model.ListResponse[model.SegmentMember], error) {
 	var resp model.ListResponse[model.SegmentMember]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -203,6 +213,7 @@ func (s *SegmentService) ListMembers(ctx context.Context, tenantID, segmentID uu
 	return resp, err
 }
 
+// AddMember adds a customer to a segment.
 func (s *SegmentService) AddMember(ctx context.Context, tenantID, segmentID uuid.UUID, req model.AddSegmentMemberRequest, actorID uuid.UUID, ip string) error {
 	if err := req.Validate(); err != nil {
 		return NewValidationError(err)
@@ -237,6 +248,7 @@ func (s *SegmentService) AddMember(ctx context.Context, tenantID, segmentID uuid
 	})
 }
 
+// RemoveMember removes a customer from a segment.
 func (s *SegmentService) RemoveMember(ctx context.Context, tenantID, segmentID, customerID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.segmentRepo.FindByID(ctx, tx, segmentID)
@@ -563,7 +575,7 @@ func (s *SegmentService) RefreshRuleBasedSegments(ctx context.Context, tenantID 
 
 func itoa(n int) string {
 	if n < 10 {
-		return string(rune('0' + n))
+		return string(rune('0' + n)) // #nosec G115 -- n is always 0-9 at this point
 	}
-	return itoa(n/10) + string(rune('0'+n%10))
+	return itoa(n/10) + string(rune('0'+n%10)) // #nosec G115 -- n%10 is always 0-9
 }

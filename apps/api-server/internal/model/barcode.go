@@ -23,6 +23,7 @@ type PackOrderRequest struct {
 	ScannedItems []ScannedItem `json:"scanned_items"`
 }
 
+// Validate validates the pack order request.
 func (r *PackOrderRequest) Validate() error {
 	if len(r.ScannedItems) == 0 {
 		return errors.New("scanned_items is required and must not be empty")

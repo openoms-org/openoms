@@ -182,7 +182,7 @@ func (s *VATOSSService) GetOSSConfig(ctx context.Context, tenantID uuid.UUID) (*
 		}
 		var allSettings map[string]json.RawMessage
 		if err := json.Unmarshal(settings, &allSettings); err != nil {
-			return nil
+			return err
 		}
 		raw, ok := allSettings["vat_oss"]
 		if !ok {

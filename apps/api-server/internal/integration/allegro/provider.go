@@ -1,3 +1,4 @@
+// Package allegro implements the Allegro marketplace provider.
 package allegro
 
 import (
@@ -20,8 +21,8 @@ func init() {
 	})
 }
 
-// AllegroCredentials is the JSON structure stored in encrypted integration credentials.
-type AllegroCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	AccessToken  string `json:"access_token"`
@@ -39,8 +40,8 @@ type Provider struct {
 }
 
 // NewProvider creates an Allegro MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds AllegroCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("allegro: parse credentials: %w", err)
 	}
@@ -62,6 +63,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "allegro" }
 
 // SDKClient returns the underlying Allegro SDK client for direct API access.
@@ -121,7 +123,7 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 }
 
 // PushOffer creates an Allegro offer from a product and listing data.
-func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
+func (p *Provider) PushOffer(ctx context.Context, _ *model.Product, listingData map[string]any) (string, error) {
 	offer, err := p.client.Offers.Create(ctx, listingData)
 	if err != nil {
 		return "", fmt.Errorf("allegro: create offer: %w", err)

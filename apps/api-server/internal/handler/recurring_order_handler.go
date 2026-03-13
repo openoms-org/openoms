@@ -12,14 +12,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// RecurringOrderHandler handles HTTP requests for recurring order management.
 type RecurringOrderHandler struct {
 	recurringOrderService *service.RecurringOrderService
 }
 
+// NewRecurringOrderHandler creates a new RecurringOrderHandler.
 func NewRecurringOrderHandler(recurringOrderService *service.RecurringOrderService) *RecurringOrderHandler {
 	return &RecurringOrderHandler{recurringOrderService: recurringOrderService}
 }
 
+// List returns a paginated list of recurring orders.
 func (h *RecurringOrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -45,6 +48,7 @@ func (h *RecurringOrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single recurring order by ID.
 func (h *RecurringOrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -66,6 +70,7 @@ func (h *RecurringOrderHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ro)
 }
 
+// Create inserts a new recurring order.
 func (h *RecurringOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -88,6 +93,7 @@ func (h *RecurringOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, ro)
 }
 
+// Update modifies an existing recurring order.
 func (h *RecurringOrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -121,6 +127,7 @@ func (h *RecurringOrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ro)
 }
 
+// Delete removes a recurring order by ID.
 func (h *RecurringOrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -146,6 +153,7 @@ func (h *RecurringOrderHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Pause suspends a recurring order from generating new orders.
 func (h *RecurringOrderHandler) Pause(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -171,6 +179,7 @@ func (h *RecurringOrderHandler) Pause(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "paused"})
 }
 
+// Resume reactivates a paused recurring order.
 func (h *RecurringOrderHandler) Resume(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -198,6 +207,7 @@ func (h *RecurringOrderHandler) Resume(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "active"})
 }
 
+// Cancel permanently stops a recurring order.
 func (h *RecurringOrderHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())

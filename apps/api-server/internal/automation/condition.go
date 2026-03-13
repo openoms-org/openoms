@@ -124,11 +124,11 @@ func toFloat64(v any) float64 {
 		return float64(n)
 	case string:
 		var f float64
-		fmt.Sscanf(n, "%f", &f)
+		_, _ = fmt.Sscanf(n, "%f", &f)
 		return f
 	default:
 		var f float64
-		fmt.Sscanf(fmt.Sprintf("%v", v), "%f", &f)
+		_, _ = fmt.Sscanf(fmt.Sprintf("%v", v), "%f", &f)
 		return f
 	}
 }

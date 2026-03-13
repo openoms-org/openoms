@@ -11,8 +11,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// RecurringOrderRepository handles persistence for recurring orders.
 type RecurringOrderRepository struct{}
 
+// NewRecurringOrderRepository creates a new RecurringOrderRepository.
 func NewRecurringOrderRepository() *RecurringOrderRepository {
 	return &RecurringOrderRepository{}
 }
@@ -33,6 +35,7 @@ func scanRecurringOrder(row interface{ Scan(dest ...any) error }) (*model.Recurr
 	return &ro, err
 }
 
+// List returns a paginated list of recurring orders matching the filter.
 func (r *RecurringOrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.RecurringOrderListFilter) ([]model.RecurringOrder, int, error) {
 	qb := NewQueryBuilder()
 
@@ -86,6 +89,7 @@ func (r *RecurringOrderRepository) List(ctx context.Context, tx pgx.Tx, filter m
 	return orders, total, rows.Err()
 }
 
+// FindByID returns a recurring order by its ID.
 func (r *RecurringOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.RecurringOrder, error) {
 	ro, err := scanRecurringOrder(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM recurring_orders WHERE id = $1", recurringOrderColumns), id,
@@ -99,6 +103,7 @@ func (r *RecurringOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id u
 	return ro, nil
 }
 
+// Create inserts a new recurring order.
 func (r *RecurringOrderRepository) Create(ctx context.Context, tx pgx.Tx, ro *model.RecurringOrder) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO recurring_orders (id, tenant_id, customer_id, customer_name, customer_email,
@@ -112,6 +117,7 @@ func (r *RecurringOrderRepository) Create(ctx context.Context, tx pgx.Tx, ro *mo
 	).Scan(&ro.CreatedAt, &ro.UpdatedAt)
 }
 
+// Update applies partial updates to a recurring order.
 func (r *RecurringOrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRecurringOrderRequest) error {
 	var setClauses []string
 	var args []any
@@ -186,6 +192,7 @@ func (r *RecurringOrderRepository) Update(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// UpdateStatus sets the status of a recurring order.
 func (r *RecurringOrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error {
 	ct, err := tx.Exec(ctx,
 		"UPDATE recurring_orders SET status = $1, updated_at = NOW() WHERE id = $2",
@@ -200,6 +207,7 @@ func (r *RecurringOrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, 
 	return nil
 }
 
+// Delete removes a recurring order by its ID.
 func (r *RecurringOrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM recurring_orders WHERE id = $1", id)
 	if err != nil {
@@ -264,6 +272,7 @@ func scanRecurringOrderItem(row interface{ Scan(dest ...any) error }) (*model.Re
 	return &item, err
 }
 
+// ListItems returns all items for the given recurring order.
 func (r *RecurringOrderRepository) ListItems(ctx context.Context, tx pgx.Tx, recurringOrderID uuid.UUID) ([]model.RecurringOrderItem, error) {
 	query := fmt.Sprintf(
 		`SELECT %s FROM recurring_order_items WHERE recurring_order_id = $1 ORDER BY created_at ASC`,
@@ -286,6 +295,7 @@ func (r *RecurringOrderRepository) ListItems(ctx context.Context, tx pgx.Tx, rec
 	return items, rows.Err()
 }
 
+// CreateItem inserts a new item into a recurring order.
 func (r *RecurringOrderRepository) CreateItem(ctx context.Context, tx pgx.Tx, item *model.RecurringOrderItem) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO recurring_order_items (id, tenant_id, recurring_order_id, product_id, sku, product_name, quantity, unit_price)
@@ -296,6 +306,7 @@ func (r *RecurringOrderRepository) CreateItem(ctx context.Context, tx pgx.Tx, it
 	).Scan(&item.CreatedAt)
 }
 
+// DeleteItemsByRecurringOrderID deletes all items for the given recurring order.
 func (r *RecurringOrderRepository) DeleteItemsByRecurringOrderID(ctx context.Context, tx pgx.Tx, recurringOrderID uuid.UUID) error {
 	_, err := tx.Exec(ctx, "DELETE FROM recurring_order_items WHERE recurring_order_id = $1", recurringOrderID)
 	if err != nil {

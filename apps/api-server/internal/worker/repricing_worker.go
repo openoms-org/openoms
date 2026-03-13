@@ -18,6 +18,7 @@ type RepricingWorker struct {
 	logger           *slog.Logger
 }
 
+// NewRepricingWorker creates a new RepricingWorker.
 func NewRepricingWorker(
 	pool *pgxpool.Pool,
 	repricingService *service.RepricingService,
@@ -30,14 +31,17 @@ func NewRepricingWorker(
 	}
 }
 
+// Name returns the unique name of this worker.
 func (w *RepricingWorker) Name() string {
 	return "repricing_engine"
 }
 
+// Interval returns how often this worker should run.
 func (w *RepricingWorker) Interval() time.Duration {
 	return 15 * time.Minute
 }
 
+// Run applies repricing rules across all active tenants.
 func (w *RepricingWorker) Run(ctx context.Context) error {
 	// Get all tenant IDs (bypasses RLS — runs on workerPool)
 	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")

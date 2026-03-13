@@ -1,3 +1,4 @@
+// Package olx implements the OLX marketplace provider.
 package olx
 
 import (
@@ -21,8 +22,8 @@ func init() {
 	})
 }
 
-// OLXCredentials is the JSON structure stored in encrypted integration credentials.
-type OLXCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	AccessToken  string `json:"access_token"`
@@ -41,8 +42,8 @@ var _ integration.ListingActivator = (*Provider)(nil)
 var _ integration.ListingDeactivator = (*Provider)(nil)
 
 // NewProvider creates an OLX MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds OLXCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("olx: parse credentials: %w", err)
 	}
@@ -75,6 +76,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "olx" }
 
 // Client returns the underlying OLX SDK client for direct API access.

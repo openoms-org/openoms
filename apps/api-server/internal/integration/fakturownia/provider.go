@@ -1,3 +1,4 @@
+// Package fakturownia implements the Fakturownia invoicing provider.
 package fakturownia
 
 import (
@@ -29,7 +30,7 @@ type Provider struct {
 }
 
 // NewProvider creates a new Fakturownia invoicing provider.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
 	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("fakturownia: invalid credentials: %w", err)
@@ -43,10 +44,12 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	return &Provider{client: client}, nil
 }
 
+// ProviderName returns the invoicing provider identifier.
 func (p *Provider) ProviderName() string {
 	return "fakturownia"
 }
 
+// CreateInvoice creates a new invoice in Fakturownia and returns the result.
 func (p *Provider) CreateInvoice(ctx context.Context, req integration.InvoiceRequest) (*integration.InvoiceResult, error) {
 	positions := make([]sdk.InvoicePosition, 0, len(req.Items))
 	for _, item := range req.Items {
@@ -86,6 +89,7 @@ func (p *Provider) CreateInvoice(ctx context.Context, req integration.InvoiceReq
 	}, nil
 }
 
+// GetInvoice retrieves an invoice from Fakturownia by its external ID.
 func (p *Provider) GetInvoice(ctx context.Context, externalID string) (*integration.InvoiceResult, error) {
 	id, err := sdk.ParseExternalID(externalID)
 	if err != nil {
@@ -105,6 +109,7 @@ func (p *Provider) GetInvoice(ctx context.Context, externalID string) (*integrat
 	}, nil
 }
 
+// GetPDF downloads the PDF for a Fakturownia invoice by its external ID.
 func (p *Provider) GetPDF(ctx context.Context, externalID string) ([]byte, error) {
 	id, err := sdk.ParseExternalID(externalID)
 	if err != nil {
@@ -119,6 +124,7 @@ func (p *Provider) GetPDF(ctx context.Context, externalID string) ([]byte, error
 	return data, nil
 }
 
+// CancelInvoice cancels a Fakturownia invoice by its external ID.
 func (p *Provider) CancelInvoice(ctx context.Context, externalID string) error {
 	id, err := sdk.ParseExternalID(externalID)
 	if err != nil {

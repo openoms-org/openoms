@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware for authentication, logging, and other cross-cutting concerns.
 package middleware
 
 import (
@@ -102,5 +103,5 @@ func HashToken(token string) string {
 func writeAuthError(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }

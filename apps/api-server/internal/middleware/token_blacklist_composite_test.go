@@ -97,12 +97,11 @@ func TestCompositeTokenBlacklist_Concurrent_RevokeAndIsRevoked(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines * 2)
 
-	for i := range goroutines {
-		go func(idx int) {
+	for range goroutines {
+		go func() {
 			defer wg.Done()
 			composite.Revoke("concurrent-token", time.Now().Add(1*time.Hour))
-			_ = idx
-		}(i)
+		}()
 	}
 
 	for range goroutines {

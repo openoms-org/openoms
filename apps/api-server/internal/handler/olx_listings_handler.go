@@ -257,9 +257,9 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		// Best-effort cleanup: deactivate the OLX advert we just created.
 		if deactErr := provider.DeactivateOffer(ctx, externalID); deactErr != nil {
-			slog.Error("olx listings: failed to deactivate orphaned advert", "external_id", externalID, "error", deactErr)
+			slog.Error("olx listings: failed to deactivate orphaned advert", "external_id", externalID, "error", deactErr) //nolint:gosec
 		} else {
-			slog.Info("olx listings: deactivated orphaned advert after DB failure", "external_id", externalID)
+			slog.Info("olx listings: deactivated orphaned advert after DB failure", "external_id", externalID) //nolint:gosec
 		}
 
 		var pgErr *pgconn.PgError
@@ -267,7 +267,7 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusConflict, "listing already exists for this product and integration")
 			return
 		}
-		slog.Error("olx listings: DB save failed after advert creation", "external_id", externalID, "tenant_id", tenantID, "error", err)
+		slog.Error("olx listings: DB save failed after advert creation", "external_id", externalID, "tenant_id", tenantID, "error", err) //nolint:gosec
 		writeServerError(w, "failed to save listing record", err)
 		return
 	}
@@ -404,7 +404,7 @@ func (h *OLXListingsHandler) ListCities(w http.ResponseWriter, r *http.Request) 
 			}
 			offset += batchSize
 		}
-		slog.Info("olx: cached cities from OLX API", "count", len(fetched))
+		slog.Info("olx: cached cities from OLX API", "count", len(fetched)) //nolint:gosec
 		globalOLXCityCache.set(fetched)
 		allCities = fetched
 	}

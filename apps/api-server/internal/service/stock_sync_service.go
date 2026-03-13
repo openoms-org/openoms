@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	// ErrStockSyncChannelNotFound is returned when a stock sync channel does not exist.
 	ErrStockSyncChannelNotFound = errors.New("stock sync channel not found")
 )
 
@@ -1089,11 +1090,12 @@ func (s *StockSyncService) GetDashboard(ctx context.Context, tenantID uuid.UUID)
 
 		for _, ch := range allChannels {
 			status := "ok"
-			if !ch.Enabled {
+			switch {
+			case !ch.Enabled:
 				status = "disabled"
-			} else if ch.LastError != nil && *ch.LastError != "" {
+			case ch.LastError != nil && *ch.LastError != "":
 				status = "error"
-			} else if ch.LastSyncAt == nil {
+			case ch.LastSyncAt == nil:
 				status = "warning"
 			}
 

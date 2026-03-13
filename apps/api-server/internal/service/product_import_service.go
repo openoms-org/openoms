@@ -60,11 +60,6 @@ type ProductImportResult struct {
 	Errors  []model.ImportError `json:"errors"`
 }
 
-// requiredProductCSVHeaders lists the expected CSV header names.
-var requiredProductCSVHeaders = map[string]bool{
-	"name": true,
-}
-
 // PreviewCSV parses a CSV and returns a preview with stats.
 func (s *ProductImportService) PreviewCSV(ctx context.Context, tenantID uuid.UUID, file io.Reader) (*ProductImportPreview, error) {
 	raw, err := io.ReadAll(file)

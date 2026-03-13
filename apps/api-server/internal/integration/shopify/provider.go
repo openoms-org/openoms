@@ -1,3 +1,4 @@
+// Package shopify implements the Shopify marketplace provider.
 package shopify
 
 import (
@@ -22,8 +23,8 @@ func init() {
 	})
 }
 
-// ShopifyCredentials is the JSON structure stored in encrypted integration credentials.
-type ShopifyCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	ShopDomain  string `json:"shop_domain"`
 	AccessToken string `json:"access_token"`
 	APIVersion  string `json:"api_version,omitempty"`
@@ -36,8 +37,8 @@ type Provider struct {
 }
 
 // NewProvider creates a Shopify MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds ShopifyCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("shopify: parse credentials: %w", err)
 	}
@@ -64,6 +65,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "shopify" }
 
 // PollOrders polls Shopify for orders updated after the given cursor.
@@ -118,7 +120,7 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 }
 
 // PushOffer creates a Shopify product from a product and listing data.
-func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
+func (p *Provider) PushOffer(_ context.Context, product *model.Product, listingData map[string]any) (string, error) {
 	data := make(map[string]any)
 	maps.Copy(data, listingData)
 	if _, ok := data["title"]; !ok {

@@ -1,3 +1,4 @@
+// Package config loads and holds all runtime configuration for the API server.
 package config
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
+// Config holds all runtime configuration loaded from environment variables.
 type Config struct {
 	Port        string `env:"PORT" envDefault:"8080"`
 	Env         string `env:"ENV" envDefault:"development"`
@@ -72,6 +74,7 @@ type Config struct {
 	SentryTracesSampleRate float64 `env:"SENTRY_TRACES_SAMPLE_RATE" envDefault:"0"`
 }
 
+// Load parses environment variables into a Config struct.
 func Load() (*Config, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
@@ -80,6 +83,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+// IsDevelopment reports whether the server is running in development mode.
 func (c *Config) IsDevelopment() bool {
 	return c.Env == "development"
 }

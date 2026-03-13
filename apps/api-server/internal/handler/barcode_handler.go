@@ -12,10 +12,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// BarcodeHandler handles HTTP requests for barcode scanning operations.
 type BarcodeHandler struct {
 	barcodeService *service.BarcodeService
 }
 
+// NewBarcodeHandler creates a new BarcodeHandler.
 func NewBarcodeHandler(barcodeService *service.BarcodeService) *BarcodeHandler {
 	return &BarcodeHandler{barcodeService: barcodeService}
 }

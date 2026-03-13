@@ -11,12 +11,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// StatsRepository provides tenant-scoped dashboard statistics queries.
 type StatsRepository struct{}
 
+// NewStatsRepository creates a new StatsRepository.
 func NewStatsRepository() *StatsRepository {
 	return &StatsRepository{}
 }
 
+// GetOrderCountByStatus returns a map of order status to count for the current tenant.
 func (r *StatsRepository) GetOrderCountByStatus(ctx context.Context, tx pgx.Tx) (map[string]int, error) {
 	rows, err := tx.Query(ctx, `SELECT status, COUNT(*) FROM orders GROUP BY status`)
 	if err != nil {
@@ -36,6 +39,7 @@ func (r *StatsRepository) GetOrderCountByStatus(ctx context.Context, tx pgx.Tx) 
 	return result, rows.Err()
 }
 
+// GetOrderCountBySource returns a map of order source to count for the current tenant.
 func (r *StatsRepository) GetOrderCountBySource(ctx context.Context, tx pgx.Tx) (map[string]int, error) {
 	rows, err := tx.Query(ctx, `SELECT source, COUNT(*) FROM orders GROUP BY source`)
 	if err != nil {
@@ -55,6 +59,7 @@ func (r *StatsRepository) GetOrderCountBySource(ctx context.Context, tx pgx.Tx) 
 	return result, rows.Err()
 }
 
+// GetTotalRevenue returns the sum of total_amount across all orders for the current tenant.
 func (r *StatsRepository) GetTotalRevenue(ctx context.Context, tx pgx.Tx) (float64, error) {
 	var total float64
 	err := tx.QueryRow(ctx, `SELECT COALESCE(SUM(total_amount), 0) FROM orders`).Scan(&total)
@@ -64,6 +69,7 @@ func (r *StatsRepository) GetTotalRevenue(ctx context.Context, tx pgx.Tx) (float
 	return total, nil
 }
 
+// GetDailyRevenue returns revenue aggregated by day for the given number of past days.
 func (r *StatsRepository) GetDailyRevenue(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyRevenue, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT DATE(created_at) as date, SUM(total_amount) as amount, COUNT(*) as count
@@ -89,6 +95,7 @@ func (r *StatsRepository) GetDailyRevenue(ctx context.Context, tx pgx.Tx, days i
 	return result, rows.Err()
 }
 
+// GetMostCommonCurrency returns the currency used most frequently in orders.
 func (r *StatsRepository) GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) (string, error) {
 	var currency *string
 	err := tx.QueryRow(ctx,
@@ -106,6 +113,7 @@ func (r *StatsRepository) GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) 
 	return *currency, nil
 }
 
+// GetRecentOrders returns up to limit most recently created order summaries.
 func (r *StatsRepository) GetRecentOrders(ctx context.Context, tx pgx.Tx, limit int) ([]model.OrderSummary, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, customer_name, status, source, total_amount, currency, created_at
@@ -130,6 +138,7 @@ func (r *StatsRepository) GetRecentOrders(ctx context.Context, tx pgx.Tx, limit 
 	return result, rows.Err()
 }
 
+// GetTopProducts returns up to limit products ranked by total revenue.
 func (r *StatsRepository) GetTopProducts(ctx context.Context, tx pgx.Tx, limit int) ([]model.TopProduct, error) {
 	rows, err := tx.Query(ctx,
 		`WITH eligible_orders AS (
@@ -164,6 +173,7 @@ func (r *StatsRepository) GetTopProducts(ctx context.Context, tx pgx.Tx, limit i
 	return result, rows.Err()
 }
 
+// GetRevenueBySource returns revenue aggregated by order source for the given number of past days.
 func (r *StatsRepository) GetRevenueBySource(ctx context.Context, tx pgx.Tx, days int) ([]model.SourceRevenue, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT source, SUM(total_amount) as revenue, COUNT(*) as count
@@ -187,6 +197,7 @@ func (r *StatsRepository) GetRevenueBySource(ctx context.Context, tx pgx.Tx, day
 	return result, rows.Err()
 }
 
+// GetOrderTrends returns daily order count and average value for the given number of past days.
 func (r *StatsRepository) GetOrderTrends(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyOrderTrend, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT DATE(created_at) as date, COUNT(*) as count, AVG(total_amount) as avg_value
@@ -212,6 +223,7 @@ func (r *StatsRepository) GetOrderTrends(ctx context.Context, tx pgx.Tx, days in
 	return result, rows.Err()
 }
 
+// GetPaymentMethodStats returns a map of payment method to order count for the current tenant.
 func (r *StatsRepository) GetPaymentMethodStats(ctx context.Context, tx pgx.Tx) (map[string]int, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT COALESCE(payment_method, 'unknown'), COUNT(*)

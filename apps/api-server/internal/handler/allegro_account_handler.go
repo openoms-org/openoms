@@ -148,7 +148,7 @@ func (h *AllegroAccountHandler) DeactivateOffer(w http.ResponseWriter, r *http.R
 	defer client.Close()
 
 	if err := client.Offers.Deactivate(r.Context(), offerID); err != nil {
-		slog.Error("allegro offers: failed to deactivate", "error", err, "offer_id", offerID)
+		slog.Error("allegro offers: failed to deactivate", "error", err, "offer_id", offerID) //nolint:gosec
 		writeAllegroError(w, "Failed to deactivate offer", err)
 		return
 	}
@@ -174,7 +174,7 @@ func (h *AllegroAccountHandler) ActivateOffer(w http.ResponseWriter, r *http.Req
 	defer client.Close()
 
 	if err := client.Offers.Activate(r.Context(), offerID); err != nil {
-		slog.Error("allegro offers: failed to activate", "error", err, "offer_id", offerID)
+		slog.Error("allegro offers: failed to activate", "error", err, "offer_id", offerID) //nolint:gosec
 		writeAllegroError(w, "Failed to activate offer", err)
 		return
 	}
@@ -208,7 +208,7 @@ func (h *AllegroAccountHandler) UpdateOfferStock(w http.ResponseWriter, r *http.
 	defer client.Close()
 
 	if err := client.Offers.UpdateStock(r.Context(), offerID, body.Quantity); err != nil {
-		slog.Error("allegro offers: failed to update stock", "error", err, "offer_id", offerID)
+		slog.Error("allegro offers: failed to update stock", "error", err, "offer_id", offerID) //nolint:gosec
 		writeAllegroError(w, "Failed to update stock", err)
 		return
 	}
@@ -262,7 +262,7 @@ func (h *AllegroAccountHandler) UpdateOfferPrice(w http.ResponseWriter, r *http.
 	defer client.Close()
 
 	if err := client.Offers.UpdatePrice(r.Context(), offerID, body.Amount, body.Currency); err != nil {
-		slog.Error("allegro offers: failed to update price", "error", err, "offer_id", offerID)
+		slog.Error("allegro offers: failed to update price", "error", err, "offer_id", offerID) //nolint:gosec
 		writeAllegroError(w, "Failed to update price", err)
 		return
 	}

@@ -12,14 +12,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// OrderGroupHandler handles HTTP requests for order grouping operations.
 type OrderGroupHandler struct {
 	orderGroupService *service.OrderGroupService
 }
 
+// NewOrderGroupHandler creates a new OrderGroupHandler.
 func NewOrderGroupHandler(orderGroupService *service.OrderGroupService) *OrderGroupHandler {
 	return &OrderGroupHandler{orderGroupService: orderGroupService}
 }
 
+// MergeOrders combines multiple orders into a single order group.
 func (h *OrderGroupHandler) MergeOrders(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -42,6 +45,7 @@ func (h *OrderGroupHandler) MergeOrders(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, group)
 }
 
+// SplitOrder splits an order group back into individual orders.
 func (h *OrderGroupHandler) SplitOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -70,6 +74,7 @@ func (h *OrderGroupHandler) SplitOrder(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, group)
 }
 
+// ListByOrder returns all order groups associated with a given order.
 func (h *OrderGroupHandler) ListByOrder(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

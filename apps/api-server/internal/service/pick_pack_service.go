@@ -16,15 +16,25 @@ import (
 )
 
 var (
+	// ErrPickPackSessionNotFound is returned when a pick-pack session does not exist.
 	ErrPickPackSessionNotFound  = errors.New("pick-pack session not found")
+	// ErrPickPackItemNotFound is returned when a pick-pack item does not exist.
 	ErrPickPackItemNotFound     = errors.New("pick-pack item not found")
+	// ErrPickPackNotPicking is returned when an operation requires the session to be in picking status.
 	ErrPickPackNotPicking       = errors.New("session is not in picking status")
+	// ErrPickPackNotPacking is returned when an operation requires the session to be in packing status.
 	ErrPickPackNotPacking       = errors.New("session is not in packing status")
+	// ErrPickPackNotActive is returned when an operation requires an active pick-pack session.
 	ErrPickPackNotActive        = errors.New("session is not active")
+	// ErrPickPackBarcodeNoMatch is returned when a scanned barcode does not match any session item.
 	ErrPickPackBarcodeNoMatch   = errors.New("barcode does not match any item in this session")
+	// ErrPickPackQuantityExceeded is returned when a scan would exceed the required item quantity.
 	ErrPickPackQuantityExceeded = errors.New("quantity would exceed required amount")
+	// ErrPickPackNotAllPicked is returned when session completion is attempted before all items are picked.
 	ErrPickPackNotAllPicked     = errors.New("not all items have been picked")
+	// ErrPickPackNotAllPacked is returned when session completion is attempted before all items are packed.
 	ErrPickPackNotAllPacked     = errors.New("not all items have been packed")
+	// ErrOrderNotProcessing is returned when an operation requires the order to be in processing status.
 	ErrOrderNotProcessing       = errors.New("order is not in processing status")
 )
 
@@ -250,7 +260,7 @@ func (s *PickPackService) ListSessions(ctx context.Context, tenantID uuid.UUID, 
 }
 
 // ScanItem processes a barcode scan during the picking phase.
-func (s *PickPackService) ScanItem(ctx context.Context, tenantID, sessionID uuid.UUID, req model.ScanItemRequest, userID uuid.UUID, ip string) (*model.ScanItemResponse, error) {
+func (s *PickPackService) ScanItem(ctx context.Context, tenantID, sessionID uuid.UUID, req model.ScanItemRequest, _ uuid.UUID, _ string) (*model.ScanItemResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
 	}
@@ -401,7 +411,7 @@ func (s *PickPackService) MoveToPacking(ctx context.Context, tenantID, sessionID
 }
 
 // MarkItemPacked marks an item as packed (or partially packed).
-func (s *PickPackService) MarkItemPacked(ctx context.Context, tenantID, sessionID, itemID uuid.UUID, req model.MarkPackedRequest, userID uuid.UUID, ip string) (*model.PickPackItem, error) {
+func (s *PickPackService) MarkItemPacked(ctx context.Context, tenantID, sessionID, itemID uuid.UUID, req model.MarkPackedRequest, _ uuid.UUID, _ string) (*model.PickPackItem, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
 	}

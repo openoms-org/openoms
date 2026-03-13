@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// LoyaltyRepository handles persistence for loyalty programs and points.
 type LoyaltyRepository struct{}
 
+// NewLoyaltyRepository creates a new LoyaltyRepository.
 func NewLoyaltyRepository() *LoyaltyRepository {
 	return &LoyaltyRepository{}
 }
@@ -27,6 +29,7 @@ func scanLoyaltyProgram(row interface{ Scan(dest ...any) error }) (*model.Loyalt
 	return &p, err
 }
 
+// ListPrograms returns a paginated list of loyalty programs.
 func (r *LoyaltyRepository) ListPrograms(ctx context.Context, tx pgx.Tx, filter model.LoyaltyProgramListFilter) ([]model.LoyaltyProgram, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM loyalty_programs").Scan(&total); err != nil {
@@ -62,6 +65,7 @@ func (r *LoyaltyRepository) ListPrograms(ctx context.Context, tx pgx.Tx, filter 
 	return programs, total, rows.Err()
 }
 
+// FindProgramByID returns a loyalty program by its ID.
 func (r *LoyaltyRepository) FindProgramByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.LoyaltyProgram, error) {
 	p, err := scanLoyaltyProgram(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM loyalty_programs WHERE id = $1", loyaltyProgramColumns), id,
@@ -75,6 +79,7 @@ func (r *LoyaltyRepository) FindProgramByID(ctx context.Context, tx pgx.Tx, id u
 	return p, nil
 }
 
+// CreateProgram inserts a new loyalty program.
 func (r *LoyaltyRepository) CreateProgram(ctx context.Context, tx pgx.Tx, program *model.LoyaltyProgram) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO loyalty_programs (id, tenant_id, name, status, program_type, config)
@@ -85,6 +90,7 @@ func (r *LoyaltyRepository) CreateProgram(ctx context.Context, tx pgx.Tx, progra
 	).Scan(&program.CreatedAt, &program.UpdatedAt)
 }
 
+// UpdateProgram applies partial updates to a loyalty program.
 func (r *LoyaltyRepository) UpdateProgram(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateLoyaltyProgramRequest) error {
 	var setClauses []string
 	var args []any
@@ -125,6 +131,7 @@ func (r *LoyaltyRepository) UpdateProgram(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// DeleteProgram removes a loyalty program by its ID.
 func (r *LoyaltyRepository) DeleteProgram(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM loyalty_programs WHERE id = $1", id)
 	if err != nil {

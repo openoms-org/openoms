@@ -30,6 +30,7 @@ type Manager struct {
 	logger  *slog.Logger
 }
 
+// NewManager creates a new worker Manager.
 func NewManager(pool *pgxpool.Pool, logger *slog.Logger) *Manager {
 	return &Manager{
 		pool:   pool,
@@ -37,10 +38,12 @@ func NewManager(pool *pgxpool.Pool, logger *slog.Logger) *Manager {
 	}
 }
 
+// Register adds a worker to the manager's run list.
 func (m *Manager) Register(w Worker) {
 	m.workers = append(m.workers, w)
 }
 
+// Start launches all registered workers in background goroutines.
 func (m *Manager) Start(ctx context.Context) {
 	ctx, m.cancel = context.WithCancel(ctx)
 	m.logger.Info("worker manager starting", "workers", len(m.workers))
@@ -51,6 +54,7 @@ func (m *Manager) Start(ctx context.Context) {
 	m.logger.Info("worker manager started")
 }
 
+// Stop signals all workers to stop and waits for them to finish.
 func (m *Manager) Stop() {
 	m.logger.Info("worker manager stopping")
 	if m.cancel != nil {

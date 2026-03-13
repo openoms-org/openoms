@@ -1,3 +1,4 @@
+// Package kaufland implements the Kaufland marketplace provider.
 package kaufland
 
 import (
@@ -20,8 +21,8 @@ func init() {
 	})
 }
 
-// KauflandCredentials is the JSON structure stored in encrypted integration credentials.
-type KauflandCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	APIKey    string `json:"api_key"`
 	SecretKey string `json:"secret_key"`
 	Sandbox   bool   `json:"sandbox,omitempty"`
@@ -34,8 +35,8 @@ type Provider struct {
 }
 
 // NewProvider creates a Kaufland MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds KauflandCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("kaufland: parse credentials: %w", err)
 	}
@@ -60,6 +61,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "kaufland" }
 
 // PollOrders polls Kaufland for order units created after the given cursor (ISO8601 timestamp).

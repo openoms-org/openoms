@@ -56,6 +56,7 @@ type SupplierShipRequest struct {
 	Carrier        string `json:"carrier"`
 }
 
+// Validate validates the supplier ship request.
 func (r *SupplierShipRequest) Validate() error {
 	if strings.TrimSpace(r.TrackingNumber) == "" {
 		return errors.New("tracking_number is required")
@@ -77,6 +78,7 @@ type CreateSupplierMessageRequest struct {
 	Message string `json:"message"`
 }
 
+// Validate validates the create supplier message request.
 func (r *CreateSupplierMessageRequest) Validate() error {
 	if strings.TrimSpace(r.Message) == "" {
 		return errors.New("message is required")

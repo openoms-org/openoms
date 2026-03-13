@@ -34,7 +34,7 @@ type InPostProvider struct {
 }
 
 // NewInPostProvider creates an InPost CarrierProvider from encrypted credentials.
-func NewInPostProvider(credentials json.RawMessage, settings json.RawMessage) (*InPostProvider, error) {
+func NewInPostProvider(credentials json.RawMessage, _ json.RawMessage) (*InPostProvider, error) {
 	var creds InPostCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("inpost: parse credentials: %w", err)
@@ -53,8 +53,10 @@ func NewInPostProvider(credentials json.RawMessage, settings json.RawMessage) (*
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *InPostProvider) ProviderName() string { return "inpost" }
 
+// CreateShipment creates an InPost shipment and returns the response with tracking info.
 func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	// Determine service type
 	svcType := inpostsdk.ServiceCourierStandard
@@ -168,6 +170,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 	}, nil
 }
 
+// GetLabel downloads the shipping label for the given InPost shipment.
 func (p *InPostProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
 	id, err := strconv.ParseInt(externalID, 10, 64)
 	if err != nil {
@@ -185,6 +188,7 @@ func (p *InPostProvider) GetLabel(ctx context.Context, externalID string, format
 	return p.client.Labels.Get(ctx, id, labelFmt)
 }
 
+// GetTracking returns tracking events for the given InPost shipment.
 func (p *InPostProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Tracking.Get(ctx, trackingNumber)
 	if err != nil {
@@ -204,6 +208,7 @@ func (p *InPostProvider) GetTracking(ctx context.Context, trackingNumber string)
 	return events, nil
 }
 
+// CancelShipment cancels an InPost shipment by its external ID.
 func (p *InPostProvider) CancelShipment(ctx context.Context, externalID string) error {
 	id, err := strconv.ParseInt(externalID, 10, 64)
 	if err != nil {
@@ -218,6 +223,7 @@ func (p *InPostProvider) CancelShipment(ctx context.Context, externalID string) 
 	return nil
 }
 
+// CreateDispatchOrder creates an InPost dispatch order for the given shipment IDs.
 func (p *InPostProvider) CreateDispatchOrder(ctx context.Context, shipmentExternalIDs []int64, address integration.DispatchOrderAddress, contact integration.DispatchOrderContact) (int64, error) {
 	req := &inpostsdk.CreateDispatchOrderRequest{
 		Shipments: shipmentExternalIDs,
@@ -240,12 +246,15 @@ func (p *InPostProvider) CreateDispatchOrder(ctx context.Context, shipmentExtern
 	return order.ID, nil
 }
 
+// MapStatus maps an InPost carrier status to the internal shipment status.
 func (p *InPostProvider) MapStatus(carrierStatus string) (string, bool) {
 	return inpostsdk.MapStatus(carrierStatus)
 }
 
+// SupportsPickupPoints reports that InPost supports parcel locker pickup.
 func (p *InPostProvider) SupportsPickupPoints() bool { return true }
 
+// GetRates returns estimated shipping rates for InPost.
 func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// InPost does not expose a real-time rate API.
 	// Use hardcoded Polish domestic pricing tiers (net prices approximation).
@@ -353,6 +362,7 @@ func mapParcelTemplate(sizeCode string) inpostsdk.ParcelTemplate {
 	}
 }
 
+// SearchPickupPoints searches for InPost parcel lockers matching the given query.
 func (p *InPostProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
 	resp, err := p.client.Points.Search(ctx, query, inpostsdk.PointTypeParcelLocker, 10)
 	if err != nil {

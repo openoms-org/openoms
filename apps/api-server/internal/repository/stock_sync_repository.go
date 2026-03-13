@@ -32,6 +32,7 @@ const stockSyncChannelColumns = `id, tenant_id, integration_id, channel_type,
 	enabled, stock_buffer, sync_mode, priority,
 	last_sync_at, last_error, created_at, updated_at`
 
+// List returns a paginated list of stock sync channels matching the filter.
 func (r *StockSyncChannelRepository) List(ctx context.Context, tx pgx.Tx, filter model.StockSyncChannelListFilter) ([]model.StockSyncChannel, int, error) {
 	var conditions []string
 	var args []any
@@ -94,6 +95,7 @@ func (r *StockSyncChannelRepository) List(ctx context.Context, tx pgx.Tx, filter
 	return channels, total, rows.Err()
 }
 
+// FindByID returns a stock sync channel by its ID.
 func (r *StockSyncChannelRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.StockSyncChannel, error) {
 	ch, err := scanStockSyncChannel(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM stock_sync_channels WHERE id = $1", stockSyncChannelColumns), id,
@@ -107,6 +109,7 @@ func (r *StockSyncChannelRepository) FindByID(ctx context.Context, tx pgx.Tx, id
 	return &ch, nil
 }
 
+// ListEnabled returns all enabled stock sync channels ordered by priority.
 func (r *StockSyncChannelRepository) ListEnabled(ctx context.Context, tx pgx.Tx) ([]model.StockSyncChannel, error) {
 	rows, err := tx.Query(ctx,
 		fmt.Sprintf("SELECT %s FROM stock_sync_channels WHERE enabled = true ORDER BY priority DESC, created_at ASC", stockSyncChannelColumns),
@@ -131,6 +134,7 @@ func (r *StockSyncChannelRepository) ListEnabled(ctx context.Context, tx pgx.Tx)
 	return channels, rows.Err()
 }
 
+// Create inserts a new stock sync channel.
 func (r *StockSyncChannelRepository) Create(ctx context.Context, tx pgx.Tx, ch *model.StockSyncChannel) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO stock_sync_channels (id, tenant_id, integration_id, channel_type, enabled, stock_buffer, sync_mode, priority)
@@ -141,6 +145,7 @@ func (r *StockSyncChannelRepository) Create(ctx context.Context, tx pgx.Tx, ch *
 	).Scan(&ch.CreatedAt, &ch.UpdatedAt)
 }
 
+// Update applies partial updates to a stock sync channel.
 func (r *StockSyncChannelRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateStockSyncChannelRequest) error {
 	var setClauses []string
 	var args []any
@@ -186,6 +191,7 @@ func (r *StockSyncChannelRepository) Update(ctx context.Context, tx pgx.Tx, id u
 	return nil
 }
 
+// Delete removes a stock sync channel by its ID.
 func (r *StockSyncChannelRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM stock_sync_channels WHERE id = $1", id)
 	if err != nil {
@@ -197,6 +203,7 @@ func (r *StockSyncChannelRepository) Delete(ctx context.Context, tx pgx.Tx, id u
 	return nil
 }
 
+// UpdateSyncStatus records the latest sync timestamp and error for the channel.
 func (r *StockSyncChannelRepository) UpdateSyncStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, lastError *string) error {
 	if lastError != nil {
 		_, err := tx.Exec(ctx,
@@ -220,6 +227,7 @@ func NewStockSyncEventRepository() *StockSyncEventRepository {
 	return &StockSyncEventRepository{}
 }
 
+// Create inserts a new stock sync event.
 func (r *StockSyncEventRepository) Create(ctx context.Context, tx pgx.Tx, event *model.StockSyncEvent) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO stock_sync_events (id, tenant_id, product_id, sku, trigger_type,
@@ -232,6 +240,7 @@ func (r *StockSyncEventRepository) Create(ctx context.Context, tx pgx.Tx, event 
 	).Scan(&event.CreatedAt)
 }
 
+// List returns a paginated list of stock sync events matching the filter.
 func (r *StockSyncEventRepository) List(ctx context.Context, tx pgx.Tx, filter model.StockSyncEventListFilter) ([]model.StockSyncEvent, int, error) {
 	var conditions []string
 	var args []any
@@ -291,6 +300,7 @@ func (r *StockSyncEventRepository) List(ctx context.Context, tx pgx.Tx, filter m
 	return events, total, rows.Err()
 }
 
+// CountRecentErrors returns the number of sync events with failures in the last 24 hours.
 func (r *StockSyncEventRepository) CountRecentErrors(ctx context.Context, tx pgx.Tx) (int, error) {
 	var count int
 	err := tx.QueryRow(ctx,

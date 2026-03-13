@@ -83,7 +83,7 @@ func (h *AllegroDisputesHandler) GetDispute(w http.ResponseWriter, r *http.Reque
 
 	result, err := client.Disputes.Get(r.Context(), disputeID)
 	if err != nil {
-		slog.Error("allegro disputes: failed to get dispute", "error", err, "disputeId", disputeID)
+		slog.Error("allegro disputes: failed to get dispute", "error", err, "disputeId", disputeID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac sporu z Allegro", err)
 		return
 	}
@@ -110,7 +110,7 @@ func (h *AllegroDisputesHandler) ListDisputeMessages(w http.ResponseWriter, r *h
 
 	result, err := client.Disputes.ListMessages(r.Context(), disputeID)
 	if err != nil {
-		slog.Error("allegro disputes: failed to list dispute messages", "error", err, "disputeId", disputeID)
+		slog.Error("allegro disputes: failed to list dispute messages", "error", err, "disputeId", disputeID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie pobrac wiadomosci sporu z Allegro", err)
 		return
 	}
@@ -153,7 +153,7 @@ func (h *AllegroDisputesHandler) SendDisputeMessage(w http.ResponseWriter, r *ht
 		Type: body.Type,
 	})
 	if err != nil {
-		slog.Error("allegro disputes: failed to send message", "error", err, "disputeId", disputeID)
+		slog.Error("allegro disputes: failed to send message", "error", err, "disputeId", disputeID) //nolint:gosec
 		writeAllegroError(w, "Nie udalo sie wyslac wiadomosci w sporze", err)
 		return
 	}

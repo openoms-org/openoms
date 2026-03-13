@@ -1,3 +1,4 @@
+// Package shoper implements the Shoper marketplace provider.
 package shoper
 
 import (
@@ -22,8 +23,8 @@ func init() {
 	})
 }
 
-// ShoperCredentials is the JSON structure stored in encrypted integration credentials.
-type ShoperCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	ShopURL      string `json:"shop_url"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
@@ -36,8 +37,8 @@ type Provider struct {
 }
 
 // NewProvider creates a Shoper MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds ShoperCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("shoper: parse credentials: %w", err)
 	}
@@ -62,6 +63,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "shoper" }
 
 // PollOrders polls Shoper for orders modified after the given cursor.
@@ -117,7 +119,7 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 }
 
 // PushOffer creates a Shoper product from a product and listing data.
-func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
+func (p *Provider) PushOffer(_ context.Context, product *model.Product, listingData map[string]any) (string, error) {
 	data := make(map[string]any)
 	maps.Copy(data, listingData)
 	if _, ok := data["code"]; !ok && product.SKU != nil {

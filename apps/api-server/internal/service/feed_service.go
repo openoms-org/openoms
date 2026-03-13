@@ -288,7 +288,7 @@ type cdata struct {
 	Value string `xml:",cdata"`
 }
 
-func (s *FeedService) buildCeneoXML(products []model.Product, cfg *model.ProductFeedConfig) ([]byte, error) {
+func (s *FeedService) buildCeneoXML(products []model.Product, _ *model.ProductFeedConfig) ([]byte, error) {
 	offers := ceneoOffers{
 		XMLNS:   "http://www.w3.org/2001/XMLSchema-instance",
 		Version: "1",
@@ -508,7 +508,7 @@ func (s *FeedService) getSettingsSection(ctx context.Context, tx pgx.Tx, tenantI
 
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return nil
+		return err
 	}
 
 	raw, ok := allSettings[key]

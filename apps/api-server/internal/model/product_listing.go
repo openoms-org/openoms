@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// ProductListing represents a product listed on a marketplace integration.
 type ProductListing struct {
 	ID              uuid.UUID       `json:"id"`
 	TenantID        uuid.UUID       `json:"tenant_id"`
@@ -28,6 +29,7 @@ type ProductListing struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
+// CreateProductListingRequest is the payload for creating a new product listing.
 type CreateProductListingRequest struct {
 	ProductID     uuid.UUID       `json:"product_id"`
 	IntegrationID uuid.UUID       `json:"integration_id"`
@@ -40,6 +42,7 @@ type CreateProductListingRequest struct {
 	Metadata      json.RawMessage `json:"metadata,omitempty"`
 }
 
+// Validate validates the create product listing request.
 func (r *CreateProductListingRequest) Validate() error {
 	if r.ProductID == uuid.Nil {
 		return errors.New("product_id is required")
@@ -53,6 +56,7 @@ func (r *CreateProductListingRequest) Validate() error {
 	return nil
 }
 
+// UpdateProductListingRequest is the payload for updating an existing product listing.
 type UpdateProductListingRequest struct {
 	ExternalID      *string          `json:"external_id,omitempty"`
 	Status          *string          `json:"status,omitempty"`
@@ -66,6 +70,7 @@ type UpdateProductListingRequest struct {
 	Metadata        *json.RawMessage `json:"metadata,omitempty"`
 }
 
+// Validate validates the update product listing request.
 func (r *UpdateProductListingRequest) Validate() error {
 	if r.ExternalID == nil && r.Status == nil && r.URL == nil &&
 		r.PriceOverride == nil && r.StockOverride == nil && r.StockSyncMode == nil &&
@@ -117,6 +122,7 @@ type EbayImportDetail struct {
 	Error     string `json:"error,omitempty"`
 }
 
+// SyncJob represents a background data synchronisation job for an integration.
 type SyncJob struct {
 	ID             uuid.UUID       `json:"id"`
 	TenantID       uuid.UUID       `json:"tenant_id"`
@@ -132,6 +138,7 @@ type SyncJob struct {
 	CreatedAt      time.Time       `json:"created_at"`
 }
 
+// SyncJobListFilter holds query parameters for listing sync jobs.
 type SyncJobListFilter struct {
 	IntegrationID *uuid.UUID
 	JobType       *string

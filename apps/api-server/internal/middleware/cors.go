@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// CORS returns middleware that adds CORS headers for the given allowed origins.
 func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 	originSet := make(map[string]bool, len(allowedOrigins))
 	for _, o := range allowedOrigins {
