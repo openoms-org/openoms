@@ -98,3 +98,4 @@ DEPLOY-INSTRUKCJA.md
 *.png
 *.webp
 !apps/dashboard/public/**
+server
