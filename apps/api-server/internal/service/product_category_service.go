@@ -17,13 +17,13 @@ import (
 
 var (
 	// ErrCategoryNotFound is returned when a product category does not exist.
-	ErrCategoryNotFound   = errors.New("category not found")
+	ErrCategoryNotFound = errors.New("category not found")
 	// ErrCategoryDepthLimit is returned when the maximum category nesting depth is exceeded.
 	ErrCategoryDepthLimit = errors.New("maximum category depth exceeded")
 	// ErrCircularReference is returned when a category update would create a circular parent chain.
-	ErrCircularReference  = errors.New("circular parent reference detected")
+	ErrCircularReference = errors.New("circular parent reference detected")
 	// ErrDuplicateSlug is returned when a category slug is already in use.
-	ErrDuplicateSlug      = errors.New("duplicate category slug")
+	ErrDuplicateSlug = errors.New("duplicate category slug")
 )
 
 // ProductCategoryService handles business logic for product categories.

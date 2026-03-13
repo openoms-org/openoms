@@ -15,9 +15,9 @@ import (
 
 var (
 	// ErrRoleNotFound is returned when a role does not exist.
-	ErrRoleNotFound      = errors.New("role not found")
+	ErrRoleNotFound = errors.New("role not found")
 	// ErrRoleIsSystem is returned when attempting to delete a system role.
-	ErrRoleIsSystem      = errors.New("system roles cannot be deleted")
+	ErrRoleIsSystem = errors.New("system roles cannot be deleted")
 	// ErrRoleDuplicateName is returned when a role with the same name already exists.
 	ErrRoleDuplicateName = errors.New("role with this name already exists")
 )

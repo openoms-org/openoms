@@ -19,15 +19,15 @@ import (
 
 var (
 	// ErrStocktakeNotFound is returned when a stocktake does not exist.
-	ErrStocktakeNotFound     = errors.New("stocktake not found")
+	ErrStocktakeNotFound = errors.New("stocktake not found")
 	// ErrStocktakeNotDraft is returned when an operation requires a draft stocktake.
-	ErrStocktakeNotDraft     = errors.New("stocktake is not in draft status")
+	ErrStocktakeNotDraft = errors.New("stocktake is not in draft status")
 	// ErrStocktakeNotActive is returned when an operation requires an active stocktake.
-	ErrStocktakeNotActive    = errors.New("stocktake is not in progress")
+	ErrStocktakeNotActive = errors.New("stocktake is not in progress")
 	// ErrStocktakeItemNotFound is returned when a stocktake item does not exist.
 	ErrStocktakeItemNotFound = errors.New("stocktake item not found")
 	// ErrNotAllItemsCounted is returned when a stocktake completion is attempted with uncounted items.
-	ErrNotAllItemsCounted    = errors.New("not all items have been counted")
+	ErrNotAllItemsCounted = errors.New("not all items have been counted")
 )
 
 // StocktakeService provides business logic for stocktaking.

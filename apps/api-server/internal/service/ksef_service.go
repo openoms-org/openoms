@@ -22,7 +22,7 @@ var (
 	// ErrKSeFNotConfigured is returned when KSeF credentials are missing for a tenant.
 	ErrKSeFNotConfigured = errors.New("KSeF is not configured for this tenant")
 	// ErrKSeFAlreadySent is returned when an invoice has already been submitted to KSeF.
-	ErrKSeFAlreadySent   = errors.New("invoice has already been sent to KSeF")
+	ErrKSeFAlreadySent = errors.New("invoice has already been sent to KSeF")
 )
 
 // KSeFSettings holds the KSeF configuration from tenant settings.
@@ -691,7 +691,6 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 
 	return items
 }
-
 
 // RetryErroredInvoices retries sending invoices with ksef_status = 'error'.
 // Max 3 retries with exponential backoff (5min, 15min, 45min).

@@ -21,7 +21,7 @@ var (
 	// ErrTrackingNotFound is returned when a tracking lookup finds no matching order.
 	ErrTrackingNotFound = errors.New("order not found")
 	// ErrTrackingEmail is returned when the provided email does not match the order's customer email.
-	ErrTrackingEmail    = errors.New("email does not match order")
+	ErrTrackingEmail = errors.New("email does not match order")
 )
 
 // TrackingService provides public order tracking lookups.

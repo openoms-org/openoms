@@ -17,7 +17,7 @@ var (
 	// ErrProductNotFound is returned when a product does not exist.
 	ErrProductNotFound = errors.New("product not found")
 	// ErrDuplicateSKU is returned when a product with the same SKU already exists.
-	ErrDuplicateSKU    = errors.New("product with this SKU already exists in this tenant")
+	ErrDuplicateSKU = errors.New("product with this SKU already exists in this tenant")
 )
 
 // ProductService handles business logic for product management.

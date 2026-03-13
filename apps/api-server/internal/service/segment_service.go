@@ -21,7 +21,7 @@ var (
 	// ErrSegmentNotFound is returned when a customer segment does not exist.
 	ErrSegmentNotFound = errors.New("segment not found")
 	// ErrMemberNotFound is returned when a member does not exist in a segment.
-	ErrMemberNotFound  = errors.New("member not found in segment")
+	ErrMemberNotFound = errors.New("member not found in segment")
 )
 
 // SegmentService handles business logic for customer segments.

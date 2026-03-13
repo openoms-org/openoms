@@ -17,9 +17,9 @@ import (
 
 var (
 	// ErrWarehouseNotFound is returned when a warehouse does not exist.
-	ErrWarehouseNotFound      = errors.New("warehouse not found")
+	ErrWarehouseNotFound = errors.New("warehouse not found")
 	// ErrStockEntryNotFound is returned when a warehouse stock entry does not exist.
-	ErrStockEntryNotFound     = errors.New("stock entry not found")
+	ErrStockEntryNotFound = errors.New("stock entry not found")
 	// ErrStrictInventoryControl is returned when direct stock changes are blocked by strict inventory control.
 	ErrStrictInventoryControl = errors.New("strict inventory control is enabled — stock changes allowed only via warehouse documents")
 )

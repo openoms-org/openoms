@@ -365,7 +365,6 @@ func shortUUID(id uuid.UUID) string {
 	return s
 }
 
-
 func derefStr(s *string) string {
 	if s == nil {
 		return ""

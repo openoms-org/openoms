@@ -21,13 +21,13 @@ var (
 	// ErrPurchaseOrderNotFound is returned when a purchase order does not exist.
 	ErrPurchaseOrderNotFound = errors.New("purchase order not found")
 	// ErrPOItemNotFound is returned when a purchase order item does not exist.
-	ErrPOItemNotFound        = errors.New("purchase order item not found")
+	ErrPOItemNotFound = errors.New("purchase order item not found")
 	// ErrPONotDraft is returned when an operation requires a draft purchase order.
-	ErrPONotDraft            = errors.New("purchase order is not in draft status")
+	ErrPONotDraft = errors.New("purchase order is not in draft status")
 	// ErrPOInvalidTransition is returned for an invalid purchase order status transition.
-	ErrPOInvalidTransition   = errors.New("invalid status transition")
+	ErrPOInvalidTransition = errors.New("invalid status transition")
 	// ErrPOAlreadyCancelled is returned when a purchase order has already been cancelled.
-	ErrPOAlreadyCancelled    = errors.New("purchase order is already cancelled")
+	ErrPOAlreadyCancelled = errors.New("purchase order is already cancelled")
 )
 
 // PurchaseOrderService handles business logic for purchase orders.

@@ -22,15 +22,15 @@ import (
 
 var (
 	// ErrPortalTokenInvalid is returned when a portal token is invalid or expired.
-	ErrPortalTokenInvalid  = errors.New("invalid or expired portal token")
+	ErrPortalTokenInvalid = errors.New("invalid or expired portal token")
 	// ErrPortalTokenExpired is returned when a portal token has passed its expiry time.
-	ErrPortalTokenExpired  = errors.New("portal token has expired")
+	ErrPortalTokenExpired = errors.New("portal token has expired")
 	// ErrPortalNotEnabled is returned when portal access is disabled for a supplier.
-	ErrPortalNotEnabled    = errors.New("portal access is not enabled for this supplier")
+	ErrPortalNotEnabled = errors.New("portal access is not enabled for this supplier")
 	// ErrPortalPONotFound is returned when a portal purchase order does not exist.
-	ErrPortalPONotFound    = errors.New("purchase order not found")
+	ErrPortalPONotFound = errors.New("purchase order not found")
 	// ErrPortalPONotOwned is returned when a PO belongs to a different supplier.
-	ErrPortalPONotOwned    = errors.New("purchase order does not belong to this supplier")
+	ErrPortalPONotOwned = errors.New("purchase order does not belong to this supplier")
 	// ErrPortalInvalidAction is returned when an action is not permitted for the current PO status.
 	ErrPortalInvalidAction = errors.New("this action is not allowed for the current PO status")
 )

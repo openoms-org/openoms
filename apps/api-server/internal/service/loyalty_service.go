@@ -20,7 +20,7 @@ var (
 	// ErrLoyaltyProgramNotFound is returned when a loyalty program does not exist.
 	ErrLoyaltyProgramNotFound = errors.New("loyalty program not found")
 	// ErrInsufficientPoints is returned when a customer has too few loyalty points.
-	ErrInsufficientPoints     = errors.New("insufficient points")
+	ErrInsufficientPoints = errors.New("insufficient points")
 )
 
 // LoyaltyService handles business logic for loyalty programs and points.

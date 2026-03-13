@@ -23,11 +23,11 @@ import (
 
 var (
 	// ErrShipmentNotCreated is returned when a shipment is not in 'created' status.
-	ErrShipmentNotCreated   = errors.New("shipment must be in 'created' status to generate label")
+	ErrShipmentNotCreated = errors.New("shipment must be in 'created' status to generate label")
 	// ErrNoCarrierIntegration is returned when no active carrier integration exists for the provider.
 	ErrNoCarrierIntegration = errors.New("no active carrier integration found for provider")
 	// ErrNoCustomerContact is returned when an order lacks customer contact information.
-	ErrNoCustomerContact    = errors.New("order has no customer email or phone")
+	ErrNoCustomerContact = errors.New("order has no customer email or phone")
 )
 
 // LabelService handles carrier label generation for shipments.

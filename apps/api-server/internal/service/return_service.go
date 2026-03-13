@@ -18,7 +18,7 @@ import (
 
 var (
 	// ErrReturnNotFound is returned when a return does not exist.
-	ErrReturnNotFound          = errors.New("return not found")
+	ErrReturnNotFound = errors.New("return not found")
 	// ErrInvalidReturnTransition is returned for an invalid return status transition.
 	ErrInvalidReturnTransition = errors.New("invalid return status transition")
 )

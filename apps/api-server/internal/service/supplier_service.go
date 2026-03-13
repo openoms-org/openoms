@@ -25,11 +25,11 @@ import (
 
 var (
 	// ErrSupplierNotFound is returned when a supplier does not exist.
-	ErrSupplierNotFound        = errors.New("supplier not found")
+	ErrSupplierNotFound = errors.New("supplier not found")
 	// ErrSupplierProductNotFound is returned when a supplier product does not exist.
 	ErrSupplierProductNotFound = errors.New("supplier product not found")
 	// ErrNoFeedURL is returned when a supplier sync is attempted without a configured feed URL.
-	ErrNoFeedURL               = errors.New("supplier has no feed URL configured")
+	ErrNoFeedURL = errors.New("supplier has no feed URL configured")
 )
 
 // SupplierService handles business logic for supplier management.

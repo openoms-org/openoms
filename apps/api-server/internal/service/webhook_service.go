@@ -21,7 +21,7 @@ var (
 	// ErrInvalidSignature is returned when a webhook HMAC signature does not match.
 	ErrInvalidSignature = errors.New("invalid webhook signature")
 	// ErrUnknownProvider is returned when a webhook provider name is not recognised.
-	ErrUnknownProvider  = errors.New("unknown webhook provider")
+	ErrUnknownProvider = errors.New("unknown webhook provider")
 )
 
 // WebhookService handles inbound webhook event verification and storage.

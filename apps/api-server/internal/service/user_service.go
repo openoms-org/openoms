@@ -18,15 +18,15 @@ import (
 
 var (
 	// ErrCannotDeleteSelf is returned when a user attempts to delete their own account.
-	ErrCannotDeleteSelf      = errors.New("cannot delete your own account")
+	ErrCannotDeleteSelf = errors.New("cannot delete your own account")
 	// ErrCannotDeleteLastOwner is returned when deleting the sole remaining owner of a tenant.
 	ErrCannotDeleteLastOwner = errors.New("cannot delete the last owner of the tenant")
 	// ErrDuplicateEmail is returned when a user with the same email already exists.
-	ErrDuplicateEmail        = errors.New("email already exists in this tenant")
+	ErrDuplicateEmail = errors.New("email already exists in this tenant")
 	// ErrOwnerRoleEscalation is returned when a non-owner attempts to assign the owner role.
-	ErrOwnerRoleEscalation   = errors.New("only owners can assign the owner role")
+	ErrOwnerRoleEscalation = errors.New("only owners can assign the owner role")
 	// ErrUserLimitExceeded is returned when a tenant has reached its maximum number of users.
-	ErrUserLimitExceeded     = errors.New("user limit exceeded")
+	ErrUserLimitExceeded = errors.New("user limit exceeded")
 )
 
 // UserService handles user management within a tenant.

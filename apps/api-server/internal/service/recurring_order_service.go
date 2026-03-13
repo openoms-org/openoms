@@ -19,7 +19,7 @@ import (
 
 var (
 	// ErrRecurringOrderNotFound is returned when a recurring order does not exist.
-	ErrRecurringOrderNotFound  = errors.New("recurring order not found")
+	ErrRecurringOrderNotFound = errors.New("recurring order not found")
 	// ErrRecurringOrderNotActive is returned when an operation requires an active recurring order.
 	ErrRecurringOrderNotActive = errors.New("recurring order is not active")
 	// ErrRecurringOrderHasOrders is returned when deleting a recurring order that has spawned orders.

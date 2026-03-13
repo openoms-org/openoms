@@ -23,7 +23,7 @@ import (
 
 var (
 	// ErrShipmentNotFound is returned when a shipment does not exist.
-	ErrShipmentNotFound         = errors.New("shipment not found")
+	ErrShipmentNotFound = errors.New("shipment not found")
 	// ErrOrderNotFoundForShipment is returned when a shipment's associated order cannot be found.
 	ErrOrderNotFoundForShipment = errors.New("order not found for shipment")
 )

@@ -16,7 +16,7 @@ import (
 
 var (
 	// ErrPriceListNotFound is returned when a price list does not exist.
-	ErrPriceListNotFound     = errors.New("price list not found")
+	ErrPriceListNotFound = errors.New("price list not found")
 	// ErrPriceListItemNotFound is returned when a price list item does not exist.
 	ErrPriceListItemNotFound = errors.New("price list item not found")
 )

@@ -19,7 +19,7 @@ var (
 	// ErrBundleComponentNotFound is returned when a bundle component does not exist.
 	ErrBundleComponentNotFound = errors.New("bundle component not found")
 	// ErrProductNotBundle is returned when a product is not configured as a bundle.
-	ErrProductNotBundle        = errors.New("product is not a bundle")
+	ErrProductNotBundle = errors.New("product is not a bundle")
 )
 
 // BundleService handles business logic for product bundles.

@@ -23,7 +23,7 @@ var (
 	// ErrExchangeRateNotFound is returned when an exchange rate does not exist.
 	ErrExchangeRateNotFound = errors.New("exchange rate not found")
 	// ErrRateNotAvailable is returned when no exchange rate exists for a currency pair.
-	ErrRateNotAvailable     = errors.New("exchange rate not available for this currency pair")
+	ErrRateNotAvailable = errors.New("exchange rate not available for this currency pair")
 )
 
 // ExchangeRateService handles business logic for currency exchange rates.

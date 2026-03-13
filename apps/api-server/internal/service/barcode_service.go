@@ -18,7 +18,7 @@ import (
 
 var (
 	// ErrBarcodeNotFound is returned when no product matches the scanned barcode.
-	ErrBarcodeNotFound     = errors.New("no product found for this barcode")
+	ErrBarcodeNotFound = errors.New("no product found for this barcode")
 	// ErrPackingItemMismatch is returned when scanned items do not match the expected order items.
 	ErrPackingItemMismatch = errors.New("scanned items do not match order items")
 )
