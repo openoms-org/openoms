@@ -58,18 +58,18 @@ func TestExchangeCode(t *testing.T) {
 			t.Errorf("BasicAuth = (%q, %q, %v), want (cid, csecret, true)", user, pass, ok)
 		}
 
-		if err := r.ParseForm(); err != nil {
+		if err := r.ParseForm(); err != nil { //nolint:gosec // G120: test code
 			t.Fatalf("ParseForm error: %v", err)
 		}
-		if gt := r.FormValue("grant_type"); gt != "authorization_code" {
+		if gt := r.FormValue("grant_type"); gt != "authorization_code" { //nolint:gosec // G120: test code
 			t.Errorf("grant_type = %q, want authorization_code", gt)
 		}
-		if code := r.FormValue("code"); code != "auth-code-123" {
+		if code := r.FormValue("code"); code != "auth-code-123" { //nolint:gosec // G120: test code
 			t.Errorf("code = %q, want auth-code-123", code)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"access_token": "new-at",
 			"token_type": "bearer",
 			"refresh_token": "new-rt",
@@ -102,9 +102,9 @@ func TestExchangeCode(t *testing.T) {
 }
 
 func TestExchangeCodeError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"message":"invalid_grant"}`))
+		_, _ = w.Write([]byte(`{"message":"invalid_grant"}`))
 	}))
 	defer srv.Close()
 
@@ -126,9 +126,9 @@ func TestExchangeCodeError(t *testing.T) {
 }
 
 func TestPostTokenNonJSONErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
-		w.Write([]byte(`<html>Bad Gateway</html>`))
+		_, _ = w.Write([]byte(`<html>Bad Gateway</html>`))
 	}))
 	defer srv.Close()
 
@@ -150,9 +150,9 @@ func TestPostTokenNonJSONErrorResponse(t *testing.T) {
 }
 
 func TestPostTokenBadJSONResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`not json`))
+		_, _ = w.Write([]byte(`not json`))
 	}))
 	defer srv.Close()
 
@@ -167,9 +167,9 @@ func TestPostTokenBadJSONResponse(t *testing.T) {
 }
 
 func TestRefreshAccessTokenError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"invalid refresh token"}`))
+		_, _ = w.Write([]byte(`{"message":"invalid refresh token"}`))
 	}))
 	defer srv.Close()
 
@@ -195,18 +195,18 @@ func TestRefreshAccessToken(t *testing.T) {
 	var callbackAT, callbackRT string
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
+		if err := r.ParseForm(); err != nil { //nolint:gosec // G120: test code
 			t.Fatalf("ParseForm error: %v", err)
 		}
-		if gt := r.FormValue("grant_type"); gt != "refresh_token" {
+		if gt := r.FormValue("grant_type"); gt != "refresh_token" { //nolint:gosec // G120: test code
 			t.Errorf("grant_type = %q, want refresh_token", gt)
 		}
-		if rt := r.FormValue("refresh_token"); rt != "old-rt" {
+		if rt := r.FormValue("refresh_token"); rt != "old-rt" { //nolint:gosec // G120: test code
 			t.Errorf("refresh_token = %q, want old-rt", rt)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"access_token": "refreshed-at",
 			"token_type": "bearer",
 			"refresh_token": "refreshed-rt",
@@ -218,7 +218,7 @@ func TestRefreshAccessToken(t *testing.T) {
 	c := NewClient("cid", "csecret",
 		WithHTTPClient(srv.Client()),
 		WithTokens("old-at", "old-rt", time.Now().Add(-time.Hour)),
-		WithOnTokenRefresh(func(at, rt string, exp time.Time) {
+		WithOnTokenRefresh(func(at, rt string, _ time.Time) {
 			callbackCalled = true
 			callbackAT = at
 			callbackRT = rt

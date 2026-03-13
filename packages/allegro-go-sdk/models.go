@@ -739,8 +739,8 @@ type CategoryParameter struct {
 type ParameterOptions struct {
 	VariantsAllowed      bool   `json:"variantsAllowed"`
 	VariantsEqual        bool   `json:"variantsEqual,omitempty"`
-	AmbiguousValueId     string `json:"ambiguousValueId,omitempty"`
-	DependsOnParameterId string `json:"dependsOnParameterId,omitempty"`
+	AmbiguousValueID     string `json:"ambiguousValueId,omitempty"`
+	DependsOnParameterID string `json:"dependsOnParameterId,omitempty"`
 	DescribesProduct     bool   `json:"describesProduct"`
 	CustomValuesEnabled  bool   `json:"customValuesEnabled"`
 }
@@ -1098,11 +1098,11 @@ type CreateShippingRateRequest struct {
 
 // DeliveryMethodList represents a list of available delivery methods.
 type DeliveryMethodList struct {
-	DeliveryMethods []AllegroDeliveryMethod `json:"deliveryMethods"`
+	DeliveryMethods []AvailableDeliveryMethod `json:"deliveryMethods"`
 }
 
-// AllegroDeliveryMethod represents an available Allegro delivery method.
-type AllegroDeliveryMethod struct {
+// AvailableDeliveryMethod represents an available Allegro delivery method.
+type AvailableDeliveryMethod struct {
 	ID                       string               `json:"id"`
 	Name                     string               `json:"name"`
 	PaymentPolicy            string               `json:"paymentPolicy"`

@@ -94,7 +94,7 @@ func (c *Client) postToken(ctx context.Context, data url.Values) (*TokenResponse
 	if err != nil {
 		return nil, fmt.Errorf("allegro: execute token request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
