@@ -124,7 +124,7 @@ func (s *WebhookDispatchService) sendWebhookWithRetry(ctx context.Context, tenan
 	maxRetries := 3
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
-			backoff := time.Duration(1<<(2*uint(max(attempt-1, 0)))) * time.Second // 1s, 4s, 16s
+			backoff := time.Duration(1<<(2*uint(max(attempt-1, 0)))) * time.Second //nolint:gosec // G115: attempt >= 1 here, max ensures non-negative
 			select {
 			case <-ctx.Done():
 				return
