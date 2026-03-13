@@ -66,19 +66,19 @@ type InvoiceService struct {
 
 // Invoice represents an inFakt invoice.
 type Invoice struct {
-	ID            int             `json:"id"`
-	Kind          string          `json:"kind"` // vat, proforma, final, correction
-	Number        string          `json:"number"`
-	InvoiceDate   string          `json:"invoice_date"`
-	SaleDate      string          `json:"sale_date"`
-	PaymentDate   string          `json:"payment_date"`
-	PaymentMethod string          `json:"payment_method"`
-	Currency      string          `json:"currency"`
-	Status        string          `json:"status"`
-	NetPrice      string          `json:"net_price"`
-	GrossPrice    string          `json:"gross_price"`
-	Client        InvoiceClient   `json:"client"`
-	Services      []InvoiceService_ `json:"services"`
+	ID            int               `json:"id"`
+	Kind          string            `json:"kind"` // vat, proforma, final, correction
+	Number        string            `json:"number"`
+	InvoiceDate   string            `json:"invoice_date"`
+	SaleDate      string            `json:"sale_date"`
+	PaymentDate   string            `json:"payment_date"`
+	PaymentMethod string            `json:"payment_method"`
+	Currency      string            `json:"currency"`
+	Status        string            `json:"status"`
+	NetPrice      string            `json:"net_price"`
+	GrossPrice    string            `json:"gross_price"`
+	Client        InvoiceClient     `json:"client"`
+	Services      []InvoiceLineItem `json:"services"`
 }
 
 // InvoiceClient represents client (buyer) information on an inFakt invoice.
@@ -92,9 +92,8 @@ type InvoiceClient struct {
 	Email      string `json:"email,omitempty"`
 }
 
-// InvoiceService_ represents a line item (service) on an inFakt invoice.
-// Named with underscore suffix to avoid conflict with the InvoiceService type.
-type InvoiceService_ struct {
+// InvoiceLineItem represents a line item (service) on an inFakt invoice.
+type InvoiceLineItem struct {
 	Name         string  `json:"name"`
 	Unit         string  `json:"unit"`
 	Quantity     int     `json:"quantity"`
@@ -104,14 +103,14 @@ type InvoiceService_ struct {
 
 // CreateInvoiceRequest is the request body for creating an invoice.
 type CreateInvoiceRequest struct {
-	Kind          string           `json:"kind"` // vat, proforma, final, correction
-	InvoiceDate   string           `json:"invoice_date"`
-	SaleDate      string           `json:"sale_date"`
-	PaymentDate   string           `json:"payment_date"`
-	PaymentMethod string           `json:"payment_method,omitempty"`
-	Currency      string           `json:"currency,omitempty"`
-	Client        InvoiceClient    `json:"client"`
-	Services      []InvoiceService_ `json:"services"`
+	Kind          string            `json:"kind"` // vat, proforma, final, correction
+	InvoiceDate   string            `json:"invoice_date"`
+	SaleDate      string            `json:"sale_date"`
+	PaymentDate   string            `json:"payment_date"`
+	PaymentMethod string            `json:"payment_method,omitempty"`
+	Currency      string            `json:"currency,omitempty"`
+	Client        InvoiceClient     `json:"client"`
+	Services      []InvoiceLineItem `json:"services"`
 }
 
 // ListInvoicesParams are query parameters for listing invoices.
@@ -239,7 +238,7 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	if err != nil {
 		return nil, fmt.Errorf("infakt: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

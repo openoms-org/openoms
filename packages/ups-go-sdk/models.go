@@ -4,23 +4,23 @@ import "time"
 
 // ShipmentRequest is the payload sent to create a new UPS shipment.
 type ShipmentRequest struct {
-	Shipper     Party        `json:"Shipper"`
-	ShipTo      Party        `json:"ShipTo"`
-	Service     ServiceCode  `json:"Service"`
+	Shipper     Party         `json:"Shipper"`
+	ShipTo      Party         `json:"ShipTo"`
+	Service     ServiceCode   `json:"Service"`
 	Package     []PackageSpec `json:"Package"`
-	Description string       `json:"Description,omitempty"`
-	Reference   *Reference   `json:"ReferenceNumber,omitempty"`
+	Description string        `json:"Description,omitempty"`
+	Reference   *Reference    `json:"ReferenceNumber,omitempty"`
 }
 
 // Party contains shipper or recipient details.
 type Party struct {
-	Name    string     `json:"Name"`
-	Address UPSAddress `json:"Address"`
-	Phone   *Phone     `json:"Phone,omitempty"`
+	Name    string  `json:"Name"`
+	Address Address `json:"Address"`
+	Phone   *Phone  `json:"Phone,omitempty"`
 }
 
-// UPSAddress contains UPS-formatted address fields.
-type UPSAddress struct {
+// Address contains UPS-formatted address fields.
+type Address struct {
 	AddressLine       []string `json:"AddressLine"`
 	City              string   `json:"City"`
 	StateProvinceCode string   `json:"StateProvinceCode,omitempty"`
@@ -42,7 +42,7 @@ type ServiceCode struct {
 // PackageSpec describes a package for shipment.
 type PackageSpec struct {
 	PackagingType Code      `json:"PackagingType"`
-	Dimensions    Dims      `json:"Dimensions,omitempty"`
+	Dimensions    Dims      `json:"Dimensions,omitzero"`
 	PackageWeight PkgWeight `json:"PackageWeight"`
 }
 

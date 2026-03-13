@@ -8,7 +8,7 @@ import (
 )
 
 func TestVerifyWebhookValid(t *testing.T) {
-	secret := "my-webhook-secret"
+	secret := "my-webhook-secret" //nolint:gosec // G101: test credential
 	body := []byte(`{"type":"status_changed","payload":{"id":123}}`)
 
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -21,7 +21,7 @@ func TestVerifyWebhookValid(t *testing.T) {
 }
 
 func TestVerifyWebhookInvalid(t *testing.T) {
-	secret := "my-webhook-secret"
+	secret := "my-webhook-secret" //nolint:gosec // G101: test credential
 	body := []byte(`{"type":"status_changed","payload":{"id":123}}`)
 
 	err := VerifyWebhook(secret, "deadbeefdeadbeef", body)

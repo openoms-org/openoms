@@ -18,7 +18,7 @@ func TestInventoryGetReport(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvReportDocument{
+		_ = json.NewEncoder(w).Encode(InvReportDocument{
 			Header: InvReportHeader{
 				InventoryReportNumber: "INV-001",
 				Currency:              "PLN",
@@ -70,7 +70,7 @@ func TestInventoryGetReportWithOptions(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvReportDocument{})
+		_ = json.NewEncoder(w).Encode(InvReportDocument{})
 	}))
 	defer srv.Close()
 
@@ -86,9 +86,9 @@ func TestInventoryGetReportWithOptions(t *testing.T) {
 }
 
 func TestInventoryGetReportWithStockSchedules(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvReportDocument{
+		_ = json.NewEncoder(w).Encode(InvReportDocument{
 			Lines: []InvReportLine{
 				{
 					LineNumber: 1,

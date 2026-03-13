@@ -19,7 +19,7 @@ type CategoryListParams struct {
 }
 
 // List retrieves a paginated list of categories.
-func (s *CategoryService) List(ctx context.Context, params CategoryListParams) (*ListResponse[ShoperCategory], error) {
+func (s *CategoryService) List(ctx context.Context, params CategoryListParams) (*ListResponse[Category], error) {
 	path := "/categories"
 
 	v := url.Values{}
@@ -33,7 +33,7 @@ func (s *CategoryService) List(ctx context.Context, params CategoryListParams) (
 		path += "?" + encoded
 	}
 
-	var result ListResponse[ShoperCategory]
+	var result ListResponse[Category]
 	if err := s.client.do(ctx, "GET", path, nil, &result); err != nil {
 		return nil, err
 	}
@@ -41,8 +41,8 @@ func (s *CategoryService) List(ctx context.Context, params CategoryListParams) (
 }
 
 // Get retrieves a single category by ID.
-func (s *CategoryService) Get(ctx context.Context, id int) (*ShoperCategory, error) {
-	var result ShoperCategory
+func (s *CategoryService) Get(ctx context.Context, id int) (*Category, error) {
+	var result Category
 	if err := s.client.do(ctx, "GET", fmt.Sprintf("/categories/%d", id), nil, &result); err != nil {
 		return nil, err
 	}

@@ -10,7 +10,7 @@ import (
 )
 
 // csrfTestToken is the fake CSRF token returned by test servers.
-const csrfTestToken = "test-csrf-token-12345"
+const csrfTestToken = "test-csrf-token-12345" //nolint:gosec // G101: test credential
 
 // withCSRF wraps a handler to respond to CSRF token fetch requests.
 // For GET requests with X-CSRF-TOKEN: Fetch header, it returns the token.
@@ -110,7 +110,7 @@ func TestAPIError_Forbidden(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(APIResult{
+		_ = json.NewEncoder(w).Encode(APIResult{
 			ResultType: "ERROR",
 			Messages:   []APIResultMessage{{MessageType: "ERROR", Message: "No inventory report role"}},
 		})
@@ -133,7 +133,7 @@ func TestAPIError_Forbidden(t *testing.T) {
 func TestAPIError_ServerError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("internal error"))
+		_, _ = w.Write([]byte("internal error"))
 	}))
 	defer srv.Close()
 
@@ -209,7 +209,7 @@ func TestAcceptHeader(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient("u", "p", WithBaseURL(srv.URL))
-	c.HealthCheck(context.Background())
+	_ = c.HealthCheck(context.Background())
 }
 
 func TestContentTypeOnPOST(t *testing.T) {
@@ -221,12 +221,12 @@ func TestContentTypeOnPOST(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(OrderResponse{})
+		_ = json.NewEncoder(w).Encode(OrderResponse{})
 	}))
 	defer srv.Close()
 
 	c := NewClient("u", "p", WithBaseURL(srv.URL))
-	c.Orders.Create(context.Background(), &OrderRequest{
+	_, _ = c.Orders.Create(context.Background(), &OrderRequest{
 		Lines: []OrderRequestLine{{BarCode: "123", Quantity: 1}},
 	})
 }
@@ -240,7 +240,7 @@ func TestCSRFTokenSentOnPOST(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(OrderResponse{})
+		_ = json.NewEncoder(w).Encode(OrderResponse{})
 	}))
 	defer srv.Close()
 

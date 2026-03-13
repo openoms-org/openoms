@@ -154,7 +154,7 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("olx: token request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
@@ -215,7 +215,7 @@ func (c *Client) doInternal(ctx context.Context, method, path string, body any, 
 	if err != nil {
 		return fmt.Errorf("olx: execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// On 401 with a stale token, force refresh and retry once.
 	if resp.StatusCode == 401 && canRetry {

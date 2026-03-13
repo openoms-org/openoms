@@ -16,9 +16,9 @@ type ShipmentService struct {
 // --- Create Shipment ---
 
 type createShipmentsRequest struct {
-	XMLName   xml.Name        `xml:"createShipments"`
-	AuthData  authData        `xml:"authData"`
-	Shipments []soapShipment  `xml:"shipments"`
+	XMLName   xml.Name       `xml:"createShipments"`
+	AuthData  authData       `xml:"authData"`
+	Shipments []soapShipment `xml:"shipments"`
 }
 
 type soapShipment struct {

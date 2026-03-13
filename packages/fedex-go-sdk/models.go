@@ -4,7 +4,7 @@ import "time"
 
 // ShipmentRequest is the payload sent to create a new FedEx shipment.
 type ShipmentRequest struct {
-	AccountNumber   AccountNumber   `json:"accountNumber"`
+	AccountNumber     AccountNumber     `json:"accountNumber"`
 	RequestedShipment RequestedShipment `json:"requestedShipment"`
 }
 
@@ -15,11 +15,11 @@ type AccountNumber struct {
 
 // RequestedShipment contains shipment details.
 type RequestedShipment struct {
-	Shipper          Party           `json:"shipper"`
-	Recipients       []Party         `json:"recipients"`
-	ServiceType      string          `json:"serviceType"`
-	PackagingType    string          `json:"packagingType"`
-	RequestedPackageLineItems []PackageLineItem `json:"requestedPackageLineItems"`
+	Shipper                   Party                    `json:"shipper"`
+	Recipients                []Party                  `json:"recipients"`
+	ServiceType               string                   `json:"serviceType"`
+	PackagingType             string                   `json:"packagingType"`
+	RequestedPackageLineItems []PackageLineItem        `json:"requestedPackageLineItems"`
 	ShipmentSpecialServices   *ShipmentSpecialServices `json:"shipmentSpecialServices,omitempty"`
 	CustomerReferences        []CustomerReference      `json:"customerReferences,omitempty"`
 	LabelSpecification        LabelSpecification       `json:"labelSpecification"`
@@ -33,23 +33,23 @@ type Party struct {
 
 // Contact contains person/company contact details.
 type Contact struct {
-	PersonName  string `json:"personName"`
-	PhoneNumber string `json:"phoneNumber,omitempty"`
+	PersonName   string `json:"personName"`
+	PhoneNumber  string `json:"phoneNumber,omitempty"`
 	EmailAddress string `json:"emailAddress,omitempty"`
 }
 
 // Address contains FedEx-formatted address fields.
 type Address struct {
-	StreetLines   []string `json:"streetLines"`
-	City          string   `json:"city"`
-	StateOrProvince string `json:"stateOrProvinceCode,omitempty"`
-	PostalCode    string   `json:"postalCode"`
-	CountryCode   string   `json:"countryCode"`
+	StreetLines     []string `json:"streetLines"`
+	City            string   `json:"city"`
+	StateOrProvince string   `json:"stateOrProvinceCode,omitempty"`
+	PostalCode      string   `json:"postalCode"`
+	CountryCode     string   `json:"countryCode"`
 }
 
 // PackageLineItem describes a package for shipment.
 type PackageLineItem struct {
-	Weight     Weight     `json:"weight"`
+	Weight     Weight      `json:"weight"`
 	Dimensions *Dimensions `json:"dimensions,omitempty"`
 }
 
@@ -69,7 +69,7 @@ type Dimensions struct {
 
 // ShipmentSpecialServices contains special service options.
 type ShipmentSpecialServices struct {
-	SpecialServiceTypes []string `json:"specialServiceTypes,omitempty"`
+	SpecialServiceTypes []string   `json:"specialServiceTypes,omitempty"`
 	CodDetail           *CODDetail `json:"codDetail,omitempty"`
 }
 
@@ -99,8 +99,8 @@ type LabelSpecification struct {
 
 // ShipmentResponse is returned after a shipment is created.
 type ShipmentResponse struct {
-	TransactionID string              `json:"transactionId"`
-	Output        ShipmentOutput      `json:"output"`
+	TransactionID string         `json:"transactionId"`
+	Output        ShipmentOutput `json:"output"`
 }
 
 // ShipmentOutput contains the shipment creation result.
@@ -110,29 +110,29 @@ type ShipmentOutput struct {
 
 // TransactionShipment contains details of a created shipment.
 type TransactionShipment struct {
-	MasterTrackingNumber string           `json:"masterTrackingNumber"`
-	ShipmentID           string           `json:"shipmentId,omitempty"`
-	PieceResponses       []PieceResponse  `json:"pieceResponses"`
+	MasterTrackingNumber string          `json:"masterTrackingNumber"`
+	ShipmentID           string          `json:"shipmentId,omitempty"`
+	PieceResponses       []PieceResponse `json:"pieceResponses"`
 }
 
 // PieceResponse contains details for a shipped piece.
 type PieceResponse struct {
-	TrackingNumber   string `json:"trackingNumber"`
+	TrackingNumber   string            `json:"trackingNumber"`
 	PackageDocuments []PackageDocument `json:"packageDocuments"`
 }
 
 // PackageDocument contains label document info.
 type PackageDocument struct {
-	ContentType string   `json:"contentType"`
-	EncodedLabel string  `json:"encodedLabel,omitempty"` // base64-encoded
-	URL         string   `json:"url,omitempty"`
+	ContentType  string `json:"contentType"`
+	EncodedLabel string `json:"encodedLabel,omitempty"` // base64-encoded
+	URL          string `json:"url,omitempty"`
 }
 
 // TrackingInfo contains tracking information for a shipment.
 type TrackingInfo struct {
-	TrackingNumber string           `json:"trackingNumber"`
-	Events         []TrackingEvent  `json:"scanEvents"`
-	LatestStatus   string           `json:"latestStatusDetail"`
+	TrackingNumber string          `json:"trackingNumber"`
+	Events         []TrackingEvent `json:"scanEvents"`
+	LatestStatus   string          `json:"latestStatusDetail"`
 }
 
 // TrackingEvent represents a single tracking event from FedEx.
@@ -178,9 +178,9 @@ type StatusDetail struct {
 
 // ScanEvent represents a single scan/tracking event.
 type ScanEvent struct {
-	Date             string      `json:"date"`
-	EventType        string      `json:"eventType"`
-	EventDescription string      `json:"eventDescription"`
+	Date             string       `json:"date"`
+	EventType        string       `json:"eventType"`
+	EventDescription string       `json:"eventDescription"`
 	ScanLocation     ScanLocation `json:"scanLocation"`
 }
 
@@ -192,6 +192,6 @@ type ScanLocation struct {
 
 // CancelShipmentRequest is the payload sent to cancel a FedEx shipment.
 type CancelShipmentRequest struct {
-	AccountNumber AccountNumber `json:"accountNumber"`
-	TrackingNumber string       `json:"trackingNumber"`
+	AccountNumber  AccountNumber `json:"accountNumber"`
+	TrackingNumber string        `json:"trackingNumber"`
 }

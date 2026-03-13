@@ -30,28 +30,28 @@ func TestSendSMS_Success(t *testing.T) {
 		}
 
 		// Parse form body
-		if err := r.ParseForm(); err != nil {
+		if err := r.ParseForm(); err != nil { //nolint:gosec // test handler
 			t.Fatalf("failed to parse form: %v", err)
 		}
 
-		if r.FormValue("to") != "48123456789" {
-			t.Errorf("expected to=48123456789, got %s", r.FormValue("to"))
+		if r.FormValue("to") != "48123456789" { //nolint:gosec // test handler
+			t.Errorf("expected to=48123456789, got %s", r.FormValue("to")) //nolint:gosec // test handler
 		}
-		if r.FormValue("message") != "Testowa wiadomosc SMS" {
-			t.Errorf("expected message=Testowa wiadomosc SMS, got %s", r.FormValue("message"))
+		if r.FormValue("message") != "Testowa wiadomosc SMS" { //nolint:gosec // test handler
+			t.Errorf("expected message=Testowa wiadomosc SMS, got %s", r.FormValue("message")) //nolint:gosec // test handler
 		}
-		if r.FormValue("from") != "OpenOMS" {
-			t.Errorf("expected from=OpenOMS, got %s", r.FormValue("from"))
+		if r.FormValue("from") != "OpenOMS" { //nolint:gosec // test handler
+			t.Errorf("expected from=OpenOMS, got %s", r.FormValue("from")) //nolint:gosec // test handler
 		}
-		if r.FormValue("format") != "json" {
-			t.Errorf("expected format=json, got %s", r.FormValue("format"))
+		if r.FormValue("format") != "json" { //nolint:gosec // test handler
+			t.Errorf("expected format=json, got %s", r.FormValue("format")) //nolint:gosec // test handler
 		}
-		if r.FormValue("encoding") != "utf-8" {
-			t.Errorf("expected encoding=utf-8, got %s", r.FormValue("encoding"))
+		if r.FormValue("encoding") != "utf-8" { //nolint:gosec // test handler
+			t.Errorf("expected encoding=utf-8, got %s", r.FormValue("encoding")) //nolint:gosec // test handler
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(SendSMSResponse{
+		_ = json.NewEncoder(w).Encode(SendSMSResponse{
 			Count: 1,
 			List: []SMSResult{
 				{
@@ -96,17 +96,17 @@ func TestSendSMS_Success(t *testing.T) {
 
 func TestSendSMS_WithRequestFrom(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := r.ParseForm(); err != nil {
+		if err := r.ParseForm(); err != nil { //nolint:gosec // test handler
 			t.Fatalf("failed to parse form: %v", err)
 		}
 
 		// Request-level from should override client default
-		if r.FormValue("from") != "CustomSender" {
-			t.Errorf("expected from=CustomSender, got %s", r.FormValue("from"))
+		if r.FormValue("from") != "CustomSender" { //nolint:gosec // test handler
+			t.Errorf("expected from=CustomSender, got %s", r.FormValue("from")) //nolint:gosec // test handler
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(SendSMSResponse{
+		_ = json.NewEncoder(w).Encode(SendSMSResponse{
 			Count: 1,
 			List: []SMSResult{
 				{ID: "def456", Points: 0.16, Number: "48987654321", Status: "QUEUE"},
@@ -130,9 +130,9 @@ func TestSendSMS_WithRequestFrom(t *testing.T) {
 }
 
 func TestSendSMS_APIError(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"error":   101,
 			"message": "Authorization failed",
 		})
@@ -165,9 +165,9 @@ func TestSendSMS_APIError(t *testing.T) {
 
 func TestSendSMS_MessageError(t *testing.T) {
 	errorCode := 13
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(SendSMSResponse{
+		_ = json.NewEncoder(w).Encode(SendSMSResponse{
 			Count: 1,
 			List: []SMSResult{
 				{

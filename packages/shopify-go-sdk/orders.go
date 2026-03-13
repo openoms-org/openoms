@@ -14,17 +14,17 @@ type OrderService struct {
 
 // OrderListParams are the optional parameters for listing orders.
 type OrderListParams struct {
-	Limit            int
-	SinceID          int64  // return orders after this ID
-	UpdatedAtMin     string // ISO8601 date filter
-	Status           string // "open", "closed", "cancelled", "any"
-	FinancialStatus  string // "authorized", "pending", "paid", "partially_paid", etc.
+	Limit             int
+	SinceID           int64  // return orders after this ID
+	UpdatedAtMin      string // ISO8601 date filter
+	Status            string // "open", "closed", "cancelled", "any"
+	FinancialStatus   string // "authorized", "pending", "paid", "partially_paid", etc.
 	FulfillmentStatus string // "shipped", "partial", "unshipped", "any"
-	Fields           string // comma-separated list of fields
+	Fields            string // comma-separated list of fields
 }
 
 // List retrieves a list of orders.
-func (s *OrderService) List(ctx context.Context, params OrderListParams) ([]ShopifyOrder, error) {
+func (s *OrderService) List(ctx context.Context, params OrderListParams) ([]Order, error) {
 	path := "/orders.json"
 
 	v := url.Values{}
@@ -54,7 +54,7 @@ func (s *OrderService) List(ctx context.Context, params OrderListParams) ([]Shop
 	}
 
 	var wrapper struct {
-		Orders []ShopifyOrder `json:"orders"`
+		Orders []Order `json:"orders"`
 	}
 	if err := s.client.do(ctx, "GET", path, nil, &wrapper); err != nil {
 		return nil, err
@@ -63,9 +63,9 @@ func (s *OrderService) List(ctx context.Context, params OrderListParams) ([]Shop
 }
 
 // Get retrieves a single order by ID.
-func (s *OrderService) Get(ctx context.Context, id int64) (*ShopifyOrder, error) {
+func (s *OrderService) Get(ctx context.Context, id int64) (*Order, error) {
 	var wrapper struct {
-		Order ShopifyOrder `json:"order"`
+		Order Order `json:"order"`
 	}
 	if err := s.client.do(ctx, "GET", fmt.Sprintf("/orders/%d.json", id), nil, &wrapper); err != nil {
 		return nil, err

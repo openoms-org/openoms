@@ -8,10 +8,10 @@ type CreateParcelRequest struct {
 	Consignee       Consignee        `json:"Consignee"`
 	Shipper         *Shipper         `json:"Shipper,omitempty"`
 	ShippingUnit    []ShipmentUnit   `json:"ShippingUnit"`
-	Product         string           `json:"Product"`             // mandatory: "PARCEL", "EXPRESS", etc.
+	Product         string           `json:"Product"` // mandatory: "PARCEL", "EXPRESS", etc.
 	Service         *ServiceSection  `json:"Service,omitempty"`
 	References      []string         `json:"References,omitempty"`
-	Middleware      *Middleware       `json:"Middleware,omitempty"`
+	Middleware      *Middleware      `json:"Middleware,omitempty"`
 	PrintingOptions *PrintingOptions `json:"PrintingOptions,omitempty"`
 }
 
@@ -54,9 +54,9 @@ type ServiceSection struct {
 // Service represents a GLS optional service.
 // Use ServiceName "service_cash" for COD, "service_addonliability" for insurance.
 type Service struct {
-	ServiceName    string                  `json:"ServiceName"`
-	Cash           *CashService            `json:"Cash,omitempty"`
-	AddOnLiability *AddOnLiabilityService  `json:"AddOnLiability,omitempty"`
+	ServiceName    string                 `json:"ServiceName"`
+	Cash           *CashService           `json:"Cash,omitempty"`
+	AddOnLiability *AddOnLiabilityService `json:"AddOnLiability,omitempty"`
 }
 
 // CashService contains COD (cash-on-delivery) payment details.
@@ -101,7 +101,7 @@ type rawCreateParcelResponse struct {
 			ParcelNumber string `json:"ParcelNumber,omitempty"`
 		} `json:"ParcelData"`
 		PrintData []struct {
-			Data     string `json:"Data"`     // base64-encoded label
+			Data     string `json:"Data"` // base64-encoded label
 			Sequence int    `json:"Sequence,omitempty"`
 		} `json:"PrintData"`
 	} `json:"CreatedShipment"`

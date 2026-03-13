@@ -79,8 +79,8 @@ type soapEnvelope struct {
 }
 
 type soapBody struct {
-	XMLName xml.Name    `xml:"soap:Body"`
-	Content interface{} `xml:",omitempty"`
+	XMLName xml.Name `xml:"soap:Body"`
+	Content any      `xml:",omitempty"`
 }
 
 // authData is embedded in every DHL24 SOAP request.
@@ -91,7 +91,7 @@ type authData struct {
 }
 
 // doSOAP sends a SOAP request and returns the raw XML response body.
-func (c *Client) doSOAP(ctx context.Context, soapAction string, body interface{}) ([]byte, error) {
+func (c *Client) doSOAP(ctx context.Context, soapAction string, body any) ([]byte, error) {
 	env := soapEnvelope{
 		NS:   "http://schemas.xmlsoap.org/soap/envelope/",
 		Body: soapBody{Content: body},
@@ -114,7 +114,7 @@ func (c *Client) doSOAP(ctx context.Context, soapAction string, body interface{}
 	if err != nil {
 		return nil, fmt.Errorf("dhl: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

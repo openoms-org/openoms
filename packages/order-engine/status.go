@@ -5,6 +5,7 @@ import "fmt"
 // OrderStatus represents the lifecycle state of an order.
 type OrderStatus string
 
+// Order lifecycle status constants.
 const (
 	OrderNew            OrderStatus = "new"
 	OrderConfirmed      OrderStatus = "confirmed"
@@ -53,6 +54,7 @@ func ParseOrderStatus(s string) (OrderStatus, error) {
 // ShipmentStatus represents the lifecycle state of a shipment.
 type ShipmentStatus string
 
+// Shipment lifecycle status constants.
 const (
 	ShipmentCreated        ShipmentStatus = "created"
 	ShipmentLabelReady     ShipmentStatus = "label_ready"

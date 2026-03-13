@@ -58,7 +58,7 @@ func TestDoSetsBasicAuth(t *testing.T) {
 			t.Errorf("Accept = %q, want application/glsVersion1+json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -104,7 +104,7 @@ func TestCreateParcel(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"ORDER-001","ParcelData":[{"TrackID":"TRK-001"},{"TrackID":"TRK-002"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"ORDER-001","ParcelData":[{"TrackID":"TRK-001"},{"TrackID":"TRK-002"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -168,7 +168,7 @@ func TestGetTracking(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(TrackingResponse{
+		_ = json.NewEncoder(w).Encode(TrackingResponse{
 			Events: []TrackingEvent{
 				{Status: "PREADVICE", Location: "Krakow", Details: "Paczka zarejestrowana"},
 				{Status: "INTRANSIT", Location: "Lodz", Details: "W drodze"},
@@ -213,7 +213,7 @@ func TestCancelParcel(t *testing.T) {
 			t.Errorf("path = %q, want /shipments/cancel/GLS-001", r.URL.Path)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -229,9 +229,9 @@ func TestCancelParcel(t *testing.T) {
 }
 
 func TestCreateParcelError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid parcel data",
 			"code":    "VALIDATION_ERROR",
 		})
@@ -250,9 +250,9 @@ func TestCreateParcelError(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
 	}))

@@ -2,6 +2,7 @@ package kaufland
 
 import "errors"
 
+// Sentinel errors for API responses.
 var (
 	ErrUnauthorized = errors.New("kaufland: unauthorized")
 	ErrForbidden    = errors.New("kaufland: forbidden")

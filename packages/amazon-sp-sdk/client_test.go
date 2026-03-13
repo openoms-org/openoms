@@ -87,7 +87,7 @@ func TestDoSetsAccessTokenHeader(t *testing.T) {
 			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -116,16 +116,16 @@ func TestOrdersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{
+		_ = json.NewEncoder(w).Encode(OrdersResponse{
 			Payload: OrdersPayload{
 				Orders: []Order{
 					{
-						AmazonOrderID:  "305-1234567-8901234",
-						PurchaseDate:   "2024-01-15T10:30:00Z",
-						OrderStatus:    "Unshipped",
-						OrderTotal:     &Money{Amount: "49.99", CurrencyCode: "PLN"},
-						MarketplaceID:  "A1RKKUPIHCS9HS",
-						FulfillmentChannel: "MFN",
+						AmazonOrderID:          "305-1234567-8901234",
+						PurchaseDate:           "2024-01-15T10:30:00Z",
+						OrderStatus:            "Unshipped",
+						OrderTotal:             &Money{Amount: "49.99", CurrencyCode: "PLN"},
+						MarketplaceID:          "A1RKKUPIHCS9HS",
+						FulfillmentChannel:     "MFN",
 						NumberOfItemsUnshipped: 1,
 					},
 				},
@@ -166,7 +166,7 @@ func TestOrdersListWithNextToken(t *testing.T) {
 			t.Errorf("NextToken = %q, want page-2-token", r.URL.Query().Get("NextToken"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{
+		_ = json.NewEncoder(w).Encode(OrdersResponse{
 			Payload: OrdersPayload{
 				Orders: []Order{},
 			},
@@ -192,17 +192,17 @@ func TestOrdersGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(GetOrderResponse{
+		_ = json.NewEncoder(w).Encode(GetOrderResponse{
 			Payload: Order{
-				AmazonOrderID:  "305-1234567-8901234",
-				OrderStatus:    "Shipped",
-				PurchaseDate:   "2024-01-15T10:30:00Z",
-				MarketplaceID:  "A1RKKUPIHCS9HS",
+				AmazonOrderID:      "305-1234567-8901234",
+				OrderStatus:        "Shipped",
+				PurchaseDate:       "2024-01-15T10:30:00Z",
+				MarketplaceID:      "A1RKKUPIHCS9HS",
 				FulfillmentChannel: "MFN",
 				ShippingAddress: &Address{
-					Name:       "Jan Kowalski",
-					City:       "Warszawa",
-					PostalCode: "00-001",
+					Name:        "Jan Kowalski",
+					City:        "Warszawa",
+					PostalCode:  "00-001",
 					CountryCode: "PL",
 				},
 				NumberOfItemsShipped: 2,
@@ -241,7 +241,7 @@ func TestOrdersGetItems(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrderItemsResponse{
+		_ = json.NewEncoder(w).Encode(OrderItemsResponse{
 			Payload: OrderItemsPayload{
 				OrderItems: []OrderItem{
 					{
@@ -297,7 +297,7 @@ func TestCatalogGetItem(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(CatalogItemResponse{
+		_ = json.NewEncoder(w).Encode(CatalogItemResponse{
 			ASIN: "B08N5WRWNW",
 			Summaries: []ItemSummary{
 				{
@@ -331,9 +331,9 @@ func TestCatalogGetItem(t *testing.T) {
 }
 
 func TestOrdersListError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(APIError{
+		_ = json.NewEncoder(w).Encode(APIError{
 			Errors: []SPError{
 				{Code: "Unauthorized", Message: "Access denied"},
 			},
@@ -358,9 +358,9 @@ func TestOrdersListError(t *testing.T) {
 }
 
 func TestOrdersGetError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(APIError{
+		_ = json.NewEncoder(w).Encode(APIError{
 			Errors: []SPError{
 				{Code: "InvalidInput", Message: "Order not found"},
 			},
@@ -377,9 +377,9 @@ func TestOrdersGetError(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"errors":[{"code":"InternalFailure","message":"Internal error"}]}`))
+		_, _ = w.Write([]byte(`{"errors":[{"code":"InternalFailure","message":"Internal error"}]}`))
 	}))
 	defer srv.Close()
 
@@ -474,7 +474,7 @@ func TestEnsureTokenSkipsRefreshWhenValid(t *testing.T) {
 			t.Errorf("x-amz-access-token = %q, want valid-access-token", tok)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{
+		_ = json.NewEncoder(w).Encode(OrdersResponse{
 			Payload: OrdersPayload{Orders: []Order{}},
 		})
 	}))

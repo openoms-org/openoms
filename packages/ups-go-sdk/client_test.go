@@ -18,7 +18,7 @@ func newAuthenticatedServer(t *testing.T, handler http.HandlerFunc) *httptest.Se
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/security/v1/oauth/token" {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(tokenResponse{
+			_ = json.NewEncoder(w).Encode(tokenResponse{ //nolint:gosec // G117: test response
 				AccessToken: "test-access-token",
 				ExpiresIn:   3600,
 				TokenType:   "Bearer",
@@ -99,7 +99,7 @@ func TestAuthenticate(t *testing.T) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(tokenResponse{
+			_ = json.NewEncoder(w).Encode(tokenResponse{ //nolint:gosec // G117: test response
 				AccessToken: "fresh-token",
 				ExpiresIn:   3600,
 				TokenType:   "Bearer",
@@ -112,7 +112,7 @@ func TestAuthenticate(t *testing.T) {
 			t.Errorf("Authorization = %q, want %q", auth, "Bearer fresh-token")
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{"events": []any{}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"events": []any{}})
 	}))
 	defer srv.Close()
 
@@ -137,7 +137,7 @@ func TestAuthenticateReusesToken(t *testing.T) {
 		if r.URL.Path == "/security/v1/oauth/token" {
 			authCalled.Add(1)
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(tokenResponse{
+			_ = json.NewEncoder(w).Encode(tokenResponse{ //nolint:gosec // G117: test response
 				AccessToken: "cached-token",
 				ExpiresIn:   3600,
 				TokenType:   "Bearer",
@@ -145,7 +145,7 @@ func TestAuthenticateReusesToken(t *testing.T) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{"events": []any{}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"events": []any{}})
 	}))
 	defer srv.Close()
 
@@ -164,9 +164,9 @@ func TestAuthenticateReusesToken(t *testing.T) {
 }
 
 func TestAuthenticateError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message": "Invalid credentials"}`))
+		_, _ = w.Write([]byte(`{"message": "Invalid credentials"}`))
 	}))
 	defer srv.Close()
 
@@ -205,7 +205,7 @@ func TestCreateShipment(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ShipmentResponse{
+		_ = json.NewEncoder(w).Encode(ShipmentResponse{
 			ShipmentID:     "SHP-001",
 			TrackingNumber: "1Z999AA10123456784",
 			LabelImage:     base64.StdEncoding.EncodeToString([]byte("%PDF-1.4 fake")),
@@ -218,7 +218,7 @@ func TestCreateShipment(t *testing.T) {
 	resp, err := c.Shipments.Create(context.Background(), &ShipmentRequest{
 		Shipper: Party{
 			Name: "Sklep Online",
-			Address: UPSAddress{
+			Address: Address{
 				AddressLine: []string{"Krakowska 10"},
 				City:        "Krakow",
 				PostalCode:  "30-001",
@@ -227,7 +227,7 @@ func TestCreateShipment(t *testing.T) {
 		},
 		ShipTo: Party{
 			Name: "Jan Kowalski",
-			Address: UPSAddress{
+			Address: Address{
 				AddressLine: []string{"Marszalkowska 1"},
 				City:        "Warszawa",
 				PostalCode:  "00-001",
@@ -269,7 +269,7 @@ func TestGetLabel(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"labelImage": encoded,
 		})
 	})
@@ -296,7 +296,7 @@ func TestGetTracking(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(TrackingResponse{
+		_ = json.NewEncoder(w).Encode(TrackingResponse{
 			Events: []TrackingEvent{
 				{Status: "P", Location: "Krakow", Description: "Pickup"},
 				{Status: "I", Location: "Lodz", Description: "In Transit"},
@@ -350,9 +350,9 @@ func TestCancelShipment(t *testing.T) {
 }
 
 func TestCreateShipmentError(t *testing.T) {
-	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid shipment data",
 			"code":    "VALIDATION_ERROR",
 		})
@@ -368,9 +368,9 @@ func TestCreateShipmentError(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
 	})
@@ -396,9 +396,9 @@ func TestServerError(t *testing.T) {
 }
 
 func TestNotFoundError(t *testing.T) {
-	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Shipment not found",
 		})
 	})
@@ -484,7 +484,7 @@ func TestDoSetsBearerToken(t *testing.T) {
 			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{"events": []any{}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"events": []any{}})
 	})
 	defer srv.Close()
 
@@ -497,7 +497,7 @@ func TestDoSetsBearerToken(t *testing.T) {
 }
 
 func TestEmptyErrorBody(t *testing.T) {
-	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	srv := newAuthenticatedServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
 	})
 	defer srv.Close()

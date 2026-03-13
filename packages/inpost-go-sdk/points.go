@@ -74,7 +74,7 @@ func (s *PointService) doPoints(ctx context.Context, path string, result any) er
 	if err != nil {
 		return fmt.Errorf("inpost: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -3,6 +3,7 @@ package inpost
 // ServiceType identifies the InPost shipping service.
 type ServiceType string
 
+// Supported InPost shipping service types.
 const (
 	ServiceLockerStandard  ServiceType = "inpost_locker_standard"
 	ServiceCourierStandard ServiceType = "inpost_courier_standard"
@@ -11,6 +12,7 @@ const (
 // ParcelTemplate identifies the standard locker parcel sizes.
 type ParcelTemplate string
 
+// Standard locker parcel size templates.
 const (
 	ParcelSmall  ParcelTemplate = "small"  // A: 8x38x64cm
 	ParcelMedium ParcelTemplate = "medium" // B: 19x38x64cm
@@ -66,6 +68,7 @@ type Weight struct {
 // SendingMethod identifies how the sender hands over parcels to InPost.
 type SendingMethod string
 
+// Sending method constants.
 const (
 	SendingMethodParcelLocker  SendingMethod = "parcel_locker"
 	SendingMethodDispatchOrder SendingMethod = "dispatch_order"
@@ -161,6 +164,7 @@ type ParcelResponse struct {
 // PointType identifies the type of InPost point.
 type PointType string
 
+// InPost point type constants.
 const (
 	PointTypeParcelLocker PointType = "parcel_locker"
 	PointTypePOP          PointType = "pop"

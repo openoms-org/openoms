@@ -32,7 +32,7 @@ func (s *InventoryService) GetLevels(ctx context.Context, inventoryItemID int64)
 // SetLevel sets the inventory level for an item at a location.
 func (s *InventoryService) SetLevel(ctx context.Context, inventoryItemID, locationID int64, available int) error {
 	body := map[string]any{
-		"location_id":      locationID,
+		"location_id":       locationID,
 		"inventory_item_id": inventoryItemID,
 		"available":         available,
 	}
@@ -42,8 +42,8 @@ func (s *InventoryService) SetLevel(ctx context.Context, inventoryItemID, locati
 // AdjustLevel adjusts the inventory level by a delta.
 func (s *InventoryService) AdjustLevel(ctx context.Context, inventoryItemID, locationID int64, delta int) error {
 	body := map[string]any{
-		"location_id":       locationID,
-		"inventory_item_id": inventoryItemID,
+		"location_id":          locationID,
+		"inventory_item_id":    inventoryItemID,
 		"available_adjustment": delta,
 	}
 	return s.client.do(ctx, "POST", "/inventory_levels/adjust.json", body, nil)

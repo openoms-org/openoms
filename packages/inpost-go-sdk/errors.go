@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// Sentinel errors for API responses.
 var (
 	ErrUnauthorized = errors.New("inpost: unauthorized")
 	ErrNotFound     = errors.New("inpost: not found")

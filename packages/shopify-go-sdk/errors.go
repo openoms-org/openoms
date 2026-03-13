@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Sentinel errors for API responses.
 var (
 	ErrUnauthorized = errors.New("shopify: unauthorized")
 	ErrForbidden    = errors.New("shopify: forbidden")

@@ -68,7 +68,7 @@ func TestCreateShipment_SendsSOAP(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		gotBody = string(b)
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(newSOAPResponse("createShipments", "<shipmentId>SHP-001</shipmentId><trackingNumber>TRK123</trackingNumber>")))
+		_, _ = w.Write([]byte(newSOAPResponse("createShipments", "<shipmentId>SHP-001</shipmentId><trackingNumber>TRK123</trackingNumber>")))
 	}))
 	defer srv.Close()
 
@@ -99,9 +99,9 @@ func TestGetLabel_SendsSOAP(t *testing.T) {
 	pdfContent := []byte("%PDF-1.4 test")
 	encoded := base64.StdEncoding.EncodeToString(pdfContent)
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(newSOAPResponse("getLabels", "<labelData>"+encoded+"</labelData>")))
+		_, _ = w.Write([]byte(newSOAPResponse("getLabels", "<labelData>"+encoded+"</labelData>")))
 	}))
 	defer srv.Close()
 
@@ -122,7 +122,7 @@ func TestGetTracking_SendsSOAP(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		gotBody = string(b)
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(newSOAPResponse("getTrackAndTraceInfo", "<events></events>")))
+		_, _ = w.Write([]byte(newSOAPResponse("getTrackAndTraceInfo", "<events></events>")))
 	}))
 	defer srv.Close()
 
@@ -146,7 +146,7 @@ func TestCancel_SendsSOAP(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		gotBody = string(b)
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(newSOAPResponse("deleteShipment", "")))
+		_, _ = w.Write([]byte(newSOAPResponse("deleteShipment", "")))
 	}))
 	defer srv.Close()
 
@@ -161,10 +161,10 @@ func TestCancel_SendsSOAP(t *testing.T) {
 }
 
 func TestSOAPFault_ReturnsError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 	<soap:Body>
 		<soap:Fault>

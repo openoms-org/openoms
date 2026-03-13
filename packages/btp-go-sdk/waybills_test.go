@@ -18,13 +18,13 @@ func TestWaybillsGet(t *testing.T) {
 		}
 
 		var req WaybillsRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		if len(req.WaybillNumbers) != 2 {
 			t.Fatalf("expected 2 waybill numbers, got %d", len(req.WaybillNumbers))
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(WaybillsResponse{
+		_ = json.NewEncoder(w).Encode(WaybillsResponse{
 			Waybills: []Waybill{
 				{WaybillNumber: "WB001", OrderNumber: "ORD001", CarrierName: "DHL", TrackingNumber: "TRACK001"},
 			},
@@ -58,7 +58,7 @@ func TestWaybillConfigureNotify(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
+		_ = json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
 	}))
 	defer srv.Close()
 

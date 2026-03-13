@@ -36,7 +36,7 @@ func TestOrderCreate(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrderResponse{
+		_ = json.NewEncoder(w).Encode(OrderResponse{
 			Result:      APIResult{ResultType: "INFORMATION"},
 			OrderID:     "ord-abc-123",
 			OrderNumber: "ZAM/2026/001",
@@ -69,7 +69,7 @@ func TestOrderCreateValidationError(t *testing.T) {
 	srv := httptest.NewServer(withCSRF(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(APIResult{
+		_ = json.NewEncoder(w).Encode(APIResult{
 			ResultType: "ERROR",
 			Messages: []APIResultMessage{
 				{MessageType: "ERROR", Message: "Lines collection is empty"},
@@ -99,7 +99,7 @@ func TestOrderSetAttachments(t *testing.T) {
 		}
 
 		var req OrderAttachmentsRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		if req.OrderID != "ord-123" {
 			t.Fatalf("expected order ID ord-123, got %s", req.OrderID)
 		}
@@ -108,7 +108,7 @@ func TestOrderSetAttachments(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrderAttachmentsResponse{
+		_ = json.NewEncoder(w).Encode(OrderAttachmentsResponse{
 			Result:          APIResult{ResultType: "INFORMATION"},
 			OrderID:         "ord-123",
 			AttachmentCount: 2,

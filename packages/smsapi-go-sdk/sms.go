@@ -48,7 +48,7 @@ func (c *Client) SendSMS(ctx context.Context, req SendSMSRequest) (*SendSMSRespo
 	if err != nil {
 		return nil, fmt.Errorf("smsapi: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

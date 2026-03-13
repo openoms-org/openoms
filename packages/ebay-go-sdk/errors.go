@@ -2,6 +2,7 @@ package ebay
 
 import "errors"
 
+// Sentinel errors for API responses.
 var (
 	ErrUnauthorized = errors.New("ebay: unauthorized")
 	ErrForbidden    = errors.New("ebay: forbidden")

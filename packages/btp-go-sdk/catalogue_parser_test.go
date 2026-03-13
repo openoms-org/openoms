@@ -201,7 +201,7 @@ func TestParseCatalogueXML_EmptyPictureURL(t *testing.T) {
 func TestParseCatalogueURL(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/xml")
-		w.Write([]byte(sampleCatalogueXML))
+		_, _ = w.Write([]byte(sampleCatalogueXML))
 	}))
 	defer srv.Close()
 

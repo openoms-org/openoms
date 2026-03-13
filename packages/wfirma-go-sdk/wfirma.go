@@ -94,11 +94,11 @@ type InvoiceBuyer struct {
 
 // InvoiceItem represents a line item on a wFirma invoice.
 type InvoiceItem struct {
-	Name      string  `json:"name"`
-	Unit      string  `json:"unit"`
-	Count     int     `json:"count"`
-	Price     float64 `json:"price"`
-	VATRate   string  `json:"vat"` // "23", "8", "5", "0", "zw", "np"
+	Name    string  `json:"name"`
+	Unit    string  `json:"unit"`
+	Count   int     `json:"count"`
+	Price   float64 `json:"price"`
+	VATRate string  `json:"vat"` // "23", "8", "5", "0", "zw", "np"
 }
 
 // CreateInvoiceRequest is the request body for creating an invoice.
@@ -240,7 +240,7 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	if err != nil {
 		return nil, fmt.Errorf("wfirma: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -60,7 +60,7 @@ func TestBearerTokenHeader(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -74,9 +74,9 @@ func TestBearerTokenHeader(t *testing.T) {
 }
 
 func TestDoReturnsAPIError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"invalid token"}`))
+		_, _ = w.Write([]byte(`{"message":"invalid token"}`))
 	}))
 	defer srv.Close()
 
@@ -104,7 +104,7 @@ func TestURLConstruction(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -117,9 +117,9 @@ func TestURLConstruction(t *testing.T) {
 }
 
 func TestDoReturnsAPIErrorNonDecodable(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
-		w.Write([]byte(`<html>error</html>`))
+		_, _ = w.Write([]byte(`<html>error</html>`))
 	}))
 	defer srv.Close()
 
@@ -142,7 +142,7 @@ func TestDoWithRequestBody(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotContentType = r.Header.Get("Content-Type")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"created"}`))
+		_, _ = w.Write([]byte(`{"id":"created"}`))
 	}))
 	defer srv.Close()
 
@@ -162,9 +162,9 @@ func TestDoWithRequestBody(t *testing.T) {
 }
 
 func TestDoContextCancelled(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -230,9 +230,9 @@ func TestAPIErrorUnwrap(t *testing.T) {
 }
 
 func TestDoDecodeError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`not valid json`))
+		_, _ = w.Write([]byte(`not valid json`))
 	}))
 	defer srv.Close()
 
@@ -245,10 +245,10 @@ func TestDoDecodeError(t *testing.T) {
 }
 
 func TestDoRawReturnsContentType(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/pdf")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("%PDF-1.4"))
+		_, _ = w.Write([]byte("%PDF-1.4"))
 	}))
 	defer srv.Close()
 

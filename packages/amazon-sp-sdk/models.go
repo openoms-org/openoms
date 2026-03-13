@@ -13,18 +13,18 @@ type OrdersPayload struct {
 
 // Order represents an Amazon SP-API order.
 type Order struct {
-	AmazonOrderID      string    `json:"AmazonOrderId"`
-	PurchaseDate       string    `json:"PurchaseDate"`
-	LastUpdateDate     string    `json:"LastUpdateDate,omitempty"`
-	OrderStatus        string    `json:"OrderStatus"`
-	OrderTotal         *Money    `json:"OrderTotal,omitempty"`
-	ShippingAddress    *Address  `json:"ShippingAddress,omitempty"`
-	BuyerInfo          *BuyerInfo `json:"BuyerInfo,omitempty"`
-	PaymentMethod      string    `json:"PaymentMethod,omitempty"`
-	FulfillmentChannel string    `json:"FulfillmentChannel"`
-	MarketplaceID      string    `json:"MarketplaceId"`
-	NumberOfItemsShipped   int   `json:"NumberOfItemsShipped"`
-	NumberOfItemsUnshipped int   `json:"NumberOfItemsUnshipped"`
+	AmazonOrderID          string     `json:"AmazonOrderId"`
+	PurchaseDate           string     `json:"PurchaseDate"`
+	LastUpdateDate         string     `json:"LastUpdateDate,omitempty"`
+	OrderStatus            string     `json:"OrderStatus"`
+	OrderTotal             *Money     `json:"OrderTotal,omitempty"`
+	ShippingAddress        *Address   `json:"ShippingAddress,omitempty"`
+	BuyerInfo              *BuyerInfo `json:"BuyerInfo,omitempty"`
+	PaymentMethod          string     `json:"PaymentMethod,omitempty"`
+	FulfillmentChannel     string     `json:"FulfillmentChannel"`
+	MarketplaceID          string     `json:"MarketplaceId"`
+	NumberOfItemsShipped   int        `json:"NumberOfItemsShipped"`
+	NumberOfItemsUnshipped int        `json:"NumberOfItemsUnshipped"`
 }
 
 // Money represents a monetary amount with currency.
@@ -62,14 +62,14 @@ type OrderItemsPayload struct {
 
 // OrderItem represents a single item in an Amazon order.
 type OrderItem struct {
-	ASIN             string `json:"ASIN"`
-	SellerSKU        string `json:"SellerSKU,omitempty"`
-	OrderItemID      string `json:"OrderItemId"`
-	Title            string `json:"Title,omitempty"`
-	QuantityOrdered  int    `json:"QuantityOrdered"`
-	QuantityShipped  int    `json:"QuantityShipped"`
-	ItemPrice        *Money `json:"ItemPrice,omitempty"`
-	ItemTax          *Money `json:"ItemTax,omitempty"`
+	ASIN            string `json:"ASIN"`
+	SellerSKU       string `json:"SellerSKU,omitempty"`
+	OrderItemID     string `json:"OrderItemId"`
+	Title           string `json:"Title,omitempty"`
+	QuantityOrdered int    `json:"QuantityOrdered"`
+	QuantityShipped int    `json:"QuantityShipped"`
+	ItemPrice       *Money `json:"ItemPrice,omitempty"`
+	ItemTax         *Money `json:"ItemTax,omitempty"`
 }
 
 // GetOrderResponse is the top-level response from GET /orders/v0/orders/{orderId}.
@@ -79,8 +79,8 @@ type GetOrderResponse struct {
 
 // CatalogItemResponse is the top-level response from GET /catalog/2022-04-01/items/{asin}.
 type CatalogItemResponse struct {
-	ASIN       string        `json:"asin"`
-	Summaries  []ItemSummary `json:"summaries,omitempty"`
+	ASIN      string        `json:"asin"`
+	Summaries []ItemSummary `json:"summaries,omitempty"`
 }
 
 // ItemSummary contains basic catalog item information.
@@ -133,7 +133,7 @@ type Feed struct {
 
 // APIError represents an error response from the Amazon SP-API.
 type APIError struct {
-	StatusCode int      `json:"-"`
+	StatusCode int       `json:"-"`
 	Errors     []SPError `json:"errors,omitempty"`
 }
 

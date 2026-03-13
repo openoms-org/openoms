@@ -97,56 +97,56 @@ func BuildInvoiceXML(data InvoiceData) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func writeHeader(w io.Writer, data InvoiceData) {
-	fmt.Fprintf(w, "  <Naglowek>\n")
-	fmt.Fprintf(w, "    <KodFormularza kodSystemowy=\"FA (2)\" wersjaSchemy=\"1-0E\">FA</KodFormularza>\n")
-	fmt.Fprintf(w, "    <WariantFormularza>2</WariantFormularza>\n")
-	fmt.Fprintf(w, "    <DataWytworzeniaFa>%s</DataWytworzeniaFa>\n", time.Now().Format("2006-01-02T15:04:05"))
-	fmt.Fprintf(w, "    <SystemInfo>OpenOMS</SystemInfo>\n")
-	fmt.Fprintf(w, "  </Naglowek>\n")
+func writeHeader(w io.Writer, _ InvoiceData) {
+	_, _ = fmt.Fprintf(w, "  <Naglowek>\n")
+	_, _ = fmt.Fprintf(w, "    <KodFormularza kodSystemowy=\"FA (2)\" wersjaSchemy=\"1-0E\">FA</KodFormularza>\n")
+	_, _ = fmt.Fprintf(w, "    <WariantFormularza>2</WariantFormularza>\n")
+	_, _ = fmt.Fprintf(w, "    <DataWytworzeniaFa>%s</DataWytworzeniaFa>\n", time.Now().Format("2006-01-02T15:04:05"))
+	_, _ = fmt.Fprintf(w, "    <SystemInfo>OpenOMS</SystemInfo>\n")
+	_, _ = fmt.Fprintf(w, "  </Naglowek>\n")
 }
 
 func writeSubject1(w io.Writer, data InvoiceData) {
-	fmt.Fprintf(w, "  <Podmiot1>\n")
-	fmt.Fprintf(w, "    <DaneIdentyfikacyjne>\n")
-	fmt.Fprintf(w, "      <NIP>%s</NIP>\n", escapeXML(data.SellerNIP))
-	fmt.Fprintf(w, "      <Nazwa>%s</Nazwa>\n", escapeXML(data.SellerName))
-	fmt.Fprintf(w, "    </DaneIdentyfikacyjne>\n")
-	fmt.Fprintf(w, "    <Adres>\n")
-	fmt.Fprintf(w, "      <KodKraju>%s</KodKraju>\n", escapeXML(data.SellerCountry))
-	fmt.Fprintf(w, "      <AdresL1>%s</AdresL1>\n", escapeXML(data.SellerStreet))
-	fmt.Fprintf(w, "      <AdresL2>%s %s</AdresL2>\n", escapeXML(data.SellerPostal), escapeXML(data.SellerCity))
-	fmt.Fprintf(w, "    </Adres>\n")
-	fmt.Fprintf(w, "  </Podmiot1>\n")
+	_, _ = fmt.Fprintf(w, "  <Podmiot1>\n")
+	_, _ = fmt.Fprintf(w, "    <DaneIdentyfikacyjne>\n")
+	_, _ = fmt.Fprintf(w, "      <NIP>%s</NIP>\n", escapeXML(data.SellerNIP))
+	_, _ = fmt.Fprintf(w, "      <Nazwa>%s</Nazwa>\n", escapeXML(data.SellerName))
+	_, _ = fmt.Fprintf(w, "    </DaneIdentyfikacyjne>\n")
+	_, _ = fmt.Fprintf(w, "    <Adres>\n") //nolint:misspell // Polish KSeF XML element name
+	_, _ = fmt.Fprintf(w, "      <KodKraju>%s</KodKraju>\n", escapeXML(data.SellerCountry))
+	_, _ = fmt.Fprintf(w, "      <AdresL1>%s</AdresL1>\n", escapeXML(data.SellerStreet))
+	_, _ = fmt.Fprintf(w, "      <AdresL2>%s %s</AdresL2>\n", escapeXML(data.SellerPostal), escapeXML(data.SellerCity))
+	_, _ = fmt.Fprintf(w, "    </Adres>\n") //nolint:misspell // Polish KSeF XML element name
+	_, _ = fmt.Fprintf(w, "  </Podmiot1>\n")
 }
 
 func writeSubject2(w io.Writer, data InvoiceData) {
-	fmt.Fprintf(w, "  <Podmiot2>\n")
-	fmt.Fprintf(w, "    <DaneIdentyfikacyjne>\n")
+	_, _ = fmt.Fprintf(w, "  <Podmiot2>\n")
+	_, _ = fmt.Fprintf(w, "    <DaneIdentyfikacyjne>\n")
 	if data.BuyerNIP != "" {
-		fmt.Fprintf(w, "      <NIP>%s</NIP>\n", escapeXML(data.BuyerNIP))
+		_, _ = fmt.Fprintf(w, "      <NIP>%s</NIP>\n", escapeXML(data.BuyerNIP))
 	}
-	fmt.Fprintf(w, "      <Nazwa>%s</Nazwa>\n", escapeXML(data.BuyerName))
-	fmt.Fprintf(w, "    </DaneIdentyfikacyjne>\n")
+	_, _ = fmt.Fprintf(w, "      <Nazwa>%s</Nazwa>\n", escapeXML(data.BuyerName))
+	_, _ = fmt.Fprintf(w, "    </DaneIdentyfikacyjne>\n")
 	if data.BuyerStreet != "" || data.BuyerCity != "" {
-		fmt.Fprintf(w, "    <Adres>\n")
-		fmt.Fprintf(w, "      <KodKraju>%s</KodKraju>\n", escapeXML(data.BuyerCountry))
+		_, _ = fmt.Fprintf(w, "    <Adres>\n") //nolint:misspell // Polish KSeF XML element name //nolint:misspell // Polish KSeF XML element name
+		_, _ = fmt.Fprintf(w, "      <KodKraju>%s</KodKraju>\n", escapeXML(data.BuyerCountry))
 		if data.BuyerStreet != "" {
-			fmt.Fprintf(w, "      <AdresL1>%s</AdresL1>\n", escapeXML(data.BuyerStreet))
+			_, _ = fmt.Fprintf(w, "      <AdresL1>%s</AdresL1>\n", escapeXML(data.BuyerStreet))
 		}
 		if data.BuyerCity != "" || data.BuyerPostal != "" {
-			fmt.Fprintf(w, "      <AdresL2>%s %s</AdresL2>\n", escapeXML(data.BuyerPostal), escapeXML(data.BuyerCity))
+			_, _ = fmt.Fprintf(w, "      <AdresL2>%s %s</AdresL2>\n", escapeXML(data.BuyerPostal), escapeXML(data.BuyerCity))
 		}
-		fmt.Fprintf(w, "    </Adres>\n")
+		_, _ = fmt.Fprintf(w, "    </Adres>\n") //nolint:misspell // Polish KSeF XML element name //nolint:misspell // Polish KSeF XML element name
 	}
-	fmt.Fprintf(w, "  </Podmiot2>\n")
+	_, _ = fmt.Fprintf(w, "  </Podmiot2>\n")
 }
 
 func writeInvoiceBody(w io.Writer, data InvoiceData) {
-	fmt.Fprintf(w, "  <Fa>\n")
-	fmt.Fprintf(w, "    <KodWaluty>%s</KodWaluty>\n", escapeXML(data.Currency))
-	fmt.Fprintf(w, "    <P_1>%s</P_1>\n", data.InvoiceDate.Format("2006-01-02"))
-	fmt.Fprintf(w, "    <P_2>%s</P_2>\n", escapeXML(data.InvoiceNumber))
+	_, _ = fmt.Fprintf(w, "  <Fa>\n")
+	_, _ = fmt.Fprintf(w, "    <KodWaluty>%s</KodWaluty>\n", escapeXML(data.Currency))
+	_, _ = fmt.Fprintf(w, "    <P_1>%s</P_1>\n", data.InvoiceDate.Format("2006-01-02"))
+	_, _ = fmt.Fprintf(w, "    <P_2>%s</P_2>\n", escapeXML(data.InvoiceNumber))
 
 	// VAT summary amounts per rate
 	vatSummary := computeVATSummary(data.Items)
@@ -155,17 +155,17 @@ func writeInvoiceBody(w io.Writer, data InvoiceData) {
 	}
 
 	// Totals
-	fmt.Fprintf(w, "    <P_15>%.2f</P_15>\n", data.TotalGross)
+	_, _ = fmt.Fprintf(w, "    <P_15>%.2f</P_15>\n", data.TotalGross)
 
 	// Payment
 	if !data.PaymentDate.IsZero() {
-		fmt.Fprintf(w, "    <TerminPlatnosci>\n")
-		fmt.Fprintf(w, "      <Termin>%s</Termin>\n", data.PaymentDate.Format("2006-01-02"))
-		fmt.Fprintf(w, "    </TerminPlatnosci>\n")
+		_, _ = fmt.Fprintf(w, "    <TerminPlatnosci>\n")
+		_, _ = fmt.Fprintf(w, "      <Termin>%s</Termin>\n", data.PaymentDate.Format("2006-01-02"))
+		_, _ = fmt.Fprintf(w, "    </TerminPlatnosci>\n")
 	}
 
 	if data.PaymentType != "" {
-		fmt.Fprintf(w, "    <FormaPlatnosci>%s</FormaPlatnosci>\n", escapeXML(mapPaymentType(data.PaymentType)))
+		_, _ = fmt.Fprintf(w, "    <FormaPlatnosci>%s</FormaPlatnosci>\n", escapeXML(mapPaymentType(data.PaymentType)))
 	}
 
 	// Line items
@@ -174,37 +174,37 @@ func writeInvoiceBody(w io.Writer, data InvoiceData) {
 	}
 
 	if data.Notes != "" {
-		fmt.Fprintf(w, "    <Adnotacje>\n")
-		fmt.Fprintf(w, "      <P_16>2</P_16>\n")
-		fmt.Fprintf(w, "      <P_17>2</P_17>\n")
-		fmt.Fprintf(w, "      <P_18>2</P_18>\n")
-		fmt.Fprintf(w, "      <P_18A>2</P_18A>\n")
-		fmt.Fprintf(w, "      <Zwolnienie>\n")
-		fmt.Fprintf(w, "        <P_19N>1</P_19N>\n")
-		fmt.Fprintf(w, "      </Zwolnienie>\n")
-		fmt.Fprintf(w, "      <NoweSrodkiTransportu>\n")
-		fmt.Fprintf(w, "        <P_22N>1</P_22N>\n")
-		fmt.Fprintf(w, "      </NoweSrodkiTransportu>\n")
-		fmt.Fprintf(w, "      <P_23>2</P_23>\n")
-		fmt.Fprintf(w, "      <PMarzy>\n")
-		fmt.Fprintf(w, "        <P_PMarzyN>1</P_PMarzyN>\n")
-		fmt.Fprintf(w, "      </PMarzy>\n")
-		fmt.Fprintf(w, "    </Adnotacje>\n")
+		_, _ = fmt.Fprintf(w, "    <Adnotacje>\n")
+		_, _ = fmt.Fprintf(w, "      <P_16>2</P_16>\n")
+		_, _ = fmt.Fprintf(w, "      <P_17>2</P_17>\n")
+		_, _ = fmt.Fprintf(w, "      <P_18>2</P_18>\n")
+		_, _ = fmt.Fprintf(w, "      <P_18A>2</P_18A>\n")
+		_, _ = fmt.Fprintf(w, "      <Zwolnienie>\n")
+		_, _ = fmt.Fprintf(w, "        <P_19N>1</P_19N>\n")
+		_, _ = fmt.Fprintf(w, "      </Zwolnienie>\n")
+		_, _ = fmt.Fprintf(w, "      <NoweSrodkiTransportu>\n")
+		_, _ = fmt.Fprintf(w, "        <P_22N>1</P_22N>\n")
+		_, _ = fmt.Fprintf(w, "      </NoweSrodkiTransportu>\n")
+		_, _ = fmt.Fprintf(w, "      <P_23>2</P_23>\n")
+		_, _ = fmt.Fprintf(w, "      <PMarzy>\n")
+		_, _ = fmt.Fprintf(w, "        <P_PMarzyN>1</P_PMarzyN>\n")
+		_, _ = fmt.Fprintf(w, "      </PMarzy>\n")
+		_, _ = fmt.Fprintf(w, "    </Adnotacje>\n")
 	}
 
-	fmt.Fprintf(w, "  </Fa>\n")
+	_, _ = fmt.Fprintf(w, "  </Fa>\n")
 }
 
 func writeLineItem(w io.Writer, item InvoiceLineItem, lineNum int) {
-	fmt.Fprintf(w, "    <FaWiersz>\n")
-	fmt.Fprintf(w, "      <NrWierszaFa>%d</NrWierszaFa>\n", lineNum)
-	fmt.Fprintf(w, "      <P_7>%s</P_7>\n", escapeXML(item.Name))
-	fmt.Fprintf(w, "      <P_8A>%s</P_8A>\n", escapeXML(item.Unit))
-	fmt.Fprintf(w, "      <P_8B>%.4f</P_8B>\n", item.Quantity)
-	fmt.Fprintf(w, "      <P_9A>%.2f</P_9A>\n", item.NetPrice)
-	fmt.Fprintf(w, "      <P_11>%.2f</P_11>\n", item.NetAmount)
-	fmt.Fprintf(w, "      <P_12>%s</P_12>\n", escapeXML(item.VATRate))
-	fmt.Fprintf(w, "    </FaWiersz>\n")
+	_, _ = fmt.Fprintf(w, "    <FaWiersz>\n")
+	_, _ = fmt.Fprintf(w, "      <NrWierszaFa>%d</NrWierszaFa>\n", lineNum)
+	_, _ = fmt.Fprintf(w, "      <P_7>%s</P_7>\n", escapeXML(item.Name))
+	_, _ = fmt.Fprintf(w, "      <P_8A>%s</P_8A>\n", escapeXML(item.Unit))
+	_, _ = fmt.Fprintf(w, "      <P_8B>%.4f</P_8B>\n", item.Quantity)
+	_, _ = fmt.Fprintf(w, "      <P_9A>%.2f</P_9A>\n", item.NetPrice)
+	_, _ = fmt.Fprintf(w, "      <P_11>%.2f</P_11>\n", item.NetAmount)
+	_, _ = fmt.Fprintf(w, "      <P_12>%s</P_12>\n", escapeXML(item.VATRate))
+	_, _ = fmt.Fprintf(w, "    </FaWiersz>\n")
 }
 
 type vatSummaryEntry struct {
@@ -240,24 +240,24 @@ func writeVATSummaryLine(w io.Writer, vs vatSummaryEntry) {
 	// Map VAT rates to the appropriate P_13/P_14 element pairs
 	switch vs.Rate {
 	case "23":
-		fmt.Fprintf(w, "    <P_13_1>%.2f</P_13_1>\n", vs.NetAmount)
-		fmt.Fprintf(w, "    <P_14_1>%.2f</P_14_1>\n", vs.VATAmount)
+		_, _ = fmt.Fprintf(w, "    <P_13_1>%.2f</P_13_1>\n", vs.NetAmount)
+		_, _ = fmt.Fprintf(w, "    <P_14_1>%.2f</P_14_1>\n", vs.VATAmount)
 	case "22":
-		fmt.Fprintf(w, "    <P_13_1>%.2f</P_13_1>\n", vs.NetAmount)
-		fmt.Fprintf(w, "    <P_14_1>%.2f</P_14_1>\n", vs.VATAmount)
+		_, _ = fmt.Fprintf(w, "    <P_13_1>%.2f</P_13_1>\n", vs.NetAmount)
+		_, _ = fmt.Fprintf(w, "    <P_14_1>%.2f</P_14_1>\n", vs.VATAmount)
 	case "8":
-		fmt.Fprintf(w, "    <P_13_2>%.2f</P_13_2>\n", vs.NetAmount)
-		fmt.Fprintf(w, "    <P_14_2>%.2f</P_14_2>\n", vs.VATAmount)
+		_, _ = fmt.Fprintf(w, "    <P_13_2>%.2f</P_13_2>\n", vs.NetAmount)
+		_, _ = fmt.Fprintf(w, "    <P_14_2>%.2f</P_14_2>\n", vs.VATAmount)
 	case "7":
-		fmt.Fprintf(w, "    <P_13_2>%.2f</P_13_2>\n", vs.NetAmount)
-		fmt.Fprintf(w, "    <P_14_2>%.2f</P_14_2>\n", vs.VATAmount)
+		_, _ = fmt.Fprintf(w, "    <P_13_2>%.2f</P_13_2>\n", vs.NetAmount)
+		_, _ = fmt.Fprintf(w, "    <P_14_2>%.2f</P_14_2>\n", vs.VATAmount)
 	case "5":
-		fmt.Fprintf(w, "    <P_13_3>%.2f</P_13_3>\n", vs.NetAmount)
-		fmt.Fprintf(w, "    <P_14_3>%.2f</P_14_3>\n", vs.VATAmount)
+		_, _ = fmt.Fprintf(w, "    <P_13_3>%.2f</P_13_3>\n", vs.NetAmount)
+		_, _ = fmt.Fprintf(w, "    <P_14_3>%.2f</P_14_3>\n", vs.VATAmount)
 	case "0":
-		fmt.Fprintf(w, "    <P_13_6_1>%.2f</P_13_6_1>\n", vs.NetAmount)
+		_, _ = fmt.Fprintf(w, "    <P_13_6_1>%.2f</P_13_6_1>\n", vs.NetAmount)
 	case "zw":
-		fmt.Fprintf(w, "    <P_13_7>%.2f</P_13_7>\n", vs.NetAmount)
+		_, _ = fmt.Fprintf(w, "    <P_13_7>%.2f</P_13_7>\n", vs.NetAmount)
 	}
 }
 

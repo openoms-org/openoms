@@ -68,7 +68,7 @@ func (s *OrderService) Get(ctx context.Context, id int) (*PSOrder, error) {
 func (s *OrderService) UpdateState(ctx context.Context, orderID int, stateID int) error {
 	body := map[string]any{
 		"order_history": map[string]any{
-			"id_order": orderID,
+			"id_order":       orderID,
 			"id_order_state": stateID,
 		},
 	}

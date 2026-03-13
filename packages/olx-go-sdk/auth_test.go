@@ -38,11 +38,11 @@ func TestAuthorizationURLWithScopes(t *testing.T) {
 func TestExchangeCode(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
-		assert.NoError(t, r.ParseForm())
-		assert.Equal(t, "authorization_code", r.FormValue("grant_type"))
-		assert.Equal(t, "test-code", r.FormValue("code"))
-		assert.Equal(t, "test_id", r.FormValue("client_id"))
-		assert.Equal(t, "test_secret", r.FormValue("client_secret"))
+		assert.NoError(t, r.ParseForm())                                 //nolint:gosec // test handler
+		assert.Equal(t, "authorization_code", r.FormValue("grant_type")) //nolint:gosec // test handler
+		assert.Equal(t, "test-code", r.FormValue("code"))                //nolint:gosec // test handler
+		assert.Equal(t, "test_id", r.FormValue("client_id"))             //nolint:gosec // test handler
+		assert.Equal(t, "test_secret", r.FormValue("client_secret"))     //nolint:gosec // test handler
 
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"access_token":"new-at","refresh_token":"new-rt","expires_in":3600,"token_type":"bearer"}`)
@@ -80,10 +80,10 @@ func TestExchangeCodeError(t *testing.T) {
 
 func TestRefreshAccessToken(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.NoError(t, r.ParseForm())
-		assert.Equal(t, "refresh_token", r.FormValue("grant_type"))
-		assert.Equal(t, "old-rt", r.FormValue("refresh_token"))
-		assert.Equal(t, "test_id", r.FormValue("client_id"))
+		assert.NoError(t, r.ParseForm())                            //nolint:gosec // test handler
+		assert.Equal(t, "refresh_token", r.FormValue("grant_type")) //nolint:gosec // test handler
+		assert.Equal(t, "old-rt", r.FormValue("refresh_token"))     //nolint:gosec // test handler
+		assert.Equal(t, "test_id", r.FormValue("client_id"))        //nolint:gosec // test handler
 
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"access_token":"refreshed-at","refresh_token":"refreshed-rt","expires_in":3600}`)

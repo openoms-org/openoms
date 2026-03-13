@@ -14,7 +14,7 @@ import (
 const (
 	productionBaseURL = "https://sellingpartnerapi-eu.amazon.com"
 	sandboxBaseURL    = "https://sandbox.sellingpartnerapi-eu.amazon.com"
-	lwaTokenEndpoint  = "https://api.amazon.com/auth/o2/token"
+	lwaTokenEndpoint  = "https://api.amazon.com/auth/o2/token" //nolint:gosec // G101: not a credential
 )
 
 // Client is an Amazon SP-API client with LWA (Login with Amazon) OAuth2 auth.
@@ -166,7 +166,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 	if err != nil {
 		return fmt.Errorf("amazon: execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if err != nil {

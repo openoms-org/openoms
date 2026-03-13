@@ -23,7 +23,7 @@ func TestFileAdd(t *testing.T) {
 			t.Fatalf("expected multipart/form-data, got %s", ct)
 		}
 
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		if err := r.ParseMultipartForm(10 << 20); err != nil { //nolint:gosec // test handler
 			t.Fatalf("failed to parse multipart: %v", err)
 		}
 		file, header, err := r.FormFile("file")
@@ -38,12 +38,12 @@ func TestFileAdd(t *testing.T) {
 		if string(data) != "pdf-content" {
 			t.Fatalf("unexpected file content: %s", string(data))
 		}
-		if desc := r.FormValue("description"); desc != "Test file" {
+		if desc := r.FormValue("description"); desc != "Test file" { //nolint:gosec // test handler
 			t.Fatalf("expected description 'Test file', got %s", desc)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(FileAddResponse{
+		_ = json.NewEncoder(w).Encode(FileAddResponse{
 			Result: APIResult{ResultType: "INFORMATION"},
 			FileID: "file-abc-123",
 		})
@@ -70,13 +70,13 @@ func TestFilesDelete(t *testing.T) {
 		}
 
 		var req FilesDeleteRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		if len(req.FileIDs) != 2 {
 			t.Fatalf("expected 2 file IDs, got %d", len(req.FileIDs))
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
+		_ = json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
 	}))
 	defer srv.Close()
 
@@ -100,7 +100,7 @@ func TestFilesClear(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
+		_ = json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
 	}))
 	defer srv.Close()
 

@@ -59,7 +59,7 @@ type createParcelRawResponse struct {
 }
 
 type responsePackage struct {
-	StatusInfo packageStatus   `json:"statusInfo"`
+	StatusInfo packageStatus    `json:"statusInfo"`
 	Parcels    []responseParcel `json:"parcels"`
 }
 

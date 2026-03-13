@@ -15,10 +15,10 @@ import (
 // Client is the Shoper WebAPI REST client.
 // Authentication uses OAuth2 with client credentials grant.
 type Client struct {
-	httpClient     *http.Client
-	baseURL        string
-	clientID       string
-	clientSecret   string
+	httpClient   *http.Client
+	baseURL      string
+	clientID     string
+	clientSecret string
 
 	// OAuth2 token state
 	mu           sync.Mutex
@@ -100,7 +100,7 @@ func (c *Client) authenticate(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("shoper: auth request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
@@ -156,7 +156,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 	if err != nil {
 		return fmt.Errorf("shoper: execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}

@@ -94,8 +94,8 @@ type TransactionService struct {
 
 // TransactionListParams are the optional parameters for listing transactions.
 type TransactionListParams struct {
-	Offset     int
-	Limit      int
+	Offset       int
+	Limit        int
 	CreatedAfter string // ISO8601 timestamp
 }
 

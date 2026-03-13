@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Transition validation errors.
 var (
 	ErrInvalidTransition = errors.New("invalid status transition")
 	ErrUnknownStatus     = errors.New("unknown status")

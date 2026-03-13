@@ -9,6 +9,7 @@
 //   - Order items retrieval
 //   - Catalog item lookup (stub)
 //   - Status mapping to OpenOMS order statuses
+//
 // Status: In Development — this package has been implemented but not yet
 // verified against the real API in a production environment.
 package amazon

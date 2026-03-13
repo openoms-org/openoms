@@ -29,7 +29,7 @@ func TestShipmentCreate(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"id": 100,
 			"status": "created",
 			"tracking_number": "TRK123456",
@@ -82,7 +82,7 @@ func TestShipmentGet(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"id": 999,
 			"status": "delivered",
 			"tracking_number": "TRK999",
@@ -110,9 +110,9 @@ func TestShipmentGet(t *testing.T) {
 }
 
 func TestShipmentCreateError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		w.Write([]byte(`{"message":"validation error","details":{"receiver.phone":"required"}}`))
+		_, _ = w.Write([]byte(`{"message":"validation error","details":{"receiver.phone":"required"}}`))
 	}))
 	defer srv.Close()
 
@@ -133,9 +133,9 @@ func TestShipmentCreateError(t *testing.T) {
 }
 
 func TestShipmentGetNotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"not found"}`))
+		_, _ = w.Write([]byte(`{"message":"not found"}`))
 	}))
 	defer srv.Close()
 

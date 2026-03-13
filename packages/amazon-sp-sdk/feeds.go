@@ -46,7 +46,7 @@ func (s *FeedService) Upload(ctx context.Context, uploadURL string, content []by
 	if err != nil {
 		return fmt.Errorf("amazon: upload feed document: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
@@ -117,12 +117,12 @@ func (s *FeedService) SubmitInventoryFeed(ctx context.Context, marketplaceID, me
 // XML structures for the inventory feed envelope.
 
 type amazonEnvelope struct {
-	XMLName     xml.Name         `xml:"AmazonEnvelope"`
-	XSI         string           `xml:"xmlns:xsi,attr"`
-	Schema      string           `xml:"xsi:noNamespaceSchemaLocation,attr"`
-	Header      envelopeHeader   `xml:"Header"`
-	MessageType string           `xml:"MessageType"`
-	Messages    []inventoryMsg   `xml:"Message"`
+	XMLName     xml.Name       `xml:"AmazonEnvelope"`
+	XSI         string         `xml:"xmlns:xsi,attr"`
+	Schema      string         `xml:"xsi:noNamespaceSchemaLocation,attr"`
+	Header      envelopeHeader `xml:"Header"`
+	MessageType string         `xml:"MessageType"`
+	Messages    []inventoryMsg `xml:"Message"`
 }
 
 type envelopeHeader struct {
@@ -165,8 +165,8 @@ const maxSKULength = 40 // Amazon seller SKU limit
 
 func buildInventoryXML(merchantID string, skuQuantities map[string]int) []byte {
 	env := amazonEnvelope{
-		XSI:         "http://www.w3.org/2001/XMLSchema-instance",
-		Schema:      "amzn-envelope.xsd",
+		XSI:    "http://www.w3.org/2001/XMLSchema-instance",
+		Schema: "amzn-envelope.xsd",
 		Header: envelopeHeader{
 			DocumentVersion:    "1.01",
 			MerchantIdentifier: merchantID,

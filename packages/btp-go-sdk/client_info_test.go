@@ -15,7 +15,7 @@ func TestClientInfoGetClient(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ClientInfo{
+		_ = json.NewEncoder(w).Encode(ClientInfo{
 			ClientID:          "CL001",
 			Name:              "Test Company",
 			TaxID:             "1234567890",
@@ -61,7 +61,7 @@ func TestClientInfoGetDeliveryModes(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(DeliveryModesResponse{
+		_ = json.NewEncoder(w).Encode(DeliveryModesResponse{
 			Modes: []DeliveryMode{
 				{ID: "DM01", Name: "Standard", Description: "Standard delivery"},
 				{ID: "DM02", Name: "Express", Description: "Express delivery"},
@@ -87,7 +87,7 @@ func TestClientInfoGetCarriers(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(CarriersResponse{
+		_ = json.NewEncoder(w).Encode(CarriersResponse{
 			Carriers: []Carrier{
 				{ID: "DHL", Name: "DHL Express"},
 				{ID: "INPOST", Name: "InPost"},
@@ -113,7 +113,7 @@ func TestClientInfoGetPaymentMethods(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(PaymentMethodsResponse{
+		_ = json.NewEncoder(w).Encode(PaymentMethodsResponse{
 			PaymentMethods: []PaymentMethod{
 				{ID: "PM01", Name: "Bank Transfer"},
 				{ID: "PM02", Name: "Cash on Delivery"},
@@ -142,7 +142,7 @@ func TestClientInfoGetCountryGovAreas(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(GovAreasResponse{
+		_ = json.NewEncoder(w).Encode(GovAreasResponse{
 			GovAreas: []CountryGovArea{
 				{CountryID: "PL", GovAreaID: "14", Name: "mazowieckie", Enabled: true},
 			},

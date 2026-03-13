@@ -8,6 +8,7 @@
 //   - Product listing, retrieval, stock and price updates
 //   - Webhook management (create, delete, list)
 //   - Basic Auth over HTTPS (consumer key/secret)
+//
 // Status: In Development — this package has been implemented but not yet
 // verified against the real API in a production environment.
 package woocommerce

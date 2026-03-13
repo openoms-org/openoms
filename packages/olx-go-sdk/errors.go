@@ -2,6 +2,7 @@ package olx
 
 import "errors"
 
+// Sentinel errors for API responses.
 var (
 	ErrUnauthorized = errors.New("olx: unauthorized")
 	ErrForbidden    = errors.New("olx: forbidden")

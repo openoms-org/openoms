@@ -5,6 +5,7 @@ import "time"
 // EventType identifies the kind of domain event.
 type EventType string
 
+// Domain event type constants.
 const (
 	EventOrderStatusChanged    EventType = "order.status_changed"
 	EventShipmentStatusChanged EventType = "shipment.status_changed"

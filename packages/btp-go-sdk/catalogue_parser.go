@@ -43,22 +43,22 @@ type xmlLine struct {
 }
 
 type xmlLineItem struct {
-	EAN                  string         `xml:"EAN"`
-	SupplierItemCode     string         `xml:"SupplierItemCode"`
-	ManufacturerItemCode string         `xml:"ManufacturerItemCode"`
-	ItemDescription      string         `xml:"ItemDescription"`
-	LongItemDescription  string         `xml:"LongItemDescription"`
-	ProductGroup         string         `xml:"ProductGroup"`
-	PrimaryProductGroup  string         `xml:"PrimaryProductGroup"`
-	BrandName            string         `xml:"BrandName"`
-	Weight               string         `xml:"Weight"`
-	UnitNetPrice         string         `xml:"UnitNetPrice"`
-	UnitRetailPrice      string         `xml:"UnitRetailPrice"`
-	TaxRate              string         `xml:"TaxRate"`
-	CustomsTariffNumber  string         `xml:"CustomsTariffNumber"`
-	Guarantee            string         `xml:"Guarantee"`
-	Pictures             xmlPictures    `xml:"Pictures"`
-	Specification        xmlSpec        `xml:"Specification"`
+	EAN                  string      `xml:"EAN"`
+	SupplierItemCode     string      `xml:"SupplierItemCode"`
+	ManufacturerItemCode string      `xml:"ManufacturerItemCode"`
+	ItemDescription      string      `xml:"ItemDescription"`
+	LongItemDescription  string      `xml:"LongItemDescription"`
+	ProductGroup         string      `xml:"ProductGroup"`
+	PrimaryProductGroup  string      `xml:"PrimaryProductGroup"`
+	BrandName            string      `xml:"BrandName"`
+	Weight               string      `xml:"Weight"`
+	UnitNetPrice         string      `xml:"UnitNetPrice"`
+	UnitRetailPrice      string      `xml:"UnitRetailPrice"`
+	TaxRate              string      `xml:"TaxRate"`
+	CustomsTariffNumber  string      `xml:"CustomsTariffNumber"`
+	Guarantee            string      `xml:"Guarantee"`
+	Pictures             xmlPictures `xml:"Pictures"`
+	Specification        xmlSpec     `xml:"Specification"`
 }
 
 type xmlPictures struct {
@@ -74,7 +74,7 @@ type xmlSpec struct {
 }
 
 type xmlAttribute struct {
-	Name   string `xml:"Name"`
+	Name   string   `xml:"Name"`
 	Values []string `xml:"Values>Value"`
 }
 
@@ -167,7 +167,7 @@ func ParseCatalogueURL(ctx context.Context, rawURL string, client *http.Client) 
 	if err != nil {
 		return nil, fmt.Errorf("btp: fetch catalogue URL: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("btp: catalogue URL returned status %d", resp.StatusCode)

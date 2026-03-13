@@ -66,7 +66,7 @@ func TestAuthentication_UsesBasicAuth(t *testing.T) {
 		gotFid = r.Header.Get("x-dpd-fid")
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[]}`))
+		_, _ = w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[]}`))
 	}))
 	defer srv.Close()
 
@@ -118,7 +118,7 @@ func TestCreateParcel(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"status": "OK",
 			"sessionId": 42,
 			"packages": [{
@@ -182,7 +182,7 @@ func TestGetLabel(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(generateLabelResponse{
+		_ = json.NewEncoder(w).Encode(generateLabelResponse{
 			Status:       "OK",
 			DocumentData: encoded,
 		})
@@ -227,9 +227,9 @@ func TestCancelParcel_ReturnsError(t *testing.T) {
 }
 
 func TestCreateParcelError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Nieprawidlowe dane przesylki",
 			"code":    "VALIDATION_ERROR",
 		})
@@ -248,9 +248,9 @@ func TestCreateParcelError(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
 	}))
@@ -271,9 +271,9 @@ func TestServerError(t *testing.T) {
 }
 
 func TestAuthenticationError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"Invalid credentials"}`))
+		_, _ = w.Write([]byte(`{"message":"Invalid credentials"}`))
 	}))
 	defer srv.Close()
 
