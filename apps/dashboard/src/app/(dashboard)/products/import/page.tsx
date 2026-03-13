@@ -64,7 +64,7 @@ export default function ProductImportPage() {
         toast.error(t("import.selectCsvFile"));
       }
     },
-    [handleFile]
+    [handleFile, t]
   );
 
   const handleImport = () => {

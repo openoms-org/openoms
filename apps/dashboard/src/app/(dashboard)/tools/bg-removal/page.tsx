@@ -47,7 +47,7 @@ export default function BGRemovalPage() {
       };
       reader.readAsDataURL(file);
     },
-    []
+    [t]
   );
 
   const handleDrop = useCallback(

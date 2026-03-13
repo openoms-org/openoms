@@ -255,7 +255,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       setIsAuthorizing(false);
       onDone();
     }
-  }, []);
+  }, [t]);
 
   const handleSave = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -491,7 +491,7 @@ function ConnectedState({
       }
     };
     doAuth();
-  }, [onRefetch]);
+  }, [onRefetch, t]);
 
   const needsOAuth =
     integration.status !== "active" || !integration.last_sync_at;

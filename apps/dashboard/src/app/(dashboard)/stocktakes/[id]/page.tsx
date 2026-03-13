@@ -115,7 +115,7 @@ export default function StocktakeDetailPage() {
       onSuccess: () => toast.success(t("inwentaryzacjaZostalaRozpoczeta")),
       onError: (error) => toast.error(getErrorMessage(error)),
     });
-  }, [id, startStocktake]);
+  }, [id, startStocktake, t]);
 
   const handleComplete = useCallback(() => {
     completeStocktake.mutate(id, {
@@ -128,7 +128,7 @@ export default function StocktakeDetailPage() {
         setShowCompleteConfirm(false);
       },
     });
-  }, [id, completeStocktake]);
+  }, [id, completeStocktake, t]);
 
   const handleCancel = useCallback(() => {
     cancelStocktake.mutate(id, {
@@ -141,7 +141,7 @@ export default function StocktakeDetailPage() {
         setShowCancelConfirm(false);
       },
     });
-  }, [id, cancelStocktake]);
+  }, [id, cancelStocktake, t]);
 
   const handleDelete = useCallback(() => {
     deleteStocktake.mutate(id, {
@@ -151,7 +151,7 @@ export default function StocktakeDetailPage() {
       },
       onError: (error) => toast.error(getErrorMessage(error)),
     });
-  }, [id, deleteStocktake, router]);
+  }, [id, deleteStocktake, router, t]);
 
   const handleCountSubmit = useCallback(
     (itemId: string, value: string) => {
@@ -172,7 +172,7 @@ export default function StocktakeDetailPage() {
         }
       );
     },
-    [recordCount]
+    [recordCount, t]
   );
 
   if (isLoading) {

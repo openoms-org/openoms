@@ -1,5 +1,5 @@
 // Package crypto provides AES-256-GCM encryption and decryption helpers for integration credentials.
-package crypto
+package crypto //nolint:revive // package name conflicts with stdlib but renaming would break imports
 
 import (
 	"crypto/aes"

@@ -83,7 +83,7 @@ export default function ImportOrdersPage() {
         toast.error(getErrorMessage(error));
       }
     },
-    [previewMutation]
+    [previewMutation, t]
   );
 
   const handleDrop = useCallback(

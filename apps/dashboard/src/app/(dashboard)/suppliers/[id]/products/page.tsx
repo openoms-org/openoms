@@ -124,7 +124,7 @@ export default function SupplierProductsPage() {
         onError: (error) => toast.error(getErrorMessage(error)),
       }
     );
-  }, [selectedIds, importProducts]);
+  }, [selectedIds, importProducts, t]);
 
   const handleBulkDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
@@ -140,7 +140,7 @@ export default function SupplierProductsPage() {
         onError: (error) => toast.error(getErrorMessage(error)),
       }
     );
-  }, [selectedIds, bulkDelete]);
+  }, [selectedIds, bulkDelete, t]);
 
   const handleUnlink = useCallback(
     (spId: string) => {
@@ -149,7 +149,7 @@ export default function SupplierProductsPage() {
         onError: (error) => toast.error(getErrorMessage(error)),
       });
     },
-    [unlinkProduct]
+    [unlinkProduct, t]
   );
 
   const handleDeleteSingle = useCallback(
@@ -159,7 +159,7 @@ export default function SupplierProductsPage() {
         onError: (error) => toast.error(getErrorMessage(error)),
       });
     },
-    [deleteProduct]
+    [deleteProduct, t]
   );
 
   const handleListOnMarketplace = useCallback(
@@ -338,7 +338,7 @@ export default function SupplierProductsPage() {
         ),
       },
     ],
-    [handleUnlink, handleDeleteSingle, handleListOnMarketplace, listingLoadingId]
+    [handleUnlink, handleDeleteSingle, handleListOnMarketplace, listingLoadingId, t, tc]
   );
 
   if (supplierLoading) return <LoadingSkeleton />;

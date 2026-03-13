@@ -256,7 +256,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       setIsAuthorizing(false);
       onDone();
     }
-  }, []);
+  }, [t]);
 
   const handleSave = () => {
     if (!appId.trim() || !certId.trim() || !devId.trim()) {
@@ -608,7 +608,7 @@ function ConnectedState({
       }
     };
     doAuth();
-  }, [onRefetch]);
+  }, [onRefetch, t]);
 
   const handleSaveSettings = () => {
     updateIntegration.mutate(

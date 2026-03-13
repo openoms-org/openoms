@@ -41,7 +41,7 @@ export default function NewShipmentPage() {
     toast.success(
       t("rateSelected", { carrier: rate.carrier_name, service: rate.service_name, price: rate.price.toFixed(2), currency: rate.currency })
     );
-  }, []);
+  }, [t]);
 
   const handleSubmit = (data: Parameters<typeof createShipment.mutate>[0]) => {
     createShipment.mutate(data, {

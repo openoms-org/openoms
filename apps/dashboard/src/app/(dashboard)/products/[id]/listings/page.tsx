@@ -672,7 +672,7 @@ function CreateListingWizard({
           description: `Integracja ${i.provider}`,
         }),
       }));
-  }, [integrations]);
+  }, [integrations, MARKETPLACE_PROVIDER_INFO]);
 
   // Show picker always — user should explicitly choose the marketplace
 

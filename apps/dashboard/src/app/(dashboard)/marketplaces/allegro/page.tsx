@@ -269,7 +269,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       setIsAuthorizing(false);
       onDone();
     }
-  }, []);
+  }, [t]);
 
   const handleSave = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -538,7 +538,7 @@ function ConnectedState({
       }
     };
     doAuth();
-  }, [onRefetch]);
+  }, [onRefetch, t]);
 
   // Show OAuth prompt if status is not active OR if there's no last_sync_at (never authorized successfully)
   const needsOAuth = integration.status !== "active" || !integration.last_sync_at;

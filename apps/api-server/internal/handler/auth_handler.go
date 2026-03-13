@@ -219,7 +219,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		h.checkoutSvc.FinalizeCheckoutClaim(r.Context(), checkoutSessionID, resp.Tenant.ID, req.Plan, req.CheckoutSessionInterval)
 	}
 
-	h.setRefreshCookie(w, refreshToken, 30*24*3600)
+	h.setRefreshCookie(w, refreshToken)
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -256,7 +256,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, result.RefreshToken, 30*24*3600)
+	h.setRefreshCookie(w, result.RefreshToken)
 	writeJSON(w, http.StatusOK, result.TokenResponse)
 }
 
@@ -286,7 +286,7 @@ func (h *AuthHandler) TwoFALogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, refreshToken, 30*24*3600)
+	h.setRefreshCookie(w, refreshToken)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -401,7 +401,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, newRefreshToken, 30*24*3600)
+	h.setRefreshCookie(w, newRefreshToken)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -428,7 +428,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
-func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string, maxAge int) {
+func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string) {
+	const maxAge = 30 * 24 * 3600 // 30 days
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    token,

@@ -430,7 +430,7 @@ func quintileBreaks(values []float64) [4]float64 {
 // quintileScore returns 1-5 based on where value falls in the breaks.
 func quintileScore(value float64, breaks [4]float64) int {
 	for i := range 4 {
-		if value <= breaks[i] {
+		if i < len(breaks) && value <= breaks[i] {
 			return i + 1
 		}
 	}
