@@ -154,7 +154,7 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, pric
 }
 
 // mapShoperOrder converts a Shoper SDK ShoperOrder to the normalized MarketplaceOrder.
-func (p *Provider) mapShoperOrder(o *shopersdk.ShoperOrder) integration.MarketplaceOrder {
+func (p *Provider) mapShoperOrder(o *shopersdk.Order) integration.MarketplaceOrder {
 	customerName := fmt.Sprintf("%s %s", o.DeliveryAddress.FirstName, o.DeliveryAddress.LastName)
 	if customerName == " " {
 		customerName = fmt.Sprintf("%s %s", o.BillingAddress.FirstName, o.BillingAddress.LastName)

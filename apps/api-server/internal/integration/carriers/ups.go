@@ -63,7 +63,7 @@ func (p *UPSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	upsReq := &upssdk.ShipmentRequest{
 		ShipTo: upssdk.Party{
 			Name: req.Receiver.Name,
-			Address: upssdk.UPSAddress{
+			Address: upssdk.Address{
 				AddressLine: []string{req.Receiver.Street},
 				City:        req.Receiver.City,
 				PostalCode:  req.Receiver.PostalCode,

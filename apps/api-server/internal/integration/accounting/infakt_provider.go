@@ -49,10 +49,10 @@ func (p *InFaktProvider) ProviderName() string {
 
 // CreateInvoice creates a new invoice in inFakt.
 func (p *InFaktProvider) CreateInvoice(ctx context.Context, req integration.InvoiceRequest) (*integration.InvoiceResult, error) {
-	services := make([]sdk.InvoiceService_, 0, len(req.Items))
+	services := make([]sdk.InvoiceLineItem, 0, len(req.Items))
 	for _, item := range req.Items {
 		taxSymbol := fmt.Sprintf("%d", item.TaxRate)
-		services = append(services, sdk.InvoiceService_{
+		services = append(services, sdk.InvoiceLineItem{
 			Name:         item.Name,
 			Unit:         item.Unit,
 			Quantity:     item.Quantity,

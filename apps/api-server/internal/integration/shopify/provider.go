@@ -165,7 +165,7 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, pric
 }
 
 // mapShopifyOrder converts a Shopify order to the normalized MarketplaceOrder.
-func (p *Provider) mapShopifyOrder(o *shopifysdk.ShopifyOrder) integration.MarketplaceOrder {
+func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) integration.MarketplaceOrder {
 	customerName := ""
 	customerEmail := o.Email
 	customerPhone := o.Phone
