@@ -90,13 +90,13 @@ describe("OnboardingPage", () => {
       setupOnboardingHandlers();
       renderWithProviders(<OnboardingPage />);
 
-      // All 4 step labels should be visible (some may appear in both stepper and card title)
+      // With next-intl mock, translation keys are returned as-is
       await waitFor(() => {
-        expect(screen.getAllByText(/dane firmy/i).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText(/stepTitles\.companyData/i).length).toBeGreaterThanOrEqual(1);
       });
-      expect(screen.getAllByText(/magazyn/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/integracj/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/zesp/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/stepTitles\.defaultWarehouse/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/stepTitles\.firstIntegration/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/stepTitles\.inviteTeam/i).length).toBeGreaterThanOrEqual(1);
     });
 
     it("shows step 1 as active by default", async () => {
@@ -105,7 +105,7 @@ describe("OnboardingPage", () => {
 
       // Step 1 form fields should be visible
       await waitFor(() => {
-        expect(screen.getAllByText(/dane firmy/i).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText(/stepTitles\.companyData/i).length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -124,7 +124,7 @@ describe("OnboardingPage", () => {
 
       // Should show step 3 content (integration)
       await waitFor(() => {
-        expect(screen.getAllByText(/integracj/i).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText(/stepTitles\.firstIntegration/i).length).toBeGreaterThanOrEqual(1);
       });
     });
   });
@@ -148,11 +148,11 @@ describe("OnboardingPage", () => {
       renderWithProviders(<OnboardingPage />);
 
       await waitFor(() => {
-        expect(screen.getAllByText(/dane firmy/i).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText(/stepTitles\.companyData/i).length).toBeGreaterThanOrEqual(1);
       });
 
-      // Step 1 is required — no "Pomiń" (skip) button
-      const skipButtons = screen.queryAllByText(/pomi[ńn]/i);
+      // Step 1 is required — no "dismiss" (skip) button
+      const skipButtons = screen.queryAllByText(/^dismiss$/i);
       expect(skipButtons).toHaveLength(0);
     });
   });
@@ -175,7 +175,7 @@ describe("OnboardingPage", () => {
       renderWithProviders(<OnboardingPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/pomi[ńn]/i)).toBeInTheDocument();
+        expect(screen.getByText(/^dismiss$/i)).toBeInTheDocument();
       });
     });
 
@@ -193,7 +193,7 @@ describe("OnboardingPage", () => {
       renderWithProviders(<OnboardingPage />);
 
       await waitFor(() => {
-        expect(screen.getByText(/pomi[ńn]/i)).toBeInTheDocument();
+        expect(screen.getByText(/^dismiss$/i)).toBeInTheDocument();
       });
     });
   });
@@ -231,7 +231,7 @@ describe("OnboardingPage", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/doko[ńn]cz p[oó][zź]niej/i)
+          screen.getByText(/^finishLater$/i)
         ).toBeInTheDocument();
       });
     });
@@ -261,9 +261,7 @@ describe("OnboardingPage", () => {
 
       // Either redirects or shows completion — both are valid
       await waitFor(() => {
-        const goToDashboard = screen.queryByText(
-          /przejd[zź] do panelu|panel|dashboard/i
-        );
+        const goToDashboard = screen.queryByText(/goToDashboard/i);
         const didRedirect = mockReplace.mock.calls.length > 0;
         expect(goToDashboard || didRedirect).toBeTruthy();
       });

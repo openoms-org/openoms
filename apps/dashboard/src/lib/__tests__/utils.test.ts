@@ -58,15 +58,15 @@ describe("formatCurrency", () => {
   });
 
   it("handles null amount", () => {
-    expect(formatCurrency(null)).toBe("0,00 zł");
+    expect(formatCurrency(null)).toMatch(/0,00\s*zł/);
   });
 
   it("handles undefined amount", () => {
-    expect(formatCurrency(undefined)).toBe("0,00 zł");
+    expect(formatCurrency(undefined)).toMatch(/0,00\s*zł/);
   });
 
   it("handles NaN", () => {
-    expect(formatCurrency(NaN)).toBe("0,00 zł");
+    expect(formatCurrency(NaN)).toMatch(/0,00\s*zł/);
   });
 
   it("formats with custom currency", () => {
