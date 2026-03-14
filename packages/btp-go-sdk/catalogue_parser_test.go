@@ -205,6 +205,11 @@ func TestParseCatalogueURL(t *testing.T) {
 	}))
 	defer srv.Close()
 
+	// Bypass SSRF validation for httptest (localhost)
+	orig := urlHostValidator
+	urlHostValidator = func(_ context.Context, _ string) error { return nil }
+	defer func() { urlHostValidator = orig }()
+
 	products, err := ParseCatalogueURL(context.Background(), srv.URL, srv.Client())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -220,8 +225,30 @@ func TestParseCatalogueURL_HTTPError(t *testing.T) {
 	}))
 	defer srv.Close()
 
+	// Bypass SSRF validation for httptest (localhost)
+	orig := urlHostValidator
+	urlHostValidator = func(_ context.Context, _ string) error { return nil }
+	defer func() { urlHostValidator = orig }()
+
 	_, err := ParseCatalogueURL(context.Background(), srv.URL, srv.Client())
 	if err == nil {
 		t.Fatal("expected error for HTTP 500")
+	}
+}
+
+func TestParseCatalogueURL_SSRFBlocked(t *testing.T) {
+	_, err := ParseCatalogueURL(context.Background(), "http://127.0.0.1:8080/feed.xml", http.DefaultClient)
+	if err == nil {
+		t.Fatal("expected error for private IP")
+	}
+	if !strings.Contains(err.Error(), "private IP") {
+		t.Errorf("expected 'private IP' in error, got: %v", err)
+	}
+}
+
+func TestParseCatalogueURL_SSRFBlocked_10Net(t *testing.T) {
+	_, err := ParseCatalogueURL(context.Background(), "http://10.0.0.1/feed.xml", http.DefaultClient)
+	if err == nil {
+		t.Fatal("expected error for private IP")
 	}
 }
