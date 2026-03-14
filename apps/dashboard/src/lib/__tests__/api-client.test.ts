@@ -167,8 +167,13 @@ describe("apiClient", () => {
 });
 
 describe("getErrorMessage", () => {
-  it("returns session expired key for 401", () => {
-    const err = new ApiClientError(401, "Unauthorized");
+  it("returns server message for 401 when available", () => {
+    const err = new ApiClientError(401, "invalid email or password");
+    expect(getErrorMessage(err)).toBe("invalid email or password");
+  });
+
+  it("returns session expired key for 401 without message", () => {
+    const err = new ApiClientError(401, "");
     expect(getErrorMessage(err)).toBe("errors.sessionExpired");
   });
 
