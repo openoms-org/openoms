@@ -1,4 +1,4 @@
-const CACHE_NAME = 'openoms-v2';
+const CACHE_NAME = 'openoms-v3';
 const STATIC_ASSETS = ['/', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
@@ -16,6 +16,12 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   // Only handle same-origin requests — let cross-origin API calls pass through
   if (new URL(e.request.url).origin !== self.location.origin) return;
+
+  // Network-first for navigation (HTML pages) — ensures fresh chunks after deploy
+  if (e.request.mode === 'navigate') {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    return;
+  }
 
   // Cache-first for static assets
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
