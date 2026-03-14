@@ -3,7 +3,21 @@ ALTER TABLE public.users ADD COLUMN language VARCHAR(5);
 
 -- Recreate find_user_for_auth to include the new language column.
 -- Must DROP + SET ROLE + CREATE to preserve openoms_auth ownership.
+-- Need to temporarily grant CREATE on schema to openoms_auth (revoked in migration 4).
 DROP FUNCTION IF EXISTS public.find_user_for_auth(text, uuid);
+
+-- Grant CREATE on schema to openoms_auth (needed for function creation)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pg_database_owner') THEN
+    EXECUTE 'SET ROLE pg_database_owner';
+    GRANT CREATE ON SCHEMA public TO openoms_auth;
+    RESET ROLE;
+  ELSE
+    GRANT CREATE ON SCHEMA public TO openoms_auth;
+  END IF;
+END;
+$$;
 
 SET ROLE openoms_auth;
 
@@ -20,6 +34,19 @@ AS $$
 $$;
 
 RESET ROLE;
+
+-- Revoke CREATE on schema from openoms_auth (no longer needed)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pg_database_owner') THEN
+    EXECUTE 'SET ROLE pg_database_owner';
+    REVOKE CREATE ON SCHEMA public FROM openoms_auth;
+    RESET ROLE;
+  ELSE
+    REVOKE CREATE ON SCHEMA public FROM openoms_auth;
+  END IF;
+END;
+$$;
 
 -- Restore execution permissions
 REVOKE EXECUTE ON FUNCTION public.find_user_for_auth(text, uuid) FROM PUBLIC;
