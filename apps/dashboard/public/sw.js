@@ -1,8 +1,6 @@
-const CACHE_NAME = 'openoms-v3';
-const STATIC_ASSETS = ['/', '/manifest.json'];
+const CACHE_NAME = 'openoms-v4';
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)));
   self.skipWaiting();
 });
 
