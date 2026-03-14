@@ -10,12 +10,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// BundleRepository handles persistence for product bundles.
 type BundleRepository struct{}
 
+// NewBundleRepository creates a new BundleRepository.
 func NewBundleRepository() *BundleRepository {
 	return &BundleRepository{}
 }
 
+// Create inserts a new bundle component.
 func (r *BundleRepository) Create(ctx context.Context, tx pgx.Tx, bundle *model.ProductBundle) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO product_bundles (id, tenant_id, bundle_product_id, component_product_id, component_variant_id, quantity, position)
@@ -26,6 +29,7 @@ func (r *BundleRepository) Create(ctx context.Context, tx pgx.Tx, bundle *model.
 	).Scan(&bundle.CreatedAt, &bundle.UpdatedAt)
 }
 
+// FindByID returns a bundle component by its ID.
 func (r *BundleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ProductBundle, error) {
 	var b model.ProductBundle
 	err := tx.QueryRow(ctx,
@@ -47,6 +51,7 @@ func (r *BundleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return &b, nil
 }
 
+// ListByBundleProduct returns all components for the given bundle product.
 func (r *BundleRepository) ListByBundleProduct(ctx context.Context, tx pgx.Tx, bundleProductID uuid.UUID) ([]model.ProductBundle, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT pb.id, pb.tenant_id, pb.bundle_product_id, pb.component_product_id,
@@ -75,6 +80,7 @@ func (r *BundleRepository) ListByBundleProduct(ctx context.Context, tx pgx.Tx, b
 	return bundles, rows.Err()
 }
 
+// ListByComponentProduct returns all bundles that use the given component product.
 func (r *BundleRepository) ListByComponentProduct(ctx context.Context, tx pgx.Tx, componentProductID uuid.UUID) ([]model.ProductBundle, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT pb.id, pb.tenant_id, pb.bundle_product_id, pb.component_product_id,
@@ -103,6 +109,7 @@ func (r *BundleRepository) ListByComponentProduct(ctx context.Context, tx pgx.Tx
 	return bundles, rows.Err()
 }
 
+// Update applies partial updates to a bundle component.
 func (r *BundleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateBundleComponentRequest) error {
 	var setClauses []string
 	var args []any
@@ -139,6 +146,7 @@ func (r *BundleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, 
 	return nil
 }
 
+// Delete removes a bundle component by its ID.
 func (r *BundleRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM product_bundles WHERE id = $1", id)
 	if err != nil {

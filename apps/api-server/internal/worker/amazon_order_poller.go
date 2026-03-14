@@ -13,6 +13,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// NewAmazonOrderPoller creates a MarketplaceOrderPoller configured for the Amazon marketplace.
 func NewAmazonOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repository.OrderRepo, shipmentRepo repository.ShipmentRepo, auditRepo repository.AuditRepo, logger *slog.Logger) *MarketplaceOrderPoller {
 	return NewMarketplaceOrderPoller(MarketplaceOrderPollerConfig{
 		Pool:          pool,

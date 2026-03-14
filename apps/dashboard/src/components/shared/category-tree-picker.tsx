@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, FolderTree } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,10 +47,11 @@ function flattenTree(
 export function CategoryTreePicker({
   value,
   onChange,
-  placeholder = "Wybierz kategorię...",
+  placeholder,
   className,
   allowClear = true,
 }: CategoryTreePickerProps) {
+  const t = useTranslations("shared.categoryPicker");
   const [open, setOpen] = useState(false);
   const { data: tree } = useCategoryTree();
 
@@ -74,16 +76,16 @@ export function CategoryTreePicker({
               {selected.label}
             </span>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="text-muted-foreground">{placeholder ?? t("placeholder")}</span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start">
         <Command>
-          <CommandInput placeholder="Szukaj kategorii..." />
+          <CommandInput placeholder={t("searchPlaceholder")} />
           <CommandList>
-            <CommandEmpty>Brak kategorii</CommandEmpty>
+            <CommandEmpty>{t("noCategory")}</CommandEmpty>
             <CommandGroup>
               {allowClear && value && (
                 <CommandItem
@@ -93,7 +95,7 @@ export function CategoryTreePicker({
                   }}
                 >
                   <FolderTree className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Brak kategorii</span>
+                  <span className="text-muted-foreground">{t("noCategory")}</span>
                 </CommandItem>
               )}
               {flatItems.map((item) => (

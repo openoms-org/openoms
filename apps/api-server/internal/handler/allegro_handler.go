@@ -92,7 +92,7 @@ func (h *AllegroHandler) UpdateFulfillment(w http.ResponseWriter, r *http.Reques
 	defer provider.Close()
 
 	if err := provider.UpdateFulfillment(ctx, *order.ExternalID, body.Status); err != nil {
-		slog.Error("allegro fulfillment: update failed", "order_id", orderIDStr, "error", err)
+		slog.Error("allegro fulfillment: update failed", "order_id", orderIDStr, "error", err) //nolint:gosec
 		writeAllegroError(w, "failed to update fulfillment on Allegro", err)
 		return
 	}
@@ -146,7 +146,7 @@ func (h *AllegroHandler) AddTracking(w http.ResponseWriter, r *http.Request) {
 	defer provider.Close()
 
 	if err := provider.AddTracking(ctx, *order.ExternalID, body.CarrierID, body.Waybill); err != nil {
-		slog.Error("allegro tracking: add failed", "order_id", orderIDStr, "error", err)
+		slog.Error("allegro tracking: add failed", "order_id", orderIDStr, "error", err) //nolint:gosec
 		writeAllegroError(w, "failed to add tracking on Allegro", err)
 		return
 	}

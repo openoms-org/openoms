@@ -43,6 +43,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Steps
@@ -50,19 +51,21 @@ import { Progress } from "@/components/ui/progress";
 
 type WizardStep = 1 | 2 | 3;
 
-const steps = [
-  { num: 1 as const, label: "Import XML", icon: FileText },
-  { num: 2 as const, label: "Klucze API", icon: KeyRound },
-  { num: 3 as const, label: "Ustawienia", icon: Settings },
-];
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default function BTPWizardPage() {
+  const t = useTranslations("suppliers");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
+
+  const steps = [
+    { num: 1 as const, label: t("btp.step1"), icon: FileText },
+    { num: 2 as const, label: t("btp.step2"), icon: KeyRound },
+    { num: 3 as const, label: t("btp.step3"), icon: Settings },
+  ];
   const [supplierId, setSupplierId] = useState<string | null>(null);
 
   // ── Step 1 state ──
@@ -86,11 +89,11 @@ export default function BTPWizardPage() {
 
   const onStartImport = () => {
     if (!name.trim()) {
-      toast.error("Nazwa dostawcy jest wymagana");
+      toast.error(t("btp.supplierNameRequired"));
       return;
     }
     if (!feedUrl.trim()) {
-      toast.error("URL pliku XML jest wymagany");
+      toast.error(t("btp.xmlUrlRequired"));
       return;
     }
 
@@ -123,11 +126,11 @@ export default function BTPWizardPage() {
   const onSubmitAPIKeys = (e: React.FormEvent) => {
     e.preventDefault();
     if (!publicKey.trim()) {
-      toast.error("Klucz publiczny jest wymagany");
+      toast.error(t("btp.publicKeyRequired"));
       return;
     }
     if (!privateKey.trim()) {
-      toast.error("Klucz prywatny jest wymagany");
+      toast.error(t("btp.privateKeyRequired"));
       return;
     }
 
@@ -139,7 +142,7 @@ export default function BTPWizardPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Klucze API zweryfikowane");
+          toast.success(t("btp.apiKeysVerified"));
           setCurrentStep(3);
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -161,7 +164,7 @@ export default function BTPWizardPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Dostawca BTP skonfigurowany");
+          toast.success(t("btp.supplierConfigured"));
           router.push(`/suppliers/${supplierId}`);
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -182,7 +185,7 @@ export default function BTPWizardPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">
-            Nowy dostawca — BTP.pro
+            {t("btp.newSupplierTitle")}
           </h1>
         </div>
 
@@ -228,29 +231,29 @@ export default function BTPWizardPage() {
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-base">
-                    Gdzie znaleźć link do pliku XML
+                    {t("gdzieZnalezcLinkDoPlikuXml")}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <ol className="list-decimal list-inside space-y-1 pl-1">
-                  <li>Zaloguj się do panelu B2B hurtowni</li>
+                  <li>{t("zalogujSieDoPaneluB2bHurtowni")}</li>
                   <li>
-                    W menu bocznym kliknij{" "}
+                    {t("btp.clickSideMenu")}{" "}
                     <span className="font-medium text-foreground">
-                      Eksport danych XML
+                      {t("btp.xmlExport")}
                     </span>
                   </li>
                   <li>
-                    Znajdź pozycję{" "}
+                    {t("btp.findEntry")}{" "}
                     <span className="font-medium text-foreground">
-                      Plik w formacie Comarch EDI
+                      {t("btp.comarchEdiFormat")}
                     </span>
                   </li>
                   <li>
-                    Skopiuj link z kolumny{" "}
+                    {t("btp.copyLinkFromColumn")}{" "}
                     <span className="font-medium text-foreground">
-                      Link do pobierania automatycznego
+                      {t("btp.autoDownloadLink")}
                     </span>
                   </li>
                 </ol>
@@ -259,24 +262,24 @@ export default function BTPWizardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Import katalogu produktów</CardTitle>
+                <CardTitle>{t("importKataloguProduktow")}</CardTitle>
                 <CardDescription>
-                  Podaj nazwę dostawcy i link do pliku XML z produktami
+                  {t("podajNazweDostawcyILinkDoPliku")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="btp-name">Nazwa dostawcy *</Label>
+                  <Label htmlFor="btp-name">{t("btp.supplierNameLabel")}</Label>
                   <Input
                     id="btp-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="np. Hurtownia XYZ"
+                    placeholder={t("btp.supplierNamePlaceholder")}
                     disabled={importStarted}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="btp-feed-url">URL pliku XML *</Label>
+                  <Label htmlFor="btp-feed-url">{t("btp.xmlUrlLabel")}</Label>
                   <Input
                     id="btp-feed-url"
                     value={feedUrl}
@@ -293,17 +296,17 @@ export default function BTPWizardPage() {
                       <>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
-                            Importowanie produktów...
+                            {t("importowanieProduktow")}
                           </span>
                           <span className="font-medium tabular-nums">
                             {progress
                               ? `${progress.processed.toLocaleString("pl-PL")} / ${progress.total.toLocaleString("pl-PL")}`
-                              : "Rozpoczynanie..."}
+                              : t("btp.starting")}
                           </span>
                         </div>
                         <Progress value={importPercent} />
                         <p className="text-xs text-muted-foreground">
-                          {importPercent}% — nie zamykaj tej strony
+                          {importPercent}% — {t("btp.doNotCloseThisPage")}
                         </p>
                       </>
                     )}
@@ -312,9 +315,7 @@ export default function BTPWizardPage() {
                       <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
                         <Check className="h-4 w-4 shrink-0" />
                         <span>
-                          Import zakończony —{" "}
-                          {progress.processed.toLocaleString("pl-PL")} produktów
-                          zaimportowanych
+                          {t("btp.importCompleted", { count: progress.processed.toLocaleString("pl-PL") })}
                         </span>
                       </div>
                     )}
@@ -323,7 +324,7 @@ export default function BTPWizardPage() {
                       <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                          <p>Import nie powiódł się</p>
+                          <p>{t("importniepowiodłsie")}</p>
                           {progress?.error && (
                             <p className="text-xs opacity-80">
                               {progress.error}
@@ -344,20 +345,20 @@ export default function BTPWizardPage() {
                       {startImport.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Rozpoczynanie...
+                          {t("btp.starting")}
                         </>
                       ) : (
-                        "Rozpocznij import"
+                        t("btp.startImport")
                       )}
                     </Button>
                   )}
                   {importDone && (
-                    <Button onClick={() => setCurrentStep(2)}>Dalej</Button>
+                    <Button onClick={() => setCurrentStep(2)}>{tc("next")}</Button>
                   )}
                   {(importFailed || progressError) && (
                     <Button variant="outline" onClick={onRetryImport}>
                       <RotateCw className="mr-2 h-4 w-4" />
-                      Spróbuj ponownie
+                      {t("retry")}
                     </Button>
                   )}
                 </div>
@@ -374,52 +375,50 @@ export default function BTPWizardPage() {
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-base">
-                    Gdzie znaleźć klucze API
+                    {t("gdzieZnalezcKluczeApi")}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <ol className="list-decimal list-inside space-y-1 pl-1">
-                  <li>Zaloguj się do panelu B2B hurtowni</li>
+                  <li>{t("zalogujSieDoPaneluB2bHurtowni")}</li>
                   <li>
-                    Przejdź do{" "}
+                    {t("btp.goTo")}{" "}
                     <span className="font-medium text-foreground">
-                      Mój Profil → zakładka Klucze
+                      {t("mojProfilZakładkaKlucze")}
                     </span>
                   </li>
-                  <li>Skopiuj klucz publiczny (login) i prywatny (hasło)</li>
+                  <li>{t("skopiujkluczpublicznyloginiprywatnyhasło")}</li>
                 </ol>
                 <p className="text-xs">
-                  Jeśli zakładka Klucze nie jest widoczna, skontaktuj się z
-                  opiekunem handlowym — wymagane jest uprawnienie ClientApi.
+                  {t("jesliZakładkaKluczeNieJestWidocznaSkontaktuj")}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Klucze API</CardTitle>
+                <CardTitle>{t("btp.apiKeysTitle")}</CardTitle>
                 <CardDescription>
-                  Podaj klucze do synchronizacji stanów magazynowych i cen w
-                  czasie rzeczywistym
+                  {t("podajKluczeDoSynchronizacjiStanowMagazynowychI")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={onSubmitAPIKeys} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="btp-public-key">
-                      Klucz publiczny (login) *
+                      {t("btp.publicKeyLabel")}
                     </Label>
                     <Input
                       id="btp-public-key"
                       value={publicKey}
                       onChange={(e) => setPublicKey(e.target.value)}
-                      placeholder="Twój klucz publiczny z panelu BTP"
+                      placeholder={t("btp.usernamePlaceholder")}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="btp-private-key">
-                      Klucz prywatny (hasło) *
+                      {t("btp.privateKeyLabel")}
                     </Label>
                     <div className="relative">
                       <Input
@@ -428,7 +427,7 @@ export default function BTPWizardPage() {
                         className="pr-10"
                         value={privateKey}
                         onChange={(e) => setPrivateKey(e.target.value)}
-                        placeholder="Twój klucz prywatny z panelu BTP"
+                        placeholder={t("btp.passwordPlaceholder")}
                       />
                       <button
                         type="button"
@@ -436,7 +435,7 @@ export default function BTPWizardPage() {
                         onClick={() => setShowPrivateKey((prev) => !prev)}
                         tabIndex={-1}
                         aria-label={
-                          showPrivateKey ? "Ukryj klucz" : "Pokaż klucz"
+                          showPrivateKey ? t("btp.hideKey") : t("pokazKlucz")
                         }
                       >
                         {showPrivateKey ? (
@@ -449,9 +448,9 @@ export default function BTPWizardPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="btp-base-url">
-                      Adres API hurtowni{" "}
+                      {t("btp.apiUrlLabel")}{" "}
                       <span className="text-muted-foreground font-normal">
-                        (opcjonalnie)
+                        ({tc("optional")})
                       </span>
                     </Label>
                     <Input
@@ -462,8 +461,7 @@ export default function BTPWizardPage() {
                       placeholder="https://twoja-hurtownia.btp.pro"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Pozostaw puste jeśli nie znasz — skonfigurujemy
-                      automatycznie.
+                      {t("pozostawPusteJesliNieZnaszSkonfigurujemy")}
                     </p>
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -471,10 +469,10 @@ export default function BTPWizardPage() {
                       {setAPIKeys.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Weryfikowanie...
+                          {t("btp.verifying")}
                         </>
                       ) : (
-                        "Weryfikuj i zapisz"
+                        t("btp.verifyAndSave")
                       )}
                     </Button>
                   </div>
@@ -492,36 +490,35 @@ export default function BTPWizardPage() {
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-base">
-                    Jak działa synchronizacja
+                    {t("jakDziałaSynchronizacja")}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  BTP wykorzystuje dwa źródła danych, które synchronizują się
-                  niezależnie:
+                  {t("btpWykorzystujeDwaZrodłaDanychKtoreSynchronizuja")}
+                  {t("niezaleznie")}
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border p-3 space-y-1">
                     <div className="flex items-center gap-1.5 font-medium text-foreground">
                       <FileText className="h-3.5 w-3.5" />
-                      Katalog XML
+                      {t("btp.xmlCatalog")}
                     </div>
                     <p className="text-xs">
-                      Pełna lista produktów — dodawanie i usuwanie. Produkty
-                      nieobecne w XML zostaną usunięte, a ich stan magazynowy
-                      wyzerowany.
+                      {t("pełnaListaProduktowDodawanieIUsuwanieProdukty")}
+                      {t("nieobecneWXmlZostanaUsunieteAIch")}
                     </p>
                   </div>
                   <div className="rounded-lg border p-3 space-y-1">
                     <div className="flex items-center gap-1.5 font-medium text-foreground">
                       <KeyRound className="h-3.5 w-3.5" />
-                      API (stany i ceny)
+                      {t("btp.apiStockAndPrices")}
                     </div>
                     <p className="text-xs">
-                      Aktualne stany magazynowe i ceny w czasie rzeczywistym.
-                      Dane z API mają zawsze priorytet — XML nigdy nie nadpisze
-                      stanów.
+                      {t("btp.realtimeStockAndPrices")}
+                      {t("daneZApiMajaZawszePriorytetXml")}
+                      {t("stanow")}
                     </p>
                   </div>
                 </div>
@@ -530,42 +527,42 @@ export default function BTPWizardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Ustawienia synchronizacji</CardTitle>
+                <CardTitle>{t("btp.syncSettingsTitle")}</CardTitle>
                 <CardDescription>
-                  Ustaw częstotliwość odświeżania katalogu i stanów
+                  {t("ustawCzestotliwoscOdswiezaniaKataloguIStanow")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Odświeżanie katalogu XML</Label>
+                  <Label>{t("odswiezanieKataloguXml")}</Label>
                   <Select value={xmlInterval} onValueChange={setXmlInterval}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="12">Co 12 godzin</SelectItem>
-                      <SelectItem value="24">Co 24 godziny</SelectItem>
-                      <SelectItem value="48">Co 48 godzin</SelectItem>
+                      <SelectItem value="12">{t("btp.every12h")}</SelectItem>
+                      <SelectItem value="24">{t("btp.every24h")}</SelectItem>
+                      <SelectItem value="48">{t("btp.every48h")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Jak często sprawdzać nowe i usunięte produkty w katalogu XML
+                    {t("jakCzestoSprawdzacNoweIUsunieteProdukty")}
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Synchronizacja stanów API</Label>
+                  <Label>{t("synchronizacjaStanowApi")}</Label>
                   <Select value={apiInterval} onValueChange={setApiInterval}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="15">Co 15 minut</SelectItem>
-                      <SelectItem value="30">Co 30 minut</SelectItem>
-                      <SelectItem value="60">Co 1 godzinę</SelectItem>
+                      <SelectItem value="15">{t("btp.every15m")}</SelectItem>
+                      <SelectItem value="30">{t("btp.every30m")}</SelectItem>
+                      <SelectItem value="60">{t("co1Godzine")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Jak często aktualizować stany magazynowe i ceny przez API
+                    {t("jakCzestoAktualizowacStanyMagazynoweICeny")}
                   </p>
                 </div>
                 <div className="flex gap-2 pt-2">
@@ -576,10 +573,10 @@ export default function BTPWizardPage() {
                     {completeSyncSettings.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Zapisywanie...
+                        {tc("saving")}
                       </>
                     ) : (
-                      "Zakończ konfigurację"
+                      t("zakonczKonfiguracje")
                     )}
                   </Button>
                 </div>

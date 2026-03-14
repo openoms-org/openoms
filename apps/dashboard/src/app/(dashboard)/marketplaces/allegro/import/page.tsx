@@ -32,8 +32,10 @@ import {
   useImportAllegroOffers,
   type AllegroImportResult,
 } from "@/hooks/use-allegro-import";
+import { useTranslations } from "next-intl";
 
 export default function AllegroImportPage() {
+  const t = useTranslations("marketplaces");
   const importMutation = useImportAllegroOffers();
   const result = importMutation.data;
 
@@ -41,11 +43,11 @@ export default function AllegroImportPage() {
     importMutation.mutate(undefined, {
       onSuccess: (data: AllegroImportResult) => {
         toast.success(
-          `Import zakończony: ${data.created} nowych, ${data.linked} powiązanych`
+          t("importCompleted", { created: data.created, linked: data.linked })
         );
       },
       onError: (error: Error) => {
-        toast.error(`Błąd importu: ${error.message}`);
+        toast.error(t("importError", { message: error.message }));
       },
     });
   };
@@ -60,9 +62,9 @@ export default function AllegroImportPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Importuj oferty z Allegro</h1>
+          <h1 className="text-2xl font-bold">{t("importAllegroOffers")}</h1>
           <p className="text-muted-foreground">
-            Pobierz swoje oferty z Allegro i utwórz produkty w systemie
+            {t("pobierzSwojeOfertyZAllegroIUtworz")}
           </p>
         </div>
       </div>
@@ -71,11 +73,11 @@ export default function AllegroImportPage() {
       {!result && (
         <Card>
           <CardHeader>
-            <CardTitle>Import ofert</CardTitle>
+            <CardTitle>{t("offerImport")}</CardTitle>
             <CardDescription>
               Import pobiera wszystkie Twoje aktywne oferty z Allegro, dopasowuje
-              je po SKU do istniejących produktów lub tworzy nowe. Oferty już
-              powiązane zostaną pominięte.
+              {t("jePoSkuDoIstniejacychProduktowLub")}
+              {t("powiazaneZostanaPominiete")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -87,12 +89,12 @@ export default function AllegroImportPage() {
               {importMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Importowanie ofert...
+                  {t("importingOffers")}
                 </>
               ) : (
                 <>
                   <Download className="mr-2 h-4 w-4" />
-                  Rozpocznij import
+                  {t("startImport")}
                 </>
               )}
             </Button>
@@ -106,25 +108,25 @@ export default function AllegroImportPage() {
           {/* Summary cards in 2x2 grid */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <SummaryCard
-              title="Utworzone"
+              title={t("created")}
               value={result.created}
               variant="success"
               icon={<CheckCircle2 className="h-4 w-4" />}
             />
             <SummaryCard
-              title="Powiązane"
+              title={t("powiazane")}
               value={result.linked}
               variant="info"
               icon={<Link2 className="h-4 w-4" />}
             />
             <SummaryCard
-              title="Pominięte"
+              title={t("pominiete")}
               value={result.skipped}
               variant="warning"
               icon={<SkipForward className="h-4 w-4" />}
             />
             <SummaryCard
-              title="Błędy"
+              title={t("błedy")}
               value={result.errors}
               variant="error"
               icon={<AlertCircle className="h-4 w-4" />}
@@ -135,19 +137,19 @@ export default function AllegroImportPage() {
           {result.details && result.details.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Szczegóły importu</CardTitle>
+                <CardTitle>{t("szczegołyImportu")}</CardTitle>
                 <CardDescription>
-                  Pokazano {result.details.length} z {result.total_offers} ofert
+                  {t("showingOfTotal", { shown: result.details.length, total: result.total_offers })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Oferta</TableHead>
+                      <TableHead>{t("offer")}</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Produkt</TableHead>
-                      <TableHead>Błąd</TableHead>
+                      <TableHead>{t("product")}</TableHead>
+                      <TableHead>{t("invoice.error")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -183,10 +185,10 @@ export default function AllegroImportPage() {
           {/* Action buttons */}
           <div className="flex gap-4">
             <Button onClick={() => importMutation.reset()} variant="outline">
-              Importuj ponownie
+              {t("importAgain")}
             </Button>
             <Button asChild>
-              <Link href="/products">Przejdź do produktów</Link>
+              <Link href="/products">{t("przejdzDoProduktow")}</Link>
             </Button>
           </div>
         </>
@@ -228,6 +230,7 @@ function SummaryCard({
 }
 
 function ActionBadge({ action }: { action: string }) {
+  const t = useTranslations("marketplaces");
   const variants: Record<
     string,
     "default" | "secondary" | "destructive" | "outline"
@@ -238,10 +241,10 @@ function ActionBadge({ action }: { action: string }) {
     error: "destructive",
   };
   const labels: Record<string, string> = {
-    created: "Utworzony",
-    linked: "Powiązany",
-    skipped: "Pominięty",
-    error: "Błąd",
+    created: t("statusCreated"),
+    linked: t("powiazany"),
+    skipped: t("pominiety"),
+    error: t("invoice.error"),
   };
   return (
     <Badge variant={variants[action] || "outline"}>

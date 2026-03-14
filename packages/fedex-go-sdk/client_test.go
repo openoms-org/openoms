@@ -68,7 +68,7 @@ func TestOAuth2Authentication(t *testing.T) {
 			authCalled = true
 			gotContentType = r.Header.Get("Content-Type")
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(tokenResponse{
+			_ = json.NewEncoder(w).Encode(tokenResponse{ //nolint:gosec // G117: test response
 				AccessToken: "test-token-123",
 				ExpiresIn:   3600,
 				TokenType:   "bearer",
@@ -82,7 +82,7 @@ func TestOAuth2Authentication(t *testing.T) {
 			t.Errorf("expected Authorization 'Bearer test-token-123', got %q", gotAuth)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -104,14 +104,14 @@ func TestDoReturnsAPIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/oauth/token" {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(tokenResponse{
+			_ = json.NewEncoder(w).Encode(tokenResponse{ //nolint:gosec // G117: test response
 				AccessToken: "tok",
 				ExpiresIn:   3600,
 			})
 			return
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"message":"invalid request","code":"INVALID"}`))
+		_, _ = w.Write([]byte(`{"message":"invalid request","code":"INVALID"}`))
 	}))
 	defer srv.Close()
 

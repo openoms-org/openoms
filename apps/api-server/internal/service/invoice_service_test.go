@@ -85,7 +85,7 @@ func TestBuildInvoiceItems(t *testing.T) {
 			taxRate: 23,
 			wantLen: 1,
 			checkResult: func(t *testing.T, items []integration.InvoiceItem) {
-				assert.Contains(t, items[0].Name, "Zamówienie")
+				assert.Contains(t, items[0].Name, "Order")
 				assert.Equal(t, 1, items[0].Quantity)
 				assert.Equal(t, 23, items[0].TaxRate)
 				assert.Equal(t, "szt.", items[0].Unit)
@@ -103,7 +103,7 @@ func TestBuildInvoiceItems(t *testing.T) {
 			taxRate: 23,
 			wantLen: 1,
 			checkResult: func(t *testing.T, items []integration.InvoiceItem) {
-				assert.Contains(t, items[0].Name, "Zamówienie")
+				assert.Contains(t, items[0].Name, "Order")
 				assert.Equal(t, 1, items[0].Quantity)
 				expectedNet := 50.00 / 1.23
 				assert.InDelta(t, expectedNet, items[0].NetPrice, 0.01)
@@ -119,7 +119,7 @@ func TestBuildInvoiceItems(t *testing.T) {
 			taxRate: 8,
 			wantLen: 1,
 			checkResult: func(t *testing.T, items []integration.InvoiceItem) {
-				assert.Contains(t, items[0].Name, "Zamówienie")
+				assert.Contains(t, items[0].Name, "Order")
 				expectedNet := 200.00 / 1.08
 				assert.InDelta(t, expectedNet, items[0].NetPrice, 0.01)
 				assert.Equal(t, 8, items[0].TaxRate)
@@ -135,7 +135,7 @@ func TestBuildInvoiceItems(t *testing.T) {
 			taxRate: 23,
 			wantLen: 1,
 			checkResult: func(t *testing.T, items []integration.InvoiceItem) {
-				assert.Contains(t, items[0].Name, "Zamówienie")
+				assert.Contains(t, items[0].Name, "Order")
 				assert.Equal(t, 1, items[0].Quantity)
 			},
 		},
@@ -274,7 +274,7 @@ func TestBuildInvoiceItems(t *testing.T) {
 			taxRate: 23,
 			wantLen: 1,
 			checkResult: func(t *testing.T, items []integration.InvoiceItem) {
-				expectedName := "Zamówienie " + orderID.String()[:8]
+				expectedName := "Order " + orderID.String()[:8]
 				assert.Equal(t, expectedName, items[0].Name)
 			},
 		},
@@ -288,7 +288,7 @@ func TestBuildInvoiceItems(t *testing.T) {
 			taxRate: 23,
 			wantLen: 1,
 			checkResult: func(t *testing.T, items []integration.InvoiceItem) {
-				assert.Contains(t, items[0].Name, "Zamówienie")
+				assert.Contains(t, items[0].Name, "Order")
 			},
 		},
 		{

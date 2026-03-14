@@ -154,7 +154,7 @@ func TestParseFlexibleTime(t *testing.T) {
 
 func TestStripBOM(t *testing.T) {
 	bom := []byte{0xEF, 0xBB, 0xBF}
-	data := append(bom, []byte("hello")...)
+	data := append(bom, []byte("hello")...) //nolint:gocritic // bom is intentionally not reused
 
 	result := stripBOM(data)
 	if string(result) != "hello" {

@@ -52,18 +52,22 @@ import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/shared/empty-state";
 import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
 import { formatDate } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
-const RETURN_STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  EXCHANGE: { label: "Wymiana", variant: "secondary" },
-  REFUND: { label: "Zwrot", variant: "default" },
-  REFUND_AND_RETURN: { label: "Zwrot + odesłanie", variant: "default" },
-  WAITING: { label: "Oczekujący", variant: "outline" },
-  ACCEPTED: { label: "Zaakceptowany", variant: "default" },
-  REJECTED: { label: "Odrzucony", variant: "destructive" },
-  CANCELLED: { label: "Anulowany", variant: "secondary" },
-};
+function getReturnStatusMap(t: (key: string) => string): Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> {
+  return {
+    EXCHANGE: { label: t("returnStatusExchange"), variant: "secondary" },
+    REFUND: { label: t("returnStatusRefund"), variant: "default" },
+    REFUND_AND_RETURN: { label: t("returnStatusRefundAndReturn"), variant: "default" },
+    WAITING: { label: t("returnStatusWaiting"), variant: "outline" },
+    ACCEPTED: { label: t("returnStatusAccepted"), variant: "default" },
+    REJECTED: { label: t("returnStatusRejected"), variant: "destructive" },
+    CANCELLED: { label: t("returnStatusCancelled"), variant: "secondary" },
+  };
+}
 
 export default function AllegroReturnsPage() {
+  const t = useTranslations("marketplaces");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [limit] = useState(25);
   const [offset, setOffset] = useState(0);
@@ -89,9 +93,9 @@ export default function AllegroReturnsPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Zwroty Allegro</h1>
+            <h1 className="text-2xl font-bold">{t("allegroReturns")}</h1>
             <p className="text-muted-foreground">
-              Zarządzaj zwrotami od kupujących na Allegro
+              {t("zarzadzajZwrotamiOdKupujacychNaAllegro")}
             </p>
           </div>
         </div>
@@ -109,18 +113,18 @@ export default function AllegroReturnsPage() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Wszystkie</SelectItem>
-                <SelectItem value="EXCHANGE">Wymiana</SelectItem>
-                <SelectItem value="REFUND">Zwrot</SelectItem>
-                <SelectItem value="WAITING">Oczekujący</SelectItem>
-                <SelectItem value="ACCEPTED">Zaakceptowany</SelectItem>
-                <SelectItem value="REJECTED">Odrzucony</SelectItem>
+                <SelectItem value="all">{t("all")}</SelectItem>
+                <SelectItem value="EXCHANGE">{t("returnStatusExchange")}</SelectItem>
+                <SelectItem value="REFUND">{t("returnStatusRefund")}</SelectItem>
+                <SelectItem value="WAITING">{t("detail.ticketStatusPending")}</SelectItem>
+                <SelectItem value="ACCEPTED">{t("returnStatusAccepted")}</SelectItem>
+                <SelectItem value="REJECTED">{t("returnStatusRejected")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RotateCcw className="mr-2 h-4 w-4" />
-            Odśwież
+            {t("refresh")}
           </Button>
         </div>
 
@@ -137,8 +141,8 @@ export default function AllegroReturnsPage() {
         {!isLoading && returns.length === 0 && (
           <EmptyState
             icon={RotateCcw}
-            title="Brak zwrotów"
-            description="Nie znaleziono zwrotów do wyświetlenia na Allegro."
+            title={t("empty.title")}
+            description={t("nieZnalezionoZwrotowDoWyswietleniaNaAllegro")}
           />
         )}
 
@@ -163,8 +167,7 @@ export default function AllegroReturnsPage() {
         {data && data.count > limit && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Wyświetlanie {offset + 1}-{Math.min(offset + limit, data.count)} z{" "}
-              {data.count}
+              {t("showingRange", { from: offset + 1, to: Math.min(offset + limit, data.count), total: data.count })}
             </p>
             <div className="flex gap-2">
               <Button
@@ -173,7 +176,7 @@ export default function AllegroReturnsPage() {
                 disabled={offset === 0}
                 onClick={() => setOffset(Math.max(0, offset - limit))}
               >
-                Poprzednia
+                {t("previous")}
               </Button>
               <Button
                 variant="outline"
@@ -181,7 +184,7 @@ export default function AllegroReturnsPage() {
                 disabled={offset + limit >= data.count}
                 onClick={() => setOffset(offset + limit)}
               >
-                Następna
+                {t("next")}
               </Button>
             </div>
           </div>
@@ -220,6 +223,8 @@ function ReturnCard({
   onReject: () => void;
   onRefund: () => void;
 }) {
+  const t = useTranslations("marketplaces");
+  const RETURN_STATUS_MAP = getReturnStatusMap(t);
   const statusInfo = RETURN_STATUS_MAP[ret.status] ?? {
     label: ret.status,
     variant: "outline" as const,
@@ -238,12 +243,12 @@ function ReturnCard({
                 <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                <span>Kupujący: {ret.buyer.login}</span>
+                <span>{t("kupujacy")}{ret.buyer.login}</span>
                 <span>{formatDate(ret.createdAt)}</span>
                 {ret.parcelSentByBuyer && (
                   <Badge variant="outline" className="text-[10px]">
                     <Package className="mr-1 h-3 w-3" />
-                    Paczka wysłana
+                    {t("paczkaWysłana")}
                   </Badge>
                 )}
               </div>
@@ -271,7 +276,7 @@ function ReturnCard({
             <div className="space-y-3">
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">
-                  Pozycje
+                  {t("items")}
                 </p>
                 <div className="space-y-1">
                   {ret.items.map((item, idx) => (
@@ -282,7 +287,7 @@ function ReturnCard({
                       <span className="truncate max-w-[60%]">{item.name}</span>
                       <div className="flex items-center gap-3">
                         <span className="text-muted-foreground">
-                          Szt.: {item.quantity}
+                          {t("qty")}: {item.quantity}
                         </span>
                         <span className="font-mono text-xs text-muted-foreground">
                           ID: {item.offerId.slice(0, 10)}
@@ -304,7 +309,7 @@ function ReturnCard({
                   onClick={onReject}
                 >
                   <XCircle className="mr-2 h-4 w-4" />
-                  Odrzuć zwrot
+                  {t("odrzucZwrot")}
                 </Button>
                 <Button
                   variant="outline"
@@ -312,7 +317,7 @@ function ReturnCard({
                   onClick={onRefund}
                 >
                   <CreditCard className="mr-2 h-4 w-4" />
-                  Zwróć pieniądze
+                  {t("zwrocPieniadze")}
                 </Button>
               </div>
             </div>
@@ -330,25 +335,26 @@ function RejectDialog({
   ret: AllegroCustomerReturn;
   onClose: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const [reason, setReason] = useState("");
   const rejectMutation = useRejectAllegroReturn(ret.id);
 
   const handleReject = () => {
     if (!reason.trim()) {
-      toast.error("Podaj powód odrzucenia");
+      toast.error(t("podajPowodOdrzucenia"));
       return;
     }
 
     rejectMutation.mutate(reason.trim(), {
       onSuccess: () => {
-        toast.success("Zwrot został odrzucony");
+        toast.success(t("zwrotZostałOdrzucony"));
         onClose();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udało się odrzucić zwrotu"
+            : t("nieUdałoSieOdrzucicZwrotu")
         );
       },
     });
@@ -358,21 +364,20 @@ function RejectDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Odrzuć zwrot</DialogTitle>
+          <DialogTitle>{t("odrzucZwrot")}</DialogTitle>
           <DialogDescription>
-            Zwrot {ret.referenceNumber || ret.id.slice(0, 12)} od{" "}
-            {ret.buyer.login}
+            {t("returnFrom", { ref: ret.referenceNumber || ret.id.slice(0, 12), buyer: ret.buyer.login })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="reject-reason">Powód odrzucenia</Label>
+            <Label htmlFor="reject-reason">{t("powodOdrzucenia")}</Label>
             <Textarea
               id="reject-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Opisz powód odrzucenia zwrotu..."
+              placeholder={t("opiszPowodOdrzuceniaZwrotu")}
               className="mt-1"
             />
           </div>
@@ -380,7 +385,7 @@ function RejectDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Anuluj
+            {t("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -390,7 +395,7 @@ function RejectDialog({
             {rejectMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Odrzuć
+            {t("odrzuc")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -405,17 +410,18 @@ function RefundDialog({
   ret: AllegroCustomerReturn;
   onClose: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const [reason, setReason] = useState("");
   const [paymentId, setPaymentId] = useState("");
   const createRefund = useCreateAllegroRefund();
 
   const handleRefund = () => {
     if (!reason.trim()) {
-      toast.error("Podaj powód zwrotu pieniędzy");
+      toast.error(t("podajPowodZwrotuPieniedzy"));
       return;
     }
     if (!paymentId.trim()) {
-      toast.error("Podaj ID płatności");
+      toast.error(t("podajIdPłatnosci"));
       return;
     }
 
@@ -436,14 +442,14 @@ function RefundDialog({
 
     createRefund.mutate(request, {
       onSuccess: () => {
-        toast.success("Zwrot pieniędzy został utworzony");
+        toast.success(t("zwrotPieniedzyZostałUtworzony"));
         onClose();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udało się utworzyć zwrotu pieniędzy"
+            : t("nieUdałoSieUtworzycZwrotuPieniedzy")
         );
       },
     });
@@ -453,38 +459,37 @@ function RefundDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Zwrot pieniędzy</DialogTitle>
+          <DialogTitle>{t("zwrotPieniedzy")}</DialogTitle>
           <DialogDescription>
-            Utwórz zwrot pieniędzy dla zwrotu{" "}
-            {ret.referenceNumber || ret.id.slice(0, 12)}
+            {t("createRefundFor", { ref: ret.referenceNumber || ret.id.slice(0, 12) })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="payment-id">ID platnosci</Label>
+            <Label htmlFor="payment-id">{t("paymentId")}</Label>
             <Input
               id="payment-id"
               value={paymentId}
               onChange={(e) => setPaymentId(e.target.value)}
-              placeholder="ID platnosci z zamowienia Allegro"
+              placeholder={t("paymentIdPlaceholder")}
               className="mt-1"
             />
           </div>
           <div>
-            <Label htmlFor="refund-reason">Powod zwrotu</Label>
+            <Label htmlFor="refund-reason">{t("refundReason")}</Label>
             <Textarea
               id="refund-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Opisz powod zwrotu pieniedzy..."
+              placeholder={t("refundReasonPlaceholder")}
               className="mt-1"
             />
           </div>
           {ret.refund && (
             <div className="rounded-md border p-3 bg-muted/50">
               <p className="text-sm">
-                Kwota zwrotu:{" "}
+                {t("refundAmount")}:{" "}
                 <span className="font-medium">
                   {ret.refund.amount} {ret.refund.currency}
                 </span>
@@ -493,7 +498,7 @@ function RefundDialog({
           )}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">
-              Pozycje do zwrotu
+              {t("itemsToRefund")}
             </p>
             <div className="space-y-1">
               {ret.items.map((item, idx) => (
@@ -510,7 +515,7 @@ function RefundDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Anuluj
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleRefund}
@@ -522,7 +527,7 @@ function RefundDialog({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             <CreditCard className="mr-2 h-4 w-4" />
-            Utworz zwrot
+            {t("createRefund")}
           </Button>
         </DialogFooter>
       </DialogContent>

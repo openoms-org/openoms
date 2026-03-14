@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatusTransitionDialog } from "@/components/shared/status-transition-dialog";
 import { SHIPMENT_TRANSITIONS, SHIPMENT_STATUSES } from "@/lib/constants";
+import { useTranslations } from "next-intl";
 
 interface ShipmentStatusActionsProps {
   currentStatus: string;
@@ -18,6 +19,7 @@ export function ShipmentStatusActions({
   onTransition,
   isLoading,
 }: ShipmentStatusActionsProps) {
+  const t = useTranslations("shipments");
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
 
   const availableTransitions = SHIPMENT_TRANSITIONS[currentStatus] ?? [];
@@ -25,7 +27,7 @@ export function ShipmentStatusActions({
   if (availableTransitions.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-4 text-center">
-        Brak dostępnych zmian statusu.
+        {t("brakDostepnychZmianStatusu")}
       </p>
     );
   }
@@ -69,16 +71,16 @@ export function ShipmentStatusActions({
       <StatusTransitionDialog
         open={!!confirmStatus}
         onOpenChange={(open) => !open && setConfirmStatus(null)}
-        title="Potwierdzenie zmiany statusu"
+        title={t("statusChangeConfirmation")}
         description={
           <>
-            Czy na pewno chcesz zmienić status przesyłki na{" "}
+            {t("confirmShipmentStatusChange")}{" "}
             <strong>
               {confirmStatus
                 ? SHIPMENT_STATUSES[confirmStatus]?.label ?? confirmStatus
                 : ""}
             </strong>
-            ? Ta operacja może być nieodwracalna.
+            {t("taOperacjaMozeBycNieodwracalna")}
           </>
         }
         isDestructive

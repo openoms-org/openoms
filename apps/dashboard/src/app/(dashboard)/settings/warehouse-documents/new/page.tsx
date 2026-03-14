@@ -23,6 +23,7 @@ import {
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { CreateWarehouseDocItemRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface ItemRow {
   product_id: string;
@@ -42,6 +43,7 @@ function ProductSearchInput({
   displayName?: string;
   onSelect: (id: string, name: string) => void;
 }) {
+  const t = useTranslations("warehouseDocuments");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -73,7 +75,7 @@ function ProductSearchInput({
           onClick={() => onSelect("", "")}
           className="text-xs"
         >
-          Zmień
+          {t("zmien")}
         </Button>
       </div>
     );
@@ -112,7 +114,7 @@ function ProductSearchInput({
             ))
           ) : (
             <div className="px-3 py-2 text-sm text-muted-foreground">
-              Brak wyników
+              {t("noResultsFound")}
             </div>
           )}
         </div>
@@ -122,6 +124,7 @@ function ProductSearchInput({
 }
 
 export default function NewWarehouseDocumentPage() {
+  const t = useTranslations("warehouseDocuments");
   const router = useRouter();
   const createDocument = useCreateWarehouseDocument();
   const { data: warehousesData } = useWarehouses({ limit: 100 });
@@ -156,7 +159,7 @@ export default function NewWarehouseDocumentPage() {
 
   const handleSubmit = () => {
     if (!docType || !warehouseId || items.some((i) => !i.product_id || i.quantity <= 0)) {
-      toast.error("Wypełnij wszystkie wymagane pola");
+      toast.error(t("wypełnijwszystkiewymaganepola"));
       return;
     }
 
@@ -179,7 +182,7 @@ export default function NewWarehouseDocumentPage() {
       },
       {
         onSuccess: (doc) => {
-          toast.success(`Dokument ${doc.document_number} został utworzony`);
+          toast.success(t("documentCreated", { number: doc.document_number }));
           router.push(`/settings/warehouse-documents/${doc.id}`);
         },
         onError: (error) => {
@@ -195,14 +198,14 @@ export default function NewWarehouseDocumentPage() {
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link href="/settings/warehouse-documents">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Powrót do listy
+            {t("powrotDoListy")}
           </Link>
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">
           Nowy dokument magazynowy
         </h1>
         <p className="text-muted-foreground">
-          Utwórz dokument PZ, WZ lub MM
+          {t("utworzDokumentPzWzLubMm")}
         </p>
       </div>
 
@@ -214,16 +217,16 @@ export default function NewWarehouseDocumentPage() {
               <SelectValue placeholder="Wybierz typ" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="PZ">PZ - Przyjęcie zewnętrzne</SelectItem>
-              <SelectItem value="WZ">WZ - Wydanie zewnętrzne</SelectItem>
-              <SelectItem value="MM">MM - Przesunięcie międzymagazynowe</SelectItem>
+              <SelectItem value="PZ">{t("pzPrzyjecieZewnetrzne")}</SelectItem>
+              <SelectItem value="WZ">{t("wzWydanieZewnetrzne")}</SelectItem>
+              <SelectItem value="MM">{t("mmPrzesuniecieMiedzymagazynowe")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label>
-            {docType === "MM" ? "Magazyn źródłowy *" : "Magazyn *"}
+            {docType === "MM" ? t("magazynZrodłowy") : "Magazyn *"}
           </Label>
           <Select value={warehouseId} onValueChange={setWarehouseId}>
             <SelectTrigger>
@@ -267,7 +270,7 @@ export default function NewWarehouseDocumentPage() {
             <Label>Dostawca</Label>
             <Select value={supplierId} onValueChange={setSupplierId}>
               <SelectTrigger>
-                <SelectValue placeholder="Wybierz dostawcę (opcjonalnie)" />
+                <SelectValue placeholder={t("wybierzDostawceOpcjonalnie")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Brak</SelectItem>
@@ -296,7 +299,7 @@ export default function NewWarehouseDocumentPage() {
             <Label className="text-base font-semibold">Pozycje *</Label>
             <Button variant="outline" size="sm" onClick={addItem}>
               <Plus className="h-4 w-4 mr-1" />
-              Dodaj pozycję
+              {t("form.addItem")}
             </Button>
           </div>
 
@@ -318,7 +321,7 @@ export default function NewWarehouseDocumentPage() {
                 />
               </div>
               <div className="w-24 space-y-1">
-                <Label className="text-xs">Ilość</Label>
+                <Label className="text-xs">{t("quantity")}</Label>
                 <Input
                   type="number"
                   min={1}
@@ -370,7 +373,7 @@ export default function NewWarehouseDocumentPage() {
               items.some((i) => !i.product_id)
             }
           >
-            {createDocument.isPending ? "Tworzenie..." : "Utwórz dokument"}
+            {createDocument.isPending ? "Tworzenie..." : t("utworzDokument")}
           </Button>
         </div>
       </div>

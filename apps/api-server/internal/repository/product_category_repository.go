@@ -9,8 +9,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// ProductCategoryRepository handles persistence for product categories.
 type ProductCategoryRepository struct{}
 
+// NewProductCategoryRepository creates a new ProductCategoryRepository.
 func NewProductCategoryRepository() *ProductCategoryRepository {
 	return &ProductCategoryRepository{}
 }
@@ -31,13 +33,14 @@ func (r *ProductCategoryRepository) List(ctx context.Context, tx pgx.Tx, filter 
 	var query string
 	var args []any
 
-	if filter.IncludeTree {
+	switch {
+	case filter.IncludeTree:
 		// Return all categories for tree building
 		query = fmt.Sprintf("SELECT %s FROM product_categories ORDER BY depth, position, name", categoryColumns)
-	} else if filter.ParentID != nil {
+	case filter.ParentID != nil:
 		query = fmt.Sprintf("SELECT %s FROM product_categories WHERE parent_id = $1 ORDER BY position, name", categoryColumns)
 		args = append(args, *filter.ParentID)
-	} else {
+	default:
 		query = fmt.Sprintf("SELECT %s FROM product_categories WHERE parent_id IS NULL ORDER BY position, name", categoryColumns)
 	}
 
@@ -58,6 +61,7 @@ func (r *ProductCategoryRepository) List(ctx context.Context, tx pgx.Tx, filter 
 	return categories, rows.Err()
 }
 
+// FindByID returns a product category by its ID.
 func (r *ProductCategoryRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ProductCategory, error) {
 	c, err := scanCategory(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM product_categories WHERE id = $1", categoryColumns), id,
@@ -71,6 +75,7 @@ func (r *ProductCategoryRepository) FindByID(ctx context.Context, tx pgx.Tx, id 
 	return c, nil
 }
 
+// FindBySlug returns a product category by its slug.
 func (r *ProductCategoryRepository) FindBySlug(ctx context.Context, tx pgx.Tx, slug string) (*model.ProductCategory, error) {
 	c, err := scanCategory(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM product_categories WHERE slug = $1", categoryColumns), slug,
@@ -84,6 +89,7 @@ func (r *ProductCategoryRepository) FindBySlug(ctx context.Context, tx pgx.Tx, s
 	return c, nil
 }
 
+// Create inserts a new product category.
 func (r *ProductCategoryRepository) Create(ctx context.Context, tx pgx.Tx, c *model.ProductCategory) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO product_categories (id, tenant_id, parent_id, name, slug, color, icon, position, depth)
@@ -93,6 +99,7 @@ func (r *ProductCategoryRepository) Create(ctx context.Context, tx pgx.Tx, c *mo
 	).Scan(&c.CreatedAt, &c.UpdatedAt)
 }
 
+// Update persists changes to a product category.
 func (r *ProductCategoryRepository) Update(ctx context.Context, tx pgx.Tx, c *model.ProductCategory) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE product_categories
@@ -109,6 +116,7 @@ func (r *ProductCategoryRepository) Update(ctx context.Context, tx pgx.Tx, c *mo
 	return nil
 }
 
+// Delete removes a product category by its ID.
 func (r *ProductCategoryRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM product_categories WHERE id = $1", id)
 	if err != nil {

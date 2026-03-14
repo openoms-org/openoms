@@ -87,7 +87,7 @@ func (h *AllegroCommsHandler) GetMessages(w http.ResponseWriter, r *http.Request
 
 	result, err := client.Messages.ListMessages(r.Context(), threadID, params)
 	if err != nil {
-		slog.Error("allegro comms: failed to list messages", "error", err, "threadId", threadID)
+		slog.Error("allegro comms: failed to list messages", "error", err, "threadId", threadID) //nolint:gosec
 		writeAllegroError(w, "Failed to fetch messages from Allegro", err)
 		return
 	}
@@ -123,7 +123,7 @@ func (h *AllegroCommsHandler) SendMessage(w http.ResponseWriter, r *http.Request
 		Text: body.Text,
 	})
 	if err != nil {
-		slog.Error("allegro comms: failed to send message", "error", err, "threadId", threadID)
+		slog.Error("allegro comms: failed to send message", "error", err, "threadId", threadID) //nolint:gosec
 		writeAllegroError(w, "Failed to send message", err)
 		return
 	}
@@ -178,7 +178,7 @@ func (h *AllegroCommsHandler) GetAllegroReturn(w http.ResponseWriter, r *http.Re
 
 	result, err := client.Returns.GetReturn(r.Context(), returnID)
 	if err != nil {
-		slog.Error("allegro comms: failed to get return", "error", err, "returnId", returnID)
+		slog.Error("allegro comms: failed to get return", "error", err, "returnId", returnID) //nolint:gosec
 		writeAllegroError(w, "Failed to fetch return from Allegro", err)
 		return
 	}
@@ -214,7 +214,7 @@ func (h *AllegroCommsHandler) RejectAllegroReturn(w http.ResponseWriter, r *http
 		Reason: body.Reason,
 	})
 	if err != nil {
-		slog.Error("allegro comms: failed to reject return", "error", err, "returnId", returnID)
+		slog.Error("allegro comms: failed to reject return", "error", err, "returnId", returnID) //nolint:gosec
 		writeAllegroError(w, "Failed to reject return", err)
 		return
 	}

@@ -18,10 +18,13 @@ import (
 )
 
 var (
+	// ErrInvalidSignature is returned when a webhook HMAC signature does not match.
 	ErrInvalidSignature = errors.New("invalid webhook signature")
-	ErrUnknownProvider  = errors.New("unknown webhook provider")
+	// ErrUnknownProvider is returned when a webhook provider name is not recognised.
+	ErrUnknownProvider = errors.New("unknown webhook provider")
 )
 
+// WebhookService handles inbound webhook event verification and storage.
 type WebhookService struct {
 	webhookRepo          repository.WebhookRepo
 	pool                 *pgxpool.Pool
@@ -29,6 +32,7 @@ type WebhookService struct {
 	inpostWebhookSecret  string
 }
 
+// NewWebhookService creates a new WebhookService.
 func NewWebhookService(
 	webhookRepo repository.WebhookRepo,
 	pool *pgxpool.Pool,
@@ -43,6 +47,7 @@ func NewWebhookService(
 	}
 }
 
+// Receive verifies the signature of an inbound webhook and persists the event.
 func (s *WebhookService) Receive(ctx context.Context, tenantID uuid.UUID, provider string, signature string, body []byte) (*model.WebhookEvent, error) {
 	secret, err := s.secretForProvider(provider)
 	if err != nil {

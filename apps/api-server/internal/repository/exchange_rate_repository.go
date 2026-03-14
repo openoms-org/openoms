@@ -10,12 +10,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// ExchangeRateRepository handles persistence for currency exchange rates.
 type ExchangeRateRepository struct{}
 
+// NewExchangeRateRepository creates a new ExchangeRateRepository.
 func NewExchangeRateRepository() *ExchangeRateRepository {
 	return &ExchangeRateRepository{}
 }
 
+// List returns a paginated list of exchange rates matching the filter.
 func (r *ExchangeRateRepository) List(ctx context.Context, tx pgx.Tx, filter model.ExchangeRateListFilter) ([]model.ExchangeRate, int, error) {
 	where := "WHERE 1=1"
 	args := []any{}
@@ -75,6 +78,7 @@ func (r *ExchangeRateRepository) List(ctx context.Context, tx pgx.Tx, filter mod
 	return rates, total, rows.Err()
 }
 
+// FindByID returns an exchange rate by its ID.
 func (r *ExchangeRateRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ExchangeRate, error) {
 	var rate model.ExchangeRate
 	err := tx.QueryRow(ctx,
@@ -93,6 +97,7 @@ func (r *ExchangeRateRepository) FindByID(ctx context.Context, tx pgx.Tx, id uui
 	return &rate, nil
 }
 
+// GetRate returns the exchange rate for a given currency pair.
 func (r *ExchangeRateRepository) GetRate(ctx context.Context, tx pgx.Tx, baseCurrency, targetCurrency string) (*model.ExchangeRate, error) {
 	var rate model.ExchangeRate
 	err := tx.QueryRow(ctx,
@@ -111,6 +116,7 @@ func (r *ExchangeRateRepository) GetRate(ctx context.Context, tx pgx.Tx, baseCur
 	return &rate, nil
 }
 
+// Create inserts a new exchange rate record.
 func (r *ExchangeRateRepository) Create(ctx context.Context, tx pgx.Tx, rate *model.ExchangeRate) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO exchange_rates (id, tenant_id, base_currency, target_currency, rate, source, fetched_at)
@@ -121,6 +127,7 @@ func (r *ExchangeRateRepository) Create(ctx context.Context, tx pgx.Tx, rate *mo
 	).Scan(&rate.CreatedAt)
 }
 
+// Upsert inserts or updates the exchange rate for a currency pair.
 func (r *ExchangeRateRepository) Upsert(ctx context.Context, tx pgx.Tx, rate *model.ExchangeRate) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO exchange_rates (id, tenant_id, base_currency, target_currency, rate, source, fetched_at)
@@ -133,6 +140,7 @@ func (r *ExchangeRateRepository) Upsert(ctx context.Context, tx pgx.Tx, rate *mo
 	).Scan(&rate.CreatedAt)
 }
 
+// Update applies partial updates to an exchange rate record.
 func (r *ExchangeRateRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateExchangeRateRequest) error {
 	setClauses := []string{}
 	args := []any{}
@@ -169,6 +177,7 @@ func (r *ExchangeRateRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.
 	return nil
 }
 
+// Delete removes an exchange rate record by its ID.
 func (r *ExchangeRateRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM exchange_rates WHERE id = $1", id)
 	if err != nil {

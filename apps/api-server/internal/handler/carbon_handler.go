@@ -53,7 +53,7 @@ func (h *CarbonHandler) GetReport(w http.ResponseWriter, r *http.Request) {
 	writeCSVHeaders(w, "carbon-report.csv")
 
 	// Header
-	_, _ = fmt.Fprintln(w, "ID przesyłki;ID zamówienia;Kurier;Nr śledzenia;Waga (kg);CO2 (kg);Dystans (km);Metoda;Status;Data utworzenia")
+	_, _ = fmt.Fprintln(w, "Shipment ID;Order ID;Carrier;Tracking Number;Weight (kg);CO2 (kg);Distance (km);Method;Status;Created At")
 
 	for _, row := range rows {
 		trackingNumber := ""

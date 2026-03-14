@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// ProductRepository handles persistence for products.
 type ProductRepository struct{}
 
+// NewProductRepository creates a new ProductRepository.
 func NewProductRepository() *ProductRepository {
 	return &ProductRepository{}
 }
@@ -49,6 +51,7 @@ func scanProducts(rows pgx.Rows) ([]model.Product, error) {
 	return products, rows.Err()
 }
 
+// List returns a paginated list of products matching the filter.
 func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.ProductListFilter) ([]model.Product, int, error) {
 	qb := NewQueryBuilder()
 
@@ -144,6 +147,7 @@ func (r *ProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.Pr
 	return products, total, rows.Err()
 }
 
+// FindByID returns a product by its ID.
 func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Product, error) {
 	p, err := scanProduct(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM products WHERE id = $1`, productSelectColumns), id,
@@ -177,6 +181,7 @@ func (r *ProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid
 	return products, nil
 }
 
+// Create inserts a new product.
 func (r *ProductRepository) Create(ctx context.Context, tx pgx.Tx, product *model.Product) error {
 	tags := product.Tags
 	if tags == nil {
@@ -194,6 +199,7 @@ func (r *ProductRepository) Create(ctx context.Context, tx pgx.Tx, product *mode
 	).Scan(&product.CreatedAt, &product.UpdatedAt)
 }
 
+// Update applies partial updates to a product.
 func (r *ProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateProductRequest) error {
 	var setClauses []string
 	var args []any
@@ -329,6 +335,7 @@ func (r *ProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID,
 	return nil
 }
 
+// FindBySKU returns the first product with the given SKU.
 func (r *ProductRepository) FindBySKU(ctx context.Context, tx pgx.Tx, sku string) (*model.Product, error) {
 	p, err := scanProduct(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM products WHERE sku = $1 LIMIT 1`, productSelectColumns), sku,
@@ -342,6 +349,7 @@ func (r *ProductRepository) FindBySKU(ctx context.Context, tx pgx.Tx, sku string
 	return &p, nil
 }
 
+// FindByEAN returns the first product with the given EAN barcode.
 func (r *ProductRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.Product, error) {
 	p, err := scanProduct(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM products WHERE ean = $1 LIMIT 1`, productSelectColumns), ean,
@@ -355,6 +363,7 @@ func (r *ProductRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string
 	return &p, nil
 }
 
+// Delete removes a product by its ID.
 func (r *ProductRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM products WHERE id = $1", id)
 	if err != nil {

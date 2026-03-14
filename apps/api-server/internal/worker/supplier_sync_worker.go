@@ -13,12 +13,14 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// SupplierSyncWorker periodically syncs product data from supplier feeds.
 type SupplierSyncWorker struct {
 	pool            *pgxpool.Pool
 	supplierService *service.SupplierService
 	logger          *slog.Logger
 }
 
+// NewSupplierSyncWorker creates a new SupplierSyncWorker.
 func NewSupplierSyncWorker(pool *pgxpool.Pool, supplierService *service.SupplierService, logger *slog.Logger) *SupplierSyncWorker {
 	return &SupplierSyncWorker{
 		pool:            pool,
@@ -27,14 +29,17 @@ func NewSupplierSyncWorker(pool *pgxpool.Pool, supplierService *service.Supplier
 	}
 }
 
+// Name returns the unique name of this worker.
 func (w *SupplierSyncWorker) Name() string {
 	return "supplier-sync"
 }
 
+// Interval returns how often this worker should run.
 func (w *SupplierSyncWorker) Interval() time.Duration {
 	return 1 * time.Minute
 }
 
+// Run syncs product data from all active supplier feeds.
 func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 	// Query active suppliers whose sync interval has elapsed (bypasses RLS).
 	// Picks up both feed-URL based suppliers (IOF) and integration-linked suppliers (BTP etc.)

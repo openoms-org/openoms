@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// ProductBundle represents a product that bundles multiple component products together.
 type ProductBundle struct {
 	ID                 uuid.UUID  `json:"id"`
 	TenantID           uuid.UUID  `json:"tenant_id"`
@@ -24,6 +25,7 @@ type ProductBundle struct {
 	ComponentStock int     `json:"component_stock"`
 }
 
+// CreateBundleComponentRequest is the payload for adding a component to a product bundle.
 type CreateBundleComponentRequest struct {
 	ComponentProductID uuid.UUID  `json:"component_product_id"`
 	ComponentVariantID *uuid.UUID `json:"component_variant_id,omitempty"`
@@ -31,6 +33,7 @@ type CreateBundleComponentRequest struct {
 	Position           int        `json:"position"`
 }
 
+// Validate validates the create bundle component request.
 func (r *CreateBundleComponentRequest) Validate() error {
 	if r.ComponentProductID == uuid.Nil {
 		return errors.New("component_product_id is required")
@@ -41,11 +44,13 @@ func (r *CreateBundleComponentRequest) Validate() error {
 	return nil
 }
 
+// UpdateBundleComponentRequest is the payload for updating a bundle component.
 type UpdateBundleComponentRequest struct {
 	Quantity *int `json:"quantity,omitempty"`
 	Position *int `json:"position,omitempty"`
 }
 
+// Validate validates the update bundle component request.
 func (r *UpdateBundleComponentRequest) Validate() error {
 	if r.Quantity == nil && r.Position == nil {
 		return errors.New("at least one field must be provided")

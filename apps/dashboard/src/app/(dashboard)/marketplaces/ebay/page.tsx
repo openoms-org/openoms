@@ -50,21 +50,22 @@ import {
 } from "@/components/ui/select";
 import type { Integration } from "@/types/api";
 import { EbayTabNav } from "./_components/ebay-tab-nav";
+import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 const MARKETPLACE_OPTIONS = [
-  { value: "EBAY_PL", label: "eBay Polska (EBAY_PL)" },
-  { value: "EBAY_DE", label: "eBay Niemcy (EBAY_DE)" },
-  { value: "EBAY_US", label: "eBay USA (EBAY_US)" },
-  { value: "EBAY_GB", label: "eBay Wielka Brytania (EBAY_GB)" },
+  { value: "EBAY_PL", labelKey: "ebayMarketplacePl" },
+  { value: "EBAY_DE", labelKey: "ebayMarketplaceDe" },
+  { value: "EBAY_US", labelKey: "ebayMarketplaceUs" },
+  { value: "EBAY_GB", labelKey: "ebayMarketplaceGb" },
 ] as const;
 
 const CURRENCY_OPTIONS = [
-  { value: "PLN", label: "PLN — Polski złoty" },
-  { value: "EUR", label: "EUR — Euro" },
-  { value: "USD", label: "USD — Dolar amerykański" },
-  { value: "GBP", label: "GBP — Funt brytyjski" },
+  { value: "PLN", labelKey: "currencyPln" },
+  { value: "EUR", labelKey: "currencyEur" },
+  { value: "USD", labelKey: "currencyUsd" },
+  { value: "GBP", labelKey: "currencyGbp" },
 ] as const;
 
 function getRedirectURI() {
@@ -87,6 +88,7 @@ export default function EbayIntegrationPage() {
 }
 
 function OAuthCallback({ code, state }: { code: string; state: string }) {
+  const t = useTranslations("marketplaces");
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading"
   );
@@ -108,7 +110,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
       .catch((err) => {
         setStatus("error");
         setErrorMsg(
-          err instanceof Error ? err.message : "Autoryzacja nie powiodła się"
+          err instanceof Error ? err.message : t("autoryzacjaNiePowiodłaSie")
         );
       });
   }, [code, state]);
@@ -121,7 +123,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Łączenie z eBay...
+                {t("łaczenieZEbay")}
               </p>
             </>
           )}
@@ -129,7 +131,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <p className="text-sm font-medium">
-                Połączono z eBay! Okno zamknie się automatycznie.
+                {t("połaczonoZEbayOknoZamknieSieAutomatycznie")}
               </p>
             </>
           )}
@@ -142,7 +144,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
                 size="sm"
                 onClick={() => window.close()}
               >
-                Zamknij okno
+                {t("closeWindow")}
               </Button>
             </>
           )}
@@ -153,6 +155,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
 }
 
 function EbayMainPage() {
+  const t = useTranslations("marketplaces");
   const { data: integrations, isLoading, refetch } = useIntegrations();
 
   const ebay = useMemo(
@@ -179,9 +182,9 @@ function EbayMainPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Integracja eBay</h1>
+            <h1 className="text-2xl font-bold">{t("ebayIntegration")}</h1>
             <p className="text-muted-foreground">
-              Połącz swoje konto eBay, aby synchronizować zamówienia i produkty
+              {t("połaczSwojeKontoEbayAbySynchronizowacZamowienia")}
             </p>
           </div>
         </div>
@@ -199,6 +202,7 @@ function EbayMainPage() {
 }
 
 function SetupState({ onCreated }: { onCreated: () => void }) {
+  const t = useTranslations("marketplaces");
   const createIntegration = useCreateIntegration();
   const [appId, setAppId] = useState("");
   const [certId, setCertId] = useState("");
@@ -233,7 +237,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
       if (!popup) {
         toast.error(
-          "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna i spróbuj ponownie."
+          t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac")
         );
         setIsAuthorizing(false);
         onDone();
@@ -248,15 +252,15 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         }
       }, 500);
     } catch {
-      toast.error("Nie udało się pobrać adresu autoryzacji eBay");
+      toast.error(t("nieUdałoSiePobracAdresuAutoryzacjiEbay"));
       setIsAuthorizing(false);
       onDone();
     }
-  }, []);
+  }, [t]);
 
   const handleSave = () => {
     if (!appId.trim() || !certId.trim() || !devId.trim()) {
-      toast.error("App ID, Cert ID i Dev ID są wymagane");
+      toast.error(t("appIdCertIdIDevIdSaWymagane"));
       return;
     }
 
@@ -277,14 +281,14 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       },
       {
         onSuccess: () => {
-          toast.success("Dane eBay zapisane. Otwieranie autoryzacji...");
+          toast.success(t("ebaySavedOpeningAuth"));
           openOAuthPopup(() => onCreated());
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas zapisywania danych"
+              : t("bładPodczasZapisywaniaDanych")
           );
         },
       }
@@ -296,9 +300,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       {/* Step 1: Prerequisites */}
       <Card>
         <CardHeader>
-          <CardTitle>Krok 1: Zarejestruj aplikację w eBay Developer Program</CardTitle>
+          <CardTitle>{t("krok1ZarejestrujAplikacjeWEbayDeveloper")}</CardTitle>
           <CardDescription>
-            Przed połączeniem musisz utworzyć aplikację w panelu deweloperskim
+            {t("przedPołaczeniemMusiszUtworzycAplikacjeWPanelu")}
             eBay.
           </CardDescription>
         </CardHeader>
@@ -311,12 +315,12 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 onCheckedChange={setSandbox}
               />
               <Label htmlFor="setup-sandbox" className="cursor-pointer">
-                Tryb sandbox (testowy)
+                {t("sandboxMode")}
               </Label>
             </div>
             {sandbox && (
               <p className="text-xs text-muted-foreground">
-                Sandbox wymaga osobnych kluczy API z panelu eBay Developer
+                {t("sandboxRequiresSeparateKeys")}
               </p>
             )}
           </div>
@@ -325,7 +329,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
           <ol className="list-decimal list-inside space-y-2 text-sm">
             <li>
-              Przejdź do{" "}
+              {t("goTo")}{" "}
               <a
                 href={devPortalURL}
                 target="_blank"
@@ -336,15 +340,15 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                 <ExternalLink className="h-3 w-3" />
               </a>
             </li>
-            <li>Skopiuj App ID (Client ID), Cert ID (Client Secret) i Dev ID</li>
+            <li>{t("ebayStep2CopyKeys")}</li>
             <li>
-              W sekcji <strong>User Tokens</strong> dodaj Redirect URI (RuName):
+              {t("ebayStep3AddRedirectUri")}
             </li>
           </ol>
 
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">
-              Redirect URI (do wklejenia w eBay)
+              {t("redirectUriLabel")}
             </Label>
             <code className="block rounded bg-muted px-3 py-2 text-sm font-mono break-all">
               {redirectURI}
@@ -353,8 +357,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
             <p className="text-xs text-amber-800 dark:text-amber-200">
-              Redirect URI musi być <strong>dokładnie taki sam</strong> jak
-              powyżej. Różnica w nawet jednym znaku spowoduje błąd autoryzacji.
+              {t("redirectUriMustBeExact")}
             </p>
           </div>
         </CardContent>
@@ -363,9 +366,9 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       {/* Step 2: Enter credentials + settings */}
       <Card>
         <CardHeader>
-          <CardTitle>Krok 2: Wprowadź dane aplikacji</CardTitle>
+          <CardTitle>{t("krok2WprowadzDaneAplikacji")}</CardTitle>
           <CardDescription>
-            Wklej klucze API z panelu deweloperskiego eBay.
+            {t("pasteEbayApiKeys")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -375,7 +378,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Input
                 id="app-id"
                 type={showAppId ? "text" : "password"}
-                placeholder="Wklej App ID aplikacji eBay"
+                placeholder={t("pasteAppId")}
                 value={appId}
                 onChange={(e) => setAppId(e.target.value)}
                 className="pr-10"
@@ -402,7 +405,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Input
                 id="cert-id"
                 type={showCertId ? "text" : "password"}
-                placeholder="Wklej Cert ID aplikacji eBay"
+                placeholder={t("pasteCertId")}
                 value={certId}
                 onChange={(e) => setCertId(e.target.value)}
                 className="pr-10"
@@ -429,7 +432,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Input
                 id="dev-id"
                 type={showDevId ? "text" : "password"}
-                placeholder="Wklej Dev ID aplikacji eBay"
+                placeholder={t("pasteDevId")}
                 value={devId}
                 onChange={(e) => setDevId(e.target.value)}
                 className="pr-10"
@@ -457,27 +460,27 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Label htmlFor="marketplace-id">Marketplace</Label>
               <Select value={marketplaceId} onValueChange={setMarketplaceId}>
                 <SelectTrigger id="marketplace-id" className="w-full">
-                  <SelectValue placeholder="Wybierz marketplace" />
+                  <SelectValue placeholder={t("selectMarketplace")} />
                 </SelectTrigger>
                 <SelectContent>
                   {MARKETPLACE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency">Waluta</Label>
+              <Label htmlFor="currency">{t("currency")}</Label>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger id="currency" className="w-full">
-                  <SelectValue placeholder="Wybierz walutę" />
+                  <SelectValue placeholder={t("wybierzWalute")} />
                 </SelectTrigger>
                 <SelectContent>
                   {CURRENCY_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -498,7 +501,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             <Save className="mr-2 h-4 w-4" />
-            Zapisz i przejdź do autoryzacji
+            {t("zapiszIPrzejdzDoAutoryzacji")}
           </Button>
         </CardContent>
       </Card>
@@ -513,6 +516,7 @@ function ConnectedState({
   integration: Integration;
   onRefetch: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
   const deleteIntegration = useDeleteIntegration();
   const [isReauthorizing, setIsReauthorizing] = useState(false);
@@ -530,14 +534,14 @@ function ConnectedState({
       { status: "inactive" },
       {
         onSuccess: () => {
-          toast.success("Integracja eBay została dezaktywowana");
+          toast.success(t("integracjaEbayZostałaDezaktywowana"));
           onRefetch();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas dezaktywacji integracji"
+              : t("bładPodczasDezaktywacjiIntegracji")
           );
         },
       }
@@ -547,21 +551,21 @@ function ConnectedState({
   const handleDelete = () => {
     if (
       !confirm(
-        "Czy na pewno chcesz usunąć integrację eBay? Ta operacja jest nieodwracalna."
+        t("czyNaPewnoChceszUsunacIntegracjeEbayTaOperacjaJest")
       )
     ) {
       return;
     }
     deleteIntegration.mutate(integration.id, {
       onSuccess: () => {
-        toast.success("Integracja eBay została usunięta");
+        toast.success(t("integracjaEbayZostałaUsunieta"));
         onRefetch();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Błąd podczas usuwania integracji"
+            : t("bładPodczasUsuwaniaIntegracji")
         );
       },
     });
@@ -585,7 +589,7 @@ function ConnectedState({
 
         if (!popup) {
           toast.error(
-            "Przeglądarka zablokowała okno popup. Zezwól na wyskakujące okna."
+            t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac1")
           );
           setIsReauthorizing(false);
           return;
@@ -599,12 +603,12 @@ function ConnectedState({
           }
         }, 500);
       } catch {
-        toast.error("Nie udało się pobrać adresu autoryzacji");
+        toast.error(t("nieUdałoSiePobracAdresuAutoryzacji"));
         setIsReauthorizing(false);
       }
     };
     doAuth();
-  }, [onRefetch]);
+  }, [onRefetch, t]);
 
   const handleSaveSettings = () => {
     updateIntegration.mutate(
@@ -617,14 +621,14 @@ function ConnectedState({
       },
       {
         onSuccess: () => {
-          toast.success("Ustawienia zostały zapisane");
+          toast.success(t("company.saved"));
           onRefetch();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas zapisywania ustawień"
+              : t("bładPodczasZapisywaniaUstawien")
           );
         },
       }
@@ -640,10 +644,10 @@ function ConnectedState({
       {needsOAuth && (
         <Card className="border-amber-200 dark:border-amber-800">
           <CardHeader>
-            <CardTitle>Autoryzacja OAuth</CardTitle>
+            <CardTitle>{t("oauthAuthorization")}</CardTitle>
             <CardDescription>
-              Dane aplikacji zostały zapisane. Kliknij poniżej, aby autoryzować
-              dostęp do konta eBay. Otworzy się okno popup z logowaniem eBay.
+              {t("daneAplikacjiZostałyZapisaneKliknijPonizejAby")}
+              {t("dostepDoKontaEbayOtworzySieOkno")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -657,7 +661,7 @@ function ConnectedState({
               ) : (
                 <ExternalLink className="mr-2 h-4 w-4" />
               )}
-              Połącz z eBay
+              {t("połaczZEbay")}
             </Button>
           </CardContent>
         </Card>
@@ -667,7 +671,7 @@ function ConnectedState({
         {/* Status card */}
         <Card>
           <CardHeader>
-            <CardTitle>Status połączenia</CardTitle>
+            <CardTitle>{t("statusPołaczenia")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -682,21 +686,21 @@ function ConnectedState({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Dane uwierzytelniające
+                  {t("daneUwierzytelniajace")}
                 </p>
                 <p className="mt-1 font-medium">
-                  {integration.has_credentials ? "Skonfigurowane" : "Brak"}
+                  {integration.has_credentials ? t("configured") : t("none")}
                 </p>
               </div>
               {integration.label && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Etykieta</p>
+                  <p className="text-sm text-muted-foreground">{t("label")}</p>
                   <p className="mt-1 font-medium">{integration.label}</p>
                 </div>
               )}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia synchronizacja
+                  {t("lastSync")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.last_sync_at
@@ -707,7 +711,7 @@ function ConnectedState({
               {integration.sync_cursor && (
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Kursor synchronizacji
+                    {t("syncCursor")}
                   </p>
                   <p className="mt-1 font-mono text-xs truncate">
                     {integration.sync_cursor}
@@ -715,11 +719,11 @@ function ConnectedState({
                 </div>
               )}
               <div>
-                <p className="text-sm text-muted-foreground">ID integracji</p>
+                <p className="text-sm text-muted-foreground">{t("integrationId")}</p>
                 <p className="mt-1 font-mono text-xs">{integration.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Data utworzenia</p>
+                <p className="text-sm text-muted-foreground">{t("createdAt")}</p>
                 <p className="mt-1 font-medium">
                   {formatDate(integration.created_at)}
                 </p>
@@ -729,7 +733,7 @@ function ConnectedState({
             {integration.status === "error" && integration.error_message && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
                 <p className="text-sm font-medium text-destructive">
-                  Błąd integracji
+                  {t("bładIntegracji")}
                 </p>
                 <p className="mt-1 text-sm text-destructive/80">
                   {integration.error_message}
@@ -742,7 +746,7 @@ function ConnectedState({
         {/* Actions card */}
         <Card>
           <CardHeader>
-            <CardTitle>Akcje</CardTitle>
+            <CardTitle>{t("actions")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {integration.status === "active" && (
@@ -757,7 +761,7 @@ function ConnectedState({
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Odśwież token
+                {t("odswiezToken")}
               </Button>
             )}
             <Button
@@ -774,7 +778,7 @@ function ConnectedState({
               ) : (
                 <Unplug className="mr-2 h-4 w-4" />
               )}
-              Dezaktywuj
+              {t("deactivate")}
             </Button>
             <Button
               className="w-full"
@@ -787,7 +791,7 @@ function ConnectedState({
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Usuń integrację
+              {t("usunIntegracje")}
             </Button>
           </CardContent>
         </Card>
@@ -801,9 +805,9 @@ function ConnectedState({
         {/* Marketplace & currency settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Ustawienia marketplace</CardTitle>
+            <CardTitle>{t("marketplaceSettings")}</CardTitle>
             <CardDescription>
-              Wybierz rynek eBay i walutę do synchronizacji.
+              {t("wybierzRynekEbayIWaluteDoSynchronizacji")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -811,27 +815,27 @@ function ConnectedState({
               <Label htmlFor="settings-marketplace-id">Marketplace</Label>
               <Select value={marketplaceId} onValueChange={setMarketplaceId}>
                 <SelectTrigger id="settings-marketplace-id" className="w-full">
-                  <SelectValue placeholder="Wybierz marketplace" />
+                  <SelectValue placeholder={t("selectMarketplace")} />
                 </SelectTrigger>
                 <SelectContent>
                   {MARKETPLACE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settings-currency">Waluta</Label>
+              <Label htmlFor="settings-currency">{t("currency")}</Label>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger id="settings-currency" className="w-full">
-                  <SelectValue placeholder="Wybierz walutę" />
+                  <SelectValue placeholder={t("wybierzWalute")} />
                 </SelectTrigger>
                 <SelectContent>
                   {CURRENCY_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -846,7 +850,7 @@ function ConnectedState({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               <Save className="mr-2 h-4 w-4" />
-              Zapisz ustawienia
+              {t("saveSettings")}
             </Button>
           </CardContent>
         </Card>
@@ -862,6 +866,7 @@ function CredentialsCard({
   integrationId: string;
   onUpdated: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integrationId);
   const [appId, setAppId] = useState("");
   const [certId, setCertId] = useState("");
@@ -873,7 +878,7 @@ function CredentialsCard({
 
   const handleUpdateCredentials = () => {
     if (!appId.trim() || !certId.trim() || !devId.trim()) {
-      toast.error("App ID, Cert ID i Dev ID są wymagane");
+      toast.error(t("appIdCertIdIDevIdSaWymagane"));
       return;
     }
 
@@ -889,7 +894,7 @@ function CredentialsCard({
       {
         onSuccess: () => {
           toast.success(
-            "Dane zaktualizowane. Kliknij 'Połącz z eBay' aby ponownie autoryzować."
+            t("daneZaktualizowaneKliknijPołaczZEbayAbyPonownieAut")
           );
           setAppId("");
           setCertId("");
@@ -900,7 +905,7 @@ function CredentialsCard({
           toast.error(
             error instanceof Error
               ? error.message
-              : "Błąd podczas aktualizacji danych"
+              : t("bładPodczasAktualizacjiDanych")
           );
         },
       }
@@ -910,10 +915,9 @@ function CredentialsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zmień dane aplikacji</CardTitle>
+        <CardTitle>{t("zmienDaneAplikacji")}</CardTitle>
         <CardDescription>
-          Zaktualizuj App ID, Cert ID i Dev ID. Po zmianie konieczna będzie
-          ponowna autoryzacja OAuth.
+          {t("zaktualizujAppIdCertIdIDev")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -923,7 +927,7 @@ function CredentialsCard({
             <Input
               id="edit-app-id"
               type={showAppId ? "text" : "password"}
-              placeholder="Nowy App ID"
+              placeholder={t("newAppId")}
               value={appId}
               onChange={(e) => setAppId(e.target.value)}
               className="pr-10"
@@ -950,7 +954,7 @@ function CredentialsCard({
             <Input
               id="edit-cert-id"
               type={showCertId ? "text" : "password"}
-              placeholder="Nowy Cert ID"
+              placeholder={t("newCertId")}
               value={certId}
               onChange={(e) => setCertId(e.target.value)}
               className="pr-10"
@@ -977,7 +981,7 @@ function CredentialsCard({
             <Input
               id="edit-dev-id"
               type={showDevId ? "text" : "password"}
-              placeholder="Nowy Dev ID"
+              placeholder={t("newDevId")}
               value={devId}
               onChange={(e) => setDevId(e.target.value)}
               className="pr-10"
@@ -1005,7 +1009,7 @@ function CredentialsCard({
             onCheckedChange={setSandbox}
           />
           <Label htmlFor="edit-sandbox" className="cursor-pointer">
-            Tryb sandbox (testowy)
+            {t("sandboxMode")}
           </Label>
         </div>
 
@@ -1023,7 +1027,7 @@ function CredentialsCard({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           <Save className="mr-2 h-4 w-4" />
-          Zaktualizuj dane
+          {t("updateCredentials")}
         </Button>
       </CardContent>
     </Card>

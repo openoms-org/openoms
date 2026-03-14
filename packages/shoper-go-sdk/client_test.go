@@ -92,7 +92,7 @@ func TestDoSetsBearerToken(t *testing.T) {
 			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
@@ -112,7 +112,7 @@ func TestDoWithRequestBody(t *testing.T) {
 		gotContentType = r.Header.Get("Content-Type")
 		gotBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
@@ -148,7 +148,7 @@ func TestAuthenticate(t *testing.T) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token": "fresh-token",
 				"expires_in":   3600,
 			})
@@ -160,7 +160,7 @@ func TestAuthenticate(t *testing.T) {
 			t.Errorf("Authorization = %q, want %q", auth, "Bearer fresh-token")
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]any{"order_id": 1})
+		_ = json.NewEncoder(w).Encode(map[string]any{"order_id": 1})
 	}))
 	defer srv.Close()
 
@@ -182,9 +182,9 @@ func TestAuthenticate(t *testing.T) {
 }
 
 func TestAuthenticateError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error":             "invalid_client",
 			"error_description": "Bad credentials",
 		})
@@ -221,11 +221,11 @@ func TestOrdersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ListResponse[ShoperOrder]{
+		_ = json.NewEncoder(w).Encode(ListResponse[Order]{
 			Count: 2,
 			Pages: 1,
 			Page:  1,
-			List: []ShoperOrder{
+			List: []Order{
 				{ID: 1, OrderSerial: "ORD-001", Sum: 99.99},
 				{ID: 2, OrderSerial: "ORD-002", Sum: 49.99},
 			},
@@ -270,7 +270,7 @@ func TestOrdersListWithParams(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ListResponse[ShoperOrder]{Count: 0, List: []ShoperOrder{}})
+		_ = json.NewEncoder(w).Encode(ListResponse[Order]{Count: 0, List: []Order{}})
 	})
 	defer srv.Close()
 
@@ -298,7 +298,7 @@ func TestOrdersGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ShoperOrder{
+		_ = json.NewEncoder(w).Encode(Order{
 			ID:          42,
 			OrderSerial: "ORD-042",
 			Email:       "jan@example.com",
@@ -331,13 +331,13 @@ func TestOrdersUpdateStatus(t *testing.T) {
 		}
 
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		if body["status_id"] != float64(3) {
 			t.Errorf("status_id = %v, want 3", body["status_id"])
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
@@ -359,11 +359,11 @@ func TestProductsList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ListResponse[ShoperProduct]{
+		_ = json.NewEncoder(w).Encode(ListResponse[Product]{
 			Count: 1,
 			Pages: 1,
 			Page:  1,
-			List: []ShoperProduct{
+			List: []Product{
 				{ID: 1, Code: "SKU-001", EAN: "5901234123457", Price: 29.99},
 			},
 		})
@@ -391,7 +391,7 @@ func TestProductsGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ShoperProduct{
+		_ = json.NewEncoder(w).Encode(Product{
 			ID:    7,
 			Code:  "SKU-007",
 			EAN:   "5901234123457",
@@ -424,13 +424,13 @@ func TestProductsUpdate(t *testing.T) {
 		}
 
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		if body["ean"] != "9999999999999" {
 			t.Errorf("ean = %v, want 9999999999999", body["ean"])
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
@@ -452,7 +452,7 @@ func TestProductsUpdateStock(t *testing.T) {
 		}
 
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		stock, ok := body["stock"].(map[string]any)
 		if !ok {
 			t.Fatal("missing stock key in body")
@@ -462,7 +462,7 @@ func TestProductsUpdateStock(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	})
 	defer srv.Close()
 
@@ -484,11 +484,11 @@ func TestCategoriesList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ListResponse[ShoperCategory]{
+		_ = json.NewEncoder(w).Encode(ListResponse[Category]{
 			Count: 2,
 			Pages: 1,
 			Page:  1,
-			List: []ShoperCategory{
+			List: []Category{
 				{ID: 1, Name: "Elektronika", ParentID: 0},
 				{ID: 2, Name: "Telefony", ParentID: 1},
 			},
@@ -524,7 +524,7 @@ func TestCategoriesListWithParams(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ListResponse[ShoperCategory]{Count: 0, List: []ShoperCategory{}})
+		_ = json.NewEncoder(w).Encode(ListResponse[Category]{Count: 0, List: []Category{}})
 	})
 	defer srv.Close()
 
@@ -546,7 +546,7 @@ func TestCategoriesGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ShoperCategory{
+		_ = json.NewEncoder(w).Encode(Category{
 			ID:       5,
 			Name:     "Odzież",
 			ParentID: 1,
@@ -569,9 +569,9 @@ func TestCategoriesGet(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error":             "server_error",
 			"error_description": "Internal server error",
 		})
@@ -598,9 +598,9 @@ func TestServerError(t *testing.T) {
 }
 
 func TestNotFoundError(t *testing.T) {
-	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error":             "not_found",
 			"error_description": "Order not found",
 		})
@@ -627,9 +627,9 @@ func TestNotFoundError(t *testing.T) {
 }
 
 func TestRateLimitedError(t *testing.T) {
-	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"error":             "rate_limit",
 			"error_description": "Too many requests",
 		})
@@ -713,10 +713,10 @@ func TestAPIErrorUnwrap(t *testing.T) {
 }
 
 func TestInvalidJSONResponse(t *testing.T) {
-	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{not valid json`))
+		_, _ = w.Write([]byte(`{not valid json`))
 	})
 	defer srv.Close()
 
@@ -736,7 +736,7 @@ func TestProductsListWithFilters(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(ListResponse[ShoperProduct]{Count: 0, List: []ShoperProduct{}})
+		_ = json.NewEncoder(w).Encode(ListResponse[Product]{Count: 0, List: []Product{}})
 	})
 	defer srv.Close()
 

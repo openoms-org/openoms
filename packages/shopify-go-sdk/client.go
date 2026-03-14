@@ -32,7 +32,7 @@ type Option func(*Client)
 func NewClient(shopDomain, accessToken string, opts ...Option) *Client {
 	// Normalize shop domain
 	if !strings.Contains(shopDomain, ".") {
-		shopDomain = shopDomain + ".myshopify.com"
+		shopDomain += ".myshopify.com"
 	}
 	shopDomain = strings.TrimRight(shopDomain, "/")
 	if !strings.HasPrefix(shopDomain, "https://") {
@@ -107,7 +107,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 	if err != nil {
 		return fmt.Errorf("shopify: execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}

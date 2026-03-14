@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// PaymentRepository handles persistence for payment settlements and transactions.
 type PaymentRepository struct{}
 
+// NewPaymentRepository creates a new PaymentRepository.
 func NewPaymentRepository() *PaymentRepository {
 	return &PaymentRepository{}
 }
@@ -37,6 +39,7 @@ const settlementSelectColumns = `id, tenant_id, provider, settlement_id,
 	settlement_date, total_amount, fee_amount, net_amount,
 	currency, status, notes, imported_at, created_at, updated_at`
 
+// ListSettlements returns a paginated list of payment settlements.
 func (r *PaymentRepository) ListSettlements(ctx context.Context, tx pgx.Tx, filter model.SettlementListFilter) ([]model.PaymentSettlement, int, error) {
 	where := "WHERE 1=1"
 	args := []any{}
@@ -102,6 +105,7 @@ func (r *PaymentRepository) ListSettlements(ctx context.Context, tx pgx.Tx, filt
 	return settlements, total, rows.Err()
 }
 
+// FindSettlementByID returns a payment settlement by its ID.
 func (r *PaymentRepository) FindSettlementByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PaymentSettlement, error) {
 	query := fmt.Sprintf("SELECT %s FROM payment_settlements WHERE id = $1", settlementSelectColumns)
 	s, err := scanSettlement(tx.QueryRow(ctx, query, id))
@@ -114,6 +118,7 @@ func (r *PaymentRepository) FindSettlementByID(ctx context.Context, tx pgx.Tx, i
 	return &s, nil
 }
 
+// CreateSettlement inserts a new payment settlement.
 func (r *PaymentRepository) CreateSettlement(ctx context.Context, tx pgx.Tx, s *model.PaymentSettlement) error {
 	query := `INSERT INTO payment_settlements
 		(id, tenant_id, provider, settlement_id, settlement_date, total_amount, fee_amount, net_amount, currency, status, notes)
@@ -129,6 +134,7 @@ func (r *PaymentRepository) CreateSettlement(ctx context.Context, tx pgx.Tx, s *
 	return nil
 }
 
+// UpdateSettlementStatus sets the status of a payment settlement.
 func (r *PaymentRepository) UpdateSettlementStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error {
 	query := `UPDATE payment_settlements SET status = $1, updated_at = now() WHERE id = $2`
 	_, err := tx.Exec(ctx, query, status, id)
@@ -157,6 +163,7 @@ func scanTransaction(row pgx.Row) (model.PaymentTransaction, error) {
 	return t, err
 }
 
+// ListTransactions returns a paginated list of payment transactions.
 func (r *PaymentRepository) ListTransactions(ctx context.Context, tx pgx.Tx, filter model.TransactionListFilter) ([]model.PaymentTransaction, int, error) {
 	where := "WHERE 1=1"
 	args := []any{}
@@ -231,6 +238,7 @@ func (r *PaymentRepository) ListTransactions(ctx context.Context, tx pgx.Tx, fil
 	return transactions, total, rows.Err()
 }
 
+// FindTransactionByID returns a payment transaction by its ID.
 func (r *PaymentRepository) FindTransactionByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PaymentTransaction, error) {
 	query := fmt.Sprintf("SELECT %s FROM payment_transactions WHERE id = $1", transactionSelectColumns)
 	t, err := scanTransaction(tx.QueryRow(ctx, query, id))
@@ -243,6 +251,7 @@ func (r *PaymentRepository) FindTransactionByID(ctx context.Context, tx pgx.Tx, 
 	return &t, nil
 }
 
+// FindTransactionByExternalID returns the transaction matching provider and external ID.
 func (r *PaymentRepository) FindTransactionByExternalID(ctx context.Context, tx pgx.Tx, provider, externalID string) (*model.PaymentTransaction, error) {
 	query := fmt.Sprintf(
 		"SELECT %s FROM payment_transactions WHERE provider = $1 AND external_transaction_id = $2",
@@ -258,6 +267,7 @@ func (r *PaymentRepository) FindTransactionByExternalID(ctx context.Context, tx 
 	return &t, nil
 }
 
+// FindTransactionsBySettlement returns all transactions for the given settlement.
 func (r *PaymentRepository) FindTransactionsBySettlement(ctx context.Context, tx pgx.Tx, settlementID uuid.UUID) ([]model.PaymentTransaction, error) {
 	query := fmt.Sprintf(
 		"SELECT %s FROM payment_transactions WHERE settlement_id = $1 ORDER BY transaction_date ASC",
@@ -280,6 +290,7 @@ func (r *PaymentRepository) FindTransactionsBySettlement(ctx context.Context, tx
 	return transactions, rows.Err()
 }
 
+// FindUnmatchedTransactions returns all unmatched payment transactions.
 func (r *PaymentRepository) FindUnmatchedTransactions(ctx context.Context, tx pgx.Tx) ([]model.PaymentTransaction, error) {
 	query := fmt.Sprintf(
 		"SELECT %s FROM payment_transactions WHERE match_status = 'unmatched' ORDER BY transaction_date ASC",
@@ -302,6 +313,7 @@ func (r *PaymentRepository) FindUnmatchedTransactions(ctx context.Context, tx pg
 	return transactions, rows.Err()
 }
 
+// CreateTransaction inserts a new payment transaction.
 func (r *PaymentRepository) CreateTransaction(ctx context.Context, tx pgx.Tx, t *model.PaymentTransaction) error {
 	query := `INSERT INTO payment_transactions
 		(id, tenant_id, settlement_id, order_id, provider, external_transaction_id,
@@ -321,6 +333,7 @@ func (r *PaymentRepository) CreateTransaction(ctx context.Context, tx pgx.Tx, t 
 	return nil
 }
 
+// UpdateTransactionMatch updates the order match for a payment transaction.
 func (r *PaymentRepository) UpdateTransactionMatch(ctx context.Context, tx pgx.Tx, id uuid.UUID, orderID *uuid.UUID, matchStatus string, matchNotes *string) error {
 	query := `UPDATE payment_transactions SET order_id = $1, match_status = $2, match_notes = $3 WHERE id = $4`
 	_, err := tx.Exec(ctx, query, orderID, matchStatus, matchNotes, id)
@@ -330,6 +343,7 @@ func (r *PaymentRepository) UpdateTransactionMatch(ctx context.Context, tx pgx.T
 	return nil
 }
 
+// GetReconciliationSummary returns an aggregated reconciliation summary for the given date range.
 func (r *PaymentRepository) GetReconciliationSummary(ctx context.Context, tx pgx.Tx, dateFrom, dateTo *string) (*model.ReconciliationSummary, error) {
 	where := "WHERE 1=1"
 	args := []any{}

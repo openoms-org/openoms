@@ -40,6 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { PickPackItem } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const statusLabels: Record<string, string> = {
   picking: "Kompletowanie",
@@ -49,6 +50,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function PickPackSessionPage() {
+  const t = useTranslations("pickPack");
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
@@ -484,7 +486,7 @@ export default function PickPackSessionPage() {
               disabled={completeSession.isPending}
             >
               <CheckCircle2 className="h-6 w-6 mr-3" />
-              {completeSession.isPending ? "Kończenie..." : "Zakoncz i wyslij"}
+              {completeSession.isPending ? t("konczenie") : "Zakoncz i wyslij"}
             </Button>
           )}
         </div>

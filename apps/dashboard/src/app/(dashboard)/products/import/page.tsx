@@ -24,8 +24,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { ProductImportPreview, ProductImportResult } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function ProductImportPage() {
+  const t = useTranslations("products");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ProductImportPreview | null>(null);
   const [result, setResult] = useState<ProductImportResult | null>(null);
@@ -59,10 +61,10 @@ export default function ProductImportPage() {
       if (droppedFile && droppedFile.name.endsWith(".csv")) {
         handleFile(droppedFile);
       } else {
-        toast.error("Wybierz plik CSV");
+        toast.error(t("import.selectCsvFile"));
       }
     },
-    [handleFile]
+    [handleFile, t]
   );
 
   const handleImport = () => {
@@ -71,7 +73,7 @@ export default function ProductImportPage() {
       onSuccess: (data) => {
         setResult(data);
         toast.success(
-          `Import zakończony: ${data.created} utworzonych, ${data.updated} zaktualizowanych`
+          t("import.importCompleteStats", { created: data.created, updated: data.updated })
         );
       },
       onError: (error) => {
@@ -96,10 +98,10 @@ export default function ProductImportPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Import produktów CSV
+            {t("importProduktowCsv")}
           </h1>
           <p className="text-muted-foreground">
-            Importuj produkty z pliku CSV. Istniejące produkty (dopasowane po SKU) zostaną zaktualizowane.
+            {t("import.description")}
           </p>
         </div>
       </div>
@@ -110,7 +112,7 @@ export default function ProductImportPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Import zakończony
+              {t("importZakonczony")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -120,7 +122,7 @@ export default function ProductImportPage() {
                   {result.created}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Nowe produkty
+                  {t("import.newProducts")}
                 </p>
               </div>
               <div className="rounded-lg border p-4 text-center">
@@ -128,7 +130,7 @@ export default function ProductImportPage() {
                   {result.updated}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Zaktualizowane
+                  {t("import.updated")}
                 </p>
               </div>
               <div className="rounded-lg border p-4 text-center">
@@ -136,21 +138,21 @@ export default function ProductImportPage() {
                   {result.errors.length}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Błędy
+                  {t("błedy")}
                 </p>
               </div>
             </div>
 
             {result.errors.length > 0 && (
               <div className="space-y-2">
-                <h3 className="font-medium text-destructive">Błędy importu:</h3>
+                <h3 className="font-medium text-destructive">{t("błedyImportu")}</h3>
                 <div className="max-h-60 overflow-y-auto rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Wiersz</TableHead>
-                        <TableHead>Pole</TableHead>
-                        <TableHead>Komunikat</TableHead>
+                        <TableHead>{t("import.row")}</TableHead>
+                        <TableHead>{t("import.field")}</TableHead>
+                        <TableHead>{t("import.message")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -169,10 +171,10 @@ export default function ProductImportPage() {
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={resetState}>
-                Importuj kolejny plik
+                {t("import.importAnotherFile")}
               </Button>
               <Button asChild>
-                <Link href="/products">Wróć do produktów</Link>
+                <Link href="/products">{t("wrocDoProduktow")}</Link>
               </Button>
             </div>
           </CardContent>
@@ -184,9 +186,9 @@ export default function ProductImportPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Plik CSV</CardTitle>
+              <CardTitle>{t("import.csvFile")}</CardTitle>
               <CardDescription>
-                Przeciągnij plik CSV lub kliknij, aby wybrać. Wymagane kolumny: name. Opcjonalne: sku, ean, price, stock_quantity, category, tags, weight, width, height, length, short_description.
+                {t("przeciagnijPlikCsvLubKliknijAbyWybrac")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -229,24 +231,24 @@ export default function ProductImportPage() {
                         resetState();
                       }}
                     >
-                      Zmień
+                      {t("zmien")}
                     </Button>
                   </div>
                 ) : (
                   <>
                     <Upload className="mb-4 h-10 w-10 text-muted-foreground" />
                     <p className="text-sm font-medium">
-                      Przeciągnij plik CSV tutaj
+                      {t("przeciagnijPlikCsvTutaj")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      lub kliknij, aby wybrać plik
+                      {t("lubKliknijAbyWybracPlik")}
                     </p>
                   </>
                 )}
               </div>
               {previewMutation.isPending && (
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Analizowanie pliku...
+                  {t("import.analyzingFile")}
                 </p>
               )}
             </CardContent>
@@ -256,27 +258,27 @@ export default function ProductImportPage() {
           {preview && (
             <Card>
               <CardHeader>
-                <CardTitle>Podgląd importu</CardTitle>
+                <CardTitle>{t("podgladImportu")}</CardTitle>
                 <CardDescription>
-                  Pierwsze 10 wierszy z pliku CSV
+                  {t("import.first10Rows")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-4">
                   <Badge variant="outline" className="text-sm px-3 py-1">
-                    Łącznie: {preview.total_rows}
+                    {t("import.total")}: {preview.total_rows}
                   </Badge>
                   <Badge
                     variant="outline"
                     className="text-sm px-3 py-1 bg-success/15 text-success"
                   >
-                    Nowe produkty: {preview.new_count}
+                    {t("import.newProducts")}: {preview.new_count}
                   </Badge>
                   <Badge
                     variant="outline"
                     className="text-sm px-3 py-1 bg-info/15 text-info"
                   >
-                    Aktualizacje: {preview.update_count}
+                    {t("import.updates")}: {preview.update_count}
                   </Badge>
                 </div>
 
@@ -309,15 +311,15 @@ export default function ProductImportPage() {
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={resetState}>
-                    Anuluj
+                    {t("import.cancel")}
                   </Button>
                   <Button
                     onClick={handleImport}
                     disabled={importMutation.isPending}
                   >
                     {importMutation.isPending
-                      ? "Importowanie..."
-                      : `Importuj ${preview.total_rows} produktów`}
+                      ? t("import.importing")
+                      : t("import.importCount", { count: preview.total_rows })}
                   </Button>
                 </div>
               </CardContent>

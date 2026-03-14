@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AllegroErrorCard } from "@/components/integrations/allegro-error-card";
+import { useTranslations } from "next-intl";
 
 const PAGE_SIZE = 20;
 
@@ -62,20 +63,21 @@ function statusBadgeVariant(status?: string) {
   }
 }
 
-function statusLabel(status?: string) {
+function statusLabel(status: string | undefined, t: (key: string) => string) {
   switch (status) {
     case "ACTIVE":
-      return "Aktywna";
+      return t("offerStatusActive");
     case "INACTIVE":
-      return "Nieaktywna";
+      return t("offerStatusInactive");
     case "ENDED":
-      return "Zakończona";
+      return t("offerStatusEnded");
     default:
       return status ?? "---";
   }
 }
 
 export default function AllegroOffersPage() {
+  const t = useTranslations("marketplaces");
   const [page, setPage] = useState(0);
   const [searchName, setSearchName] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -99,9 +101,9 @@ export default function AllegroOffersPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Oferty Allegro</h1>
+            <h1 className="text-2xl font-bold">{t("allegroOffers")}</h1>
             <p className="text-muted-foreground">
-              Zarządzaj swoimi ofertami na Allegro
+              {t("zarzadzajSwoimiOfertamiNaAllegro")}
             </p>
           </div>
         </div>
@@ -116,7 +118,7 @@ export default function AllegroOffersPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Szukaj po nazwie..."
+                    placeholder={t("searchByName")}
                     value={searchName}
                     onChange={(e) => {
                       setSearchName(e.target.value);
@@ -137,10 +139,10 @@ export default function AllegroOffersPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Wszystkie</SelectItem>
-                  <SelectItem value="ACTIVE">Aktywne</SelectItem>
-                  <SelectItem value="INACTIVE">Nieaktywne</SelectItem>
-                  <SelectItem value="ENDED">Zakończone</SelectItem>
+                  <SelectItem value="all">{t("all")}</SelectItem>
+                  <SelectItem value="ACTIVE">{t("statusActive")}</SelectItem>
+                  <SelectItem value="INACTIVE">{t("statusInactive")}</SelectItem>
+                  <SelectItem value="ENDED">{t("order.completed")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -152,10 +154,10 @@ export default function AllegroOffersPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Oferty
+              {t("offers")}
               {data && (
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({data.totalCount} łącznie)
+                  ({t("totalCount", { count: data.totalCount })})
                 </span>
               )}
               {isFetching && (
@@ -172,19 +174,19 @@ export default function AllegroOffersPage() {
               </div>
             ) : !data?.offers?.length ? (
               <p className="py-8 text-center text-muted-foreground">
-                Brak ofert do wyświetlenia
+                {t("brakOfertDoWyswietlenia")}
               </p>
             ) : (
               <>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-16">Zdjęcie</TableHead>
-                      <TableHead>Nazwa</TableHead>
-                      <TableHead className="w-28">Cena</TableHead>
-                      <TableHead className="w-24">Stan</TableHead>
+                      <TableHead className="w-16">{t("zdjecie")}</TableHead>
+                      <TableHead>{t("name")}</TableHead>
+                      <TableHead className="w-28">{t("price")}</TableHead>
+                      <TableHead className="w-24">{t("stock")}</TableHead>
                       <TableHead className="w-28">Status</TableHead>
-                      <TableHead className="w-40 text-right">Akcje</TableHead>
+                      <TableHead className="w-40 text-right">{t("actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -197,8 +199,7 @@ export default function AllegroOffersPage() {
                 {/* Pagination */}
                 <div className="mt-4 flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Strona {page + 1} z{" "}
-                    {Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE))}
+                    {t("pageOf", { page: page + 1, total: Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE)) })}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -207,7 +208,7 @@ export default function AllegroOffersPage() {
                       disabled={page === 0}
                       onClick={() => setPage((p) => p - 1)}
                     >
-                      Poprzednia
+                      {t("previous")}
                     </Button>
                     <Button
                       variant="outline"
@@ -215,7 +216,7 @@ export default function AllegroOffersPage() {
                       disabled={(page + 1) * PAGE_SIZE >= data.totalCount}
                       onClick={() => setPage((p) => p + 1)}
                     >
-                      Następna
+                      {t("next")}
                     </Button>
                   </div>
                 </div>
@@ -229,6 +230,7 @@ export default function AllegroOffersPage() {
 }
 
 function OfferRow({ offer }: { offer: AllegroOffer }) {
+  const t = useTranslations("marketplaces");
   const [editingStock, setEditingStock] = useState(false);
   const [editingPrice, setEditingPrice] = useState(false);
   const [stockValue, setStockValue] = useState(
@@ -248,13 +250,13 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
   const handleToggleStatus = () => {
     if (isActive) {
       deactivate.mutate(offer.id, {
-        onSuccess: () => toast.success("Oferta dezaktywowana"),
-        onError: () => toast.error("Nie udało się dezaktywować oferty"),
+        onSuccess: () => toast.success(t("offerDeactivated")),
+        onError: () => toast.error(t("nieUdałoSieDezaktywowacOferty")),
       });
     } else {
       activate.mutate(offer.id, {
-        onSuccess: () => toast.success("Oferta aktywowana"),
-        onError: () => toast.error("Nie udało się aktywować oferty"),
+        onSuccess: () => toast.success(t("offerActivated")),
+        onError: () => toast.error(t("nieUdałoSieAktywowacOferty")),
       });
     }
   };
@@ -262,17 +264,17 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
   const handleSaveStock = () => {
     const qty = parseInt(stockValue, 10);
     if (isNaN(qty) || qty < 0) {
-      toast.error("Nieprawidłowa wartość stanu");
+      toast.error(t("nieprawidłowaWartoscStanu"));
       return;
     }
     updateStock.mutate(
       { offerId: offer.id, quantity: qty },
       {
         onSuccess: () => {
-          toast.success("Stan zaktualizowany");
+          toast.success(t("stockUpdated"));
           setEditingStock(false);
         },
-        onError: () => toast.error("Nie udało się zaktualizować stanu"),
+        onError: () => toast.error(t("nieUdałoSieZaktualizowacStanu")),
       }
     );
   };
@@ -280,7 +282,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
   const handleSavePrice = () => {
     const amt = parseFloat(priceValue);
     if (isNaN(amt) || amt < 0) {
-      toast.error("Nieprawidłowa wartość ceny");
+      toast.error(t("nieprawidłowaWartoscCeny"));
       return;
     }
     updatePrice.mutate(
@@ -291,10 +293,10 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
       },
       {
         onSuccess: () => {
-          toast.success("Cena zaktualizowana");
+          toast.success(t("priceUpdated"));
           setEditingPrice(false);
         },
-        onError: () => toast.error("Nie udało się zaktualizować ceny"),
+        onError: () => toast.error(t("nieUdałoSieZaktualizowacCeny")),
       }
     );
   };
@@ -414,7 +416,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
       {/* Status */}
       <TableCell>
         <Badge variant={statusBadgeVariant(offer.publication?.status)}>
-          {statusLabel(offer.publication?.status)}
+          {statusLabel(offer.publication?.status, t)}
         </Badge>
       </TableCell>
 
@@ -437,7 +439,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
           ) : (
             <Play className="mr-1 h-3 w-3" />
           )}
-          {isActive ? "Dezaktywuj" : "Aktywuj"}
+          {isActive ? t("deactivate") : t("activate")}
         </Button>
       </TableCell>
     </TableRow>

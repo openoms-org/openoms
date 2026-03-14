@@ -24,11 +24,15 @@ import (
 )
 
 var (
-	ErrSupplierNotFound        = errors.New("supplier not found")
+	// ErrSupplierNotFound is returned when a supplier does not exist.
+	ErrSupplierNotFound = errors.New("supplier not found")
+	// ErrSupplierProductNotFound is returned when a supplier product does not exist.
 	ErrSupplierProductNotFound = errors.New("supplier product not found")
-	ErrNoFeedURL               = errors.New("supplier has no feed URL configured")
+	// ErrNoFeedURL is returned when a supplier sync is attempted without a configured feed URL.
+	ErrNoFeedURL = errors.New("supplier has no feed URL configured")
 )
 
+// SupplierService handles business logic for supplier management.
 type SupplierService struct {
 	supplierRepo        repository.SupplierRepo
 	supplierProdRepo    repository.SupplierProductRepo
@@ -49,6 +53,7 @@ func (s *SupplierService) SetStockSyncService(svc *StockSyncService) {
 	s.stockSyncService = svc
 }
 
+// NewSupplierService creates a new SupplierService.
 func NewSupplierService(
 	supplierRepo repository.SupplierRepo,
 	supplierProdRepo repository.SupplierProductRepo,
@@ -77,6 +82,7 @@ func NewSupplierService(
 	}
 }
 
+// List returns a paginated list of suppliers for a tenant.
 func (s *SupplierService) List(ctx context.Context, tenantID uuid.UUID, filter model.SupplierListFilter) (model.ListResponse[model.Supplier], error) {
 	var resp model.ListResponse[model.Supplier]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -98,6 +104,7 @@ func (s *SupplierService) List(ctx context.Context, tenantID uuid.UUID, filter m
 	return resp, err
 }
 
+// Get returns a single supplier by ID.
 func (s *SupplierService) Get(ctx context.Context, tenantID, supplierID uuid.UUID) (*model.Supplier, error) {
 	var supplier *model.Supplier
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -114,6 +121,7 @@ func (s *SupplierService) Get(ctx context.Context, tenantID, supplierID uuid.UUI
 	return supplier, nil
 }
 
+// Create inserts a new supplier.
 func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateSupplierRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -175,6 +183,7 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	return supplier, nil
 }
 
+// Update modifies an existing supplier.
 func (s *SupplierService) Update(ctx context.Context, tenantID, supplierID uuid.UUID, req model.UpdateSupplierRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -217,6 +226,7 @@ func (s *SupplierService) Update(ctx context.Context, tenantID, supplierID uuid.
 	return supplier, err
 }
 
+// Delete removes a supplier by ID.
 func (s *SupplierService) Delete(ctx context.Context, tenantID, supplierID uuid.UUID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
@@ -249,6 +259,7 @@ func (s *SupplierService) Delete(ctx context.Context, tenantID, supplierID uuid.
 	return err
 }
 
+// ListProducts returns a paginated list of products linked to a supplier.
 func (s *SupplierService) ListProducts(ctx context.Context, tenantID uuid.UUID, filter model.SupplierProductListFilter) (model.ListResponse[model.SupplierProduct], error) {
 	var resp model.ListResponse[model.SupplierProduct]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -292,6 +303,7 @@ func (s *SupplierService) ListAllProducts(ctx context.Context, tenantID uuid.UUI
 	return resp, err
 }
 
+// LinkProduct associates a supplier product with an internal product.
 func (s *SupplierService) LinkProduct(ctx context.Context, tenantID, supplierProductID, productID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		sp, err := s.supplierProdRepo.FindByID(ctx, tx, supplierProductID)
@@ -502,6 +514,7 @@ func (s *SupplierService) ImportSingleProduct(ctx context.Context, tenantID, sup
 	return result, nil
 }
 
+// ImportProducts imports supplier products from a CSV or feed payload.
 func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplierID uuid.UUID, req model.ImportSupplierProductsRequest, actorID uuid.UUID, ip string) (*model.ImportSupplierProductsResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -603,6 +616,7 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 	return resp, nil
 }
 
+// SyncFeed fetches the supplier's product feed URL and reconciles products.
 func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uuid.UUID) error {
 	var supplier *model.Supplier
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

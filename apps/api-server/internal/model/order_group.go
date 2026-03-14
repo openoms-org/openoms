@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// OrderGroup links multiple source orders into a single logical group.
 type OrderGroup struct {
 	ID             uuid.UUID   `json:"id"`
 	TenantID       uuid.UUID   `json:"tenant_id"`
@@ -20,11 +21,13 @@ type OrderGroup struct {
 	CreatedAt      time.Time   `json:"created_at"`
 }
 
+// MergeOrdersRequest is the payload for merging multiple orders into one.
 type MergeOrdersRequest struct {
 	OrderIDs []uuid.UUID `json:"order_ids"`
 	Notes    *string     `json:"notes,omitempty"`
 }
 
+// Validate validates the merge orders request.
 func (r *MergeOrdersRequest) Validate() error {
 	if len(r.OrderIDs) < 2 {
 		return errors.New("at least 2 order_ids are required to merge")
@@ -35,17 +38,20 @@ func (r *MergeOrdersRequest) Validate() error {
 	return nil
 }
 
+// SplitSpec describes one portion of a split order operation.
 type SplitSpec struct {
 	Items           json.RawMessage `json:"items"`
 	CustomerName    string          `json:"customer_name,omitempty"`
 	ShippingAddress json.RawMessage `json:"shipping_address,omitempty"`
 }
 
+// SplitOrderRequest is the payload for splitting an order into multiple orders.
 type SplitOrderRequest struct {
 	Splits []SplitSpec `json:"splits"`
 	Notes  *string     `json:"notes,omitempty"`
 }
 
+// Validate validates the split order request.
 func (r *SplitOrderRequest) Validate() error {
 	if len(r.Splits) < 2 {
 		return errors.New("at least 2 splits are required")

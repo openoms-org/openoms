@@ -9,12 +9,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// SupplierCategoryMappingRepository handles persistence for supplier category mappings.
 type SupplierCategoryMappingRepository struct{}
 
+// NewSupplierCategoryMappingRepository creates a new SupplierCategoryMappingRepository.
 func NewSupplierCategoryMappingRepository() *SupplierCategoryMappingRepository {
 	return &SupplierCategoryMappingRepository{}
 }
 
+// ListBySupplier returns all category mappings for the given supplier.
 func (r *SupplierCategoryMappingRepository) ListBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) ([]model.SupplierCategoryMapping, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, supplier_id, source_category, category_id, auto_matched, confirmed, created_at
@@ -39,6 +42,7 @@ func (r *SupplierCategoryMappingRepository) ListBySupplier(ctx context.Context, 
 	return mappings, rows.Err()
 }
 
+// FindBySourceCategory returns a mapping for the given supplier and source category.
 func (r *SupplierCategoryMappingRepository) FindBySourceCategory(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, sourceCategory string) (*model.SupplierCategoryMapping, error) {
 	var m model.SupplierCategoryMapping
 	err := tx.QueryRow(ctx,
@@ -56,6 +60,7 @@ func (r *SupplierCategoryMappingRepository) FindBySourceCategory(ctx context.Con
 	return &m, nil
 }
 
+// Upsert inserts or updates a supplier category mapping.
 func (r *SupplierCategoryMappingRepository) Upsert(ctx context.Context, tx pgx.Tx, m *model.SupplierCategoryMapping) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO supplier_category_mappings (id, tenant_id, supplier_id, source_category, category_id, auto_matched, confirmed)
@@ -67,6 +72,7 @@ func (r *SupplierCategoryMappingRepository) Upsert(ctx context.Context, tx pgx.T
 	).Scan(&m.ID, &m.CreatedAt)
 }
 
+// Delete removes a supplier category mapping by its ID.
 func (r *SupplierCategoryMappingRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM supplier_category_mappings WHERE id = $1", id)
 	if err != nil {

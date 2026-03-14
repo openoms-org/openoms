@@ -2,79 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronRight, Home } from "lucide-react";
-
-const segmentLabels: Record<string, string> = {
-  orders: "Zamówienia",
-  shipments: "Przesyłki",
-  products: "Produkty",
-  integrations: "Połączenia",
-  settings: "Ustawienia",
-  users: "Użytkownicy",
-  returns: "Zwroty",
-  audit: "Dziennik aktywności",
-  company: "Firma",
-  email: "E-mail",
-  "order-statuses": "Statusy",
-  "custom-fields": "Pola",
-  "product-categories": "Kategorie",
-  webhooks: "Webhooki",
-  allegro: "Allegro",
-  amazon: "Amazon",
-  offers: "Oferty",
-  messages: "Wiadomości",
-  catalog: "Katalog",
-  promotions: "Promocje",
-  disputes: "Spory",
-  delivery: "Dostawa",
-  policies: "Polityki",
-  finance: "Finanse",
-  ratings: "Oceny",
-  listings: "Oferty marketplace",
-  suppliers: "Dostawcy",
-  deliveries: "Dostarczenia",
-  new: "Nowe",
-  import: "Import",
-  "warehouse-documents": "Dokumenty magazynowe",
-  "price-lists": "Cenniki",
-  "sync-jobs": "Synchronizacja",
-  "webhook-deliveries": "Dostarczenia webhooków",
-  reports: "Raporty",
-  packing: "Pakowanie",
-  marketing: "Marketing",
-  helpdesk: "Helpdesk",
-  sms: "SMS",
-  notifications: "Powiadomienia",
-  currencies: "Waluty",
-  "print-templates": "Szablony wydruków",
-  categories: "Kategorie",
-  automation: "Automatyzacja",
-  variants: "Warianty",
-  bundles: "Zestawy",
-  "return-request": "Zgłoszenie zwrotu",
-  customers: "Klienci",
-  invoices: "Faktury",
-  invoicing: "Fakturowanie",
-  ksef: "KSeF",
-  roles: "Role",
-  warehouses: "Magazyny",
-  stocktakes: "Inwentaryzacja",
-  security: "Bezpieczeństwo",
-  inventory: "Kontrola magazynowa",
-};
 
 export function Breadcrumbs() {
   const pathname = usePathname();
+  const t = useTranslations("breadcrumbs");
   const segments = pathname.split("/").filter(Boolean);
 
   if (segments.length === 0) return null;
 
   const formatSegment = (segment: string): string => {
-    // If it looks like a UUID, show "Szczegóły" instead
+    // If it looks like a UUID, show "Details" instead
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(segment)) {
-      return "Szczegóły";
+      return t("details");
     }
-    return segmentLabels[segment] || segment;
+    try {
+      return t(segment);
+    } catch {
+      return segment;
+    }
   };
 
   const crumbs = segments.map((segment, index) => {

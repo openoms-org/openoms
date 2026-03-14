@@ -2,6 +2,7 @@ package inpost
 
 import "errors"
 
+// MaxParcelWeightKg is the maximum weight for an InPost parcel (25 kg).
 const MaxParcelWeightKg = 25.0
 
 // ParcelDimensions maps standard templates to their maximum dimensions in mm.
@@ -11,6 +12,7 @@ var ParcelDimensions = map[ParcelTemplate]Dimensions{
 	ParcelLarge:  {Height: 410, Width: 380, Length: 640},
 }
 
+// Validation errors returned by ValidateCreateShipment.
 var (
 	ErrWeightExceeded     = errors.New("inpost: parcel weight exceeds 25 kg")
 	ErrInvalidTemplate    = errors.New("inpost: invalid parcel template")

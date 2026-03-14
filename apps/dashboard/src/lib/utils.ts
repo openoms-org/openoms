@@ -14,9 +14,15 @@ export function formatDateTime(date: string | Date): string {
   return format(new Date(date), "dd.MM.yyyy HH:mm:ss");
 }
 
-export function formatCurrency(amount: number | undefined | null, currency = "PLN"): string {
-  if (amount == null || isNaN(amount)) return "0,00 zł";
-  return new Intl.NumberFormat("pl-PL", {
+export function formatCurrency(amount: number | undefined | null, currency = "PLN", locale = "pl-PL"): string {
+  if (amount == null || isNaN(amount)) {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    }).format(0);
+  }
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

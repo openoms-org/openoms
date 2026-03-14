@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	// ErrVariantNotFound is returned when a product variant does not exist.
 	ErrVariantNotFound = errors.New("variant not found")
 )
 

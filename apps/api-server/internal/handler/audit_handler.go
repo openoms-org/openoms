@@ -13,15 +13,18 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// AuditHandler handles HTTP requests for audit log retrieval.
 type AuditHandler struct {
 	auditRepo repository.AuditRepo
 	pool      *pgxpool.Pool
 }
 
+// NewAuditHandler creates a new AuditHandler.
 func NewAuditHandler(auditRepo repository.AuditRepo, pool *pgxpool.Pool) *AuditHandler {
 	return &AuditHandler{auditRepo: auditRepo, pool: pool}
 }
 
+// List returns a paginated audit log for the tenant.
 func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)

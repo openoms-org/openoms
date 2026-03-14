@@ -25,8 +25,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatDate } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 export default function AllegroMessagesPage() {
+  const t = useTranslations("marketplaces");
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
 
   return (
@@ -39,9 +41,9 @@ export default function AllegroMessagesPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Wiadomości Allegro</h1>
+            <h1 className="text-2xl font-bold">{t("wiadomosciAllegro")}</h1>
             <p className="text-muted-foreground">
-              Odpowiadaj na wiadomości od kupujących
+              {t("odpowiadajNaWiadomosciOdKupujacych")}
             </p>
           </div>
         </div>
@@ -60,7 +62,7 @@ export default function AllegroMessagesPage() {
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="text-center space-y-2">
                   <MessageSquare className="h-12 w-12 mx-auto opacity-30" />
-                  <p className="text-sm">Wybierz wątek, aby wyświetlić wiadomości</p>
+                  <p className="text-sm">{t("wybierzWatekAbyWyswietlicWiadomosci")}</p>
                 </div>
               </div>
             )}
@@ -78,6 +80,7 @@ function ThreadList({
   selectedThreadId: string | null;
   onSelectThread: (id: string) => void;
 }) {
+  const t = useTranslations("marketplaces");
   const { data, isLoading, isError, refetch } = useAllegroThreads({
     limit: 50,
   });
@@ -101,9 +104,9 @@ function ThreadList({
   if (isError) {
     return (
       <div className="p-4 text-center space-y-2">
-        <p className="text-sm text-destructive">Błąd ładowania wątków</p>
+        <p className="text-sm text-destructive">{t("bładŁadowaniaWatkow")}</p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Spróbuj ponownie
+          {t("retry")}
         </Button>
       </div>
     );
@@ -116,7 +119,7 @@ function ThreadList({
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="text-center space-y-2">
           <Mail className="h-8 w-8 mx-auto text-muted-foreground opacity-30" />
-          <p className="text-sm text-muted-foreground">Brak wątków</p>
+          <p className="text-sm text-muted-foreground">{t("brakWatkow")}</p>
         </div>
       </div>
     );
@@ -156,12 +159,12 @@ function ThreadList({
                       variant="default"
                       className="shrink-0 text-[10px] px-1.5 py-0"
                     >
-                      Nowa
+                      {t("newBadge")}
                     </Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {thread.subject || (thread.offer ? thread.offer.name : "Brak tematu")}
+                  {thread.subject || (thread.offer ? thread.offer.name : t("noSubject"))}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {formatDate(thread.lastMessageDateTime)}
@@ -176,6 +179,7 @@ function ThreadList({
 }
 
 function MessageView({ threadId }: { threadId: string }) {
+  const t = useTranslations("marketplaces");
   const { data, isLoading, isError, refetch } = useAllegroMessages(threadId);
   const sendMessage = useSendAllegroMessage(threadId);
   const [messageText, setMessageText] = useState("");
@@ -194,13 +198,13 @@ function MessageView({ threadId }: { threadId: string }) {
     sendMessage.mutate(text, {
       onSuccess: () => {
         setMessageText("");
-        toast.success("Wiadomość wysłana");
+        toast.success(t("wiadomoscWysłana"));
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udało się wysłać wiadomości"
+            : t("nieUdałoSieWysłacWiadomosci")
         );
       },
     });
@@ -225,9 +229,9 @@ function MessageView({ threadId }: { threadId: string }) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-sm text-destructive">Błąd ładowania wiadomości</p>
+          <p className="text-sm text-destructive">{t("bładŁadowaniaWiadomosci")}</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       </div>
@@ -292,7 +296,7 @@ function MessageView({ threadId }: { threadId: string }) {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Napisz wiadomość... (Enter aby wysłać, Shift+Enter nowa linia)"
+            placeholder={t("napiszWiadomoscEnterAbyWysłacShiftenterNowaLinia")}
             className="min-h-[60px] max-h-[120px] resize-none"
             disabled={sendMessage.isPending}
           />

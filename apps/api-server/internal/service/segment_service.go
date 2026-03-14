@@ -18,10 +18,13 @@ import (
 )
 
 var (
+	// ErrSegmentNotFound is returned when a customer segment does not exist.
 	ErrSegmentNotFound = errors.New("segment not found")
-	ErrMemberNotFound  = errors.New("member not found in segment")
+	// ErrMemberNotFound is returned when a member does not exist in a segment.
+	ErrMemberNotFound = errors.New("member not found in segment")
 )
 
+// SegmentService handles business logic for customer segments.
 type SegmentService struct {
 	segmentRepo *repository.CustomerSegmentRepository
 	auditRepo   repository.AuditRepo
@@ -29,6 +32,7 @@ type SegmentService struct {
 	logger      *slog.Logger
 }
 
+// NewSegmentService creates a new SegmentService.
 func NewSegmentService(
 	segmentRepo *repository.CustomerSegmentRepository,
 	auditRepo repository.AuditRepo,
@@ -43,6 +47,7 @@ func NewSegmentService(
 	}
 }
 
+// List returns a paginated list of customer segments.
 func (s *SegmentService) List(ctx context.Context, tenantID uuid.UUID, filter model.SegmentListFilter) (model.ListResponse[model.CustomerSegment], error) {
 	var resp model.ListResponse[model.CustomerSegment]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -64,6 +69,7 @@ func (s *SegmentService) List(ctx context.Context, tenantID uuid.UUID, filter mo
 	return resp, err
 }
 
+// Get returns a single customer segment by ID.
 func (s *SegmentService) Get(ctx context.Context, tenantID, segmentID uuid.UUID) (*model.CustomerSegment, error) {
 	var segment *model.CustomerSegment
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -80,6 +86,7 @@ func (s *SegmentService) Get(ctx context.Context, tenantID, segmentID uuid.UUID)
 	return segment, nil
 }
 
+// Create inserts a new customer segment.
 func (s *SegmentService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateSegmentRequest, actorID uuid.UUID, ip string) (*model.CustomerSegment, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -112,6 +119,7 @@ func (s *SegmentService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 	return segment, err
 }
 
+// Update modifies an existing customer segment.
 func (s *SegmentService) Update(ctx context.Context, tenantID, segmentID uuid.UUID, req model.UpdateSegmentRequest, actorID uuid.UUID, ip string) (*model.CustomerSegment, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -148,6 +156,7 @@ func (s *SegmentService) Update(ctx context.Context, tenantID, segmentID uuid.UU
 	return segment, err
 }
 
+// Delete removes a customer segment by ID.
 func (s *SegmentService) Delete(ctx context.Context, tenantID, segmentID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.segmentRepo.FindByID(ctx, tx, segmentID)
@@ -174,6 +183,7 @@ func (s *SegmentService) Delete(ctx context.Context, tenantID, segmentID uuid.UU
 	})
 }
 
+// ListMembers returns a paginated list of members in a segment.
 func (s *SegmentService) ListMembers(ctx context.Context, tenantID, segmentID uuid.UUID, limit, offset int) (model.ListResponse[model.SegmentMember], error) {
 	var resp model.ListResponse[model.SegmentMember]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -203,6 +213,7 @@ func (s *SegmentService) ListMembers(ctx context.Context, tenantID, segmentID uu
 	return resp, err
 }
 
+// AddMember adds a customer to a segment.
 func (s *SegmentService) AddMember(ctx context.Context, tenantID, segmentID uuid.UUID, req model.AddSegmentMemberRequest, actorID uuid.UUID, ip string) error {
 	if err := req.Validate(); err != nil {
 		return NewValidationError(err)
@@ -237,6 +248,7 @@ func (s *SegmentService) AddMember(ctx context.Context, tenantID, segmentID uuid
 	})
 }
 
+// RemoveMember removes a customer from a segment.
 func (s *SegmentService) RemoveMember(ctx context.Context, tenantID, segmentID, customerID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.segmentRepo.FindByID(ctx, tx, segmentID)
@@ -328,11 +340,11 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 		// Auto-assign to RFM segments
 		rfmSegments := map[string][]model.CustomerRFM{
 			"Champions":           {},
-			"Lojalni klienci":     {},
-			"Potencjalni lojalni": {},
-			"Zagrożeni":           {},
-			"Utraceni":            {},
-			"Pozostali":           {},
+			"Loyal Customers":     {},
+			"Potential Loyalists": {},
+			"At Risk":             {},
+			"Lost":                {},
+			"Others":              {},
 		}
 
 		for _, r := range results {
@@ -342,11 +354,11 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 		// Colors for auto-segments
 		segmentColors := map[string]string{
 			"Champions":           "#10b981",
-			"Lojalni klienci":     "#3b82f6",
-			"Potencjalni lojalni": "#8b5cf6",
-			"Zagrożeni":           "#f59e0b",
-			"Utraceni":            "#ef4444",
-			"Pozostali":           "#6b7280",
+			"Loyal Customers":     "#3b82f6",
+			"Potential Loyalists": "#8b5cf6",
+			"At Risk":             "#f59e0b",
+			"Lost":                "#ef4444",
+			"Others":              "#6b7280",
 		}
 
 		for segName, customers := range rfmSegments {
@@ -418,7 +430,7 @@ func quintileBreaks(values []float64) [4]float64 {
 // quintileScore returns 1-5 based on where value falls in the breaks.
 func quintileScore(value float64, breaks [4]float64) int {
 	for i := range 4 {
-		if value <= breaks[i] {
+		if i < len(breaks) && value <= breaks[i] {
 			return i + 1
 		}
 	}
@@ -435,31 +447,31 @@ func rfmSegmentLabel(rfm model.RFMScores) string {
 	}
 	// Loyal: frequency >= 4
 	if f >= 4 {
-		return "Lojalni klienci"
+		return "Loyal Customers"
 	}
 	// Potential loyalists: high recency, moderate frequency
 	if r >= 4 && f >= 2 {
-		return "Potencjalni lojalni"
+		return "Potential Loyalists"
 	}
 	// At risk: low recency, moderate+ frequency
 	if r <= 2 && f >= 3 {
-		return "Zagrożeni"
+		return "At Risk"
 	}
 	// Lost: low recency, low frequency
 	if r == 1 && f == 1 {
-		return "Utraceni"
+		return "Lost"
 	}
-	return "Pozostali"
+	return "Others"
 }
 
 func rfmSegmentDescription(name string) string {
 	descriptions := map[string]string{
-		"Champions":           "Najlepsi klienci — kupują często, ostatnio i za duże kwoty",
-		"Lojalni klienci":     "Klienci kupujący regularnie",
-		"Potencjalni lojalni": "Ostatnio kupili, mogą stać się lojalnymi",
-		"Zagrożeni":           "Kiedyś kupowali regularnie, ale dawno ich nie było",
-		"Utraceni":            "Dawno nie kupowali i kupowali rzadko",
-		"Pozostali":           "Klienci nie pasujący do innych segmentów",
+		"Champions":           "Best customers — buy frequently, recently, and at high value",
+		"Loyal Customers":     "Customers who buy regularly",
+		"Potential Loyalists": "Recent buyers who may become loyal",
+		"At Risk":             "Used to buy regularly but haven't been seen in a while",
+		"Lost":                "Haven't bought in a long time and bought rarely",
+		"Others":              "Customers that don't fit other segments",
 	}
 	if d, ok := descriptions[name]; ok {
 		return d
@@ -563,7 +575,7 @@ func (s *SegmentService) RefreshRuleBasedSegments(ctx context.Context, tenantID 
 
 func itoa(n int) string {
 	if n < 10 {
-		return string(rune('0' + n))
+		return string(rune('0' + n)) // #nosec G115 -- n is always 0-9 at this point
 	}
-	return itoa(n/10) + string(rune('0'+n%10))
+	return itoa(n/10) + string(rune('0'+n%10)) // #nosec G115 -- n%10 is always 0-9
 }

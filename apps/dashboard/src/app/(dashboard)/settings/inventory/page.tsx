@@ -26,8 +26,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTranslations } from "next-intl";
 
 export default function InventorySettingsPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data, isLoading } = useInventorySettings();
   const updateSettings = useUpdateInventorySettings();
   const [showWarning, setShowWarning] = useState(false);
@@ -48,7 +51,7 @@ export default function InventorySettingsPage() {
         { strict_mode: false },
         {
           onSuccess: () => {
-            toast.success("Tryb ścisłej kontroli magazynowej wyłączony");
+            toast.success(t("trybScisłejKontroliMagazynowejWyłaczony"));
           },
           onError: (error) => {
             toast.error(getErrorMessage(error));
@@ -63,7 +66,7 @@ export default function InventorySettingsPage() {
       { strict_mode: true },
       {
         onSuccess: () => {
-          toast.success("Tryb ścisłej kontroli magazynowej włączony");
+          toast.success(t("trybScisłejKontroliMagazynowejWłaczony"));
           setShowWarning(false);
         },
         onError: (error) => {
@@ -79,28 +82,28 @@ export default function InventorySettingsPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Ustawienia magazynowe
+            {t("inventory.title")}
           </h1>
           <p className="text-muted-foreground">
-            Konfiguruj zachowanie systemu magazynowego
+            {t("inventory.subtitle")}
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Kontrola magazynowa</CardTitle>
+            <CardTitle>{t("inventory.controlTitle")}</CardTitle>
             <CardDescription>
-              Ustawienia dotyczące sposobu zarządzania stanami magazynowymi
+              {t("ustawieniaDotyczaceSposobuZarzadzaniaStanamiMagazy")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="strict-mode" className="text-base font-medium">
-                  Tryb ścisłej kontroli magazynowej
+                  {t("trybScisłejKontroliMagazynowej")}
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Gdy włączony, zmiany stanów magazynowych możliwe tylko przez dokumenty PZ/WZ/MM
+                  {t("gdyWłaczonyZmianyStanowMagazynowychMozliweTylko")}
                 </p>
               </div>
               <Switch
@@ -116,11 +119,10 @@ export default function InventorySettingsPage() {
                 <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-warning">
-                    Tryb ścisłej kontroli jest aktywny
+                    {t("trybScisłejKontroliJestAktywny")}
                   </p>
                   <p className="text-sm text-warning">
-                    Ręczna zmiana stanów magazynowych (PUT /warehouses/&#123;id&#125;/stock) jest zablokowana.
-                    Wszystkie zmiany muszą przechodzić przez dokumenty magazynowe (PZ, WZ, MM) lub inwentaryzacje.
+                    {t("inventory.strictModeWarning")}
                   </p>
                 </div>
               </div>
@@ -133,18 +135,18 @@ export default function InventorySettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Włączenie ścisłej kontroli magazynowej
+              {t("właczenieScisłejKontroliMagazynowej")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Uwaga: po włączeniu nie będzie możliwa ręczna zmiana stanów magazynowych.
-              Wszystkie zmiany będą musiały przechodzić przez dokumenty magazynowe (PZ/WZ/MM).
-              Czy na pewno chcesz włączyć ten tryb?
+              {t("uwagaPoWłaczeniuNieBedzieMozliwaReczna")}
+              {t("inventory.allChangesMustGoThrough")}
+              {t("czyNaPewnoChceszWłaczycTenTryb")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmEnable}>
-              {updateSettings.isPending ? "Włączanie..." : "Włącz"}
+              {updateSettings.isPending ? t("właczanie") : t("włacz1")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

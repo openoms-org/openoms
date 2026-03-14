@@ -24,6 +24,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// SettingsHandler handles tenant settings endpoints.
 type SettingsHandler struct {
 	tenantRepo   repository.TenantRepo
 	auditRepo    repository.AuditRepo
@@ -33,6 +34,7 @@ type SettingsHandler struct {
 	pool         *pgxpool.Pool
 }
 
+// NewSettingsHandler creates a new SettingsHandler.
 func NewSettingsHandler(tenantRepo repository.TenantRepo, auditRepo repository.AuditRepo, categoryRepo repository.ProductCategoryRepo, emailService *service.EmailService, smsService *service.SMSService, pool *pgxpool.Pool) *SettingsHandler {
 	return &SettingsHandler{tenantRepo: tenantRepo, auditRepo: auditRepo, categoryRepo: categoryRepo, emailService: emailService, smsService: smsService, pool: pool}
 }
@@ -99,6 +101,7 @@ func (h *SettingsHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, 
 	return h.tenantRepo.UpdateSettings(ctx, tx, tenantID, newSettings)
 }
 
+// GetEmailSettings returns the tenant's email delivery configuration.
 func (h *SettingsHandler) GetEmailSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -123,6 +126,7 @@ func (h *SettingsHandler) GetEmailSettings(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, emailCfg)
 }
 
+// UpdateEmailSettings replaces the tenant's email delivery configuration.
 func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -172,6 +176,7 @@ func (h *SettingsHandler) UpdateEmailSettings(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, emailCfg)
 }
 
+// GetCompanySettings returns the tenant's company profile settings.
 func (h *SettingsHandler) GetCompanySettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -187,6 +192,7 @@ func (h *SettingsHandler) GetCompanySettings(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, companyCfg)
 }
 
+// UpdateCompanySettings replaces the tenant's company profile settings.
 func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -252,6 +258,7 @@ func (h *SettingsHandler) UpdateCompanySettings(w http.ResponseWriter, r *http.R
 	writeJSON(w, http.StatusOK, finalCfg)
 }
 
+// GetOrderStatuses returns the tenant's custom order status configuration.
 func (h *SettingsHandler) GetOrderStatuses(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -275,6 +282,7 @@ func (h *SettingsHandler) GetOrderStatuses(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, config)
 }
 
+// UpdateOrderStatuses replaces the tenant's custom order status configuration.
 func (h *SettingsHandler) UpdateOrderStatuses(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -335,6 +343,7 @@ func (h *SettingsHandler) UpdateOrderStatuses(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, config)
 }
 
+// GetCustomFields returns the tenant's custom field definitions.
 func (h *SettingsHandler) GetCustomFields(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -358,6 +367,7 @@ func (h *SettingsHandler) GetCustomFields(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, config)
 }
 
+// UpdateCustomFields replaces the tenant's custom field definitions.
 func (h *SettingsHandler) UpdateCustomFields(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -412,6 +422,7 @@ func (h *SettingsHandler) UpdateCustomFields(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, config)
 }
 
+// GetProductCategories returns the tenant's product categories.
 func (h *SettingsHandler) GetProductCategories(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -444,6 +455,7 @@ func (h *SettingsHandler) GetProductCategories(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, config)
 }
 
+// UpdateProductCategories replaces the tenant's product categories.
 func (h *SettingsHandler) UpdateProductCategories(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -490,6 +502,7 @@ func (h *SettingsHandler) UpdateProductCategories(w http.ResponseWriter, r *http
 	writeJSON(w, http.StatusOK, config)
 }
 
+// GetWebhooks returns the tenant's outgoing webhook configuration.
 func (h *SettingsHandler) GetWebhooks(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -513,6 +526,7 @@ func (h *SettingsHandler) GetWebhooks(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, config)
 }
 
+// UpdateWebhooks replaces the tenant's outgoing webhook configuration.
 func (h *SettingsHandler) UpdateWebhooks(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -832,6 +846,7 @@ func (h *SettingsHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]string{"message": "onboarding completed"})
 }
 
+// SendTestEmail sends a test email using the tenant's email settings.
 func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -868,6 +883,7 @@ func (h *SettingsHandler) SendTestEmail(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Test email sent successfully"})
 }
 
+// GetInvoicingSettings returns the tenant's invoicing provider configuration.
 func (h *SettingsHandler) GetInvoicingSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -893,6 +909,7 @@ func (h *SettingsHandler) GetInvoicingSettings(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, invoicingCfg)
 }
 
+// UpdateInvoicingSettings replaces the tenant's invoicing provider configuration.
 func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -931,6 +948,7 @@ func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http
 	writeJSON(w, http.StatusOK, invoicingCfg)
 }
 
+// GetSMSSettings returns the tenant's SMS provider configuration.
 func (h *SettingsHandler) GetSMSSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -955,6 +973,7 @@ func (h *SettingsHandler) GetSMSSettings(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, smsCfg)
 }
 
+// UpdateSMSSettings replaces the tenant's SMS provider configuration.
 func (h *SettingsHandler) UpdateSMSSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -1004,6 +1023,7 @@ func (h *SettingsHandler) UpdateSMSSettings(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, smsCfg)
 }
 
+// GetInventorySettings returns the tenant's inventory management settings.
 func (h *SettingsHandler) GetInventorySettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -1019,6 +1039,7 @@ func (h *SettingsHandler) GetInventorySettings(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, inventoryCfg)
 }
 
+// UpdateInventorySettings replaces the tenant's inventory management settings.
 func (h *SettingsHandler) UpdateInventorySettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -1050,6 +1071,7 @@ func (h *SettingsHandler) UpdateInventorySettings(w http.ResponseWriter, r *http
 	writeJSON(w, http.StatusOK, inventoryCfg)
 }
 
+// SendTestSMS sends a test SMS using the tenant's SMS provider settings.
 func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -1086,6 +1108,7 @@ func (h *SettingsHandler) SendTestSMS(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "Test SMS sent successfully"})
 }
 
+// ExportSettings exports all tenant settings as a JSON file download.
 func (h *SettingsHandler) ExportSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -1110,7 +1133,7 @@ func (h *SettingsHandler) ExportSettings(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", `attachment; filename="settings-export.json"`)
 	w.WriteHeader(http.StatusOK)
-	w.Write(settings)
+	_, _ = w.Write(settings)
 }
 
 // maskSensitiveSettings redacts credentials and secrets from settings JSON before export.
@@ -1181,6 +1204,7 @@ func maskSensitiveSettings(raw json.RawMessage) json.RawMessage {
 	return result
 }
 
+// ImportSettings replaces all tenant settings from a JSON import payload.
 func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -1263,5 +1287,5 @@ func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(updatedSettings)
+	_, _ = w.Write(updatedSettings)
 }

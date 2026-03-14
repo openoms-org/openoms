@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useCreateOrder } from "@/hooks/use-orders";
 import { getErrorMessage } from "@/lib/api-client";
@@ -10,11 +11,12 @@ import type { CreateOrderRequest } from "@/types/api";
 export default function NewOrderPage() {
   const router = useRouter();
   const createOrder = useCreateOrder();
+  const t = useTranslations("orders");
 
   const handleSubmit = async (data: CreateOrderRequest) => {
     try {
       const order = await createOrder.mutateAsync(data);
-      toast.success("Zamówienie zostało utworzone");
+      toast.success(t("detail.orderCreated"));
       router.push(`/orders/${order.id}`);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -24,9 +26,9 @@ export default function NewOrderPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Nowe zamówienie</h1>
+        <h1 className="text-2xl font-bold">{t("newOrder")}</h1>
         <p className="text-muted-foreground mt-1">
-          Wypełnij formularz, aby utworzyć nowe zamówienie
+          {t("detail.fillFormToCreate")}
         </p>
       </div>
 

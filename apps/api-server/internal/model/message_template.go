@@ -35,7 +35,7 @@ type CreateMessageTemplateRequest struct {
 	Enabled         *bool    `json:"enabled,omitempty"`
 }
 
-// Maximum body length for message templates (50 KB).
+// MaxTemplateBodyLength is the maximum body length for a message template (50 KB).
 const MaxTemplateBodyLength = 50000
 
 // Validate validates the create message template request.

@@ -17,12 +17,14 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// IntegrationHandler handles HTTP requests for external integration management.
 type IntegrationHandler struct {
 	integrationService *service.IntegrationService
 	integrationRepo    repository.IntegrationRepo
 	pool               *pgxpool.Pool
 }
 
+// NewIntegrationHandler creates a new IntegrationHandler.
 func NewIntegrationHandler(integrationService *service.IntegrationService, integrationRepo repository.IntegrationRepo, pool *pgxpool.Pool) *IntegrationHandler {
 	return &IntegrationHandler{
 		integrationService: integrationService,
@@ -31,6 +33,7 @@ func NewIntegrationHandler(integrationService *service.IntegrationService, integ
 	}
 }
 
+// List returns all integrations configured for the tenant.
 func (h *IntegrationHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -45,6 +48,7 @@ func (h *IntegrationHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, integrations)
 }
 
+// Get returns a single integration by provider name.
 func (h *IntegrationHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -66,6 +70,7 @@ func (h *IntegrationHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, integration)
 }
 
+// Create saves a new integration configuration.
 func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -86,7 +91,7 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrIntegrationLimitExceeded):
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto limit integracji w planie (max: %d). Zmień plan aby dodać więcej integracji.", req.MaxIntegrations))
+				"Integration limit reached for current plan (max: %d). Upgrade to add more.", req.MaxIntegrations))
 		case errors.Is(err, service.ErrDuplicateProvider):
 			writeError(w, http.StatusConflict, "integration for this provider already exists")
 		default:
@@ -101,6 +106,7 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, integration)
 }
 
+// Update modifies an existing integration configuration.
 func (h *IntegrationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -136,6 +142,7 @@ func (h *IntegrationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, integration)
 }
 
+// Delete removes an integration configuration.
 func (h *IntegrationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -159,6 +166,7 @@ func (h *IntegrationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetGeowidgetToken returns a short-lived InPost Geowidget auth token.
 func (h *IntegrationHandler) GetGeowidgetToken(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -176,7 +184,7 @@ func (h *IntegrationHandler) GetGeowidgetToken(w http.ResponseWriter, r *http.Re
 		}
 		var settings map[string]any
 		if err := json.Unmarshal(integration.Settings, &settings); err != nil {
-			return nil
+			return err
 		}
 		if v, ok := settings["geowidget_token"].(string); ok {
 			token = v

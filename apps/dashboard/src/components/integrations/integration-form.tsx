@@ -29,9 +29,10 @@ import {
 } from "@/lib/constants";
 import type { CredentialField } from "@/lib/constants";
 import { isInDevelopment } from "@/lib/integration-status";
+import { useTranslations } from "next-intl";
 
 const integrationSchema = z.object({
-  provider: z.string().min(1, "Dostawca jest wymagany"),
+  provider: z.string().min(1),
   settings: z.string().optional().refine(
     (val) => {
       if (!val || val.trim() === "") return true;
@@ -42,7 +43,7 @@ const integrationSchema = z.object({
         return false;
       }
     },
-    { message: "Nieprawidłowy format JSON" }
+    { message: "Invalid JSON format" }
   ),
 });
 
@@ -67,6 +68,7 @@ export function IntegrationForm({
   editProvider,
   existingSettings,
 }: IntegrationFormProps) {
+  const t = useTranslations("integrations");
   const isEditMode = !!editProvider;
 
   const {
@@ -131,7 +133,7 @@ export function IntegrationForm({
       if (!isEditMode && field.required && field.type !== "checkbox") {
         const val = credentialValues[field.key];
         if (!val || (typeof val === "string" && val.trim() === "")) {
-          newErrors[field.key] = `Pole "${field.label}" jest wymagane`;
+          newErrors[field.key] = t("fieldRequired", { field: field.labelKey });
         }
       }
       if (field.type === "url" && credentialValues[field.key]) {
@@ -140,7 +142,7 @@ export function IntegrationForm({
           try {
             new URL(urlVal);
           } catch {
-            newErrors[field.key] = "Podaj prawidłowy adres URL";
+            newErrors[field.key] = t("invalidUrl");
           }
         }
       }
@@ -204,7 +206,7 @@ export function IntegrationForm({
         ? cat.providers
         : cat.providers.filter((p) => !(p in PROVIDERS_WITH_DEDICATED_PAGES)),
     },
-  ] as [string, { label: string; providers: string[] }]).filter(([, cat]) => cat.providers.length > 0);
+  ] as [string, { labelKey: string; providers: string[] }]).filter(([, cat]) => cat.providers.length > 0);
 
   const renderField = (field: CredentialField) => {
     if (field.type === "checkbox") {
@@ -218,7 +220,7 @@ export function IntegrationForm({
             }
           />
           <Label htmlFor={`cred-${field.key}`} className="font-normal cursor-pointer">
-            {field.label}
+            {field.labelKey}
           </Label>
         </div>
       );
@@ -227,24 +229,24 @@ export function IntegrationForm({
     if (field.type === "select" && field.options) {
       return (
         <div key={field.key} className="space-y-2">
-          <Label htmlFor={`cred-${field.key}`}>{field.label}</Label>
+          <Label htmlFor={`cred-${field.key}`}>{field.labelKey}</Label>
           <Select
             value={(credentialValues[field.key] as string) ?? ""}
             onValueChange={(v) => handleCredentialChange(field.key, v)}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Nie ustawiono" />
+              <SelectValue placeholder={t("notSet")} />
             </SelectTrigger>
             <SelectContent>
               {field.options.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {opt.labelKey}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {field.helpText && (
-            <p className="text-sm text-muted-foreground">{field.helpText}</p>
+          {field.helpTextKey && (
+            <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
           )}
         </div>
       );
@@ -257,14 +259,14 @@ export function IntegrationForm({
     return (
       <div key={field.key} className="space-y-2">
         <Label htmlFor={`cred-${field.key}`}>
-          {field.label}
+          {field.labelKey}
           {!isEditMode && field.required && <span className="text-destructive ml-1">*</span>}
         </Label>
         <div className="relative">
           <Input
             id={`cred-${field.key}`}
             type={inputType}
-            placeholder={isEditMode ? "Pozostaw puste, aby nie zmieniać" : field.placeholder}
+            placeholder={isEditMode ? t("leaveEmptyToKeep") : field.placeholderKey}
             value={(credentialValues[field.key] as string) ?? ""}
             onChange={(e) => handleCredentialChange(field.key, e.target.value)}
             className={isPassword ? "pr-10" : ""}
@@ -285,13 +287,13 @@ export function IntegrationForm({
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="sr-only">
-                {isVisible ? "Ukryj" : "Pokaż"} {field.label.toLowerCase()}
+                {isVisible ? t("hide") : t("show")} {field.labelKey.toLowerCase()}
               </span>
             </Button>
           )}
         </div>
-        {field.helpText && (
-          <p className="text-sm text-muted-foreground">{field.helpText}</p>
+        {field.helpTextKey && (
+          <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
         )}
         {credentialErrors[field.key] && (
           <p className="text-sm text-destructive">{credentialErrors[field.key]}</p>
@@ -305,24 +307,24 @@ export function IntegrationForm({
       {/* Provider selection — only shown in create mode */}
       {!isEditMode && (
         <div className="space-y-2">
-          <Label htmlFor="provider">Dostawca</Label>
+          <Label htmlFor="provider">{t("provider")}</Label>
           <Select
             value={selectedProvider}
             onValueChange={handleProviderChange}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Wybierz dostawcę" />
+              <SelectValue placeholder={t("selectProviderPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {categoryEntries.map(([catKey, category], catIndex) => (
                 <SelectGroup key={catKey}>
                   {catIndex > 0 && <SelectSeparator />}
-                  <SelectLabel>{category.label}</SelectLabel>
+                  <SelectLabel>{category.labelKey}</SelectLabel>
                   {category.providers.map((provider) => (
                     <SelectItem key={provider} value={provider}>
                       {INTEGRATION_PROVIDER_LABELS[provider] ??
                         provider.charAt(0).toUpperCase() + provider.slice(1)}
-                      {isInDevelopment(provider) ? " (W budowie)" : ""}
+                      {isInDevelopment(provider) ? ` (${t("inDevelopment")})` : ""}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -339,12 +341,12 @@ export function IntegrationForm({
       {selectedProvider && fields.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-foreground">
-            {isEditMode ? "Aktualizuj dane" : "Dane uwierzytelniające"} &mdash;{" "}
+            {isEditMode ? t("updateData") : t("credentialFields")} &mdash;{" "}
             {INTEGRATION_PROVIDER_LABELS[selectedProvider] ?? selectedProvider}
           </h3>
           {isEditMode && (
             <p className="text-sm text-muted-foreground">
-              Wypełnij tylko pola, które chcesz zmienić. Puste pola nie zostaną nadpisane.
+              {t("editModeHint")}
             </p>
           )}
 
@@ -377,11 +379,11 @@ export function IntegrationForm({
           ) : (
             <ChevronRight className="h-4 w-4" />
           )}
-          Pokaż zaawansowane
+          {t("showAdvanced")}
         </button>
         {showAdvanced && (
           <div className="space-y-2 pt-2">
-            <Label htmlFor="settings">Ustawienia dodatkowe (JSON, opcjonalne)</Label>
+            <Label htmlFor="settings">{t("additionalSettingsJson")}</Label>
             <Textarea
               id="settings"
               placeholder='{"webhook_url": "...", "sync_interval": 3600}'
@@ -398,8 +400,8 @@ export function IntegrationForm({
       <div className="flex justify-end gap-3">
         <Button type="submit" disabled={isLoading}>
           {isLoading
-            ? isEditMode ? "Aktualizowanie..." : "Tworzenie..."
-            : isEditMode ? "Zapisz zmiany" : "Utwórz integrację"
+            ? isEditMode ? t("updating") : t("creating")
+            : isEditMode ? t("saveChanges") : t("create")
           }
         </Button>
       </div>

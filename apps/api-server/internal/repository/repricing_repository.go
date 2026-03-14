@@ -10,14 +10,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// RepricingRepository handles persistence for repricing rules and logs.
 type RepricingRepository struct{}
 
+// NewRepricingRepository creates a new RepricingRepository.
 func NewRepricingRepository() *RepricingRepository {
 	return &RepricingRepository{}
 }
 
 // --- Rules CRUD ---
 
+// ListRules returns a paginated list of repricing rules matching the filter.
 func (r *RepricingRepository) ListRules(ctx context.Context, tx pgx.Tx, filter model.RepricingRuleListFilter) ([]model.RepricingRule, int, error) {
 	where := "WHERE 1=1"
 	args := []any{}
@@ -83,6 +86,7 @@ func (r *RepricingRepository) ListRules(ctx context.Context, tx pgx.Tx, filter m
 	return rules, total, rows.Err()
 }
 
+// FindRuleByID returns a repricing rule by its ID.
 func (r *RepricingRepository) FindRuleByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.RepricingRule, error) {
 	var rule model.RepricingRule
 	err := tx.QueryRow(ctx,
@@ -106,6 +110,7 @@ func (r *RepricingRepository) FindRuleByID(ctx context.Context, tx pgx.Tx, id uu
 	return &rule, nil
 }
 
+// CreateRule inserts a new repricing rule.
 func (r *RepricingRepository) CreateRule(ctx context.Context, tx pgx.Tx, rule *model.RepricingRule) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO repricing_rules (
@@ -119,6 +124,7 @@ func (r *RepricingRepository) CreateRule(ctx context.Context, tx pgx.Tx, rule *m
 	).Scan(&rule.CreatedAt, &rule.UpdatedAt)
 }
 
+// UpdateRule applies partial updates to a repricing rule.
 func (r *RepricingRepository) UpdateRule(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRepricingRuleRequest) error {
 	setClauses := []string{}
 	args := []any{}
@@ -195,6 +201,7 @@ func (r *RepricingRepository) UpdateRule(ctx context.Context, tx pgx.Tx, id uuid
 	return nil
 }
 
+// DeleteRule removes a repricing rule by its ID.
 func (r *RepricingRepository) DeleteRule(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM repricing_rules WHERE id = $1", id)
 	if err != nil {
@@ -206,6 +213,7 @@ func (r *RepricingRepository) DeleteRule(ctx context.Context, tx pgx.Tx, id uuid
 	return nil
 }
 
+// ListActiveRules returns all active repricing rules ordered by priority.
 func (r *RepricingRepository) ListActiveRules(ctx context.Context, tx pgx.Tx) ([]model.RepricingRule, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, name, status, strategy, priority, scope_type, scope_value,
@@ -237,6 +245,7 @@ func (r *RepricingRepository) ListActiveRules(ctx context.Context, tx pgx.Tx) ([
 	return rules, rows.Err()
 }
 
+// UpdateRuleApplied records the last applied timestamp and products affected count.
 func (r *RepricingRepository) UpdateRuleApplied(ctx context.Context, tx pgx.Tx, id uuid.UUID, productsAffected int) error {
 	_, err := tx.Exec(ctx,
 		"UPDATE repricing_rules SET last_applied_at = NOW(), products_affected = $1, updated_at = NOW() WHERE id = $2",
@@ -247,6 +256,7 @@ func (r *RepricingRepository) UpdateRuleApplied(ctx context.Context, tx pgx.Tx, 
 
 // --- Log entries ---
 
+// CreateLog inserts a new repricing log entry.
 func (r *RepricingRepository) CreateLog(ctx context.Context, tx pgx.Tx, log *model.RepricingLog) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO repricing_log (id, tenant_id, rule_id, product_id, old_price, new_price, reason, channel)
@@ -257,6 +267,7 @@ func (r *RepricingRepository) CreateLog(ctx context.Context, tx pgx.Tx, log *mod
 	).Scan(&log.AppliedAt)
 }
 
+// ListLogByRule returns repricing log entries for a given rule.
 func (r *RepricingRepository) ListLogByRule(ctx context.Context, tx pgx.Tx, ruleID uuid.UUID, limit, offset int) ([]model.RepricingLog, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_log WHERE rule_id = $1", ruleID).Scan(&total); err != nil {
@@ -290,6 +301,7 @@ func (r *RepricingRepository) ListLogByRule(ctx context.Context, tx pgx.Tx, rule
 	return logs, total, rows.Err()
 }
 
+// ListLogByProduct returns repricing log entries for a given product.
 func (r *RepricingRepository) ListLogByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID, limit, offset int) ([]model.RepricingLog, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_log WHERE product_id = $1", productID).Scan(&total); err != nil {
@@ -323,6 +335,7 @@ func (r *RepricingRepository) ListLogByProduct(ctx context.Context, tx pgx.Tx, p
 	return logs, total, rows.Err()
 }
 
+// ListLog returns a paginated list of all repricing log entries.
 func (r *RepricingRepository) ListLog(ctx context.Context, tx pgx.Tx, limit, offset int) ([]model.RepricingLog, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM repricing_log").Scan(&total); err != nil {
@@ -355,6 +368,7 @@ func (r *RepricingRepository) ListLog(ctx context.Context, tx pgx.Tx, limit, off
 	return logs, total, rows.Err()
 }
 
+// GetSummary returns aggregated repricing statistics for the current tenant.
 func (r *RepricingRepository) GetSummary(ctx context.Context, tx pgx.Tx) (*model.RepricingSummary, error) {
 	var s model.RepricingSummary
 

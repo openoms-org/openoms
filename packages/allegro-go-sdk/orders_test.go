@@ -21,7 +21,7 @@ func TestOrdersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"checkoutForms": [
 				{
 					"id": "order-1",
@@ -85,7 +85,7 @@ func TestOrdersListNilParams(t *testing.T) {
 		if r.URL.RawQuery != "" {
 			t.Errorf("expected no query params, got %q", r.URL.RawQuery)
 		}
-		w.Write([]byte(`{"checkoutForms":[],"count":0,"totalCount":0}`))
+		_, _ = w.Write([]byte(`{"checkoutForms":[],"count":0,"totalCount":0}`))
 	}))
 	defer srv.Close()
 
@@ -122,7 +122,7 @@ func TestOrdersListAllParams(t *testing.T) {
 		if q.Get("updatedAt.lte") == "" {
 			t.Error("updatedAt.lte should be set")
 		}
-		w.Write([]byte(`{"checkoutForms":[],"count":0,"totalCount":0}`))
+		_, _ = w.Write([]byte(`{"checkoutForms":[],"count":0,"totalCount":0}`))
 	}))
 	defer srv.Close()
 
@@ -145,9 +145,9 @@ func TestOrdersListAllParams(t *testing.T) {
 }
 
 func TestOrdersListError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"message":"server error"}`))
+		_, _ = w.Write([]byte(`{"message":"server error"}`))
 	}))
 	defer srv.Close()
 
@@ -161,9 +161,9 @@ func TestOrdersListError(t *testing.T) {
 }
 
 func TestOrdersGetError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"not found"}`))
+		_, _ = w.Write([]byte(`{"message":"not found"}`))
 	}))
 	defer srv.Close()
 
@@ -181,7 +181,7 @@ func TestOrdersGet(t *testing.T) {
 		if r.URL.Path != "/order/checkout-forms/order-abc" {
 			t.Errorf("path = %q, want /order/checkout-forms/order-abc", r.URL.Path)
 		}
-		w.Write([]byte(`{"id":"order-abc","status":"READY_FOR_PROCESSING","updatedAt":"2024-01-15T10:30:00Z"}`))
+		_, _ = w.Write([]byte(`{"id":"order-abc","status":"READY_FOR_PROCESSING","updatedAt":"2024-01-15T10:30:00Z"}`))
 	}))
 	defer srv.Close()
 

@@ -15,10 +15,13 @@ import (
 )
 
 var (
-	ErrPriceListNotFound     = errors.New("price list not found")
+	// ErrPriceListNotFound is returned when a price list does not exist.
+	ErrPriceListNotFound = errors.New("price list not found")
+	// ErrPriceListItemNotFound is returned when a price list item does not exist.
 	ErrPriceListItemNotFound = errors.New("price list item not found")
 )
 
+// PriceListService handles business logic for price lists and their items.
 type PriceListService struct {
 	priceListRepo repository.PriceListRepo
 	productRepo   repository.ProductRepo
@@ -26,6 +29,7 @@ type PriceListService struct {
 	pool          *pgxpool.Pool
 }
 
+// NewPriceListService creates a new PriceListService.
 func NewPriceListService(
 	priceListRepo repository.PriceListRepo,
 	productRepo repository.ProductRepo,
@@ -40,6 +44,7 @@ func NewPriceListService(
 	}
 }
 
+// List returns a paginated list of price lists.
 func (s *PriceListService) List(ctx context.Context, tenantID uuid.UUID, filter model.PriceListListFilter) ([]model.PriceList, int, error) {
 	var priceLists []model.PriceList
 	var total int
@@ -51,6 +56,7 @@ func (s *PriceListService) List(ctx context.Context, tenantID uuid.UUID, filter 
 	return priceLists, total, err
 }
 
+// Get returns a single price list by ID.
 func (s *PriceListService) Get(ctx context.Context, tenantID, id uuid.UUID) (*model.PriceList, error) {
 	var pl *model.PriceList
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -67,6 +73,7 @@ func (s *PriceListService) Get(ctx context.Context, tenantID, id uuid.UUID) (*mo
 	return pl, nil
 }
 
+// Create inserts a new price list.
 func (s *PriceListService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreatePriceListRequest, actorID uuid.UUID, ip string) (*model.PriceList, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -110,6 +117,7 @@ func (s *PriceListService) Create(ctx context.Context, tenantID uuid.UUID, req m
 	return pl, nil
 }
 
+// Update modifies an existing price list.
 func (s *PriceListService) Update(ctx context.Context, tenantID, id uuid.UUID, req model.UpdatePriceListRequest, actorID uuid.UUID, ip string) (*model.PriceList, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -150,6 +158,7 @@ func (s *PriceListService) Update(ctx context.Context, tenantID, id uuid.UUID, r
 	return pl, nil
 }
 
+// Delete removes a price list by ID.
 func (s *PriceListService) Delete(ctx context.Context, tenantID, id uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		pl, err := s.priceListRepo.FindByID(ctx, tx, id)
@@ -178,6 +187,7 @@ func (s *PriceListService) Delete(ctx context.Context, tenantID, id uuid.UUID, a
 
 // --- Price List Items ---
 
+// ListItems returns a paginated list of items for a price list.
 func (s *PriceListService) ListItems(ctx context.Context, tenantID, priceListID uuid.UUID, limit, offset int) ([]model.PriceListItem, int, error) {
 	var items []model.PriceListItem
 	var total int
@@ -195,6 +205,7 @@ func (s *PriceListService) ListItems(ctx context.Context, tenantID, priceListID 
 	return items, total, err
 }
 
+// CreateItem inserts a new item into a price list.
 func (s *PriceListService) CreateItem(ctx context.Context, tenantID, priceListID uuid.UUID, req model.CreatePriceListItemRequest, actorID uuid.UUID, ip string) (*model.PriceListItem, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -243,6 +254,7 @@ func (s *PriceListService) CreateItem(ctx context.Context, tenantID, priceListID
 	return item, nil
 }
 
+// DeleteItem removes a price list item by ID.
 func (s *PriceListService) DeleteItem(ctx context.Context, tenantID, itemID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := s.priceListRepo.DeleteItem(ctx, tx, itemID); err != nil {

@@ -94,9 +94,9 @@ func TestUnitUpdatePrice(t *testing.T) {
 }
 
 func TestUnitUpdateStock_Error(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"Unit not found","code":404}`))
+		_, _ = w.Write([]byte(`{"message":"Unit not found","code":404}`))
 	}))
 	defer srv.Close()
 
@@ -120,9 +120,9 @@ func TestUnitUpdateStock_Error(t *testing.T) {
 }
 
 func TestUnitUpdatePrice_RateLimited(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write([]byte(`{"message":"Rate limit exceeded","code":429}`))
+		_, _ = w.Write([]byte(`{"message":"Rate limit exceeded","code":429}`))
 	}))
 	defer srv.Close()
 

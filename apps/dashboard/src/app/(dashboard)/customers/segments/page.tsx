@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Users, Trash2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,13 +39,9 @@ import type { CreateSegmentRequest, CustomerRFM } from "@/types/api";
 
 const DEFAULT_LIMIT = 20;
 
-const SEGMENT_TYPE_LABELS: Record<string, string> = {
-  manual: "Ręczny",
-  rfm_auto: "RFM (auto)",
-  rule_based: "Regułowy",
-};
-
 export default function SegmentsPage() {
+  const t = useTranslations("customers");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [pagination, setPagination] = useState({
     limit: DEFAULT_LIMIT,
@@ -76,7 +73,7 @@ export default function SegmentsPage() {
   const handleCreate = async () => {
     try {
       await createSegment.mutateAsync(formData);
-      toast.success("Segment został utworzony");
+      toast.success(t("segmentCreated"));
       setCreateOpen(false);
       setFormData({ name: "", description: "", color: "#6366f1", segment_type: "manual" });
     } catch (error) {
@@ -88,7 +85,7 @@ export default function SegmentsPage() {
     if (!deleteId) return;
     deleteSegment.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Segment został usunięty");
+        toast.success(t("segmentDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -102,7 +99,7 @@ export default function SegmentsPage() {
       const results = await runRFM.mutateAsync();
       setRfmResults(results);
       setRfmOpen(true);
-      toast.success("Analiza RFM zakończona");
+      toast.success(t("rfmAnalysisComplete"));
       refetch();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -120,6 +117,12 @@ export default function SegmentsPage() {
       )
     : {};
 
+  const SEGMENT_TYPE_LABELS: Record<string, string> = {
+    manual: t("segmentTypeManual"),
+    rfm_auto: t("segmentTypeRfm"),
+    rule_based: t("segmentTypeRuleBased"),
+  };
+
   const rfmColors: Record<string, string> = {
     Champions: "#10b981",
     "Lojalni klienci": "#3b82f6",
@@ -133,9 +136,9 @@ export default function SegmentsPage() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Segmenty klientów</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("segmentsTitle")}</h1>
           <p className="text-muted-foreground">
-            Grupuj klientów według zachowań zakupowych i analizy RFM
+            {t("segmentsSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -145,44 +148,44 @@ export default function SegmentsPage() {
             disabled={runRFM.isPending}
           >
             <BarChart3 className="mr-2 h-4 w-4" />
-            {runRFM.isPending ? "Analiza..." : "Analiza RFM"}
+            {runRFM.isPending ? t("rfmAnalyzing") : t("rfmAnalysis")}
           </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Users className="mr-2 h-4 w-4" />
-                Nowy segment
+                {t("newSegment")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Utwórz segment</DialogTitle>
+                <DialogTitle>{t("createSegment")}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Nazwa *</Label>
+                  <Label>{tc("name")} *</Label>
                   <Input
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder="np. VIP klienci"
+                    placeholder={t("segmentNamePlaceholder")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Opis</Label>
+                  <Label>{tc("description")}</Label>
                   <Textarea
                     value={formData.description || ""}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    placeholder="Opis segmentu..."
+                    placeholder={t("segmentDescriptionPlaceholder")}
                     rows={2}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Typ</Label>
+                    <Label>{tc("type")}</Label>
                     <Select
                       value={formData.segment_type}
                       onValueChange={(val) =>
@@ -196,13 +199,13 @@ export default function SegmentsPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="manual">Ręczny</SelectItem>
-                        <SelectItem value="rule_based">Regułowy</SelectItem>
+                        <SelectItem value="manual">{t("segmentTypeManual")}</SelectItem>
+                        <SelectItem value="rule_based">{t("segmentTypeRuleBased")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Kolor</Label>
+                    <Label>{t("segmentColor")}</Label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -224,7 +227,7 @@ export default function SegmentsPage() {
                 </div>
                 {formData.segment_type === "rule_based" && (
                   <div className="space-y-2">
-                    <Label>Reguły (JSON)</Label>
+                    <Label>{t("segmentRulesJson")}</Label>
                     <Textarea
                       value={
                         formData.rules
@@ -249,13 +252,13 @@ export default function SegmentsPage() {
                     variant="outline"
                     onClick={() => setCreateOpen(false)}
                   >
-                    Anuluj
+                    {tc("cancel")}
                   </Button>
                   <Button
                     onClick={handleCreate}
                     disabled={createSegment.isPending || !formData.name.trim()}
                   >
-                    {createSegment.isPending ? "Tworzenie..." : "Utwórz"}
+                    {createSegment.isPending ? tc("creating") : tc("create")}
                   </Button>
                 </div>
               </div>
@@ -267,8 +270,8 @@ export default function SegmentsPage() {
       {segments.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="Brak segmentów"
-          description="Utwórz pierwszy segment klientów lub uruchom analizę RFM."
+          title={t("noSegments")}
+          description={t("noSegmentsDescription")}
         />
       ) : (
         <>
@@ -308,7 +311,7 @@ export default function SegmentsPage() {
                 <div className="mt-3 flex items-center gap-3 text-sm">
                   <span className="flex items-center gap-1">
                     <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    {segment.customer_count} klientów
+                    {segment.customer_count} {t("customersCount")}
                   </span>
                   <span
                     className="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -322,7 +325,7 @@ export default function SegmentsPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Utworzono {formatDate(segment.created_at)}
+                  {tc("createdAt")} {formatDate(segment.created_at)}
                 </p>
               </div>
             ))}
@@ -348,13 +351,11 @@ export default function SegmentsPage() {
       <Dialog open={rfmOpen} onOpenChange={setRfmOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Wyniki analizy RFM</DialogTitle>
+            <DialogTitle>{t("rfmResultsTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Klienci zostali automatycznie przypisani do segmentów RFM na
-              podstawie aktualności (Recency), częstotliwości (Frequency) i
-              wartości zakupów (Monetary).
+              {t("rfmResultsDescription")}
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {Object.entries(rfmSummary).map(([label, count]) => (
@@ -377,8 +378,7 @@ export default function SegmentsPage() {
             </div>
             {rfmResults && rfmResults.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Przeanalizowano {rfmResults.length} klientów. Segmenty zostały
-                automatycznie zaktualizowane.
+                {t("rfmAnalyzedCustomers", { count: rfmResults.length })}
               </p>
             )}
           </div>
@@ -388,9 +388,9 @@ export default function SegmentsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń segment"
-        description="Czy na pewno chcesz usunąć ten segment? Klienci nie zostaną usunięci."
-        confirmLabel="Usuń"
+        title={t("deleteSegmentTitle")}
+        description={t("deleteSegmentDescription")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteSegment.isPending}

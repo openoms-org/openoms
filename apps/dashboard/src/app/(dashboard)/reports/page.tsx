@@ -37,6 +37,7 @@ import {
   useOrderTrends,
   usePaymentMethodStats,
 } from "@/hooks/use-reports";
+import { useTranslations } from "next-intl";
 
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
@@ -47,6 +48,7 @@ const CHART_COLORS = [
 ];
 
 function RevenueBySourceChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useRevenueBySource(30);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -55,20 +57,20 @@ function RevenueBySourceChart() {
 
   const chartData = data?.map((d) => ({
     ...d,
-    label: d.source || "Nieznane",
+    label: d.source || t("unknown"),
   }));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Przychód wg źródła (ostatnie 30 dni)</CardTitle>
+        <CardTitle>{t("przychodWgZrodłaOstatnie30Dni")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : !chartData || chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -92,7 +94,7 @@ function RevenueBySourceChart() {
                 // @ts-expect-error Recharts formatter type mismatch
                 formatter={(value: number | string) => [
                   formatCurrency(Number(value), "PLN"),
-                  "Przychód",
+                  t("przychod"),
                 ]}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -135,6 +137,7 @@ function fillTrendGaps(data: { date: string; count: number; avg_value: number }[
 }
 
 function DailyRevenueTrendChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useOrderTrends(30);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -146,14 +149,14 @@ function DailyRevenueTrendChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trend zamówień (ostatnie 30 dni)</CardTitle>
+        <CardTitle>{t("trendZamowienOstatnie30Dni")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : !chartData || chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -178,8 +181,8 @@ function DailyRevenueTrendChart() {
                 formatter={(value: number | string, name: string) => {
                   const v = Number(value);
                   if (name === "avg_value")
-                    return [formatCurrency(v, "PLN"), "Średnia wartość"];
-                  return [v, "Liczba"];
+                    return [formatCurrency(v, "PLN"), t("sredniaWartosc")];
+                  return [v, t("count")];
                 }}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -190,8 +193,8 @@ function DailyRevenueTrendChart() {
               />
               <Legend
                 formatter={(value: string) => {
-                  if (value === "avg_value") return "Średnia wartość";
-                  return "Liczba zamówień";
+                  if (value === "avg_value") return t("sredniaWartosc");
+                  return t("liczbaZamowien");
                 }}
               />
               <Line
@@ -210,28 +213,29 @@ function DailyRevenueTrendChart() {
 }
 
 function TopProductsTable() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useTopProducts(10);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top produkty</CardTitle>
+        <CardTitle>{t("topProducts")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : !data || data.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Ilość</TableHead>
-                <TableHead className="text-right">Przychód</TableHead>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("sku")}</TableHead>
+                <TableHead className="text-right">{t("quantity")}</TableHead>
+                <TableHead className="text-right">{t("przychod")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -258,6 +262,7 @@ function TopProductsTable() {
 }
 
 function OrderTrendsChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = useOrderTrends(30);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -269,14 +274,14 @@ function OrderTrendsChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trend zamówień</CardTitle>
+        <CardTitle>{t("trendZamowien")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : !chartData || chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -310,8 +315,8 @@ function OrderTrendsChart() {
                 formatter={(value: number | string, name: string) => {
                   const v = Number(value);
                   if (name === "avg_value")
-                    return [formatCurrency(v, "PLN"), "Średnia wartość"];
-                  return [v, "Liczba zamówień"];
+                    return [formatCurrency(v, "PLN"), t("sredniaWartosc")];
+                  return [v, t("liczbaZamowien")];
                 }}
                 contentStyle={{
                   backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -322,8 +327,8 @@ function OrderTrendsChart() {
               />
               <Legend
                 formatter={(value: string) => {
-                  if (value === "avg_value") return "Średnia wartość";
-                  return "Liczba zamówień";
+                  if (value === "avg_value") return t("sredniaWartosc");
+                  return t("liczbaZamowien");
                 }}
               />
               <Bar
@@ -349,6 +354,7 @@ function OrderTrendsChart() {
 }
 
 function PaymentMethodChart() {
+  const t = useTranslations("reports");
   const { data, isLoading } = usePaymentMethodStats();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -357,7 +363,7 @@ function PaymentMethodChart() {
     ? Object.entries(data)
         .filter(([, count]) => count > 0)
         .map(([method, count]) => ({
-          name: (method === "unknown" || !method) ? "Nieznana" : method,
+          name: (method === "unknown" || !method) ? t("unknownFeminine") : method,
           value: count,
         }))
         .sort((a, b) => b.value - a.value)
@@ -366,14 +372,14 @@ function PaymentMethodChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Metody płatności</CardTitle>
+        <CardTitle>{t("metodyPłatnosci")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {t("noData")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
@@ -417,22 +423,23 @@ function PaymentMethodChart() {
 }
 
 export default function ReportsPage() {
+  const t = useTranslations("reports");
   return (
     <AdminGuard>
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Raporty</h1>
+        <h1 className="text-2xl font-bold">{t("reports")}</h1>
         <p className="text-muted-foreground mt-1">
-          Szczegółowe statystyki i analizy sprzedaży
+          {t("szczegołoweStatystykiIAnalizySprzedazy")}
         </p>
       </div>
 
       <Tabs defaultValue="revenue">
         <TabsList>
-          <TabsTrigger value="revenue">Przychody</TabsTrigger>
-          <TabsTrigger value="products">Produkty</TabsTrigger>
-          <TabsTrigger value="trends">Trendy</TabsTrigger>
-          <TabsTrigger value="payments">Płatności</TabsTrigger>
+          <TabsTrigger value="revenue">{t("revenue")}</TabsTrigger>
+          <TabsTrigger value="products">{t("products")}</TabsTrigger>
+          <TabsTrigger value="trends">{t("trends")}</TabsTrigger>
+          <TabsTrigger value="payments">{t("płatnosci")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="space-y-6">

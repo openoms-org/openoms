@@ -167,19 +167,19 @@ describe("apiClient", () => {
 });
 
 describe("getErrorMessage", () => {
-  it("returns session expired message for 401", () => {
+  it("returns session expired key for 401", () => {
     const err = new ApiClientError(401, "Unauthorized");
-    expect(getErrorMessage(err)).toBe("Sesja wygasła. Zaloguj się ponownie.");
+    expect(getErrorMessage(err)).toBe("errors.sessionExpired");
   });
 
-  it("returns rate limit message for 429", () => {
+  it("returns rate limit key for 429", () => {
     const err = new ApiClientError(429, "Too many requests");
-    expect(getErrorMessage(err)).toBe("Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.");
+    expect(getErrorMessage(err)).toBe("errors.tooManyRequests");
   });
 
-  it("returns server error message for 500", () => {
+  it("returns server error key for 500", () => {
     const err = new ApiClientError(500, "Internal Server Error");
-    expect(getErrorMessage(err)).toBe("Błąd serwera. Spróbuj ponownie później.");
+    expect(getErrorMessage(err)).toBe("errors.serverError");
   });
 
   it("returns the error message for other ApiClientError statuses", () => {
@@ -192,9 +192,9 @@ describe("getErrorMessage", () => {
     expect(getErrorMessage(err)).toBe("Something broke");
   });
 
-  it("returns fallback for non-Error objects", () => {
-    expect(getErrorMessage("random string")).toBe("Wystąpił nieoczekiwany błąd.");
-    expect(getErrorMessage(null)).toBe("Wystąpił nieoczekiwany błąd.");
+  it("returns fallback key for non-Error objects", () => {
+    expect(getErrorMessage("random string")).toBe("errors.unexpected");
+    expect(getErrorMessage(null)).toBe("errors.unexpected");
   });
 });
 

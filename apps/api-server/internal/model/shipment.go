@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Shipment represents a carrier shipment linked to an order.
 type Shipment struct {
 	ID             uuid.UUID       `json:"id"`
 	TenantID       uuid.UUID       `json:"tenant_id"`
@@ -34,6 +35,7 @@ type Shipment struct {
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
+// CreateShipmentRequest is the payload for creating a new shipment.
 type CreateShipmentRequest struct {
 	OrderID        uuid.UUID       `json:"order_id"`
 	Provider       string          `json:"provider"`
@@ -50,6 +52,7 @@ type CreateShipmentRequest struct {
 	Notes          string          `json:"notes,omitempty"`
 }
 
+// Validate validates the create shipment request.
 func (r *CreateShipmentRequest) Validate() error {
 	if r.OrderID == uuid.Nil {
 		return errors.New("order_id is required")
@@ -66,6 +69,7 @@ func (r *CreateShipmentRequest) Validate() error {
 	return nil
 }
 
+// UpdateShipmentRequest is the payload for updating an existing shipment.
 type UpdateShipmentRequest struct {
 	TrackingNumber *string         `json:"tracking_number,omitempty"`
 	LabelURL       *string         `json:"label_url,omitempty"`
@@ -77,6 +81,7 @@ type UpdateShipmentRequest struct {
 	Notes          *string         `json:"notes,omitempty"`
 }
 
+// Validate validates the update shipment request.
 func (r *UpdateShipmentRequest) Validate() error {
 	if r.TrackingNumber == nil && r.LabelURL == nil && r.CarrierData == nil &&
 		r.Weight == nil && r.Length == nil && r.Width == nil && r.Height == nil && r.Notes == nil {
@@ -85,10 +90,12 @@ func (r *UpdateShipmentRequest) Validate() error {
 	return nil
 }
 
+// ShipmentStatusTransitionRequest is the payload for transitioning a shipment status.
 type ShipmentStatusTransitionRequest struct {
 	Status string `json:"status"`
 }
 
+// Validate validates the shipment status transition request.
 func (r *ShipmentStatusTransitionRequest) Validate() error {
 	if strings.TrimSpace(r.Status) == "" {
 		return errors.New("status is required")
@@ -96,6 +103,7 @@ func (r *ShipmentStatusTransitionRequest) Validate() error {
 	return nil
 }
 
+// GenerateLabelRequest is the payload for generating a carrier shipping label.
 type GenerateLabelRequest struct {
 	ServiceType   string  `json:"service_type"`
 	ParcelSize    string  `json:"parcel_size,omitempty"`
@@ -120,6 +128,7 @@ var validSendingMethods = map[string]bool{
 	"branch":         true,
 }
 
+// Validate validates the generate label request.
 func (r *GenerateLabelRequest) Validate() error {
 	if strings.TrimSpace(r.ServiceType) == "" {
 		return errors.New("service_type is required")
@@ -146,6 +155,7 @@ func (r *GenerateLabelRequest) Validate() error {
 	return nil
 }
 
+// ShipmentListFilter holds query parameters for listing shipments.
 type ShipmentListFilter struct {
 	Status   *string
 	Provider *string

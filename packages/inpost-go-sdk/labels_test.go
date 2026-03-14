@@ -38,7 +38,7 @@ func TestLabelGenerate(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/pdf")
 		w.WriteHeader(http.StatusOK)
-		w.Write(pdfData)
+		_, _ = w.Write(pdfData)
 	}))
 	defer srv.Close()
 
@@ -69,7 +69,7 @@ func TestLabelGet(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
-		w.Write(zplData)
+		_, _ = w.Write(zplData)
 	}))
 	defer srv.Close()
 
@@ -85,9 +85,9 @@ func TestLabelGet(t *testing.T) {
 }
 
 func TestLabelGetError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"shipment not found"}`))
+		_, _ = w.Write([]byte(`{"message":"shipment not found"}`))
 	}))
 	defer srv.Close()
 
@@ -106,9 +106,9 @@ func TestLabelGetError(t *testing.T) {
 }
 
 func TestLabelGenerateServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"message":"internal error"}`))
+		_, _ = w.Write([]byte(`{"message":"internal error"}`))
 	}))
 	defer srv.Close()
 

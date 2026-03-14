@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, KeyboardEvent } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -10,7 +11,8 @@ interface TagInputProps {
   placeholder?: string;
 }
 
-export function TagInput({ tags, onChange, placeholder = "Dodaj tag..." }: TagInputProps) {
+export function TagInput({ tags, onChange, placeholder }: TagInputProps) {
+  const t = useTranslations("shared.tagInput");
   const [input, setInput] = useState("");
 
   const addTag = (tag: string) => {
@@ -59,7 +61,7 @@ export function TagInput({ tags, onChange, placeholder = "Dodaj tag..." }: TagIn
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => { if (input.trim()) addTag(input); }}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t("placeholder")}
       />
     </div>
   );

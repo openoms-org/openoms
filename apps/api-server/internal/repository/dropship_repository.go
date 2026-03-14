@@ -18,6 +18,7 @@ func NewDropshipOrderRepository() *DropshipOrderRepository {
 	return &DropshipOrderRepository{}
 }
 
+// List returns a paginated list of dropship orders matching the filter.
 func (r *DropshipOrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.DropshipOrderListFilter) ([]model.DropshipOrder, int, error) {
 	qb := NewQueryBuilder()
 
@@ -79,6 +80,7 @@ func (r *DropshipOrderRepository) List(ctx context.Context, tx pgx.Tx, filter mo
 	return orders, total, rows.Err()
 }
 
+// FindByID returns a dropship order by its ID.
 func (r *DropshipOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error) {
 	var d model.DropshipOrder
 	err := tx.QueryRow(ctx,
@@ -102,6 +104,7 @@ func (r *DropshipOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uu
 	return &d, nil
 }
 
+// FindByOrderID returns all dropship orders for the given order.
 func (r *DropshipOrderRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, order_id, supplier_id, supplier_name, status,
@@ -131,6 +134,7 @@ func (r *DropshipOrderRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, 
 	return orders, rows.Err()
 }
 
+// Create inserts a new dropship order.
 func (r *DropshipOrderRepository) Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO dropship_orders (id, tenant_id, order_id, supplier_id, supplier_name,
@@ -144,6 +148,7 @@ func (r *DropshipOrderRepository) Create(ctx context.Context, tx pgx.Tx, d *mode
 	).Scan(&d.CreatedAt, &d.UpdatedAt)
 }
 
+// UpdateStatus sets the status of a dropship order.
 func (r *DropshipOrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE dropship_orders SET status = $1, updated_at = NOW() WHERE id = $2`,
@@ -158,6 +163,7 @@ func (r *DropshipOrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, i
 	return nil
 }
 
+// UpdateFields updates mutable fields on a dropship order.
 func (r *DropshipOrderRepository) UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error {
 	var setClauses []string
 	var args []any
@@ -215,6 +221,7 @@ func (r *DropshipOrderRepository) UpdateFields(ctx context.Context, tx pgx.Tx, i
 	return nil
 }
 
+// Delete removes a dropship order by its ID.
 func (r *DropshipOrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM dropship_orders WHERE id = $1", id)
 	if err != nil {
@@ -234,6 +241,7 @@ func NewDropshipOrderItemRepository() *DropshipOrderItemRepository {
 	return &DropshipOrderItemRepository{}
 }
 
+// CreateItem inserts a new dropship order item.
 func (r *DropshipOrderItemRepository) CreateItem(ctx context.Context, tx pgx.Tx, item *model.DropshipOrderItem) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO dropship_order_items (id, tenant_id, dropship_order_id, product_id, sku,
@@ -245,6 +253,7 @@ func (r *DropshipOrderItemRepository) CreateItem(ctx context.Context, tx pgx.Tx,
 	).Scan(&item.CreatedAt)
 }
 
+// ListByDropshipOrderID returns all items for the given dropship order.
 func (r *DropshipOrderItemRepository) ListByDropshipOrderID(ctx context.Context, tx pgx.Tx, dropshipOrderID uuid.UUID) ([]model.DropshipOrderItem, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, dropship_order_id, product_id, sku, product_name,
@@ -270,6 +279,7 @@ func (r *DropshipOrderItemRepository) ListByDropshipOrderID(ctx context.Context,
 	return items, rows.Err()
 }
 
+// DeleteByDropshipOrderID deletes all items for the given dropship order.
 func (r *DropshipOrderItemRepository) DeleteByDropshipOrderID(ctx context.Context, tx pgx.Tx, dropshipOrderID uuid.UUID) error {
 	_, err := tx.Exec(ctx, "DELETE FROM dropship_order_items WHERE dropship_order_id = $1", dropshipOrderID)
 	if err != nil {

@@ -1,3 +1,4 @@
+// Package integration defines carrier and marketplace provider interfaces.
 package integration
 
 import (

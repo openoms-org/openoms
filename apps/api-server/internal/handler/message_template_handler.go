@@ -12,14 +12,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// MessageTemplateHandler handles HTTP requests for message template management.
 type MessageTemplateHandler struct {
 	svc *service.MessageTemplateService
 }
 
+// NewMessageTemplateHandler creates a new MessageTemplateHandler.
 func NewMessageTemplateHandler(svc *service.MessageTemplateService) *MessageTemplateHandler {
 	return &MessageTemplateHandler{svc: svc}
 }
 
+// List returns all message templates for the tenant.
 func (h *MessageTemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -54,6 +57,7 @@ func (h *MessageTemplateHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Get returns a single message template by ID.
 func (h *MessageTemplateHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -75,6 +79,7 @@ func (h *MessageTemplateHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, t)
 }
 
+// Create inserts a new message template.
 func (h *MessageTemplateHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -96,6 +101,7 @@ func (h *MessageTemplateHandler) Create(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, t)
 }
 
+// Update modifies an existing message template.
 func (h *MessageTemplateHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -128,6 +134,7 @@ func (h *MessageTemplateHandler) Update(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, t)
 }
 
+// Delete removes a message template by ID.
 func (h *MessageTemplateHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

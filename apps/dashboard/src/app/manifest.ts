@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "OpenOMS",
     short_name: "OpenOMS",
-    description: "System zarządzania zamówieniami",
+    description: "Order Management System",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

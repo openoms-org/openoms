@@ -31,7 +31,7 @@ type UPSProvider struct {
 }
 
 // NewUPSProvider creates a UPS CarrierProvider from encrypted credentials.
-func NewUPSProvider(credentials json.RawMessage, settings json.RawMessage) (*UPSProvider, error) {
+func NewUPSProvider(credentials json.RawMessage, _ json.RawMessage) (*UPSProvider, error) {
 	var creds UPSCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("ups: parse credentials: %w", err)
@@ -50,8 +50,10 @@ func NewUPSProvider(credentials json.RawMessage, settings json.RawMessage) (*UPS
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *UPSProvider) ProviderName() string { return "ups" }
 
+// CreateShipment creates a UPS shipment and returns the response with tracking info.
 func (p *UPSProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	svcCode := req.ServiceType
 	if svcCode == "" {
@@ -61,7 +63,7 @@ func (p *UPSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	upsReq := &upssdk.ShipmentRequest{
 		ShipTo: upssdk.Party{
 			Name: req.Receiver.Name,
-			Address: upssdk.UPSAddress{
+			Address: upssdk.Address{
 				AddressLine: []string{req.Receiver.Street},
 				City:        req.Receiver.City,
 				PostalCode:  req.Receiver.PostalCode,
@@ -115,7 +117,8 @@ func (p *UPSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	return result, nil
 }
 
-func (p *UPSProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
+// GetLabel downloads the shipping label for the given UPS shipment.
+func (p *UPSProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
 	data, err := p.client.Shipments.GetLabel(ctx, externalID)
 	if err != nil {
 		return nil, fmt.Errorf("ups: get label: %w", err)
@@ -123,6 +126,7 @@ func (p *UPSProvider) GetLabel(ctx context.Context, externalID string, format st
 	return data, nil
 }
 
+// GetTracking returns tracking events for the given UPS shipment.
 func (p *UPSProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
 	if err != nil {
@@ -142,14 +146,17 @@ func (p *UPSProvider) GetTracking(ctx context.Context, trackingNumber string) ([
 	return events, nil
 }
 
+// CancelShipment cancels a UPS shipment by its external ID.
 func (p *UPSProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return p.client.Shipments.Cancel(ctx, externalID)
 }
 
+// MapStatus maps a UPS carrier status to the internal shipment status.
 func (p *UPSProvider) MapStatus(carrierStatus string) (string, bool) {
 	return upssdk.MapStatus(carrierStatus)
 }
 
+// GetRates returns estimated shipping rates for UPS.
 func (p *UPSProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// TODO: Implement real UPS Rating API integration.
 	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
@@ -186,8 +193,10 @@ func (p *UPSProvider) GetRates(_ context.Context, req integration.RateRequest) (
 	return rates, nil
 }
 
+// SupportsPickupPoints reports that UPS does not support pickup point delivery.
 func (p *UPSProvider) SupportsPickupPoints() bool { return false }
 
-func (p *UPSProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
+// SearchPickupPoints is not supported by UPS and always returns nil.
+func (p *UPSProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
 	return nil, nil
 }

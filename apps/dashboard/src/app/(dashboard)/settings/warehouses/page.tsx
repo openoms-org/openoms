@@ -32,8 +32,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 export default function WarehousesPage() {
+  const t = useTranslations("warehouses");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useWarehouses();
   const deleteWarehouse = useDeleteWarehouse();
@@ -54,7 +57,7 @@ export default function WarehousesPage() {
     if (!deleteId) return;
     deleteWarehouse.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Magazyn został usunięty");
+        toast.success(t("deleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -69,7 +72,7 @@ export default function WarehousesPage() {
       { name: newName, code: newCode || undefined },
       {
         onSuccess: () => {
-          toast.success("Magazyn został utworzony");
+          toast.success(t("created"));
           setShowCreate(false);
           setNewName("");
           setNewCode("");
@@ -87,7 +90,7 @@ export default function WarehousesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Magazyny</h1>
           <p className="text-muted-foreground">
-            Zarządzaj magazynami i stanami magazynowymi
+            {t("subtitle")}
           </p>
         </div>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -135,7 +138,7 @@ export default function WarehousesPage() {
                 onClick={handleCreate}
                 disabled={!newName.trim() || createWarehouse.isPending}
               >
-                {createWarehouse.isPending ? "Tworzenie..." : "Utwórz"}
+                {createWarehouse.isPending ? "Tworzenie..." : tc("create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -145,7 +148,7 @@ export default function WarehousesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -153,7 +156,7 @@ export default function WarehousesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -161,8 +164,8 @@ export default function WarehousesPage() {
       {warehouses.length === 0 ? (
         <EmptyState
           icon={Warehouse}
-          title="Brak magazynów"
-          description="Dodaj pierwszy magazyn, aby zarządzać stanami magazynowymi produktów."
+          title={t("empty.title")}
+          description={t("empty.description")}
         />
       ) : (
         <div className="rounded-md border">
@@ -171,7 +174,7 @@ export default function WarehousesPage() {
               <TableRow>
                 <TableHead>Nazwa</TableHead>
                 <TableHead>Kod</TableHead>
-                <TableHead>Domyślny</TableHead>
+                <TableHead>{t("columns.default")}</TableHead>
                 <TableHead>Aktywny</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[80px]" />
@@ -237,9 +240,9 @@ export default function WarehousesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń magazyn"
-        description="Czy na pewno chcesz usunąć ten magazyn? Wszystkie stany magazynowe zostaną usunięte."
-        confirmLabel="Usuń"
+        title={t("deleteConfirm.title")}
+        description={t("deleteConfirm.description")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteWarehouse.isPending}

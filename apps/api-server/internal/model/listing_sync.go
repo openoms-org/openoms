@@ -56,6 +56,7 @@ type CreateListingSyncConfigRequest struct {
 	StockBuffer         *int            `json:"stock_buffer,omitempty"`
 }
 
+// Validate validates the create listing sync config request.
 func (r *CreateListingSyncConfigRequest) Validate() error {
 	if r.IntegrationID == uuid.Nil {
 		return errors.New("integration_id is required")
@@ -98,6 +99,7 @@ type UpdateListingSyncConfigRequest struct {
 	Status              *string          `json:"status,omitempty"`
 }
 
+// Validate validates the update listing sync config request.
 func (r *UpdateListingSyncConfigRequest) Validate() error {
 	if r.SyncDirection == nil && r.AutoSync == nil && r.SyncIntervalMinutes == nil &&
 		r.FieldMapping == nil && r.PriceRule == nil && r.PriceModifier == nil &&

@@ -38,17 +38,19 @@ import {
 import { useOrder } from "@/hooks/use-orders";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { formatDate, shortId, sanitizeUrl } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
-const SENDING_METHOD_LABELS: Record<string, string> = {
-  dispatch_order: "Kurier odbierze",
-  parcel_locker: "Nadanie w paczkomacie",
-  pop: "PaczkoPunkt (POP)",
-  any_point: "Dowolny punkt",
-  pok: "Punkt Obslugi Klienta",
-  branch: "Oddzial InPost",
+const SENDING_METHOD_LABEL_KEYS: Record<string, string> = {
+  dispatch_order: "sendingMethods.dispatchOrder",
+  parcel_locker: "sendingMethods.parcelLocker",
+  pop: "sendingMethods.pop",
+  any_point: "sendingMethods.anyPoint",
+  pok: "sendingMethods.pok",
+  branch: "sendingMethods.branch",
 };
 
 export default function ShipmentDetailPage() {
+  const t = useTranslations("shipments");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -72,11 +74,11 @@ export default function ShipmentDetailPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Przesyłka została zaktualizowana");
+          toast.success(t("shipmentUpdated"));
           setIsEditing(false);
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udało się zaktualizować przesyłki");
+          toast.error(error.message || t("updateFailed"));
         },
       }
     );
@@ -85,11 +87,11 @@ export default function ShipmentDetailPage() {
   const handleDelete = () => {
     deleteShipment.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Przesyłka została usunięta");
+        toast.success(t("shipmentDeleted"));
         router.push("/shipments");
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się usunąć przesyłki");
+        toast.error(error.message || t("deleteFailed"));
       },
     });
   };
@@ -99,10 +101,10 @@ export default function ShipmentDetailPage() {
       { status },
       {
         onSuccess: () => {
-          toast.success("Status przesyłki został zmieniony");
+          toast.success(t("statusChanged"));
         },
         onError: (error) => {
-          toast.error(error.message || "Nie udało się zmienić statusu");
+          toast.error(error.message || t("statusChangeFailed"));
         },
       }
     );
@@ -120,9 +122,9 @@ export default function ShipmentDetailPage() {
   if (!shipment) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Nie znaleziono przesyłki</h1>
+        <h1 className="text-2xl font-bold">{t("notFound")}</h1>
         <Button asChild variant="outline">
-          <Link href="/shipments">Wróć do listy</Link>
+          <Link href="/shipments">{t("detail.backToList")}</Link>
         </Button>
       </div>
     );
@@ -139,10 +141,10 @@ export default function ShipmentDetailPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
-              Przesyłka {shortId(shipment.id)}
+              {t("shipmentTitle", { id: shortId(shipment.id) })}
             </h1>
             <p className="text-muted-foreground">
-              Utworzona {formatDate(shipment.created_at)}
+              {t("createdOn", { date: formatDate(shipment.created_at) })}
             </p>
           </div>
         </div>
@@ -154,14 +156,14 @@ export default function ShipmentDetailPage() {
               onClick={() => setShowLabelDialog(true)}
             >
               <Tag className="h-4 w-4" />
-              Generuj etykietę {SHIPMENT_PROVIDER_LABELS[shipment.provider] ?? shipment.provider.toUpperCase()}
+              {t("generateLabel")} {SHIPMENT_PROVIDER_LABELS[shipment.provider] ?? shipment.provider.toUpperCase()}
             </Button>
           )}
           {shipment.label_url && (
             <Button variant="outline" size="sm" asChild>
               <a href={sanitizeUrl(shipment.label_url)} target="_blank" rel="noopener noreferrer">
                 <FileDown className="h-4 w-4" />
-                Pobierz etykietę
+                {t("downloadLabel")}
               </a>
             </Button>
           )}
@@ -174,7 +176,7 @@ export default function ShipmentDetailPage() {
               onClick={() => setShowDispatchDialog(true)}
             >
               <Truck className="h-4 w-4" />
-              Zamow kuriera
+              {t("orderCourier")}
             </Button>
           )}
           <Button
@@ -183,7 +185,7 @@ export default function ShipmentDetailPage() {
             onClick={() => setIsEditing(!isEditing)}
           >
             <Pencil className="h-4 w-4" />
-            {isEditing ? "Anuluj edycję" : "Edytuj"}
+            {isEditing ? t("cancelEdit") : t("edit")}
           </Button>
           <Button
             variant="destructive"
@@ -191,7 +193,7 @@ export default function ShipmentDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Usuń
+            {t("delete")}
        </Button>
         </div>
       </div>
@@ -199,7 +201,7 @@ export default function ShipmentDetailPage() {
       {isEditing ? (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja przesyłki</CardTitle>
+            <CardTitle>{t("editShipment")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ShipmentForm
@@ -213,7 +215,7 @@ export default function ShipmentDetailPage() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Szczegóły przesyłki</CardTitle>
+              <CardTitle>{t("shipmentDetails")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -221,7 +223,7 @@ export default function ShipmentDetailPage() {
                 <p className="font-mono text-sm">{shipment.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Zamówienie</p>
+                <p className="text-sm text-muted-foreground">{t("columns.order")}</p>
                 <Link
                   href={`/orders/${shipment.order_id}`}
                   className="inline-flex items-center gap-1 font-mono text-sm text-primary hover:underline"
@@ -231,7 +233,7 @@ export default function ShipmentDetailPage() {
                 </Link>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Dostawca</p>
+                <p className="text-sm text-muted-foreground">{t("provider")}</p>
                 <p className="text-sm">{SHIPMENT_PROVIDER_LABELS[shipment.provider] ?? shipment.provider.toUpperCase()}</p>
               </div>
               <div>
@@ -242,17 +244,17 @@ export default function ShipmentDetailPage() {
                 />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Numer paczki</p>
-                <p className="text-sm font-medium">Paczka #{shipment.package_number}</p>
+                <p className="text-sm text-muted-foreground">{t("packageNumber")}</p>
+                <p className="text-sm font-medium">#{shipment.package_number}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Numer śledzenia</p>
+                <p className="text-sm text-muted-foreground">{t("columns.trackingNumber")}</p>
                 <p className="text-sm">
                   {shipment.tracking_number || "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">URL etykiety</p>
+                <p className="text-sm text-muted-foreground">{t("labelUrl")}</p>
                 {shipment.label_url ? (
                   <a
                     href={sanitizeUrl(shipment.label_url)}
@@ -260,7 +262,7 @@ export default function ShipmentDetailPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                   >
-                    Otwórz etykietę
+                    {t("openLabel")}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
@@ -271,7 +273,7 @@ export default function ShipmentDetailPage() {
                 typeof shipment.carrier_data?.target_point === "string" && (
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Paczkomat docelowy
+                      {t("targetParcelLocker")}
                     </p>
                     <div className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2.5 py-1 mt-1">
                       <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -283,25 +285,25 @@ export default function ShipmentDetailPage() {
                 )}
               {typeof shipment.carrier_data?.sending_method === "string" && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Metoda nadania</p>
-                  <p className="text-sm">{SENDING_METHOD_LABELS[shipment.carrier_data.sending_method] ?? shipment.carrier_data.sending_method}</p>
+                  <p className="text-sm text-muted-foreground">{t("sendingMethod")}</p>
+                  <p className="text-sm">{SENDING_METHOD_LABEL_KEYS[shipment.carrier_data.sending_method] ? t(SENDING_METHOD_LABEL_KEYS[shipment.carrier_data.sending_method]) : shipment.carrier_data.sending_method}</p>
                 </div>
               )}
               {shipment.carrier_data?.dispatch_order_id != null && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Zlecenie odbioru</p>
+                  <p className="text-sm text-muted-foreground">{t("dispatchOrder")}</p>
                   <p className="font-mono text-sm">#{String(shipment.carrier_data.dispatch_order_id)}</p>
                 </div>
               )}
               {shipment.weight != null && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Waga</p>
+                  <p className="text-sm text-muted-foreground">{t("weight")}</p>
                   <p className="text-sm">{shipment.weight} kg</p>
                 </div>
               )}
               {(shipment.length != null || shipment.width != null || shipment.height != null) && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Wymiary (cm)</p>
+                  <p className="text-sm text-muted-foreground">{t("dimensions")}</p>
                   <p className="text-sm">
                     {shipment.length ?? "-"} x {shipment.width ?? "-"} x {shipment.height ?? "-"}
                   </p>
@@ -311,32 +313,32 @@ export default function ShipmentDetailPage() {
                 <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
                   <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1.5">
                     <Leaf className="h-4 w-4" />
-                    Szacunkowy slad weglowy
+                    {t("carbonFootprint")}
                   </p>
                   <p className="text-lg font-bold text-green-800 dark:text-green-300 mt-1">
                     {shipment.carbon_kg.toFixed(3)} kg CO2
                   </p>
                   {shipment.distance_km != null && (
                     <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">
-                      Dystans: ~{shipment.distance_km.toFixed(0)} km
-                      {shipment.carbon_method === "estimate" && " (szacunkowy)"}
+                      {t("distance")}: ~{shipment.distance_km.toFixed(0)} km
+                      {shipment.carbon_method === "estimate" && ` (${t("estimated")})`}
                     </p>
                   )}
                 </div>
               )}
               {shipment.notes && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Notatki</p>
+                  <p className="text-sm text-muted-foreground">{t("notesLabel")}</p>
                   <p className="text-sm">{shipment.notes}</p>
                 </div>
               )}
               <div>
-                <p className="text-sm text-muted-foreground">Data utworzenia</p>
+                <p className="text-sm text-muted-foreground">{t("createdDate")}</p>
                 <p className="text-sm">{formatDate(shipment.created_at)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia aktualizacja
+                  {t("lastUpdate")}
                 </p>
                 <p className="text-sm">{formatDate(shipment.updated_at)}</p>
               </div>
@@ -345,9 +347,9 @@ export default function ShipmentDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Zmiana statusu</CardTitle>
+              <CardTitle>{t("changeStatus")}</CardTitle>
               <CardDescription>
-                Dostępne przejścia statusu dla tej przesyłki
+                {t("availableStatusTransitions")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -368,7 +370,7 @@ export default function ShipmentDetailPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Route className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Śledzenie przesyłki</CardTitle>
+                <CardTitle>{t("shipmentTracking")}</CardTitle>
               </div>
               {shipment.tracking_number && (
                 <span className="text-xs font-mono text-muted-foreground">
@@ -394,10 +396,9 @@ export default function ShipmentDetailPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Usuń przesyłkę</DialogTitle>
+            <DialogTitle>{t("deleteShipment")}</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz usunąć tę przesyłkę? Ta operacja jest
-              nieodwracalna.
+              {t("deleteShipmentConfirm")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -405,14 +406,14 @@ export default function ShipmentDetailPage() {
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
             >
-              Anuluj
+              {t("cancelAction")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={deleteShipment.isPending}
             >
-              {deleteShipment.isPending ? "Usuwanie..." : "Usuń"}
+              {deleteShipment.isPending ? t("deleting") : t("delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

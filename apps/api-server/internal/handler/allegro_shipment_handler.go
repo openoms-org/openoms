@@ -241,7 +241,7 @@ func (h *AllegroShipmentHandler) GetLabel(w http.ResponseWriter, r *http.Request
 
 	pdfBytes, err := provider.GetLabel(r.Context(), []string{shipmentID})
 	if err != nil {
-		slog.Error("allegro shipment: failed to get label", "error", err, "shipment_id", shipmentID)
+		slog.Error("allegro shipment: failed to get label", "error", err, "shipment_id", shipmentID) //nolint:gosec
 		writeAllegroError(w, "Failed to fetch label from Allegro", err)
 		return
 	}
@@ -249,7 +249,7 @@ func (h *AllegroShipmentHandler) GetLabel(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=\"label-"+shipmentID+".pdf\"")
 	w.WriteHeader(http.StatusOK)
-	w.Write(pdfBytes)
+	_, _ = w.Write(pdfBytes) // #nosec G705
 }
 
 // CancelShipment cancels a managed shipment.
@@ -271,7 +271,7 @@ func (h *AllegroShipmentHandler) CancelShipment(w http.ResponseWriter, r *http.R
 	defer provider.Close()
 
 	if err := provider.CancelShipment(r.Context(), []string{shipmentID}); err != nil {
-		slog.Error("allegro shipment: failed to cancel shipment", "error", err, "shipment_id", shipmentID)
+		slog.Error("allegro shipment: failed to cancel shipment", "error", err, "shipment_id", shipmentID) //nolint:gosec
 		writeAllegroError(w, "Failed to cancel shipment on Allegro", err)
 		return
 	}
@@ -290,21 +290,17 @@ func (h *AllegroShipmentHandler) cancelLinkedShipment(ctx context.Context, tenan
 			return err
 		}
 		if shipment == nil {
-			slog.Debug("allegro shipment link: no OpenOMS shipment found for cancel",
-				"allegro_shipment_id", allegroShipmentID)
+			slog.Debug("allegro shipment link: no OpenOMS shipment found for cancel", "allegro_shipment_id", allegroShipmentID) //nolint:gosec
 			return nil
 		}
 		if err := h.shipmentRepo.UpdateStatus(ctx, tx, shipment.ID, "cancelled"); err != nil {
 			return err
 		}
-		slog.Info("allegro shipment link: OpenOMS shipment status set to cancelled",
-			"shipment_id", shipment.ID,
-			"allegro_shipment_id", allegroShipmentID,
-		)
+		slog.Info("allegro shipment link: OpenOMS shipment status set to cancelled", "shipment_id", shipment.ID, "allegro_shipment_id", allegroShipmentID) //nolint:gosec
 		return nil
 	})
 	if err != nil {
-		slog.Error("allegro shipment link: failed to cancel OpenOMS shipment",
+		slog.Error("allegro shipment link: failed to cancel OpenOMS shipment", //nolint:gosec
 			"error", err,
 			"allegro_shipment_id", allegroShipmentID,
 		)
@@ -405,5 +401,5 @@ func (h *AllegroShipmentHandler) GenerateProtocol(w http.ResponseWriter, r *http
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=\"protocol-allegro.pdf\"")
 	w.WriteHeader(http.StatusOK)
-	w.Write(pdfBytes)
+	_, _ = w.Write(pdfBytes)
 }

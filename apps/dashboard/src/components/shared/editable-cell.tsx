@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,6 +25,7 @@ export function EditableCell<T>({
   config,
   displayContent,
 }: EditableCellProps<T>) {
+  const t = useTranslations("shared.editableCell");
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(value ?? ""));
   const [isSaving, setIsSaving] = useState(false);
@@ -65,12 +67,12 @@ export function EditableCell<T>({
       setIsEditing(false);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać zmian";
+        err instanceof Error ? err.message : t("saveError");
       toast.error(message);
     } finally {
       setIsSaving(false);
     }
-  }, [config, editValue, row, value]);
+  }, [config, editValue, row, value, t]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -89,7 +91,7 @@ export function EditableCell<T>({
     return (
       <div className="flex items-center gap-2">
         <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Zapisywanie...</span>
+        <span className="text-xs text-muted-foreground">{t("saving")}</span>
       </div>
     );
   }
@@ -102,7 +104,7 @@ export function EditableCell<T>({
           e.stopPropagation();
           startEditing();
         }}
-        title="Kliknij dwukrotnie, aby edytować"
+        title={t("doubleClickToEdit")}
       >
         {displayContent}
         <Pencil className="absolute top-1 right-1 h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -127,7 +129,7 @@ export function EditableCell<T>({
               const message =
                 err instanceof Error
                   ? err.message
-                  : "Nie udało się zapisać zmian";
+                  : t("saveError");
               toast.error(message);
             })
             .finally(() => {

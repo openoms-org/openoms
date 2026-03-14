@@ -8,10 +8,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// MarketingHandler handles HTTP requests for marketing integrations.
 type MarketingHandler struct {
 	mailchimpService *service.MailchimpService
 }
 
+// NewMarketingHandler creates a new MarketingHandler.
 func NewMarketingHandler(mailchimpService *service.MailchimpService) *MarketingHandler {
 	return &MarketingHandler{mailchimpService: mailchimpService}
 }

@@ -11,10 +11,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// TenantRepository handles persistence for tenant records and settings.
 type TenantRepository struct {
 	pool *pgxpool.Pool
 }
 
+// NewTenantRepository creates a new TenantRepository backed by the given pool.
 func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
 	return &TenantRepository{pool: pool}
 }
@@ -69,6 +71,7 @@ func (r *TenantRepository) Create(ctx context.Context, tx pgx.Tx, tenant *model.
 	).Scan(&tenant.CreatedAt, &tenant.UpdatedAt)
 }
 
+// GetSettings returns the raw JSON settings blob for a tenant.
 func (r *TenantRepository) GetSettings(ctx context.Context, tx pgx.Tx, id uuid.UUID) (json.RawMessage, error) {
 	var settings json.RawMessage
 	err := tx.QueryRow(ctx, "SELECT settings FROM tenants WHERE id = $1", id).Scan(&settings)
@@ -97,6 +100,7 @@ func (r *TenantRepository) ListAllTenantIDs(ctx context.Context, pool *pgxpool.P
 	return ids, rows.Err()
 }
 
+// UpdateSettings persists updated settings for a tenant.
 func (r *TenantRepository) UpdateSettings(ctx context.Context, tx pgx.Tx, id uuid.UUID, settings json.RawMessage) error {
 	ct, err := tx.Exec(ctx, "UPDATE tenants SET settings = $1::jsonb, updated_at = NOW() WHERE id = $2", settings, id)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Supplier represents a product supplier or dropship vendor.
 type Supplier struct {
 	ID                  uuid.UUID       `json:"id"`
 	TenantID            uuid.UUID       `json:"tenant_id"`
@@ -28,6 +29,7 @@ type Supplier struct {
 	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
+// SupplierProduct represents a product sourced from a supplier feed.
 type SupplierProduct struct {
 	ID             uuid.UUID       `json:"id"`
 	TenantID       uuid.UUID       `json:"tenant_id"`
@@ -46,6 +48,7 @@ type SupplierProduct struct {
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
+// CreateSupplierRequest is the payload for creating a new supplier.
 type CreateSupplierRequest struct {
 	Name                string          `json:"name"`
 	Code                *string         `json:"code,omitempty"`
@@ -56,6 +59,7 @@ type CreateSupplierRequest struct {
 	IntegrationID       *uuid.UUID      `json:"integration_id,omitempty"`
 }
 
+// Validate validates the create supplier request.
 func (r *CreateSupplierRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -78,6 +82,7 @@ func (r *CreateSupplierRequest) Validate() error {
 	return nil
 }
 
+// UpdateSupplierRequest is the payload for updating an existing supplier.
 type UpdateSupplierRequest struct {
 	Name                *string          `json:"name,omitempty"`
 	Code                *string          `json:"code,omitempty"`
@@ -92,6 +97,7 @@ type UpdateSupplierRequest struct {
 	DefaultCategoryID   *uuid.UUID       `json:"default_category_id,omitempty"`
 }
 
+// Validate validates the update supplier request.
 func (r *UpdateSupplierRequest) Validate() error {
 	if r.Name == nil && r.Code == nil && r.FeedURL == nil &&
 		r.FeedFormat == nil && r.Status == nil && r.Settings == nil &&
@@ -121,11 +127,13 @@ func (r *UpdateSupplierRequest) Validate() error {
 	return nil
 }
 
+// SupplierListFilter holds query parameters for listing suppliers.
 type SupplierListFilter struct {
 	Status *string
 	PaginationParams
 }
 
+// SupplierProductListFilter holds query parameters for listing supplier products.
 type SupplierProductListFilter struct {
 	SupplierID     *uuid.UUID
 	EAN            *string
@@ -164,6 +172,7 @@ type ImportSupplierProductError struct {
 	Reason            string `json:"reason"`
 }
 
+// SupplierCategoryMapping maps a supplier's source category to an internal category.
 type SupplierCategoryMapping struct {
 	ID             uuid.UUID  `json:"id"`
 	TenantID       uuid.UUID  `json:"tenant_id"`
@@ -175,12 +184,14 @@ type SupplierCategoryMapping struct {
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
+// UpsertCategoryMappingRequest is the payload for creating or updating a category mapping.
 type UpsertCategoryMappingRequest struct {
 	SourceCategory string     `json:"source_category"`
 	CategoryID     *uuid.UUID `json:"category_id,omitempty"`
 	Confirmed      bool       `json:"confirmed"`
 }
 
+// Validate validates the upsert category mapping request.
 func (r *UpsertCategoryMappingRequest) Validate() error {
 	if strings.TrimSpace(r.SourceCategory) == "" {
 		return errors.New("source_category is required")
@@ -204,10 +215,12 @@ func (r *BulkDeleteSupplierProductsRequest) Validate() error {
 	return nil
 }
 
+// LinkProductRequest is the payload for linking a supplier product to a catalog product.
 type LinkProductRequest struct {
 	ProductID uuid.UUID `json:"product_id"`
 }
 
+// Validate validates the link product request.
 func (r *LinkProductRequest) Validate() error {
 	if r.ProductID == uuid.Nil {
 		return errors.New("product_id is required")

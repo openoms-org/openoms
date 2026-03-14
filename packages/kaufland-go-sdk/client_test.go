@@ -59,7 +59,7 @@ func TestDoSetsSignatureHeaders(t *testing.T) {
 			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -81,7 +81,7 @@ func TestDoSetsSandboxHeader(t *testing.T) {
 			t.Errorf("Shop-Storefront = %q, want sandbox", r.Header.Get("Shop-Storefront"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -99,9 +99,9 @@ func TestDoSetsSandboxHeader(t *testing.T) {
 }
 
 func TestDoHandlesErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"Order unit not found","code":404}`))
+		_, _ = w.Write([]byte(`{"message":"Order unit not found","code":404}`))
 	}))
 	defer srv.Close()
 
@@ -160,7 +160,7 @@ func TestGetOrderUnits(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -208,7 +208,7 @@ func TestGetOrderUnit(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 

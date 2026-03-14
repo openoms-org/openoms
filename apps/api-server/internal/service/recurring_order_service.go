@@ -18,11 +18,15 @@ import (
 )
 
 var (
-	ErrRecurringOrderNotFound  = errors.New("recurring order not found")
+	// ErrRecurringOrderNotFound is returned when a recurring order does not exist.
+	ErrRecurringOrderNotFound = errors.New("recurring order not found")
+	// ErrRecurringOrderNotActive is returned when an operation requires an active recurring order.
 	ErrRecurringOrderNotActive = errors.New("recurring order is not active")
+	// ErrRecurringOrderHasOrders is returned when deleting a recurring order that has spawned orders.
 	ErrRecurringOrderHasOrders = errors.New("cannot delete recurring order that has created orders")
 )
 
+// RecurringOrderService handles business logic for recurring orders.
 type RecurringOrderService struct {
 	recurringRepo   repository.RecurringOrderRepo
 	orderRepo       repository.OrderRepo
@@ -32,6 +36,7 @@ type RecurringOrderService struct {
 	logger          *slog.Logger
 }
 
+// NewRecurringOrderService creates a new RecurringOrderService.
 func NewRecurringOrderService(
 	recurringRepo repository.RecurringOrderRepo,
 	orderRepo repository.OrderRepo,
@@ -50,6 +55,7 @@ func NewRecurringOrderService(
 	}
 }
 
+// List returns a paginated list of recurring orders.
 func (s *RecurringOrderService) List(ctx context.Context, tenantID uuid.UUID, filter model.RecurringOrderListFilter) (model.ListResponse[model.RecurringOrder], error) {
 	var resp model.ListResponse[model.RecurringOrder]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -71,6 +77,7 @@ func (s *RecurringOrderService) List(ctx context.Context, tenantID uuid.UUID, fi
 	return resp, err
 }
 
+// Get returns a single recurring order by ID.
 func (s *RecurringOrderService) Get(ctx context.Context, tenantID, id uuid.UUID) (*model.RecurringOrder, error) {
 	var ro *model.RecurringOrder
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -99,6 +106,7 @@ func (s *RecurringOrderService) Get(ctx context.Context, tenantID, id uuid.UUID)
 	return ro, nil
 }
 
+// Create inserts a new recurring order.
 func (s *RecurringOrderService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateRecurringOrderRequest, actorID uuid.UUID, ip string) (*model.RecurringOrder, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -177,6 +185,7 @@ func (s *RecurringOrderService) Create(ctx context.Context, tenantID uuid.UUID, 
 	return ro, nil
 }
 
+// Update modifies an existing recurring order.
 func (s *RecurringOrderService) Update(ctx context.Context, tenantID, id uuid.UUID, req model.UpdateRecurringOrderRequest, actorID uuid.UUID, ip string) (*model.RecurringOrder, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -249,6 +258,7 @@ func (s *RecurringOrderService) Update(ctx context.Context, tenantID, id uuid.UU
 	return ro, nil
 }
 
+// Delete removes a recurring order by ID.
 func (s *RecurringOrderService) Delete(ctx context.Context, tenantID, id uuid.UUID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.recurringRepo.FindByID(ctx, tx, id)
@@ -284,6 +294,7 @@ func (s *RecurringOrderService) Delete(ctx context.Context, tenantID, id uuid.UU
 	return err
 }
 
+// Pause suspends a recurring order schedule.
 func (s *RecurringOrderService) Pause(ctx context.Context, tenantID, id uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.recurringRepo.FindByID(ctx, tx, id)
@@ -310,6 +321,7 @@ func (s *RecurringOrderService) Pause(ctx context.Context, tenantID, id uuid.UUI
 	})
 }
 
+// Resume reactivates a paused recurring order schedule.
 func (s *RecurringOrderService) Resume(ctx context.Context, tenantID, id uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.recurringRepo.FindByID(ctx, tx, id)
@@ -336,6 +348,7 @@ func (s *RecurringOrderService) Resume(ctx context.Context, tenantID, id uuid.UU
 	})
 }
 
+// Cancel permanently stops a recurring order schedule.
 func (s *RecurringOrderService) Cancel(ctx context.Context, tenantID, id uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.recurringRepo.FindByID(ctx, tx, id)

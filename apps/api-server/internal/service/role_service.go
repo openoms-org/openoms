@@ -14,8 +14,11 @@ import (
 )
 
 var (
-	ErrRoleNotFound      = errors.New("role not found")
-	ErrRoleIsSystem      = errors.New("system roles cannot be deleted")
+	// ErrRoleNotFound is returned when a role does not exist.
+	ErrRoleNotFound = errors.New("role not found")
+	// ErrRoleIsSystem is returned when attempting to delete a system role.
+	ErrRoleIsSystem = errors.New("system roles cannot be deleted")
+	// ErrRoleDuplicateName is returned when a role with the same name already exists.
 	ErrRoleDuplicateName = errors.New("role with this name already exists")
 )
 
@@ -44,18 +47,18 @@ func (s *RoleService) EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID)
 			Permissions []string
 		}{
 			{
-				Name:        "Właściciel",
-				Description: "Pełen dostęp do systemu",
+				Name:        "Owner",
+				Description: "Full system access",
 				Permissions: model.SystemRoleOwnerPermissions,
 			},
 			{
 				Name:        "Administrator",
-				Description: "Zarządzanie systemem i danymi",
+				Description: "System and data management",
 				Permissions: model.SystemRoleAdminPermissions,
 			},
 			{
-				Name:        "Pracownik",
-				Description: "Podstawowy dostęp do operacji",
+				Name:        "Employee",
+				Description: "Basic operational access",
 				Permissions: model.SystemRoleMemberPermissions,
 			},
 		}

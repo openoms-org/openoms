@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// HealthHandler serves the application health-check endpoint.
 type HealthHandler struct {
 	DB *pgxpool.Pool
 }

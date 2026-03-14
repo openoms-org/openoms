@@ -108,7 +108,7 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	if err != nil {
 		return nil, fmt.Errorf("gls: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	const maxResponseBody = 10 * 1024 * 1024
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBody+1))

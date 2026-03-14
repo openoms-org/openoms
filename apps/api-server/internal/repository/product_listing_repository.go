@@ -10,12 +10,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// ProductListingRepository handles persistence for product marketplace listings.
 type ProductListingRepository struct{}
 
+// NewProductListingRepository creates a new ProductListingRepository.
 func NewProductListingRepository() *ProductListingRepository {
 	return &ProductListingRepository{}
 }
 
+// Create inserts a new product listing.
 func (r *ProductListingRepository) Create(ctx context.Context, tx pgx.Tx, listing *model.ProductListing) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO product_listings (
@@ -30,6 +33,7 @@ func (r *ProductListingRepository) Create(ctx context.Context, tx pgx.Tx, listin
 	).Scan(&listing.CreatedAt, &listing.UpdatedAt)
 }
 
+// Update applies partial updates to a product listing.
 func (r *ProductListingRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req *model.UpdateProductListingRequest) error {
 	var setClauses []string
 	var args []any
@@ -105,6 +109,7 @@ func (r *ProductListingRepository) Update(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// GetByID returns a product listing by its ID.
 func (r *ProductListingRepository) GetByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ProductListing, error) {
 	var l model.ProductListing
 	err := tx.QueryRow(ctx,
@@ -128,6 +133,7 @@ func (r *ProductListingRepository) GetByID(ctx context.Context, tx pgx.Tx, id uu
 	return &l, nil
 }
 
+// FindByProductAndIntegration returns the listing for a product on a given integration.
 func (r *ProductListingRepository) FindByProductAndIntegration(ctx context.Context, tx pgx.Tx, productID, integrationID uuid.UUID) (*model.ProductListing, error) {
 	var l model.ProductListing
 	err := tx.QueryRow(ctx,
@@ -151,6 +157,7 @@ func (r *ProductListingRepository) FindByProductAndIntegration(ctx context.Conte
 	return &l, nil
 }
 
+// FindByExternalIDAndIntegration returns the listing matching the given external ID and integration.
 func (r *ProductListingRepository) FindByExternalIDAndIntegration(ctx context.Context, tx pgx.Tx, externalID string, integrationID uuid.UUID) (*model.ProductListing, error) {
 	var l model.ProductListing
 	err := tx.QueryRow(ctx,
@@ -174,6 +181,7 @@ func (r *ProductListingRepository) FindByExternalIDAndIntegration(ctx context.Co
 	return &l, nil
 }
 
+// ListByProduct returns all listings for the given product.
 func (r *ProductListingRepository) ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]*model.ProductListing, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
@@ -203,6 +211,7 @@ func (r *ProductListingRepository) ListByProduct(ctx context.Context, tx pgx.Tx,
 	return listings, rows.Err()
 }
 
+// ListByIntegration returns all listings for the given integration.
 func (r *ProductListingRepository) ListByIntegration(ctx context.Context, tx pgx.Tx, integrationID uuid.UUID) ([]*model.ProductListing, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, product_id, integration_id, external_id,
@@ -264,6 +273,7 @@ func (r *ProductListingRepository) ListAutoSyncByProduct(ctx context.Context, tx
 	return listings, rows.Err()
 }
 
+// Delete removes a product listing by its ID.
 func (r *ProductListingRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM product_listings WHERE id = $1", id)
 	if err != nil {

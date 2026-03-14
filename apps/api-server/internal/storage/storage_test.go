@@ -24,7 +24,7 @@ func TestLocalStorage_Upload(t *testing.T) {
 	assert.Equal(t, "http://localhost:8080/uploads/tenant-abc/photo.jpg", url)
 
 	// Verify file exists on disk with correct content
-	data, err := os.ReadFile(filepath.Join(tmpDir, key))
+	data, err := os.ReadFile(filepath.Join(tmpDir, key)) // #nosec G304 -- test file path is constructed from test temp dir
 	require.NoError(t, err)
 	assert.Equal(t, content, string(data))
 }

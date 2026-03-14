@@ -17,11 +17,13 @@ import (
 	smsapi "github.com/openoms-org/openoms/packages/smsapi-go-sdk"
 )
 
+// SMSService sends SMS notifications for order events.
 type SMSService struct {
 	tenantRepo repository.TenantRepo
 	pool       *pgxpool.Pool
 }
 
+// NewSMSService creates a new SMSService.
 func NewSMSService(tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *SMSService {
 	return &SMSService{tenantRepo: tenantRepo, pool: pool}
 }
@@ -38,7 +40,7 @@ func (s *SMSService) loadSMSSettings(ctx context.Context, tenantID uuid.UUID) *m
 		}
 		var allSettings map[string]json.RawMessage
 		if err := json.Unmarshal(settings, &allSettings); err != nil {
-			return nil
+			return err
 		}
 		raw, ok := allSettings["sms"]
 		if !ok {
@@ -46,7 +48,7 @@ func (s *SMSService) loadSMSSettings(ctx context.Context, tenantID uuid.UUID) *m
 		}
 		var parsed model.SMSSettings
 		if err := json.Unmarshal(raw, &parsed); err != nil {
-			return nil
+			return err
 		}
 		cfg = &parsed
 		return nil
@@ -57,7 +59,7 @@ func (s *SMSService) loadSMSSettings(ctx context.Context, tenantID uuid.UUID) *m
 }
 
 // SendOrderStatusSMS sends an SMS notification when order status changes.
-func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID, order *model.Order, oldStatus, newStatus string) {
+func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID, order *model.Order, _ string, newStatus string) {
 	if order.CustomerPhone == nil || *order.CustomerPhone == "" {
 		slog.Debug("sms: no customer phone number, skipping", "order_id", order.ID)
 		return
@@ -91,15 +93,11 @@ func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID,
 		"TrackingURL":    "",
 	}
 
-	message, err := renderSMSTemplate(tmplStr, data)
-	if err != nil {
-		slog.Error("sms: failed to render template", "error", err, "status", newStatus, "order_id", order.ID)
-		return
-	}
+	message := renderSMSTemplate(tmplStr, data)
 
 	// Send SMS
 	client := smsapi.NewClient(cfg.APIToken, smsapi.WithFrom(cfg.From))
-	_, err = client.SendSMS(ctx, smsapi.SendSMSRequest{
+	_, err := client.SendSMS(ctx, smsapi.SendSMSRequest{
 		To:      *order.CustomerPhone,
 		Message: message,
 	})
@@ -173,15 +171,11 @@ func (s *SMSService) SendShipmentStatusSMS(ctx context.Context, tenantID uuid.UU
 		"TrackingURL":    trackingURL,
 	}
 
-	message, err := renderSMSTemplate(tmplStr, data)
-	if err != nil {
-		slog.Error("sms: failed to render template", "error", err, "status", shipment.Status, "shipment_id", shipment.ID)
-		return
-	}
+	message := renderSMSTemplate(tmplStr, data)
 
 	// Send SMS
 	client := smsapi.NewClient(cfg.APIToken, smsapi.WithFrom(cfg.From))
-	_, err = client.SendSMS(ctx, smsapi.SendSMSRequest{
+	_, err := client.SendSMS(ctx, smsapi.SendSMSRequest{
 		To:      *order.CustomerPhone,
 		Message: message,
 	})
@@ -202,10 +196,10 @@ func (s *SMSService) SendTestSMS(ctx context.Context, settings model.SMSSettings
 	return err
 }
 
-func renderSMSTemplate(tmplStr string, data map[string]string) (string, error) {
+func renderSMSTemplate(tmplStr string, data map[string]string) string {
 	result := tmplStr
 	for key, val := range data {
 		result = strings.ReplaceAll(result, "{{."+key+"}}", val)
 	}
-	return result, nil
+	return result
 }

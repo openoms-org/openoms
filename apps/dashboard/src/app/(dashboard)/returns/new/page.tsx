@@ -17,15 +17,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 import type { Order, OrderItem } from "@/types/api";
+import { useTranslations } from "next-intl";
 
-const returnSchema = z.object({
-  order_id: z.string().min(1, "ID zamówienia jest wymagane"),
-  reason: z.string().min(1, "Powód zwrotu jest wymagany"),
-  refund_amount: z.number().min(0, "Kwota musi być dodatnia"),
-  notes: z.string().optional(),
-});
+function createReturnSchema(t: (key: string) => string) {
+  return z.object({
+    order_id: z.string().min(1, t("validation.orderIdRequired")),
+    reason: z.string().min(1, t("validation.reasonRequired")),
+    refund_amount: z.number().min(0, t("validation.amountPositive")),
+    notes: z.string().optional(),
+  });
+}
 
-type ReturnFormValues = z.infer<typeof returnSchema>;
+type ReturnFormValues = z.infer<ReturnType<typeof createReturnSchema>>;
 
 interface SelectedItem {
   name: string;
@@ -36,11 +39,13 @@ interface SelectedItem {
 }
 
 export default function NewReturnPage() {
+  const t = useTranslations("returns");
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultOrderId = searchParams.get("order_id") ?? "";
   const createReturn = useCreateReturn();
 
+  const returnSchema = createReturnSchema(t);
   const [orderItems, setOrderItems] = useState<SelectedItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
@@ -125,7 +130,7 @@ export default function NewReturnPage() {
         notes: data.notes || undefined,
         items: selectedItems.length > 0 ? selectedItems : undefined,
       });
-      toast.success("Zwrot został utworzony");
+      toast.success(t("zwrotzostałutworzony"));
       router.push(`/returns/${result.id}`);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -141,21 +146,21 @@ export default function NewReturnPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Nowy zwrot</h1>
+          <h1 className="text-2xl font-bold">{t("newReturn")}</h1>
           <p className="text-muted-foreground">
-            Wypełnij formularz, aby zgłosić nowy zwrot
+            {t("wypełnijFormularzAbyZgłosicNowyZwrot")}
           </p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Dane zwrotu</CardTitle>
+          <CardTitle>{t("returnData")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label>Zamówienie</Label>
+              <Label>{t("columns.order")}</Label>
               <OrderSearchCombobox
                 value={watch("order_id")}
                 onValueChange={(id) =>
@@ -169,24 +174,24 @@ export default function NewReturnPage() {
 
             {orderId && (
               <div className="space-y-2">
-                <Label>Produkty do zwrotu</Label>
+                <Label>{t("productsToReturn")}</Label>
                 {loadingItems ? (
                   <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Wczytywanie pozycji zamówienia...
+                    {t("wczytywaniePozycjiZamowienia")}
                   </div>
                 ) : orderItems.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-2">
-                    Brak pozycji w zamówieniu
+                    {t("brakPozycjiWZamowieniu")}
                   </p>
                 ) : (
                   <div className="rounded-md border">
                     <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-4 gap-y-0 text-sm">
                       <div className="contents font-medium text-muted-foreground border-b">
                         <div className="px-3 py-2" />
-                        <div className="px-3 py-2">Produkt</div>
-                        <div className="px-3 py-2 text-center">W zamówieniu</div>
-                        <div className="px-3 py-2 text-center">Do zwrotu</div>
+                        <div className="px-3 py-2">{t("product")}</div>
+                        <div className="px-3 py-2 text-center">{t("wZamowieniu")}</div>
+                        <div className="px-3 py-2 text-center">{t("toReturn")}</div>
                       </div>
                       {orderItems.map((item, index) => (
                         <div key={index} className="contents">
@@ -231,10 +236,10 @@ export default function NewReturnPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Powód</Label>
+              <Label htmlFor="reason">{t("columns.reason")}</Label>
               <Textarea
                 id="reason"
-                placeholder="Podaj powód zwrotu"
+                placeholder={t("podajPowodZwrotu")}
                 {...register("reason")}
               />
               {errors.reason && (
@@ -243,7 +248,7 @@ export default function NewReturnPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="refund_amount">Kwota zwrotu (PLN)</Label>
+              <Label htmlFor="refund_amount">{t("refundAmountPln")}</Label>
               <Input
                 id="refund_amount"
                 type="number"
@@ -257,10 +262,10 @@ export default function NewReturnPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notatki</Label>
+              <Label htmlFor="notes">{t("notes")}</Label>
               <Textarea
                 id="notes"
-                placeholder="Dodatkowe informacje (opcjonalne)"
+                placeholder={t("additionalInfoOptional")}
                 {...register("notes")}
               />
               {errors.notes && (
@@ -270,10 +275,10 @@ export default function NewReturnPage() {
 
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={createReturn.isPending}>
-                {createReturn.isPending ? "Tworzenie..." : "Utwórz zwrot"}
+                {createReturn.isPending ? t("creating") : t("utworzZwrot")}
               </Button>
               <Button variant="outline" type="button" onClick={() => router.push("/returns")}>
-                Anuluj
+                {t("cancel")}
               </Button>
             </div>
           </form>

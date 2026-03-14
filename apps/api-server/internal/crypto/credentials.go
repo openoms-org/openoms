@@ -1,4 +1,5 @@
-package crypto
+// Package crypto provides AES-256-GCM encryption and decryption helpers for integration credentials.
+package crypto //nolint:revive // package name conflicts with stdlib but renaming would break imports
 
 import (
 	"crypto/aes"
@@ -9,6 +10,7 @@ import (
 	"io"
 )
 
+// Encrypt encodes plaintext using AES-256-GCM and returns a base64-encoded ciphertext.
 func Encrypt(plaintext []byte, key []byte) (string, error) {
 	if len(key) != 32 {
 		return "", fmt.Errorf("encryption key must be 32 bytes, got %d", len(key))
@@ -33,6 +35,7 @@ func Encrypt(plaintext []byte, key []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
+// Decrypt decodes a base64-encoded AES-256-GCM ciphertext and returns the plaintext.
 func Decrypt(encodedCiphertext string, key []byte) ([]byte, error) {
 	if len(key) != 32 {
 		return nil, fmt.Errorf("encryption key must be 32 bytes, got %d", len(key))

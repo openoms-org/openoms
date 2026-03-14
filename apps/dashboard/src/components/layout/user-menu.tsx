@@ -1,6 +1,7 @@
 "use client";
 
 import { LogOut } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/hooks/use-auth";
 import { ROLES } from "@/lib/constants";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { LanguageSelector } from "@/components/language-selector";
 
 function getInitials(name: string): string {
   return name
@@ -26,8 +28,18 @@ function getInitials(name: string): string {
 
 export function UserMenu() {
   const { user, logout } = useAuth();
+  const t = useTranslations("layout");
+  const tRoles = useTranslations("roles");
 
   if (!user) return null;
+
+  const roleLabel = (() => {
+    try {
+      return tRoles(ROLES[user.role] || user.role);
+    } catch {
+      return user.role;
+    }
+  })();
 
   return (
     <DropdownMenu>
@@ -44,14 +56,18 @@ export function UserMenu() {
             <p className="text-sm font-medium leading-none">{user.name}</p>
             <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
             <Badge variant="secondary" className="mt-1 w-fit text-xs">
-              {ROLES[user.role] || user.role}
+              {roleLabel}
             </Badge>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <div className="px-2 py-1.5">
+          <LanguageSelector compact />
+        </div>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout} className="cursor-pointer">
           <LogOut className="mr-2 h-4 w-4" />
-          Wyloguj się
+          {t("logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

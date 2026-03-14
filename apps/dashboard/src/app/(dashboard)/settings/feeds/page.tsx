@@ -24,6 +24,7 @@ import { useProductCategories } from "@/hooks/use-product-categories";
 import { useAuthStore } from "@/lib/auth";
 import { Loader2, Save, Copy, RefreshCw, ExternalLink } from "lucide-react";
 import type { ProductFeedConfig } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -47,6 +48,7 @@ function buildFeedURL(
 }
 
 export default function FeedSettingsPage() {
+  const t = useTranslations("settings");
   const { data: feedSettings, isLoading } = useFeedSettings();
   const updateFeedSettings = useUpdateFeedSettings();
   const regenerateToken = useRegenerateFeedToken();
@@ -138,7 +140,7 @@ export default function FeedSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">Feedy produktowe</h1>
           <p className="text-muted-foreground">
-            Generuj pliki XML dla porównywarek cen i Google Shopping
+            {t("generujPlikiXmlDlaPorownywarekCenI")}
           </p>
         </div>
 
@@ -156,7 +158,7 @@ export default function FeedSettingsPage() {
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Feed XML dla Ceneo.pl — polskiej porównywarki cen
+                  {t("feedXmlDlaCeneoplPolskiejPorownywarkiCen")}
                 </CardDescription>
               </div>
               <Switch
@@ -273,9 +275,9 @@ export default function FeedSettingsPage() {
         {/* General Feed Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>Ustawienia ogólne</CardTitle>
+            <CardTitle>{t("ustawieniaOgolne")}</CardTitle>
             <CardDescription>
-              Parametry wspólne dla wszystkich feedów
+              {t("parametryWspolneDlaWszystkichFeedow")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -309,7 +311,7 @@ export default function FeedSettingsPage() {
               <div>
                 <p className="font-medium">Ukryj produkty bez stanu</p>
                 <p className="text-sm text-muted-foreground">
-                  Nie uwzgledniaj produktów z zerowym stanem magazynowym w feedach
+                  {t("nieUwzgledniajProduktowZZerowymStanemMagazynowym")}
                 </p>
               </div>
               <Switch

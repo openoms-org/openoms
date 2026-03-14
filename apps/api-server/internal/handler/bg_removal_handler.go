@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -72,14 +73,18 @@ func (h *BGRemovalHandler) RemoveBackground(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "file too large or invalid form data")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() {
+		if err := r.MultipartForm.RemoveAll(); err != nil {
+			slog.Warn("bg_removal: failed to clean up multipart form", "error", err)
+		}
+	}()
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing 'file' field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	imageData, err := io.ReadAll(file)
 	if err != nil {
@@ -171,7 +176,7 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 			imageURL = *p.ImageURL
 		}
 
-		if p.Images != nil && len(p.Images) > 0 {
+		if len(p.Images) > 0 {
 			if err := json.Unmarshal(p.Images, &images); err != nil {
 				return fmt.Errorf("unmarshal images: %w", err)
 			}
@@ -293,7 +298,7 @@ func (h *BGRemovalHandler) downloadImage(ctx context.Context, imageURL string) (
 	if err != nil {
 		return nil, "", fmt.Errorf("download image: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, "", fmt.Errorf("download failed with status %d", resp.StatusCode)
@@ -311,7 +316,7 @@ func (h *BGRemovalHandler) downloadImage(ctx context.Context, imageURL string) (
 
 // Status handles GET /v1/images/remove-background/status
 // Returns whether background removal is configured.
-func (h *BGRemovalHandler) Status(w http.ResponseWriter, r *http.Request) {
+func (h *BGRemovalHandler) Status(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{
 		"configured": h.bgService.IsConfigured(),
 	})

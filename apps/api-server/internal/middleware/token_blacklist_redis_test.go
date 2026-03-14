@@ -22,7 +22,7 @@ func unreachableRedisOpts() *redis.Options {
 
 func TestRedisTokenBlacklist_NewReturnsNonNil(t *testing.T) {
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	bl := middleware.NewRedisTokenBlacklist(client)
 	assert.NotNil(t, bl, "NewRedisTokenBlacklist should return a non-nil instance")
@@ -30,7 +30,7 @@ func TestRedisTokenBlacklist_NewReturnsNonNil(t *testing.T) {
 
 func TestRedisTokenBlacklist_ImplementsTokenBlacklistStore(_ *testing.T) {
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	bl := middleware.NewRedisTokenBlacklist(client)
 	var _ middleware.TokenBlacklistStore = bl
@@ -40,7 +40,7 @@ func TestRedisTokenBlacklist_Revoke_NegativeTTLIsNoOp(t *testing.T) {
 	// With a broken/unreachable client, Revoke with a past expiry should be a no-op
 	// (the TTL check returns early before even touching Redis).
 	client := redis.NewClient(unreachableRedisOpts())
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	bl := middleware.NewRedisTokenBlacklist(client)
 
@@ -52,7 +52,7 @@ func TestRedisTokenBlacklist_Revoke_NegativeTTLIsNoOp(t *testing.T) {
 
 func TestRedisTokenBlacklist_Revoke_ZeroTTLIsNoOp(t *testing.T) {
 	client := redis.NewClient(unreachableRedisOpts())
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	bl := middleware.NewRedisTokenBlacklist(client)
 
@@ -64,7 +64,7 @@ func TestRedisTokenBlacklist_Revoke_ZeroTTLIsNoOp(t *testing.T) {
 func TestRedisTokenBlacklist_IsRevoked_FailsOpenOnError(t *testing.T) {
 	// With an unreachable Redis, IsRevoked should return false (fail open).
 	client := redis.NewClient(unreachableRedisOpts())
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	bl := middleware.NewRedisTokenBlacklist(client)
 	result := bl.IsRevoked("any-token")
@@ -75,7 +75,7 @@ func TestRedisTokenBlacklist_IsRevoked_NonExistentTokenReturnsFalse(t *testing.T
 	// Even if we could connect, a token that was never added should return false.
 	// With unreachable Redis, the error path also returns false.
 	client := redis.NewClient(unreachableRedisOpts())
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	bl := middleware.NewRedisTokenBlacklist(client)
 	assert.False(t, bl.IsRevoked("never-added-token"))
@@ -86,7 +86,7 @@ func TestRedisTokenBlacklist_UsableInComposite(t *testing.T) {
 	// with in-memory as fallback. When Redis is down, the composite
 	// still works through the fallback.
 	client := redis.NewClient(unreachableRedisOpts())
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	redisBL := middleware.NewRedisTokenBlacklist(client)
 	memoryBL := middleware.NewMemoryTokenBlacklist()

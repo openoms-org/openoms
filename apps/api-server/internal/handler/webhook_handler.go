@@ -10,14 +10,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// WebhookHandler handles inbound webhook requests from external providers.
 type WebhookHandler struct {
 	webhookService *service.WebhookService
 }
 
+// NewWebhookHandler creates a new WebhookHandler.
 func NewWebhookHandler(webhookService *service.WebhookService) *WebhookHandler {
 	return &WebhookHandler{webhookService: webhookService}
 }
 
+// Receive processes an inbound webhook event from a provider.
 func (h *WebhookHandler) Receive(w http.ResponseWriter, r *http.Request) {
 	provider := chi.URLParam(r, "provider")
 	tenantIDStr := chi.URLParam(r, "tenant_id")

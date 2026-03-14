@@ -25,6 +25,7 @@ type OAuthRefresher struct {
 	logger        *slog.Logger
 }
 
+// NewOAuthRefresher creates a new OAuthRefresher worker.
 func NewOAuthRefresher(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.Logger) *OAuthRefresher {
 	return &OAuthRefresher{
 		pool:          pool,
@@ -33,10 +34,12 @@ func NewOAuthRefresher(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.Lo
 	}
 }
 
+// Name returns the unique name of this worker.
 func (w *OAuthRefresher) Name() string {
 	return "oauth_refresher"
 }
 
+// Interval returns how often this worker should run.
 func (w *OAuthRefresher) Interval() time.Duration {
 	return 30 * time.Minute
 }
@@ -85,14 +88,14 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 		var tokenExpiry string
 		switch ir.provider {
 		case "allegro":
-			var creds allegroIntegration.AllegroCredentials
+			var creds allegroIntegration.Credentials
 			if err := json.Unmarshal(credJSON, &creds); err != nil {
 				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
 				continue
 			}
 			tokenExpiry = creds.TokenExpiry
 		case "olx":
-			var creds olxIntegration.OLXCredentials
+			var creds olxIntegration.Credentials
 			if err := json.Unmarshal(credJSON, &creds); err != nil {
 				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
 				continue
@@ -102,7 +105,7 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 				continue // no refresh token, skip (client_credentials flow)
 			}
 		case "amazon":
-			var creds amazonIntegration.AmazonCredentials
+			var creds amazonIntegration.Credentials
 			if err := json.Unmarshal(credJSON, &creds); err != nil {
 				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
 				continue
@@ -181,7 +184,7 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 }
 
 func (w *OAuthRefresher) refreshAllegro(ctx context.Context, credJSON []byte, expiry time.Time) ([]byte, error) {
-	var creds allegroIntegration.AllegroCredentials
+	var creds allegroIntegration.Credentials
 	if err := json.Unmarshal(credJSON, &creds); err != nil {
 		return nil, err
 	}
@@ -200,7 +203,7 @@ func (w *OAuthRefresher) refreshAllegro(ctx context.Context, credJSON []byte, ex
 	}
 
 	newExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
-	newCreds := allegroIntegration.AllegroCredentials{
+	newCreds := allegroIntegration.Credentials{
 		ClientID:     creds.ClientID,
 		ClientSecret: creds.ClientSecret,
 		AccessToken:  tok.AccessToken,
@@ -208,11 +211,11 @@ func (w *OAuthRefresher) refreshAllegro(ctx context.Context, credJSON []byte, ex
 		TokenExpiry:  newExpiry.Format(time.RFC3339),
 		Sandbox:      creds.Sandbox,
 	}
-	return json.Marshal(newCreds)
+	return json.Marshal(newCreds) // #nosec G117 -- ClientSecret is a legitimate credential field
 }
 
 func (w *OAuthRefresher) refreshOLX(ctx context.Context, credJSON []byte, expiry time.Time) ([]byte, error) {
-	var creds olxIntegration.OLXCredentials
+	var creds olxIntegration.Credentials
 	if err := json.Unmarshal(credJSON, &creds); err != nil {
 		return nil, err
 	}
@@ -226,18 +229,18 @@ func (w *OAuthRefresher) refreshOLX(ctx context.Context, credJSON []byte, expiry
 	}
 
 	newExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
-	newCreds := olxIntegration.OLXCredentials{
+	newCreds := olxIntegration.Credentials{
 		ClientID:     creds.ClientID,
 		ClientSecret: creds.ClientSecret,
 		AccessToken:  tok.AccessToken,
 		RefreshToken: tok.RefreshToken,
 		TokenExpiry:  newExpiry.Format(time.RFC3339),
 	}
-	return json.Marshal(newCreds)
+	return json.Marshal(newCreds) // #nosec G117 -- ClientSecret is a legitimate credential field
 }
 
 func (w *OAuthRefresher) refreshAmazon(ctx context.Context, credJSON []byte, expiry time.Time) ([]byte, error) {
-	var creds amazonIntegration.AmazonCredentials
+	var creds amazonIntegration.Credentials
 	if err := json.Unmarshal(credJSON, &creds); err != nil {
 		return nil, err
 	}
@@ -256,5 +259,5 @@ func (w *OAuthRefresher) refreshAmazon(ctx context.Context, credJSON []byte, exp
 		creds.RefreshToken = tok.RefreshToken
 	}
 	creds.TokenExpiry = newExpiry.Format(time.RFC3339)
-	return json.Marshal(creds)
+	return json.Marshal(creds) // #nosec G117 -- ClientSecret is a legitimate credential field
 }

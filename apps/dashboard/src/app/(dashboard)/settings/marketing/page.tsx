@@ -24,6 +24,7 @@ import { Loader2, Save, RefreshCw, Send } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { apiClient } from "@/lib/api-client";
 import type { MailchimpSettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_SETTINGS: MailchimpSettings = {
   api_key: "",
@@ -32,6 +33,8 @@ const DEFAULT_SETTINGS: MailchimpSettings = {
 };
 
 export default function MarketingSettingsPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data: status, isLoading: statusLoading } = useMarketingStatus();
   const syncCustomers = useSyncCustomers();
   const createCampaign = useCreateCampaign();
@@ -61,7 +64,6 @@ export default function MarketingSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save mailchimp settings under the tenant settings mailchimp key
       const current = companySettings || {};
       await apiClient("/v1/settings/company", {
         method: "PUT",
@@ -70,10 +72,10 @@ export default function MarketingSettingsPage() {
           mailchimp: form,
         }),
       });
-      toast.success("Ustawienia Mailchimp zapisane");
+      toast.success(t("marketing.mailchimpSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -83,10 +85,10 @@ export default function MarketingSettingsPage() {
   const handleSync = async () => {
     try {
       const result = await syncCustomers.mutateAsync();
-      toast.success(`Synchronizacja zakończona: ${result.synced} zsynchronizowanych, ${result.failed} błędów`);
+      toast.success(t("marketing.syncCompleted", { synced: result.synced, failed: result.failed }));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zsynchronizować";
+        err instanceof Error ? err.message : t("nieUdałoSieZsynchronizowac");
       toast.error(message);
     }
   };
@@ -94,11 +96,11 @@ export default function MarketingSettingsPage() {
   const handleCreateCampaign = async () => {
     try {
       const result = await createCampaign.mutateAsync(campaignForm);
-      toast.success(`Kampania utworzona (ID: ${result.campaign_id})`);
+      toast.success(t("marketing.campaignCreated", { id: result.campaign_id }));
       setCampaignForm({ name: "", subject: "", content: "" });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się utworzyć kampanii";
+        err instanceof Error ? err.message : t("nieUdałoSieUtworzycKampanii");
       toast.error(message);
     }
   };
@@ -115,9 +117,9 @@ export default function MarketingSettingsPage() {
     <AdminGuard>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Marketing (Mailchimp)</h1>
+          <h1 className="text-2xl font-bold">{t("marketing.title")}</h1>
           <p className="text-muted-foreground">
-            Synchronizuj klientów z Mailchimp i tworzenie kampanii email
+            {t("synchronizujKlientowZMailchimpITworzenieKampanii")}
           </p>
         </div>
 
@@ -126,7 +128,7 @@ export default function MarketingSettingsPage() {
         {/* Status card */}
         <Card>
           <CardHeader>
-            <CardTitle>Status integracji</CardTitle>
+            <CardTitle>{t("marketing.integrationStatus")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
@@ -137,7 +139,7 @@ export default function MarketingSettingsPage() {
                   }`}
                 />
                 <span className="text-sm">
-                  Mailchimp: {status?.configured ? "Skonfigurowany" : "Nieskonfigurowany"}
+                  Mailchimp: {status?.configured ? t("marketing.configured") : t("marketing.notConfigured")}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -147,7 +149,7 @@ export default function MarketingSettingsPage() {
                   }`}
                 />
                 <span className="text-sm">
-                  {status?.enabled ? "Włączony" : "Wyłączony"}
+                  {status?.enabled ? t("właczony") : t("wyłaczony1")}
                 </span>
               </div>
             </div>
@@ -157,14 +159,14 @@ export default function MarketingSettingsPage() {
         {/* Configuration card */}
         <Card>
           <CardHeader>
-            <CardTitle>Konfiguracja Mailchimp</CardTitle>
+            <CardTitle>{t("marketing.mailchimpConfig")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Aktywna integracja</p>
+                <p className="font-medium">{t("marketing.activeIntegration")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Włącz synchronizację klientów z Mailchimp
+                  {t("właczSynchronizacjeKlientowZMailchimp")}
                 </p>
               </div>
               <Switch
@@ -176,30 +178,30 @@ export default function MarketingSettingsPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Klucz API</Label>
+                <Label>{t("marketing.apiKey")}</Label>
                 <Input
                   type="password"
                   value={form.api_key}
                   onChange={(e) =>
                     setForm({ ...form, api_key: e.target.value })
                   }
-                  placeholder="Wklej klucz API Mailchimp"
+                  placeholder={t("marketing.apiKeyPlaceholder")}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Klucz API znajdziesz w Mailchimp &rarr; Account &rarr; API keys
+                  {t("marketing.apiKeyHint")}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>ID listy (Audience)</Label>
+                <Label>{t("marketing.listId")}</Label>
                 <Input
                   value={form.list_id}
                   onChange={(e) =>
                     setForm({ ...form, list_id: e.target.value })
                   }
-                  placeholder="np. abc1234567"
+                  placeholder="e.g. abc1234567"
                 />
                 <p className="text-xs text-muted-foreground">
-                  ID listy znajdziesz w Mailchimp &rarr; Audience &rarr; Settings
+                  {t("marketing.listIdHint")}
                 </p>
               </div>
             </div>
@@ -210,7 +212,7 @@ export default function MarketingSettingsPage() {
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Zapisz ustawienia
+                {t("saveSettings")}
               </Button>
             </div>
           </CardContent>
@@ -219,11 +221,11 @@ export default function MarketingSettingsPage() {
         {/* Sync card */}
         <Card>
           <CardHeader>
-            <CardTitle>Synchronizacja klientów</CardTitle>
+            <CardTitle>{t("synchronizacjaKlientow")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Synchronizuj wszystkich klientów z adresem email do listy Mailchimp.
+              {t("synchronizujWszystkichKlientowZAdresemEmailDo")}
             </p>
             <Button
               onClick={handleSync}
@@ -235,7 +237,7 @@ export default function MarketingSettingsPage() {
               ) : (
                 <RefreshCw className="h-4 w-4" />
               )}
-              Synchronizuj teraz
+              {t("marketing.syncNow")}
             </Button>
           </CardContent>
         </Card>
@@ -243,39 +245,39 @@ export default function MarketingSettingsPage() {
         {/* Campaign creation card */}
         <Card>
           <CardHeader>
-            <CardTitle>Nowa kampania</CardTitle>
+            <CardTitle>{t("marketing.newCampaign")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nazwa kampanii</Label>
+                <Label>{t("marketing.campaignName")}</Label>
                 <Input
                   value={campaignForm.name}
                   onChange={(e) =>
                     setCampaignForm({ ...campaignForm, name: e.target.value })
                   }
-                  placeholder="Nazwa kampanii"
+                  placeholder={t("marketing.campaignName")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Temat wiadomości</Label>
+                <Label>{t("marketing.emailSubject")}</Label>
                 <Input
                   value={campaignForm.subject}
                   onChange={(e) =>
                     setCampaignForm({ ...campaignForm, subject: e.target.value })
                   }
-                  placeholder="Temat emaila"
+                  placeholder={t("marketing.emailSubject")}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Treść HTML</Label>
+              <Label>{t("trescHtml")}</Label>
               <Textarea
                 value={campaignForm.content}
                 onChange={(e) =>
                   setCampaignForm({ ...campaignForm, content: e.target.value })
                 }
-                placeholder="<html><body>Treść kampanii...</body></html>"
+                placeholder="<html><body>...</body></html>"
                 rows={6}
                 className="font-mono text-sm"
               />
@@ -295,7 +297,7 @@ export default function MarketingSettingsPage() {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Utwórz kampanię
+                {t("utworzKampanie")}
               </Button>
             </div>
           </CardContent>

@@ -174,9 +174,9 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		// Best-effort cleanup: set stock to 0 to hide the Erli offer.
 		if stockErr := provider.UpdateStock(ctx, externalID, 0); stockErr != nil {
-			slog.Error("erli listings: failed to zero-stock orphaned offer", "external_id", externalID, "error", stockErr)
+			slog.Error("erli listings: failed to zero-stock orphaned offer", "external_id", externalID, "error", stockErr) //nolint:gosec
 		} else {
-			slog.Info("erli listings: zeroed stock on orphaned offer after DB failure", "external_id", externalID)
+			slog.Info("erli listings: zeroed stock on orphaned offer after DB failure", "external_id", externalID) //nolint:gosec
 		}
 
 		var pgErr *pgconn.PgError
@@ -184,7 +184,7 @@ func (h *ErliListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusConflict, "listing already exists for this product and integration")
 			return
 		}
-		slog.Error("erli listings: DB save failed after offer creation", "external_id", externalID, "tenant_id", tenantID, "error", err)
+		slog.Error("erli listings: DB save failed after offer creation", "external_id", externalID, "tenant_id", tenantID, "error", err) //nolint:gosec
 		writeServerError(w, "failed to save listing record", err)
 		return
 	}

@@ -20,7 +20,7 @@ type ProductListParams struct {
 }
 
 // List retrieves a paginated list of products.
-func (s *ProductService) List(ctx context.Context, params ProductListParams) (*ListResponse[ShoperProduct], error) {
+func (s *ProductService) List(ctx context.Context, params ProductListParams) (*ListResponse[Product], error) {
 	path := "/products"
 
 	v := url.Values{}
@@ -37,7 +37,7 @@ func (s *ProductService) List(ctx context.Context, params ProductListParams) (*L
 		path += "?" + encoded
 	}
 
-	var result ListResponse[ShoperProduct]
+	var result ListResponse[Product]
 	if err := s.client.do(ctx, "GET", path, nil, &result); err != nil {
 		return nil, err
 	}
@@ -45,8 +45,8 @@ func (s *ProductService) List(ctx context.Context, params ProductListParams) (*L
 }
 
 // Get retrieves a single product by ID.
-func (s *ProductService) Get(ctx context.Context, id int) (*ShoperProduct, error) {
-	var result ShoperProduct
+func (s *ProductService) Get(ctx context.Context, id int) (*Product, error) {
+	var result Product
 	if err := s.client.do(ctx, "GET", fmt.Sprintf("/products/%d", id), nil, &result); err != nil {
 		return nil, err
 	}

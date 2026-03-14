@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// ReturnRepository handles persistence for return requests.
 type ReturnRepository struct{}
 
+// NewReturnRepository creates a new ReturnRepository.
 func NewReturnRepository() *ReturnRepository {
 	return &ReturnRepository{}
 }
@@ -46,6 +48,7 @@ func scanReturns(rows pgx.Rows) ([]model.Return, error) {
 	return returns, rows.Err()
 }
 
+// List returns a paginated list of returns matching the filter.
 func (r *ReturnRepository) List(ctx context.Context, tx pgx.Tx, filter model.ReturnListFilter) ([]model.Return, int, error) {
 	qb := NewQueryBuilder()
 
@@ -93,6 +96,7 @@ func (r *ReturnRepository) List(ctx context.Context, tx pgx.Tx, filter model.Ret
 	return returns, total, nil
 }
 
+// FindByID returns a return by its ID.
 func (r *ReturnRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Return, error) {
 	ret, err := scanReturn(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM returns WHERE id = $1`, returnSelectColumns), id,
@@ -106,6 +110,7 @@ func (r *ReturnRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	return &ret, nil
 }
 
+// FindByToken returns a return by its customer-facing token.
 func (r *ReturnRepository) FindByToken(ctx context.Context, tx pgx.Tx, token string) (*model.Return, error) {
 	ret, err := scanReturn(tx.QueryRow(ctx,
 		fmt.Sprintf(`SELECT %s FROM returns WHERE return_token = $1`, returnSelectColumns), token,
@@ -119,6 +124,7 @@ func (r *ReturnRepository) FindByToken(ctx context.Context, tx pgx.Tx, token str
 	return &ret, nil
 }
 
+// Create inserts a new return.
 func (r *ReturnRepository) Create(ctx context.Context, tx pgx.Tx, ret *model.Return) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO returns (
@@ -132,6 +138,7 @@ func (r *ReturnRepository) Create(ctx context.Context, tx pgx.Tx, ret *model.Ret
 	).Scan(&ret.CreatedAt, &ret.UpdatedAt)
 }
 
+// Update applies partial updates to a return.
 func (r *ReturnRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateReturnRequest) error {
 	setClauses := []string{}
 	args := []any{}
@@ -178,6 +185,7 @@ func (r *ReturnRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, 
 	return nil
 }
 
+// UpdateStatus sets the status of a return.
 func (r *ReturnRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error {
 	ct, err := tx.Exec(ctx,
 		"UPDATE returns SET status = $1, updated_at = NOW() WHERE id = $2",
@@ -192,6 +200,7 @@ func (r *ReturnRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.
 	return nil
 }
 
+// Delete removes a return by its ID.
 func (r *ReturnRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM returns WHERE id = $1", id)
 	if err != nil {

@@ -2,31 +2,36 @@
 
 import { Package, MapPin, Clock, CheckCircle2, Truck, AlertCircle } from "lucide-react";
 import type { TrackingEvent } from "@/types/api";
+import { useTranslations } from "next-intl";
 
-const STATUS_CONFIG: Record<string, { icon: typeof Package; color: string; label: string }> = {
-  created: { icon: Package, color: "text-blue-500", label: "Utworzona" },
-  confirmed: { icon: CheckCircle2, color: "text-blue-500", label: "Potwierdzona" },
-  offers_prepared: { icon: Package, color: "text-blue-500", label: "Oferty przygotowane" },
-  offer_selected: { icon: Package, color: "text-blue-500", label: "Oferta wybrana" },
-  dispatched_by_sender: { icon: Truck, color: "text-orange-500", label: "Nadana" },
-  collected_from_sender: { icon: Truck, color: "text-orange-500", label: "Odebrana od nadawcy" },
-  taken_by_courier: { icon: Truck, color: "text-orange-500", label: "Pobrana przez kuriera" },
-  adopted_at_source_branch: { icon: MapPin, color: "text-orange-500", label: "W oddziale nadawczym" },
-  sent_from_source_branch: { icon: Truck, color: "text-orange-500", label: "Wysłana z oddziału" },
-  adopted_at_sorting_center: { icon: MapPin, color: "text-orange-500", label: "W sortowni" },
-  sent_from_sorting_center: { icon: Truck, color: "text-orange-500", label: "Wysłana z sortowni" },
-  adopted_at_target_branch: { icon: MapPin, color: "text-yellow-500", label: "W oddziale docelowym" },
-  out_for_delivery: { icon: Truck, color: "text-yellow-500", label: "W doręczeniu" },
-  ready_to_pickup: { icon: CheckCircle2, color: "text-green-500", label: "Gotowa do odbioru" },
-  delivered: { icon: CheckCircle2, color: "text-green-600", label: "Doręczona" },
-  pickup_reminder_sent: { icon: Clock, color: "text-yellow-500", label: "Przypomnienie o odbiorze" },
-  undelivered: { icon: AlertCircle, color: "text-red-500", label: "Niedoręczona" },
-  returned_to_sender: { icon: AlertCircle, color: "text-red-500", label: "Zwrócona do nadawcy" },
-  canceled: { icon: AlertCircle, color: "text-red-500", label: "Anulowana" },
+const STATUS_ICON_CONFIG: Record<string, { icon: typeof Package; color: string; labelKey: string }> = {
+  created: { icon: Package, color: "text-blue-500", labelKey: "tracking.created" },
+  confirmed: { icon: CheckCircle2, color: "text-blue-500", labelKey: "tracking.confirmed" },
+  offers_prepared: { icon: Package, color: "text-blue-500", labelKey: "tracking.offersPrepared" },
+  offer_selected: { icon: Package, color: "text-blue-500", labelKey: "tracking.offerSelected" },
+  dispatched_by_sender: { icon: Truck, color: "text-orange-500", labelKey: "tracking.dispatchedBySender" },
+  collected_from_sender: { icon: Truck, color: "text-orange-500", labelKey: "tracking.collectedFromSender" },
+  taken_by_courier: { icon: Truck, color: "text-orange-500", labelKey: "tracking.takenByCourier" },
+  adopted_at_source_branch: { icon: MapPin, color: "text-orange-500", labelKey: "tracking.adoptedAtSourceBranch" },
+  sent_from_source_branch: { icon: Truck, color: "text-orange-500", labelKey: "tracking.sentFromSourceBranch" },
+  adopted_at_sorting_center: { icon: MapPin, color: "text-orange-500", labelKey: "tracking.adoptedAtSortingCenter" },
+  sent_from_sorting_center: { icon: Truck, color: "text-orange-500", labelKey: "tracking.sentFromSortingCenter" },
+  adopted_at_target_branch: { icon: MapPin, color: "text-yellow-500", labelKey: "tracking.adoptedAtTargetBranch" },
+  out_for_delivery: { icon: Truck, color: "text-yellow-500", labelKey: "tracking.outForDelivery" },
+  ready_to_pickup: { icon: CheckCircle2, color: "text-green-500", labelKey: "tracking.readyToPickup" },
+  delivered: { icon: CheckCircle2, color: "text-green-600", labelKey: "tracking.delivered" },
+  pickup_reminder_sent: { icon: Clock, color: "text-yellow-500", labelKey: "tracking.pickupReminderSent" },
+  undelivered: { icon: AlertCircle, color: "text-red-500", labelKey: "tracking.undelivered" },
+  returned_to_sender: { icon: AlertCircle, color: "text-red-500", labelKey: "tracking.returnedToSender" },
+  canceled: { icon: AlertCircle, color: "text-red-500", labelKey: "tracking.canceled" },
 };
 
-function getStatusConfig(status: string) {
-  return STATUS_CONFIG[status] ?? {
+function getStatusConfig(status: string, t: (key: string) => string) {
+  const config = STATUS_ICON_CONFIG[status];
+  if (config) {
+    return { icon: config.icon, color: config.color, label: t(config.labelKey) };
+  }
+  return {
     icon: Package,
     color: "text-muted-foreground",
     label: status.replace(/_/g, " "),
@@ -53,11 +58,12 @@ interface TrackingTimelineProps {
 }
 
 export function TrackingTimeline({ events }: TrackingTimelineProps) {
+  const t = useTranslations("shipments");
   if (events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-        <p className="text-sm text-muted-foreground">Brak danych śledzenia. Informacje pojawią się po nadaniu przesyłki.</p>
+        <p className="text-sm text-muted-foreground">{t("brakDanychSledzeniaInformacjePojawiaSiePo")}</p>
       </div>
     );
   }
@@ -65,7 +71,7 @@ export function TrackingTimeline({ events }: TrackingTimelineProps) {
   return (
     <div className="relative space-y-0">
       {events.map((event, index) => {
-        const config = getStatusConfig(event.status);
+        const config = getStatusConfig(event.status, t);
         const Icon = config.icon;
         const isFirst = index === 0;
 

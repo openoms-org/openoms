@@ -126,8 +126,8 @@ func (c *Client) fetchCSRFToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("btp: csrf fetch: %w", err)
 	}
-	defer resp.Body.Close()
-	io.Copy(io.Discard, resp.Body)
+	defer func() { _ = resp.Body.Close() }()
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	token := resp.Header.Get("X-CSRF-TOKEN")
 	if token == "" {
@@ -207,7 +207,7 @@ func (c *Client) doRawOnce(ctx context.Context, method, path string, body any) (
 	if err != nil {
 		return nil, fmt.Errorf("btp: send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -249,7 +249,7 @@ func (c *Client) doMultipart(ctx context.Context, path string, bodyBuf *bytes.Bu
 	if err != nil {
 		return fmt.Errorf("btp: send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {

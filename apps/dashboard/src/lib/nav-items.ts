@@ -63,29 +63,33 @@ import {
 
 export interface NavItem {
   href: string;
+  /** Translation key under "navigation" namespace */
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  /** Group key matching NavGroup.key — used for grouping and translated via "navigation.groups.*" */
   group?: string;
   children?: NavItem[];
 }
 
 export interface NavGroup {
+  /** Stable key used for matching items and localStorage persistence */
   key: string;
+  /** Translation key under "navigation.groups" namespace */
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   defaultExpanded?: boolean;
 }
 
 export const navGroups: NavGroup[] = [
-  { key: "Sprzedaż", label: "Sprzedaż", icon: ShoppingCart, defaultExpanded: true },
-  { key: "Katalog", label: "Katalog", icon: Package },
-  { key: "Logistyka", label: "Logistyka", icon: Truck },
-  { key: "Kanały sprzedaży", label: "Kanały sprzedaży", icon: Store },
-  { key: "Raporty", label: "Raporty", icon: BarChart3 },
-  { key: "Zaopatrzenie", label: "Zaopatrzenie", icon: Factory },
-  { key: "Narzędzia", label: "Narzędzia", icon: Wrench },
-  { key: "Ustawienia", label: "Ustawienia", icon: Settings },
+  { key: "sales", label: "sales", icon: ShoppingCart, defaultExpanded: true },
+  { key: "catalog", label: "catalog", icon: Package },
+  { key: "logistics", label: "logistics", icon: Truck },
+  { key: "salesChannels", label: "salesChannels", icon: Store },
+  { key: "reports", label: "reports", icon: BarChart3 },
+  { key: "procurement", label: "procurement", icon: Factory },
+  { key: "tools", label: "tools", icon: Wrench },
+  { key: "settings", label: "settings", icon: Settings },
 ];
 
 /** Flatten nav items including children — for command palette search */
@@ -101,81 +105,81 @@ export function flattenNavItems(items: NavItem[]): NavItem[] {
 }
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Pulpit", icon: LayoutDashboard },
+  { href: "/", label: "dashboard", icon: LayoutDashboard },
 
-  // ── Sprzedaż ──
-  { href: "/orders", label: "Zamówienia", icon: ShoppingCart, group: "Sprzedaż" },
-  { href: "/customers", label: "Klienci", icon: Contact, group: "Sprzedaż" },
-  { href: "/returns", label: "Zwroty", icon: RotateCcw, group: "Sprzedaż" },
-  { href: "/invoices", label: "Faktury", icon: FileText, group: "Sprzedaż" },
-  { href: "/invoicing", label: "Fakturowanie", icon: Receipt, adminOnly: true, group: "Sprzedaż" },
+  // ── Sales ──
+  { href: "/orders", label: "orders", icon: ShoppingCart, group: "sales" },
+  { href: "/customers", label: "customers", icon: Contact, group: "sales" },
+  { href: "/returns", label: "returns", icon: RotateCcw, group: "sales" },
+  { href: "/invoices", label: "invoices", icon: FileText, group: "sales" },
+  { href: "/invoicing", label: "invoicing", icon: Receipt, adminOnly: true, group: "sales" },
 
-  // ── Katalog ──
-  { href: "/products", label: "Produkty", icon: Package, group: "Katalog" },
-  { href: "/settings/product-categories", label: "Kategorie", icon: FolderTree, group: "Katalog" },
-  { href: "/settings/print-templates", label: "Szablony druku", icon: Printer, group: "Katalog" },
+  // ── Catalog ──
+  { href: "/products", label: "products", icon: Package, group: "catalog" },
+  { href: "/settings/product-categories", label: "categories", icon: FolderTree, group: "catalog" },
+  { href: "/settings/print-templates", label: "printTemplates", icon: Printer, group: "catalog" },
 
-  // ── Logistyka ──
-  { href: "/shipments", label: "Przesyłki", icon: Truck, group: "Logistyka" },
-  { href: "/carriers", label: "Kurierzy", icon: Route, adminOnly: true, group: "Logistyka" },
-  { href: "/packing", label: "Pakowanie", icon: ScanBarcode, group: "Logistyka" },
-  { href: "/pick-pack", label: "Pick & Pack", icon: PackageCheck, group: "Logistyka" },
-  { href: "/settings/warehouses", label: "Magazyny", icon: Warehouse, adminOnly: true, group: "Logistyka" },
-  { href: "/stocktakes", label: "Inwentaryzacja", icon: ClipboardCheck, adminOnly: true, group: "Logistyka" },
-  { href: "/settings/warehouse-documents", label: "Dokumenty magazynowe", icon: ClipboardList, adminOnly: true, group: "Logistyka" },
-  { href: "/stock-sync", label: "Sync magazynu", icon: RefreshCw, adminOnly: true, group: "Logistyka" },
+  // ── Logistics ──
+  { href: "/shipments", label: "shipments", icon: Truck, group: "logistics" },
+  { href: "/carriers", label: "carriers", icon: Route, adminOnly: true, group: "logistics" },
+  { href: "/packing", label: "packing", icon: ScanBarcode, group: "logistics" },
+  { href: "/pick-pack", label: "pickPack", icon: PackageCheck, group: "logistics" },
+  { href: "/settings/warehouses", label: "warehouses", icon: Warehouse, adminOnly: true, group: "logistics" },
+  { href: "/stocktakes", label: "stocktakes", icon: ClipboardCheck, adminOnly: true, group: "logistics" },
+  { href: "/settings/warehouse-documents", label: "warehouseDocuments", icon: ClipboardList, adminOnly: true, group: "logistics" },
+  { href: "/stock-sync", label: "stockSync", icon: RefreshCw, adminOnly: true, group: "logistics" },
 
-  // ── Kanały sprzedaży ──
-  { href: "/marketplaces", label: "Marketplace", icon: Store, adminOnly: true, group: "Kanały sprzedaży" },
-  { href: "/settings/feeds", label: "Feedy produktowe", icon: Rss, adminOnly: true, group: "Kanały sprzedaży" },
-  { href: "/listing-sync", label: "Synchronizacja ofert", icon: ArrowUpDown, adminOnly: true, group: "Kanały sprzedaży" },
+  // ── Sales channels ──
+  { href: "/marketplaces", label: "marketplace", icon: Store, adminOnly: true, group: "salesChannels" },
+  { href: "/settings/feeds", label: "productFeeds", icon: Rss, adminOnly: true, group: "salesChannels" },
+  { href: "/listing-sync", label: "listingSync", icon: ArrowUpDown, adminOnly: true, group: "salesChannels" },
 
-  // ── Raporty ──
-  { href: "/reports", label: "Raporty", icon: BarChart3, adminOnly: true, group: "Raporty" },
-  { href: "/reports/forecast", label: "Prognoza popytu", icon: TrendingUp, adminOnly: true, group: "Raporty" },
-  { href: "/reports/carbon", label: "Ślad węglowy", icon: Leaf, adminOnly: true, group: "Raporty" },
-  { href: "/reports/vat-oss", label: "Raport VAT OSS", icon: Globe, adminOnly: true, group: "Raporty" },
-  { href: "/reconciliation", label: "Rozliczenia", icon: CreditCard, adminOnly: true, group: "Raporty" },
-  { href: "/repricing", label: "Repricing", icon: Tag, adminOnly: true, group: "Raporty" },
+  // ── Reports ──
+  { href: "/reports", label: "reports", icon: BarChart3, adminOnly: true, group: "reports" },
+  { href: "/reports/forecast", label: "demandForecast", icon: TrendingUp, adminOnly: true, group: "reports" },
+  { href: "/reports/carbon", label: "carbonFootprint", icon: Leaf, adminOnly: true, group: "reports" },
+  { href: "/reports/vat-oss", label: "vatOssReport", icon: Globe, adminOnly: true, group: "reports" },
+  { href: "/reconciliation", label: "reconciliation", icon: CreditCard, adminOnly: true, group: "reports" },
+  { href: "/repricing", label: "repricing", icon: Tag, adminOnly: true, group: "reports" },
 
-  // ── Zaopatrzenie ──
-  { href: "/suppliers", label: "Dostawcy", icon: Factory, adminOnly: true, group: "Zaopatrzenie" },
-  { href: "/purchase-orders", label: "Zamówienia zakupu", icon: ListOrdered, adminOnly: true, group: "Zaopatrzenie" },
-  { href: "/dropship-orders", label: "Dropshipping", icon: Share2, adminOnly: true, group: "Zaopatrzenie" },
+  // ── Procurement ──
+  { href: "/suppliers", label: "suppliers", icon: Factory, adminOnly: true, group: "procurement" },
+  { href: "/purchase-orders", label: "purchaseOrders", icon: ListOrdered, adminOnly: true, group: "procurement" },
+  { href: "/dropship-orders", label: "dropshipping", icon: Share2, adminOnly: true, group: "procurement" },
 
-  // ── Narzędzia ──
-  { href: "/settings/automation", label: "Automatyzacja", icon: Zap, adminOnly: true, group: "Narzędzia" },
-  { href: "/workflows", label: "Workflow Builder", icon: Workflow, adminOnly: true, group: "Narzędzia" },
-  { href: "/orders/import", label: "Import zamówień", icon: Upload, group: "Narzędzia" },
-  { href: "/products/import", label: "Import produktów", icon: FileUp, group: "Narzędzia" },
-  { href: "/tools/bg-removal", label: "Usuwanie tła", icon: Eraser, group: "Narzędzia" },
-  { href: "/settings/marketing", label: "Marketing", icon: Send, adminOnly: true, group: "Narzędzia" },
-  { href: "/settings/helpdesk", label: "Helpdesk", icon: Headphones, adminOnly: true, group: "Narzędzia" },
-  { href: "/settings/currencies", label: "Waluty", icon: Coins, adminOnly: true, group: "Narzędzia" },
-  { href: "/recurring-orders", label: "Subskrypcje", icon: Repeat, group: "Narzędzia" },
-  { href: "/loyalty", label: "Program lojalnościowy", icon: Award, group: "Narzędzia" },
-  { href: "/customers/segments", label: "Segmenty klientów", icon: UsersRound, group: "Narzędzia" },
+  // ── Tools ──
+  { href: "/settings/automation", label: "automation", icon: Zap, adminOnly: true, group: "tools" },
+  { href: "/workflows", label: "workflowBuilder", icon: Workflow, adminOnly: true, group: "tools" },
+  { href: "/orders/import", label: "orderImport", icon: Upload, group: "tools" },
+  { href: "/products/import", label: "productImport", icon: FileUp, group: "tools" },
+  { href: "/tools/bg-removal", label: "bgRemoval", icon: Eraser, group: "tools" },
+  { href: "/settings/marketing", label: "marketing", icon: Send, adminOnly: true, group: "tools" },
+  { href: "/settings/helpdesk", label: "helpdesk", icon: Headphones, adminOnly: true, group: "tools" },
+  { href: "/settings/currencies", label: "currencies", icon: Coins, adminOnly: true, group: "tools" },
+  { href: "/recurring-orders", label: "subscriptions", icon: Repeat, group: "tools" },
+  { href: "/loyalty", label: "loyalty", icon: Award, group: "tools" },
+  { href: "/customers/segments", label: "customerSegments", icon: UsersRound, group: "tools" },
 
-  // ── Ustawienia ──
-  { href: "/settings/billing", label: "Subskrypcja", icon: CreditCard, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/company", label: "Firma", icon: Building2, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/users", label: "Użytkownicy", icon: Users, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/roles", label: "Role", icon: Shield, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/security", label: "Bezpieczeństwo", icon: ShieldCheck, group: "Ustawienia" },
-  { href: "/settings/order-statuses", label: "Statusy zamówień", icon: ListChecks, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/custom-fields", label: "Pola niestandardowe", icon: TextCursorInput, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/price-lists", label: "Cenniki", icon: BadgePercent, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/accounting", label: "Księgowość", icon: Calculator, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/ksef", label: "KSeF", icon: FileCheck, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/vat-oss", label: "VAT OSS", icon: Landmark, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/inventory", label: "Kontrola magazynowa", icon: PackageSearch, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/notifications", label: "Powiadomienia", icon: Bell, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/sms", label: "SMS", icon: MessageSquare, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/webhooks", label: "Webhooki", icon: Webhook, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/webhooks/deliveries", label: "Dostawy webhooków", icon: MailCheck, adminOnly: true, group: "Ustawienia" },
-  { href: "/settings/sync-jobs", label: "Synchronizacja", icon: RotateCw, adminOnly: true, group: "Ustawienia" },
-  { href: "/audit", label: "Dziennik aktywności", icon: ScrollText, adminOnly: true, group: "Ustawienia" },
+  // ── Settings ──
+  { href: "/settings/billing", label: "subscription", icon: CreditCard, adminOnly: true, group: "settings" },
+  { href: "/settings/company", label: "company", icon: Building2, adminOnly: true, group: "settings" },
+  { href: "/settings/users", label: "users", icon: Users, adminOnly: true, group: "settings" },
+  { href: "/settings/roles", label: "roles", icon: Shield, adminOnly: true, group: "settings" },
+  { href: "/settings/security", label: "security", icon: ShieldCheck, group: "settings" },
+  { href: "/settings/order-statuses", label: "orderStatuses", icon: ListChecks, adminOnly: true, group: "settings" },
+  { href: "/settings/custom-fields", label: "customFields", icon: TextCursorInput, adminOnly: true, group: "settings" },
+  { href: "/settings/price-lists", label: "priceLists", icon: BadgePercent, adminOnly: true, group: "settings" },
+  { href: "/settings/accounting", label: "accounting", icon: Calculator, adminOnly: true, group: "settings" },
+  { href: "/settings/ksef", label: "ksef", icon: FileCheck, adminOnly: true, group: "settings" },
+  { href: "/settings/vat-oss", label: "vatOss", icon: Landmark, adminOnly: true, group: "settings" },
+  { href: "/settings/inventory", label: "inventoryControl", icon: PackageSearch, adminOnly: true, group: "settings" },
+  { href: "/settings/notifications", label: "notifications", icon: Bell, adminOnly: true, group: "settings" },
+  { href: "/settings/sms", label: "sms", icon: MessageSquare, adminOnly: true, group: "settings" },
+  { href: "/settings/webhooks", label: "webhooks", icon: Webhook, adminOnly: true, group: "settings" },
+  { href: "/settings/webhooks/deliveries", label: "webhookDeliveries", icon: MailCheck, adminOnly: true, group: "settings" },
+  { href: "/settings/sync-jobs", label: "sync", icon: RotateCw, adminOnly: true, group: "settings" },
+  { href: "/audit", label: "auditLog", icon: ScrollText, adminOnly: true, group: "settings" },
 
-  // ── Pomoc (flat — no group) ──
-  { href: "/help", label: "Pomoc", icon: HelpCircle },
+  // ── Help (flat — no group) ──
+  { href: "/help", label: "help", icon: HelpCircle },
 ];

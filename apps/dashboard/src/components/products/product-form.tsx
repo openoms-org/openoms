@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Trash2, Upload, Loader2, Sparkles, Languages, ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,35 +36,31 @@ import { Switch } from "@/components/ui/switch";
 
 const PRODUCT_SOURCES = ["manual", "allegro", "woocommerce"] as const;
 
-const PRODUCT_SOURCE_LABELS: Record<string, string> = {
-  manual: "Ręczne",
-  allegro: "Allegro",
-  woocommerce: "WooCommerce",
-};
-
 // Empty number inputs with valueAsNumber produce NaN — catch converts to undefined
 const optionalDimension = z.number().min(0).optional().catch(undefined);
 
-const productSchema = z.object({
-  name: z.string().min(1, "Nazwa produktu jest wymagana"),
-  sku: z.string().optional(),
-  ean: z.string().optional(),
-  price: z.number().min(0, "Cena musi być większa lub równa 0"),
-  stock_quantity: z
-    .number()
-    .int("Ilość musi być liczbą całkowitą")
-    .min(0, "Ilość musi być większa lub równa 0"),
-  source: z.enum(["manual", "allegro", "woocommerce"]),
-  description_short: z.string().optional(),
-  description_long: z.string().optional(),
-  weight: optionalDimension,
-  width: optionalDimension,
-  height: optionalDimension,
-  depth: optionalDimension,
-  image_url: z.string(),
-});
+function createProductSchema(t: (key: string) => string) {
+  return z.object({
+    name: z.string().min(1, t("nameRequired")),
+    sku: z.string().optional(),
+    ean: z.string().optional(),
+    price: z.number().min(0, t("priceMin")),
+    stock_quantity: z
+      .number()
+      .int("quantityInteger")
+      .min(0, t("quantityMin")),
+    source: z.enum(["manual", "allegro", "woocommerce"]),
+    description_short: z.string().optional(),
+    description_long: z.string().optional(),
+    weight: optionalDimension,
+    width: optionalDimension,
+    height: optionalDimension,
+    depth: optionalDimension,
+    image_url: z.string(),
+  });
+}
 
-type ProductFormValues = z.infer<typeof productSchema>;
+type ProductFormValues = z.infer<ReturnType<typeof createProductSchema>>;
 
 interface ProductFormProps {
   product?: Product;
@@ -72,6 +69,9 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) {
+  const t = useTranslations("products");
+  const tv = useTranslations("products.validation");
+  const tc = useTranslations("common");
   const [imageList, setImageList] = useState<{ url: string; alt: string }[]>(
     normalizeProductImages(product?.images).map((img) => ({ url: img.url, alt: img.alt || "" }))
   );
@@ -86,6 +86,8 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   const galleryFileRef = useRef<HTMLInputElement>(null);
   const improveDescription = useImproveDescription();
   const translateDescription = useTranslateDescription();
+
+  const productSchema = createProductSchema(tv);
 
   const {
     register,
@@ -120,7 +122,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   const handleImprove = (field: "description_short" | "description_long") => {
     const text = field === "description_short" ? descShortValue : descLongValue;
     if (!text?.trim()) {
-      toast.error("Pole opisu jest puste");
+      toast.error(t("form.descriptionEmpty"));
       return;
     }
     improveDescription.mutate(
@@ -128,7 +130,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       {
         onSuccess: (data) => {
           setValue(field, data.description, { shouldDirty: true });
-          toast.success("Opis poprawiony przez AI");
+          toast.success(t("form.improvedByAi"));
         },
         onError: (error) => toast.error(getErrorMessage(error)),
       }
@@ -138,7 +140,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   const handleTranslate = (field: "description_short" | "description_long", targetLanguage: string) => {
     const text = field === "description_short" ? descShortValue : descLongValue;
     if (!text?.trim()) {
-      toast.error("Pole opisu jest puste");
+      toast.error(t("form.descriptionEmpty"));
       return;
     }
     translateDescription.mutate(
@@ -146,7 +148,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       {
         onSuccess: (data) => {
           setValue(field, data.description, { shouldDirty: true });
-          toast.success("Opis przetłumaczony przez AI");
+          toast.success(t("form.translatedByAi"));
         },
         onError: (error) => toast.error(getErrorMessage(error)),
       }
@@ -191,10 +193,10 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Nazwa produktu <span className="text-destructive">*</span></Label>
+        <Label htmlFor="name">{t("form.productName")} <span className="text-destructive">*</span></Label>
         <Input
           id="name"
-          placeholder="Nazwa produktu"
+          placeholder={t("form.productNamePlaceholder")}
           aria-invalid={!!errors.name}
           {...register("name")}
         />
@@ -205,19 +207,19 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="sku">SKU</Label>
+          <Label htmlFor="sku">{t("form.sku")}</Label>
           <Input
             id="sku"
-            placeholder="Opcjonalny kod SKU"
+            placeholder={t("form.skuPlaceholder")}
             {...register("sku")}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="ean">EAN</Label>
+          <Label htmlFor="ean">{t("form.ean")}</Label>
           <Input
             id="ean"
-            placeholder="Opcjonalny kod EAN"
+            placeholder={t("form.eanPlaceholder")}
             {...register("ean")}
           />
         </div>
@@ -225,7 +227,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="price">Cena <span className="text-destructive">*</span></Label>
+          <Label htmlFor="price">{t("form.price")} <span className="text-destructive">*</span></Label>
           <Input
             id="price"
             type="number"
@@ -241,7 +243,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="stock_quantity">Stan magazynowy <span className="text-destructive">*</span></Label>
+          <Label htmlFor="stock_quantity">{t("form.stockQuantity")} <span className="text-destructive">*</span></Label>
           <Input
             id="stock_quantity"
             type="number"
@@ -260,7 +262,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="source">Źródło <span className="text-destructive">*</span></Label>
+        <Label htmlFor="source">{t("form.source")} <span className="text-destructive">*</span></Label>
         <Select
           value={sourceValue}
           onValueChange={(value) =>
@@ -270,12 +272,12 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
           }
         >
           <SelectTrigger className="w-full" aria-invalid={!!errors.source}>
-            <SelectValue placeholder="Wybierz źródło" />
+            <SelectValue placeholder={t("form.sourcePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {PRODUCT_SOURCES.map((source) => (
               <SelectItem key={source} value={source}>
-                {PRODUCT_SOURCE_LABELS[source]}
+                {source === "manual" ? t("form.sourceManual") : source === "allegro" ? "Allegro" : "WooCommerce"}
               </SelectItem>
             ))}
           </SelectContent>
@@ -286,18 +288,18 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label>Kategoria</Label>
+        <Label>{t("form.category")}</Label>
         <CategoryTreePicker
           value={selectedCategoryId}
           onChange={setSelectedCategoryId}
-          placeholder="Wybierz kategorię..."
+          placeholder={t("form.categoryPlaceholder")}
           className="w-full"
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="description_short">Krótki opis</Label>
+          <Label htmlFor="description_short">{t("form.shortDescription")}</Label>
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -312,7 +314,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
               ) : (
                 <Sparkles className="mr-1 h-3 w-3" />
               )}
-              Popraw
+              {t("form.improve")}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -328,7 +330,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                   ) : (
                     <Languages className="mr-1 h-3 w-3" />
                   )}
-                  Przetłumacz
+                  {t("form.translate")}
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
@@ -348,14 +350,14 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         </div>
         <Input
           id="description_short"
-          placeholder="Krótki opis produktu..."
+          placeholder={t("form.shortDescriptionPlaceholder")}
           {...register("description_short")}
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="description_long">Opis</Label>
+          <Label htmlFor="description_long">{t("form.longDescription")}</Label>
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -370,7 +372,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
               ) : (
                 <Sparkles className="mr-1 h-3 w-3" />
               )}
-              Popraw
+              {t("form.improve")}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -386,7 +388,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                   ) : (
                     <Languages className="mr-1 h-3 w-3" />
                   )}
-                  Przetłumacz
+                  {t("form.translate")}
                   <ChevronDown className="ml-1 h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
@@ -406,36 +408,36 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         </div>
         <Textarea
           id="description_long"
-          placeholder="Pełny opis produktu..."
+          placeholder={t("form.longDescriptionPlaceholder")}
           rows={5}
           {...register("description_long")}
         />
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-sm font-medium">Wymiary i waga</h3>
+        <h3 className="text-sm font-medium">{t("form.dimensionsAndWeight")}</h3>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <div className="space-y-2">
-            <Label htmlFor="weight">Waga (kg)</Label>
+            <Label htmlFor="weight">{t("form.weight")}</Label>
             <Input id="weight" type="number" step="0.001" min="0" placeholder="0.000" {...register("weight", { valueAsNumber: true })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="width">Szerokość (cm)</Label>
+            <Label htmlFor="width">{t("form.width")}</Label>
             <Input id="width" type="number" step="0.01" min="0" placeholder="0.00" {...register("width", { valueAsNumber: true })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="height">Wysokość (cm)</Label>
+            <Label htmlFor="height">{t("form.height")}</Label>
             <Input id="height" type="number" step="0.01" min="0" placeholder="0.00" {...register("height", { valueAsNumber: true })} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="depth">Głębokość (cm)</Label>
+            <Label htmlFor="depth">{t("form.depth")}</Label>
             <Input id="depth" type="number" step="0.01" min="0" placeholder="0.00" {...register("depth", { valueAsNumber: true })} />
           </div>
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="image_url">Zdjęcie główne (URL)</Label>
+        <Label htmlFor="image_url">{t("form.mainImage")}</Label>
         <div className="flex gap-2">
           <Input
             id="image_url"
@@ -451,7 +453,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             onClick={() => mainFileRef.current?.click()}
           >
             {uploadingMain ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Wgraj
+            {t("form.uploadImage")}
           </Button>
           <input
             ref={mainFileRef}
@@ -462,7 +464,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
               const file = e.target.files?.[0];
               if (!file) return;
               if (file.size > 5 * 1024 * 1024) {
-                toast.error("Plik jest za duży. Maksymalny rozmiar: 5 MB.");
+                toast.error(t("form.fileTooLarge"));
                 e.target.value = "";
                 return;
               }
@@ -471,7 +473,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                 const { url } = await uploadFile(file);
                 setValue("image_url", url, { shouldValidate: true });
               } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Błąd uploadu");
+                toast.error(err instanceof Error ? err.message : t("form.uploadError"));
               } finally {
                 setUploadingMain(false);
                 e.target.value = "";
@@ -482,7 +484,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
         {imageUrlValue && imageUrlValue.trim() !== "" && (
           <img
             src={imageUrlValue}
-            alt="Podgląd zdjęcia głównego"
+            alt={t("form.mainImagePreview")}
             className="h-32 w-32 rounded-lg object-cover border"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
@@ -492,18 +494,18 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       </div>
 
       <div className="space-y-2">
-        <Label>Dodatkowe zdjęcia</Label>
+        <Label>{t("form.additionalImages")}</Label>
         <div className="space-y-2">
           {imageList.map((img, index) => (
             <div key={index} className="flex items-start gap-2">
               <div className="flex-1 space-y-1">
                 <Input
-                  placeholder="URL zdjęcia"
+                  placeholder={t("form.imageUrl")}
                   value={img.url}
                   onChange={(e) => updateImage(index, "url", e.target.value)}
                 />
                 <Input
-                  placeholder="Tekst alternatywny (opcjonalny)"
+                  placeholder={t("form.imageAlt")}
                   value={img.alt}
                   onChange={(e) => updateImage(index, "alt", e.target.value)}
                 />
@@ -511,7 +513,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
               {img.url.trim() !== "" && (
                 <img
                   src={img.url}
-                  alt={img.alt || `Zdjęcie ${index + 1}`}
+                  alt={img.alt || `${t("form.mainImagePreview")} ${index + 1}`}
                   className="h-10 w-10 rounded border object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
@@ -533,7 +535,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
           {imageList.length < 16 && (
             <Button type="button" variant="outline" size="sm" onClick={addImage}>
               <Plus className="h-4 w-4" />
-              Dodaj zdjęcie
+              {t("form.addImage")}
             </Button>
           )}
           <Button
@@ -544,7 +546,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
             onClick={() => galleryFileRef.current?.click()}
           >
             {uploadingIdx !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Wgraj zdjęcie
+            {t("form.uploadPhoto")}
           </Button>
           <input
             ref={galleryFileRef}
@@ -555,7 +557,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
               const file = e.target.files?.[0];
               if (!file) return;
               if (file.size > 5 * 1024 * 1024) {
-                toast.error("Plik jest za duży. Maksymalny rozmiar: 5 MB.");
+                toast.error(t("form.fileTooLarge"));
                 e.target.value = "";
                 return;
               }
@@ -564,7 +566,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
                 const { url } = await uploadFile(file);
                 setImageList((prev) => [...prev, { url, alt: "" }]);
               } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Błąd uploadu");
+                toast.error(err instanceof Error ? err.message : t("form.uploadError"));
               } finally {
                 setUploadingIdx(null);
                 e.target.value = "";
@@ -579,19 +581,19 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>Produkt dropship</Label>
+            <Label>{t("form.dropshipProduct")}</Label>
             <p className="text-xs text-muted-foreground">
-              Zamowienia z tym produktem beda automatycznie routowane do dostawcy
+              {t("form.dropshipDescription")}
             </p>
           </div>
           <Switch checked={isDropship} onCheckedChange={setIsDropship} />
         </div>
         {isDropship && (
           <div className="space-y-2">
-            <Label>Dostawca dropship</Label>
+            <Label>{t("form.dropshipSupplier")}</Label>
             <Select value={dropshipSupplierId} onValueChange={setDropshipSupplierId}>
               <SelectTrigger>
-                <SelectValue placeholder="Wybierz dostawce" />
+                <SelectValue placeholder={t("form.dropshipSupplierPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {suppliersData?.items?.map((s) => (
@@ -608,16 +610,16 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       <Separator />
 
       <div className="space-y-2">
-        <Label>Tagi</Label>
+        <Label>{tc("tags")}</Label>
         <TagInput tags={tags} onChange={setTags} />
       </div>
 
       <Button type="submit" disabled={isLoading}>
         {isLoading
-          ? "Zapisywanie..."
+          ? tc("saving")
           : product
-            ? "Zapisz zmiany"
-            : "Utwórz produkt"}
+            ? t("form.submitUpdate")
+            : t("form.submitCreate")}
       </Button>
     </form>
   );

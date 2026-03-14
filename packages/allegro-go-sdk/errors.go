@@ -6,13 +6,20 @@ import (
 	"strings"
 )
 
-var (
-	ErrUnauthorized = errors.New("allegro: unauthorized")
-	ErrForbidden    = errors.New("allegro: forbidden")
-	ErrNotFound     = errors.New("allegro: not found")
-	ErrRateLimited  = errors.New("allegro: rate limited")
-	ErrServerError  = errors.New("allegro: server error")
-)
+// ErrUnauthorized is returned when the API responds with 401 Unauthorized.
+var ErrUnauthorized = errors.New("allegro: unauthorized")
+
+// ErrForbidden is returned when the API responds with 403 Forbidden.
+var ErrForbidden = errors.New("allegro: forbidden")
+
+// ErrNotFound is returned when the API responds with 404 Not Found.
+var ErrNotFound = errors.New("allegro: not found")
+
+// ErrRateLimited is returned when the API responds with 429 Too Many Requests.
+var ErrRateLimited = errors.New("allegro: rate limited")
+
+// ErrServerError is returned when the API responds with a 5xx status code.
+var ErrServerError = errors.New("allegro: server error")
 
 // APIError represents an error response from the Allegro API.
 type APIError struct {

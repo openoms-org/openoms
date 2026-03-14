@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const statusColors: Record<string, string> = {
   active: "bg-green-500/10 text-green-700 dark:text-green-400",
@@ -58,6 +59,7 @@ export default function RecurringOrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = useTranslations("recurringOrders");
   const { id } = use(params);
   const router = useRouter();
   const { data: order, isLoading, refetch } = useRecurringOrder(id);
@@ -74,7 +76,7 @@ export default function RecurringOrderDetailPage({
       <div className="text-center py-12">
         <p className="text-muted-foreground">Nie znaleziono subskrypcji</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/recurring-orders")}>
-          Wróc do listy
+          {t("wrocDoListy")}
         </Button>
       </div>
     );

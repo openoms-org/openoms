@@ -7,14 +7,17 @@ import (
 	inpost "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
 
+// InPostPointHandler handles HTTP requests for InPost parcel locker point searches.
 type InPostPointHandler struct {
 	inpostClient *inpost.Client
 }
 
+// NewInPostPointHandler creates a new InPostPointHandler.
 func NewInPostPointHandler(inpostClient *inpost.Client) *InPostPointHandler {
 	return &InPostPointHandler{inpostClient: inpostClient}
 }
 
+// Search returns InPost parcel locker points matching the given query.
 func (h *InPostPointHandler) Search(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("query")
 	if query == "" {
@@ -33,7 +36,7 @@ func (h *InPostPointHandler) Search(w http.ResponseWriter, r *http.Request) {
 		10,
 	)
 	if err != nil {
-		slog.Error("inpost point search failed", "error", err, "query", query)
+		slog.Error("inpost point search failed", "error", err, "query", query) //nolint:gosec
 		writeError(w, http.StatusUnprocessableEntity, "failed to search InPost points")
 		return
 	}

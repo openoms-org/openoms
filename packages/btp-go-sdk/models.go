@@ -193,16 +193,16 @@ type PaymentMethodsResponse struct {
 
 // CountryGovArea represents a governing/territorial area.
 type CountryGovArea struct {
-	CountryID      string    `json:"countryId"`
-	GovAreaLevel   int       `json:"govAreaLevel"`
-	GovAreaID      string    `json:"govAreaId"`
-	ParentGovArea  string    `json:"parentGovAreaId"`
-	Name           string    `json:"name"`
-	Enabled        bool      `json:"enabled"`
-	SortID         int       `json:"sortId"`
-	Code           string    `json:"code"`
-	ExtCode        string    `json:"extCode"`
-	EntryInfo      EntryInfo `json:"entryInfo"`
+	CountryID     string    `json:"countryId"`
+	GovAreaLevel  int       `json:"govAreaLevel"`
+	GovAreaID     string    `json:"govAreaId"`
+	ParentGovArea string    `json:"parentGovAreaId"`
+	Name          string    `json:"name"`
+	Enabled       bool      `json:"enabled"`
+	SortID        int       `json:"sortId"`
+	Code          string    `json:"code"`
+	ExtCode       string    `json:"extCode"`
+	EntryInfo     EntryInfo `json:"entryInfo"`
 }
 
 // EntryInfo contains create/update metadata for an entity.
@@ -287,7 +287,7 @@ type InvoicesResponse struct {
 
 // InvoiceDocument represents a single invoice.
 type InvoiceDocument struct {
-	InvoiceCreatedOperation string               `json:"invoiceCreatedOperation"` // CREATED, MODIFIED
+	InvoiceCreatedOperation string                `json:"invoiceCreatedOperation"` // CREATED, MODIFIED
 	Header                  InvoiceDocumentHeader `json:"header"`
 	Parties                 InvoiceParties        `json:"parties"`
 	Lines                   []InvoiceLine         `json:"lines"`
@@ -371,21 +371,21 @@ type Waybill struct {
 
 // DocumentNotifyConfig is used to configure invoice/waybill webhook notifications.
 type DocumentNotifyConfig struct {
-	EndpointURL    string                    `json:"endpointUrl"`
-	HTTPMethod     string                    `json:"httpMethod"`
-	Mode           string                    `json:"mode"`   // KeyOnly, WholeBody
-	Format         string                    `json:"format"` // JSON, XML
-	Authentication DocumentNotifyAuth        `json:"authentication"`
+	EndpointURL    string             `json:"endpointUrl"`
+	HTTPMethod     string             `json:"httpMethod"`
+	Mode           string             `json:"mode"`   // KeyOnly, WholeBody
+	Format         string             `json:"format"` // JSON, XML
+	Authentication DocumentNotifyAuth `json:"authentication"`
 }
 
 // DocumentNotifyAuth contains authentication settings for webhook notifications.
 type DocumentNotifyAuth struct {
 	AuthKey1     string `json:"authKey1"`
 	AuthKey2     string `json:"authKey2"`
-	AuthType     string `json:"authType"`     // Basic, Bearer, ApiKey
+	AuthType     string `json:"authType"` // Basic, Bearer, ApiKey
 	AuthKey1Name string `json:"authKey1Name"`
 	AuthKey2Name string `json:"authKey2Name"`
-	AuthSendIn   string `json:"authSendIn"`   // Query, Header, Cookie
+	AuthSendIn   string `json:"authSendIn"` // Query, Header, Cookie
 }
 
 // --- Files ---

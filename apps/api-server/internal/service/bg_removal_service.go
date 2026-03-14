@@ -36,7 +36,7 @@ func (s *BGRemovalService) IsConfigured() bool {
 // The returned content type is always "image/png" (transparent background).
 func (s *BGRemovalService) RemoveBackground(ctx context.Context, imageData []byte, filename string) ([]byte, string, error) {
 	if !s.IsConfigured() {
-		return nil, "", fmt.Errorf("usuwanie tła nie jest skonfigurowane — ustaw REMOVEBG_API_KEY")
+		return nil, "", fmt.Errorf("background removal not configured — set REMOVEBG_API_KEY")
 	}
 
 	// Build multipart form body
@@ -71,7 +71,7 @@ func (s *BGRemovalService) RemoveBackground(ctx context.Context, imageData []byt
 	if err != nil {
 		return nil, "", fmt.Errorf("remove.bg request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {

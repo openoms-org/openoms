@@ -13,10 +13,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// UserHandler handles HTTP requests for user management within a tenant.
 type UserHandler struct {
 	userService *service.UserService
 }
 
+// NewUserHandler creates a new UserHandler.
 func NewUserHandler(userService *service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
@@ -29,6 +31,32 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 	user, err := h.userService.GetCurrentUser(r.Context(), tenantID, userID)
 	if err != nil {
 		writeServerError(w, "failed to get user", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, user)
+}
+
+// UpdateMe allows the current user to update their own profile (language).
+func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	userID := middleware.UserIDFromContext(r.Context())
+
+	var req model.UpdateMeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	updateReq := model.UpdateUserRequest{
+		Language: req.Language,
+	}
+	user, err := h.userService.UpdateUser(r.Context(), tenantID, userID, updateReq, userID, "", clientIP(r))
+	if err != nil {
+		writeServerError(w, "failed to update user", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, user)
@@ -67,7 +95,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, service.ErrUserLimitExceeded):
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Osiągnięto limit użytkowników w planie (max: %d). Zmień plan aby dodać więcej użytkowników.", req.MaxUsers))
+				"User limit reached for current plan (max: %d). Upgrade to add more.", req.MaxUsers))
 		case errors.Is(err, service.ErrDuplicateEmail):
 			writeError(w, http.StatusConflict, "email already exists in this tenant")
 		default:

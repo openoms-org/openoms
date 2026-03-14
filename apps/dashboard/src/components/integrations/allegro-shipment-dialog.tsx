@@ -28,6 +28,7 @@ import {
 } from "@/hooks/use-allegro";
 import type { Order } from "@/types/api";
 import { getErrorMessage } from "@/lib/api-client";
+import { useTranslations } from "next-intl";
 
 interface AllegroShipmentDialogProps {
   open: boolean;
@@ -42,6 +43,7 @@ export function AllegroShipmentDialog({
   onOpenChange,
   order,
 }: AllegroShipmentDialogProps) {
+  const t = useTranslations("integrations");
   const [step, setStep] = useState<Step>("select-service");
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [weight, setWeight] = useState("1");
@@ -74,7 +76,7 @@ export function AllegroShipmentDialog({
 
   const handleCreateShipment = async () => {
     if (!selectedServiceId) {
-      toast.error("Wybierz usługę dostawy");
+      toast.error(t("selectDeliveryService"));
       return;
     }
 
@@ -126,7 +128,7 @@ export function AllegroShipmentDialog({
 
       setCreatedShipmentId(result.shipmentId);
       setStep("result");
-      toast.success("Przesyłka została utworzona w Allegro");
+      toast.success(t("allegroShipmentCreated"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -137,7 +139,7 @@ export function AllegroShipmentDialog({
     setIsDownloading(true);
     try {
       await downloadAllegroLabel(createdShipmentId);
-      toast.success("Etykieta została pobrana");
+      toast.success(t("labelDownloaded"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -151,25 +153,25 @@ export function AllegroShipmentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Wyślij z Allegro
+            {t("allegroSendTitle")}
           </DialogTitle>
           <DialogDescription>
-            Utwórz przesyłkę i wygeneruj etykietę kurierską przez Allegro.
+            {t("allegroCreateShipmentDesc")}
           </DialogDescription>
         </DialogHeader>
 
         {step === "select-service" && (
           <div className="space-y-4">
             <div>
-              <Label>Usługa dostawy</Label>
+              <Label>{t("deliveryService")}</Label>
               {isLoadingServices ? (
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Ładowanie usług dostawy...
+                  {t("loadingDeliveryServices")}
                 </div>
               ) : deliveryServices.length === 0 ? (
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Brak dostępnych usług dostawy. Sprawdź konfigurację Allegro.
+                  {t("noDeliveryServices")}
                 </p>
               ) : (
                 <Select
@@ -177,7 +179,7 @@ export function AllegroShipmentDialog({
                   onValueChange={setSelectedServiceId}
                 >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Wybierz usługę dostawy..." />
+                    <SelectValue placeholder={t("selectDeliveryServicePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {deliveryServices.map((svc) => (
@@ -192,13 +194,13 @@ export function AllegroShipmentDialog({
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Anuluj
+                {t("cancel")}
               </Button>
               <Button
                 onClick={() => setStep("package-details")}
                 disabled={!selectedServiceId}
               >
-                Dalej
+                {t("next")}
               </Button>
             </DialogFooter>
           </div>
@@ -208,7 +210,7 @@ export function AllegroShipmentDialog({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Waga (kg)</Label>
+                <Label>{t("weightKg")}</Label>
                 <Input
                   type="number"
                   step="0.1"
@@ -219,7 +221,7 @@ export function AllegroShipmentDialog({
                 />
               </div>
               <div>
-                <Label>Długość (cm)</Label>
+                <Label>{t("addPackage.length")}</Label>
                 <Input
                   type="number"
                   step="1"
@@ -230,7 +232,7 @@ export function AllegroShipmentDialog({
                 />
               </div>
               <div>
-                <Label>Szerokość (cm)</Label>
+                <Label>{t("addPackage.width")}</Label>
                 <Input
                   type="number"
                   step="1"
@@ -241,7 +243,7 @@ export function AllegroShipmentDialog({
                 />
               </div>
               <div>
-                <Label>Wysokość (cm)</Label>
+                <Label>{t("addPackage.height")}</Label>
                 <Input
                   type="number"
                   step="1"
@@ -254,7 +256,7 @@ export function AllegroShipmentDialog({
             </div>
 
             <div className="rounded-md border bg-muted/50 p-3 text-sm">
-              <p className="font-medium">Dane odbiorcy</p>
+              <p className="font-medium">{t("receiverData")}</p>
               <p className="text-muted-foreground">
                 {order.shipping_address?.name || order.customer_name}
               </p>
@@ -272,7 +274,7 @@ export function AllegroShipmentDialog({
                 variant="outline"
                 onClick={() => setStep("select-service")}
               >
-                Wstecz
+                {t("back")}
               </Button>
               <Button
                 onClick={handleCreateShipment}
@@ -281,10 +283,10 @@ export function AllegroShipmentDialog({
                 {createShipment.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Tworzenie...
+                    {t("creating")}
                   </>
                 ) : (
-                  "Utwórz przesyłkę"
+                  t("createShipment")
                 )}
               </Button>
             </DialogFooter>
@@ -295,9 +297,9 @@ export function AllegroShipmentDialog({
           <div className="space-y-4">
             <div className="flex flex-col items-center gap-3 py-4">
               <CheckCircle2 className="h-12 w-12 text-green-500" />
-              <p className="text-lg font-medium">Przesyłka utworzona</p>
+              <p className="text-lg font-medium">{t("triggers.shipment.created")}</p>
               <p className="text-sm text-muted-foreground text-center">
-                ID przesyłki: {createdShipmentId}
+                {t("shipmentIdLabel", { id: createdShipmentId })}
               </p>
             </div>
 
@@ -311,12 +313,12 @@ export function AllegroShipmentDialog({
               ) : (
                 <Download className="mr-2 h-4 w-4" />
               )}
-              Pobierz etykietę
+              {t("downloadLabel")}
             </Button>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Zamknij
+                {t("close")}
               </Button>
             </DialogFooter>
           </div>

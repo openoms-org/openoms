@@ -33,7 +33,7 @@ func TestSpec_Auth_UsesBasicAuthWithFidHeader(t *testing.T) {
 		if r.URL.Path == "/auth/login" {
 			t.Error("should NOT call /auth/login — DPD uses Basic Auth, not session tokens")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"token":"fake"}`))
+			_, _ = w.Write([]byte(`{"token":"fake"}`))
 			return
 		}
 
@@ -57,7 +57,7 @@ func TestSpec_Auth_UsesBasicAuthWithFidHeader(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[]}`))
+		_, _ = w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[]}`))
 	}))
 	defer srv.Close()
 
@@ -83,12 +83,12 @@ func TestSpec_Auth_NoSessionTokenFlow(t *testing.T) {
 		if r.URL.Path == "/auth/login" {
 			authLoginCalled = true
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"token":"session-token"}`))
+			_, _ = w.Write([]byte(`{"token":"session-token"}`))
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[]}`))
+		_, _ = w.Write([]byte(`{"status":"OK","sessionId":1,"packages":[]}`))
 	}))
 	defer srv.Close()
 
@@ -135,14 +135,14 @@ func TestSpec_CreateShipment_PostsToGeneratePackagesNumbers(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/login" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"token":"t"}`))
+			_, _ = w.Write([]byte(`{"token":"t"}`))
 			return
 		}
 		gotPath = r.URL.Path
 		gotMethod = r.Method
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"status": "OK",
 			"sessionId": 42,
 			"packages": [{
@@ -184,12 +184,12 @@ func TestSpec_CreateShipment_ResponseContainsSessionIdAndWaybill(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/login" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"token":"t"}`))
+			_, _ = w.Write([]byte(`{"token":"t"}`))
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		// DPD official response structure
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"status": "OK",
 			"sessionId": 42,
 			"packages": [{
@@ -230,7 +230,7 @@ func TestSpec_GetLabel_PostsToGenerateSpedLabels(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/login" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"token":"t"}`))
+			_, _ = w.Write([]byte(`{"token":"t"}`))
 			return
 		}
 		gotPath = r.URL.Path
@@ -242,7 +242,7 @@ func TestSpec_GetLabel_PostsToGenerateSpedLabels(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"OK","documentData":"JVBERi0="}`))
+		_, _ = w.Write([]byte(`{"status":"OK","documentData":"JVBERi0="}`))
 	}))
 	defer srv.Close()
 
@@ -274,7 +274,7 @@ func TestSpec_GetTracking_ReturnsNotAvailableError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/login" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"token":"t"}`))
+			_, _ = w.Write([]byte(`{"token":"t"}`))
 			return
 		}
 		// If tracking endpoint is called, it means SDK hasn't been fixed
@@ -331,9 +331,9 @@ func TestSpec_StatusMapping_DPDStatuses(t *testing.T) {
 // --- Edge Cases ---
 
 func TestSpec_CreateShipment_AuthFailure_ReturnsError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"Invalid credentials"}`))
+		_, _ = w.Write([]byte(`{"message":"Invalid credentials"}`))
 	}))
 	defer srv.Close()
 
@@ -355,11 +355,11 @@ func TestSpec_CreateShipment_EmptyParcels_ReturnsError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/auth/login" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"token":"t"}`))
+			_, _ = w.Write([]byte(`{"token":"t"}`))
 			return
 		}
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"message":"At least one parcel required"}`))
+		_, _ = w.Write([]byte(`{"message":"At least one parcel required"}`))
 	}))
 	defer srv.Close()
 

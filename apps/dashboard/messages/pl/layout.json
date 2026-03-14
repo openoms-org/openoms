@@ -1,0 +1,244 @@
+{
+  "auth": {
+    "alreadyHaveAccount": "Masz już konto?",
+    "brakIdentyfikatoraSesjiPłatnosci": "Brak identyfikatora sesji płatności",
+    "brakIdentyfikatoraSesjiWrocNaStroneWyboruPlanu": "Brak identyfikatora sesji. Wróć na stronę wyboru planu.",
+    "chooseAnotherPlan": "Wybierz inny plan",
+    "choosePlan": "Wybierz plan",
+    "completeInviteRegistration": "Dokończ rejestrację z zaproszenia",
+    "createAccount": "Utwórz konto",
+    "dokonczRejestracje": "Dokończ rejestrację",
+    "form": {
+      "fullName": "Imię i nazwisko",
+      "orgName": "Nazwa organizacji",
+      "orgSlug": "Slug organizacji"
+    },
+    "login": {
+      "email": "Email",
+      "hidePassword": "Ukryj hasło",
+      "noAccount": "Nie masz konta?",
+      "organization": "Organizacja",
+      "organizationPlaceholder": "moja-firma",
+      "password": "Hasło",
+      "register": "Zarejestruj się",
+      "showPassword": "Pokaż hasło",
+      "submit": "Zaloguj się",
+      "submitting": "Logowanie...",
+      "subtitle": "Zaloguj się do panelu OpenOMS",
+      "title": "Logowanie"
+    },
+    "logout": "Wyloguj się",
+    "minimum8Znakow": "Minimum 8 znaków",
+    "missingTokenUseInviteLink": "Brak tokenu. Użyj linku otrzymanego w zaproszeniu lub po zakupie subskrypcji.",
+    "nieUdałoSieZweryfikowacPłatnosciSprobujPonownieZaC": "Nie udało się zweryfikować płatności. Spróbuj ponownie za chwilę.",
+    "płatnoscNieZostałaJeszczePotwierdzonaSprobujOdswie": "Płatność nie została jeszcze potwierdzona. Spróbuj odświeżyć stronę za chwilę.",
+    "register": {
+      "freeTrialStart": "{days} dni za darmo na start",
+      "haveAccount": "Masz już konto?",
+      "haveInvite": "Masz token zaproszenia?",
+      "loadError": "Nie udało się załadować planów",
+      "loginLink": "Zaloguj się",
+      "monthly": "Miesięcznie",
+      "mostPopular": "Najpopularniejszy",
+      "noPlans": "Brak dostępnych planów",
+      "perMonth": "/mies.",
+      "plansNotConfigured": "Plany cenowe nie są jeszcze skonfigurowane.",
+      "redirecting": "Przekierowywanie...",
+      "registerWithInvite": "Zarejestruj się z zaproszeniem",
+      "startFree": "Zacznij za darmo",
+      "title": "Wybierz plan dla swojego biznesu",
+      "trialDays": "{days} dni za darmo",
+      "trialDescription": "Wszystkie plany z pełnym dostępem przez {days} dni. Bez karty na start. Zrezygnuj kiedy chcesz.",
+      "yearly": "Rocznie",
+      "yearlyTotal": "{price} rocznie"
+    },
+    "registering": "Rejestracja...",
+    "sesjaPłatnosciNieZostałaZnaleziona": "Sesja płatności nie została znaleziona",
+    "sprawdzamyStatusTwojejPłatnosci": "Sprawdzamy status Twojej płatności",
+    "taSesjaPłatnosciZostałaJuzWykorzystana": "Ta sesja płatności została już wykorzystana",
+    "twoFa": {
+      "backToLogin": "Wróć do logowania",
+      "codeHint": "Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej",
+      "codeLabel": "Kod weryfikacyjny",
+      "subtitle": "Kod z aplikacji uwierzytelniającej",
+      "title": "Weryfikacja 2FA",
+      "verify": "Zweryfikuj",
+      "verifying": "Weryfikacja..."
+    },
+    "validation": {
+      "emailInvalid": "Nieprawidłowy adres email",
+      "fullNameRequired": "Imię i nazwisko jest wymagane",
+      "orgNameRequired": "Nazwa organizacji jest wymagana",
+      "orgRequired": "Slug organizacji jest wymagany",
+      "orgSlugRequired": "Slug organizacji jest wymagany",
+      "passwordDigit": "Hasło musi zawierać cyfrę",
+      "passwordMinLength": "Hasło musi mieć minimum 8 znaków",
+      "passwordRequired": "Hasło jest wymagane",
+      "passwordUppercase": "Hasło musi zawierać wielką literę",
+      "slugFormat": "Slug może zawierać tylko małe litery, cyfry i myślniki"
+    },
+    "weryfikacjaPłatnosci": "Weryfikacja płatności..."
+  },
+  "breadcrumbs": {
+    "allegro": "Allegro",
+    "amazon": "Amazon",
+    "audit": "Dziennik aktywności",
+    "automation": "Automatyzacja",
+    "bundles": "Zestawy",
+    "catalog": "Katalog",
+    "categories": "Kategorie",
+    "company": "Firma",
+    "currencies": "Waluty",
+    "custom-fields": "Pola",
+    "customers": "Klienci",
+    "deliveries": "Dostarczenia",
+    "delivery": "Dostawa",
+    "details": "Szczegóły",
+    "disputes": "Spory",
+    "email": "E-mail",
+    "finance": "Finanse",
+    "helpdesk": "Helpdesk",
+    "import": "Importuj",
+    "integrations": "Połączenia",
+    "inventory": "Kontrola magazynowa",
+    "invoices": "Faktury",
+    "invoicing": "Fakturowanie",
+    "ksef": "KSeF",
+    "listings": "Oferty marketplace",
+    "marketing": "Marketing",
+    "messages": "Wiadomości",
+    "new": "Nowe",
+    "notifications": "Powiadomienia",
+    "offers": "Oferty",
+    "order-statuses": "Statusy",
+    "orders": "Zamówienia",
+    "packing": "Pakowanie",
+    "policies": "Polityki",
+    "price-lists": "Cenniki",
+    "print-templates": "Szablony wydruków",
+    "product-categories": "Kategorie",
+    "products": "Produkty",
+    "promotions": "Promocje",
+    "ratings": "Oceny",
+    "reports": "Raporty",
+    "return-request": "Zgłoszenie zwrotu",
+    "returns": "Zwroty",
+    "roles": "Role",
+    "security": "Bezpieczeństwo",
+    "settings": "Ustawienia",
+    "shipments": "Przesyłki",
+    "sms": "SMS",
+    "stocktakes": "Inwentaryzacja",
+    "suppliers": "Dostawcy",
+    "sync-jobs": "Synchronizacja",
+    "users": "Użytkownicy",
+    "variants": "Warianty",
+    "warehouse-documents": "Dokumenty magazynowe",
+    "warehouses": "Magazyny",
+    "webhook-deliveries": "Dostarczenia webhooków",
+    "webhooks": "Webhooki"
+  },
+  "commandPalette": {
+    "navigation": "Nawigacja",
+    "newCustomer": "Nowy klient",
+    "newOrder": "Nowe zamówienie",
+    "newProduct": "Nowy produkt",
+    "newShipment": "Nowa przesyłka",
+    "noResults": "Nie znaleziono wyników.",
+    "placeholder": "Wyszukaj stronę lub akcję...",
+    "quickActions": "Akcje",
+    "title": "Paleta poleceń"
+  },
+  "layout": {
+    "connection": {
+      "connected": "Połączenie aktywne",
+      "disconnected": "Brak połączenia z serwerem"
+    },
+    "logout": "Wyloguj się",
+    "theme": {
+      "dark": "Ciemny",
+      "light": "Jasny",
+      "system": "Systemowy",
+      "toggle": "Zmień motyw"
+    }
+  },
+  "layout.connection": {
+    "connected": "Połączono",
+    "disconnected": "Rozłączono"
+  },
+  "layout.theme": {
+    "dark": "mr-2 h-4 w-4",
+    "light": "Jasny",
+    "system": "Systemowy",
+    "toggle": "Przełącz motyw"
+  },
+  "shared": {
+    "categoryPicker": {
+      "noCategory": "Brak kategorii",
+      "placeholder": "Wybierz kategorię...",
+      "searchPlaceholder": "Szukaj kategorii..."
+    },
+    "developmentBanner": {
+      "badge": "W budowie",
+      "message": "Ta integracja jest w trakcie budowy i nie została jeszcze zweryfikowana produkcyjnie. Używaj na własną odpowiedzialność.",
+      "title": "W budowie"
+    },
+    "editableCell": {
+      "doubleClickToEdit": "Kliknij dwukrotnie, aby edytować",
+      "saveError": "Nie udało się zapisać zmian",
+      "saving": "Zapisywanie..."
+    },
+    "errorBoundary": {
+      "genericError": "Coś poszło nie tak",
+      "genericErrorMessage": "Wystąpił nieoczekiwany błąd. Spróbuj odświeżyć stronę.",
+      "logIn": "Zaloguj się",
+      "serverError": "Błąd serwera",
+      "serverErrorMessage": "Błąd serwera. Spróbuj ponownie później.",
+      "sessionExpired": "Sesja wygasła",
+      "sessionExpiredMessage": "Sesja wygasła. Zaloguj się ponownie.",
+      "tooManyRequests": "Zbyt wiele żądań",
+      "tooManyRequestsMessage": "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.",
+      "tryAgain": "Spróbuj ponownie"
+    },
+    "mobileNav": {
+      "openMenu": "Otwórz menu"
+    },
+    "nieprawidłow": "nieprawidłow",
+    "noData": "Brak danych",
+    "odnowSubskrypcje": "Odnów subskrypcję →",
+    "orderSearch": {
+      "noResults": "Nie znaleziono zamówień.",
+      "placeholder": "Wybierz zamówienie...",
+      "searchPlaceholder": "Szukaj zamówienia..."
+    },
+    "paczkomat": {
+      "closeAndSearch": "Zamknij dialog i użyj wyszukiwarki tekstowej.",
+      "inpostPanel": "panelu InPost",
+      "minChars": "Wpisz min. 2 znaki, aby wyszukać",
+      "noResults": "Nie znaleziono paczkomatów",
+      "placeholder": "Wybierz paczkomat...",
+      "searchPlaceholder": "Wpisz miasto lub kod paczkomatu...",
+      "selectPoint": "Wybierz paczkomat InPost",
+      "selected": "Paczkomat: {name}",
+      "showMap": "Pokaż mapę paczkomatów",
+      "showOnMap": "Pokaż na mapie",
+      "tokenDomain": "czy token jest wygenerowany dla domeny:",
+      "tokenError": "Błąd tokenu GeoWidget",
+      "tokenHelp": "Token GeoWidget jest przypisany do konkretnej domeny. Sprawdź w"
+    },
+    "sidebar": {
+      "collapseMenu": "Zwiń menu",
+      "expandMenu": "Rozwiń menu (Ctrl+B)",
+      "mainMenu": "Menu główne"
+    },
+    "tableDensity": {
+      "comfortable": "Standardowy",
+      "compact": "Kompaktowy",
+      "spacious": "Przestronny"
+    },
+    "tagInput": {
+      "placeholder": "Dodaj tag..."
+    },
+    "zarzadzajSubskrypcja": "Zarządzaj subskrypcją →"
+  }
+}

@@ -123,6 +123,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { AlertTriangle, Check, ChevronsUpDown, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { sanitizeUrl } from "@/lib/utils";
 import { PROVIDER_CATEGORIES } from "@/lib/constants";
 
@@ -632,16 +633,7 @@ function ListingRow({
 
 // ===================== Marketplace Picker =====================
 
-const MARKETPLACE_PROVIDER_INFO: Record<string, { name: string; logo: string; description: string }> = {
-  allegro: { name: "Allegro", logo: "/logos/allegro.svg", description: "Wystawianie ofert na Allegro.pl" },
-  woocommerce: { name: "WooCommerce", logo: "/logos/woocommerce.svg", description: "Publikacja produktu w sklepie WooCommerce" },
-  olx: { name: "OLX", logo: "/logos/olx.svg", description: "Wystawianie ogłoszeń na OLX.pl" },
-  erli: { name: "Erli", logo: "/logos/erli.svg", description: "Wystawianie ofert na Erli.pl" },
-  amazon: { name: "Amazon", logo: "/logos/amazon.svg", description: "Publikacja oferty na Amazon" },
-  ebay: { name: "eBay", logo: "/logos/ebay.svg", description: "Wystawianie ofert na eBay" },
-  kaufland: { name: "Kaufland", logo: "/logos/kaufland.svg", description: "Publikacja oferty na Kaufland.de" },
-  empik: { name: "Empik Marketplace", logo: "/logos/empik.svg", description: "Wystawianie ofert na Empik Marketplace" },
-};
+// MARKETPLACE_PROVIDER_INFO moved inside CreateListingWizard to use translations
 
 function CreateListingWizard({
   product,
@@ -650,8 +642,20 @@ function CreateListingWizard({
   product: Product;
   onClose: () => void;
 }) {
+  const tl = useTranslations("listings");
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const { data: integrations } = useIntegrations();
+
+  const MARKETPLACE_PROVIDER_INFO: Record<string, { name: string; logo: string; description: string }> = {
+    allegro: { name: "Allegro", logo: "/logos/allegro.svg", description: tl("providerAllegro") },
+    woocommerce: { name: "WooCommerce", logo: "/logos/woocommerce.svg", description: tl("providerWooCommerce") },
+    olx: { name: "OLX", logo: "/logos/olx.svg", description: tl("providerOlx") },
+    erli: { name: "Erli", logo: "/logos/erli.svg", description: tl("providerErli") },
+    amazon: { name: "Amazon", logo: "/logos/amazon.svg", description: tl("providerAmazon") },
+    ebay: { name: "eBay", logo: "/logos/ebay.svg", description: tl("providerEbay") },
+    kaufland: { name: "Kaufland", logo: "/logos/kaufland.svg", description: tl("providerKaufland") },
+    empik: { name: "Empik Marketplace", logo: "/logos/empik.svg", description: tl("providerEmpik") },
+  };
 
   // Filter to only marketplace providers that have active integrations
   const availableProviders = useMemo(() => {
@@ -668,7 +672,7 @@ function CreateListingWizard({
           description: `Integracja ${i.provider}`,
         }),
       }));
-  }, [integrations]);
+  }, [integrations, MARKETPLACE_PROVIDER_INFO]);
 
   // Show picker always — user should explicitly choose the marketplace
 
@@ -698,12 +702,12 @@ function CreateListingWizard({
           <DialogHeader>
             <DialogTitle>{MARKETPLACE_PROVIDER_INFO[selectedProvider]?.name ?? selectedProvider}</DialogTitle>
             <DialogDescription>
-              Wystawianie na tym marketplace będzie wkrótce dostępne.
+              {tl("comingSoon")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedProvider(null)}>Wróć</Button>
-            <Button variant="outline" onClick={onClose}>Zamknij</Button>
+            <Button variant="outline" onClick={() => setSelectedProvider(null)}>{tl("goBack")}</Button>
+            <Button variant="outline" onClick={onClose}>{tl("close")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -715,19 +719,19 @@ function CreateListingWizard({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Wystaw na marketplace</DialogTitle>
+          <DialogTitle>{tl("listOnMarketplace")}</DialogTitle>
           <DialogDescription>
-            Wybierz marketplace, na którym chcesz wystawić produkt &quot;{product.name}&quot;
+            {tl("chooseMarketplace", { name: product.name })}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 py-4">
           {availableProviders.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Brak skonfigurowanych integracji marketplace. Przejdź do{" "}
+              {tl("noIntegrations")}{" "}
               <Link href="/integrations" className="text-primary hover:underline">
-                Integracji
+                {tl("integrationsLink")}
               </Link>
-              , aby dodać marketplace.
+              {tl("toAddMarketplace")}
             </p>
           )}
           {availableProviders.map((mp) => (
@@ -755,7 +759,7 @@ function CreateListingWizard({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Anuluj
+            {tl("cancel")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1210,6 +1214,7 @@ function CreateOLXListingDialog({
   integrationId: string;
   onClose: () => void;
 }) {
+  const tl = useTranslations("listings");
   // Category navigation state
   const [categoryPath, setCategoryPath] = useState<{ id: number; name: string }[]>([]);
   const currentParentId = categoryPath.length > 0 ? categoryPath[categoryPath.length - 1].id : undefined;
@@ -1298,16 +1303,16 @@ function CreateOLXListingDialog({
   const handleSubmit = () => {
     if (!selectedCategoryId || !selectedCity || !contactName) return;
     if (districts && districts.length > 0 && !selectedDistrictId) {
-      toast.error("Wybierz dzielnicę");
+      toast.error(tl("selectDistrict"));
       return;
     }
     if (effectiveTitle.length < 16) {
-      toast.error("Tytuł ogłoszenia musi mieć min. 16 znaków");
+      toast.error(tl("titleMinLength"));
       return;
     }
     const missingAttrs = requiredAttributes.filter((a) => !attributeValues[a.code]);
     if (missingAttrs.length > 0) {
-      toast.error(`Uzupełnij wymagane atrybuty: ${missingAttrs.map((a) => a.label).join(", ")}`);
+      toast.error(`${tl("fillRequiredAttributes")}: ${missingAttrs.map((a) => a.label).join(", ")}`);
       return;
     }
 
@@ -1330,12 +1335,12 @@ function CreateOLXListingDialog({
       },
       {
         onSuccess: () => {
-          toast.success("Ogłoszenie wystawione na OLX");
+          toast.success(tl("olxListingCreated"));
           onClose();
         },
         onError: (error) => {
           toast.error(
-            error instanceof Error ? error.message : "Nie udało się wystawić ogłoszenia na OLX"
+            error instanceof Error ? error.message : tl("olxListingFailed")
           );
         },
       }
@@ -1348,9 +1353,9 @@ function CreateOLXListingDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Wystaw na OLX</DialogTitle>
+          <DialogTitle>{tl("listOnOlx")}</DialogTitle>
           <DialogDescription>
-            Wystawianie ogłoszenia &quot;{product.name}&quot; na OLX.pl
+            {tl("listingOnOlx", { name: product.name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -1358,7 +1363,7 @@ function CreateOLXListingDialog({
           {/* Category selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Kategoria OLX *</Label>
+              <Label>{tl("olxCategory")} *</Label>
               {!isLeafCategory && (
                 <Button
                   type="button"
@@ -1368,7 +1373,7 @@ function CreateOLXListingDialog({
                   onClick={() => setShowSuggestions(!showSuggestions)}
                 >
                   <Sparkles className="h-3 w-3" />
-                  Sugeruj kategorię
+                  {tl("suggestCategory")}
                 </Button>
               )}
             </div>
@@ -1380,7 +1385,7 @@ function CreateOLXListingDialog({
                 </p>
                 {suggestionsLoading ? (
                   <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Szukam...
+                    <Loader2 className="h-3 w-3 animate-spin" /> {tl("searching")}
                   </div>
                 ) : suggestions && suggestions.length > 0 ? (
                   suggestions.map((s) => (
@@ -1397,7 +1402,7 @@ function CreateOLXListingDialog({
                     </button>
                   ))
                 ) : (
-                  <p className="text-xs text-muted-foreground p-2">Brak sugestii</p>
+                  <p className="text-xs text-muted-foreground p-2">{tl("noSuggestions")}</p>
                 )}
               </div>
             )}
@@ -1408,7 +1413,7 @@ function CreateOLXListingDialog({
                 className="text-primary hover:underline"
                 onClick={handleBreadcrumbRoot}
               >
-                Kategorie
+                {tl("categories")}
               </button>
               {categoryPath.map((crumb, idx) => (
                 <span key={crumb.id} className="flex items-center gap-1">
@@ -1436,7 +1441,7 @@ function CreateOLXListingDialog({
                   </div>
                 ) : categoriesError ? (
                   <p className="p-3 text-sm text-destructive">
-                    Błąd: {categoriesErrorObj instanceof Error ? categoriesErrorObj.message : "Nie udało się pobrać kategorii OLX"}
+                    {categoriesErrorObj instanceof Error ? categoriesErrorObj.message : tl("fetchCategoriesError")}
                   </p>
                 ) : categories && categories.length > 0 ? (
                   categories.map((cat) => (
@@ -1459,13 +1464,13 @@ function CreateOLXListingDialog({
                     </button>
                   ))
                 ) : (
-                  <p className="p-3 text-sm text-muted-foreground">Brak podkategorii</p>
+                  <p className="p-3 text-sm text-muted-foreground">{tl("noSubcategories")}</p>
                 )}
               </div>
             )}
             {isLeafCategory && (
               <p className="text-sm text-green-600 flex items-center gap-1">
-                <Check className="h-4 w-4" /> Kategoria wybrana
+                <Check className="h-4 w-4" /> {tl("categorySelected")}
               </p>
             )}
           </div>
@@ -1473,12 +1478,12 @@ function CreateOLXListingDialog({
           {/* Category required attributes */}
           {isLeafCategory && attrsLoading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" /> Pobieranie atrybutów kategorii...
+              <Loader2 className="h-3 w-3 animate-spin" /> {tl("fetchingAttributes")}
             </div>
           )}
           {isLeafCategory && requiredAttributes.length > 0 && (
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Atrybuty kategorii *</Label>
+              <Label className="text-sm font-medium">{tl("categoryAttributes")} *</Label>
               {requiredAttributes.map((attr) => (
                 <div key={attr.code} className="space-y-1">
                   <Label className="text-xs">{attr.label}{attr.unit ? ` (${attr.unit})` : ""}</Label>
@@ -1490,7 +1495,7 @@ function CreateOLXListingDialog({
                         setAttributeValues((prev) => ({ ...prev, [attr.code]: e.target.value }))
                       }
                     >
-                      <option value="">Wybierz...</option>
+                      <option value="">{tl("selectOption")}</option>
                       {attr.values.map((v) => (
                         <option key={v.code} value={v.code}>{v.label}</option>
                       ))}
@@ -1512,10 +1517,10 @@ function CreateOLXListingDialog({
 
           {/* City search */}
           <div className="space-y-2">
-            <Label>Miasto *</Label>
+            <Label>{tl("city")} *</Label>
             <div className="relative">
               <Input
-                placeholder="Wpisz nazwę miasta (min. 2 znaki)..."
+                placeholder={tl("citySearchPlaceholder")}
                 value={selectedCity ? selectedCity.name : cityQuery}
                 onChange={(e) => {
                   setCityQuery(e.target.value);
@@ -1532,7 +1537,7 @@ function CreateOLXListingDialog({
                     </div>
                   ) : citiesError ? (
                     <p className="p-3 text-sm text-destructive">
-                      {citiesErrorObj instanceof Error ? citiesErrorObj.message : "Błąd pobierania miast"}
+                      {citiesErrorObj instanceof Error ? citiesErrorObj.message : tl("fetchCitiesError")}
                     </p>
                   ) : cities.length > 0 ? (
                     cities.map((city) => (
@@ -1554,7 +1559,7 @@ function CreateOLXListingDialog({
                       </button>
                     ))
                   ) : (
-                    <p className="p-3 text-sm text-muted-foreground">Nie znaleziono miast</p>
+                    <p className="p-3 text-sm text-muted-foreground">{tl("noCitiesFound")}</p>
                   )}
                 </div>
               )}
@@ -1564,13 +1569,13 @@ function CreateOLXListingDialog({
           {/* District select (shown when city has districts) */}
           {selectedCity && districts && districts.length > 0 && (
             <div className="space-y-2">
-              <Label>Dzielnica *</Label>
+              <Label>{tl("district")} *</Label>
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 value={selectedDistrictId ?? ""}
                 onChange={(e) => setSelectedDistrictId(e.target.value ? parseInt(e.target.value, 10) : null)}
               >
-                <option value="">Wybierz dzielnicę...</option>
+                <option value="">{tl("selectDistrict")}...</option>
                 {districts.map((d) => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
@@ -1581,7 +1586,7 @@ function CreateOLXListingDialog({
           {/* Contact details */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Imię kontaktowe *</Label>
+              <Label>{tl("contactName")} *</Label>
               <Input
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
@@ -1589,7 +1594,7 @@ function CreateOLXListingDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Telefon kontaktowy</Label>
+              <Label>{tl("contactPhone")}</Label>
               <Input
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
@@ -1602,7 +1607,7 @@ function CreateOLXListingDialog({
 
           {/* Optional overrides */}
           <div className="space-y-2">
-            <Label>Tytuł ogłoszenia *</Label>
+            <Label>{tl("listingTitle")} *</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -1610,9 +1615,9 @@ function CreateOLXListingDialog({
               maxLength={70}
             />
             {(title || product.name).length < 16 && (
-              <p className="text-xs text-destructive">Min. 16 znaków (obecnie {(title || product.name).length})</p>
+              <p className="text-xs text-destructive">{tl("minChars", { min: 16, current: (title || product.name).length })}</p>
             )}
-            <p className="text-xs text-muted-foreground">16–70 znaków. Domyślnie: nazwa produktu.</p>
+            <p className="text-xs text-muted-foreground">{tl("titleHint")}</p>
           </div>
 
           <div className="space-y-2">
@@ -1621,7 +1626,7 @@ function CreateOLXListingDialog({
               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Opcjonalny opis ogłoszenia (maks. 9000 znaków)"
+              placeholder={tl("descriptionPlaceholder")}
               maxLength={9000}
             />
           </div>
@@ -1636,24 +1641,24 @@ function CreateOLXListingDialog({
               onChange={(e) => setPriceOverride(e.target.value)}
               placeholder={String(product.price)}
             />
-            <p className="text-xs text-muted-foreground">Domyślnie: {product.price} PLN</p>
+            <p className="text-xs text-muted-foreground">{tl("defaultPrice", { price: product.price })}</p>
           </div>
 
           {/* Product info summary */}
           <div className="rounded-md border bg-muted/50 p-3 space-y-1 text-sm">
             <p><span className="text-muted-foreground">SKU/EAN:</span> {product.ean || product.sku || "---"}</p>
-            <p><span className="text-muted-foreground">Zdjęcia:</span> {(product.images?.length ?? 0) > 0 ? `${product.images!.length} zdjęć` : "Brak"}</p>
+            <p><span className="text-muted-foreground">{tl("photos")}:</span> {(product.images?.length ?? 0) > 0 ? `${product.images!.length}` : tl("none")}</p>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Anuluj</Button>
+          <Button variant="outline" onClick={onClose}>{tl("cancel")}</Button>
           <Button
             onClick={handleSubmit}
             disabled={createListing.isPending || !selectedCategoryId || !selectedCity || !contactName || effectiveTitle.length < 16}
           >
             {createListing.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Wystaw na OLX
+            {tl("listOnOlx")}
           </Button>
         </DialogFooter>
       </DialogContent>

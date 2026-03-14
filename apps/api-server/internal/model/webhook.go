@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// WebhookEvent represents an inbound webhook event received from a marketplace.
 type WebhookEvent struct {
 	ID        uuid.UUID       `json:"id"`
 	TenantID  uuid.UUID       `json:"tenant_id"`

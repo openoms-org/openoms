@@ -51,7 +51,7 @@ func TestDoSetsAPIKeyHeader(t *testing.T) {
 			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -88,7 +88,7 @@ func TestInvoiceCreate(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(invoiceResponse{
+		_ = json.NewEncoder(w).Encode(invoiceResponse{
 			Invoice: Invoice{
 				ID:         42,
 				Kind:       "vat",
@@ -121,7 +121,7 @@ func TestInvoiceCreate(t *testing.T) {
 			PostalCode: "00-001",
 			Country:    "PL",
 		},
-		Services: []InvoiceService_{
+		Services: []InvoiceLineItem{
 			{
 				Name:         "Usługa programistyczna",
 				Unit:         "szt",
@@ -158,7 +158,7 @@ func TestInvoiceGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(invoiceResponse{
+		_ = json.NewEncoder(w).Encode(invoiceResponse{
 			Invoice: Invoice{
 				ID:     42,
 				Kind:   "vat",
@@ -199,7 +199,7 @@ func TestInvoiceList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(invoiceListResponse{
+		_ = json.NewEncoder(w).Encode(invoiceListResponse{
 			Entities: []Invoice{
 				{ID: 1, Number: "FV/2024/001"},
 				{ID: 2, Number: "FV/2024/002"},
@@ -239,7 +239,7 @@ func TestInvoiceListWithParams(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(invoiceListResponse{Entities: []Invoice{}})
+		_ = json.NewEncoder(w).Encode(invoiceListResponse{Entities: []Invoice{}})
 	}))
 	defer srv.Close()
 
@@ -269,7 +269,7 @@ func TestInvoiceDownloadPDF(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/pdf")
-		w.Write(pdfContent)
+		_, _ = w.Write(pdfContent)
 	}))
 	defer srv.Close()
 
@@ -326,9 +326,9 @@ func TestInvoiceSendByEmail(t *testing.T) {
 }
 
 func TestInvoiceCreateError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid invoice data",
 			"code":    "VALIDATION_ERROR",
 		})
@@ -355,9 +355,9 @@ func TestInvoiceCreateError(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
 	}))
@@ -383,9 +383,9 @@ func TestServerError(t *testing.T) {
 }
 
 func TestNotFoundError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invoice not found",
 		})
 	}))
@@ -411,10 +411,10 @@ func TestNotFoundError(t *testing.T) {
 }
 
 func TestInvalidJSONResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{invalid json}`))
+		_, _ = w.Write([]byte(`{invalid json}`))
 	}))
 	defer srv.Close()
 

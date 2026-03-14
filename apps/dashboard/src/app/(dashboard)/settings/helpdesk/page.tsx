@@ -28,6 +28,7 @@ import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { apiClient } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import type { FreshdeskSettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_SETTINGS: FreshdeskSettings = {
   domain: "",
@@ -35,23 +36,24 @@ const DEFAULT_SETTINGS: FreshdeskSettings = {
   enabled: false,
 };
 
-const FRESHDESK_STATUS_LABELS: Record<number, string> = {
-  2: "Otwarty",
-  3: "Oczekujący",
-  4: "Rozwiązany",
-  5: "Zamknięty",
-};
-
-const FRESHDESK_PRIORITY_LABELS: Record<number, string> = {
-  1: "Niski",
-  2: "Średni",
-  3: "Wysoki",
-  4: "Pilny",
-};
-
 export default function HelpdeskSettingsPage() {
+  const t = useTranslations("settings");
   const { data: ticketsData, isLoading: ticketsLoading } = useAllTickets();
   const { data: companySettings } = useCompanySettings();
+
+  const FRESHDESK_STATUS_LABELS: Record<number, string> = {
+    2: t("helpdesk.statusOpen"),
+    3: t("helpdesk.statusPending"),
+    4: t("helpdesk.statusResolved"),
+    5: t("helpdesk.statusClosed"),
+  };
+
+  const FRESHDESK_PRIORITY_LABELS: Record<number, string> = {
+    1: t("helpdesk.priorityLow"),
+    2: t("helpdesk.priorityMedium"),
+    3: t("helpdesk.priorityHigh"),
+    4: t("helpdesk.priorityUrgent"),
+  };
 
   const [form, setForm] = useState<FreshdeskSettings>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
@@ -59,8 +61,6 @@ export default function HelpdeskSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save freshdesk settings under the tenant settings freshdesk key,
-      // spreading existing company settings to avoid overwriting other fields.
       const current = companySettings || {};
       await apiClient("/v1/settings/company", {
         method: "PUT",
@@ -69,10 +69,10 @@ export default function HelpdeskSettingsPage() {
           freshdesk: form,
         }),
       });
-      toast.success("Ustawienia Freshdesk zapisane");
+      toast.success(t("helpdesk.freshdeskSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -83,9 +83,9 @@ export default function HelpdeskSettingsPage() {
     <AdminGuard>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Helpdesk (Freshdesk)</h1>
+          <h1 className="text-2xl font-bold">{t("helpdesk.title")}</h1>
           <p className="text-muted-foreground">
-            Integracja z Freshdesk do obsługi zgłoszeń klientów
+            {t("integracjaZFreshdeskDoObsługiZgłoszenKlientow")}
           </p>
         </div>
 
@@ -94,14 +94,14 @@ export default function HelpdeskSettingsPage() {
         {/* Configuration card */}
         <Card>
           <CardHeader>
-            <CardTitle>Konfiguracja Freshdesk</CardTitle>
+            <CardTitle>{t("helpdesk.freshdeskConfig")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Aktywna integracja</p>
+                <p className="font-medium">{t("helpdesk.activeIntegration")}</p>
                 <p className="text-sm text-muted-foreground">
-                  Włącz tworzenie zgłoszeń w Freshdesk z poziomu zamówień
+                  {t("właczTworzenieZgłoszenWFreshdeskZPoziomu")}
                 </p>
               </div>
               <Switch
@@ -113,30 +113,30 @@ export default function HelpdeskSettingsPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Domena Freshdesk</Label>
+                <Label>{t("helpdesk.freshdeskDomain")}</Label>
                 <Input
                   value={form.domain}
                   onChange={(e) =>
                     setForm({ ...form, domain: e.target.value })
                   }
-                  placeholder="mojafirma"
+                  placeholder={t("helpdesk.domainPlaceholder")}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Domena bez .freshdesk.com (np. &quot;mojafirma&quot; dla mojafirma.freshdesk.com)
+                  {t("helpdesk.domainHint")}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Klucz API</Label>
+                <Label>{t("helpdesk.apiKey")}</Label>
                 <Input
                   type="password"
                   value={form.api_key}
                   onChange={(e) =>
                     setForm({ ...form, api_key: e.target.value })
                   }
-                  placeholder="Wklej klucz API Freshdesk"
+                  placeholder={t("helpdesk.apiKeyPlaceholder")}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Klucz API znajdziesz w Freshdesk &rarr; Profil &rarr; API key
+                  {t("helpdesk.apiKeyHint")}
                 </p>
               </div>
             </div>
@@ -147,7 +147,7 @@ export default function HelpdeskSettingsPage() {
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Zapisz ustawienia
+                {t("saveSettings")}
               </Button>
             </div>
           </CardContent>
@@ -156,7 +156,7 @@ export default function HelpdeskSettingsPage() {
         {/* Recent tickets card */}
         <Card>
           <CardHeader>
-            <CardTitle>Ostatnie zgłoszenia</CardTitle>
+            <CardTitle>{t("ostatnieZgłoszenia")}</CardTitle>
           </CardHeader>
           <CardContent>
             {ticketsLoading ? (
@@ -168,10 +168,10 @@ export default function HelpdeskSettingsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Temat</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Priorytet</TableHead>
-                    <TableHead>Utworzono</TableHead>
+                    <TableHead>{t("helpdesk.columns.subject")}</TableHead>
+                    <TableHead>{t("helpdesk.columns.status")}</TableHead>
+                    <TableHead>{t("helpdesk.columns.priority")}</TableHead>
+                    <TableHead>{t("helpdesk.columns.createdAt")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -190,7 +190,7 @@ export default function HelpdeskSettingsPage() {
                       </TableCell>
                       <TableCell>
                         <span className="text-xs">
-                          {FRESHDESK_PRIORITY_LABELS[ticket.priority] || `Priorytet ${ticket.priority}`}
+                          {FRESHDESK_PRIORITY_LABELS[ticket.priority] || `Priority ${ticket.priority}`}
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -202,7 +202,7 @@ export default function HelpdeskSettingsPage() {
               </Table>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Brak zgłoszeń. Skonfiguruj Freshdesk aby zobaczyć zgłoszenia.
+                {t("brakZgłoszenSkonfigurujFreshdeskAbyZobaczycZgłosze")}
               </p>
             )}
           </CardContent>

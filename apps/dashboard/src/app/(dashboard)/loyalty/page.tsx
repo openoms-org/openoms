@@ -34,29 +34,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CreateLoyaltyProgramRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_LIMIT = 20;
-
-const PROGRAM_TYPE_LABELS: Record<string, string> = {
-  points: "Punkty",
-  tier: "Poziomy",
-  discount_after_n: "Rabat po N zamówieniach",
-};
-
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  active: {
-    label: "Aktywny",
-    className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  },
-  paused: {
-    label: "Wstrzymany",
-    className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  },
-  ended: {
-    label: "Zakończony",
-    className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-  },
-};
 
 const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
   points: { points_per_pln: 1, redemption_rate: 100, redemption_value: 5 },
@@ -71,6 +51,29 @@ const DEFAULT_CONFIGS: Record<string, Record<string, unknown>> = {
 };
 
 export default function LoyaltyPage() {
+  const t = useTranslations("loyalty");
+  const tc = useTranslations("common");
+
+  const PROGRAM_TYPE_LABELS: Record<string, string> = {
+    points: t("type.points"),
+    tier: t("type.tier"),
+    discount_after_n: t("type.discountAfterN"),
+  };
+
+  const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+    active: {
+      label: t("statusActive"),
+      className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    },
+    paused: {
+      label: t("statusPaused"),
+      className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    },
+    ended: {
+      label: t("zakonczony"),
+      className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+    },
+  };
   const router = useRouter();
   const [pagination, setPagination] = useState({
     limit: DEFAULT_LIMIT,
@@ -113,12 +116,12 @@ export default function LoyaltyPage() {
       try {
         config = JSON.parse(configText);
       } catch {
-        toast.error("Nieprawidłowy format JSON w konfiguracji");
+        toast.error(t("nieprawidłowyformatjsonwkonfiguracji"));
         return;
       }
 
       await createProgram.mutateAsync({ ...formData, config });
-      toast.success("Program lojalnościowy został utworzony");
+      toast.success(t("programlojalnosciowyzostałutworzony"));
       setCreateOpen(false);
       setFormData({
         name: "",
@@ -135,7 +138,7 @@ export default function LoyaltyPage() {
     if (!deleteId) return;
     deleteProgram.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Program został usunięty");
+        toast.success(t("programzostałusuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -149,36 +152,36 @@ export default function LoyaltyPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Programy lojalnościowe
+            {t("programyLojalnosciowe")}
           </h1>
           <p className="text-muted-foreground">
-            Zarządzaj programami punktowymi, poziomami i rabatami
+            {t("zarzadzajProgramamiPunktowymiPoziomamiIRabatami")}
           </p>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Nowy program
+              {t("newProgram")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Nowy program lojalnościowy</DialogTitle>
+              <DialogTitle>{t("nowyProgramLojalnosciowy")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Nazwa *</Label>
+                <Label>{t("nameRequired")}</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="np. Program punktowy"
+                  placeholder={t("namePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Typ programu</Label>
+                <Label>{t("programType")}</Label>
                 <Select
                   value={formData.program_type}
                   onValueChange={handleTypeChange}
@@ -188,19 +191,19 @@ export default function LoyaltyPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="points">
-                      Punkty (zbieraj za zakupy)
+                      {t("type.pointsDesc")}
                     </SelectItem>
                     <SelectItem value="tier">
-                      Poziomy (Bronze/Silver/Gold)
+                      {t("type.tierDesc")}
                     </SelectItem>
                     <SelectItem value="discount_after_n">
-                      Rabat po N zamówieniach
+                      {t("rabatPoNZamowieniach")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Konfiguracja (JSON)</Label>
+                <Label>{t("configurationJson")}</Label>
                 <Textarea
                   value={configText}
                   onChange={(e) => setConfigText(e.target.value)}
@@ -209,11 +212,11 @@ export default function LoyaltyPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   {formData.program_type === "points" &&
-                    "points_per_pln: ile punktów za 1 PLN; redemption_rate: ile punktów wymienić; redemption_value: wartość w PLN"}
+                    t("points_per_plnIlePunktowZa1PlnRedemption_rateIlePu")}
                   {formData.program_type === "tier" &&
-                    "tiers: lista poziomów z progami min_spent i rabatami discount_pct"}
+                    t("tiersListaPoziomowZProgamiMin_spentIRabatamiDiscou")}
                   {formData.program_type === "discount_after_n" &&
-                    "orders_required: ile zamówień potrzeba; discount_pct: procent rabatu"}
+                    t("orders_requiredIleZamowienPotrzebaDiscount_pctProc")}
                 </p>
               </div>
               <div className="flex justify-end gap-2">
@@ -221,7 +224,7 @@ export default function LoyaltyPage() {
                   variant="outline"
                   onClick={() => setCreateOpen(false)}
                 >
-                  Anuluj
+                  {tc("cancel")}
                 </Button>
                 <Button
                   onClick={handleCreate}
@@ -229,7 +232,7 @@ export default function LoyaltyPage() {
                     createProgram.isPending || !formData.name.trim()
                   }
                 >
-                  {createProgram.isPending ? "Tworzenie..." : "Utwórz"}
+                  {createProgram.isPending ? t("creating") : tc("create")}
                 </Button>
               </div>
             </div>
@@ -240,8 +243,8 @@ export default function LoyaltyPage() {
       {programs.length === 0 ? (
         <EmptyState
           icon={Award}
-          title="Brak programów lojalnościowych"
-          description="Utwórz pierwszy program, aby nagradzać klientów za zakupy."
+          title={t("brakProgramowLojalnosciowych")}
+          description={t("utworzPierwszyProgramAbyNagradzacKlientowZaZakupy")}
         />
       ) : (
         <>
@@ -286,7 +289,7 @@ export default function LoyaltyPage() {
                     <Award className="h-8 w-8 text-muted-foreground/30" />
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Utworzono {formatDate(program.created_at)}
+                    {t("createdOn", { date: formatDate(program.created_at) })}
                   </p>
                 </div>
               );
@@ -312,9 +315,9 @@ export default function LoyaltyPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń program"
-        description="Czy na pewno chcesz usunąć ten program lojalnościowy? Wszystkie dane punktowe zostaną utracone."
-        confirmLabel="Usuń"
+        title={t("usunProgram")}
+        description={t("czyNaPewnoChceszUsunacTenProgramLojalnosciowyWszys1")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteProgram.isPending}

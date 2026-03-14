@@ -3,7 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/md5" // #nosec G501 -- MD5 required by Mailchimp Subscriber Hash API, not used for cryptographic security
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,6 +37,7 @@ type MailchimpService struct {
 	logger       *slog.Logger
 }
 
+// NewMailchimpService creates a new MailchimpService.
 func NewMailchimpService(tenantRepo repository.TenantRepo, customerRepo repository.CustomerRepo, pool *pgxpool.Pool, logger *slog.Logger) *MailchimpService {
 	return &MailchimpService{
 		tenantRepo:   tenantRepo,
@@ -60,10 +61,12 @@ func (s *MailchimpService) GetSettings(ctx context.Context, tenantID uuid.UUID) 
 		}
 		var all map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &all); err != nil {
-			return nil
+			return err
 		}
 		if mc, ok := all["mailchimp"]; ok {
-			json.Unmarshal(mc, &settings)
+			if err := json.Unmarshal(mc, &settings); err != nil {
+				return fmt.Errorf("mailchimp: unmarshal config: %w", err)
+			}
 		}
 		return nil
 	})
@@ -99,7 +102,7 @@ func (s *MailchimpService) doRequest(ctx context.Context, method, url, apiKey st
 	if err != nil {
 		return nil, 0, fmt.Errorf("mailchimp request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -110,7 +113,7 @@ func (s *MailchimpService) doRequest(ctx context.Context, method, url, apiKey st
 }
 
 func emailHash(email string) string {
-	h := md5.Sum([]byte(strings.ToLower(strings.TrimSpace(email))))
+	h := md5.Sum([]byte(strings.ToLower(strings.TrimSpace(email)))) // #nosec G401 -- see import comment
 	return fmt.Sprintf("%x", h)
 }
 

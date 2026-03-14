@@ -25,7 +25,7 @@ func unreachableRedisClient() *redis.Client {
 
 func TestRedisRateLimiter_NewReturnsNonNil(t *testing.T) {
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	limiter := middleware.NewRedisRateLimiter(client)
 	assert.NotNil(t, limiter, "NewRedisRateLimiter should return a non-nil instance")
@@ -33,7 +33,7 @@ func TestRedisRateLimiter_NewReturnsNonNil(t *testing.T) {
 
 func TestRedisRateLimiter_ImplementsRateLimiterInterface(_ *testing.T) {
 	client := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	limiter := middleware.NewRedisRateLimiter(client)
 	var _ middleware.RateLimiter = limiter
@@ -41,7 +41,7 @@ func TestRedisRateLimiter_ImplementsRateLimiterInterface(_ *testing.T) {
 
 func TestRedisRateLimiter_Allow_ReturnsErrorOnUnreachableRedis(t *testing.T) {
 	client := unreachableRedisClient()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	limiter := middleware.NewRedisRateLimiter(client)
 	allowed, err := limiter.Allow(context.Background(), "test-key", 10, time.Minute)
@@ -51,7 +51,7 @@ func TestRedisRateLimiter_Allow_ReturnsErrorOnUnreachableRedis(t *testing.T) {
 
 func TestRedisRateLimiter_Allow_ContextCancelled(t *testing.T) {
 	client := unreachableRedisClient()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	limiter := middleware.NewRedisRateLimiter(client)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -66,7 +66,7 @@ func TestRedisRateLimiter_UsableInRateLimitWithMiddleware_FailsOpen(t *testing.T
 	// When Redis is down, the RateLimitWith middleware should fail open
 	// because the limiter returns an error.
 	client := unreachableRedisClient()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	limiter := middleware.NewRedisRateLimiter(client)
 	handler := middleware.RateLimitWith(limiter, 1, time.Minute)(okHandler())
@@ -83,7 +83,7 @@ func TestRedisRateLimiter_UsableInRateLimitWithMiddleware_FailsOpen(t *testing.T
 func TestRedisRateLimiter_Allow_ConnectionErrorType(t *testing.T) {
 	// Verify the error is a dial/connection error, not a Lua script error.
 	client := unreachableRedisClient()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	limiter := middleware.NewRedisRateLimiter(client)
 	_, err := limiter.Allow(context.Background(), "192.168.1.1", 100, 5*time.Minute)
@@ -96,7 +96,7 @@ func TestRedisRateLimiter_Allow_ConnectionErrorType(t *testing.T) {
 
 func TestRedisRateLimiter_MultipleCallsAllReturnErrors(t *testing.T) {
 	client := unreachableRedisClient()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	limiter := middleware.NewRedisRateLimiter(client)
 	ctx := context.Background()

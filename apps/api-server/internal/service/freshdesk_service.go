@@ -46,6 +46,7 @@ type FreshdeskService struct {
 	logger     *slog.Logger
 }
 
+// NewFreshdeskService creates a new FreshdeskService.
 func NewFreshdeskService(tenantRepo repository.TenantRepo, orderRepo repository.OrderRepo, pool *pgxpool.Pool, logger *slog.Logger) *FreshdeskService {
 	return &FreshdeskService{
 		tenantRepo: tenantRepo,
@@ -69,10 +70,12 @@ func (s *FreshdeskService) GetSettings(ctx context.Context, tenantID uuid.UUID) 
 		}
 		var all map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &all); err != nil {
-			return nil
+			return err
 		}
 		if fd, ok := all["freshdesk"]; ok {
-			json.Unmarshal(fd, &settings)
+			if err := json.Unmarshal(fd, &settings); err != nil {
+				return fmt.Errorf("freshdesk: unmarshal config: %w", err)
+			}
 		}
 		return nil
 	})
@@ -100,7 +103,7 @@ func (s *FreshdeskService) doRequest(ctx context.Context, method, url, apiKey st
 	if err != nil {
 		return nil, 0, fmt.Errorf("freshdesk request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {

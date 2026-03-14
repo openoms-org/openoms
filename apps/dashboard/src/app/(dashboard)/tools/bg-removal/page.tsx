@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/card";
 import { useBGRemovalStatus, useRemoveBackground } from "@/hooks/use-bg-removal";
 import { downloadBlob } from "@/lib/download";
+import { useTranslations } from "next-intl";
 
 export default function BGRemovalPage() {
+  const t = useTranslations("tools");
   const { data: bgStatus, isLoading: isLoadingStatus } = useBGRemovalStatus();
   const removeBackground = useRemoveBackground();
 
@@ -28,11 +30,11 @@ export default function BGRemovalPage() {
     (file: File) => {
       const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
       if (!allowedTypes.includes(file.type)) {
-        toast.error("Nieobsługiwany typ pliku. Dozwolone: JPEG, PNG, WEBP.");
+        toast.error(t("nieobsługiwanyTypPlikuDozwoloneJpegPngWebp"));
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("Plik jest za duży. Maksymalny rozmiar: 10 MB.");
+        toast.error(t("plikJestZaDuzyMaksymalnyRozmiar10Mb"));
         return;
       }
 
@@ -45,7 +47,7 @@ export default function BGRemovalPage() {
       };
       reader.readAsDataURL(file);
     },
-    []
+    [t]
   );
 
   const handleDrop = useCallback(
@@ -73,10 +75,10 @@ export default function BGRemovalPage() {
     removeBackground.mutate(originalFile, {
       onSuccess: (data) => {
         setResultUrl(data.url);
-        toast.success("Tło zostało usunięte");
+        toast.success(t("tłoZostałoUsuniete"));
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Błąd usuwania tła");
+        toast.error(error instanceof Error ? error.message : t("bładUsuwaniaTła"));
       },
     });
   };
@@ -109,21 +111,22 @@ export default function BGRemovalPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Usuwanie tła</h1>
+          <h1 className="text-2xl font-bold">{t("bgRemovalTitle")}</h1>
           <p className="text-muted-foreground">
-            Automatyczne usuwanie tła ze zdjęć produktowych
+            {t("automatyczneUsuwanieTłaZeZdjecProduktowych")}
           </p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Eraser className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h2 className="text-lg font-semibold mb-2">
-              Usuwanie tła nie jest skonfigurowane
+              {t("usuwanieTłaNieJestSkonfigurowane")}
             </h2>
             <p className="text-sm text-muted-foreground max-w-md">
-              Aby korzystać z tej funkcji, administrator musi ustawić zmienną
-              środowiskową <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">REMOVEBG_API_KEY</code> w
-              konfiguracji serwera. Klucz API można uzyskać na stronie{" "}
+              {t("abyKorzystacZTejFunkcjiAdministratorMusi")}{" "}
+              {t("envVarConfig")}{" "}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">REMOVEBG_API_KEY</code>{" "}
+              {t("inServerConfig")}{" "}{t("apiKeyAvailableAt")}{" "}
               <a
                 href="https://www.remove.bg/api"
                 target="_blank"
@@ -143,9 +146,9 @@ export default function BGRemovalPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Usuwanie tła</h1>
+        <h1 className="text-2xl font-bold">{t("bgRemovalTitle")}</h1>
         <p className="text-muted-foreground">
-          Automatyczne usuwanie tła ze zdjęć produktowych. Powered by remove.bg
+          {t("automatyczneUsuwanieTłaZeZdjecProduktowychPowered")}
         </p>
       </div>
 
@@ -166,14 +169,14 @@ export default function BGRemovalPage() {
             >
               <Upload className="h-10 w-10 text-muted-foreground/50 mb-4" />
               <p className="text-sm font-medium mb-1">
-                Przeciągnij i upuść zdjęcie
+                {t("przeciagnijIUpuscZdjecie")}
               </p>
               <p className="text-xs text-muted-foreground mb-4">
-                lub kliknij, aby wybrać plik (JPEG, PNG, WEBP, maks. 10 MB)
+                {t("orClickToSelect")}
               </p>
               <Button variant="outline" size="sm" type="button">
                 <ImageIcon className="mr-2 h-4 w-4" />
-                Wybierz plik
+                {t("selectFile")}
               </Button>
               <input
                 ref={fileInputRef}
@@ -196,7 +199,7 @@ export default function BGRemovalPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Oryginał</CardTitle>
+                <CardTitle className="text-base">{t("oryginał")}</CardTitle>
                 <CardDescription>
                   {originalFile?.name} ({((originalFile?.size || 0) / 1024).toFixed(0)} KB)
                 </CardDescription>
@@ -205,7 +208,7 @@ export default function BGRemovalPage() {
                 <div className="relative flex items-center justify-center rounded-lg border bg-muted/30 p-2">
                   <img
                     src={originalPreview}
-                    alt="Oryginalne zdjęcie"
+                    alt={t("oryginalneZdjecie")}
                     className="max-h-80 rounded object-contain"
                   />
                 </div>
@@ -214,9 +217,9 @@ export default function BGRemovalPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Bez tła</CardTitle>
+                <CardTitle className="text-base">{t("bezTła")}</CardTitle>
                 <CardDescription>
-                  {resultUrl ? "Gotowe" : "Kliknij \"Usuń tło\" aby przetworzyć"}
+                  {resultUrl ? t("gotowe") : t("kliknijUsunTloAbyPrzetworzyc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -231,13 +234,13 @@ export default function BGRemovalPage() {
                   {resultUrl ? (
                     <img
                       src={resultUrl}
-                      alt="Zdjęcie bez tła"
+                      alt={t("zdjecieBezTła")}
                       className="max-h-80 rounded object-contain"
                     />
                   ) : (
                     <div className="flex h-80 flex-col items-center justify-center text-muted-foreground">
                       <Eraser className="h-10 w-10 mb-2 opacity-30" />
-                      <p className="text-sm">Wynik pojawi się tutaj</p>
+                      <p className="text-sm">{t("wynikPojawiSieTutaj")}</p>
                     </div>
                   )}
                 </div>
@@ -248,7 +251,7 @@ export default function BGRemovalPage() {
           {/* Action buttons */}
           <div className="flex items-center justify-center gap-3">
             <Button variant="outline" onClick={handleReset}>
-              Nowe zdjęcie
+              {t("noweZdjecie")}
             </Button>
             {!resultUrl ? (
               <Button
@@ -260,12 +263,12 @@ export default function BGRemovalPage() {
                 ) : (
                   <Eraser className="mr-2 h-4 w-4" />
                 )}
-                Usuń tło
+                {t("usunTło1")}
               </Button>
             ) : (
               <Button onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
-                Pobierz
+                {t("download")}
               </Button>
             )}
           </div>

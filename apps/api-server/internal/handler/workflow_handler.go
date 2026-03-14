@@ -23,7 +23,7 @@ func NewWorkflowHandler(automationService *service.AutomationService) *WorkflowH
 }
 
 // ListTemplates returns pre-built workflow templates.
-func (h *WorkflowHandler) ListTemplates(w http.ResponseWriter, r *http.Request) {
+func (h *WorkflowHandler) ListTemplates(w http.ResponseWriter, _ *http.Request) {
 	templates := model.GetWorkflowTemplates()
 	writeJSON(w, http.StatusOK, templates)
 }

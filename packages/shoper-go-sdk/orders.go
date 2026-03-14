@@ -14,16 +14,16 @@ type OrderService struct {
 
 // OrderListParams are the optional parameters for listing orders.
 type OrderListParams struct {
-	Page           int
-	Limit          int
-	ModifiedAfter  string // ISO8601 date filter: date_modify >= value
-	StatusID       int
-	SortBy         string // e.g. "date_add", "date_modify"
-	SortDirection  string // "asc" or "desc"
+	Page          int
+	Limit         int
+	ModifiedAfter string // ISO8601 date filter: date_modify >= value
+	StatusID      int
+	SortBy        string // e.g. "date_add", "date_modify"
+	SortDirection string // "asc" or "desc"
 }
 
 // List retrieves a paginated list of orders.
-func (s *OrderService) List(ctx context.Context, params OrderListParams) (*ListResponse[ShoperOrder], error) {
+func (s *OrderService) List(ctx context.Context, params OrderListParams) (*ListResponse[Order], error) {
 	path := "/orders"
 
 	v := url.Values{}
@@ -49,7 +49,7 @@ func (s *OrderService) List(ctx context.Context, params OrderListParams) (*ListR
 		path += "?" + encoded
 	}
 
-	var result ListResponse[ShoperOrder]
+	var result ListResponse[Order]
 	if err := s.client.do(ctx, "GET", path, nil, &result); err != nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func (s *OrderService) List(ctx context.Context, params OrderListParams) (*ListR
 }
 
 // Get retrieves a single order by ID.
-func (s *OrderService) Get(ctx context.Context, id int) (*ShoperOrder, error) {
-	var result ShoperOrder
+func (s *OrderService) Get(ctx context.Context, id int) (*Order, error) {
+	var result Order
 	if err := s.client.do(ctx, "GET", fmt.Sprintf("/orders/%d", id), nil, &result); err != nil {
 		return nil, err
 	}

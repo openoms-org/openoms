@@ -19,10 +19,11 @@ import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
 import type { Shipment } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const shipmentSchema = z.object({
-  order_id: z.string().min(1, "ID zamówienia jest wymagane"),
-  provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"], "Wybierz dostawcę"),
+  order_id: z.string().min(1),
+  provider: z.enum(["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"]),
   tracking_number: z.string().optional(),
   label_url: z.string().optional(),
   carrier_data: z.record(z.string(), z.unknown()).optional(),
@@ -43,6 +44,7 @@ export function ShipmentForm({
   onSubmit,
   isLoading,
 }: ShipmentFormProps) {
+  const t = useTranslations("shipments");
   const existingTargetPoint =
     (shipment?.carrier_data?.target_point as string | undefined) ??
     (defaultValues?.carrier_data?.target_point as string | undefined) ??
@@ -81,7 +83,7 @@ export function ShipmentForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label>Zamówienie</Label>
+        <Label>{t("columns.order")}</Label>
         <OrderSearchCombobox
           value={watch("order_id")}
           onValueChange={(id) =>
@@ -95,7 +97,7 @@ export function ShipmentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="provider">Dostawca</Label>
+        <Label htmlFor="provider">{t("provider")}</Label>
         <Select
           value={providerValue}
           onValueChange={(value) =>
@@ -105,7 +107,7 @@ export function ShipmentForm({
           }
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Wybierz dostawcę" />
+            <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {SHIPMENT_PROVIDERS.map((provider) => (
@@ -122,7 +124,7 @@ export function ShipmentForm({
 
       {providerValue === "inpost" && (
         <div className="space-y-2">
-          <Label>Paczkomat docelowy</Label>
+          <Label>{t("targetLocker")}</Label>
           {targetPoint && (
             <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
               <MapPin className="h-4 w-4 text-primary" />
@@ -138,25 +140,25 @@ export function ShipmentForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="tracking_number">Numer śledzenia</Label>
+        <Label htmlFor="tracking_number">{t("columns.trackingNumber")}</Label>
         <Input
           id="tracking_number"
-          placeholder="Opcjonalny numer śledzenia"
+          placeholder={t("opcjonalnyNumerSledzenia")}
           {...register("tracking_number")}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="label_url">URL etykiety</Label>
+        <Label htmlFor="label_url">{t("labelUrl")}</Label>
         <Input
           id="label_url"
-          placeholder="Opcjonalny URL etykiety"
+          placeholder={t("optionalLabelUrl")}
           {...register("label_url")}
         />
       </div>
 
       <Button type="submit" disabled={isLoading}>
-        {isLoading ? "Zapisywanie..." : shipment ? "Zapisz zmiany" : "Utwórz przesyłkę"}
+        {isLoading ? t("saving") : shipment ? t("saveChanges") : t("utworzPrzesyłke")}
       </Button>
     </form>
   );

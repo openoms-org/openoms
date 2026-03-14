@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import {
   BarChart,
   Bar,
@@ -22,6 +23,8 @@ interface OrderStatusChartProps {
 
 export function OrderStatusChart({ data, isLoading }: OrderStatusChartProps) {
   const { resolvedTheme } = useTheme();
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   const isDark = resolvedTheme === "dark";
   const axisColor = isDark ? "#a1a1aa" : "#71717a";
   const gridColor = isDark ? "#27272a" : "#e4e4e7";
@@ -44,14 +47,14 @@ export function OrderStatusChart({ data, isLoading }: OrderStatusChartProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zamówienia według statusu</CardTitle>
+        <CardTitle>{t("ordersByStatus")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-[300px] w-full" />
         ) : chartData.length === 0 ? (
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            Brak danych
+            {tc("noResults")}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>

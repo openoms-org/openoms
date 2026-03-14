@@ -10,8 +10,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// CustomerSegmentRepository handles persistence for customer segments.
 type CustomerSegmentRepository struct{}
 
+// NewCustomerSegmentRepository creates a new CustomerSegmentRepository.
 func NewCustomerSegmentRepository() *CustomerSegmentRepository {
 	return &CustomerSegmentRepository{}
 }
@@ -28,6 +30,7 @@ func scanSegment(row interface{ Scan(dest ...any) error }) (*model.CustomerSegme
 	return &s, err
 }
 
+// List returns a paginated list of customer segments.
 func (r *CustomerSegmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.SegmentListFilter) ([]model.CustomerSegment, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM customer_segments").Scan(&total); err != nil {
@@ -63,6 +66,7 @@ func (r *CustomerSegmentRepository) List(ctx context.Context, tx pgx.Tx, filter 
 	return segments, total, rows.Err()
 }
 
+// FindByID returns a customer segment by its ID.
 func (r *CustomerSegmentRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.CustomerSegment, error) {
 	s, err := scanSegment(tx.QueryRow(ctx,
 		fmt.Sprintf("SELECT %s FROM customer_segments WHERE id = $1", segmentColumns), id,
@@ -76,6 +80,7 @@ func (r *CustomerSegmentRepository) FindByID(ctx context.Context, tx pgx.Tx, id 
 	return s, nil
 }
 
+// Create inserts a new customer segment.
 func (r *CustomerSegmentRepository) Create(ctx context.Context, tx pgx.Tx, segment *model.CustomerSegment) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO customer_segments (id, tenant_id, name, description, color, segment_type, rules)
@@ -86,6 +91,7 @@ func (r *CustomerSegmentRepository) Create(ctx context.Context, tx pgx.Tx, segme
 	).Scan(&segment.CreatedAt, &segment.UpdatedAt)
 }
 
+// Update applies partial updates to a customer segment.
 func (r *CustomerSegmentRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateSegmentRequest) error {
 	var setClauses []string
 	var args []any
@@ -131,6 +137,7 @@ func (r *CustomerSegmentRepository) Update(ctx context.Context, tx pgx.Tx, id uu
 	return nil
 }
 
+// Delete removes a customer segment by its ID.
 func (r *CustomerSegmentRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM customer_segments WHERE id = $1", id)
 	if err != nil {

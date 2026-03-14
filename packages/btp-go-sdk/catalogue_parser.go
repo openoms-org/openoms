@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -43,22 +44,22 @@ type xmlLine struct {
 }
 
 type xmlLineItem struct {
-	EAN                  string         `xml:"EAN"`
-	SupplierItemCode     string         `xml:"SupplierItemCode"`
-	ManufacturerItemCode string         `xml:"ManufacturerItemCode"`
-	ItemDescription      string         `xml:"ItemDescription"`
-	LongItemDescription  string         `xml:"LongItemDescription"`
-	ProductGroup         string         `xml:"ProductGroup"`
-	PrimaryProductGroup  string         `xml:"PrimaryProductGroup"`
-	BrandName            string         `xml:"BrandName"`
-	Weight               string         `xml:"Weight"`
-	UnitNetPrice         string         `xml:"UnitNetPrice"`
-	UnitRetailPrice      string         `xml:"UnitRetailPrice"`
-	TaxRate              string         `xml:"TaxRate"`
-	CustomsTariffNumber  string         `xml:"CustomsTariffNumber"`
-	Guarantee            string         `xml:"Guarantee"`
-	Pictures             xmlPictures    `xml:"Pictures"`
-	Specification        xmlSpec        `xml:"Specification"`
+	EAN                  string      `xml:"EAN"`
+	SupplierItemCode     string      `xml:"SupplierItemCode"`
+	ManufacturerItemCode string      `xml:"ManufacturerItemCode"`
+	ItemDescription      string      `xml:"ItemDescription"`
+	LongItemDescription  string      `xml:"LongItemDescription"`
+	ProductGroup         string      `xml:"ProductGroup"`
+	PrimaryProductGroup  string      `xml:"PrimaryProductGroup"`
+	BrandName            string      `xml:"BrandName"`
+	Weight               string      `xml:"Weight"`
+	UnitNetPrice         string      `xml:"UnitNetPrice"`
+	UnitRetailPrice      string      `xml:"UnitRetailPrice"`
+	TaxRate              string      `xml:"TaxRate"`
+	CustomsTariffNumber  string      `xml:"CustomsTariffNumber"`
+	Guarantee            string      `xml:"Guarantee"`
+	Pictures             xmlPictures `xml:"Pictures"`
+	Specification        xmlSpec     `xml:"Specification"`
 }
 
 type xmlPictures struct {
@@ -74,7 +75,7 @@ type xmlSpec struct {
 }
 
 type xmlAttribute struct {
-	Name   string `xml:"Name"`
+	Name   string   `xml:"Name"`
 	Values []string `xml:"Values>Value"`
 }
 
@@ -149,6 +150,7 @@ func ParseCatalogueXML(r io.Reader) ([]CatalogueProduct, error) {
 
 // ParseCatalogueURL fetches and parses a BTP XML catalogue feed from the given URL.
 // The provided http.Client should have SSRF protections (e.g. netutil.SafeHTTPClient).
+// Additionally, this function validates the URL host against private IP ranges as defense-in-depth.
 func ParseCatalogueURL(ctx context.Context, rawURL string, client *http.Client) ([]CatalogueProduct, error) {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
@@ -156,6 +158,9 @@ func ParseCatalogueURL(ctx context.Context, rawURL string, client *http.Client) 
 	}
 	if parsed.Scheme != "https" && parsed.Scheme != "http" {
 		return nil, fmt.Errorf("btp: catalogue URL must use http or https scheme, got %q", parsed.Scheme)
+	}
+	if err := urlHostValidator(ctx, parsed.Hostname()); err != nil {
+		return nil, fmt.Errorf("btp: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
@@ -167,11 +172,54 @@ func ParseCatalogueURL(ctx context.Context, rawURL string, client *http.Client) 
 	if err != nil {
 		return nil, fmt.Errorf("btp: fetch catalogue URL: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("btp: catalogue URL returned status %d", resp.StatusCode)
 	}
 
 	return ParseCatalogueXML(resp.Body)
+}
+
+// privateCIDRs lists IP ranges that must not be targeted by catalogue fetches (SSRF protection).
+var privateCIDRs = func() []*net.IPNet {
+	cidrs := []string{
+		"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
+		"127.0.0.0/8", "169.254.0.0/16", "0.0.0.0/8",
+		"100.64.0.0/10", "::1/128", "fc00::/7", "fe80::/10",
+	}
+	nets := make([]*net.IPNet, 0, len(cidrs))
+	for _, c := range cidrs {
+		_, ipNet, err := net.ParseCIDR(c)
+		if err == nil {
+			nets = append(nets, ipNet)
+		}
+	}
+	return nets
+}()
+
+// urlHostValidator is the function used to validate URL hosts. It can be replaced in tests.
+var urlHostValidator = validateURLHost
+
+// validateURLHost resolves the hostname and rejects private/internal IP addresses.
+func validateURLHost(ctx context.Context, host string) error {
+	if host == "" {
+		return fmt.Errorf("empty hostname")
+	}
+	ips, err := net.DefaultResolver.LookupHost(ctx, host)
+	if err != nil {
+		return fmt.Errorf("DNS lookup failed for %q: %w", host, err)
+	}
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			continue
+		}
+		for _, cidr := range privateCIDRs {
+			if cidr.Contains(ip) {
+				return fmt.Errorf("URL host %q resolves to private IP %s", host, ipStr)
+			}
+		}
+	}
+	return nil
 }

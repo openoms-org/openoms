@@ -14,14 +14,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// AutomationHandler handles HTTP requests for automation rule management.
 type AutomationHandler struct {
 	automationService *service.AutomationService
 }
 
+// NewAutomationHandler creates a new AutomationHandler.
 func NewAutomationHandler(automationService *service.AutomationService) *AutomationHandler {
 	return &AutomationHandler{automationService: automationService}
 }
 
+// List returns a paginated list of automation rules.
 func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -47,6 +50,7 @@ func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single automation rule by ID.
 func (h *AutomationHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -68,6 +72,7 @@ func (h *AutomationHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rule)
 }
 
+// Create inserts a new automation rule.
 func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -89,6 +94,7 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, rule)
 }
 
+// Update modifies an existing automation rule.
 func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -120,6 +126,7 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rule)
 }
 
+// Delete removes an automation rule by ID.
 func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -141,6 +148,7 @@ func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetLogs returns execution logs for an automation rule.
 func (h *AutomationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -164,6 +172,7 @@ func (h *AutomationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// ListDelayed returns pending delayed automation actions for the tenant.
 func (h *AutomationHandler) ListDelayed(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -175,6 +184,7 @@ func (h *AutomationHandler) ListDelayed(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, actions)
 }
 
+// TestRule runs an automation rule against a sample payload without persisting changes.
 func (h *AutomationHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

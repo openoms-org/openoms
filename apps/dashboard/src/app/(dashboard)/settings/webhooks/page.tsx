@@ -12,17 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Plus, ExternalLink } from "lucide-react";
 import type { WebhookEndpoint, WebhookConfig } from "@/types/api";
+import { useTranslations } from "next-intl";
 
-const WEBHOOK_EVENTS: { value: string; label: string }[] = [
-  { value: "order.created", label: "Zamówienie utworzone" },
-  { value: "order.status_changed", label: "Status zamówienia zmieniony" },
-  { value: "order.deleted", label: "Zamówienie usunięte" },
-  { value: "product.created", label: "Produkt utworzony" },
-  { value: "product.updated", label: "Produkt zaktualizowany" },
-  { value: "product.deleted", label: "Produkt usunięty" },
-  { value: "shipment.created", label: "Przesyłka utworzona" },
-  { value: "shipment.updated", label: "Przesyłka zaktualizowana" },
-];
+// WEBHOOK_EVENTS moved inside component to use translations
 
 function createEmptyEndpoint(): WebhookEndpoint {
   return {
@@ -36,6 +28,20 @@ function createEmptyEndpoint(): WebhookEndpoint {
 }
 
 export default function WebhooksPage() {
+  const t = useTranslations("settings");
+  const tw = useTranslations("settings.webhooks");
+
+  const WEBHOOK_EVENTS: { value: string; label: string }[] = [
+    { value: "order.created", label: tw("eventOrderCreated") },
+    { value: "order.status_changed", label: tw("eventOrderStatusChanged") },
+    { value: "order.deleted", label: tw("eventOrderDeleted") },
+    { value: "product.created", label: tw("eventProductCreated") },
+    { value: "product.updated", label: tw("eventProductUpdated") },
+    { value: "product.deleted", label: tw("eventProductDeleted") },
+    { value: "shipment.created", label: tw("eventShipmentCreated") },
+    { value: "shipment.updated", label: tw("eventShipmentUpdated") },
+  ];
+
   const { data: config, isLoading } = useWebhookConfig();
   const updateConfig = useUpdateWebhookConfig();
 
@@ -76,15 +82,15 @@ export default function WebhooksPage() {
   const handleSave = async () => {
     for (const ep of endpoints) {
       if (!ep.name.trim()) {
-        toast.error("Nazwa endpointu nie może być pusta");
+        toast.error(t("nazwaEndpointuNieMozeBycPusta"));
         return;
       }
       if (!ep.url.trim()) {
-        toast.error("URL endpointu nie może być pusty");
+        toast.error(t("urlEndpointuNieMozeBycPusty"));
         return;
       }
       if (ep.events.length === 0) {
-        toast.error(`Endpoint "${ep.name}" musi mieć co najmniej jedno zdarzenie`);
+        toast.error(tw("endpointMustHaveEvent", { name: ep.name }));
         return;
       }
     }
@@ -93,16 +99,16 @@ export default function WebhooksPage() {
 
     try {
       await updateConfig.mutateAsync(configToSave);
-      toast.success("Konfiguracja webhooków została zapisana");
+      toast.success(t("konfiguracjaWebhookowZostałaZapisana"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Błąd podczas zapisywania"
+        error instanceof Error ? error.message : t("bładPodczasZapisywania")
       );
     }
   };
 
   if (isLoading) {
-    return <div className="p-6">Ładowanie...</div>;
+    return <div className="p-6">{t("loading")}</div>;
   }
 
   return (
@@ -110,12 +116,12 @@ export default function WebhooksPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Webhooki wychodzące</h1>
+          <h1 className="text-2xl font-bold">{t("webhookiWychodzace")}</h1>
           <p className="text-muted-foreground mt-1">
-            Konfiguracja endpointów do powiadamiania zewnętrznych systemów
+            {t("konfiguracjaEndpointowDoPowiadamianiaZewnetrznychS")}
           </p>
           <p className="text-sm text-muted-foreground">
-            Webhooki wysyłają powiadomienia HTTP POST do zewnętrznych systemów gdy wystąpi zdarzenie w OpenOMS.
+            {t("webhookiWysyłajaPowiadomieniaHttpPostDoZewnetrznyc")}
           </p>
         </div>
         <Link href="/settings/webhooks/deliveries">
@@ -145,7 +151,7 @@ export default function WebhooksPage() {
               <div className="space-y-2">
                 <Label>Nazwa</Label>
                 <Input
-                  placeholder="Mój webhook"
+                  placeholder={t("mojWebhook")}
                   value={endpoint.name}
                   onChange={(e) =>
                     handleEndpointChange(index, "name", e.target.value)

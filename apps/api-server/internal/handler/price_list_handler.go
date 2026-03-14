@@ -12,14 +12,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// PriceListHandler handles HTTP requests for price list management.
 type PriceListHandler struct {
 	priceListService *service.PriceListService
 }
 
+// NewPriceListHandler creates a new PriceListHandler.
 func NewPriceListHandler(priceListService *service.PriceListService) *PriceListHandler {
 	return &PriceListHandler{priceListService: priceListService}
 }
 
+// List returns a paginated list of price lists.
 func (h *PriceListHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -51,6 +54,7 @@ func (h *PriceListHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Get returns a single price list by ID.
 func (h *PriceListHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -72,6 +76,7 @@ func (h *PriceListHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, pl)
 }
 
+// Create inserts a new price list.
 func (h *PriceListHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -94,6 +99,7 @@ func (h *PriceListHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, pl)
 }
 
+// Update modifies an existing price list.
 func (h *PriceListHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -127,6 +133,7 @@ func (h *PriceListHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, pl)
 }
 
+// Delete removes a price list by ID.
 func (h *PriceListHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -152,6 +159,7 @@ func (h *PriceListHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // --- Price List Items ---
 
+// ListItems returns all items in a price list.
 func (h *PriceListHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -182,6 +190,7 @@ func (h *PriceListHandler) ListItems(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// CreateItem adds a product price entry to a price list.
 func (h *PriceListHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -215,6 +224,7 @@ func (h *PriceListHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, item)
 }
 
+// DeleteItem removes a product price entry from a price list.
 func (h *PriceListHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())

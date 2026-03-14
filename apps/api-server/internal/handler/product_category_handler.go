@@ -12,14 +12,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// ProductCategoryHandler handles HTTP requests for product categories.
 type ProductCategoryHandler struct {
 	categorySvc *service.ProductCategoryService
 }
 
+// NewProductCategoryHandler creates a new ProductCategoryHandler.
 func NewProductCategoryHandler(categorySvc *service.ProductCategoryService) *ProductCategoryHandler {
 	return &ProductCategoryHandler{categorySvc: categorySvc}
 }
 
+// List returns all product categories for the tenant.
 func (h *ProductCategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -48,6 +51,7 @@ func (h *ProductCategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, categories)
 }
 
+// Get returns a single product category by ID.
 func (h *ProductCategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -68,6 +72,7 @@ func (h *ProductCategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, category)
 }
 
+// Create inserts a new product category.
 func (h *ProductCategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -97,6 +102,7 @@ func (h *ProductCategoryHandler) Create(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, category)
 }
 
+// Update modifies an existing product category.
 func (h *ProductCategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -133,6 +139,7 @@ func (h *ProductCategoryHandler) Update(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, category)
 }
 
+// Delete removes a product category by ID.
 func (h *ProductCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -154,6 +161,7 @@ func (h *ProductCategoryHandler) Delete(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ListDescendants returns the IDs of all descendant categories.
 func (h *ProductCategoryHandler) ListDescendants(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	id, err := uuid.Parse(chi.URLParam(r, "id"))

@@ -12,6 +12,7 @@ import (
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
+// Customer represents a buyer associated with one or more orders.
 type Customer struct {
 	ID                     uuid.UUID       `json:"id"`
 	TenantID               uuid.UUID       `json:"tenant_id"`
@@ -31,6 +32,7 @@ type Customer struct {
 	UpdatedAt              time.Time       `json:"updated_at"`
 }
 
+// CreateCustomerRequest is the payload for creating a new customer.
 type CreateCustomerRequest struct {
 	Email                  *string         `json:"email,omitempty"`
 	Phone                  *string         `json:"phone,omitempty"`
@@ -43,6 +45,7 @@ type CreateCustomerRequest struct {
 	Notes                  *string         `json:"notes,omitempty"`
 }
 
+// Validate validates the create customer request.
 func (r *CreateCustomerRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -71,6 +74,7 @@ func (r *CreateCustomerRequest) Validate() error {
 	return nil
 }
 
+// UpdateCustomerRequest is the payload for updating an existing customer.
 type UpdateCustomerRequest struct {
 	Email                  *string         `json:"email,omitempty"`
 	Phone                  *string         `json:"phone,omitempty"`
@@ -84,6 +88,7 @@ type UpdateCustomerRequest struct {
 	PriceListID            *uuid.UUID      `json:"price_list_id,omitempty"`
 }
 
+// Validate validates the update customer request.
 func (r *UpdateCustomerRequest) Validate() error {
 	if r.Email == nil && r.Phone == nil && r.Name == nil &&
 		r.CompanyName == nil && r.NIP == nil &&
@@ -120,6 +125,7 @@ func (r *UpdateCustomerRequest) Validate() error {
 	return nil
 }
 
+// CustomerListFilter holds query parameters for listing customers.
 type CustomerListFilter struct {
 	Search *string
 	Tags   *string

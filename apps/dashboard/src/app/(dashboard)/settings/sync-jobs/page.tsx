@@ -25,34 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { shortId } from "@/lib/utils";
 import type { SyncJob } from "@/types/api";
-
-const STATUS_OPTIONS = [
-  { value: "__all__", label: "Wszystkie" },
-  { value: "running", label: "W trakcie" },
-  { value: "completed", label: "Zakończone" },
-  { value: "failed", label: "Nieudane" },
-];
-
-const JOB_TYPE_OPTIONS = [
-  { value: "__all__", label: "Wszystkie" },
-  { value: "orders", label: "Zamówienia" },
-  { value: "products", label: "Produkty" },
-  { value: "stock", label: "Stany magazynowe" },
-  { value: "prices", label: "Ceny" },
-];
-
-function statusBadge(status: string) {
-  switch (status) {
-    case "running":
-      return <Badge variant="info">W trakcie</Badge>;
-    case "completed":
-      return <Badge variant="success">Zakończone</Badge>;
-    case "failed":
-      return <Badge variant="destructive">Nieudane</Badge>;
-    default:
-      return <Badge variant="secondary">{status}</Badge>;
-  }
-}
+import { useTranslations } from "next-intl";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return <span className="text-muted-foreground">&mdash;</span>;
@@ -60,6 +33,36 @@ function formatDate(dateStr?: string) {
 }
 
 export default function SyncJobsPage() {
+  const t = useTranslations("syncJobs");
+
+  const STATUS_OPTIONS = [
+    { value: "__all__", label: t("statusAll") },
+    { value: "running", label: t("statusRunning") },
+    { value: "completed", label: t("statusCompleted") },
+    { value: "failed", label: t("statusFailed") },
+  ];
+
+  const JOB_TYPE_OPTIONS = [
+    { value: "__all__", label: t("typeAll") },
+    { value: "orders", label: t("typeOrders") },
+    { value: "products", label: t("typeProducts") },
+    { value: "stock", label: t("typeStock") },
+    { value: "prices", label: t("typePrices") },
+  ];
+
+  function statusBadge(status: string) {
+    switch (status) {
+      case "running":
+        return <Badge variant="info">{t("statusRunning")}</Badge>;
+      case "completed":
+        return <Badge variant="success">{t("statusCompleted")}</Badge>;
+      case "failed":
+        return <Badge variant="destructive">{t("statusFailed")}</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  }
+
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [jobTypeFilter, setJobTypeFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -94,12 +97,12 @@ export default function SyncJobsPage() {
 
   const columns: ColumnDef<SyncJob>[] = [
     {
-      header: "Typ zadania",
+      header: t("columns.jobType"),
       accessorKey: "job_type",
       cell: (row) => row.job_type,
     },
     {
-      header: "Integracja",
+      header: t("columns.integration"),
       accessorKey: "integration_id",
       cell: (row) => (
         <span className="font-mono text-xs">{shortId(row.integration_id)}</span>
@@ -111,22 +114,22 @@ export default function SyncJobsPage() {
       cell: (row) => statusBadge(row.status),
     },
     {
-      header: "Rozpoczęto",
+      header: t("rozpoczeto"),
       accessorKey: "started_at",
       cell: (row) => formatDate(row.started_at),
     },
     {
-      header: "Zakończono",
+      header: t("zakonczono"),
       accessorKey: "finished_at",
       cell: (row) => formatDate(row.finished_at),
     },
     {
-      header: "Przetworzone",
+      header: t("columns.processed"),
       accessorKey: "items_processed",
       cell: (row) => row.items_processed,
     },
     {
-      header: "Błędy",
+      header: t("błedy1"),
       accessorKey: "items_failed",
       cell: (row) =>
         row.items_failed > 0 ? (
@@ -136,7 +139,7 @@ export default function SyncJobsPage() {
         ),
     },
     {
-      header: "Komunikat",
+      header: t("columns.message"),
       accessorKey: "error_message",
       cell: (row) =>
         row.error_message ? (
@@ -153,9 +156,9 @@ export default function SyncJobsPage() {
     <AdminGuard>
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Historia synchronizacji</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-1">
-          Przegląd wszystkich zadań synchronizacji z zewnętrznymi integracjami
+          {t("przegladWszystkichZadanSynchronizacjiZZewnetrznymi")}
         </p>
       </div>
 
@@ -196,7 +199,7 @@ export default function SyncJobsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -204,7 +207,7 @@ export default function SyncJobsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -214,7 +217,7 @@ export default function SyncJobsPage() {
           columns={columns}
           data={data?.items || []}
           isLoading={isLoading}
-          emptyMessage="Brak zadań synchronizacji"
+          emptyMessage={t("brakZadanSynchronizacji")}
           rowId={(row) => row.id}
           onRowClick={(row) => setSelectedJob(row)}
         />
@@ -233,7 +236,7 @@ export default function SyncJobsPage() {
       <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Szczegóły synchronizacji</DialogTitle>
+            <DialogTitle>{t("szczegołysynchronizacji")}</DialogTitle>
             <DialogDescription>
               ID: {selectedJob?.id}
             </DialogDescription>
@@ -242,7 +245,7 @@ export default function SyncJobsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-muted-foreground">Typ zadania:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.jobType")}:</span>
                   <p>{selectedJob.job_type}</p>
                 </div>
                 <div>
@@ -250,38 +253,38 @@ export default function SyncJobsPage() {
                   <p className="mt-1">{statusBadge(selectedJob.status)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Integracja:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.integration")}:</span>
                   <p className="font-mono text-xs">{selectedJob.integration_id}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Utworzono:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.createdAt")}</span>
                   <p>{formatDate(selectedJob.created_at)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Rozpoczęto:</span>
+                  <span className="font-medium text-muted-foreground">{t("rozpoczeto1")}</span>
                   <p>{formatDate(selectedJob.started_at)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Zakończono:</span>
+                  <span className="font-medium text-muted-foreground">{t("zakonczono1")}</span>
                   <p>{formatDate(selectedJob.finished_at)}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Przetworzone:</span>
+                  <span className="font-medium text-muted-foreground">{t("columns.processed")}:</span>
                   <p>{selectedJob.items_processed}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">Błędy:</span>
+                  <span className="font-medium text-muted-foreground">{t("błedy1")}</span>
                   <p>{selectedJob.items_failed}</p>
                 </div>
               </div>
               {selectedJob.error_message && (
                 <div>
-                  <span className="font-medium text-muted-foreground text-sm">Komunikat błędu:</span>
+                  <span className="font-medium text-muted-foreground text-sm">{t("komunikatbłedu")}</span>
                   <p className="text-destructive text-sm mt-1">{selectedJob.error_message}</p>
                 </div>
               )}
               <div>
-                <span className="font-medium text-muted-foreground text-sm">Metadane (JSON):</span>
+                <span className="font-medium text-muted-foreground text-sm">{t("metadataJson")}</span>
                 <pre className="mt-1 rounded-md bg-muted p-3 text-xs overflow-auto max-h-64">
                   {JSON.stringify(selectedJob.metadata, null, 2)}
                 </pre>

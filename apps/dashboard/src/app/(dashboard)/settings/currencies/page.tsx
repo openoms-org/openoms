@@ -43,10 +43,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const CURRENCIES = ["PLN", "EUR", "USD", "GBP", "CZK", "CHF", "SEK", "NOK", "DKK", "HUF"];
 
 export default function CurrenciesPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data, isLoading, isError, refetch } = useExchangeRates({ limit: 100 });
   const deleteRate = useDeleteExchangeRate();
   const createRate = useCreateExchangeRate();
@@ -68,7 +71,7 @@ export default function CurrenciesPage() {
     if (!deleteId) return;
     deleteRate.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Kurs został usunięty");
+        toast.success(t("kursZostałUsuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -80,7 +83,7 @@ export default function CurrenciesPage() {
   const handleCreate = () => {
     const rateNum = parseFloat(rate);
     if (!rateNum || rateNum <= 0) {
-      toast.error("Kurs musi być liczbą dodatnią");
+      toast.error(t("kursMusiBycLiczbaDodatnia"));
       return;
     }
     createRate.mutate(
@@ -92,7 +95,7 @@ export default function CurrenciesPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Kurs został dodany");
+          toast.success(t("kursZostałDodany"));
           setShowCreate(false);
           setRate("");
         },
@@ -106,7 +109,7 @@ export default function CurrenciesPage() {
   const handleFetchNBP = () => {
     fetchNBP.mutate(undefined, {
       onSuccess: (data) => {
-        toast.success(`Pobrano ${data.fetched} kursów z NBP`);
+        toast.success(t("currencies.fetchedNBP", { count: data.fetched }));
       },
       onError: (error) => {
         toast.error(getErrorMessage(error));
@@ -118,33 +121,33 @@ export default function CurrenciesPage() {
     <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Waluty i kursy wymiany</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("currencies.title")}</h1>
           <p className="text-muted-foreground">
-            Zarządzaj kursami walut i przeliczaj kwoty
+            {t("zarzadzajKursamiWalutIPrzeliczajKwoty")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleFetchNBP} disabled={fetchNBP.isPending}>
             <Download className="h-4 w-4 mr-2" />
-            {fetchNBP.isPending ? "Pobieranie..." : "Pobierz kursy NBP"}
+            {fetchNBP.isPending ? t("currencies.fetchingNBP") : t("currencies.fetchNBP")}
           </Button>
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Nowy kurs
+                {t("currencies.newRate")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nowy kurs wymiany</DialogTitle>
+                <DialogTitle>{t("currencies.newExchangeRate")}</DialogTitle>
                 <DialogDescription>
-                  Dodaj ręcznie kurs wymiany walut
+                  {t("dodajRecznieKursWymianyWalut")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Waluta bazowa</Label>
+                  <Label>{t("currencies.baseCurrency")}</Label>
                   <Select value={baseCurrency} onValueChange={setBaseCurrency}>
                     <SelectTrigger>
                       <SelectValue />
@@ -159,7 +162,7 @@ export default function CurrenciesPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Waluta docelowa</Label>
+                  <Label>{t("currencies.targetCurrency")}</Label>
                   <Select value={targetCurrency} onValueChange={setTargetCurrency}>
                     <SelectTrigger>
                       <SelectValue />
@@ -174,13 +177,13 @@ export default function CurrenciesPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Kurs</Label>
+                  <Label>{t("currencies.rate")}</Label>
                   <Input
                     type="number"
                     step="0.000001"
                     value={rate}
                     onChange={(e) => setRate(e.target.value)}
-                    placeholder="np. 0.2326"
+                    placeholder={t("currencies.ratePlaceholder")}
                   />
                   <p className="text-xs text-muted-foreground">
                     1 {baseCurrency} = ? {targetCurrency}
@@ -189,13 +192,13 @@ export default function CurrenciesPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowCreate(false)}>
-                  Anuluj
+                  {t("currencies.cancelButton")}
                 </Button>
                 <Button
                   onClick={handleCreate}
                   disabled={!rate || createRate.isPending}
                 >
-                  {createRate.isPending ? "Dodawanie..." : "Dodaj"}
+                  {createRate.isPending ? t("currencies.adding") : t("currencies.addButton")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -206,7 +209,7 @@ export default function CurrenciesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {tc("loadError")}
           </p>
           <Button
             variant="outline"
@@ -214,7 +217,7 @@ export default function CurrenciesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {tc("retry")}
           </Button>
         </div>
       )}
@@ -222,19 +225,19 @@ export default function CurrenciesPage() {
       {rates.length === 0 ? (
         <EmptyState
           icon={Coins}
-          title="Brak kursów walut"
-          description="Dodaj pierwszy kurs ręcznie lub pobierz kursy z NBP."
+          title={t("brakKursowWalut")}
+          description={t("dodajPierwszyKursRecznieLubPobierzKursyZNbp")}
         />
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Waluta bazowa</TableHead>
-                <TableHead>Waluta docelowa</TableHead>
-                <TableHead>Kurs</TableHead>
-                <TableHead>Źródło</TableHead>
-                <TableHead>Pobrano</TableHead>
+                <TableHead>{t("currencies.baseCurrency")}</TableHead>
+                <TableHead>{t("currencies.targetCurrency")}</TableHead>
+                <TableHead>{t("currencies.rate")}</TableHead>
+                <TableHead>{t("columns.source")}</TableHead>
+                <TableHead>{t("currencies.fetchedAt")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -259,7 +262,7 @@ export default function CurrenciesPage() {
                           : ""
                       }
                     >
-                      {exchangeRate.source === "nbp" ? "NBP" : "Ręczny"}
+                      {exchangeRate.source === "nbp" ? "NBP" : t("reczny")}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDate(exchangeRate.fetched_at)}</TableCell>
@@ -282,9 +285,9 @@ export default function CurrenciesPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń kurs"
-        description="Czy na pewno chcesz usunąć ten kurs wymiany?"
-        confirmLabel="Usuń"
+        title={t("usunKurs")}
+        description={t("czyNaPewnoChceszUsunacTenKursWymiany")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteRate.isPending}

@@ -23,8 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 export default function SuppliersPage() {
+  const t = useTranslations("suppliers");
+  const tc = useTranslations("common");
   const router = useRouter();
   const { data, isLoading, isError, refetch } = useSuppliers();
   const deleteSupplier = useDeleteSupplier();
@@ -42,7 +45,7 @@ export default function SuppliersPage() {
     if (!deleteId) return;
     deleteSupplier.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Dostawca został usunięty");
+        toast.success(t("dostawcazostałusuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -55,7 +58,7 @@ export default function SuppliersPage() {
     e.stopPropagation();
     syncSupplier.mutate(id, {
       onSuccess: () => {
-        toast.success("Synchronizacja zakończona");
+        toast.success(t("synchronizacjaZakonczona"));
       },
       onError: (error) => {
         toast.error(getErrorMessage(error));
@@ -66,15 +69,15 @@ export default function SuppliersPage() {
   return (
     <AdminGuard>
       <PageHeader
-        title="Dostawcy"
-        description="Zarządzaj dostawcami i synchronizacją feedów produktowych"
-        action={{ label: "Nowy dostawca", href: "/suppliers/new" }}
+        title={t("title")}
+        description={t("zarzadzajDostawcamiISynchronizacjaFeedowProduktowy")}
+        action={{ label: t("newSupplier"), href: "/suppliers/new" }}
       />
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -82,7 +85,7 @@ export default function SuppliersPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -90,21 +93,21 @@ export default function SuppliersPage() {
       {suppliers.length === 0 ? (
         <EmptyState
           icon={Factory}
-          title="Brak dostawców"
-          description="Dodaj pierwszego dostawcę, aby importować produkty z feedów IOF."
-          action={{ label: "Nowy dostawca", href: "/suppliers/new" }}
+          title={t("brakDostawcow")}
+          description={t("dodajPierwszegoDostawceAbyImportowacProduktyZFeedo")}
+          action={{ label: t("newSupplier"), href: "/suppliers/new" }}
         />
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>Kod</TableHead>
-                <TableHead>Format</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ostatnia synchronizacja</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{tc("name")}</TableHead>
+                <TableHead>{tc("code")}</TableHead>
+                <TableHead>{t("format")}</TableHead>
+                <TableHead>{tc("status")}</TableHead>
+                <TableHead>{t("lastSync")}</TableHead>
+                <TableHead>{tc("createdAt")}</TableHead>
                 <TableHead className="w-[100px]" />
               </TableRow>
             </TableHeader>
@@ -162,9 +165,9 @@ export default function SuppliersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń dostawcę"
-        description="Czy na pewno chcesz usunąć tego dostawcę? Produkty dostawcy również zostaną usunięte."
-        confirmLabel="Usuń"
+        title={t("usunDostawce")}
+        description={t("czyNaPewnoChceszUsunacTegoDostawceProduktyDostawcy")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteSupplier.isPending}

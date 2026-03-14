@@ -13,6 +13,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// AuthHandler handles HTTP requests for authentication and session management.
 type AuthHandler struct {
 	authService      *service.AuthService
 	invitationSvc    *service.InvitationService
@@ -24,6 +25,7 @@ type AuthHandler struct {
 	tokenBlacklist   *middleware.TokenBlacklist
 }
 
+// NewAuthHandler creates a new AuthHandler.
 func NewAuthHandler(authService *service.AuthService, isDev bool, blacklist ...*middleware.TokenBlacklist) *AuthHandler {
 	h := &AuthHandler{authService: authService, isDev: isDev, registrationMode: "open"}
 	if len(blacklist) > 0 {
@@ -32,10 +34,12 @@ func NewAuthHandler(authService *service.AuthService, isDev bool, blacklist ...*
 	return h
 }
 
+// SetRegistrationMode updates the handler's registration mode at runtime.
 func (h *AuthHandler) SetRegistrationMode(mode string) {
 	h.registrationMode = mode
 }
 
+// SetInvitationService injects the invitation service dependency.
 func (h *AuthHandler) SetInvitationService(svc *service.InvitationService) {
 	h.invitationSvc = svc
 }
@@ -55,6 +59,7 @@ func (h *AuthHandler) SetCheckoutService(svc *service.CheckoutService) {
 	h.checkoutSvc = svc
 }
 
+// Register handles new user and tenant registration.
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Check registration mode
 	switch h.registrationMode {
@@ -214,10 +219,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		h.checkoutSvc.FinalizeCheckoutClaim(r.Context(), checkoutSessionID, resp.Tenant.ID, req.Plan, req.CheckoutSessionInterval)
 	}
 
-	h.setRefreshCookie(w, refreshToken, 30*24*3600)
+	h.setRefreshCookie(w, refreshToken)
 	writeJSON(w, http.StatusCreated, resp)
 }
 
+// Login authenticates a user and issues access and refresh tokens.
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req model.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -250,10 +256,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, result.RefreshToken, 30*24*3600)
+	h.setRefreshCookie(w, result.RefreshToken)
 	writeJSON(w, http.StatusOK, result.TokenResponse)
 }
 
+// TwoFALogin completes login by verifying a TOTP code after password auth.
 func (h *AuthHandler) TwoFALogin(w http.ResponseWriter, r *http.Request) {
 	var req model.TwoFALoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -279,10 +286,11 @@ func (h *AuthHandler) TwoFALogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, refreshToken, 30*24*3600)
+	h.setRefreshCookie(w, refreshToken)
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// TwoFASetup generates a TOTP secret and QR code for 2FA enrollment.
 func (h *AuthHandler) TwoFASetup(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	tenantID := middleware.TenantIDFromContext(r.Context())
@@ -297,6 +305,7 @@ func (h *AuthHandler) TwoFASetup(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// TwoFAVerify confirms a TOTP code and activates 2FA for the user.
 func (h *AuthHandler) TwoFAVerify(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	tenantID := middleware.TenantIDFromContext(r.Context())
@@ -327,6 +336,7 @@ func (h *AuthHandler) TwoFAVerify(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "2FA enabled"})
 }
 
+// TwoFADisable turns off 2FA for the authenticated user.
 func (h *AuthHandler) TwoFADisable(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	tenantID := middleware.TenantIDFromContext(r.Context())
@@ -357,6 +367,7 @@ func (h *AuthHandler) TwoFADisable(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "2FA disabled"})
 }
 
+// TwoFAStatus returns the current 2FA enrollment state for the user.
 func (h *AuthHandler) TwoFAStatus(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	tenantID := middleware.TenantIDFromContext(r.Context())
@@ -370,6 +381,7 @@ func (h *AuthHandler) TwoFAStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Refresh rotates the access token using a valid refresh token cookie.
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
@@ -389,10 +401,11 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, newRefreshToken, 30*24*3600)
+	h.setRefreshCookie(w, newRefreshToken)
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Logout revokes the current session and clears auth cookies.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	// Revoke the access token if a blacklist is configured
 	if h.tokenBlacklist != nil {
@@ -415,7 +428,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "logged out"})
 }
 
-func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string, maxAge int) {
+func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string) {
+	const maxAge = 30 * 24 * 3600 // 30 days
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    token,

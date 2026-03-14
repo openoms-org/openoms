@@ -15,6 +15,7 @@ type TrackingHandler struct {
 	trackingService *service.TrackingService
 }
 
+// NewTrackingHandler creates a new TrackingHandler.
 func NewTrackingHandler(trackingService *service.TrackingService) *TrackingHandler {
 	return &TrackingHandler{trackingService: trackingService}
 }

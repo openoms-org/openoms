@@ -20,7 +20,7 @@ func TestEventsPoll(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"events": [
 				{
 					"id": "evt-101",
@@ -64,9 +64,9 @@ func TestEventsPoll(t *testing.T) {
 }
 
 func TestEventsPollError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"message":"unauthorized"}`))
+		_, _ = w.Write([]byte(`{"message":"unauthorized"}`))
 	}))
 	defer srv.Close()
 
@@ -84,7 +84,7 @@ func TestEventsPollNoParams(t *testing.T) {
 		if r.URL.RawQuery != "" {
 			t.Errorf("expected no query params, got %q", r.URL.RawQuery)
 		}
-		w.Write([]byte(`{"events":[]}`))
+		_, _ = w.Write([]byte(`{"events":[]}`))
 	}))
 	defer srv.Close()
 

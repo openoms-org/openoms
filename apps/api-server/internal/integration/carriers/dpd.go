@@ -32,7 +32,7 @@ type DPDProvider struct {
 }
 
 // NewDPDProvider creates a DPD CarrierProvider from encrypted credentials.
-func NewDPDProvider(credentials json.RawMessage, settings json.RawMessage) (*DPDProvider, error) {
+func NewDPDProvider(credentials json.RawMessage, _ json.RawMessage) (*DPDProvider, error) {
 	var creds DPDCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("dpd: parse credentials: %w", err)
@@ -51,8 +51,10 @@ func NewDPDProvider(credentials json.RawMessage, settings json.RawMessage) (*DPD
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *DPDProvider) ProviderName() string { return "dpd" }
 
+// CreateShipment creates a DPD shipment and returns the response with tracking info.
 func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	svcType, err := mapDPDServiceType(req.ServiceType)
 	if err != nil {
@@ -137,10 +139,12 @@ func (p *DPDProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}, nil
 }
 
-func (p *DPDProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
+// GetLabel downloads the shipping label for the given DPD shipment.
+func (p *DPDProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
 	return p.client.Shipments.GetLabel(ctx, externalID)
 }
 
+// GetTracking returns tracking events for the given DPD shipment.
 func (p *DPDProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
 	if err != nil {
@@ -160,14 +164,17 @@ func (p *DPDProvider) GetTracking(ctx context.Context, trackingNumber string) ([
 	return events, nil
 }
 
+// CancelShipment cancels a DPD shipment by its external ID.
 func (p *DPDProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return p.client.Shipments.Cancel(ctx, externalID)
 }
 
+// MapStatus maps a DPD carrier status to the internal shipment status.
 func (p *DPDProvider) MapStatus(carrierStatus string) (string, bool) {
 	return dpdsdk.MapStatus(carrierStatus)
 }
 
+// GetRates returns estimated shipping rates for DPD.
 func (p *DPDProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// TODO: Implement real DPD rate API integration.
 	// For now, return realistic Polish domestic rates.

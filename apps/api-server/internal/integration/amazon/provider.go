@@ -1,3 +1,4 @@
+// Package amazon implements the Amazon marketplace provider.
 package amazon
 
 import (
@@ -20,8 +21,8 @@ func init() {
 	})
 }
 
-// AmazonCredentials is the JSON structure stored in encrypted integration credentials.
-type AmazonCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	ClientID         string `json:"client_id"`
 	ClientSecret     string `json:"client_secret"`
 	RefreshToken     string `json:"refresh_token"`
@@ -49,8 +50,8 @@ type Provider struct {
 }
 
 // NewProvider creates an Amazon MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds AmazonCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("amazon: parse credentials: %w", err)
 	}
@@ -77,6 +78,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "amazon" }
 
 // PollOrders polls Amazon for orders created after the given cursor (ISO8601 timestamp).

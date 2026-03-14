@@ -11,14 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-
-const STATUS_LABELS: Record<string, string> = {
-  trialing: "Okres próbny",
-  active: "Aktywna",
-  past_due: "Zaległa płatność",
-  canceled: "Anulowana",
-  suspended: "Zawieszona",
-};
+import { useTranslations } from "next-intl";
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   trialing: "secondary",
@@ -26,11 +19,6 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
   past_due: "destructive",
   canceled: "destructive",
   suspended: "destructive",
-};
-
-const INTERVAL_LABELS: Record<string, string> = {
-  month: "Miesięcznie",
-  year: "Rocznie",
 };
 
 function computeDaysLeft(trialEnd: string): number {
@@ -43,8 +31,22 @@ function computeDaysLeft(trialEnd: string): number {
 }
 
 export default function BillingSettingsPage() {
+  const t = useTranslations("subscription");
   const { data: subscription, isLoading } = useSubscription();
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
+
+  const STATUS_LABELS: Record<string, string> = {
+    trialing: t("statusTrialing"),
+    active: t("statusActive"),
+    past_due: t("statusPastDue"),
+    canceled: t("statusCanceled"),
+    suspended: t("statusSuspended"),
+  };
+
+  const INTERVAL_LABELS: Record<string, string> = {
+    month: t("intervalMonth"),
+    year: t("intervalYear"),
+  };
 
   useEffect(() => {
     if (subscription?.status === "trialing" && subscription.trial_end) {
@@ -67,12 +69,12 @@ export default function BillingSettingsPage() {
       <AdminGuard>
         <div className="mx-auto max-w-4xl space-y-6">
           <div>
-            <h1 className="text-2xl font-bold">Subskrypcja</h1>
-            <p className="text-muted-foreground">Zarządzaj planem i płatnościami</p>
+            <h1 className="text-2xl font-bold">{t("title")}</h1>
+            <p className="text-muted-foreground">{t("zarzadzajPlanemIPłatnosciami")}</p>
           </div>
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              Nie udało się załadować danych subskrypcji.
+              {t("nieUdałoSieZaładowacDanychSubskrypcji")}
             </CardContent>
           </Card>
         </div>
@@ -84,14 +86,14 @@ export default function BillingSettingsPage() {
     <AdminGuard>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Subskrypcja</h1>
-          <p className="text-muted-foreground">Zarządzaj planem i płatnościami</p>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("zarzadzajPlanemIPłatnosciami")}</p>
         </div>
 
         {/* Plan & Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Twój plan</CardTitle>
+            <CardTitle>{t("twojPlan")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
@@ -111,8 +113,8 @@ export default function BillingSettingsPage() {
 
             {daysLeft !== null && (
               <p className="text-sm text-muted-foreground">
-                Okres próbny kończy się za{" "}
-                <span className="font-medium text-foreground">{daysLeft} dni</span>
+                {t("trialEndsIn")}{" "}
+                <span className="font-medium text-foreground">{t("days", { count: daysLeft })}</span>
                 {subscription.trial_end && (
                   <>
                     {" "}
@@ -125,7 +127,7 @@ export default function BillingSettingsPage() {
             {subscription.status === "canceled" &&
               subscription.current_period_end && (
                 <p className="text-sm text-muted-foreground">
-                  Dostęp wygasa:{" "}
+                  {t("accessExpires")}{" "}
                   <span className="font-medium text-foreground">
                     {new Date(
                       subscription.current_period_end
@@ -137,7 +139,7 @@ export default function BillingSettingsPage() {
             {subscription.status === "active" &&
               subscription.current_period_end && (
                 <p className="text-sm text-muted-foreground">
-                  Następne odnowienie:{" "}
+                  {t("nextRenewal")}{" "}
                   <span className="font-medium text-foreground">
                     {new Date(
                       subscription.current_period_end
@@ -152,7 +154,7 @@ export default function BillingSettingsPage() {
         {subscription.limits && (
           <Card>
             <CardHeader>
-              <CardTitle>Limity planu</CardTitle>
+              <CardTitle>{t("planLimits")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -162,7 +164,7 @@ export default function BillingSettingsPage() {
                       {subscription.limits.max_users}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Maks. użytkowników
+                      {t("maksUzytkownikow")}
                     </p>
                   </div>
                 )}
@@ -172,7 +174,7 @@ export default function BillingSettingsPage() {
                       {subscription.limits.max_orders_monthly}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Zamówień / miesiąc
+                      {t("zamowienMiesiac")}
                     </p>
                   </div>
                 )}
@@ -182,7 +184,7 @@ export default function BillingSettingsPage() {
                       {subscription.limits.max_integrations}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Maks. integracji
+                      {t("maxIntegrations")}
                     </p>
                   </div>
                 )}
@@ -190,7 +192,7 @@ export default function BillingSettingsPage() {
                   !subscription.limits.max_orders_monthly &&
                   !subscription.limits.max_integrations && (
                     <p className="col-span-3 text-sm text-muted-foreground">
-                      Brak limitów w bieżącym planie.
+                      {t("brakLimitowWBiezacymPlanie")}
                     </p>
                   )}
               </div>

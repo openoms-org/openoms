@@ -19,8 +19,10 @@ import (
 )
 
 var (
+	// ErrKSeFNotConfigured is returned when KSeF credentials are missing for a tenant.
 	ErrKSeFNotConfigured = errors.New("KSeF is not configured for this tenant")
-	ErrKSeFAlreadySent   = errors.New("invoice has already been sent to KSeF")
+	// ErrKSeFAlreadySent is returned when an invoice has already been submitted to KSeF.
+	ErrKSeFAlreadySent = errors.New("invoice has already been sent to KSeF")
 )
 
 // KSeFSettings holds the KSeF configuration from tenant settings.
@@ -118,7 +120,7 @@ func (s *KSeFService) TestConnection(ctx context.Context, tenantID uuid.UUID) (*
 	if !cfg.Enabled || cfg.NIP == "" || cfg.Token == "" {
 		return &KSeFTestResult{
 			Success: false,
-			Message: "KSeF nie jest skonfigurowany. Uzupełnij NIP i token.",
+			Message: "KSeF not configured. Set NIP and token.",
 		}, nil
 	}
 
@@ -129,13 +131,13 @@ func (s *KSeFService) TestConnection(ctx context.Context, tenantID uuid.UUID) (*
 	if err != nil {
 		return &KSeFTestResult{
 			Success: false,
-			Message: fmt.Sprintf("Błąd połączenia z KSeF: %v", err),
+			Message: fmt.Sprintf("KSeF connection error: %v", err),
 		}, nil
 	}
 
 	return &KSeFTestResult{
 		Success:   true,
-		Message:   "Połączenie z KSeF działa poprawnie.",
+		Message:   "KSeF connection OK.",
 		Timestamp: resp.Timestamp,
 		Challenge: resp.Challenge,
 	}, nil
@@ -305,7 +307,10 @@ func (s *KSeFService) CheckKSeFStatus(ctx context.Context, tenantID, invoiceID u
 		}
 
 		cfg, err := s.loadKSeFSettings(ctx, tx, tenantID)
-		if err != nil || !cfg.Enabled {
+		if err != nil {
+			return err
+		}
+		if !cfg.Enabled {
 			return nil
 		}
 
@@ -496,7 +501,7 @@ func (s *KSeFService) loadKSeFSettings(ctx context.Context, tx pgx.Tx, tenantID 
 
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return KSeFSettings{}, nil
+		return KSeFSettings{}, err
 	}
 
 	raw, ok := allSettings["ksef"]
@@ -506,7 +511,7 @@ func (s *KSeFService) loadKSeFSettings(ctx context.Context, tx pgx.Tx, tenantID 
 
 	var cfg KSeFSettings
 	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return KSeFSettings{}, nil
+		return KSeFSettings{}, err
 	}
 	return cfg, nil
 }
@@ -599,11 +604,12 @@ func (s *KSeFService) buildInvoiceData(inv *model.Invoice, order *model.Order, c
 	taxRate := 23 // Default Polish VAT rate
 	if inv.TotalNet != nil && inv.TotalGross != nil && *inv.TotalNet > 0 {
 		effectiveRate := (*inv.TotalGross / *inv.TotalNet - 1) * 100
-		if effectiveRate > 20 && effectiveRate < 26 {
+		switch {
+		case effectiveRate > 20 && effectiveRate < 26:
 			taxRate = 23
-		} else if effectiveRate > 6 && effectiveRate < 10 {
+		case effectiveRate > 6 && effectiveRate < 10:
 			taxRate = 8
-		} else if effectiveRate > 3 && effectiveRate < 7 {
+		case effectiveRate > 3 && effectiveRate < 7:
 			taxRate = 5
 		}
 	}
@@ -619,7 +625,7 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 		return []ksef.InvoiceLineItem{
 			{
 				LineNumber: 1,
-				Name:       "Zamówienie",
+				Name:       "Order",
 				Quantity:   1,
 				Unit:       "szt.",
 				VATRate:    fmt.Sprintf("%d", taxRate),
@@ -639,7 +645,7 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 		return []ksef.InvoiceLineItem{
 			{
 				LineNumber: 1,
-				Name:       "Zamówienie",
+				Name:       "Order",
 				Quantity:   1,
 				Unit:       "szt.",
 				VATRate:    fmt.Sprintf("%d", taxRate),
@@ -675,7 +681,7 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 		return []ksef.InvoiceLineItem{
 			{
 				LineNumber: 1,
-				Name:       "Zamówienie",
+				Name:       "Order",
 				Quantity:   1,
 				Unit:       "szt.",
 				VATRate:    fmt.Sprintf("%d", taxRate),
@@ -684,34 +690,6 @@ func (s *KSeFService) buildLineItems(order *model.Order, taxRate int) []ksef.Inv
 	}
 
 	return items
-}
-
-// markKSeFError updates an invoice with a KSeF error status.
-// Uses "error" status (retryable) instead of "rejected" (terminal, only for UPO rejections).
-func (s *KSeFService) markKSeFError(ctx context.Context, tx pgx.Tx, inv *model.Invoice, err error) error {
-	// Preserve existing retry_count from ksef_response
-	retryCount := 0
-	if inv.KSeFResponse != nil {
-		var existing map[string]any
-		if jsonErr := json.Unmarshal(inv.KSeFResponse, &existing); jsonErr == nil {
-			if rc, ok := existing["retry_count"].(float64); ok {
-				retryCount = int(rc)
-			}
-		}
-	}
-
-	inv.KSeFStatus = "error"
-	errMsg := err.Error()
-	responseJSON, _ := json.Marshal(map[string]any{
-		"error":         errMsg,
-		"retry_count":   retryCount,
-		"last_error_at": time.Now().UTC().Format(time.RFC3339),
-	})
-	inv.KSeFResponse = responseJSON
-	if updateErr := s.invoiceRepo.Update(ctx, tx, inv); updateErr != nil {
-		slog.Error("ksef: failed to persist error status", "invoice_id", inv.ID, "update_error", updateErr, "ksef_error", err)
-	}
-	return err
 }
 
 // RetryErroredInvoices retries sending invoices with ksef_status = 'error'.
@@ -734,7 +712,10 @@ func (s *KSeFService) RetryErroredInvoices(ctx context.Context, tenantID uuid.UU
 		}
 
 		cfg, err := s.loadKSeFSettings(ctx, tx, tenantID)
-		if err != nil || !cfg.Enabled {
+		if err != nil {
+			return err
+		}
+		if !cfg.Enabled {
 			return nil
 		}
 

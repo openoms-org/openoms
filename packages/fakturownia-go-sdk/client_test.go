@@ -29,7 +29,7 @@ func TestInvoiceService_Create(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvoiceResponse{
+		_ = json.NewEncoder(w).Encode(InvoiceResponse{
 			ID:         123,
 			Number:     "FV/2024/01/001",
 			Status:     "issued",
@@ -82,7 +82,7 @@ func TestInvoiceService_Get(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvoiceResponse{
+		_ = json.NewEncoder(w).Encode(InvoiceResponse{
 			ID:     123,
 			Number: "FV/2024/01/001",
 			Status: "issued",
@@ -116,7 +116,7 @@ func TestInvoiceService_GetPDF(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/pdf")
-		w.Write(pdfContent)
+		_, _ = w.Write(pdfContent)
 	})
 
 	server := httptest.NewServer(handler)
@@ -158,9 +158,9 @@ func TestInvoiceService_Cancel(t *testing.T) {
 }
 
 func TestClient_APIError(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"code":    "unauthorized",
 			"message": "Invalid API token",
 		})

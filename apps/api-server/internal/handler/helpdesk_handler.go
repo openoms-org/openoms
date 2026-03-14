@@ -11,10 +11,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// HelpdeskHandler handles HTTP requests for helpdesk ticket management.
 type HelpdeskHandler struct {
 	freshdeskService *service.FreshdeskService
 }
 
+// NewHelpdeskHandler creates a new HelpdeskHandler.
 func NewHelpdeskHandler(freshdeskService *service.FreshdeskService) *HelpdeskHandler {
 	return &HelpdeskHandler{freshdeskService: freshdeskService}
 }

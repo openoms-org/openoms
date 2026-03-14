@@ -1,0 +1,122 @@
+{
+  "returnRequest": {
+    "detail": {
+      "reportReturn": "Zgłoś zwrot"
+    },
+    "error": "Błąd",
+    "jegoStatusPodPonizszymLinkiem": "jego status pod poniższym linkiem.",
+    "lastUpdate": "Ostatnia aktualizacja",
+    "loading": "Ładowanie...",
+    "nieUdałoSiePołaczycZSerwerem": "Nie udało się połączyć z serwerem.",
+    "nieUdałoSiePołaczycZSerweremSprobujPonownie": "Nie udało się połączyć z serwerem. Spróbuj ponownie.",
+    "nieudałosiepołaczyczserwerem": "Nie udało się połączyć z serwerem.",
+    "numerZamowieniaId": "Numer zamówienia (ID)",
+    "opiszPowodZwrotu": "Opisz powód zwrotu...",
+    "podajNumerZamowieniaIAdresEmailKtory": "Podaj numer zamówienia i adres email, który został",
+    "postep": "Postęp",
+    "powodZwrotu": "Powód zwrotu",
+    "powrotDoFormularza": "Powrót do formularza",
+    "productsToReturn": "Produkty do zwrotu",
+    "returnLabel": "Etykieta zwrotu",
+    "returnNotFound": "Nie znaleziono zwrotu",
+    "returnStatus": "Status zwrotu",
+    "sprawdzStatusZwrotu": "Sprawdź status zwrotu",
+    "submittedAt": "Zgłoszono",
+    "twojeZgłoszenieZostałoZarejestrowaneOtrzymaszInfor": "Twoje zgłoszenie zostało zarejestrowane. Otrzymasz informacje o zmianach statusu.",
+    "twojeZgłoszenieZwrotuZostałoOdrzucone": "Twoje zgłoszenie zwrotu zostało odrzucone.",
+    "twojeZgłoszenieZwrotuZostałoPrzyjeteMozeszSledzic": "Twoje zgłoszenie zwrotu zostało przyjęte. Możesz śledzić",
+    "twojezgłoszeniezwrotuzostałoodrzucone": "Twoje zgłoszenie zwrotu zostało odrzucone.",
+    "uzytyPrzySkładaniuZamowienia": "użyty przy składaniu zamówienia.",
+    "wypełnijFormularzAbyZgłosicZwrotZamowienia": "Wypełnij formularz, aby zgłosić zwrot zamówienia.",
+    "wystapiłBładPodczasSkładaniaZwrotu": "Wystąpił błąd podczas składania zwrotu",
+    "wystapiłBładPodczasŁadowaniaStatusuZwrotu": "Wystąpił błąd podczas ładowania statusu zwrotu.",
+    "wystapiłbładpodczasładowaniastatusuzwrotu": "Wystąpił błąd podczas ładowania statusu zwrotu.",
+    "wysyłanie": "Wysyłanie...",
+    "zgłosKolejnyZwrot": "Zgłoś kolejny zwrot",
+    "zwrotZostałAnulowany": "Zwrot został anulowany.",
+    "zwrotZostałZgłoszony": "Zwrot został zgłoszony",
+    "zwrotzostałanulowany": "Zwrot został anulowany."
+  },
+  "returns": {
+    "additionalInfoOptional": "Dodatkowe informacje (opcjonalne)",
+    "brakPozycjiWZamowieniu": "Brak pozycji w zamówieniu",
+    "cancel": "Anuluj",
+    "changeStatus": "Zmiana statusu",
+    "columns": {
+      "date": "Data",
+      "order": "Zamówienie",
+      "reason": "Powód",
+      "refundAmount": "Kwota zwrotu",
+      "status": "Status"
+    },
+    "createReturn": "Utwórz zwrot",
+    "created": "Utworzono",
+    "createdOn": "Utworzony {date}",
+    "creating": "Tworzenie...",
+    "customerEmail": "Email klienta (z formularza)",
+    "customerNotes": "Uwagi klienta",
+    "delete": "Usuń",
+    "deleteReturn": "Usuń zwrot",
+    "deleteReturnConfirm": "Czy na pewno chcesz usunąć ten zwrot? Ta operacja jest nieodwracalna.",
+    "detail": {
+      "backToList": "Wróć do zwrotów"
+    },
+    "edit": "Edytuj",
+    "editReturn": "Edycja zwrotu",
+    "empty": {
+      "description": "Nie znaleziono zwrotów do wyświetlenia.",
+      "title": "Brak zwrotów"
+    },
+    "enterReturnReason": "Podaj powód zwrotu",
+    "fillFormForNewReturn": "Wypełnij formularz, aby zgłosić nowy zwrot",
+    "inOrder": "W zamówieniu",
+    "loadError": "Nie udało się załadować danych",
+    "loadingOrderItems": "Wczytywanie pozycji zamówienia...",
+    "newReturn": "Nowy zwrot",
+    "noItemsInOrder": "Brak pozycji w zamówieniu",
+    "notFound": "Nie znaleziono zwrotu",
+    "notes": "Notatki",
+    "order": {
+      "refunded": "Zwrócone"
+    },
+    "podajPowodZwrotu": "Podaj powód zwrotu",
+    "product": "Produkt",
+    "productsToReturn": "Produkty do zwrotu",
+    "refundAmount": "Kwota zwrotu",
+    "refundAmountPln": "Kwota zwrotu (PLN)",
+    "retry": "Spróbuj ponownie",
+    "return": {
+      "requested": "Zgłoszony"
+    },
+    "returnCreated": "Zwrot został utworzony",
+    "returnData": "Dane zwrotu",
+    "returnDeleted": "Zwrot został usunięty",
+    "returnTitle": "Zwrot #{id}",
+    "returnUpdated": "Zwrot został zaktualizowany",
+    "saveChanges": "Zapisz zmiany",
+    "saving": "Zapisywanie...",
+    "statusChanged": "Status zwrotu został zmieniony",
+    "subtitle": "Zarządzaj zwrotami i reklamacjami",
+    "title": "Zwroty",
+    "toReturn": "Do zwrotu",
+    "trackingLinkForCustomer": "Link do śledzenia (dla klienta)",
+    "transitions": {
+      "approved": "Zatwierdź",
+      "cancelled": "Anuluj",
+      "received": "Oznacz jako odebrane",
+      "refunded": "Zwróć środki",
+      "rejected": "Odrzuć"
+    },
+    "updated": "Zaktualizowano",
+    "utworzZwrot": "Utwórz zwrot",
+    "validation": {
+      "amountPositive": "Kwota musi być dodatnia",
+      "orderIdRequired": "ID zamówienia jest wymagane",
+      "reasonRequired": "Powód jest wymagany"
+    },
+    "wZamowieniu": "w zamówieniu",
+    "wczytywaniePozycjiZamowienia": "Wczytywanie pozycji zamówienia...",
+    "wypełnijFormularzAbyZgłosicNowyZwrot": "Wypełnij Formular z Aby Zgłosic Nowy Zwrot",
+    "zwrotzostałutworzony": "Zwrot został utworzony"
+  }
+}

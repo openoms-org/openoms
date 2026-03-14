@@ -9,6 +9,7 @@ import (
 // LabelFormat specifies the label output format.
 type LabelFormat string
 
+// Label format constants.
 const (
 	LabelPDF LabelFormat = "Pdf"
 	LabelZPL LabelFormat = "Zpl"
@@ -18,6 +19,7 @@ const (
 // LabelPageFormat specifies the label page size.
 type LabelPageFormat string
 
+// Label page format constants.
 const (
 	LabelPageNormal LabelPageFormat = "normal" // A6
 	LabelPageA4     LabelPageFormat = "A4"

@@ -1,3 +1,4 @@
+// Package woocommerce implements the WooCommerce marketplace provider.
 package woocommerce
 
 import (
@@ -22,8 +23,8 @@ func init() {
 	})
 }
 
-// WooCommerceCredentials is the JSON structure stored in encrypted integration credentials.
-type WooCommerceCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	StoreURL       string `json:"store_url"`
 	ConsumerKey    string `json:"consumer_key"`
 	ConsumerSecret string `json:"consumer_secret"`
@@ -36,8 +37,8 @@ type Provider struct {
 }
 
 // NewProvider creates a WooCommerce MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds WooCommerceCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("woocommerce: parse credentials: %w", err)
 	}
@@ -62,6 +63,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "woocommerce" }
 
 // PollOrders polls WooCommerce for orders modified after the given cursor.

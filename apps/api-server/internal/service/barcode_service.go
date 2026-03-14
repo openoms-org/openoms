@@ -17,10 +17,13 @@ import (
 )
 
 var (
-	ErrBarcodeNotFound     = errors.New("no product found for this barcode")
+	// ErrBarcodeNotFound is returned when no product matches the scanned barcode.
+	ErrBarcodeNotFound = errors.New("no product found for this barcode")
+	// ErrPackingItemMismatch is returned when scanned items do not match the expected order items.
 	ErrPackingItemMismatch = errors.New("scanned items do not match order items")
 )
 
+// BarcodeService handles barcode scanning and pick-pack validation.
 type BarcodeService struct {
 	productRepo repository.ProductRepo
 	variantRepo repository.VariantRepo
@@ -29,6 +32,7 @@ type BarcodeService struct {
 	pool        *pgxpool.Pool
 }
 
+// NewBarcodeService creates a new BarcodeService.
 func NewBarcodeService(
 	productRepo repository.ProductRepo,
 	variantRepo repository.VariantRepo,

@@ -70,10 +70,13 @@ import type { CreateProductRequest, AISuggestion, AIDescribeRequest } from "@/ty
 import { normalizeProductImages } from "@/types/api";
 import { useBGRemovalStatus, useRemoveProductImageBackground } from "@/hooks/use-bg-removal";
 import { useRepricingLog } from "@/hooks/use-repricing";
+import { useTranslations } from "next-intl";
 
 export default function ProductDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const t = useTranslations("products.detail");
+  const tc = useTranslations("common");
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -126,7 +129,7 @@ export default function ProductDetailPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Produkt został zaktualizowany");
+          toast.success(t("updated"));
           setIsEditing(false);
         },
         onError: (error) => {
@@ -139,7 +142,7 @@ export default function ProductDetailPage() {
   const handleDelete = () => {
     deleteProduct.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Produkt został usunięty");
+        toast.success(t("deleted"));
         router.push("/products");
       },
       onError: (error) => {
@@ -160,9 +163,9 @@ export default function ProductDetailPage() {
   if (!product) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Nie znaleziono produktu</h1>
+        <h1 className="text-2xl font-bold">{t("notFound")}</h1>
         <Button asChild variant="outline">
-          <Link href="/products">Wróć do listy</Link>
+          <Link href="/products">{t("backToList")}</Link>
         </Button>
       </div>
     );
@@ -180,7 +183,7 @@ export default function ProductDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{product.name}</h1>
             <p className="text-muted-foreground">
-              Utworzony {formatDate(product.created_at)}
+              {t("createdAt", { date: formatDate(product.created_at) })}
             </p>
           </div>
         </div>
@@ -205,13 +208,13 @@ export default function ProductDetailPage() {
                 ) : (
                   <Sparkles className="h-4 w-4" />
                 )}
-                Sugeruj kategorie
+                {t("suggestCategories")}
               </Button>
             </PopoverTrigger>
             {aiSuggestions && (
               <PopoverContent className="w-80">
                 <div className="space-y-3">
-                  <p className="text-sm font-medium">Sugerowane kategorie</p>
+                  <p className="text-sm font-medium">{t("suggestedCategories")}</p>
                   <div className="flex flex-wrap gap-1">
                     {aiSuggestions.categories.map((cat) => (
                       <button
@@ -222,7 +225,7 @@ export default function ProductDetailPage() {
                             { category: cat },
                             {
                               onSuccess: () => {
-                                toast.success(`Kategoria "${cat}" zastosowana`);
+                                toast.success(t("categoryApplied", { category: cat }));
                                 setAiSuggestions(null);
                               },
                               onError: (error) => toast.error(getErrorMessage(error)),
@@ -236,7 +239,7 @@ export default function ProductDetailPage() {
                   </div>
                   {aiSuggestions.tags.length > 0 && (
                     <>
-                      <p className="text-sm font-medium">Sugerowane tagi</p>
+                      <p className="text-sm font-medium">{t("suggestedTags")}</p>
                       <div className="flex flex-wrap gap-1">
                         {aiSuggestions.tags.map((tag) => (
                           <button
@@ -248,7 +251,7 @@ export default function ProductDetailPage() {
                                 updateProduct.mutate(
                                   { tags: [...currentTags, tag] },
                                   {
-                                    onSuccess: () => toast.success(`Tag "${tag}" dodany`),
+                                    onSuccess: () => toast.success(t("tagAdded", { tag })),
                                     onError: (error) => toast.error(getErrorMessage(error)),
                                   }
                                 );
@@ -262,7 +265,7 @@ export default function ProductDetailPage() {
                     </>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Kliknij aby zastosować sugestię
+                    {t("clickToApply")}
                   </p>
                 </div>
               </PopoverContent>
@@ -275,19 +278,19 @@ export default function ProductDetailPage() {
             onClick={() => setShowAIOptionsDialog(true)}
           >
             <Sparkles className="h-4 w-4" />
-            Generuj opis AI
+            {t("generateAiDescription")}
           </Button>
 
           <Button variant="outline" size="sm" asChild>
             <Link href={`/products/${params.id}/listings`}>
               <Store className="h-4 w-4" />
-              Oferty marketplace
+              {t("marketplaceOffers")}
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/products/${params.id}/variants`}>
               <Layers className="h-4 w-4" />
-              Warianty
+              {t("variants")}
             </Link>
           </Button>
           <Button
@@ -296,7 +299,7 @@ export default function ProductDetailPage() {
             onClick={() => setIsEditing(!isEditing)}
           >
             <Pencil className="h-4 w-4" />
-            {isEditing ? "Anuluj edycję" : "Edytuj"}
+            {isEditing ? t("cancelEdit") : tc("edit")}
           </Button>
           <Button
             variant="destructive"
@@ -304,7 +307,7 @@ export default function ProductDetailPage() {
             onClick={() => setShowDeleteDialog(true)}
           >
             <Trash2 className="h-4 w-4" />
-            Usuń
+            {tc("delete")}
           </Button>
         </div>
       </div>
@@ -312,7 +315,7 @@ export default function ProductDetailPage() {
       {isEditing ? (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja produktu</CardTitle>
+            <CardTitle>{t("editProduct" as Parameters<typeof t>[0])}</CardTitle>
           </CardHeader>
           <CardContent>
             <ProductForm
@@ -326,7 +329,7 @@ export default function ProductDetailPage() {
         <>
         <Card>
           <CardHeader>
-            <CardTitle>Zdjęcia</CardTitle>
+            <CardTitle>{t("photos")}</CardTitle>
           </CardHeader>
           <CardContent>
             {product.image_url ? (
@@ -346,8 +349,8 @@ export default function ProductDetailPage() {
                       disabled={removeProductBg.isPending}
                       onClick={() => {
                         removeProductBg.mutate(-1, {
-                          onSuccess: () => toast.success("Tło zostało usunięte ze zdjęcia głównego"),
-                          onError: (error) => toast.error(error instanceof Error ? error.message : "Błąd usuwania tła"),
+                          onSuccess: () => toast.success(t("bgRemovedMain")),
+                          onError: (error) => toast.error(error instanceof Error ? error.message : t("bgRemoveError")),
                         });
                       }}
                     >
@@ -356,7 +359,7 @@ export default function ProductDetailPage() {
                       ) : (
                         <Eraser className="mr-1 h-3 w-3" />
                       )}
-                      Usuń tło
+                      {t("removeBackground")}
                     </Button>
                   )}
                 </div>
@@ -366,7 +369,7 @@ export default function ProductDetailPage() {
                       <div key={i} className="relative group">
                         <img
                           src={img.url}
-                          alt={img.alt || `Zdjęcie ${i + 1}`}
+                          alt={img.alt || t("photoAlt", { index: i + 1 })}
                           className="h-20 w-20 rounded border object-cover"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
@@ -378,8 +381,8 @@ export default function ProductDetailPage() {
                             disabled={removeProductBg.isPending}
                             onClick={() => {
                               removeProductBg.mutate(i, {
-                                onSuccess: () => toast.success(`Tło usunięte ze zdjęcia ${i + 1}`),
-                                onError: (error) => toast.error(error instanceof Error ? error.message : "Błąd usuwania tła"),
+                                onSuccess: () => toast.success(t("bgRemovedPhoto", { index: i + 1 })),
+                                onError: (error) => toast.error(error instanceof Error ? error.message : t("bgRemoveError")),
                               });
                             }}
                           >
@@ -404,12 +407,12 @@ export default function ProductDetailPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Szczegóły produktu</CardTitle>
+            <CardTitle>{t("productDetails")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-sm text-muted-foreground">Nazwa</p>
+                <p className="text-sm text-muted-foreground">{tc("name")}</p>
                 <p className="text-sm font-medium">{product.name}</p>
               </div>
               <div>
@@ -425,13 +428,13 @@ export default function ProductDetailPage() {
                 <p className="font-mono text-sm">{product.ean || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Cena</p>
+                <p className="text-sm text-muted-foreground">{tc("price")}</p>
                 <p className="text-sm font-medium">
                   {formatCurrency(product.price)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Stan magazynowy</p>
+                <p className="text-sm text-muted-foreground">{tc("stockQuantity")}</p>
                 <p
                   className={`text-sm font-medium ${
                     product.stock_quantity === 0
@@ -445,7 +448,7 @@ export default function ProductDetailPage() {
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Źródło</p>
+                <p className="text-sm text-muted-foreground">{t("source")}</p>
                 <p className="text-sm">
                   {ORDER_SOURCE_LABELS[product.source] ?? product.source}
                 </p>
@@ -454,7 +457,7 @@ export default function ProductDetailPage() {
                 const cat = categoriesConfig?.categories?.find((c) => c.key === product.category);
                 return (
                   <div>
-                    <p className="text-sm text-muted-foreground">Kategoria</p>
+                    <p className="text-sm text-muted-foreground">{tc("category")}</p>
                     <span
                       className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium mt-1"
                       style={{
@@ -469,26 +472,26 @@ export default function ProductDetailPage() {
               })()}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Identyfikator zewnętrzny
+                  {t("externalId")}
                 </p>
                 <p className="font-mono text-sm">
                   {product.external_id || "-"}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Data utworzenia</p>
+                <p className="text-sm text-muted-foreground">{t("createdDate")}</p>
                 <p className="text-sm">{formatDate(product.created_at)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia aktualizacja
+                  {t("lastUpdated")}
                 </p>
                 <p className="text-sm">{formatDate(product.updated_at)}</p>
               </div>
             </div>
             {product.description_short && (
               <div className="sm:col-span-2">
-                <p className="text-sm text-muted-foreground">Krótki opis</p>
+                <p className="text-sm text-muted-foreground">{t("shortDescription")}</p>
                 <p className="mt-1 text-sm">{product.description_short}</p>
               </div>
             )}
@@ -497,7 +500,7 @@ export default function ProductDetailPage() {
               <div className="sm:col-span-2">
                 <Separator />
                 <div className="pt-4">
-                  <p className="text-sm text-muted-foreground">Opis</p>
+                  <p className="text-sm text-muted-foreground">{t("fullDescription")}</p>
                   <p className="mt-1 text-sm whitespace-pre-wrap">{product.description_long}</p>
                 </div>
               </div>
@@ -506,29 +509,29 @@ export default function ProductDetailPage() {
               <>
                 <Separator />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Wymiary i waga</p>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">{t("dimensionsAndWeight")}</p>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                     {product.weight != null && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Waga</p>
+                        <p className="text-sm text-muted-foreground">{t("weight")}</p>
                         <p className="mt-1 font-medium">{product.weight} kg</p>
                       </div>
                     )}
                     {product.width != null && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Szerokość</p>
+                        <p className="text-sm text-muted-foreground">{t("width")}</p>
                         <p className="mt-1 font-medium">{product.width} cm</p>
                       </div>
                     )}
                     {product.height != null && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Wysokość</p>
+                        <p className="text-sm text-muted-foreground">{t("height")}</p>
                         <p className="mt-1 font-medium">{product.height} cm</p>
                       </div>
                     )}
                     {product.depth != null && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Głębokość</p>
+                        <p className="text-sm text-muted-foreground">{t("depth")}</p>
                         <p className="mt-1 font-medium">{product.depth} cm</p>
                       </div>
                     )}
@@ -538,7 +541,7 @@ export default function ProductDetailPage() {
             )}
             {product.tags && product.tags.length > 0 && (
               <div className="pt-4">
-                <p className="text-sm text-muted-foreground">Tagi</p>
+                <p className="text-sm text-muted-foreground">{tc("tags")}</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {product.tags.map((tag) => (
                     <span key={tag} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
@@ -557,11 +560,11 @@ export default function ProductDetailPage() {
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <PackageOpen className="h-4 w-4" />
-                Zestaw produktów
+                {t("productBundle")}
               </span>
               <div className="flex items-center gap-2">
                 <Label htmlFor="is-bundle-toggle" className="text-sm font-normal text-muted-foreground">
-                  Zestaw
+                  {t("bundle")}
                 </Label>
                 <Switch
                   id="is-bundle-toggle"
@@ -571,7 +574,7 @@ export default function ProductDetailPage() {
                       { is_bundle: checked },
                       {
                         onSuccess: () => {
-                          toast.success(checked ? "Produkt oznaczony jako zestaw" : "Produkt nie jest już zestawem");
+                          toast.success(checked ? t("markedAsBundle") : t("unmarkedAsBundle"));
                         },
                         onError: (error) => {
                           toast.error(getErrorMessage(error));
@@ -588,7 +591,7 @@ export default function ProductDetailPage() {
               <div className="space-y-4">
                 {bundleStockData && (
                   <div className="rounded-md bg-muted/50 p-3">
-                    <p className="text-sm text-muted-foreground">Stan zestawu (kalkulowany)</p>
+                    <p className="text-sm text-muted-foreground">{t("bundleStock")}</p>
                     <p className={`text-lg font-bold ${bundleStockData.stock === 0 ? "text-destructive" : ""}`}>
                       {bundleStockData.stock}
                     </p>
@@ -603,10 +606,10 @@ export default function ProductDetailPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Komponent</TableHead>
+                        <TableHead>{t("component")}</TableHead>
                         <TableHead>SKU</TableHead>
-                        <TableHead className="text-right">Ilość</TableHead>
-                        <TableHead className="text-right">Stan</TableHead>
+                        <TableHead className="text-right">{t("quantity")}</TableHead>
+                        <TableHead className="text-right">{t("stock")}</TableHead>
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -626,7 +629,7 @@ export default function ProductDetailPage() {
                               className="h-7 w-7"
                               onClick={() => {
                                 removeComponent.mutate(comp.id, {
-                                  onSuccess: () => toast.success("Komponent usunięty z zestawu"),
+                                  onSuccess: () => toast.success(t("componentRemoved")),
                                   onError: (error) => toast.error(getErrorMessage(error)),
                                 });
                               }}
@@ -641,7 +644,7 @@ export default function ProductDetailPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <PackageOpen className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                    <p className="text-sm text-muted-foreground">Brak komponentów w zestawie.</p>
+                    <p className="text-sm text-muted-foreground">{t("noComponents")}</p>
                   </div>
                 )}
                 <Button
@@ -650,12 +653,12 @@ export default function ProductDetailPage() {
                   onClick={() => setShowAddComponentDialog(true)}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Dodaj komponent
+                  {t("addComponent")}
                 </Button>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Włącz przełącznik &quot;Zestaw&quot; aby zarządzać komponentami zestawu.
+                {t("enableBundleHint")}
               </p>
             )}
           </CardContent>
@@ -667,18 +670,18 @@ export default function ProductDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Historia zmian cen
+                {t("priceHistory")}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Stara cena</TableHead>
-                    <TableHead>Nowa cena</TableHead>
-                    <TableHead>Zmiana</TableHead>
-                    <TableHead>Powód</TableHead>
-                    <TableHead>Data</TableHead>
+                    <TableHead>{t("oldPrice")}</TableHead>
+                    <TableHead>{t("newPrice")}</TableHead>
+                    <TableHead>{t("change")}</TableHead>
+                    <TableHead>{t("reason")}</TableHead>
+                    <TableHead>{tc("date")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -719,7 +722,7 @@ export default function ProductDetailPage() {
               <div className="mt-3 text-center">
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/repricing">
-                    Zobacz wszystkie reguły repricing
+                    {t("viewAllRepricing")}
                   </Link>
                 </Button>
               </div>
@@ -733,25 +736,25 @@ export default function ProductDetailPage() {
       <Dialog open={showAIOptionsDialog} onOpenChange={setShowAIOptionsDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Generuj opis AI</DialogTitle>
+            <DialogTitle>{t("aiOptions.title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Styl</Label>
+              <Label>{t("aiOptions.style")}</Label>
               <Select value={aiStyle} onValueChange={setAiStyle}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="professional">Profesjonalny</SelectItem>
-                  <SelectItem value="promotional">Promocyjny</SelectItem>
-                  <SelectItem value="casual">Swobodny</SelectItem>
-                  <SelectItem value="seo">SEO</SelectItem>
+                  <SelectItem value="professional">{t("aiOptions.professional")}</SelectItem>
+                  <SelectItem value="promotional">{t("aiOptions.promotional")}</SelectItem>
+                  <SelectItem value="casual">{t("aiOptions.casual")}</SelectItem>
+                  <SelectItem value="seo">{t("aiOptions.seo")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Język</Label>
+              <Label>{t("aiOptions.language")}</Label>
               <Select value={aiLanguage} onValueChange={setAiLanguage}>
                 <SelectTrigger>
                   <SelectValue />
@@ -764,26 +767,26 @@ export default function ProductDetailPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Długość</Label>
+              <Label>{t("aiOptions.length")}</Label>
               <Select value={aiLength} onValueChange={setAiLength}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="short">Krótki</SelectItem>
-                  <SelectItem value="medium">Średni</SelectItem>
-                  <SelectItem value="long">Długi</SelectItem>
+                  <SelectItem value="short">{t("aiOptions.short")}</SelectItem>
+                  <SelectItem value="medium">{t("aiOptions.medium")}</SelectItem>
+                  <SelectItem value="long">{t("aiOptions.long")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Marketplace</Label>
+              <Label>{t("aiOptions.marketplace")}</Label>
               <Select value={aiMarketplace || "__none__"} onValueChange={(v) => setAiMarketplace(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Brak</SelectItem>
+                  <SelectItem value="__none__">{t("aiOptions.none")}</SelectItem>
                   <SelectItem value="allegro">Allegro</SelectItem>
                   <SelectItem value="amazon">Amazon</SelectItem>
                   <SelectItem value="ebay">eBay</SelectItem>
@@ -793,7 +796,7 @@ export default function ProductDetailPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAIOptionsDialog(false)}>
-              Anuluj
+              {tc("cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -821,7 +824,7 @@ export default function ProductDetailPage() {
               ) : (
                 <Sparkles className="mr-2 h-4 w-4" />
               )}
-              Generuj
+              {t("aiOptions.generate")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -831,23 +834,23 @@ export default function ProductDetailPage() {
       <Dialog open={showDescriptionDialog} onOpenChange={setShowDescriptionDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Wygenerowany opis AI</DialogTitle>
+            <DialogTitle>{t("aiResult.title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {aiShortDescription && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Krótki opis</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">{t("aiResult.shortDescription")}</p>
                 <p className="text-sm whitespace-pre-wrap rounded-md border p-3">{aiShortDescription}</p>
               </div>
             )}
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">Pełny opis</p>
+              <p className="text-sm font-medium text-muted-foreground mb-1">{t("aiResult.fullDescription")}</p>
               <p className="text-sm whitespace-pre-wrap rounded-md border p-3">{aiLongDescription}</p>
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setShowDescriptionDialog(false)}>
-              Anuluj
+              {tc("cancel")}
             </Button>
             {aiShortDescription && (
               <Button
@@ -856,13 +859,13 @@ export default function ProductDetailPage() {
                   updateProduct.mutate(
                     { description_short: aiShortDescription },
                     {
-                      onSuccess: () => toast.success("Krótki opis zaktualizowany"),
+                      onSuccess: () => toast.success(t("aiResult.shortUpdated")),
                       onError: (error) => toast.error(getErrorMessage(error)),
                     }
                   );
                 }}
               >
-                Zastosuj krótki opis
+                {t("aiResult.applyShort")}
               </Button>
             )}
             <Button
@@ -873,14 +876,14 @@ export default function ProductDetailPage() {
                 }
                 updateProduct.mutate(update, {
                   onSuccess: () => {
-                    toast.success("Opis produktu zaktualizowany");
+                    toast.success(t("aiResult.descriptionUpdated"));
                     setShowDescriptionDialog(false);
                   },
                   onError: (error) => toast.error(getErrorMessage(error)),
                 });
               }}
             >
-              Zastosuj wszystko
+              {t("aiResult.applyAll")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -889,9 +892,9 @@ export default function ProductDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuń produkt"
-        description={`Czy na pewno chcesz usunąć produkt "${product.name}"? Ta operacja jest nieodwracalna.`}
-        confirmLabel="Usuń"
+        title={t("deleteProduct")}
+        description={t("deleteProductConfirm", { name: product.name })}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteProduct.isPending}
@@ -906,7 +909,7 @@ export default function ProductDetailPage() {
             { component_product_id: componentId, quantity, position: 0 },
             {
               onSuccess: () => {
-                toast.success("Komponent dodany do zestawu");
+                toast.success(t("addComponentDialog.componentAdded"));
                 setShowAddComponentDialog(false);
               },
               onError: (error) => {
@@ -934,6 +937,8 @@ function AddBundleComponentDialog({
   onAdd: (componentId: string, quantity: number) => void;
   isLoading: boolean;
 }) {
+  const t = useTranslations("products.detail.addComponentDialog");
+  const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
@@ -945,13 +950,13 @@ function AddBundleComponentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Dodaj komponent do zestawu</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Szukaj produktu</Label>
+            <Label>{t("searchProduct")}</Label>
             <Input
-              placeholder="Wpisz nazwę produktu..."
+              placeholder={t("searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -969,14 +974,14 @@ function AddBundleComponentDialog({
                     <span className="ml-2 text-xs text-muted-foreground">({p.sku})</span>
                   )}
                   <span className="ml-2 text-xs text-muted-foreground">
-                    Stan: {p.stock_quantity}
+                    {tc("stockQuantity")}: {p.stock_quantity}
                   </span>
                 </div>
               ))}
             </div>
           )}
           <div>
-            <Label>Ilość w zestawie</Label>
+            <Label>{t("quantityInBundle")}</Label>
             <Input
               type="number"
               min={1}
@@ -987,13 +992,13 @@ function AddBundleComponentDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button
             onClick={() => onAdd(selectedProductId, quantity)}
             disabled={!selectedProductId || isLoading}
           >
-            {isLoading ? "Dodawanie..." : "Dodaj komponent"}
+            {isLoading ? t("adding") : t("addComponent" as Parameters<typeof t>[0])}
           </Button>
         </DialogFooter>
       </DialogContent>

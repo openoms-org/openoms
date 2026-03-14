@@ -26,7 +26,7 @@ func TestOffersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"offers": [
 				{"id": "off-1", "name": "Widget Pro"},
 				{"id": "off-2", "name": "Widget Lite"}
@@ -70,7 +70,7 @@ func TestOffersListWithOffset(t *testing.T) {
 		if q := r.URL.Query().Get("offset"); q != "10" {
 			t.Errorf("offset = %q, want 10", q)
 		}
-		w.Write([]byte(`{"offers":[],"count":0,"totalCount":0}`))
+		_, _ = w.Write([]byte(`{"offers":[],"count":0,"totalCount":0}`))
 	}))
 	defer srv.Close()
 
@@ -84,9 +84,9 @@ func TestOffersListWithOffset(t *testing.T) {
 }
 
 func TestOffersListError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte(`{"message":"forbidden"}`))
+		_, _ = w.Write([]byte(`{"message":"forbidden"}`))
 	}))
 	defer srv.Close()
 
@@ -100,9 +100,9 @@ func TestOffersListError(t *testing.T) {
 }
 
 func TestOffersGetError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"not found"}`))
+		_, _ = w.Write([]byte(`{"message":"not found"}`))
 	}))
 	defer srv.Close()
 
@@ -120,7 +120,7 @@ func TestOffersGet(t *testing.T) {
 		if r.URL.Path != "/sale/product-offers/off-abc" {
 			t.Errorf("path = %q, want /sale/product-offers/off-abc", r.URL.Path)
 		}
-		w.Write([]byte(`{"id":"off-abc","name":"Super Widget"}`))
+		_, _ = w.Write([]byte(`{"id":"off-abc","name":"Super Widget"}`))
 	}))
 	defer srv.Close()
 

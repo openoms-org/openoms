@@ -58,7 +58,7 @@ func TestAuthHeaders(t *testing.T) {
 		gotAuth = r.Header.Get("Authorization")
 		gotPartner = r.Header.Get("X-Partner-ID")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -75,9 +75,9 @@ func TestAuthHeaders(t *testing.T) {
 }
 
 func TestDoReturnsAPIError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte(`{"message":"access denied"}`))
+		_, _ = w.Write([]byte(`{"message":"access denied"}`))
 	}))
 	defer srv.Close()
 
@@ -130,9 +130,9 @@ func TestAPIErrorError(t *testing.T) {
 
 func TestMapStatus(t *testing.T) {
 	tests := []struct {
-		input    string
-		wantOMS  string
-		wantOK   bool
+		input   string
+		wantOMS string
+		wantOK  bool
 	}{
 		{"DELIVERED", "delivered", true},
 		{"IN_TRANSIT", "in_transit", true},

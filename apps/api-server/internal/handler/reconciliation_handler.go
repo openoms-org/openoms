@@ -13,10 +13,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// ReconciliationHandler handles HTTP requests for payment reconciliation.
 type ReconciliationHandler struct {
 	reconciliationService *service.ReconciliationService
 }
 
+// NewReconciliationHandler creates a new ReconciliationHandler.
 func NewReconciliationHandler(reconciliationService *service.ReconciliationService) *ReconciliationHandler {
 	return &ReconciliationHandler{reconciliationService: reconciliationService}
 }
@@ -72,7 +74,7 @@ func (h *ReconciliationHandler) ImportCSV(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "file is required")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	settlement, err := h.reconciliationService.ImportCSV(r.Context(), tenantID, provider, file)
 	if err != nil {

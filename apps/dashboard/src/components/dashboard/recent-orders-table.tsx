@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -25,13 +27,18 @@ interface RecentOrdersTableProps {
 }
 
 export function RecentOrdersTable({ orders, isLoading }: RecentOrdersTableProps) {
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
+  const tOrders = useTranslations("orders");
+  const locale = useLocale();
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
+  const dateLocale = locale === "pl" ? pl : enUS;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ostatnie zamówienia</CardTitle>
+        <CardTitle>{t("recentOrders")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -42,17 +49,17 @@ export function RecentOrdersTable({ orders, isLoading }: RecentOrdersTableProps)
           </div>
         ) : !orders || orders.length === 0 ? (
           <div className="flex h-32 items-center justify-center text-muted-foreground">
-            Brak zamówień
+            {tOrders("empty.title")}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Klient</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Źródło</TableHead>
-                <TableHead>Kwota</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead>{tOrders("columns.customer")}</TableHead>
+                <TableHead>{tc("status")}</TableHead>
+                <TableHead>{tOrders("columns.source")}</TableHead>
+                <TableHead>{tc("amount")}</TableHead>
+                <TableHead>{tc("date")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,7 +83,7 @@ export function RecentOrdersTable({ orders, isLoading }: RecentOrdersTableProps)
                   <TableCell className="text-muted-foreground">
                     {formatDistanceToNow(new Date(order.created_at), {
                       addSuffix: true,
-                      locale: pl,
+                      locale: dateLocale,
                     })}
                   </TableCell>
                 </TableRow>

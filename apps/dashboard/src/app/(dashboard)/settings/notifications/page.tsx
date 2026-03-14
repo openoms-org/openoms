@@ -34,22 +34,7 @@ import { Loader2, Send, Save } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
 import type { EmailSettings } from "@/types/api";
 import type { SMSSettings } from "@/types/api";
-
-const EMAIL_NOTIFICATION_STATUSES = [
-  { value: "confirmed", label: "Potwierdzenie zamówienia" },
-  { value: "shipped", label: "Wysyłka zamówienia" },
-  { value: "delivered", label: "Dostarczenie zamówienia" },
-  { value: "cancelled", label: "Anulowanie zamówienia" },
-  { value: "refunded", label: "Zwrot środków" },
-];
-
-const SMS_NOTIFICATION_STATUSES = [
-  { value: "shipped", label: "Wysyłka zamówienia" },
-  { value: "delivered", label: "Dostarczenie zamówienia" },
-  { value: "out_for_delivery", label: "W doręczeniu" },
-  { value: "in_transit", label: "W transporcie" },
-  { value: "cancelled", label: "Anulowanie zamówienia" },
-];
+import { useTranslations } from "next-intl";
 
 const DEFAULT_EMAIL_SETTINGS: EmailSettings = {
   enabled: false,
@@ -62,6 +47,9 @@ const DEFAULT_EMAIL_SETTINGS: EmailSettings = {
   notify_on: ["confirmed", "shipped", "delivered", "cancelled", "refunded"],
 };
 
+// NOTE: These are Go text/template strings sent by the backend to customers.
+// They are NOT UI labels and should NOT be wrapped in t() calls.
+// Tenant-specific templates are stored server-side and edited here as raw text.
 const DEFAULT_TEMPLATES: Record<string, string> = {
   shipped:
     "Twoje zamówienie {{.OrderNumber}} zostało wysłane. Numer przesyłki: {{.TrackingNumber}}",
@@ -82,6 +70,9 @@ const DEFAULT_SMS_SETTINGS: SMSSettings = {
 };
 
 export default function NotificationsPage() {
+  const t = useTranslations("settings");
+  const tn = useTranslations("settings.notifications");
+  const tc = useTranslations("common");
   const { data: emailSettings, isLoading: emailLoading } = useEmailSettings();
   const updateEmailSettings = useUpdateEmailSettings();
   const sendTestEmail = useSendTestEmail();
@@ -90,8 +81,24 @@ export default function NotificationsPage() {
   const updateSMSSettings = useUpdateSMSSettings();
   const sendTestSMS = useSendTestSMS();
 
+  const EMAIL_NOTIFICATION_STATUSES = [
+    { value: "confirmed", label: tn("orderConfirmed") },
+    { value: "shipped", label: tn("orderShipped") },
+    { value: "delivered", label: tn("orderDelivered") },
+    { value: "cancelled", label: tn("orderCancelled") },
+    { value: "refunded", label: tn("refunded") },
+  ];
+
+  const SMS_NOTIFICATION_STATUSES = [
+    { value: "shipped", label: tn("orderShipped") },
+    { value: "delivered", label: tn("orderDelivered") },
+    { value: "out_for_delivery", label: tn("outForDelivery") },
+    { value: "in_transit", label: tn("inTransit") },
+    { value: "cancelled", label: tn("orderCancelled") },
+  ];
+
   const [emailForm, setEmailForm] = useState<EmailSettings>(DEFAULT_EMAIL_SETTINGS);
-  const [testEmail, setTestEmail] = useState("");
+  const [testEmailAddr, setTestEmailAddr] = useState("");
 
   const [smsForm, setSmsForm] = useState<SMSSettings>(DEFAULT_SMS_SETTINGS);
   const [testPhone, setTestPhone] = useState("");
@@ -112,21 +119,21 @@ export default function NotificationsPage() {
   const handleEmailSave = async () => {
     try {
       await updateEmailSettings.mutateAsync(emailForm);
-      toast.success("Ustawienia zapisane");
+      toast.success(tn("savedEmail"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
       toast.error(message);
     }
   };
 
   const handleTestEmail = async () => {
     try {
-      await sendTestEmail.mutateAsync(testEmail);
-      toast.success("Testowy email wysłany");
+      await sendTestEmail.mutateAsync(testEmailAddr);
+      toast.success(t("testowyEmailWysłany"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się wysłać testowego emaila";
+        err instanceof Error ? err.message : t("nieUdałoSieWysłacTestowegoEmaila");
       toast.error(message);
     }
   };
@@ -134,12 +141,12 @@ export default function NotificationsPage() {
   const handleSmsSave = async () => {
     try {
       await updateSMSSettings.mutateAsync(smsForm);
-      toast.success("Ustawienia SMS zapisane");
+      toast.success(tn("savedSMS"));
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udało się zapisać ustawień SMS";
+          : t("nieUdałoSieZapisacUstawienSms");
       toast.error(message);
     }
   };
@@ -147,12 +154,12 @@ export default function NotificationsPage() {
   const handleTestSMS = async () => {
     try {
       await sendTestSMS.mutateAsync(testPhone);
-      toast.success("Testowy SMS wysłany");
+      toast.success(t("testowySmsWysłany"));
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udało się wysłać testowego SMS";
+          : t("nieUdałoSieWysłacTestowegoSms");
       toast.error(message);
     }
   };
@@ -169,9 +176,9 @@ export default function NotificationsPage() {
     <AdminGuard>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Powiadomienia</h1>
+          <h1 className="text-2xl font-bold">{tn("title")}</h1>
           <p className="text-muted-foreground">
-            Konfiguracja kanałów powiadomień do klientów
+            {t("konfiguracjaKanałowPowiadomienDoKlientow")}
           </p>
         </div>
 
@@ -187,14 +194,14 @@ export default function NotificationsPage() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Status</CardTitle>
+                  <CardTitle>{tc("status")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">Powiadomienia email</p>
+                      <p className="font-medium">{tn("emailNotifications")}</p>
                       <p className="text-sm text-muted-foreground">
-                        Wysyłaj automatyczne emaile przy zmianie statusu zamówienia
+                        {t("wysyłajAutomatyczneEmailePrzyZmianieStatusuZamowie")}
                       </p>
                     </div>
                     <Switch
@@ -209,12 +216,12 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Konfiguracja SMTP</CardTitle>
+                  <CardTitle>{tn("smtpConfig")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Host SMTP</Label>
+                      <Label>{tn("smtpHost")}</Label>
                       <Input
                         value={emailForm.smtp_host}
                         onChange={(e) =>
@@ -224,7 +231,7 @@ export default function NotificationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Port</Label>
+                      <Label>{tn("port")}</Label>
                       <Input
                         type="number"
                         value={emailForm.smtp_port}
@@ -237,7 +244,7 @@ export default function NotificationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Użytkownik</Label>
+                      <Label>{t("uzytkownik")}</Label>
                       <Input
                         value={emailForm.smtp_user}
                         onChange={(e) =>
@@ -247,7 +254,7 @@ export default function NotificationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Hasło</Label>
+                      <Label>{t("dhl.password")}</Label>
                       <Input
                         type="password"
                         value={emailForm.smtp_pass}
@@ -258,23 +265,23 @@ export default function NotificationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Email nadawcy</Label>
+                      <Label>{tn("senderEmail")}</Label>
                       <Input
                         value={emailForm.from_email}
                         onChange={(e) =>
                           setEmailForm({ ...emailForm, from_email: e.target.value })
                         }
-                        placeholder="zamówienia@firma.pl"
+                        placeholder={t("zamowieniafirmapl")}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Nazwa nadawcy</Label>
+                      <Label>{tn("senderName")}</Label>
                       <Input
                         value={emailForm.from_name}
                         onChange={(e) =>
                           setEmailForm({ ...emailForm, from_name: e.target.value })
                         }
-                        placeholder="Moja Firma"
+                        placeholder={tn("senderNamePlaceholder")}
                       />
                     </div>
                   </div>
@@ -283,11 +290,11 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Wyzwalacze</CardTitle>
+                  <CardTitle>{tn("triggers")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Wybierz przy jakich zmianach statusu wysyłać email do klienta
+                    {t("wybierzPrzyJakichZmianachStatusuWysyłacEmail")}
                   </p>
                   <div className="space-y-3">
                     {EMAIL_NOTIFICATION_STATUSES.map(({ value, label }) => (
@@ -317,27 +324,27 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Testowy email</CardTitle>
+                  <CardTitle>{tn("testEmail")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-2 max-w-md">
                     <Input
-                      value={testEmail}
-                      onChange={(e) => setTestEmail(e.target.value)}
+                      value={testEmailAddr}
+                      onChange={(e) => setTestEmailAddr(e.target.value)}
                       placeholder="test@example.com"
                       type="email"
                     />
                     <Button
                       variant="outline"
                       onClick={handleTestEmail}
-                      disabled={!testEmail || sendTestEmail.isPending}
+                      disabled={!testEmailAddr || sendTestEmail.isPending}
                     >
                       {sendTestEmail.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      Wyślij
+                      {t("allegro.send")}
                     </Button>
                   </div>
                 </CardContent>
@@ -350,7 +357,7 @@ export default function NotificationsPage() {
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
-                  Zapisz ustawienia
+                  {t("saveSettings")}
                 </Button>
               </div>
             </div>
@@ -360,14 +367,14 @@ export default function NotificationsPage() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Status</CardTitle>
+                  <CardTitle>{tc("status")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">Powiadomienia SMS</p>
+                      <p className="font-medium">{tn("smsNotifications")}</p>
                       <p className="text-sm text-muted-foreground">
-                        Wysyłaj automatyczne SMS-y przy zmianie statusu zamówienia
+                        {t("wysyłajAutomatyczneSmsyPrzyZmianieStatusuZamowieni")}
                       </p>
                     </div>
                     <Switch
@@ -382,33 +389,33 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Konfiguracja SMSAPI.pl</CardTitle>
+                  <CardTitle>{tn("smsapiConfig")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>Token API</Label>
+                      <Label>{tn("smsApiToken")}</Label>
                       <Input
                         type="password"
                         value={smsForm.api_token}
                         onChange={(e) =>
                           setSmsForm({ ...smsForm, api_token: e.target.value })
                         }
-                        placeholder="Wklej token z panelu SMSAPI.pl"
+                        placeholder={tn("smsApiTokenPlaceholder")}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Token znajdziesz w panelu SMSAPI.pl &rarr; Ustawienia &rarr; API
+                        {tn("smsApiTokenHint")}
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label>Nazwa nadawcy</Label>
+                      <Label>{tn("smsSenderName")}</Label>
                       <Input
                         value={smsForm.from}
                         onChange={(e) => setSmsForm({ ...smsForm, from: e.target.value })}
                         placeholder="OpenOMS"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Nazwa zarejestrowana w panelu SMSAPI.pl
+                        {tn("smsSenderHint")}
                       </p>
                     </div>
                   </div>
@@ -417,11 +424,11 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Wyzwalacze</CardTitle>
+                  <CardTitle>{tn("triggers")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Wybierz przy jakich zmianach statusu wysyłać SMS do klienta
+                    {t("wybierzPrzyJakichZmianachStatusuWysyłacSms")}
                   </p>
                   <div className="space-y-3">
                     {SMS_NOTIFICATION_STATUSES.map(({ value, label }) => (
@@ -451,11 +458,11 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Szablony wiadomości</CardTitle>
+                  <CardTitle>{t("szablonyWiadomosci")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Dostępne zmienne:{" "}
+                    {tn("smsAvailableVars")}{" "}
                     <code className="text-xs bg-muted px-1 py-0.5 rounded dark:bg-muted/50">
                       {"{{.OrderNumber}}"}
                     </code>{" "}
@@ -497,7 +504,7 @@ export default function NotificationsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Testowy SMS</CardTitle>
+                  <CardTitle>{tn("testSMS")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex gap-2 max-w-md">
@@ -517,11 +524,11 @@ export default function NotificationsPage() {
                       ) : (
                         <Send className="h-4 w-4" />
                       )}
-                      Wyślij
+                      {t("allegro.send")}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Numer telefonu w formacie E.164 (np. 48123456789)
+                    {tn("phoneHint")}
                   </p>
                 </CardContent>
               </Card>
@@ -533,7 +540,7 @@ export default function NotificationsPage() {
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
-                  Zapisz ustawienia
+                  {t("saveSettings")}
                 </Button>
               </div>
             </div>

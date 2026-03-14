@@ -8,7 +8,7 @@ import (
 )
 
 func TestVerifyWebhookValid(t *testing.T) {
-	secret := "my-webhook-secret"
+	secret := "my-webhook-secret" //nolint:gosec // G101: test credential
 	body := []byte(`{"type":"ORDER_STATUS_CHANGED","id":"evt-1"}`)
 
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -21,7 +21,7 @@ func TestVerifyWebhookValid(t *testing.T) {
 }
 
 func TestVerifyWebhookInvalid(t *testing.T) {
-	secret := "my-webhook-secret"
+	secret := "my-webhook-secret" //nolint:gosec // G101: test credential
 	body := []byte(`{"type":"ORDER_STATUS_CHANGED","id":"evt-1"}`)
 
 	if err := VerifyWebhook(secret, "bad-signature", body); err == nil {
@@ -30,7 +30,7 @@ func TestVerifyWebhookInvalid(t *testing.T) {
 }
 
 func TestVerifyWebhookTamperedBody(t *testing.T) {
-	secret := "my-webhook-secret"
+	secret := "my-webhook-secret" //nolint:gosec // G101: test credential
 	original := []byte(`{"type":"ORDER_STATUS_CHANGED","id":"evt-1"}`)
 	tampered := []byte(`{"type":"ORDER_STATUS_CHANGED","id":"evt-2"}`)
 

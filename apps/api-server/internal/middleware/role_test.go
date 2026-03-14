@@ -20,7 +20,7 @@ func withClaims(r *http.Request, role string) *http.Request {
 }
 
 func TestRequireRole_OwnerCanAccessAdmin(t *testing.T) {
-	handler := RequireRole("admin")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireRole("admin")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -35,7 +35,7 @@ func TestRequireRole_OwnerCanAccessAdmin(t *testing.T) {
 }
 
 func TestRequireRole_AdminCanAccessAdmin(t *testing.T) {
-	handler := RequireRole("admin")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireRole("admin")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -50,7 +50,7 @@ func TestRequireRole_AdminCanAccessAdmin(t *testing.T) {
 }
 
 func TestRequireRole_MemberCannotAccessAdmin(t *testing.T) {
-	handler := RequireRole("admin")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireRole("admin")(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("handler should not be called")
 	}))
 
@@ -65,7 +65,7 @@ func TestRequireRole_MemberCannotAccessAdmin(t *testing.T) {
 }
 
 func TestRequireRole_NoClaims(t *testing.T) {
-	handler := RequireRole("admin")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := RequireRole("admin")(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("handler should not be called")
 	}))
 

@@ -25,14 +25,7 @@ import {
 } from "@/components/ui/table";
 import { useStockSyncEvents } from "@/hooks/use-stock-sync";
 import Link from "next/link";
-
-const triggerTypeLabels: Record<string, string> = {
-  order_placed: "Złożenie zamówienia",
-  order_cancelled: "Anulowanie zamówienia",
-  stock_adjusted: "Korekta stanu",
-  manual: "Ręczna synchronizacja",
-  recount: "Remanent",
-};
+import { useTranslations } from "next-intl";
 
 const triggerTypeVariants: Record<string, string> = {
   order_placed:
@@ -48,6 +41,16 @@ const triggerTypeVariants: Record<string, string> = {
 };
 
 export default function StockSyncEventsPage() {
+  const t = useTranslations("stockSync");
+
+  const triggerTypeLabels: Record<string, string> = {
+    order_placed: t("triggerOrderPlaced"),
+    order_cancelled: t("triggerOrderCancelled"),
+    stock_adjusted: t("triggerStockAdjusted"),
+    manual: t("triggerManualSync"),
+    recount: t("triggerRecount"),
+  };
+
   const [triggerFilter, setTriggerFilter] = useState<string>("");
   const [offset, setOffset] = useState(0);
   const limit = 20;
@@ -76,16 +79,16 @@ export default function StockSyncEventsPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">
-                Historia zdarzeń synchronizacji
+                {t("historiaZdarzenSynchronizacji")}
               </h1>
               <p className="text-muted-foreground">
-                Dziennik zmian stanów magazynowych i synchronizacji z kanałami
+                {t("dziennikZmianStanowMagazynowychISynchronizacjiZ")}
               </p>
             </div>
           </div>
           <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Odśwież
+            {t("refresh")}
           </Button>
         </div>
 
@@ -99,10 +102,10 @@ export default function StockSyncEventsPage() {
             }}
           >
             <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Filtruj po typie zdarzenia" />
+              <SelectValue placeholder={t("filterByEventType")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie typy</SelectItem>
+              <SelectItem value="all">{t("allTypes")}</SelectItem>
               {Object.entries(triggerTypeLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -117,8 +120,8 @@ export default function StockSyncEventsPage() {
         ) : events.length === 0 ? (
           <EmptyState
             icon={RefreshCw}
-            title="Brak zdarzeń synchronizacji"
-            description="Zdarzenia pojawią się po zmianach stanów magazynowych"
+            title={t("brakZdarzenSynchronizacji")}
+            description={t("zdarzeniaPojawiaSiePoZmianachStanowMagazynowych")}
           />
         ) : (
           <>
@@ -126,16 +129,16 @@ export default function StockSyncEventsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Typ zdarzenia</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead className="text-right">Poprzedni stan</TableHead>
-                    <TableHead className="text-right">Nowy stan</TableHead>
-                    <TableHead className="text-right">Dostępny</TableHead>
+                    <TableHead>{t("date")}</TableHead>
+                    <TableHead>{t("eventType")}</TableHead>
+                    <TableHead>{t("sku")}</TableHead>
+                    <TableHead className="text-right">{t("previousStock")}</TableHead>
+                    <TableHead className="text-right">{t("newStock")}</TableHead>
+                    <TableHead className="text-right">{t("dostepny")}</TableHead>
                     <TableHead className="text-right">
-                      Kanały powiadomione
+                      {t("kanałyPowiadomione")}
                     </TableHead>
-                    <TableHead className="text-right">Błędy</TableHead>
+                    <TableHead className="text-right">{t("błedy1")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -198,8 +201,7 @@ export default function StockSyncEventsPage() {
             {/* Pagination */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Wyświetlanie {offset + 1}-{Math.min(offset + limit, total)} z{" "}
-                {total}
+                {t("showingRange", { from: offset + 1, to: Math.min(offset + limit, total), total })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -208,7 +210,7 @@ export default function StockSyncEventsPage() {
                   disabled={!hasPrev}
                   onClick={() => setOffset(Math.max(0, offset - limit))}
                 >
-                  Poprzednia
+                  {t("previous")}
                 </Button>
                 <Button
                   variant="outline"
@@ -216,7 +218,7 @@ export default function StockSyncEventsPage() {
                   disabled={!hasNext}
                   onClick={() => setOffset(offset + limit)}
                 >
-                  Następna
+                  {t("next")}
                 </Button>
               </div>
             </div>

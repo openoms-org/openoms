@@ -12,11 +12,13 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// StatsService handles business logic for dashboard statistics.
 type StatsService struct {
 	statsRepo repository.StatsRepo
 	pool      *pgxpool.Pool
 }
 
+// NewStatsService creates a new StatsService.
 func NewStatsService(
 	statsRepo repository.StatsRepo,
 	pool *pgxpool.Pool,
@@ -27,6 +29,7 @@ func NewStatsService(
 	}
 }
 
+// GetDashboardStats returns aggregated dashboard statistics for a tenant.
 func (s *StatsService) GetDashboardStats(ctx context.Context, tenantID uuid.UUID) (*model.DashboardStats, error) {
 	var stats model.DashboardStats
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -97,6 +100,7 @@ func (s *StatsService) GetDashboardStats(ctx context.Context, tenantID uuid.UUID
 	return &stats, nil
 }
 
+// GetTopProducts returns the best-selling products by order count.
 func (s *StatsService) GetTopProducts(ctx context.Context, tenantID uuid.UUID, limit int) ([]model.TopProduct, error) {
 	var result []model.TopProduct
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -116,6 +120,7 @@ func (s *StatsService) GetTopProducts(ctx context.Context, tenantID uuid.UUID, l
 	return result, nil
 }
 
+// GetRevenueBySource returns revenue grouped by order source for the given period.
 func (s *StatsService) GetRevenueBySource(ctx context.Context, tenantID uuid.UUID, days int) ([]model.SourceRevenue, error) {
 	var result []model.SourceRevenue
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -135,6 +140,7 @@ func (s *StatsService) GetRevenueBySource(ctx context.Context, tenantID uuid.UUI
 	return result, nil
 }
 
+// GetOrderTrends returns daily order counts for the given period.
 func (s *StatsService) GetOrderTrends(ctx context.Context, tenantID uuid.UUID, days int) ([]model.DailyOrderTrend, error) {
 	var result []model.DailyOrderTrend
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -154,6 +160,7 @@ func (s *StatsService) GetOrderTrends(ctx context.Context, tenantID uuid.UUID, d
 	return result, nil
 }
 
+// GetPaymentMethodStats returns order counts grouped by payment method.
 func (s *StatsService) GetPaymentMethodStats(ctx context.Context, tenantID uuid.UUID) (map[string]int, error) {
 	var result map[string]int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

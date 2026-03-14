@@ -58,7 +58,6 @@ uploads/
 # Binary output
 /bin/
 tmp/
-server
 apps/api-server/server
 
 # Script artifacts
@@ -99,3 +98,4 @@ DEPLOY-INSTRUKCJA.md
 *.png
 *.webp
 !apps/dashboard/public/**
+server

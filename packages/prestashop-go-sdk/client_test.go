@@ -71,7 +71,7 @@ func TestDoSetsBasicAuthWithAPIKey(t *testing.T) {
 			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -93,7 +93,7 @@ func TestDoAppendsOutputFormatJSON(t *testing.T) {
 			t.Errorf("output_format = %q, want JSON", r.URL.Query().Get("output_format"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -116,7 +116,7 @@ func TestDoWithRequestBody(t *testing.T) {
 		gotContentType = r.Header.Get("Content-Type")
 		gotBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -151,7 +151,7 @@ func TestOrdersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"orders": []map[string]any{
 				{"id": 1, "reference": "ORD-001", "total_paid": "99.99"},
 				{"id": 2, "reference": "ORD-002", "total_paid": "49.99"},
@@ -191,7 +191,7 @@ func TestOrdersListWithParams(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{"orders": []any{}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"orders": []any{}})
 	}))
 	defer srv.Close()
 
@@ -220,7 +220,7 @@ func TestOrdersGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"order": map[string]any{
 				"id":          42,
 				"reference":   "ORD-042",
@@ -261,7 +261,7 @@ func TestOrdersUpdateState(t *testing.T) {
 		}
 
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		oh, ok := body["order_history"].(map[string]any)
 		if !ok {
 			t.Fatal("missing order_history key in body")
@@ -274,7 +274,7 @@ func TestOrdersUpdateState(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -296,7 +296,7 @@ func TestOrdersGetAddress(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"address": map[string]any{
 				"id":        10,
 				"firstname": "Jan",
@@ -332,7 +332,7 @@ func TestOrdersGetCustomer(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"customer": map[string]any{
 				"id":        5,
 				"firstname": "Anna",
@@ -370,7 +370,7 @@ func TestProductsList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"products": []map[string]any{
 				{"id": 1, "reference": "SKU-001", "price": "29.99"},
 				{"id": 2, "reference": "SKU-002", "price": "59.99"},
@@ -403,7 +403,7 @@ func TestProductsGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"product": map[string]any{
 				"id":        7,
 				"reference": "SKU-007",
@@ -441,7 +441,7 @@ func TestProductsUpdate(t *testing.T) {
 		}
 
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		prod, ok := body["product"].(map[string]any)
 		if !ok {
 			t.Fatal("missing product key in body")
@@ -451,7 +451,7 @@ func TestProductsUpdate(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -473,7 +473,7 @@ func TestProductsUpdatePrice(t *testing.T) {
 		}
 
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		prod, ok := body["product"].(map[string]any)
 		if !ok {
 			t.Fatal("missing product key in body")
@@ -483,7 +483,7 @@ func TestProductsUpdatePrice(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -508,7 +508,7 @@ func TestProductsListOrderDetails(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"order_details": []map[string]any{
 				{"id": 1, "id_order": 42, "product_name": "Widget", "product_quantity": 3},
 			},
@@ -546,7 +546,7 @@ func TestStockGetByProduct(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"stock_availables": []map[string]any{
 				{"id": 100, "id_product": 7, "quantity": 25},
 			},
@@ -575,9 +575,9 @@ func TestStockGetByProduct(t *testing.T) {
 }
 
 func TestStockGetByProductNotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"stock_availables": []any{},
 		})
 	}))
@@ -612,7 +612,7 @@ func TestStockUpdateQuantity(t *testing.T) {
 		}
 
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		sa, ok := body["stock_available"].(map[string]any)
 		if !ok {
 			t.Fatal("missing stock_available key in body")
@@ -622,7 +622,7 @@ func TestStockUpdateQuantity(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -638,9 +638,9 @@ func TestStockUpdateQuantity(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
 	}))
@@ -669,9 +669,9 @@ func TestServerError(t *testing.T) {
 }
 
 func TestNotFoundError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Resource not found",
 		})
 	}))
@@ -700,9 +700,9 @@ func TestNotFoundError(t *testing.T) {
 }
 
 func TestUnauthorizedError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid API key",
 		})
 	}))
@@ -724,9 +724,9 @@ func TestUnauthorizedError(t *testing.T) {
 }
 
 func TestRateLimitedError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Too many requests",
 		})
 	}))
@@ -812,9 +812,9 @@ func TestAPIErrorUnwrap(t *testing.T) {
 }
 
 func TestBadRequestError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"code":    47,
 			"message": "Invalid product data",
 		})
@@ -844,10 +844,10 @@ func TestBadRequestError(t *testing.T) {
 }
 
 func TestInvalidJSONResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{invalid json`))
+		_, _ = w.Write([]byte(`{invalid json`))
 	}))
 	defer srv.Close()
 

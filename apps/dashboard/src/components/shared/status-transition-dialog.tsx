@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,9 +32,11 @@ export function StatusTransitionDialog({
   isDestructive = false,
   isPending = false,
   onConfirm,
-  confirmLabel = "Potwierdź",
-  cancelLabel = "Anuluj",
+  confirmLabel,
+  cancelLabel,
 }: StatusTransitionDialogProps) {
+  const t = useTranslations("common");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -45,14 +48,14 @@ export function StatusTransitionDialog({
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {cancelLabel}
+            {cancelLabel ?? t("cancel")}
           </Button>
           <Button
             variant={isDestructive ? "destructive" : "default"}
             onClick={onConfirm}
             disabled={isPending}
           >
-            {confirmLabel}
+            {confirmLabel ?? t("confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

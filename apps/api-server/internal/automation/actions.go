@@ -1,3 +1,4 @@
+// Package automation implements the rule engine and action executors for workflow automation.
 package automation
 
 import (
@@ -138,6 +139,7 @@ type DefaultActionExecutor struct {
 	pool                   *pgxpool.Pool
 }
 
+// NewDefaultActionExecutor creates a new DefaultActionExecutor with a safe HTTP client.
 func NewDefaultActionExecutor(logger *slog.Logger) *DefaultActionExecutor {
 	return &DefaultActionExecutor{
 		logger:     logger,
@@ -178,6 +180,7 @@ func (e *DefaultActionExecutor) SetMarketplaceMessageDeps(deps *MarketplaceMessa
 	e.marketplaceMessageDeps = deps
 }
 
+// ExecuteAction dispatches an automation action based on its type.
 func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid.UUID, action Action, event Event) error {
 	switch action.Type {
 	case "webhook":
@@ -372,7 +375,7 @@ func (e *DefaultActionExecutor) executeSendEmail(_ context.Context, tenantID uui
 }
 
 // executeCreateInvoice triggers invoice creation for an order.
-func (e *DefaultActionExecutor) executeCreateInvoice(ctx context.Context, tenantID uuid.UUID, action Action, event Event) error {
+func (e *DefaultActionExecutor) executeCreateInvoice(_ context.Context, tenantID uuid.UUID, _ Action, event Event) error {
 	e.logger.Info("automation action: create_invoice",
 		"tenant_id", tenantID,
 		"entity_type", event.EntityType,
@@ -840,7 +843,7 @@ func (e *DefaultActionExecutor) executeWebhook(ctx context.Context, tenantID uui
 	if err != nil {
 		return fmt.Errorf("webhook request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("webhook returned status %d", resp.StatusCode)

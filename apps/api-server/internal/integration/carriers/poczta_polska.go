@@ -31,7 +31,7 @@ type PocztaPolskaProvider struct {
 }
 
 // NewPocztaPolskaProvider creates a Poczta Polska CarrierProvider from encrypted credentials.
-func NewPocztaPolskaProvider(credentials json.RawMessage, settings json.RawMessage) (*PocztaPolskaProvider, error) {
+func NewPocztaPolskaProvider(credentials json.RawMessage, _ json.RawMessage) (*PocztaPolskaProvider, error) {
 	var creds PocztaPolskaCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("poczta_polska: parse credentials: %w", err)
@@ -50,8 +50,10 @@ func NewPocztaPolskaProvider(credentials json.RawMessage, settings json.RawMessa
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *PocztaPolskaProvider) ProviderName() string { return "poczta_polska" }
 
+// CreateShipment creates a Poczta Polska shipment and returns the response with tracking info.
 func (p *PocztaPolskaProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	svcType := req.ServiceType
 	if svcType == "" {
@@ -109,10 +111,12 @@ func (p *PocztaPolskaProvider) CreateShipment(ctx context.Context, req integrati
 	}, nil
 }
 
-func (p *PocztaPolskaProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
+// GetLabel downloads the shipping label for the given Poczta Polska shipment.
+func (p *PocztaPolskaProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
 	return p.client.Shipments.GetLabel(ctx, externalID)
 }
 
+// GetTracking returns tracking events for the given Poczta Polska shipment.
 func (p *PocztaPolskaProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
 	if err != nil {
@@ -132,14 +136,17 @@ func (p *PocztaPolskaProvider) GetTracking(ctx context.Context, trackingNumber s
 	return events, nil
 }
 
+// CancelShipment cancels a Poczta Polska shipment by its external ID.
 func (p *PocztaPolskaProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return p.client.Shipments.Cancel(ctx, externalID)
 }
 
+// MapStatus maps a Poczta Polska carrier status to the internal shipment status.
 func (p *PocztaPolskaProvider) MapStatus(carrierStatus string) (string, bool) {
 	return pocztasdk.MapStatus(carrierStatus)
 }
 
+// GetRates returns estimated shipping rates for Poczta Polska.
 func (p *PocztaPolskaProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// TODO: Implement real Poczta Polska eNadawca rate API integration.
 	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
@@ -176,8 +183,10 @@ func (p *PocztaPolskaProvider) GetRates(_ context.Context, req integration.RateR
 	return rates, nil
 }
 
+// SupportsPickupPoints reports that Poczta Polska does not support pickup point delivery.
 func (p *PocztaPolskaProvider) SupportsPickupPoints() bool { return false }
 
-func (p *PocztaPolskaProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
+// SearchPickupPoints is not supported by Poczta Polska and always returns nil.
+func (p *PocztaPolskaProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
 	return nil, nil
 }

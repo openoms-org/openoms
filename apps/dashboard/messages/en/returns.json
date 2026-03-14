@@ -1,0 +1,122 @@
+{
+  "returnRequest": {
+    "detail": {
+      "reportReturn": "Report Return"
+    },
+    "error": "Error",
+    "jegoStatusPodPonizszymLinkiem": "its status using the link below",
+    "lastUpdate": "Last Update",
+    "loading": "Loading",
+    "nieUdałoSiePołaczycZSerwerem": "Failed to connect to server.",
+    "nieUdałoSiePołaczycZSerweremSprobujPonownie": "Failed to connect to server. Please try again.",
+    "nieudałosiepołaczyczserwerem": "Failed to connect to server.",
+    "numerZamowieniaId": "Order number / ID",
+    "opiszPowodZwrotu": "Describe the return reason",
+    "podajNumerZamowieniaIAdresEmailKtory": "Enter the order number and email address that",
+    "postep": "Postep",
+    "powodZwrotu": "Return reason",
+    "powrotDoFormularza": "Back to form",
+    "productsToReturn": "Products To Return",
+    "returnLabel": "Return Label",
+    "returnNotFound": "Return Not Found",
+    "returnStatus": "Return Status",
+    "sprawdzStatusZwrotu": "Check return status",
+    "submittedAt": "Submitted At",
+    "twojeZgłoszenieZostałoZarejestrowaneOtrzymaszInfor": "Your request has been registered. You will receive information",
+    "twojeZgłoszenieZwrotuZostałoOdrzucone": "Your return request has been rejected.",
+    "twojeZgłoszenieZwrotuZostałoPrzyjeteMozeszSledzic": "Your return request has been accepted. You can track",
+    "twojezgłoszeniezwrotuzostałoodrzucone": "Your return request has been rejected.",
+    "uzytyPrzySkładaniuZamowienia": "was used when placing the order",
+    "wypełnijFormularzAbyZgłosicZwrotZamowienia": "Fill in the form to submit an order return",
+    "wystapiłBładPodczasSkładaniaZwrotu": "An error occurred while submitting the return",
+    "wystapiłBładPodczasŁadowaniaStatusuZwrotu": "An error occurred while loading return status.",
+    "wystapiłbładpodczasładowaniastatusuzwrotu": "An error occurred while loading return status.",
+    "wysyłanie": "Sending",
+    "zgłosKolejnyZwrot": "Submit another return",
+    "zwrotZostałAnulowany": "Return has been cancelled.",
+    "zwrotZostałZgłoszony": "Return has been submitted",
+    "zwrotzostałanulowany": "Return has been cancelled."
+  },
+  "returns": {
+    "additionalInfoOptional": "Additional Info Optional",
+    "brakPozycjiWZamowieniu": "Brak Pozycji W Zamowieniu",
+    "cancel": "Cancel",
+    "changeStatus": "Change status",
+    "columns": {
+      "date": "Date",
+      "order": "Order",
+      "reason": "Reason",
+      "refundAmount": "Refund amount",
+      "status": "Status"
+    },
+    "createReturn": "Create return",
+    "created": "Created",
+    "createdOn": "Created {date}",
+    "creating": "Creating",
+    "customerEmail": "Customer email (from form)",
+    "customerNotes": "Customer notes",
+    "delete": "Delete",
+    "deleteReturn": "Delete return",
+    "deleteReturnConfirm": "Are you sure you want to delete this return? This action is irreversible.",
+    "detail": {
+      "backToList": "Back to returns"
+    },
+    "edit": "Edit",
+    "editReturn": "Edit return",
+    "empty": {
+      "description": "No returns found to display.",
+      "title": "No returns"
+    },
+    "enterReturnReason": "Enter return reason",
+    "fillFormForNewReturn": "Fill in the form to report a new return",
+    "inOrder": "In order",
+    "loadError": "Load Error",
+    "loadingOrderItems": "Loading order items",
+    "newReturn": "New return",
+    "noItemsInOrder": "No items in order",
+    "notFound": "Return not found",
+    "notes": "Notes",
+    "order": {
+      "refunded": "Refunded"
+    },
+    "podajPowodZwrotu": "Podaj Powod Zwrotu",
+    "product": "Product",
+    "productsToReturn": "Products To Return",
+    "refundAmount": "Refund amount",
+    "refundAmountPln": "Refund Amount Pln",
+    "retry": "Retry",
+    "return": {
+      "requested": "Requested"
+    },
+    "returnCreated": "Return has been created",
+    "returnData": "Return details",
+    "returnDeleted": "Return has been deleted",
+    "returnTitle": "Return #{id}",
+    "returnUpdated": "Return has been updated",
+    "saveChanges": "Save changes",
+    "saving": "Saving...",
+    "statusChanged": "Return status has been changed",
+    "subtitle": "Manage returns and claims",
+    "title": "Returns",
+    "toReturn": "To Return",
+    "trackingLinkForCustomer": "Tracking link (for customer)",
+    "transitions": {
+      "approved": "Approve",
+      "cancelled": "Cancel",
+      "received": "Mark as received",
+      "refunded": "Refund",
+      "rejected": "Reject"
+    },
+    "updated": "Updated",
+    "utworzZwrot": "Utworz Zwrot",
+    "validation": {
+      "amountPositive": "Amount must be positive",
+      "orderIdRequired": "Order Id Required",
+      "reasonRequired": "Reason is required"
+    },
+    "wZamowieniu": "W Zamowieniu",
+    "wczytywaniePozycjiZamowienia": "Wczytywanie Pozycji Zamowienia",
+    "wypełnijFormularzAbyZgłosicNowyZwrot": "Wypełnij Formularz Aby Zgłosic Nowy Zwrot",
+    "zwrotzostałutworzony": "Zwrotzostałutworzony"
+  }
+}

@@ -7,8 +7,8 @@ import (
 
 // AdvertListResponse is the response from the OLX adverts endpoint.
 type AdvertListResponse struct {
-	Data   []Advert   `json:"data"`
-	Links  PageLinks  `json:"links"`
+	Data  []Advert  `json:"data"`
+	Links PageLinks `json:"links"`
 }
 
 // PageLinks contains pagination links.
@@ -37,6 +37,7 @@ type Advert struct {
 // FlexFloat handles JSON values that may be either a number or a string.
 type FlexFloat float64
 
+// UnmarshalJSON handles JSON values that may be either a number or a string.
 func (f *FlexFloat) UnmarshalJSON(data []byte) error {
 	var num float64
 	if err := json.Unmarshal(data, &num); err == nil {
@@ -55,6 +56,7 @@ func (f *FlexFloat) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON encodes FlexFloat as a JSON number.
 func (f FlexFloat) MarshalJSON() ([]byte, error) {
 	return json.Marshal(float64(f))
 }
@@ -95,18 +97,18 @@ type TransactionListResponse struct {
 
 // Transaction represents a completed transaction (sale) on OLX.
 type Transaction struct {
-	ID            string          `json:"id"`
-	AdvertID      int64           `json:"advert_id"`
-	Status        string          `json:"status"`
-	Amount        float64         `json:"amount"`
-	Currency      string          `json:"currency"`
-	CreatedAt     string          `json:"created_at"`
-	BuyerName     string          `json:"buyer_name"`
-	BuyerEmail    string          `json:"buyer_email"`
-	BuyerPhone    string          `json:"buyer_phone,omitempty"`
-	ShippingAddr  *ShippingAddr   `json:"shipping_address,omitempty"`
-	AdvertTitle   string          `json:"advert_title,omitempty"`
-	Quantity      int             `json:"quantity"`
+	ID           string        `json:"id"`
+	AdvertID     int64         `json:"advert_id"`
+	Status       string        `json:"status"`
+	Amount       float64       `json:"amount"`
+	Currency     string        `json:"currency"`
+	CreatedAt    string        `json:"created_at"`
+	BuyerName    string        `json:"buyer_name"`
+	BuyerEmail   string        `json:"buyer_email"`
+	BuyerPhone   string        `json:"buyer_phone,omitempty"`
+	ShippingAddr *ShippingAddr `json:"shipping_address,omitempty"`
+	AdvertTitle  string        `json:"advert_title,omitempty"`
+	Quantity     int           `json:"quantity"`
 }
 
 // ShippingAddr is a delivery address for an OLX transaction.

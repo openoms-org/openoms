@@ -45,11 +45,12 @@ func WithHTTPClient(c *http.Client) Option {
 	}
 }
 
-// Deprecated: WithSandbox is a no-op. The Erli sandbox URL is not publicly
-// documented and the previously hardcoded value was incorrect. Use WithBaseURL()
-// with the URL provided by Erli BOK instead:
+// WithSandbox is a no-op placeholder. Erli does not have a public sandbox;
+// use WithBaseURL with the URL provided by Erli BOK instead:
 //
 //	erli.NewClient(token, erli.WithBaseURL(os.Getenv("ERLI_SANDBOX_URL")))
+//
+// Deprecated: use WithBaseURL.
 func WithSandbox() Option {
 	return func(_ *Client) {}
 }
@@ -121,7 +122,7 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	if err != nil {
 		return nil, 0, fmt.Errorf("erli: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}

@@ -33,7 +33,7 @@ type GLSProvider struct {
 }
 
 // NewGLSProvider creates a GLS CarrierProvider from encrypted credentials.
-func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLSProvider, error) {
+func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage) (*GLSProvider, error) {
 	var creds GLSCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("gls: parse credentials: %w", err)
@@ -53,8 +53,10 @@ func NewGLSProvider(credentials json.RawMessage, settings json.RawMessage) (*GLS
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *GLSProvider) ProviderName() string { return "gls" }
 
+// CreateShipment creates a GLS shipment and returns the response with tracking info.
 func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	product, err := mapGLSServiceType(req.ServiceType)
 	if err != nil {
@@ -173,6 +175,7 @@ func (p *GLSProvider) GetLabel(_ context.Context, externalID string, _ string) (
 	return nil, fmt.Errorf("gls: labels are embedded in the create shipment response — use PrintData from CreateShipment")
 }
 
+// GetTracking returns tracking events for the given GLS shipment.
 func (p *GLSProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
 	if err != nil {
@@ -192,14 +195,17 @@ func (p *GLSProvider) GetTracking(ctx context.Context, trackingNumber string) ([
 	return events, nil
 }
 
+// CancelShipment cancels a GLS shipment by its external ID.
 func (p *GLSProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return p.client.Shipments.Cancel(ctx, externalID)
 }
 
+// MapStatus maps a GLS carrier status to the internal shipment status.
 func (p *GLSProvider) MapStatus(carrierStatus string) (string, bool) {
 	return glssdk.MapStatus(carrierStatus)
 }
 
+// GetRates returns estimated shipping rates for GLS.
 func (p *GLSProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// TODO: Implement real GLS rate API integration.
 	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&

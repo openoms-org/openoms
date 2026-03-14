@@ -22,7 +22,7 @@ func NewConfigHandler(registrationMode string, licenseEnabled, billingEnabled bo
 
 // PublicConfig returns non-sensitive configuration for the frontend.
 // GET /v1/config/public — no auth required.
-func (h *ConfigHandler) PublicConfig(w http.ResponseWriter, r *http.Request) {
+func (h *ConfigHandler) PublicConfig(w http.ResponseWriter, _ *http.Request) {
 	resp := map[string]any{
 		"registration_mode": h.registrationMode,
 		"license_enabled":   h.licenseEnabled,

@@ -48,14 +48,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslations } from "next-intl";
 
-const SEGMENT_TYPE_LABELS: Record<string, string> = {
-  manual: "Ręczny",
-  rfm_auto: "RFM (auto)",
-  rule_based: "Regułowy",
-};
+// SEGMENT_TYPE_LABELS moved inside component to use translations
 
 export default function SegmentDetailPage() {
+  const t = useTranslations("customers");
+  const tc = useTranslations("common");
+  const SEGMENT_TYPE_LABELS: Record<string, string> = {
+    manual: t("segmentTypeManual"),
+    rfm_auto: t("segmentTypeRfm"),
+    rule_based: t("segmentTypeRuleBased"),
+  };
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [memberPagination, setMemberPagination] = useState({
@@ -101,13 +105,13 @@ export default function SegmentDetailPage() {
   if (!segment) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono segmentu</p>
+        <p className="text-muted-foreground">{t("segmentNotFound")}</p>
         <Button
           variant="outline"
           className="mt-4"
           onClick={() => router.push("/customers/segments")}
         >
-          Wróć do listy
+          {t("detail.backToList")}
         </Button>
       </div>
     );
@@ -127,7 +131,7 @@ export default function SegmentDetailPage() {
         description: editDescription,
         color: editColor,
       });
-      toast.success("Segment został zaktualizowany");
+      toast.success(t("segmentzostałzaktualizowany"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -137,7 +141,7 @@ export default function SegmentDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteSegment.mutateAsync(params.id);
-      toast.success("Segment został usunięty");
+      toast.success(t("segmentzostałusuniety"));
       router.push("/customers/segments");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -148,7 +152,7 @@ export default function SegmentDetailPage() {
     if (!selectedCustomerId) return;
     try {
       await addMember.mutateAsync({ customer_id: selectedCustomerId });
-      toast.success("Klient został dodany do segmentu");
+      toast.success(t("klientzostałdodanydosegmentu"));
       setShowAddMemberDialog(false);
       setSelectedCustomerId("");
       setCustomerSearch("");
@@ -161,7 +165,7 @@ export default function SegmentDetailPage() {
     if (!removeCustomerId) return;
     removeMember.mutate(removeCustomerId, {
       onSuccess: () => {
-        toast.success("Klient został usunięty z segmentu");
+        toast.success(t("klientzostałusunietyzsegmentu"));
         setRemoveCustomerId(null);
       },
       onError: (error) => {
@@ -191,13 +195,13 @@ export default function SegmentDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={startEditing}>
-            Edytuj
+            {tc("edit")}
           </Button>
           <Button
             variant="destructive"
             onClick={() => setShowDeleteDialog(true)}
           >
-            Usuń
+            {t("delete")}
           </Button>
         </div>
       </div>
@@ -205,26 +209,26 @@ export default function SegmentDetailPage() {
       {isEditing && (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja segmentu</CardTitle>
+            <CardTitle>{t("editSegment")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-w-md">
               <div className="space-y-2">
-                <Label>Nazwa</Label>
+                <Label>{tc("name")}</Label>
                 <Input
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Opis</Label>
+                <Label>{tc("description")}</Label>
                 <Input
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Kolor</Label>
+                <Label>{t("segmentColor")}</Label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -244,13 +248,13 @@ export default function SegmentDetailPage() {
                   onClick={handleUpdate}
                   disabled={updateSegment.isPending}
                 >
-                  {updateSegment.isPending ? "Zapisywanie..." : "Zapisz"}
+                  {updateSegment.isPending ? tc("saving") : tc("save")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing(false)}
                 >
-                  Anuluj
+                  {tc("cancel")}
                 </Button>
               </div>
             </div>
@@ -261,30 +265,30 @@ export default function SegmentDetailPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Informacje</CardTitle>
+            <CardTitle>{tc("details")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {segment.description && (
               <div>
-                <p className="text-sm text-muted-foreground">Opis</p>
+                <p className="text-sm text-muted-foreground">{tc("description")}</p>
                 <p className="mt-1 text-sm">{segment.description}</p>
               </div>
             )}
             <div>
-              <p className="text-sm text-muted-foreground">Typ</p>
+              <p className="text-sm text-muted-foreground">{tc("type")}</p>
               <p className="mt-1 text-sm font-medium">
                 {SEGMENT_TYPE_LABELS[segment.segment_type] ||
                   segment.segment_type}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Klientów</p>
+              <p className="text-sm text-muted-foreground">{t("klientow")}</p>
               <p className="mt-1 text-2xl font-bold">
                 {segment.customer_count}
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Utworzono</p>
+              <p className="text-sm text-muted-foreground">{tc("createdAt")}</p>
               <p className="mt-1 text-sm">{formatDate(segment.created_at)}</p>
             </div>
           </CardContent>
@@ -293,7 +297,7 @@ export default function SegmentDetailPage() {
         {segment.rules && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Reguły</CardTitle>
+              <CardTitle>{t("reguły1")}</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="rounded bg-muted p-3 text-sm font-mono overflow-auto">
@@ -306,14 +310,14 @@ export default function SegmentDetailPage() {
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle>Członkowie</CardTitle>
+          <CardTitle>{t("członkowie1")}</CardTitle>
           {segment.segment_type === "manual" && (
             <Button
               size="sm"
               onClick={() => setShowAddMemberDialog(true)}
             >
               <Plus className="mr-1 h-4 w-4" />
-              Dodaj klienta
+              {t("addCustomer")}
             </Button>
           )}
         </CardHeader>
@@ -327,7 +331,7 @@ export default function SegmentDetailPage() {
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Users className="h-8 w-8 text-muted-foreground/50 mb-2" />
               <p className="text-sm text-muted-foreground">
-                Brak klientów w tym segmencie.
+                {t("brakKlientowWTymSegmencie")}
               </p>
             </div>
           ) : (
@@ -335,11 +339,11 @@ export default function SegmentDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Klient</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead className="text-right">Zamówień</TableHead>
-                    <TableHead className="text-right">Wydano</TableHead>
-                    <TableHead>Dodano</TableHead>
+                    <TableHead>{t("form.fullName")}</TableHead>
+                    <TableHead>{t("form.email")}</TableHead>
+                    <TableHead className="text-right">{t("zamowien")}</TableHead>
+                    <TableHead className="text-right">{t("wydanoŁacznie")}</TableHead>
+                    <TableHead>{t("addedAt")}</TableHead>
                     <TableHead className="w-[60px]" />
                   </TableRow>
                 </TableHeader>
@@ -406,15 +410,15 @@ export default function SegmentDetailPage() {
       <Dialog open={showAddMemberDialog} onOpenChange={setShowAddMemberDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Dodaj klienta do segmentu</DialogTitle>
+            <DialogTitle>{t("addCustomerToSegment")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Szukaj klienta</Label>
+              <Label>{t("searchCustomer")}</Label>
               <Input
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
-                placeholder="Wpisz imię lub e-mail..."
+                placeholder={t("wpiszImieLubEmail")}
               />
             </div>
             {customers.length > 0 && (
@@ -423,7 +427,7 @@ export default function SegmentDetailPage() {
                 onValueChange={setSelectedCustomerId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz klienta" />
+                  <SelectValue placeholder={t("selectCustomer")} />
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
@@ -439,13 +443,13 @@ export default function SegmentDetailPage() {
                 variant="outline"
                 onClick={() => setShowAddMemberDialog(false)}
               >
-                Anuluj
+                {tc("cancel")}
               </Button>
               <Button
                 onClick={handleAddMember}
                 disabled={addMember.isPending || !selectedCustomerId}
               >
-                {addMember.isPending ? "Dodawanie..." : "Dodaj"}
+                {addMember.isPending ? t("adding") : tc("add")}
               </Button>
             </div>
           </div>
@@ -455,9 +459,9 @@ export default function SegmentDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuwanie segmentu"
-        description="Czy na pewno chcesz usunąć ten segment?"
-        confirmLabel="Usuń segment"
+        title={t("deleteSegmentTitle")}
+        description={t("czyNaPewnoChceszUsunacTenSegment")}
+        confirmLabel={t("usunSegment")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteSegment.isPending}
@@ -466,9 +470,9 @@ export default function SegmentDetailPage() {
       <ConfirmDialog
         open={!!removeCustomerId}
         onOpenChange={(open) => !open && setRemoveCustomerId(null)}
-        title="Usuń z segmentu"
-        description="Czy na pewno chcesz usunąć tego klienta z segmentu?"
-        confirmLabel="Usuń"
+        title={t("usunZSegmentu")}
+        description={t("czyNaPewnoChceszUsunacTegoKlientaZSegmentu")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleRemoveMember}
         isLoading={removeMember.isPending}

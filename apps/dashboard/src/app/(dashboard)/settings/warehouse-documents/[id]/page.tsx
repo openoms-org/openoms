@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 function ProductName({ productId }: { productId: string }) {
   const { data: product } = useProduct(productId);
@@ -34,17 +35,7 @@ function ProductName({ productId }: { productId: string }) {
   return <span className="font-mono text-xs">{shortId(productId)}</span>;
 }
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  PZ: "PZ - Przyjęcie zewnętrzne",
-  WZ: "WZ - Wydanie zewnętrzne",
-  MM: "MM - Przesunięcie międzymagazynowe",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Szkic",
-  confirmed: "Zatwierdzony",
-  cancelled: "Anulowany",
-};
+// DOC_TYPE_LABELS and STATUS_LABELS moved inside component to use translations
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -53,8 +44,21 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function WarehouseDocumentDetailPage() {
+  const t = useTranslations("warehouseDocuments");
   const params = useParams();
   const id = params.id as string;
+
+  const DOC_TYPE_LABELS: Record<string, string> = {
+    PZ: t("pzLabel"),
+    WZ: t("wzLabel"),
+    MM: t("mmLabel"),
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    draft: t("statusDraft"),
+    confirmed: t("statusConfirmed"),
+    cancelled: t("statusCancelled"),
+  };
 
   const { data: doc, isLoading, isError, refetch } = useWarehouseDocument(id);
   const confirmDoc = useConfirmWarehouseDocument();
@@ -74,7 +78,7 @@ export default function WarehouseDocumentDetailPage() {
       <AdminGuard>
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Nie udało się załadować dokumentu.
+            {t("nieUdałoSieZaładowacDokumentu")}
           </p>
           <Button
             variant="outline"
@@ -82,7 +86,7 @@ export default function WarehouseDocumentDetailPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       </AdminGuard>
@@ -92,7 +96,7 @@ export default function WarehouseDocumentDetailPage() {
   const handleConfirm = () => {
     confirmDoc.mutate(id, {
       onSuccess: () => {
-        toast.success("Dokument został zatwierdzony. Stany magazynowe zaktualizowane.");
+        toast.success(t("dokumentzostałzatwierdzonystanymagazynowezaktualiz"));
         refetch();
       },
       onError: (error) => {
@@ -104,7 +108,7 @@ export default function WarehouseDocumentDetailPage() {
   const handleCancel = () => {
     cancelDoc.mutate(id, {
       onSuccess: () => {
-        toast.success("Dokument został anulowany");
+        toast.success(t("dokumentzostałanulowany"));
         refetch();
       },
       onError: (error) => {
@@ -121,7 +125,7 @@ export default function WarehouseDocumentDetailPage() {
         <Button variant="ghost" size="sm" asChild className="mb-4">
           <Link href="/settings/warehouse-documents">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Powrót do listy
+            {t("powrotDoListy")}
           </Link>
         </Button>
 
@@ -148,7 +152,7 @@ export default function WarehouseDocumentDetailPage() {
                   disabled={confirmDoc.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {confirmDoc.isPending ? "Zatwierdzanie..." : "Zatwierdź"}
+                  {confirmDoc.isPending ? "Zatwierdzanie..." : t("zatwierdz")}
                 </Button>
                 <Button
                   variant="outline"
@@ -167,7 +171,7 @@ export default function WarehouseDocumentDetailPage() {
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="rounded-md border p-4 space-y-2">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase">
-            Szczegóły
+            {t("details")}
           </h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <span className="text-muted-foreground">Typ:</span>
@@ -190,7 +194,7 @@ export default function WarehouseDocumentDetailPage() {
             )}
             {doc.order_id && (
               <>
-                <span className="text-muted-foreground">Zamówienie:</span>
+                <span className="text-muted-foreground">{t("split.orderLabel")}</span>
                 <Link href={`/orders/${doc.order_id}`} className="text-primary hover:underline">
                   {order ? `#${shortId(doc.order_id)}` : shortId(doc.order_id)}
                 </Link>
@@ -235,7 +239,7 @@ export default function WarehouseDocumentDetailPage() {
                 <TableRow>
                   <TableHead>Produkt</TableHead>
                   <TableHead>Wariant</TableHead>
-                  <TableHead>Ilość</TableHead>
+                  <TableHead>{t("quantity")}</TableHead>
                   <TableHead>Cena jedn.</TableHead>
                   <TableHead>Uwagi</TableHead>
                 </TableRow>

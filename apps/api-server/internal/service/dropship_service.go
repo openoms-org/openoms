@@ -20,10 +20,14 @@ import (
 )
 
 var (
-	ErrDropshipOrderNotFound     = errors.New("dropship order not found")
-	ErrDropshipAlreadyCancelled  = errors.New("dropship order is already cancelled")
+	// ErrDropshipOrderNotFound is returned when a dropship order does not exist.
+	ErrDropshipOrderNotFound = errors.New("dropship order not found")
+	// ErrDropshipAlreadyCancelled is returned when a dropship order has already been cancelled.
+	ErrDropshipAlreadyCancelled = errors.New("dropship order is already cancelled")
+	// ErrDropshipInvalidTransition is returned for an invalid dropship order status transition.
 	ErrDropshipInvalidTransition = errors.New("invalid dropship status transition")
-	ErrNoDropshipItems           = errors.New("no dropship items found for this order")
+	// ErrNoDropshipItems is returned when no dropship items exist for an order.
+	ErrNoDropshipItems = errors.New("no dropship items found for this order")
 )
 
 // DropshipService handles business logic for dropship orders.

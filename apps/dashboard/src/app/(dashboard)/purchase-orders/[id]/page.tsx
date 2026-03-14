@@ -45,8 +45,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { PurchaseOrderItem, ReceiveItemEntry } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function PurchaseOrderDetailPage() {
+  const t = useTranslations("purchaseOrders");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -68,7 +70,7 @@ export default function PurchaseOrderDetailPage() {
   if (!po) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Zamówienie zakupu nie znalezione
+        {t("zamowienieZakupuNieZnalezione")}
       </div>
     );
   }
@@ -77,7 +79,7 @@ export default function PurchaseOrderDetailPage() {
 
   const handleSend = () => {
     sendPO.mutate(id, {
-      onSuccess: () => toast.success("Zamówienie zostało wysłane do dostawcy"),
+      onSuccess: () => toast.success(t("zamowienieZostaloWyslaneDo")),
       onError: (error) => toast.error(getErrorMessage(error)),
     });
   };
@@ -100,7 +102,7 @@ export default function PurchaseOrderDetailPage() {
       .map(([item_id, quantity_received]) => ({ item_id, quantity_received }));
 
     if (entries.length === 0) {
-      toast.error("Wprowadź ilości do przyjęcia");
+      toast.error(t("wprowadzIlosciDoPrzyjecia"));
       return;
     }
 
@@ -108,7 +110,7 @@ export default function PurchaseOrderDetailPage() {
       { items: entries },
       {
         onSuccess: () => {
-          toast.success("Pozycje zostały przyjęte");
+          toast.success(t("pozycjezostałyprzyjete"));
           setShowReceiveDialog(false);
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -119,7 +121,7 @@ export default function PurchaseOrderDetailPage() {
   const handleCancel = () => {
     cancelPO.mutate(id, {
       onSuccess: () => {
-        toast.success("Zamówienie zostało anulowane");
+        toast.success(t("zamowieniezostałoanulowane"));
         setShowCancelDialog(false);
       },
       onError: (error) => toast.error(getErrorMessage(error)),
@@ -160,13 +162,13 @@ export default function PurchaseOrderDetailPage() {
             {canSend && (
               <Button onClick={handleSend} disabled={sendPO.isPending}>
                 <Send className="h-4 w-4 mr-2" />
-                Wyślij
+                {t("allegro.send")}
               </Button>
             )}
             {canReceive && (
               <Button onClick={openReceiveDialog} variant="default">
                 <PackageCheck className="h-4 w-4 mr-2" />
-                Przyjmij towar
+                {t("receiveGoods")}
               </Button>
             )}
             {canCancel && (
@@ -206,7 +208,7 @@ export default function PurchaseOrderDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Wartość zamówienia</span>
+                <span className="text-muted-foreground">{t("wartoscZamowienia")}</span>
                 <span className="font-medium">
                   {formatCurrency(po.total_amount, po.currency)}
                 </span>
@@ -221,7 +223,7 @@ export default function PurchaseOrderDetailPage() {
               </div>
               {receivedTotal > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Przyjęto za</span>
+                  <span className="text-muted-foreground">{t("przyjetoZa")}</span>
                   <span className="font-medium text-green-600">
                     {formatCurrency(receivedTotal, po.currency)}
                   </span>
@@ -268,15 +270,15 @@ export default function PurchaseOrderDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Pozycje zamówienia ({items.length})</CardTitle>
+            <CardTitle>{t("pozycjeZamowienia")}{items.length})</CardTitle>
             <CardDescription>
-              Lista produktów w zamówieniu zakupu
+              {t("listaProduktowWZamowieniuZakupu")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Brak pozycji w zamówieniu.
+                {t("brakPozycjiWZamowieniu")}
               </p>
             ) : (
               <Table>
@@ -285,10 +287,10 @@ export default function PurchaseOrderDetailPage() {
                     <TableHead>Produkt</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead className="text-right">Cena jedn.</TableHead>
-                    <TableHead className="text-center">Zamówiono</TableHead>
-                    <TableHead className="text-center">Przyjęto</TableHead>
-                    <TableHead className="text-center">Postęp</TableHead>
-                    <TableHead className="text-right">Wartość</TableHead>
+                    <TableHead className="text-center">{t("zamowiono")}</TableHead>
+                    <TableHead className="text-center">{t("przyjeto")}</TableHead>
+                    <TableHead className="text-center">{t("postep")}</TableHead>
+                    <TableHead className="text-right">{t("detail.value")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -328,9 +330,9 @@ export default function PurchaseOrderDetailPage() {
       <Dialog open={showReceiveDialog} onOpenChange={setShowReceiveDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Przyjmij towar</DialogTitle>
+            <DialogTitle>{t("receiveGoods")}</DialogTitle>
             <DialogDescription>
-              Wprowadź ilości przyjętych produktów dla zamówienia {po.po_number}.
+              {t("receiveDescription", { number: po.po_number })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 max-h-80 overflow-auto">
@@ -351,12 +353,12 @@ export default function PurchaseOrderDetailPage() {
                         {item.product_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Zamówiono: {item.quantity_ordered} | Przyjęto:{" "}
-                        {item.quantity_received} | Pozostało: {remaining}
+                        {t("ordered")}: {item.quantity_ordered} | {t("received")}:{" "}
+                        {item.quantity_received} | {t("remaining")}: {remaining}
                       </p>
                     </div>
                     <div className="w-20">
-                      <Label className="sr-only">Ilość</Label>
+                      <Label className="sr-only">{t("quantity")}</Label>
                       <Input
                         type="number"
                         min={0}
@@ -399,9 +401,9 @@ export default function PurchaseOrderDetailPage() {
       <ConfirmDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
-        title="Anuluj zamówienie zakupu"
-        description="Czy na pewno chcesz anulować to zamówienie zakupu? Przyjęte pozycje pozostaną w magazynie."
-        confirmLabel="Anuluj zamówienie"
+        title={t("anulujZamowienieZakupu")}
+        description={t("czyNaPewnoChceszAnulowacToZamowienieZakupuPrzyjete")}
+        confirmLabel={t("anulujZamowienie")}
         variant="destructive"
         onConfirm={handleCancel}
         isLoading={cancelPO.isPending}

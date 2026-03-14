@@ -19,7 +19,7 @@ func (h *DocsHandler) ServeSpec(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.WriteHeader(http.StatusOK)
-	w.Write(h.spec)
+	_, _ = w.Write(h.spec)
 }
 
 // ServeSwaggerUI serves a minimal HTML page that loads Swagger UI from a CDN.
@@ -27,7 +27,7 @@ func (h *DocsHandler) ServeSwaggerUI(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(swaggerHTML))
+	_, _ = w.Write([]byte(swaggerHTML))
 }
 
 const swaggerHTML = `<!DOCTYPE html>

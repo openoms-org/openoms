@@ -12,8 +12,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// IntegrationRepository handles persistence for marketplace and service integrations.
 type IntegrationRepository struct{}
 
+// NewIntegrationRepository creates a new IntegrationRepository.
 func NewIntegrationRepository() *IntegrationRepository {
 	return &IntegrationRepository{}
 }
@@ -28,6 +30,7 @@ func (r *IntegrationRepository) Count(ctx context.Context, tx pgx.Tx) (int, erro
 	return count, nil
 }
 
+// List returns all integrations with their encrypted credentials.
 func (r *IntegrationRepository) List(ctx context.Context, tx pgx.Tx) ([]model.IntegrationWithCreds, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, provider, label, status, credentials, settings, sync_cursor, error_message, last_sync_at, created_at, updated_at
@@ -56,6 +59,7 @@ func (r *IntegrationRepository) List(ctx context.Context, tx pgx.Tx) ([]model.In
 	return integrations, rows.Err()
 }
 
+// FindByID returns an integration by its ID.
 func (r *IntegrationRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.IntegrationWithCreds, error) {
 	var i model.IntegrationWithCreds
 	var credsJSON json.RawMessage
@@ -78,6 +82,7 @@ func (r *IntegrationRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid
 	return &i, nil
 }
 
+// FindByProvider returns the first integration matching the given provider slug.
 func (r *IntegrationRepository) FindByProvider(ctx context.Context, tx pgx.Tx, provider string) (*model.IntegrationWithCreds, error) {
 	var i model.IntegrationWithCreds
 	var credsJSON json.RawMessage
@@ -100,6 +105,7 @@ func (r *IntegrationRepository) FindByProvider(ctx context.Context, tx pgx.Tx, p
 	return &i, nil
 }
 
+// Create inserts a new integration with encrypted credentials.
 func (r *IntegrationRepository) Create(ctx context.Context, tx pgx.Tx, integration *model.Integration, encryptedCreds string) error {
 	// Store encrypted credentials as a JSON string value in the JSONB column
 	credsJSON, _ := json.Marshal(encryptedCreds)
@@ -112,6 +118,7 @@ func (r *IntegrationRepository) Create(ctx context.Context, tx pgx.Tx, integrati
 	).Scan(&integration.CreatedAt, &integration.UpdatedAt)
 }
 
+// Update applies partial updates to an integration.
 func (r *IntegrationRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateIntegrationRequest, encryptedCreds *string) error {
 	var setClauses []string
 	var args []any
@@ -168,6 +175,7 @@ func (r *IntegrationRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.U
 	return nil
 }
 
+// Delete removes an integration by its ID.
 func (r *IntegrationRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM integrations WHERE id = $1", id)
 	if err != nil {

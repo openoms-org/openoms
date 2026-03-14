@@ -16,7 +16,7 @@ type mockValidator struct {
 	err    error
 }
 
-func (m *mockValidator) ValidateToken(tokenStr string) (*model.AuthClaims, error) {
+func (m *mockValidator) ValidateToken(_ string) (*model.AuthClaims, error) {
 	return m.claims, m.err
 }
 
@@ -69,7 +69,7 @@ func TestJWTAuth_ValidToken(t *testing.T) {
 }
 
 func TestJWTAuth_MissingHeader(t *testing.T) {
-	handler := JWTAuth(&mockValidator{})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := JWTAuth(&mockValidator{})(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("handler should not be called")
 	}))
 
@@ -88,7 +88,7 @@ func TestJWTAuth_InvalidToken(t *testing.T) {
 		err: jwt.ErrTokenExpired,
 	}
 
-	handler := JWTAuth(validator)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := JWTAuth(validator)(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("handler should not be called")
 	}))
 
@@ -104,7 +104,7 @@ func TestJWTAuth_InvalidToken(t *testing.T) {
 }
 
 func TestJWTAuth_NoBearerPrefix(t *testing.T) {
-	handler := JWTAuth(&mockValidator{})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := JWTAuth(&mockValidator{})(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
 		t.Error("handler should not be called")
 	}))
 

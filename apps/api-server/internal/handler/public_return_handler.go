@@ -25,6 +25,7 @@ type PublicReturnHandler struct {
 	orderRepo  repository.OrderRepo
 }
 
+// NewPublicReturnHandler creates a new PublicReturnHandler.
 func NewPublicReturnHandler(pool *pgxpool.Pool, returnRepo repository.ReturnRepo, orderRepo repository.OrderRepo) *PublicReturnHandler {
 	return &PublicReturnHandler{
 		pool:       pool,

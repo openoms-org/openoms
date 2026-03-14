@@ -30,6 +30,7 @@ import { Loader2, Save, TestTube, CheckCircle, XCircle } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
 import { KSEF_ENVIRONMENTS } from "@/lib/constants";
 import type { KSeFSettings } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_SETTINGS: KSeFSettings = {
   enabled: false,
@@ -45,6 +46,8 @@ const DEFAULT_SETTINGS: KSeFSettings = {
 };
 
 export default function KSeFSettingsPage() {
+  const t = useTranslations("ksef");
+  const ts = useTranslations("settings");
   const { data: settings, isLoading } = useKSeFSettings();
   const updateSettings = useUpdateKSeFSettings();
   const testConnection = useTestKSeFConnection();
@@ -67,10 +70,10 @@ export default function KSeFSettingsPage() {
   const handleSave = async () => {
     try {
       await updateSettings.mutateAsync(form);
-      toast.success("Ustawienia KSeF zapisane");
+      toast.success(t("settingsSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się zapisać ustawień";
+        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
       toast.error(message);
     }
   };
@@ -87,7 +90,7 @@ export default function KSeFSettingsPage() {
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udało się przetestować połączenia";
+        err instanceof Error ? err.message : t("nieudałosieprzetestowacpołaczenia");
       toast.error(message);
       setTestResult({ success: false, message });
     }
@@ -105,9 +108,9 @@ export default function KSeFSettingsPage() {
     <AdminGuard>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">KSeF - Krajowy System e-Faktur</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground">
-            Konfiguracja integracji z Krajowym Systemem e-Faktur
+            {t("subtitle")}
           </p>
         </div>
 
@@ -116,9 +119,9 @@ export default function KSeFSettingsPage() {
         {/* Enable/disable */}
         <Card>
           <CardHeader>
-            <CardTitle>Status integracji</CardTitle>
+            <CardTitle>{t("integrationStatus")}</CardTitle>
             <CardDescription>
-              Włącz lub wyłącz wysyłanie faktur do KSeF
+              {t("właczLubWyłaczWysyłanieFakturDoKsef")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -130,7 +133,7 @@ export default function KSeFSettingsPage() {
                 }
               />
               <span className="text-sm">
-                {form.enabled ? "KSeF włączony" : "KSeF wyłączony"}
+                {form.enabled ? t("ksefWłaczony") : t("ksefWyłaczony")}
               </span>
             </div>
           </CardContent>
@@ -139,10 +142,10 @@ export default function KSeFSettingsPage() {
         {/* Auto-send */}
         <Card>
           <CardHeader>
-            <CardTitle>Automatyczne wysyłanie</CardTitle>
+            <CardTitle>{t("automatyczneWysyłanie")}</CardTitle>
             <CardDescription>
-              Automatycznie wysyłaj nowo utworzone faktury do KSeF.
-              Nieudane wysyłki będą automatycznie ponawiane (maks. 3 próby).
+              {t("automatycznieWysyłajNowoUtworzoneFakturyDoKsef")}
+              {t("autoSendRetry")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -155,12 +158,12 @@ export default function KSeFSettingsPage() {
                 disabled={!form.enabled}
               />
               <span className="text-sm">
-                {form.auto_send ? "Auto-send włączony" : "Auto-send wyłączony"}
+                {form.auto_send ? t("autosendWłaczony") : t("autosendWyłaczony")}
               </span>
             </div>
             {!form.enabled && form.auto_send && (
               <p className="text-xs text-muted-foreground mt-2">
-                Włącz integrację KSeF, aby korzystać z automatycznego wysyłania.
+                {t("właczIntegracjeKsefAbyKorzystacZAutomatycznego")}
               </p>
             )}
           </CardContent>
@@ -169,14 +172,14 @@ export default function KSeFSettingsPage() {
         {/* Environment */}
         <Card>
           <CardHeader>
-            <CardTitle>Środowisko</CardTitle>
+            <CardTitle>{t("srodowisko")}</CardTitle>
             <CardDescription>
-              Wybierz środowisko KSeF (testowe do testów, produkcyjne do wysyłki prawdziwych faktur)
+              {t("environmentDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-w-sm">
-              <Label>Środowisko</Label>
+              <Label>{t("srodowisko")}</Label>
               <Select
                 value={form.environment || "test"}
                 onValueChange={(value) =>
@@ -184,7 +187,7 @@ export default function KSeFSettingsPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Wybierz środowisko" />
+                  <SelectValue placeholder={t("wybierzSrodowisko")} />
                 </SelectTrigger>
                 <SelectContent>
                   {KSEF_ENVIRONMENTS.map((env) => (
@@ -201,9 +204,9 @@ export default function KSeFSettingsPage() {
         {/* Authentication */}
         <Card>
           <CardHeader>
-            <CardTitle>Dane autoryzacyjne</CardTitle>
+            <CardTitle>{t("authData")}</CardTitle>
             <CardDescription>
-              NIP firmy i token autoryzacyjny z portalu KSeF
+              {t("authDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -217,22 +220,23 @@ export default function KSeFSettingsPage() {
                   maxLength={10}
                 />
                 <p className="text-xs text-muted-foreground">
-                  10-cyfrowy numer identyfikacji podatkowej
+                  {t("nipHint")}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Token autoryzacyjny</Label>
+                <Label>{t("authToken")}</Label>
                 <Input
                   type="password"
                   value={form.token}
                   onChange={(e) => setForm({ ...form, token: e.target.value })}
-                  placeholder="Token z portalu KSeF"
+                  placeholder={t("authTokenPlaceholder")}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Wygeneruj token w portalu{" "}
-                  {form.environment === "production"
-                    ? "ksef.mf.gov.pl"
-                    : "ksef-test.mf.gov.pl"}
+                  {t("generateTokenHint", {
+                    portal: form.environment === "production"
+                      ? "ksef.mf.gov.pl"
+                      : "ksef-test.mf.gov.pl"
+                  })}
                 </p>
               </div>
             </div>
@@ -242,45 +246,43 @@ export default function KSeFSettingsPage() {
         {/* Company details */}
         <Card>
           <CardHeader>
-            <CardTitle>Dane firmy (sprzedawca)</CardTitle>
+            <CardTitle>{t("companyData")}</CardTitle>
             <CardDescription>
-              Dane firmy używane w fakturach strukturalnych KSeF
+              {t("daneFirmyUzywaneWFakturachStrukturalnychKsef")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Nazwa firmy</Label>
+              <Label>{t("companyName")}</Label>
               <Input
                 value={form.company_name}
                 onChange={(e) =>
                   setForm({ ...form, company_name: e.target.value })
                 }
-                placeholder="Nazwa firmy sp. z o.o."
+                placeholder={t("companyNamePlaceholder")}
               />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Ulica</Label>
+                <Label>{t("street")}</Label>
                 <Input
                   value={form.company_street}
                   onChange={(e) =>
                     setForm({ ...form, company_street: e.target.value })
                   }
-                  placeholder="ul. Przykładowa 1"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Miasto</Label>
+                <Label>{t("city")}</Label>
                 <Input
                   value={form.company_city}
                   onChange={(e) =>
                     setForm({ ...form, company_city: e.target.value })
                   }
-                  placeholder="Warszawa"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Kod pocztowy</Label>
+                <Label>{t("postalCode")}</Label>
                 <Input
                   value={form.company_postal}
                   onChange={(e) =>
@@ -290,7 +292,7 @@ export default function KSeFSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Kraj</Label>
+                <Label>{t("country")}</Label>
                 <Input
                   value={form.company_country}
                   onChange={(e) =>
@@ -307,9 +309,9 @@ export default function KSeFSettingsPage() {
         {/* Test connection */}
         <Card>
           <CardHeader>
-            <CardTitle>Test połączenia</CardTitle>
+            <CardTitle>{t("testpołaczenia")}</CardTitle>
             <CardDescription>
-              Sprawdź czy połączenie z KSeF działa poprawnie
+              {t("sprawdzCzyPołaczenieZKsefDziałaPoprawnie")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -323,7 +325,7 @@ export default function KSeFSettingsPage() {
               ) : (
                 <TestTube className="mr-2 h-4 w-4" />
               )}
-              Testuj połączenie
+              {ts("testujPołaczenie")}
             </Button>
 
             {testResult && (
@@ -353,7 +355,7 @@ export default function KSeFSettingsPage() {
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            Zapisz ustawienia
+            {ts("saveSettings")}
           </Button>
         </div>
       </div>

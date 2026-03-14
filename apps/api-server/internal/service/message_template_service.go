@@ -13,17 +13,21 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// ErrMessageTemplateNotFound is returned when a message template does not exist.
 var ErrMessageTemplateNotFound = errors.New("message template not found")
 
+// MessageTemplateService handles business logic for message templates.
 type MessageTemplateService struct {
 	repo repository.MessageTemplateRepo
 	pool *pgxpool.Pool
 }
 
+// NewMessageTemplateService creates a new MessageTemplateService.
 func NewMessageTemplateService(repo repository.MessageTemplateRepo, pool *pgxpool.Pool) *MessageTemplateService {
 	return &MessageTemplateService{repo: repo, pool: pool}
 }
 
+// List returns message templates for a tenant matching the given filter.
 func (s *MessageTemplateService) List(ctx context.Context, tenantID uuid.UUID, filter model.MessageTemplateListFilter) ([]model.MessageTemplate, int, error) {
 	var templates []model.MessageTemplate
 	var total int
@@ -35,6 +39,7 @@ func (s *MessageTemplateService) List(ctx context.Context, tenantID uuid.UUID, f
 	return templates, total, err
 }
 
+// Get returns a single message template by ID.
 func (s *MessageTemplateService) Get(ctx context.Context, tenantID, id uuid.UUID) (*model.MessageTemplate, error) {
 	var t *model.MessageTemplate
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -51,6 +56,7 @@ func (s *MessageTemplateService) Get(ctx context.Context, tenantID, id uuid.UUID
 	return t, nil
 }
 
+// Create inserts a new message template.
 func (s *MessageTemplateService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateMessageTemplateRequest) (*model.MessageTemplate, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -88,6 +94,7 @@ func (s *MessageTemplateService) Create(ctx context.Context, tenantID uuid.UUID,
 	return t, nil
 }
 
+// Update modifies an existing message template.
 func (s *MessageTemplateService) Update(ctx context.Context, tenantID, id uuid.UUID, req model.UpdateMessageTemplateRequest) (*model.MessageTemplate, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -117,6 +124,7 @@ func (s *MessageTemplateService) Update(ctx context.Context, tenantID, id uuid.U
 	return t, nil
 }
 
+// Delete removes a message template by ID.
 func (s *MessageTemplateService) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		t, err := s.repo.FindByID(ctx, tx, id)

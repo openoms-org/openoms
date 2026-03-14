@@ -10,10 +10,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// AIHandler handles AI-assisted product categorization requests.
 type AIHandler struct {
 	aiService *service.AIService
 }
 
+// NewAIHandler creates a new AIHandler.
 func NewAIHandler(aiService *service.AIService) *AIHandler {
 	return &AIHandler{aiService: aiService}
 }

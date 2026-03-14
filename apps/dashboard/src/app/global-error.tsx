@@ -18,9 +18,9 @@ export default function GlobalError({
     <html>
       <body>
         <div style={{ padding: "2rem", textAlign: "center" }}>
-          <h2>Wystąpił nieoczekiwany błąd</h2>
+          <h2>An unexpected error occurred</h2>
           <p style={{ color: "#666", marginTop: "0.5rem" }}>
-            Błąd został automatycznie zgłoszony. Spróbuj ponownie.
+            The error has been automatically reported. Please try again.
           </p>
           <button
             onClick={reset}
@@ -30,7 +30,7 @@ export default function GlobalError({
               cursor: "pointer",
             }}
           >
-            Spróbuj ponownie
+            Try again
           </button>
         </div>
       </body>

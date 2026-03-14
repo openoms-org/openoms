@@ -12,6 +12,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// CustomerHandler handles HTTP requests for customer management.
 type CustomerHandler struct {
 	customerService       *service.CustomerService
 	customerImportService *service.CustomerImportService
@@ -25,6 +26,7 @@ func NewCustomerHandler(customerService *service.CustomerService, customerImport
 	}
 }
 
+// List returns a paginated list of customers.
 func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -47,6 +49,7 @@ func (h *CustomerHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single customer by ID.
 func (h *CustomerHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -68,6 +71,7 @@ func (h *CustomerHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, customer)
 }
 
+// Create inserts a new customer.
 func (h *CustomerHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -90,6 +94,7 @@ func (h *CustomerHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, customer)
 }
 
+// Update modifies an existing customer.
 func (h *CustomerHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -123,6 +128,7 @@ func (h *CustomerHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, customer)
 }
 
+// Delete removes a customer by ID.
 func (h *CustomerHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -146,6 +152,7 @@ func (h *CustomerHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ListOrders returns orders placed by a specific customer.
 func (h *CustomerHandler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)

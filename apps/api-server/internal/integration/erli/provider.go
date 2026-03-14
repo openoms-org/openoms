@@ -1,3 +1,4 @@
+// Package erli implements the Erli.pl marketplace provider.
 package erli
 
 import (
@@ -20,8 +21,8 @@ func init() {
 	})
 }
 
-// ErliCredentials is the JSON structure stored in encrypted integration credentials.
-type ErliCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	APIToken string `json:"api_token"`
 	BaseURL  string `json:"base_url,omitempty"`
 	Sandbox  bool   `json:"sandbox,omitempty"`
@@ -35,7 +36,7 @@ type Provider struct {
 
 // NewProvider creates an Erli MarketplaceProvider from encrypted credentials.
 func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
-	var creds ErliCredentials
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("erli: parse credentials: %w", err)
 	}
@@ -61,6 +62,7 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "erli" }
 
 // PollOrders polls Erli for purchased orders using cursor-based pagination.

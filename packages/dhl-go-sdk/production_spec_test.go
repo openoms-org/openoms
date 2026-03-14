@@ -24,7 +24,7 @@ import (
 func TestSpec_Shipper_HasPhoneField(t *testing.T) {
 	// DHL24 SOAP API requires shipper phone in the address block.
 	// The Shipper model must have a Phone field so callers can set it.
-	typ := reflect.TypeOf(Shipper{})
+	typ := reflect.TypeFor[Shipper]()
 	_, found := typ.FieldByName("Phone")
 	if !found {
 		t.Error("Shipper struct must have a Phone field — DHL24 SOAP requires shipper phone in address")
@@ -44,7 +44,7 @@ func TestSpec_CreateShipment_NoDuplicateServiceField(t *testing.T) {
 		requestBody = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body>
 				<createShipmentsResponse>
@@ -82,7 +82,7 @@ func TestSpec_GetTracking_InvalidTimestamp_MustReturnError(t *testing.T) {
 	// Silent failures hide data corruption from callers.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body>
 				<getTrackAndTraceInfoResponse>

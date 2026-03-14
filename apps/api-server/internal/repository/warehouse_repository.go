@@ -18,6 +18,7 @@ func NewWarehouseRepository() *WarehouseRepository {
 	return &WarehouseRepository{}
 }
 
+// List returns a paginated list of warehouses matching the filter.
 func (r *WarehouseRepository) List(ctx context.Context, tx pgx.Tx, filter model.WarehouseListFilter) ([]model.Warehouse, int, error) {
 	var conditions []string
 	var args []any
@@ -73,6 +74,7 @@ func (r *WarehouseRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 	return warehouses, total, rows.Err()
 }
 
+// FindByID returns a warehouse by its ID.
 func (r *WarehouseRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Warehouse, error) {
 	var w model.Warehouse
 	err := tx.QueryRow(ctx,
@@ -110,6 +112,7 @@ func (r *WarehouseRepository) FindDefault(ctx context.Context, tx pgx.Tx) (*mode
 	return &w, nil
 }
 
+// Create inserts a new warehouse.
 func (r *WarehouseRepository) Create(ctx context.Context, tx pgx.Tx, warehouse *model.Warehouse) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO warehouses (id, tenant_id, name, code, address, is_default, active)
@@ -120,6 +123,7 @@ func (r *WarehouseRepository) Create(ctx context.Context, tx pgx.Tx, warehouse *
 	).Scan(&warehouse.CreatedAt, &warehouse.UpdatedAt)
 }
 
+// Update applies partial updates to a warehouse.
 func (r *WarehouseRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateWarehouseRequest) error {
 	var setClauses []string
 	var args []any
@@ -170,6 +174,7 @@ func (r *WarehouseRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return nil
 }
 
+// Delete removes a warehouse by its ID.
 func (r *WarehouseRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM warehouses WHERE id = $1", id)
 	if err != nil {
@@ -189,6 +194,7 @@ func NewWarehouseStockRepository() *WarehouseStockRepository {
 	return &WarehouseStockRepository{}
 }
 
+// ListByWarehouse returns paginated stock records for the given warehouse.
 func (r *WarehouseStockRepository) ListByWarehouse(ctx context.Context, tx pgx.Tx, warehouseID uuid.UUID, filter model.WarehouseStockListFilter) ([]model.WarehouseStock, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx,
@@ -222,6 +228,7 @@ func (r *WarehouseStockRepository) ListByWarehouse(ctx context.Context, tx pgx.T
 	return stocks, total, rows.Err()
 }
 
+// ListByProduct returns all stock records for the given product.
 func (r *WarehouseStockRepository) ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]model.WarehouseStock, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, warehouse_id, product_id, variant_id, quantity, reserved, min_stock, created_at, updated_at
@@ -248,6 +255,7 @@ func (r *WarehouseStockRepository) ListByProduct(ctx context.Context, tx pgx.Tx,
 	return stocks, rows.Err()
 }
 
+// Upsert inserts or updates a warehouse stock record.
 func (r *WarehouseStockRepository) Upsert(ctx context.Context, tx pgx.Tx, stock *model.WarehouseStock) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO warehouse_stock (id, tenant_id, warehouse_id, product_id, variant_id, quantity, reserved, min_stock)
@@ -261,6 +269,7 @@ func (r *WarehouseStockRepository) Upsert(ctx context.Context, tx pgx.Tx, stock 
 	).Scan(&stock.ID, &stock.CreatedAt, &stock.UpdatedAt)
 }
 
+// AdjustQuantity adjusts the stock quantity for a product in a warehouse by the given delta.
 func (r *WarehouseStockRepository) AdjustQuantity(ctx context.Context, tx pgx.Tx, warehouseID, productID uuid.UUID, variantID *uuid.UUID, delta int) error {
 	if variantID != nil {
 		_, err := tx.Exec(ctx,

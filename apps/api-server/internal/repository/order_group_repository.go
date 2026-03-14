@@ -9,12 +9,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// OrderGroupRepository handles persistence for order groups.
 type OrderGroupRepository struct{}
 
+// NewOrderGroupRepository creates a new OrderGroupRepository.
 func NewOrderGroupRepository() *OrderGroupRepository {
 	return &OrderGroupRepository{}
 }
 
+// Create inserts a new order group.
 func (r *OrderGroupRepository) Create(ctx context.Context, tx pgx.Tx, group *model.OrderGroup) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO order_groups (id, tenant_id, group_type, source_order_ids, target_order_ids, notes, created_by)
@@ -25,6 +28,7 @@ func (r *OrderGroupRepository) Create(ctx context.Context, tx pgx.Tx, group *mod
 	).Scan(&group.CreatedAt)
 }
 
+// FindByID returns an order group by its ID.
 func (r *OrderGroupRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.OrderGroup, error) {
 	var g model.OrderGroup
 	err := tx.QueryRow(ctx,
@@ -41,6 +45,7 @@ func (r *OrderGroupRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.
 	return &g, nil
 }
 
+// ListByOrderID returns all order groups that reference the given order.
 func (r *OrderGroupRepository) ListByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.OrderGroup, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, group_type, source_order_ids, target_order_ids, notes, created_by, created_at

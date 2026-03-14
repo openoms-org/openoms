@@ -87,7 +87,7 @@ func TestAuthorisationChallenge(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(AuthorisationChallengeResponse{
+		_ = json.NewEncoder(w).Encode(AuthorisationChallengeResponse{
 			Timestamp: "2024-01-15T10:00:00.000Z",
 			Challenge: "challenge-token-abc123",
 		})
@@ -121,17 +121,17 @@ func TestSessionStatus(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(SessionStatusResponse{
-			Timestamp:       "2024-01-15T10:05:00.000Z",
-			ReferenceNumber: "REF-001",
-			NumberOfElements: 2,
-			ProcessingCode:  200,
+		_ = json.NewEncoder(w).Encode(SessionStatusResponse{
+			Timestamp:             "2024-01-15T10:05:00.000Z",
+			ReferenceNumber:       "REF-001",
+			NumberOfElements:      2,
+			ProcessingCode:        200,
 			ProcessingDescription: "Przetwarzanie zakonczone",
 			InvoiceStatusList: []InvoiceStatus{
 				{
-					InvoiceNumber:     "FV/2024/001",
+					InvoiceNumber:       "FV/2024/001",
 					KsefReferenceNumber: "KSEF-12345",
-					ProcessingCode:    200,
+					ProcessingCode:      200,
 				},
 			},
 		})
@@ -171,7 +171,7 @@ func TestSessionTerminate(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(TerminateSessionResponse{
+		_ = json.NewEncoder(w).Encode(TerminateSessionResponse{
 			Timestamp:       "2024-01-15T10:10:00.000Z",
 			ReferenceNumber: "REF-001",
 			ProcessingCode:  200,
@@ -211,12 +211,12 @@ func TestInvoiceSend(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(SendInvoiceResponse{
+		_ = json.NewEncoder(w).Encode(SendInvoiceResponse{
 			ElementReferenceNumber: "ELEM-001",
-			ReferenceNumber:       "REF-001",
-			ProcessingCode:        200,
-			ProcessingDescription: "Przyjeto do przetwarzania",
-			Timestamp:             "2024-01-15T10:15:00.000Z",
+			ReferenceNumber:        "REF-001",
+			ProcessingCode:         200,
+			ProcessingDescription:  "Przyjeto do przetwarzania",
+			Timestamp:              "2024-01-15T10:15:00.000Z",
 		})
 	}))
 	defer srv.Close()
@@ -249,7 +249,7 @@ func TestInvoiceGetStatus(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvoiceStatus{
+		_ = json.NewEncoder(w).Encode(InvoiceStatus{
 			InvoiceNumber:       "FV/2024/001",
 			KsefReferenceNumber: "KSEF-12345",
 			ProcessingCode:      200,
@@ -284,7 +284,7 @@ func TestInvoiceGetUPO(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(UPOResponse{
+		_ = json.NewEncoder(w).Encode(UPOResponse{
 			Timestamp:       "2024-01-15T10:20:00.000Z",
 			ReferenceNumber: "REF-001",
 			ProcessingCode:  200,
@@ -305,9 +305,9 @@ func TestInvoiceGetUPO(t *testing.T) {
 }
 
 func TestInvoiceGetUPONotReady(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(UPOResponse{
+		_ = json.NewEncoder(w).Encode(UPOResponse{
 			Timestamp:       "2024-01-15T10:20:00.000Z",
 			ReferenceNumber: "REF-001",
 			ProcessingCode:  100,
@@ -328,9 +328,9 @@ func TestInvoiceGetUPONotReady(t *testing.T) {
 }
 
 func TestAPIError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Brak autoryzacji",
 			"code":    "UNAUTHORIZED",
 		})
@@ -406,9 +406,9 @@ func TestBuildInvoiceXML(t *testing.T) {
 				GrossAmount: 246.00,
 			},
 		},
-		TotalNet:   200.00,
-		TotalVAT:   46.00,
-		TotalGross: 246.00,
+		TotalNet:    200.00,
+		TotalVAT:    46.00,
+		TotalGross:  246.00,
 		PaymentDate: time.Date(2024, 1, 29, 0, 0, 0, 0, time.UTC),
 		PaymentType: "przelew",
 	}

@@ -47,7 +47,7 @@ func TestDHL_CreateShipment_ServiceTypeMapping(t *testing.T) {
 				requestXML = string(body)
 
 				w.Header().Set("Content-Type", "text/xml")
-				fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
+				_, _ = fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
 			}))
 			defer srv.Close()
 
@@ -133,7 +133,7 @@ func TestDHL_CreateShipment_ReceiverStreetSplit(t *testing.T) {
 				requestXML = string(body)
 
 				w.Header().Set("Content-Type", "text/xml")
-				fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
+				_, _ = fmt.Fprint(w, dhlCreateSOAPResponse("S", "T"))
 			}))
 			defer srv.Close()
 
@@ -191,7 +191,7 @@ func TestDHL_CreateShipment_SOAPMustContainShipperAddress(t *testing.T) {
 		requestXML = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		fmt.Fprint(w, dhlCreateSOAPResponse("SHP-001", "1234567890"))
+		_, _ = fmt.Fprint(w, dhlCreateSOAPResponse("SHP-001", "1234567890"))
 	}))
 	defer srv.Close()
 

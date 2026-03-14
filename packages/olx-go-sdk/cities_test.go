@@ -31,7 +31,7 @@ func TestListCities(t *testing.T) {
 			Total: 2,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -70,7 +70,7 @@ func TestListCitiesWithQuery(t *testing.T) {
 			Total: 1,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -102,7 +102,7 @@ func TestGetCity(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":{"id":12345,"name":"Warszawa","county":"Warszawa","municipality":"Warszawa","latitude":52.2297,"longitude":21.0122}}`))
+		_, _ = w.Write([]byte(`{"data":{"id":12345,"name":"Warszawa","county":"Warszawa","municipality":"Warszawa","latitude":52.2297,"longitude":21.0122}}`))
 	}))
 	defer srv.Close()
 
@@ -131,9 +131,9 @@ func TestGetCity(t *testing.T) {
 }
 
 func TestListCities_Error(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error":"unauthorized","message":"Invalid token"}`))
+		_, _ = w.Write([]byte(`{"error":"unauthorized","message":"Invalid token"}`))
 	}))
 	defer srv.Close()
 

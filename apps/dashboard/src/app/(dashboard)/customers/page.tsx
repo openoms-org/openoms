@@ -23,10 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useTranslations } from "next-intl";
 
 const DEFAULT_LIMIT = 20;
 
 export default function CustomersPage() {
+  const t = useTranslations("customers");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,7 +49,7 @@ export default function CustomersPage() {
     if (!deleteId) return;
     deleteCustomer.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Klient został usunięty");
+        toast.success(t("klientzostałusuniety"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -65,18 +68,18 @@ export default function CustomersPage() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Klienci</h1>
-          <p className="text-muted-foreground">Baza klientów i historia zamówień</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground">{t("bazaKlientowIHistoriaZamowien")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
             <Link href="/customers/import">
               <Upload className="h-4 w-4" />
-              Importuj CSV
+              {t("importCsv")}
             </Link>
           </Button>
           <Button asChild>
-            <Link href="/customers/new">Nowy klient</Link>
+            <Link href="/customers/new">{t("newCustomer")}</Link>
           </Button>
         </div>
       </div>
@@ -85,14 +88,14 @@ export default function CustomersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Szukaj po imieniu, e-mail, telefonie..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
         <Button type="submit" variant="outline" size="sm">
-          Szukaj
+          {tc("search")}
         </Button>
         <div className="ml-auto">
           <DensityToggle />
@@ -102,7 +105,7 @@ export default function CustomersPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -110,7 +113,7 @@ export default function CustomersPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -118,9 +121,9 @@ export default function CustomersPage() {
       {customers.length === 0 ? (
         <EmptyState
           icon={Contact}
-          title="Brak klientów"
-          description="Dodaj pierwszego klienta, aby śledzić zamówienia i historię zakupów."
-          action={{ label: "Nowy klient", href: "/customers/new" }}
+          title={t("brakKlientow")}
+          description={t("dodajPierwszegoKlientaAbySledzicZamowieniaIHistori")}
+          action={{ label: t("newCustomer"), href: "/customers/new" }}
         />
       ) : (
         <>
@@ -128,13 +131,13 @@ export default function CustomersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Imię i nazwisko</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead>Firma</TableHead>
-                  <TableHead className="text-right">Zamówień</TableHead>
-                  <TableHead className="text-right">Wydano łącznie</TableHead>
-                  <TableHead>Tagi</TableHead>
+                  <TableHead>{t("form.fullName")}</TableHead>
+                  <TableHead>{t("form.email")}</TableHead>
+                  <TableHead>{t("form.phone")}</TableHead>
+                  <TableHead>{t("form.company")}</TableHead>
+                  <TableHead className="text-right">{t("zamowien")}</TableHead>
+                  <TableHead className="text-right">{t("wydanołacznie")}</TableHead>
+                  <TableHead>{tc("tags")}</TableHead>
                   <TableHead className="w-[60px]" />
                 </TableRow>
               </TableHeader>
@@ -211,9 +214,9 @@ export default function CustomersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usuń klienta"
-        description="Czy na pewno chcesz usunąć tego klienta? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        title={t("usunKlienta")}
+        description={t("czyNaPewnoChceszUsunacTegoKlientaTaOperacjaJestNie")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteCustomer.isPending}

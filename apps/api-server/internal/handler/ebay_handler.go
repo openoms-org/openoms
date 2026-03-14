@@ -61,7 +61,7 @@ func (h *EbayHandler) getClient(ctx context.Context, tenantID uuid.UUID) (*ebays
 		return nil, err
 	}
 
-	var creds ebayIntegration.EbayCredentials
+	var creds ebayIntegration.Credentials
 	if err := json.Unmarshal(credJSON, &creds); err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (h *EbayHandler) AddTracking(w http.ResponseWriter, r *http.Request) {
 	// Items stored in DB contain external_id (eBay lineItemId) and quantity.
 	lineItems, err := h.buildLineItems(ctx, client, *order.ExternalID, order.Items)
 	if err != nil {
-		slog.Error("ebay tracking: build line items failed", "order_id", orderIDStr, "error", err)
+		slog.Error("ebay tracking: build line items failed", "order_id", orderIDStr, "error", err) //nolint:gosec
 		writeServerError(w, "failed to resolve order line items", err)
 		return
 	}
@@ -138,7 +138,7 @@ func (h *EbayHandler) AddTracking(w http.ResponseWriter, r *http.Request) {
 
 	result, err := client.Fulfillment.CreateShippingFulfillment(ctx, *order.ExternalID, fulfillmentReq)
 	if err != nil {
-		slog.Error("ebay tracking: create fulfillment failed", "order_id", orderIDStr, "error", err)
+		slog.Error("ebay tracking: create fulfillment failed", "order_id", orderIDStr, "error", err) //nolint:gosec
 		writeServerError(w, "failed to push tracking to eBay", err)
 		return
 	}
@@ -248,7 +248,7 @@ func (h *EbayHandler) IssueRefund(w http.ResponseWriter, r *http.Request) {
 
 	result, err := client.Fulfillment.IssueRefund(ctx, *order.ExternalID, refundReq)
 	if err != nil {
-		slog.Error("ebay refund: issue refund failed", "order_id", orderIDStr, "error", err)
+		slog.Error("ebay refund: issue refund failed", "order_id", orderIDStr, "error", err) //nolint:gosec
 		writeServerError(w, "failed to issue refund on eBay", err)
 		return
 	}

@@ -22,11 +22,15 @@ import (
 )
 
 var (
-	ErrSettlementNotFound  = errors.New("settlement not found")
+	// ErrSettlementNotFound is returned when a payment settlement does not exist.
+	ErrSettlementNotFound = errors.New("settlement not found")
+	// ErrTransactionNotFound is returned when a payment transaction does not exist.
 	ErrTransactionNotFound = errors.New("transaction not found")
-	ErrAlreadyMatched      = errors.New("transaction is already matched")
+	// ErrAlreadyMatched is returned when a transaction has already been reconciled.
+	ErrAlreadyMatched = errors.New("transaction is already matched")
 )
 
+// ReconciliationService handles payment reconciliation and transaction matching.
 type ReconciliationService struct {
 	paymentRepo *repository.PaymentRepository
 	orderRepo   repository.OrderRepo
@@ -34,6 +38,7 @@ type ReconciliationService struct {
 	pool        *pgxpool.Pool
 }
 
+// NewReconciliationService creates a new ReconciliationService.
 func NewReconciliationService(
 	paymentRepo *repository.PaymentRepository,
 	orderRepo repository.OrderRepo,

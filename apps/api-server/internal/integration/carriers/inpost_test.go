@@ -57,7 +57,7 @@ func TestInPostCreateShipment_Locker(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"id": 12345,
 			"tracking_number": "INPOST123456",
 			"status": "confirmed",
@@ -149,7 +149,7 @@ func TestInPostCreateShipment_Courier(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"id": 67890,
 			"tracking_number": "COURIER789012",
 			"status": "confirmed",
@@ -281,7 +281,7 @@ func TestInPostGetLabel_PDF(t *testing.T) {
 		receivedPath = r.URL.RequestURI()
 		w.Header().Set("Content-Type", "application/pdf")
 		w.WriteHeader(http.StatusOK)
-		w.Write(fakePDF)
+		_, _ = w.Write(fakePDF)
 	}))
 	defer srv.Close()
 
@@ -321,7 +321,7 @@ func TestInPostGetLabel_ZPL(t *testing.T) {
 		receivedPath = r.URL.RequestURI()
 		w.Header().Set("Content-Type", "application/x-zpl")
 		w.WriteHeader(http.StatusOK)
-		w.Write(fakeZPL)
+		_, _ = w.Write(fakeZPL)
 	}))
 	defer srv.Close()
 
@@ -358,7 +358,7 @@ func TestInPostGetTracking(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"tracking_number": "INPOST123456",
 			"service": "inpost_locker_standard",
 			"tracking_details": [
@@ -449,7 +449,7 @@ func TestInPostSearchPickupPoints(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"items": [
 				{
 					"name": "KRA01M",
@@ -590,9 +590,9 @@ func TestInPostGetRates(t *testing.T) {
 			t.Fatalf("expected 4 rates for small parcel, got %d", len(rates))
 		}
 
-		// Verify Paczkomat A rate.
-		if rates[0].ServiceName != "Paczkomat A (mała)" {
-			t.Errorf("rates[0].ServiceName = %q, want %q", rates[0].ServiceName, "Paczkomat A (mała)")
+		// Verify Parcel Locker A rate.
+		if rates[0].ServiceName != "Parcel Locker A (small)" {
+			t.Errorf("rates[0].ServiceName = %q, want %q", rates[0].ServiceName, "Parcel Locker A (small)")
 		}
 		if rates[0].Price != 12.99 {
 			t.Errorf("rates[0].Price = %f, want 12.99", rates[0].Price)
@@ -604,17 +604,17 @@ func TestInPostGetRates(t *testing.T) {
 			t.Error("rates[0].PickupPoint should be true")
 		}
 
-		// Verify Paczkomat B rate.
-		if rates[1].ServiceName != "Paczkomat B (średnia)" {
-			t.Errorf("rates[1].ServiceName = %q, want %q", rates[1].ServiceName, "Paczkomat B (średnia)")
+		// Verify Parcel Locker B rate.
+		if rates[1].ServiceName != "Parcel Locker B (medium)" {
+			t.Errorf("rates[1].ServiceName = %q, want %q", rates[1].ServiceName, "Parcel Locker B (medium)")
 		}
 		if rates[1].Price != 13.99 {
 			t.Errorf("rates[1].Price = %f, want 13.99", rates[1].Price)
 		}
 
-		// Verify Paczkomat C rate.
-		if rates[2].ServiceName != "Paczkomat C (duża)" {
-			t.Errorf("rates[2].ServiceName = %q, want %q", rates[2].ServiceName, "Paczkomat C (duża)")
+		// Verify Parcel Locker C rate.
+		if rates[2].ServiceName != "Parcel Locker C (large)" {
+			t.Errorf("rates[2].ServiceName = %q, want %q", rates[2].ServiceName, "Parcel Locker C (large)")
 		}
 		if rates[2].Price != 15.49 {
 			t.Errorf("rates[2].Price = %f, want 15.49", rates[2].Price)
@@ -656,11 +656,11 @@ func TestInPostGetRates(t *testing.T) {
 			t.Fatalf("expected 3 rates for medium parcel, got %d", len(rates))
 		}
 
-		if rates[0].ServiceName != "Paczkomat B (średnia)" {
-			t.Errorf("rates[0].ServiceName = %q, want Paczkomat B", rates[0].ServiceName)
+		if rates[0].ServiceName != "Parcel Locker B (medium)" {
+			t.Errorf("rates[0].ServiceName = %q, want Parcel Locker B", rates[0].ServiceName)
 		}
-		if rates[1].ServiceName != "Paczkomat C (duża)" {
-			t.Errorf("rates[1].ServiceName = %q, want Paczkomat C", rates[1].ServiceName)
+		if rates[1].ServiceName != "Parcel Locker C (large)" {
+			t.Errorf("rates[1].ServiceName = %q, want Parcel Locker C", rates[1].ServiceName)
 		}
 		if rates[2].ServiceName != "Kurier Standard" {
 			t.Errorf("rates[2].ServiceName = %q, want Kurier Standard", rates[2].ServiceName)
@@ -729,9 +729,9 @@ func TestInPostGetRates(t *testing.T) {
 			t.Fatalf("expected 4 rates with COD, got %d", len(rates))
 		}
 
-		// Paczkomat A with COD: 12.99 + 3.50 = 16.49.
+		// Parcel Locker A with COD: 12.99 + 3.50 = 16.49.
 		if !floatClose(rates[0].Price, 16.49, 0.001) {
-			t.Errorf("Paczkomat A with COD: price = %f, want ~16.49", rates[0].Price)
+			t.Errorf("Parcel Locker A with COD: price = %f, want ~16.49", rates[0].Price)
 		}
 
 		// Courier with COD: 16.99 + 4.00 = 20.99.
@@ -821,10 +821,10 @@ func TestInPostMapStatus(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInPostCreateShipment_APIError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"message": "Validation failed",
 			"details": {
 				"receiver.phone": "is invalid",
@@ -870,7 +870,7 @@ func TestInPostCreateShipment_APIError(t *testing.T) {
 
 func TestInPostCredentialParsing(t *testing.T) {
 	t.Run("production mode", func(t *testing.T) {
-		creds := `{"api_token":"prod-token-abc","organization_id":"org-prod-456","sandbox":false}`
+		creds := `{"api_token":"prod-token-abc","organization_id":"org-prod-456","sandbox":false}` // #nosec G101 -- test dummy credential
 		settings := `{}`
 
 		provider, err := NewInPostProvider(json.RawMessage(creds), json.RawMessage(settings))
@@ -890,7 +890,7 @@ func TestInPostCredentialParsing(t *testing.T) {
 	})
 
 	t.Run("sandbox mode", func(t *testing.T) {
-		creds := `{"api_token":"sandbox-token-xyz","organization_id":"org-sandbox-789","sandbox":true}`
+		creds := `{"api_token":"sandbox-token-xyz","organization_id":"org-sandbox-789","sandbox":true}` // #nosec G101 -- test dummy credential
 		settings := `{}`
 
 		provider, err := NewInPostProvider(json.RawMessage(creds), json.RawMessage(settings))
@@ -904,7 +904,7 @@ func TestInPostCredentialParsing(t *testing.T) {
 	})
 
 	t.Run("invalid JSON", func(t *testing.T) {
-		creds := `{invalid json}`
+		creds := `{invalid json}` // #nosec G101 -- test dummy credential
 		settings := `{}`
 
 		_, err := NewInPostProvider(json.RawMessage(creds), json.RawMessage(settings))
@@ -957,7 +957,7 @@ func TestInPostGetLabel_EPL(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedPath = r.URL.RequestURI()
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("N\nq812\nQ1218,24\nZT\nP1\n"))
+		_, _ = w.Write([]byte("N\nq812\nQ1218,24\nZT\nP1\n"))
 	}))
 	defer srv.Close()
 
@@ -985,7 +985,7 @@ func TestInPostGetLabel_UnknownFormatDefaultsPDF(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedPath = r.URL.RequestURI()
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("%PDF-default"))
+		_, _ = w.Write([]byte("%PDF-default"))
 	}))
 	defer srv.Close()
 
@@ -1039,7 +1039,7 @@ func TestInPostCreateShipment_ExplicitServiceType(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"id": 55555,
 			"tracking_number": "CUSTOM555",
 			"status": "confirmed",
@@ -1097,7 +1097,7 @@ func TestInPostSearchPickupPoints_ByCode(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"items": [{
 				"name": "KRA01M",
 				"type": ["parcel_locker"],
@@ -1138,10 +1138,10 @@ func TestInPostSearchPickupPoints_ByCode(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInPostSearchPickupPoints_NoAddressDetails(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"items": [{
 				"name": "WAW100A",
 				"type": ["parcel_locker"],
@@ -1196,7 +1196,7 @@ func TestInPostCreateShipment_AuthorizationHeader(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"id": 1,
 			"tracking_number": "T1",
 			"status": "created",
@@ -1231,10 +1231,10 @@ func TestInPostCreateShipment_AuthorizationHeader(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInPostGetTracking_APIError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"message":"Tracking not found"}`))
+		_, _ = w.Write([]byte(`{"message":"Tracking not found"}`))
 	}))
 	defer srv.Close()
 
@@ -1254,9 +1254,9 @@ func TestInPostGetTracking_APIError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInPostSearchPickupPoints_APIError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"message":"Internal Server Error"}`))
+		_, _ = w.Write([]byte(`{"message":"Internal Server Error"}`))
 	}))
 	defer srv.Close()
 
@@ -1283,7 +1283,7 @@ func TestInPostFullShipmentLifecycle(t *testing.T) {
 		// Step 1: Create shipment.
 		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/shipments"):
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
+			_, _ = w.Write([]byte(`{
 				"id": 42000,
 				"tracking_number": "LIFECYCLE42",
 				"status": "confirmed",
@@ -1299,12 +1299,12 @@ func TestInPostFullShipmentLifecycle(t *testing.T) {
 		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/label"):
 			w.Header().Set("Content-Type", "application/pdf")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("%PDF-lifecycle-label"))
+			_, _ = w.Write([]byte("%PDF-lifecycle-label"))
 
 		// Step 3: Get tracking.
 		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/tracking/"):
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
+			_, _ = w.Write([]byte(`{
 				"tracking_number": "LIFECYCLE42",
 				"service": "inpost_locker_standard",
 				"tracking_details": [
@@ -1316,7 +1316,7 @@ func TestInPostFullShipmentLifecycle(t *testing.T) {
 
 		default:
 			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, `{"message":"not found: %s %s"}`, r.Method, r.URL.Path)
+			_, _ = fmt.Fprintf(w, `{"message":"not found: %s %s"}`, r.Method, r.URL.Path) // #nosec G705
 		}
 	}))
 	defer srv.Close()

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// Product represents a product in the catalogue.
 type Product struct {
 	ID                   uuid.UUID       `json:"id"`
 	TenantID             uuid.UUID       `json:"tenant_id"`
@@ -41,6 +42,7 @@ type Product struct {
 	UpdatedAt            time.Time       `json:"updated_at"`
 }
 
+// CreateProductRequest is the payload for creating a new product.
 type CreateProductRequest struct {
 	ExternalID         *string         `json:"external_id,omitempty"`
 	Source             string          `json:"source"`
@@ -65,6 +67,7 @@ type CreateProductRequest struct {
 	DropshipSupplierID *uuid.UUID      `json:"dropship_supplier_id,omitempty"`
 }
 
+// Validate validates the create product request.
 func (r *CreateProductRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -104,6 +107,7 @@ func (r *CreateProductRequest) Validate() error {
 	return nil
 }
 
+// UpdateProductRequest is the payload for updating an existing product.
 type UpdateProductRequest struct {
 	ExternalID         *string          `json:"external_id,omitempty"`
 	Source             *string          `json:"source,omitempty"`
@@ -129,6 +133,7 @@ type UpdateProductRequest struct {
 	DropshipSupplierID *uuid.UUID       `json:"dropship_supplier_id,omitempty"`
 }
 
+// Validate validates the update product request.
 func (r *UpdateProductRequest) Validate() error {
 	if r.ExternalID == nil && r.Source == nil && r.Name == nil && r.SKU == nil &&
 		r.EAN == nil && r.Price == nil && r.StockQuantity == nil && r.Metadata == nil &&
@@ -173,6 +178,7 @@ func (r *UpdateProductRequest) Validate() error {
 	return nil
 }
 
+// ProductListFilter holds query parameters for listing products.
 type ProductListFilter struct {
 	Name        *string
 	SKU         *string

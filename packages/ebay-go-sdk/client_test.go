@@ -65,7 +65,7 @@ func TestDoSetsAuthHeader(t *testing.T) {
 			t.Errorf("Authorization = %q, want %q", auth, "Bearer test_token")
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -83,9 +83,9 @@ func TestDoSetsAuthHeader(t *testing.T) {
 }
 
 func TestDoHandlesErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"errors":[{"errorId":11001,"domain":"fulfillment","category":"REQUEST","message":"Order not found"}]}`))
+		_, _ = w.Write([]byte(`{"errors":[{"errorId":11001,"domain":"fulfillment","category":"REQUEST","message":"Order not found"}]}`))
 	}))
 	defer srv.Close()
 
@@ -156,7 +156,7 @@ func TestGetOrders(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -202,7 +202,7 @@ func TestGetOrder(t *testing.T) {
 			Buyer: BuyerInfo{Username: "buyer123"},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 

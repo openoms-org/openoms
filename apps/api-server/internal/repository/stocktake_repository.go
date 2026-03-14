@@ -18,6 +18,7 @@ func NewStocktakeRepository() *StocktakeRepository {
 	return &StocktakeRepository{}
 }
 
+// Create inserts a new stocktake.
 func (r *StocktakeRepository) Create(ctx context.Context, tx pgx.Tx, stocktake *model.Stocktake) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO stocktakes (id, tenant_id, warehouse_id, name, status, notes, created_by)
@@ -28,6 +29,7 @@ func (r *StocktakeRepository) Create(ctx context.Context, tx pgx.Tx, stocktake *
 	).Scan(&stocktake.CreatedAt, &stocktake.UpdatedAt)
 }
 
+// FindByID returns a stocktake by its ID.
 func (r *StocktakeRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Stocktake, error) {
 	var s model.Stocktake
 	err := tx.QueryRow(ctx,
@@ -48,6 +50,7 @@ func (r *StocktakeRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.U
 	return &s, nil
 }
 
+// List returns a paginated list of stocktakes matching the filter.
 func (r *StocktakeRepository) List(ctx context.Context, tx pgx.Tx, filter model.StocktakeListFilter) ([]model.Stocktake, int, error) {
 	var conditions []string
 	var args []any
@@ -111,6 +114,7 @@ func (r *StocktakeRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 	return stocktakes, total, rows.Err()
 }
 
+// UpdateStatus sets the status of a stocktake.
 func (r *StocktakeRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE stocktakes SET status = $1, updated_at = NOW() WHERE id = $2`,
@@ -125,6 +129,7 @@ func (r *StocktakeRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uu
 	return nil
 }
 
+// SetStartedAt marks a stocktake as in-progress and records the start time.
 func (r *StocktakeRepository) SetStartedAt(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE stocktakes SET started_at = NOW(), status = 'in_progress', updated_at = NOW() WHERE id = $1`,
@@ -139,6 +144,7 @@ func (r *StocktakeRepository) SetStartedAt(ctx context.Context, tx pgx.Tx, id uu
 	return nil
 }
 
+// SetCompletedAt marks a stocktake as completed and records the completion time.
 func (r *StocktakeRepository) SetCompletedAt(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE stocktakes SET completed_at = NOW(), status = 'completed', updated_at = NOW() WHERE id = $1`,
@@ -153,6 +159,7 @@ func (r *StocktakeRepository) SetCompletedAt(ctx context.Context, tx pgx.Tx, id 
 	return nil
 }
 
+// Delete removes a stocktake by its ID.
 func (r *StocktakeRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM stocktakes WHERE id = $1", id)
 	if err != nil {
@@ -172,6 +179,7 @@ func NewStocktakeItemRepository() *StocktakeItemRepository {
 	return &StocktakeItemRepository{}
 }
 
+// CreateBulk inserts multiple stocktake items in a single operation.
 func (r *StocktakeItemRepository) CreateBulk(ctx context.Context, tx pgx.Tx, items []model.StocktakeItem) error {
 	if len(items) == 0 {
 		return nil
@@ -190,6 +198,7 @@ func (r *StocktakeItemRepository) CreateBulk(ctx context.Context, tx pgx.Tx, ite
 	return nil
 }
 
+// List returns paginated stocktake items for the given stocktake.
 func (r *StocktakeItemRepository) List(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID, filter model.StocktakeItemListFilter) ([]model.StocktakeItem, int, error) {
 	var conditions []string
 	var args []any
@@ -250,6 +259,7 @@ func (r *StocktakeItemRepository) List(ctx context.Context, tx pgx.Tx, stocktake
 	return items, total, rows.Err()
 }
 
+// FindByID returns a stocktake item by its ID.
 func (r *StocktakeItemRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.StocktakeItem, error) {
 	var item model.StocktakeItem
 	err := tx.QueryRow(ctx,
@@ -271,6 +281,7 @@ func (r *StocktakeItemRepository) FindByID(ctx context.Context, tx pgx.Tx, id uu
 	return &item, nil
 }
 
+// UpdateCount records the counted quantity for a stocktake item.
 func (r *StocktakeItemRepository) UpdateCount(ctx context.Context, tx pgx.Tx, itemID uuid.UUID, countedQty int, notes *string, countedBy uuid.UUID) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE stocktake_items
@@ -287,6 +298,7 @@ func (r *StocktakeItemRepository) UpdateCount(ctx context.Context, tx pgx.Tx, it
 	return nil
 }
 
+// GetStats returns aggregated counting statistics for a stocktake.
 func (r *StocktakeItemRepository) GetStats(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID) (*model.StocktakeStats, error) {
 	var stats model.StocktakeStats
 	err := tx.QueryRow(ctx,
@@ -306,6 +318,7 @@ func (r *StocktakeItemRepository) GetStats(ctx context.Context, tx pgx.Tx, stock
 	return &stats, nil
 }
 
+// ListDiscrepancies returns items where the counted quantity differs from the expected quantity.
 func (r *StocktakeItemRepository) ListDiscrepancies(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID) ([]model.StocktakeItem, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT si.id, si.tenant_id, si.stocktake_id, si.product_id,

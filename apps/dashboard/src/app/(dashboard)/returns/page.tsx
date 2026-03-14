@@ -20,8 +20,10 @@ import { RETURN_STATUSES } from "@/lib/constants";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/empty-state";
 import type { Return } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function ReturnsPage() {
+  const t = useTranslations("returns");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [limit, setLimit] = useState(20);
@@ -40,7 +42,7 @@ export default function ReturnsPage() {
       cell: (row) => <StatusBadge status={row.status} statusMap={RETURN_STATUSES} />,
     },
     {
-      header: "Zamówienie",
+      header: t("columns.order"),
       accessorKey: "order_id",
       cell: (row) => (
         <Link
@@ -53,7 +55,7 @@ export default function ReturnsPage() {
       ),
     },
     {
-      header: "Powód",
+      header: t("columns.reason"),
       accessorKey: "reason",
       cell: (row) => (
         <span className="text-sm">
@@ -93,7 +95,7 @@ export default function ReturnsPage() {
         <div>
           <h1 className="text-2xl font-bold">Zwroty</h1>
           <p className="text-muted-foreground mt-1">
-            Zarządzaj zwrotami i reklamacjami
+            {t("subtitle")}
           </p>
         </div>
         <Button asChild>
@@ -109,10 +111,10 @@ export default function ReturnsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Wszystkie</SelectItem>
-              <SelectItem value="requested">Zgłoszone</SelectItem>
+              <SelectItem value="requested">{t("return.requested")}</SelectItem>
               <SelectItem value="approved">Zatwierdzone</SelectItem>
               <SelectItem value="received">Odebrane</SelectItem>
-              <SelectItem value="refunded">Zwrócone</SelectItem>
+              <SelectItem value="refunded">{t("order.refunded")}</SelectItem>
               <SelectItem value="rejected">Odrzucone</SelectItem>
               <SelectItem value="cancelled">Anulowane</SelectItem>
             </SelectContent>
@@ -123,7 +125,7 @@ export default function ReturnsPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -131,7 +133,7 @@ export default function ReturnsPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -144,8 +146,8 @@ export default function ReturnsPage() {
           emptyState={
             <EmptyState
               icon={RotateCcw}
-              title="Brak zwrotów"
-              description="Nie znaleziono zwrotów do wyświetlenia."
+              title={t("empty.title")}
+              description={t("empty.description")}
               action={{ label: "Nowy zwrot", href: "/returns/new" }}
             />
           }

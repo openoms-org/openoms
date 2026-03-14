@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	// ErrListingSyncConfigNotFound is returned when a listing sync configuration does not exist.
 	ErrListingSyncConfigNotFound = errors.New("listing sync config not found")
 )
 
@@ -337,7 +338,7 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 	// Update last sync
 	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
 
-	result.Message = fmt.Sprintf("Zsynchronizowano %d produktów, %d błędów", result.ItemsProcessed, result.ItemsFailed)
+	result.Message = fmt.Sprintf("Synced %d products, %d errors", result.ItemsProcessed, result.ItemsFailed)
 	return result, nil
 }
 
@@ -398,7 +399,7 @@ func (s *ListingSyncService) PullListings(ctx context.Context, tenantID uuid.UUI
 	}
 
 	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
-	result.Message = fmt.Sprintf("Pobrano %d ofert, %d błędów", result.ItemsProcessed, result.ItemsFailed)
+	result.Message = fmt.Sprintf("Fetched %d offers, %d errors", result.ItemsProcessed, result.ItemsFailed)
 	return result, nil
 }
 
@@ -454,7 +455,7 @@ func (s *ListingSyncService) SyncPrices(ctx context.Context, tenantID uuid.UUID,
 	}
 
 	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
-	result.Message = fmt.Sprintf("Zsynchronizowano ceny dla %d ofert, %d błędów", result.ItemsProcessed, result.ItemsFailed)
+	result.Message = fmt.Sprintf("Synced prices for %d offers, %d errors", result.ItemsProcessed, result.ItemsFailed)
 	return result, nil
 }
 
@@ -512,7 +513,7 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 	}
 
 	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
-	result.Message = fmt.Sprintf("Zsynchronizowano stany magazynowe dla %d ofert, %d błędów", result.ItemsProcessed, result.ItemsFailed)
+	result.Message = fmt.Sprintf("Synced stock for %d offers, %d errors", result.ItemsProcessed, result.ItemsFailed)
 	return result, nil
 }
 
@@ -559,7 +560,7 @@ func (s *ListingSyncService) RunFullSync(ctx context.Context, tenantID uuid.UUID
 		}
 	}
 
-	totalResult.Message = fmt.Sprintf("Pełna synchronizacja: %d operacji, %d błędów", totalResult.ItemsProcessed, totalResult.ItemsFailed)
+	totalResult.Message = fmt.Sprintf("Full sync: %d operations, %d errors", totalResult.ItemsProcessed, totalResult.ItemsFailed)
 	return totalResult, nil
 }
 

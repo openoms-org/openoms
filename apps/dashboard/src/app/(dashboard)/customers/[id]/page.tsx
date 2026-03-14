@@ -43,8 +43,11 @@ import {
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { UpdateCustomerRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 export default function CustomerDetailPage() {
+  const t = useTranslations("customers");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
@@ -80,12 +83,12 @@ export default function CustomerDetailPage() {
 
   const handleUpdate = async () => {
     if (!formData.name?.trim()) {
-      toast.error("Imię i nazwisko jest wymagane");
+      toast.error(t("validation.nameRequired"));
       return;
     }
     try {
       await updateCustomer.mutateAsync(formData);
-      toast.success("Dane klienta zostały zaktualizowane");
+      toast.success(t("daneklientazostałyzaktualizowane"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -95,7 +98,7 @@ export default function CustomerDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteCustomer.mutateAsync(params.id);
-      toast.success("Klient został usunięty");
+      toast.success(t("klientzostałusuniety"));
       router.push("/customers");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -118,9 +121,9 @@ export default function CustomerDetailPage() {
   if (!customer) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">Nie znaleziono klienta</p>
+        <p className="text-muted-foreground">{t("notFound")}</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/customers")}>
-          Wróć do listy
+          {t("detail.backToList")}
         </Button>
       </div>
     );
@@ -135,16 +138,16 @@ export default function CustomerDetailPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{customer.name}</h1>
           <p className="text-muted-foreground mt-1">
-            Klient od {formatDate(customer.created_at)}
+            {t("customerSince", { date: formatDate(customer.created_at) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={startEditing}>
             <Pencil className="mr-2 h-4 w-4" />
-            Edytuj
+            {tc("edit")}
           </Button>
           <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            Usuń
+            {t("delete")}
           </Button>
         </div>
       </div>
@@ -152,12 +155,12 @@ export default function CustomerDetailPage() {
       {isEditing && (
         <Card>
           <CardHeader>
-            <CardTitle>Edycja danych klienta</CardTitle>
+            <CardTitle>{t("editCustomerData")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 max-w-xl">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Imię i nazwisko *</Label>
+                <Label htmlFor="edit-name">{t("imieINazwisko")}</Label>
                 <Input
                   id="edit-name"
                   value={formData.name || ""}
@@ -166,7 +169,7 @@ export default function CustomerDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-email">E-mail</Label>
+                  <Label htmlFor="edit-email">{t("form.email")}</Label>
                   <Input
                     id="edit-email"
                     type="email"
@@ -175,7 +178,7 @@ export default function CustomerDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-phone">Telefon</Label>
+                  <Label htmlFor="edit-phone">{t("form.phone")}</Label>
                   <Input
                     id="edit-phone"
                     value={formData.phone || ""}
@@ -185,7 +188,7 @@ export default function CustomerDetailPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-company">Firma</Label>
+                  <Label htmlFor="edit-company">{t("form.company")}</Label>
                   <Input
                     id="edit-company"
                     value={formData.company_name || ""}
@@ -202,7 +205,7 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notatki</Label>
+                <Label htmlFor="edit-notes">{t("form.notes")}</Label>
                 <Textarea
                   id="edit-notes"
                   value={formData.notes || ""}
@@ -211,7 +214,7 @@ export default function CustomerDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Cennik</Label>
+                <Label>{t("priceList")}</Label>
                 <Select
                   value={formData.price_list_id || "none"}
                   onValueChange={(val) =>
@@ -219,10 +222,10 @@ export default function CustomerDetailPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Brak cennika" />
+                    <SelectValue placeholder={t("noPriceList")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Brak cennika</SelectItem>
+                    <SelectItem value="none">{t("noPriceList")}</SelectItem>
                     {priceLists.map((pl) => (
                       <SelectItem key={pl.id} value={pl.id}>
                         {pl.name}
@@ -233,10 +236,10 @@ export default function CustomerDetailPage() {
               </div>
               <div className="flex gap-2 pt-2">
                 <Button onClick={handleUpdate} disabled={updateCustomer.isPending}>
-                  {updateCustomer.isPending ? "Zapisywanie..." : "Zapisz"}
+                  {updateCustomer.isPending ? tc("saving") : tc("save")}
                 </Button>
                 <Button variant="outline" onClick={() => setIsEditing(false)}>
-                  Anuluj
+                  {tc("cancel")}
                 </Button>
               </div>
             </div>
@@ -248,29 +251,29 @@ export default function CustomerDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Dane klienta</CardTitle>
+              <CardTitle>{t("customerData")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Imię i nazwisko</p>
+                  <p className="text-sm text-muted-foreground">{t("form.fullName")}</p>
                   <p className="mt-1 font-medium">{customer.name}</p>
                 </div>
                 {customer.email && (
                   <div>
-                    <p className="text-sm text-muted-foreground">E-mail</p>
+                    <p className="text-sm text-muted-foreground">{t("form.email")}</p>
                     <p className="mt-1 text-sm">{customer.email}</p>
                   </div>
                 )}
                 {customer.phone && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Telefon</p>
+                    <p className="text-sm text-muted-foreground">{t("form.phone")}</p>
                     <p className="mt-1 text-sm">{customer.phone}</p>
                   </div>
                 )}
                 {customer.company_name && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Firma</p>
+                    <p className="text-sm text-muted-foreground">{t("form.company")}</p>
                     <p className="mt-1 font-medium">{customer.company_name}</p>
                   </div>
                 )}
@@ -282,7 +285,7 @@ export default function CustomerDetailPage() {
                 )}
                 {customer.price_list_id && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Cennik</p>
+                    <p className="text-sm text-muted-foreground">{t("priceList")}</p>
                     <p className="mt-1 text-sm">
                       {priceLists.find((pl) => pl.id === customer.price_list_id)?.name ?? customer.price_list_id.slice(0, 8)}
                     </p>
@@ -294,7 +297,7 @@ export default function CustomerDetailPage() {
                 <>
                   <Separator />
                   <div>
-                    <p className="text-sm text-muted-foreground">Tagi</p>
+                    <p className="text-sm text-muted-foreground">{tc("tags")}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {customer.tags.map((tag) => (
                         <span
@@ -313,7 +316,7 @@ export default function CustomerDetailPage() {
                 <>
                   <Separator />
                   <div>
-                    <p className="text-sm text-muted-foreground">Notatki</p>
+                    <p className="text-sm text-muted-foreground">{t("form.notes")}</p>
                     <p className="mt-1 text-sm whitespace-pre-wrap">{customer.notes}</p>
                   </div>
                 </>
@@ -323,7 +326,7 @@ export default function CustomerDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Historia zamówień</CardTitle>
+              <CardTitle>{t("historiaZamowien")}</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoadingOrders ? (
@@ -337,9 +340,9 @@ export default function CustomerDetailPage() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Źródło</TableHead>
-                      <TableHead className="text-right">Kwota</TableHead>
-                      <TableHead>Data</TableHead>
+                      <TableHead>{t("columns.source")}</TableHead>
+                      <TableHead className="text-right">{tc("amount")}</TableHead>
+                      <TableHead>{tc("date")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -368,7 +371,7 @@ export default function CustomerDetailPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <ShoppingBag className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-sm text-muted-foreground">Brak zamówień dla tego klienta.</p>
+                  <p className="text-sm text-muted-foreground">{t("brakZamowienDlaTegoKlienta")}</p>
                 </div>
               )}
             </CardContent>
@@ -378,21 +381,21 @@ export default function CustomerDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Podsumowanie</CardTitle>
+              <CardTitle>{t("summary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm text-muted-foreground">Zamówień</p>
+                <p className="text-sm text-muted-foreground">{t("zamowien")}</p>
                 <p className="mt-1 text-2xl font-bold">{customer.total_orders}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Wydano łącznie</p>
+                <p className="text-sm text-muted-foreground">{t("wydanołacznie")}</p>
                 <p className="mt-1 text-2xl font-bold">
                   {formatCurrency(customer.total_spent)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Klient od</p>
+                <p className="text-sm text-muted-foreground">{t("customerSinceLabel")}</p>
                 <p className="mt-1 font-medium">{formatDate(customer.created_at)}</p>
               </div>
             </CardContent>
@@ -403,7 +406,7 @@ export default function CustomerDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="h-4 w-4" />
-                  Segmenty
+                  {t("segments")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -431,7 +434,7 @@ export default function CustomerDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Award className="h-4 w-4" />
-                  Programy lojalnościowe
+                  {t("programyLojalnosciowe")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -451,7 +454,7 @@ export default function CustomerDetailPage() {
                           {ls.current_tier}
                         </span>
                       )}
-                      <span>{ls.order_count} zamówień</span>
+                      <span>{ls.order_count} {t("zamowien")}</span>
                     </div>
                   </Link>
                 ))}
@@ -464,9 +467,9 @@ export default function CustomerDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title="Usuwanie klienta"
-        description="Czy na pewno chcesz usunąć tego klienta? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń klienta"
+        title={t("deleteCustomerTitle")}
+        description={t("czyNaPewnoChceszUsunacTegoKlientaTaOperacjaJestNie")}
+        confirmLabel={t("usunKlienta")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteCustomer.isPending}

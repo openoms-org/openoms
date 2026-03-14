@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   CommandDialog,
   CommandInput,
@@ -26,16 +27,18 @@ interface CommandPaletteProps {
 }
 
 const quickActions = [
-  { label: "Nowe zamówienie", href: "/orders/new", icon: ShoppingCart },
-  { label: "Nowy produkt", href: "/products/new", icon: Package },
-  { label: "Nowa przesyłka", href: "/shipments/new", icon: Truck },
-  { label: "Nowy klient", href: "/customers/new", icon: Contact },
+  { labelKey: "newOrder" as const, href: "/orders/new", icon: ShoppingCart },
+  { labelKey: "newProduct" as const, href: "/products/new", icon: Package },
+  { labelKey: "newShipment" as const, href: "/shipments/new", icon: Truck },
+  { labelKey: "newCustomer" as const, href: "/customers/new", icon: Contact },
 ];
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === "admin" || user?.role === "owner";
+  const t = useTranslations("commandPalette");
+  const tNav = useTranslations("navigation");
 
   const allNavItems = flattenNavItems(navItems).filter(
     (item) => !item.adminOnly || isAdmin
@@ -53,25 +56,25 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     <CommandDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Paleta poleceń"
-      description="Wyszukaj stronę lub akcję..."
+      title={t("title")}
+      description={t("placeholder")}
     >
-      <CommandInput placeholder="Szukaj..." />
+      <CommandInput placeholder={t("placeholder")} />
       <CommandList>
-        <CommandEmpty>Nie znaleziono wyników.</CommandEmpty>
+        <CommandEmpty>{t("noResults")}</CommandEmpty>
 
-        <CommandGroup heading="Nawigacja">
+        <CommandGroup heading={t("navigation")}>
           {allNavItems.map((item) => (
             <CommandItem
               key={item.href}
-              value={`${item.label} ${item.group || ""}`}
+              value={`${tNav(item.label)} ${item.group ? tNav(`groups.${item.group}`) : ""}`}
               onSelect={() => handleSelect(item.href)}
             >
               <item.icon className="mr-2 h-4 w-4" />
-              <span>{item.label}</span>
+              <span>{tNav(item.label)}</span>
               {item.group && (
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {item.group}
+                  {tNav(`groups.${item.group}`)}
                 </span>
               )}
             </CommandItem>
@@ -80,15 +83,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         <CommandSeparator />
 
-        <CommandGroup heading="Akcje">
+        <CommandGroup heading={t("quickActions")}>
           {quickActions.map((action) => (
             <CommandItem
               key={action.href}
-              value={action.label}
+              value={t(action.labelKey)}
               onSelect={() => handleSelect(action.href)}
             >
               <action.icon className="mr-2 h-4 w-4" />
-              <span>{action.label}</span>
+              <span>{t(action.labelKey)}</span>
             </CommandItem>
           ))}
         </CommandGroup>

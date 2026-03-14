@@ -68,6 +68,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { useTranslations } from "next-intl";
 
 // ---- Local shipment tracking (client-side) ----
 
@@ -98,23 +99,24 @@ function statusBadgeVariant(status: string) {
   }
 }
 
-function statusLabel(status: string) {
+function statusLabel(status: string, t: (key: string) => string) {
   switch (status) {
     case "CREATED":
     case "NEW":
-      return "Utworzona";
+      return t("allegroShipments.statusCreated");
     case "CANCELLED":
-      return "Anulowana";
+      return t("allegroShipments.statusCancelled");
     case "LABEL_DOWNLOADED":
-      return "Etykieta pobrana";
+      return t("allegroShipments.statusLabelDownloaded");
     case "PICKUP_SCHEDULED":
-      return "Odbiór zaplanowany";
+      return t("allegroShipments.statusPickupScheduled");
     default:
       return status;
   }
 }
 
 export default function AllegroShipmentsPage() {
+  const t = useTranslations("marketplaces");
   const [shipments, setShipments] = useState<LocalShipment[]>([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [pickupDialogOpen, setPickupDialogOpen] = useState(false);
@@ -165,16 +167,16 @@ export default function AllegroShipmentsPage() {
             </Link>
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">Wysylam z Allegro</h1>
+            <h1 className="text-2xl font-bold">{t("allegroShipments.title")}</h1>
             <p className="text-muted-foreground">
-              Zarzadzaj przesylkami, etykietami i odbiorem kurierskim
+              {t("allegroShipments.description")}
             </p>
           </div>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Utworz przesylke
+                {t("allegroShipments.createShipment")}
               </Button>
             </DialogTrigger>
             <CreateShipmentDialog
@@ -191,21 +193,20 @@ export default function AllegroShipmentsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Lista przesylek
+              {t("allegroShipments.shipmentList")}
               <span className="text-sm font-normal text-muted-foreground">
                 ({shipments.length})
               </span>
             </CardTitle>
             <CardDescription>
-              Przesylki utworzone w biezacej sesji. Zaznacz przesylki, aby pobrac
-              etykiety lub wygenerowac protokol nadania.
+              {t("allegroShipments.shipmentListDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {shipments.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
                 <Truck className="h-12 w-12 opacity-40" />
-                <p>Brak przesylek. Kliknij &quot;Utworz przesylke&quot; aby rozpoczac.</p>
+                <p>{t("allegroShipments.noShipments")}</p>
               </div>
             ) : (
               <Table>
@@ -232,12 +233,12 @@ export default function AllegroShipmentsPage() {
                         }}
                       />
                     </TableHead>
-                    <TableHead>ID przesylki</TableHead>
-                    <TableHead>Usluga dostawy</TableHead>
-                    <TableHead>Odbiorca</TableHead>
-                    <TableHead>Miasto</TableHead>
+                    <TableHead>{t("allegroShipments.shipmentId")}</TableHead>
+                    <TableHead>{t("allegroShipments.deliveryService")}</TableHead>
+                    <TableHead>{t("allegroShipments.receiver")}</TableHead>
+                    <TableHead>{t("allegroShipments.city")}</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Akcje</TableHead>
+                    <TableHead className="text-right">{t("allegroShipments.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -272,10 +273,10 @@ export default function AllegroShipmentsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Download className="h-4 w-4" />
-                  Etykiety
+                  {t("allegroShipments.labels")}
                 </CardTitle>
                 <CardDescription>
-                  Pobierz etykiety dla zaznaczonych przesylek
+                  {t("allegroShipments.labelsDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -293,10 +294,10 @@ export default function AllegroShipmentsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="h-4 w-4" />
-                  Odbior kurierski
+                  {t("allegroShipments.courierPickup")}
                 </CardTitle>
                 <CardDescription>
-                  Zamow odbior paczek przez kuriera
+                  {t("allegroShipments.courierPickupDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -311,7 +312,7 @@ export default function AllegroShipmentsPage() {
                       disabled={selectedShipmentIds.size === 0}
                     >
                       <Truck className="mr-2 h-4 w-4" />
-                      Zaplanuj odbior ({selectedShipmentIds.size})
+                      {t("allegroShipments.schedulePickup", { count: selectedShipmentIds.size })}
                     </Button>
                   </DialogTrigger>
                   <PickupDialog
@@ -332,10 +333,10 @@ export default function AllegroShipmentsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <FileText className="h-4 w-4" />
-                  Protokol nadania
+                  {t("allegroShipments.dispatchProtocol")}
                 </CardTitle>
                 <CardDescription>
-                  Wygeneruj protokol dla zaznaczonych przesylek
+                  {t("allegroShipments.dispatchProtocolDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -350,7 +351,7 @@ export default function AllegroShipmentsPage() {
                       disabled={selectedShipmentIds.size === 0}
                     >
                       <FileText className="mr-2 h-4 w-4" />
-                      Generuj protokol ({selectedShipmentIds.size})
+                      {t("allegroShipments.generateProtocol", { count: selectedShipmentIds.size })}
                     </Button>
                   </DialogTrigger>
                   <ProtocolDialog
@@ -374,6 +375,7 @@ function CreateShipmentDialog({
 }: {
   onCreated: (shipment: LocalShipment) => void;
 }) {
+  const t = useTranslations("marketplaces");
   const { data: servicesData, isLoading: servicesLoading } =
     useAllegroDeliveryServices();
   const createShipment = useCreateAllegroShipment();
@@ -415,15 +417,15 @@ function CreateShipmentDialog({
 
   const handleSubmit = () => {
     if (!selectedServiceId) {
-      toast.error("Wybierz usluge dostawy");
+      toast.error(t("allegroShipments.selectDeliveryService"));
       return;
     }
     if (!receiverStreet || !receiverCity || !receiverZipCode) {
-      toast.error("Uzupelnij adres odbiorcy (ulica, miasto, kod pocztowy)");
+      toast.error(t("allegroShipments.fillReceiverAddress"));
       return;
     }
     if (!senderStreet || !senderCity || !senderZipCode) {
-      toast.error("Uzupelnij adres nadawcy (ulica, miasto, kod pocztowy)");
+      toast.error(t("allegroShipments.fillSenderAddress"));
       return;
     }
 
@@ -494,7 +496,7 @@ function CreateShipmentDialog({
 
     createShipment.mutate(cmd, {
       onSuccess: (resp: AllegroCreateShipmentResponse) => {
-        toast.success("Przesylka utworzona pomyslnie");
+        toast.success(t("allegroShipments.shipmentCreated"));
         onCreated({
           commandId: resp.commandId,
           shipmentId: resp.shipmentId,
@@ -510,7 +512,7 @@ function CreateShipmentDialog({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udalo sie utworzyc przesylki"
+            : t("allegroShipments.createShipmentError")
         );
       },
     });
@@ -519,16 +521,16 @@ function CreateShipmentDialog({
   return (
     <DialogContent size="lg">
       <DialogHeader>
-        <DialogTitle>Utworz nowa przesylke</DialogTitle>
+        <DialogTitle>{t("allegroShipments.createNewShipment")}</DialogTitle>
         <DialogDescription>
-          Wypelnij dane przesylki, aby utworzyc ja przez Allegro.
+          {t("allegroShipments.createNewShipmentDescription")}
         </DialogDescription>
       </DialogHeader>
 
       <div className="max-h-[60vh] overflow-y-auto space-y-6 pr-2">
         {/* Delivery service selection */}
         <div className="space-y-2">
-          <Label>Usluga dostawy</Label>
+          <Label>{t("allegroShipments.deliveryService")}</Label>
           {servicesLoading ? (
             <Skeleton className="h-9 w-full" />
           ) : (
@@ -537,7 +539,7 @@ function CreateShipmentDialog({
               onValueChange={setSelectedServiceId}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Wybierz usluge dostawy..." />
+                <SelectValue placeholder={t("allegroShipments.selectDeliveryServicePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {deliveryServices.map((ds) => (
@@ -554,29 +556,29 @@ function CreateShipmentDialog({
 
         {/* Sender address */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Nadawca</h3>
+          <h3 className="font-semibold text-sm">{t("allegroShipments.sender")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Imie i nazwisko</Label>
+              <Label className="text-xs">{t("allegroShipments.fullName")}</Label>
               <Input
-                placeholder="Jan Kowalski"
+                placeholder={t("allegroShipments.fullNamePlaceholder")}
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Firma</Label>
+              <Label className="text-xs">{t("allegroShipments.company")}</Label>
               <Input
-                placeholder="Nazwa firmy (opcjonalnie)"
+                placeholder={t("allegroShipments.companyPlaceholder")}
                 value={senderCompany}
                 onChange={(e) => setSenderCompany(e.target.value)}
               />
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Ulica *</Label>
+            <Label className="text-xs">{t("allegroShipments.street")} *</Label>
             <Input
-              placeholder="ul. Przykladowa 1/2"
+              placeholder={t("allegroShipments.streetPlaceholderSender")}
               value={senderStreet}
               onChange={(e) => setSenderStreet(e.target.value)}
               required
@@ -584,16 +586,16 @@ function CreateShipmentDialog({
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Miasto *</Label>
+              <Label className="text-xs">{t("allegroShipments.city")} *</Label>
               <Input
-                placeholder="Warszawa"
+                placeholder={t("allegroShipments.cityPlaceholderSender")}
                 value={senderCity}
                 onChange={(e) => setSenderCity(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Kod pocztowy *</Label>
+              <Label className="text-xs">{t("allegroShipments.postalCode")} *</Label>
               <Input
                 placeholder="00-001"
                 value={senderZipCode}
@@ -602,7 +604,7 @@ function CreateShipmentDialog({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Kraj</Label>
+              <Label className="text-xs">{t("allegroShipments.country")}</Label>
               <Input
                 value={senderCountryCode}
                 onChange={(e) => setSenderCountryCode(e.target.value)}
@@ -611,7 +613,7 @@ function CreateShipmentDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Telefon</Label>
+              <Label className="text-xs">{t("allegroShipments.phone")}</Label>
               <Input
                 placeholder="+48 123 456 789"
                 value={senderPhone}
@@ -621,7 +623,7 @@ function CreateShipmentDialog({
             <div className="space-y-1">
               <Label className="text-xs">Email</Label>
               <Input
-                placeholder="nadawca@email.pl"
+                placeholder={t("allegroShipments.emailPlaceholderSender")}
                 value={senderEmail}
                 onChange={(e) => setSenderEmail(e.target.value)}
               />
@@ -633,29 +635,29 @@ function CreateShipmentDialog({
 
         {/* Receiver address */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Odbiorca</h3>
+          <h3 className="font-semibold text-sm">{t("allegroShipments.receiver")}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Imie i nazwisko</Label>
+              <Label className="text-xs">{t("allegroShipments.fullName")}</Label>
               <Input
-                placeholder="Anna Nowak"
+                placeholder={t("allegroShipments.fullNamePlaceholderReceiver")}
                 value={receiverName}
                 onChange={(e) => setReceiverName(e.target.value)}
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Firma</Label>
+              <Label className="text-xs">{t("allegroShipments.company")}</Label>
               <Input
-                placeholder="Nazwa firmy (opcjonalnie)"
+                placeholder={t("allegroShipments.companyPlaceholder")}
                 value={receiverCompany}
                 onChange={(e) => setReceiverCompany(e.target.value)}
               />
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Ulica *</Label>
+            <Label className="text-xs">{t("allegroShipments.street")} *</Label>
             <Input
-              placeholder="ul. Odbiorcza 5/10"
+              placeholder={t("allegroShipments.streetPlaceholderReceiver")}
               value={receiverStreet}
               onChange={(e) => setReceiverStreet(e.target.value)}
               required
@@ -663,16 +665,16 @@ function CreateShipmentDialog({
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Miasto *</Label>
+              <Label className="text-xs">{t("allegroShipments.city")} *</Label>
               <Input
-                placeholder="Krakow"
+                placeholder={t("allegroShipments.cityPlaceholderReceiver")}
                 value={receiverCity}
                 onChange={(e) => setReceiverCity(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Kod pocztowy *</Label>
+              <Label className="text-xs">{t("allegroShipments.postalCode")} *</Label>
               <Input
                 placeholder="30-001"
                 value={receiverZipCode}
@@ -681,7 +683,7 @@ function CreateShipmentDialog({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Kraj</Label>
+              <Label className="text-xs">{t("allegroShipments.country")}</Label>
               <Input
                 value={receiverCountryCode}
                 onChange={(e) => setReceiverCountryCode(e.target.value)}
@@ -690,7 +692,7 @@ function CreateShipmentDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Telefon</Label>
+              <Label className="text-xs">{t("allegroShipments.phone")}</Label>
               <Input
                 placeholder="+48 987 654 321"
                 value={receiverPhone}
@@ -700,7 +702,7 @@ function CreateShipmentDialog({
             <div className="space-y-1">
               <Label className="text-xs">Email</Label>
               <Input
-                placeholder="odbiorca@email.pl"
+                placeholder={t("allegroShipments.emailPlaceholderReceiver")}
                 value={receiverEmail}
                 onChange={(e) => setReceiverEmail(e.target.value)}
               />
@@ -712,10 +714,10 @@ function CreateShipmentDialog({
 
         {/* Package dimensions */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Wymiary paczki</h3>
+          <h3 className="font-semibold text-sm">{t("allegroShipments.packageDimensions")}</h3>
           <div className="grid grid-cols-4 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Dlugosc (cm)</Label>
+              <Label className="text-xs">{t("allegroShipments.lengthCm")}</Label>
               <Input
                 type="number"
                 placeholder="30"
@@ -726,7 +728,7 @@ function CreateShipmentDialog({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Szerokosc (cm)</Label>
+              <Label className="text-xs">{t("allegroShipments.widthCm")}</Label>
               <Input
                 type="number"
                 placeholder="20"
@@ -737,7 +739,7 @@ function CreateShipmentDialog({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Wysokosc (cm)</Label>
+              <Label className="text-xs">{t("allegroShipments.heightCm")}</Label>
               <Input
                 type="number"
                 placeholder="15"
@@ -748,7 +750,7 @@ function CreateShipmentDialog({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Waga (kg)</Label>
+              <Label className="text-xs">{t("allegroShipments.weightKg")}</Label>
               <Input
                 type="number"
                 placeholder="1.5"
@@ -771,7 +773,7 @@ function CreateShipmentDialog({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           <Plus className="mr-2 h-4 w-4" />
-          Utworz przesylke
+          {t("allegroShipments.createShipment")}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -793,6 +795,7 @@ function ShipmentRow({
   onCancelled: () => void;
   onLabelDownloaded: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const cancelShipment = useCancelAllegroShipment();
   const [isDownloadingLabel, setIsDownloadingLabel] = useState(false);
 
@@ -801,21 +804,21 @@ function ShipmentRow({
   const handleCancel = () => {
     if (
       !confirm(
-        `Czy na pewno chcesz anulowac przesylke ${shipment.shipmentId}?`
+        t("allegroShipments.confirmCancel", { id: shipment.shipmentId })
       )
     ) {
       return;
     }
     cancelShipment.mutate(shipment.shipmentId, {
       onSuccess: () => {
-        toast.success("Przesylka anulowana");
+        toast.success(t("allegroShipments.shipmentCancelled"));
         onCancelled();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udalo sie anulowac przesylki"
+            : t("allegroShipments.cancelShipmentError")
         );
       },
     });
@@ -825,13 +828,13 @@ function ShipmentRow({
     setIsDownloadingLabel(true);
     try {
       await downloadAllegroLabel(shipment.shipmentId);
-      toast.success("Etykieta pobrana");
+      toast.success(t("allegroShipments.labelDownloaded"));
       onLabelDownloaded();
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nie udalo sie pobrac etykiety"
+          : t("allegroShipments.downloadLabelError")
       );
     } finally {
       setIsDownloadingLabel(false);
@@ -863,7 +866,7 @@ function ShipmentRow({
       </TableCell>
       <TableCell>
         <Badge variant={statusBadgeVariant(shipment.status)}>
-          {statusLabel(shipment.status)}
+          {statusLabel(shipment.status, t)}
         </Badge>
       </TableCell>
       <TableCell className="text-right">
@@ -873,7 +876,7 @@ function ShipmentRow({
             size="sm"
             onClick={handleDownloadLabel}
             disabled={isCancelled || isDownloadingLabel}
-            title="Pobierz etykiete"
+            title={t("allegroShipments.downloadLabel")}
           >
             {isDownloadingLabel ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -886,7 +889,7 @@ function ShipmentRow({
             size="sm"
             onClick={handleCancel}
             disabled={isCancelled || cancelShipment.isPending}
-            title="Anuluj przesylke"
+            title={t("allegroShipments.cancelShipment")}
           >
             {cancelShipment.isPending ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -909,6 +912,7 @@ function BulkLabelDownload({
   selectedIds: Set<string>;
   onDownloaded: (id: string) => void;
 }) {
+  const t = useTranslations("marketplaces");
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadAll = async () => {
@@ -919,12 +923,12 @@ function BulkLabelDownload({
         await downloadAllegroLabel(id);
         onDownloaded(id);
       }
-      toast.success(`Pobrano ${selectedIds.size} etykiet`);
+      toast.success(t("allegroShipments.labelsDownloaded", { count: selectedIds.size }));
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nie udalo sie pobrac etykiet"
+          : t("allegroShipments.downloadLabelsError")
       );
     } finally {
       setIsDownloading(false);
@@ -943,7 +947,7 @@ function BulkLabelDownload({
       ) : (
         <Download className="mr-2 h-4 w-4" />
       )}
-      Pobierz etykiety ({selectedIds.size})
+      {t("allegroShipments.downloadLabels", { count: selectedIds.size })}
     </Button>
   );
 }
@@ -957,6 +961,7 @@ function PickupDialog({
   selectedIds: string[];
   onScheduled: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const getProposals = useAllegroPickupProposals();
   const schedulePickup = useScheduleAllegroPickup();
 
@@ -972,7 +977,7 @@ function PickupDialog({
 
   const handleFetchProposals = () => {
     if (!deliveryMethodId) {
-      toast.error("Wybierz metode dostawy");
+      toast.error(t("allegroShipments.selectDeliveryMethod"));
       return;
     }
     getProposals.mutate(
@@ -981,14 +986,14 @@ function PickupDialog({
         onSuccess: (resp) => {
           setProposals(resp.proposals ?? []);
           if (!resp.proposals?.length) {
-            toast.info("Brak dostepnych terminow odbioru");
+            toast.info(t("allegroShipments.noPickupSlots"));
           }
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie pobrac propozycji odbioru"
+              : t("allegroShipments.fetchPickupProposalsError")
           );
         },
       }
@@ -997,7 +1002,7 @@ function PickupDialog({
 
   const handleSchedule = () => {
     if (!selectedDate || !selectedWindow) {
-      toast.error("Wybierz date i okno czasowe odbioru");
+      toast.error(t("allegroShipments.selectDateAndTimeWindow"));
       return;
     }
     schedulePickup.mutate(
@@ -1009,14 +1014,14 @@ function PickupDialog({
       },
       {
         onSuccess: () => {
-          toast.success("Odbior kurierski zaplanowany");
+          toast.success(t("allegroShipments.pickupScheduled"));
           onScheduled();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie zaplanowac odbioru"
+              : t("allegroShipments.schedulePickupError")
           );
         },
       }
@@ -1028,20 +1033,19 @@ function PickupDialog({
   return (
     <DialogContent size="md">
       <DialogHeader>
-        <DialogTitle>Zaplanuj odbior kurierski</DialogTitle>
+        <DialogTitle>{t("allegroShipments.schedulePickupTitle")}</DialogTitle>
         <DialogDescription>
-          Wybierz metode dostawy i termin odbioru dla {selectedIds.length}{" "}
-          przesylek.
+          {t("allegroShipments.schedulePickupDescription", { count: selectedIds.length })}
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4">
         {/* Delivery method selector */}
         <div className="space-y-2">
-          <Label>Metoda dostawy</Label>
+          <Label>{t("allegroShipments.deliveryMethod")}</Label>
           <Select value={deliveryMethodId} onValueChange={setDeliveryMethodId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Wybierz metode dostawy..." />
+              <SelectValue placeholder={t("allegroShipments.selectDeliveryMethodPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {deliveryServices.map((ds) => (
@@ -1062,7 +1066,7 @@ function PickupDialog({
           {getProposals.isPending && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          Sprawdz dostepne terminy
+          {t("allegroShipments.checkAvailableSlots")}
         </Button>
 
         {/* Proposals */}
@@ -1070,13 +1074,13 @@ function PickupDialog({
           <>
             <Separator />
             <div className="space-y-2">
-              <Label>Dostepne terminy</Label>
+              <Label>{t("allegroShipments.availableSlots")}</Label>
               <Select value={selectedDate} onValueChange={(v) => {
                 setSelectedDate(v);
                 setSelectedWindow(null);
               }}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Wybierz date..." />
+                  <SelectValue placeholder={t("allegroShipments.selectDate")} />
                 </SelectTrigger>
                 <SelectContent>
                   {proposals.map((p) => (
@@ -1090,7 +1094,7 @@ function PickupDialog({
 
             {selectedProposal && (
               <div className="space-y-2">
-                <Label>Okno czasowe</Label>
+                <Label>{t("allegroShipments.timeWindow")}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {selectedProposal.timeWindows.map((tw, idx) => (
                     <Button
@@ -1125,7 +1129,7 @@ function PickupDialog({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
           <Truck className="mr-2 h-4 w-4" />
-          Zaplanuj odbior
+          {t("allegroShipments.schedulePickupButton")}
         </Button>
       </DialogFooter>
     </DialogContent>
@@ -1141,19 +1145,20 @@ function ProtocolDialog({
   selectedIds: string[];
   onGenerated: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
       await downloadAllegroProtocol(selectedIds);
-      toast.success("Protokol nadania wygenerowany i pobrany");
+      toast.success(t("allegroShipments.protocolGenerated"));
       onGenerated();
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nie udalo sie wygenerowac protokolu"
+          : t("allegroShipments.generateProtocolError")
       );
     } finally {
       setIsGenerating(false);
@@ -1163,16 +1168,15 @@ function ProtocolDialog({
   return (
     <DialogContent size="sm">
       <DialogHeader>
-        <DialogTitle>Generuj protokol nadania</DialogTitle>
+        <DialogTitle>{t("allegroShipments.generateProtocolTitle")}</DialogTitle>
         <DialogDescription>
-          Protokol zostanie wygenerowany dla {selectedIds.length} zaznaczonych
-          przesylek i pobrany jako plik PDF.
+          {t("allegroShipments.generateProtocolDescription", { count: selectedIds.length })}
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">
-          ID przesylek:
+          {t("allegroShipments.shipmentIds")}
         </p>
         <div className="max-h-32 overflow-y-auto rounded border p-2">
           {selectedIds.map((id) => (
@@ -1193,7 +1197,7 @@ function ProtocolDialog({
           ) : (
             <FileText className="mr-2 h-4 w-4" />
           )}
-          Generuj i pobierz
+          {t("allegroShipments.generateAndDownload")}
         </Button>
       </DialogFooter>
     </DialogContent>

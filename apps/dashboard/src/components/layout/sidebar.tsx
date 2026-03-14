@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronRight, Package, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth";
@@ -24,6 +25,8 @@ export function Sidebar() {
   const { collapsed, toggleSidebar } = useSidebar();
   const { toggleGroup, isGroupExpanded } = useGroupExpansion();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const tNav = useTranslations("navigation");
+  const tShared = useTranslations("shared.sidebar");
 
   const toggleExpand = useCallback((href: string) => {
     setExpandedItems((prev) => {
@@ -64,7 +67,7 @@ export function Sidebar() {
             )}
           >
             <item.icon className="h-4 w-4" />
-            {item.label}
+            {tNav(item.label)}
             <ChevronRight
               className={cn(
                 "ml-auto h-3 w-3 transition-transform duration-200",
@@ -91,7 +94,7 @@ export function Sidebar() {
           )}
         >
           <item.icon className={cn("h-4 w-4 shrink-0", isChild && "h-3.5 w-3.5")} />
-          <span className="truncate">{item.label}</span>
+          <span className="truncate">{tNav(item.label)}</span>
         </Link>
       </div>
     );
@@ -116,11 +119,11 @@ export function Sidebar() {
           </Link>
         </TooltipTrigger>
         <TooltipContent side="right" className="font-medium">
-          {item.label}
+          {tNav(item.label)}
           {item.children && item.children.length > 0 && (
             <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
               {item.children.map((child) => (
-                <div key={child.href}>{child.label}</div>
+                <div key={child.href}>{tNav(child.label)}</div>
               ))}
             </div>
           )}
@@ -152,7 +155,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav
-        aria-label="Menu główne"
+        aria-label={tShared("mainMenu")}
         className={cn(
           "flex-1 space-y-1 overflow-y-auto",
           collapsed ? "p-2" : "p-3"
@@ -174,7 +177,7 @@ export function Sidebar() {
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="right" className="font-medium">
-                      {group.label}
+                      {tNav(`groups.${group.label}`)}
                     </TooltipContent>
                   </Tooltip>
                   {items.map((item) => renderCollapsedNavLink(item))}
@@ -204,7 +207,7 @@ export function Sidebar() {
                       )}
                     />
                     <group.icon className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{group.label}</span>
+                    <span className="truncate">{tNav(`groups.${group.label}`)}</span>
                   </button>
                   {expanded && (
                     <div className="mt-0.5 space-y-0.5">
@@ -232,7 +235,7 @@ export function Sidebar() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-medium">
-                Rozwiń menu (Ctrl+B)
+                {tShared("expandMenu")}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -242,7 +245,7 @@ export function Sidebar() {
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground transition-colors"
           >
             <PanelLeftClose className="h-4 w-4" />
-            <span>Zwiń menu</span>
+            <span>{tShared("collapseMenu")}</span>
             <kbd className="ml-auto rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
               Ctrl+B
             </kbd>

@@ -12,15 +12,18 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+// WebhookDeliveryHandler handles HTTP requests for webhook delivery history.
 type WebhookDeliveryHandler struct {
 	deliveryRepo repository.WebhookDeliveryRepo
 	pool         *pgxpool.Pool
 }
 
+// NewWebhookDeliveryHandler creates a new WebhookDeliveryHandler.
 func NewWebhookDeliveryHandler(deliveryRepo repository.WebhookDeliveryRepo, pool *pgxpool.Pool) *WebhookDeliveryHandler {
 	return &WebhookDeliveryHandler{deliveryRepo: deliveryRepo, pool: pool}
 }
 
+// List returns a paginated list of webhook delivery records.
 func (h *WebhookDeliveryHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)

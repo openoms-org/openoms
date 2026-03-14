@@ -8,12 +8,15 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+// WebhookDeliveryRepository handles persistence for webhook delivery records.
 type WebhookDeliveryRepository struct{}
 
+// NewWebhookDeliveryRepository creates a new WebhookDeliveryRepository.
 func NewWebhookDeliveryRepository() *WebhookDeliveryRepository {
 	return &WebhookDeliveryRepository{}
 }
 
+// Create inserts a new webhook delivery record.
 func (r *WebhookDeliveryRepository) Create(ctx context.Context, tx pgx.Tx, delivery *model.WebhookDelivery) error {
 	_, err := tx.Exec(ctx,
 		`INSERT INTO webhook_deliveries (id, tenant_id, url, event_type, payload, status, response_code, error, created_at)
@@ -27,6 +30,7 @@ func (r *WebhookDeliveryRepository) Create(ctx context.Context, tx pgx.Tx, deliv
 	return nil
 }
 
+// List returns a paginated list of webhook deliveries matching the filter.
 func (r *WebhookDeliveryRepository) List(ctx context.Context, tx pgx.Tx, filter model.WebhookDeliveryFilter) ([]model.WebhookDelivery, int, error) {
 	qb := NewQueryBuilder()
 

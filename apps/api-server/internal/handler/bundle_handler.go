@@ -13,14 +13,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// BundleHandler handles HTTP requests for product bundle management.
 type BundleHandler struct {
 	bundleService *service.BundleService
 }
 
+// NewBundleHandler creates a new BundleHandler.
 func NewBundleHandler(bundleService *service.BundleService) *BundleHandler {
 	return &BundleHandler{bundleService: bundleService}
 }
 
+// ListComponents returns all component products in a bundle.
 func (h *BundleHandler) ListComponents(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -38,6 +41,7 @@ func (h *BundleHandler) ListComponents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, components)
 }
 
+// AddComponent adds a product as a component to a bundle.
 func (h *BundleHandler) AddComponent(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -71,6 +75,7 @@ func (h *BundleHandler) AddComponent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, component)
 }
 
+// UpdateComponent modifies a bundle component (e.g. quantity).
 func (h *BundleHandler) UpdateComponent(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -104,6 +109,7 @@ func (h *BundleHandler) UpdateComponent(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, component)
 }
 
+// RemoveComponent removes a product component from a bundle.
 func (h *BundleHandler) RemoveComponent(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -127,6 +133,7 @@ func (h *BundleHandler) RemoveComponent(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetBundleStock returns the effective available stock for a bundle.
 func (h *BundleHandler) GetBundleStock(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

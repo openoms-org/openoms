@@ -1,3 +1,4 @@
+// Package mirakl implements the Mirakl marketplace provider.
 package mirakl
 
 import (
@@ -20,8 +21,8 @@ func init() {
 	})
 }
 
-// MiraklCredentials is the JSON structure stored in encrypted integration credentials.
-type MiraklCredentials struct {
+// Credentials is the JSON structure stored in encrypted integration credentials.
+type Credentials struct {
 	BaseURL string `json:"base_url"` // marketplace-specific URL
 	APIKey  string `json:"api_key"`
 }
@@ -33,8 +34,8 @@ type Provider struct {
 }
 
 // NewProvider creates a Mirakl MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provider, error) {
-	var creds MiraklCredentials
+func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("mirakl: parse credentials: %w", err)
 	}
@@ -56,6 +57,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	}, nil
 }
 
+// ProviderName returns the marketplace provider identifier.
 func (p *Provider) ProviderName() string { return "mirakl" }
 
 // PollOrders polls Mirakl for orders updated since the cursor timestamp.
@@ -96,7 +98,7 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 }
 
 // PushOffer is a stub — Mirakl offer creation uses a separate import process.
-func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
+func (p *Provider) PushOffer(_ context.Context, _ *model.Product, _ map[string]any) (string, error) {
 	return "", fmt.Errorf("mirakl: PushOffer not supported (use Mirakl import)")
 }
 

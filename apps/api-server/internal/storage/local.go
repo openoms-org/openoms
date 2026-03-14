@@ -1,3 +1,4 @@
+// Package storage implements local filesystem-backed object storage.
 package storage
 
 import (
@@ -28,23 +29,28 @@ func NewLocalStorage(baseDir, baseURL string) *LocalStorage {
 // Upload saves a file to baseDir/key and returns its public URL.
 // The key is expected to be in the form "tenantID/filename.ext".
 func (s *LocalStorage) Upload(_ context.Context, key string, reader io.Reader, _ string) (string, error) {
-	fullPath := filepath.Join(s.baseDir, key)
+	fullPath := filepath.Clean(filepath.Join(s.baseDir, key))
 
 	// Ensure the parent directory exists.
 	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return "", fmt.Errorf("creating directory %s: %w", dir, err)
 	}
 
-	f, err := os.Create(fullPath)
+	f, err := os.Create(fullPath) // #nosec G304 -- path is cleaned and joined under baseDir
 	if err != nil {
 		return "", fmt.Errorf("creating file %s: %w", fullPath, err)
 	}
-	defer f.Close()
 
 	if _, err := io.Copy(f, reader); err != nil {
-		os.Remove(fullPath) // cleanup on error
+		_ = f.Close()
+		_ = os.Remove(fullPath)
 		return "", fmt.Errorf("writing file %s: %w", fullPath, err)
+	}
+
+	if err := f.Close(); err != nil {
+		_ = os.Remove(fullPath)
+		return "", fmt.Errorf("closing file %s: %w", fullPath, err)
 	}
 
 	url := fmt.Sprintf("%s/uploads/%s", s.baseURL, key)

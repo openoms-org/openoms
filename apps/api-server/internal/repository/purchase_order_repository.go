@@ -19,6 +19,7 @@ func NewPurchaseOrderRepository() *PurchaseOrderRepository {
 	return &PurchaseOrderRepository{}
 }
 
+// List returns a paginated list of purchase orders matching the filter.
 func (r *PurchaseOrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.PurchaseOrderListFilter) ([]model.PurchaseOrder, int, error) {
 	qb := NewQueryBuilder()
 
@@ -78,6 +79,7 @@ func (r *PurchaseOrderRepository) List(ctx context.Context, tx pgx.Tx, filter mo
 	return orders, total, rows.Err()
 }
 
+// FindByID returns a purchase order by its ID.
 func (r *PurchaseOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PurchaseOrder, error) {
 	var po model.PurchaseOrder
 	err := tx.QueryRow(ctx,
@@ -100,6 +102,7 @@ func (r *PurchaseOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uu
 	return &po, nil
 }
 
+// Create inserts a new purchase order.
 func (r *PurchaseOrderRepository) Create(ctx context.Context, tx pgx.Tx, po *model.PurchaseOrder) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO purchase_orders (id, tenant_id, po_number, supplier_id, supplier_name,
@@ -112,6 +115,7 @@ func (r *PurchaseOrderRepository) Create(ctx context.Context, tx pgx.Tx, po *mod
 	).Scan(&po.CreatedAt, &po.UpdatedAt)
 }
 
+// Update applies partial updates to a purchase order.
 func (r *PurchaseOrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdatePurchaseOrderRequest) error {
 	var setClauses []string
 	var args []any
@@ -171,6 +175,7 @@ func (r *PurchaseOrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid
 	return nil
 }
 
+// UpdateStatus sets the status of a purchase order.
 func (r *PurchaseOrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE purchase_orders SET status = $1, updated_at = NOW() WHERE id = $2`,
@@ -185,6 +190,7 @@ func (r *PurchaseOrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, i
 	return nil
 }
 
+// UpdateTotalAmount sets the total amount of a purchase order.
 func (r *PurchaseOrderRepository) UpdateTotalAmount(ctx context.Context, tx pgx.Tx, id uuid.UUID, amount float64) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE purchase_orders SET total_amount = $1, updated_at = NOW() WHERE id = $2`,
@@ -199,6 +205,7 @@ func (r *PurchaseOrderRepository) UpdateTotalAmount(ctx context.Context, tx pgx.
 	return nil
 }
 
+// Delete removes a purchase order by its ID.
 func (r *PurchaseOrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM purchase_orders WHERE id = $1", id)
 	if err != nil {
@@ -211,7 +218,7 @@ func (r *PurchaseOrderRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid
 }
 
 // GeneratePONumber generates the next PO number in PO-YYYYMMDD-NNN format.
-func (r *PurchaseOrderRepository) GeneratePONumber(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (string, error) {
+func (r *PurchaseOrderRepository) GeneratePONumber(ctx context.Context, tx pgx.Tx, _ uuid.UUID) (string, error) {
 	today := time.Now().Format("20060102")
 	prefix := "PO-" + today + "-"
 
@@ -235,6 +242,7 @@ func NewPurchaseOrderItemRepository() *PurchaseOrderItemRepository {
 	return &PurchaseOrderItemRepository{}
 }
 
+// CreateItem inserts a new purchase order item.
 func (r *PurchaseOrderItemRepository) CreateItem(ctx context.Context, tx pgx.Tx, item *model.PurchaseOrderItem) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO purchase_order_items (id, tenant_id, purchase_order_id, product_id, sku, product_name,
@@ -246,6 +254,7 @@ func (r *PurchaseOrderItemRepository) CreateItem(ctx context.Context, tx pgx.Tx,
 	).Scan(&item.TotalCost, &item.CreatedAt)
 }
 
+// ListByPOID returns all items for the given purchase order.
 func (r *PurchaseOrderItemRepository) ListByPOID(ctx context.Context, tx pgx.Tx, poID uuid.UUID) ([]model.PurchaseOrderItem, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, purchase_order_id, product_id, sku, product_name,
@@ -272,6 +281,7 @@ func (r *PurchaseOrderItemRepository) ListByPOID(ctx context.Context, tx pgx.Tx,
 	return items, rows.Err()
 }
 
+// FindByID returns a purchase order item by its ID.
 func (r *PurchaseOrderItemRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.PurchaseOrderItem, error) {
 	var item model.PurchaseOrderItem
 	err := tx.QueryRow(ctx,
@@ -292,6 +302,7 @@ func (r *PurchaseOrderItemRepository) FindByID(ctx context.Context, tx pgx.Tx, i
 	return &item, nil
 }
 
+// UpdateReceived sets the quantity received for a purchase order item.
 func (r *PurchaseOrderItemRepository) UpdateReceived(ctx context.Context, tx pgx.Tx, id uuid.UUID, quantityReceived int) error {
 	ct, err := tx.Exec(ctx,
 		`UPDATE purchase_order_items SET quantity_received = $1 WHERE id = $2`,
@@ -306,6 +317,7 @@ func (r *PurchaseOrderItemRepository) UpdateReceived(ctx context.Context, tx pgx
 	return nil
 }
 
+// DeleteByPOID deletes all items for the given purchase order.
 func (r *PurchaseOrderItemRepository) DeleteByPOID(ctx context.Context, tx pgx.Tx, poID uuid.UUID) error {
 	_, err := tx.Exec(ctx, "DELETE FROM purchase_order_items WHERE purchase_order_id = $1", poID)
 	if err != nil {

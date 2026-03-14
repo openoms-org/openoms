@@ -18,6 +18,7 @@ func NewRoleRepository() *RoleRepository {
 	return &RoleRepository{}
 }
 
+// List returns a paginated list of roles matching the filter.
 func (r *RoleRepository) List(ctx context.Context, tx pgx.Tx, filter model.RoleListFilter) ([]model.Role, int, error) {
 	var total int
 	if err := tx.QueryRow(ctx, "SELECT COUNT(*) FROM roles").Scan(&total); err != nil {
@@ -56,6 +57,7 @@ func (r *RoleRepository) List(ctx context.Context, tx pgx.Tx, filter model.RoleL
 	return roles, total, rows.Err()
 }
 
+// FindByID returns a role by its ID.
 func (r *RoleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Role, error) {
 	var role model.Role
 	err := tx.QueryRow(ctx,
@@ -74,6 +76,7 @@ func (r *RoleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) 
 	return &role, nil
 }
 
+// FindByName returns a role by its name.
 func (r *RoleRepository) FindByName(ctx context.Context, tx pgx.Tx, name string) (*model.Role, error) {
 	var role model.Role
 	err := tx.QueryRow(ctx,
@@ -92,6 +95,7 @@ func (r *RoleRepository) FindByName(ctx context.Context, tx pgx.Tx, name string)
 	return &role, nil
 }
 
+// Create inserts a new role.
 func (r *RoleRepository) Create(ctx context.Context, tx pgx.Tx, role *model.Role) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO roles (id, tenant_id, name, description, is_system, permissions)
@@ -102,6 +106,7 @@ func (r *RoleRepository) Create(ctx context.Context, tx pgx.Tx, role *model.Role
 	).Scan(&role.CreatedAt, &role.UpdatedAt)
 }
 
+// Update applies partial updates to a role.
 func (r *RoleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRoleRequest) error {
 	var setClauses []string
 	var args []any
@@ -143,6 +148,7 @@ func (r *RoleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, re
 	return nil
 }
 
+// Delete removes a role by its ID.
 func (r *RoleRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM roles WHERE id = $1", id)
 	if err != nil {

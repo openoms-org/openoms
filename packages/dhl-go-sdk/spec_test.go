@@ -47,7 +47,7 @@ func TestSpec_CreateShipment_SendsSOAPXML(t *testing.T) {
 
 		// Return a valid response so the SDK doesn't error on response parsing
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body>
 				<createShipmentsResponse>
@@ -105,7 +105,7 @@ func TestSpec_CreateShipment_ContainsSOAPAction(t *testing.T) {
 		gotSOAPAction = r.Header.Get("SOAPAction")
 
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body><createShipmentsResponse></createShipmentsResponse></soap:Body>
 		</soap:Envelope>`))
@@ -138,7 +138,7 @@ func TestSpec_GetLabel_UsesSOAPGetLabelsMethod(t *testing.T) {
 		gotBody = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body>
 				<getLabelsResponse>
@@ -174,7 +174,7 @@ func TestSpec_GetTracking_UsesSOAPMethod(t *testing.T) {
 		gotBody = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body>
 				<getTrackAndTraceInfoResponse>
@@ -215,7 +215,7 @@ func TestSpec_Cancel_UsesSOAPDeleteShipmentMethod(t *testing.T) {
 		gotBody = string(body)
 
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body><deleteShipmentResponse></deleteShipmentResponse></soap:Body>
 		</soap:Envelope>`))
@@ -250,7 +250,7 @@ func TestSpec_AuthData_EmbeddedInEveryRequest(t *testing.T) {
 		bodies = append(bodies, string(body))
 
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body><response></response></soap:Body>
 		</soap:Envelope>`))
@@ -317,10 +317,10 @@ func TestSpec_StatusMapping_DHL24Statuses(t *testing.T) {
 // --- Edge Cases ---
 
 func TestSpec_CreateShipment_ReturnsErrorOnSOAPFault(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Header().Set("Content-Type", "text/xml")
-		w.Write([]byte(`<?xml version="1.0"?>
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
 		<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 			<soap:Body>
 				<soap:Fault>

@@ -13,14 +13,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// ReturnHandler handles HTTP requests for return management.
 type ReturnHandler struct {
 	returnService *service.ReturnService
 }
 
+// NewReturnHandler creates a new ReturnHandler.
 func NewReturnHandler(returnService *service.ReturnService) *ReturnHandler {
 	return &ReturnHandler{returnService: returnService}
 }
 
+// List returns a paginated list of returns.
 func (h *ReturnHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -48,6 +51,7 @@ func (h *ReturnHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single return by ID.
 func (h *ReturnHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -69,6 +73,7 @@ func (h *ReturnHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ret)
 }
 
+// Create inserts a new return.
 func (h *ReturnHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -91,6 +96,7 @@ func (h *ReturnHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, ret)
 }
 
+// Update modifies an existing return.
 func (h *ReturnHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -124,6 +130,7 @@ func (h *ReturnHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, ret)
 }
 
+// TransitionStatus moves a return to a new status.
 func (h *ReturnHandler) TransitionStatus(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -159,6 +166,7 @@ func (h *ReturnHandler) TransitionStatus(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, ret)
 }
 
+// Delete removes a return by ID.
 func (h *ReturnHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())

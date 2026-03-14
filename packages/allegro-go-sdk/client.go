@@ -277,7 +277,7 @@ func (c *Client) doRawOnce(ctx context.Context, method, path string, body any, a
 	if err != nil {
 		return nil, fmt.Errorf("allegro: execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
@@ -378,7 +378,7 @@ func (c *Client) doUpload(ctx context.Context, path string, body any, result any
 	if err != nil {
 		return fmt.Errorf("allegro: execute upload request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		rawBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
@@ -419,7 +419,7 @@ func (c *Client) doUploadBinary(ctx context.Context, path string, data []byte, c
 	if err != nil {
 		return "", fmt.Errorf("allegro: execute upload request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		rawBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
@@ -468,7 +468,7 @@ func (c *Client) doOnce(ctx context.Context, method, path string, body any, resu
 	if err != nil {
 		return fmt.Errorf("allegro: execute request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		rawBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))

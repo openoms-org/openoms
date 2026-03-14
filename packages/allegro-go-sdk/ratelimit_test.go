@@ -69,7 +69,7 @@ func TestRateLimiterRefill(t *testing.T) {
 	// Drain all tokens.
 	for range 60000 {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-		rl.Wait(ctx)
+		_ = rl.Wait(ctx)
 		cancel()
 	}
 
@@ -84,7 +84,7 @@ func TestRateLimiterRefill(t *testing.T) {
 	}
 }
 
-func TestRateLimiterCloseIdempotent(t *testing.T) {
+func TestRateLimiterCloseIdempotent(_ *testing.T) {
 	rl := newRateLimiter(10)
 	rl.Close()
 	rl.Close() // Should not panic.

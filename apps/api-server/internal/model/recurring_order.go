@@ -58,6 +58,7 @@ var validFrequencies = map[string]bool{
 	"quarterly": true,
 }
 
+// IsValidFrequency reports whether f is a recognised recurring order frequency string.
 func IsValidFrequency(f string) bool {
 	return validFrequencies[f]
 }
@@ -105,6 +106,7 @@ type CreateRecurringOrderRequest struct {
 	Items           []CreateRecurringOrderItemRequest `json:"items"`
 }
 
+// Validate validates the create recurring order request.
 func (r *CreateRecurringOrderRequest) Validate() error {
 	if strings.TrimSpace(r.CustomerName) == "" {
 		return errors.New("customer_name is required")
@@ -170,6 +172,7 @@ type UpdateRecurringOrderRequest struct {
 	Items           *[]CreateRecurringOrderItemRequest `json:"items,omitempty"`
 }
 
+// Validate validates the update recurring order request.
 func (r *UpdateRecurringOrderRequest) Validate() error {
 	if r.CustomerName != nil && strings.TrimSpace(*r.CustomerName) == "" {
 		return errors.New("customer_name cannot be empty")

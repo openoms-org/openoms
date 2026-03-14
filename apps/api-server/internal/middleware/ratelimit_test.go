@@ -59,7 +59,7 @@ func TestMemoryRateLimiter_Allow_MultipleExceedAllBlocked(t *testing.T) {
 	limit := 2
 
 	for range limit {
-		limiter.Allow(ctx, "key", limit, time.Minute)
+		_, _ = limiter.Allow(ctx, "key", limit, time.Minute)
 	}
 
 	// All subsequent requests should be blocked
@@ -135,7 +135,7 @@ func TestMemoryRateLimiter_Allow_WindowExpiryResetsCount(t *testing.T) {
 
 	// Use all requests in window
 	for range limit {
-		limiter.Allow(ctx, "user1", limit, window)
+		_, _ = limiter.Allow(ctx, "user1", limit, window)
 	}
 	blocked, _ := limiter.Allow(ctx, "user1", limit, window)
 	assert.False(t, blocked)
@@ -241,7 +241,7 @@ func TestMemoryRateLimiter_Allow_ConcurrentDifferentKeys(t *testing.T) {
 func testOKHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	})
 }
 
@@ -363,6 +363,6 @@ func TestRateLimit_LegacyConstructorWorks(t *testing.T) {
 
 // --- RateLimiter interface compliance ---
 
-func TestMemoryRateLimiter_ImplementsInterface(t *testing.T) {
+func TestMemoryRateLimiter_ImplementsInterface(_ *testing.T) {
 	var _ middleware.RateLimiter = middleware.NewMemoryRateLimiter()
 }

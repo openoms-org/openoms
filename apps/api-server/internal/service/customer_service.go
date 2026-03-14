@@ -16,9 +16,11 @@ import (
 )
 
 var (
+	// ErrCustomerNotFound is returned when a customer does not exist.
 	ErrCustomerNotFound = errors.New("customer not found")
 )
 
+// CustomerService handles business logic for customer management.
 type CustomerService struct {
 	customerRepo    repository.CustomerRepo
 	auditRepo       repository.AuditRepo
@@ -27,6 +29,7 @@ type CustomerService struct {
 	logger          *slog.Logger
 }
 
+// NewCustomerService creates a new CustomerService.
 func NewCustomerService(
 	customerRepo repository.CustomerRepo,
 	auditRepo repository.AuditRepo,
@@ -43,6 +46,7 @@ func NewCustomerService(
 	}
 }
 
+// List returns a paginated list of customers for a tenant.
 func (s *CustomerService) List(ctx context.Context, tenantID uuid.UUID, filter model.CustomerListFilter) (model.ListResponse[model.Customer], error) {
 	var resp model.ListResponse[model.Customer]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -64,6 +68,7 @@ func (s *CustomerService) List(ctx context.Context, tenantID uuid.UUID, filter m
 	return resp, err
 }
 
+// Get returns a single customer by ID.
 func (s *CustomerService) Get(ctx context.Context, tenantID, customerID uuid.UUID) (*model.Customer, error) {
 	var customer *model.Customer
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -80,6 +85,7 @@ func (s *CustomerService) Get(ctx context.Context, tenantID, customerID uuid.UUI
 	return customer, nil
 }
 
+// Create inserts a new customer.
 func (s *CustomerService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateCustomerRequest, actorID uuid.UUID, ip string) (*model.Customer, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -129,6 +135,7 @@ func (s *CustomerService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	return customer, nil
 }
 
+// Update modifies an existing customer.
 func (s *CustomerService) Update(ctx context.Context, tenantID, customerID uuid.UUID, req model.UpdateCustomerRequest, actorID uuid.UUID, ip string) (*model.Customer, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -171,6 +178,7 @@ func (s *CustomerService) Update(ctx context.Context, tenantID, customerID uuid.
 	return customer, err
 }
 
+// Delete removes a customer by ID.
 func (s *CustomerService) Delete(ctx context.Context, tenantID, customerID uuid.UUID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		customer, err := s.customerRepo.FindByID(ctx, tx, customerID)
@@ -203,6 +211,7 @@ func (s *CustomerService) Delete(ctx context.Context, tenantID, customerID uuid.
 	return err
 }
 
+// ListOrders returns a paginated list of orders for a specific customer.
 func (s *CustomerService) ListOrders(ctx context.Context, tenantID, customerID uuid.UUID, filter model.OrderListFilter) (model.ListResponse[model.Order], error) {
 	var resp model.ListResponse[model.Order]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

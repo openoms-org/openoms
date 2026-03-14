@@ -17,6 +17,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// ProductHandler handles HTTP requests for product management.
 type ProductHandler struct {
 	productService         *service.ProductService
 	productImportService   *service.ProductImportService
@@ -42,6 +43,7 @@ func NewProductHandler(
 	}
 }
 
+// List returns a paginated list of products.
 func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -114,6 +116,7 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Get returns a single product by ID.
 func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -135,6 +138,7 @@ func (h *ProductHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, product)
 }
 
+// Create inserts a new product.
 func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -162,6 +166,7 @@ func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, product)
 }
 
+// Update modifies an existing product.
 func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -197,6 +202,7 @@ func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, product)
 }
 
+// Delete removes a product by ID.
 func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -340,14 +346,18 @@ func (h *ProductHandler) ImportPreview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() {
+		if err := r.MultipartForm.RemoveAll(); err != nil {
+			slog.Warn("product: failed to clean up multipart form", "error", err)
+		}
+	}()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	preview, err := h.productImportService.PreviewCSV(r.Context(), tenantID, file)
@@ -370,14 +380,18 @@ func (h *ProductHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "file too large or invalid multipart form")
 		return
 	}
-	defer r.MultipartForm.RemoveAll()
+	defer func() {
+		if err := r.MultipartForm.RemoveAll(); err != nil {
+			slog.Warn("product: failed to clean up multipart form", "error", err)
+		}
+	}()
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	result, err := h.productImportService.ImportCSV(r.Context(), tenantID, file, userID, clientIP(r))
 	if err != nil {

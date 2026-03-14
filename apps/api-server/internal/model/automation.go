@@ -82,6 +82,7 @@ type CreateAutomationRuleRequest struct {
 	Actions      json.RawMessage `json:"actions"`
 }
 
+// Validate validates the create automation rule request.
 func (r *CreateAutomationRuleRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
@@ -120,6 +121,7 @@ type UpdateAutomationRuleRequest struct {
 	Actions      json.RawMessage `json:"actions,omitempty"`
 }
 
+// Validate validates the update automation rule request.
 func (r *UpdateAutomationRuleRequest) Validate() error {
 	if r.Name == nil && r.Description == nil && r.Enabled == nil &&
 		r.Priority == nil && r.TriggerEvent == nil &&

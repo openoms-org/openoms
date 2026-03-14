@@ -127,7 +127,7 @@ func TestImageDownload_DownloadsExternalURLs(t *testing.T) {
 
 	body, contentType, err := svc.downloadImage(context.Background(), server.URL+"/image.png")
 	require.NoError(t, err)
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 
 	assert.Equal(t, "image/png", contentType)
 
@@ -174,7 +174,7 @@ func TestImageDownload_DefaultContentType(t *testing.T) {
 
 	body, contentType, err := svc.downloadImage(context.Background(), server.URL+"/no-type.jpg")
 	require.NoError(t, err)
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 
 	// When Content-Type header is empty, should default to image/jpeg
 	assert.Equal(t, "image/jpeg", contentType)

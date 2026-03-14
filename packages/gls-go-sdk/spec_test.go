@@ -46,7 +46,7 @@ func TestSpec_Auth_UsesBasicAuth(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -70,7 +70,7 @@ func TestSpec_ContentType_UsesGLSVersionHeader(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ParcelData":[{"TrackID":"T1"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ParcelData":[{"TrackID":"T1"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -97,7 +97,7 @@ func TestSpec_CreateShipment_PostsToShipmentsEndpoint(t *testing.T) {
 		gotMethod = r.Method
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"T1"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -139,7 +139,7 @@ func TestSpec_CreateShipment_RequestUsesCorrectFieldNames(t *testing.T) {
 		_ = json.Unmarshal(body, &gotBody)
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"CreatedShipment":{"ParcelData":[{"TrackID":"T1"}]}}`))
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ParcelData":[{"TrackID":"T1"}]}}`))
 	}))
 	defer srv.Close()
 
@@ -195,10 +195,10 @@ func TestSpec_CreateShipment_RequestUsesCorrectFieldNames(t *testing.T) {
 }
 
 func TestSpec_CreateShipment_ResponsePrintDataAtCreatedShipmentLevel(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// PrintData is at CreatedShipment level (sibling of ParcelData), NOT inside ParcelData
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"CreatedShipment": {
 				"ShipmentReference": "ORDER-001",
 				"ParcelData": [
@@ -258,7 +258,7 @@ func TestSpec_GetTracking_UsesPostMethod(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"events":[{"status":"INTRANSIT","location":"Lodz"}]}`))
+		_, _ = w.Write([]byte(`{"events":[{"status":"INTRANSIT","location":"Lodz"}]}`))
 	}))
 	defer srv.Close()
 
@@ -315,7 +315,7 @@ func TestSpec_Cancel_UsesPostToShipmentsCancel(t *testing.T) {
 		gotMethod = r.Method
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"CANCELLED"}`))
+		_, _ = w.Write([]byte(`{"status":"CANCELLED"}`))
 	}))
 	defer srv.Close()
 
@@ -375,9 +375,9 @@ func TestSpec_StatusMapping_IncludesAllGLSStatuses(t *testing.T) {
 // --- Edge Cases ---
 
 func TestSpec_CreateShipment_EmptyShippingUnit_ReturnsError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"message":"At least one shipping unit is required"}`))
+		_, _ = w.Write([]byte(`{"message":"At least one shipping unit is required"}`))
 	}))
 	defer srv.Close()
 

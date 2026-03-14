@@ -16,10 +16,13 @@ import (
 )
 
 var (
+	// ErrBundleComponentNotFound is returned when a bundle component does not exist.
 	ErrBundleComponentNotFound = errors.New("bundle component not found")
-	ErrProductNotBundle        = errors.New("product is not a bundle")
+	// ErrProductNotBundle is returned when a product is not configured as a bundle.
+	ErrProductNotBundle = errors.New("product is not a bundle")
 )
 
+// BundleService handles business logic for product bundles.
 type BundleService struct {
 	bundleRepo  *repository.BundleRepository
 	productRepo repository.ProductRepo
@@ -27,6 +30,7 @@ type BundleService struct {
 	pool        *pgxpool.Pool
 }
 
+// NewBundleService creates a new BundleService.
 func NewBundleService(
 	bundleRepo *repository.BundleRepository,
 	productRepo repository.ProductRepo,
@@ -41,6 +45,7 @@ func NewBundleService(
 	}
 }
 
+// ListComponents returns all components of a bundle product.
 func (s *BundleService) ListComponents(ctx context.Context, tenantID, bundleProductID uuid.UUID) ([]model.ProductBundle, error) {
 	var components []model.ProductBundle
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -54,6 +59,7 @@ func (s *BundleService) ListComponents(ctx context.Context, tenantID, bundleProd
 	return components, err
 }
 
+// AddComponent adds a product as a component of a bundle.
 func (s *BundleService) AddComponent(ctx context.Context, tenantID uuid.UUID, bundleProductID uuid.UUID, req model.CreateBundleComponentRequest, actorID uuid.UUID, ip string) (*model.ProductBundle, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -119,6 +125,7 @@ func (s *BundleService) AddComponent(ctx context.Context, tenantID uuid.UUID, bu
 	return bundle, nil
 }
 
+// UpdateComponent modifies the quantity or details of a bundle component.
 func (s *BundleService) UpdateComponent(ctx context.Context, tenantID uuid.UUID, componentID uuid.UUID, req model.UpdateBundleComponentRequest, actorID uuid.UUID, ip string) (*model.ProductBundle, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -155,6 +162,7 @@ func (s *BundleService) UpdateComponent(ctx context.Context, tenantID uuid.UUID,
 	return result, err
 }
 
+// RemoveComponent removes a component from a bundle.
 func (s *BundleService) RemoveComponent(ctx context.Context, tenantID uuid.UUID, componentID uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.bundleRepo.FindByID(ctx, tx, componentID)

@@ -56,7 +56,7 @@ func TestDoSetsBasicAuthHeader(t *testing.T) {
 			t.Errorf("Authorization = %q, want %q", auth, expected)
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -73,9 +73,9 @@ func TestDoSetsBasicAuthHeader(t *testing.T) {
 }
 
 func TestDoHandlesErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"code":"woocommerce_rest_shop_order_invalid_id","message":"Invalid ID."}`))
+		_, _ = w.Write([]byte(`{"code":"woocommerce_rest_shop_order_invalid_id","message":"Invalid ID."}`))
 	}))
 	defer srv.Close()
 
@@ -103,9 +103,9 @@ func TestDoHandlesErrorResponse(t *testing.T) {
 }
 
 func TestDoNonDecodableErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
-		w.Write([]byte(`<html>Bad Gateway</html>`))
+		_, _ = w.Write([]byte(`<html>Bad Gateway</html>`))
 	}))
 	defer srv.Close()
 
@@ -137,7 +137,7 @@ func TestDoWithRequestBody(t *testing.T) {
 		gotContentType = r.Header.Get("Content-Type")
 		gotBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":123}`))
+		_, _ = w.Write([]byte(`{"id":123}`))
 	}))
 	defer srv.Close()
 
@@ -161,9 +161,9 @@ func TestDoWithRequestBody(t *testing.T) {
 }
 
 func TestDoDecodeResponseError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`not json at all`))
+		_, _ = w.Write([]byte(`not json at all`))
 	}))
 	defer srv.Close()
 
@@ -250,7 +250,7 @@ func TestOrdersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[
+		_, _ = w.Write([]byte(`[
 			{
 				"id": 42,
 				"status": "processing",
@@ -348,7 +348,7 @@ func TestOrdersListWithModifiedAfter(t *testing.T) {
 		if s := r.URL.Query().Get("status"); s != "processing" {
 			t.Errorf("status = %q, want processing", s)
 		}
-		w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[]`))
 	}))
 	defer srv.Close()
 
@@ -371,7 +371,7 @@ func TestOrdersListEmpty(t *testing.T) {
 		if r.URL.RawQuery != "" {
 			t.Errorf("expected no query params, got %q", r.URL.RawQuery)
 		}
-		w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[]`))
 	}))
 	defer srv.Close()
 
@@ -390,9 +390,9 @@ func TestOrdersListEmpty(t *testing.T) {
 }
 
 func TestOrdersListError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"code":"internal_error","message":"server error"}`))
+		_, _ = w.Write([]byte(`{"code":"internal_error","message":"server error"}`))
 	}))
 	defer srv.Close()
 
@@ -412,7 +412,7 @@ func TestOrdersGet(t *testing.T) {
 		if r.URL.Path != "/orders/42" {
 			t.Errorf("path = %q, want /orders/42", r.URL.Path)
 		}
-		w.Write([]byte(`{"id":42,"status":"completed","currency":"PLN","total":"99.00","billing":{"first_name":"Anna","last_name":"Nowak"},"shipping":{},"line_items":[],"date_created":"2024-02-01T12:00:00","date_modified":"2024-02-01T13:00:00"}`))
+		_, _ = w.Write([]byte(`{"id":42,"status":"completed","currency":"PLN","total":"99.00","billing":{"first_name":"Anna","last_name":"Nowak"},"shipping":{},"line_items":[],"date_created":"2024-02-01T12:00:00","date_modified":"2024-02-01T13:00:00"}`))
 	}))
 	defer srv.Close()
 
@@ -437,9 +437,9 @@ func TestOrdersGet(t *testing.T) {
 }
 
 func TestOrdersGetError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"code":"woocommerce_rest_shop_order_invalid_id","message":"Invalid ID."}`))
+		_, _ = w.Write([]byte(`{"code":"woocommerce_rest_shop_order_invalid_id","message":"Invalid ID."}`))
 	}))
 	defer srv.Close()
 
@@ -496,7 +496,7 @@ func TestProductsList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[
+		_, _ = w.Write([]byte(`[
 			{
 				"id": 15,
 				"name": "Widget Pro",
@@ -564,7 +564,7 @@ func TestProductsGet(t *testing.T) {
 		if r.URL.Path != "/products/15" {
 			t.Errorf("path = %q, want /products/15", r.URL.Path)
 		}
-		w.Write([]byte(`{"id":15,"name":"Widget Pro","sku":"WP-001","price":"99.99","stock_quantity":50,"stock_status":"instock","status":"publish"}`))
+		_, _ = w.Write([]byte(`{"id":15,"name":"Widget Pro","sku":"WP-001","price":"99.99","stock_quantity":50,"stock_status":"instock","status":"publish"}`))
 	}))
 	defer srv.Close()
 
@@ -586,9 +586,9 @@ func TestProductsGet(t *testing.T) {
 }
 
 func TestProductsGetError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"code":"woocommerce_rest_product_invalid_id","message":"Invalid ID."}`))
+		_, _ = w.Write([]byte(`{"code":"woocommerce_rest_product_invalid_id","message":"Invalid ID."}`))
 	}))
 	defer srv.Close()
 
@@ -662,7 +662,7 @@ func TestWebhooksList(t *testing.T) {
 		if r.URL.Path != "/webhooks" {
 			t.Errorf("path = %q, want /webhooks", r.URL.Path)
 		}
-		w.Write([]byte(`[{"id":1,"name":"OpenOMS order.created","status":"active","topic":"order.created","delivery_url":"https://example.com/hook","secret":"s3cret"}]`))
+		_, _ = w.Write([]byte(`[{"id":1,"name":"OpenOMS order.created","status":"active","topic":"order.created","delivery_url":"https://example.com/hook","secret":"s3cret"}]`))
 	}))
 	defer srv.Close()
 
@@ -692,7 +692,7 @@ func TestWebhooksCreate(t *testing.T) {
 			t.Errorf("path = %q, want /webhooks", r.URL.Path)
 		}
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(`{"id":5,"name":"OpenOMS order.created","status":"active","topic":"order.created","delivery_url":"https://example.com/hook","secret":"s3cret"}`))
+		_, _ = w.Write([]byte(`{"id":5,"name":"OpenOMS order.created","status":"active","topic":"order.created","delivery_url":"https://example.com/hook","secret":"s3cret"}`))
 	}))
 	defer srv.Close()
 

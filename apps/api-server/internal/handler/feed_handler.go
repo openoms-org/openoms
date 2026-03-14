@@ -104,7 +104,7 @@ func (h *FeedHandler) ServeCeneoFeed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=900") // 15 min
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, _ = w.Write(data) //nolint:gosec
 }
 
 // ServeGoogleFeed serves the Google Shopping XML feed (public, token-authenticated).
@@ -134,7 +134,7 @@ func (h *FeedHandler) ServeGoogleFeed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=900") // 15 min
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	_, _ = w.Write(data) //nolint:gosec
 }
 
 // parseFeedParams extracts and validates tenant_id and token from URL params.

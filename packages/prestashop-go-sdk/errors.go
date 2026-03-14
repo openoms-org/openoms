@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Sentinel errors for API responses.
 var (
 	ErrUnauthorized = errors.New("prestashop: unauthorized")
 	ErrForbidden    = errors.New("prestashop: forbidden")

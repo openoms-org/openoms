@@ -18,11 +18,16 @@ import (
 )
 
 var (
-	ErrStocktakeNotFound     = errors.New("stocktake not found")
-	ErrStocktakeNotDraft     = errors.New("stocktake is not in draft status")
-	ErrStocktakeNotActive    = errors.New("stocktake is not in progress")
+	// ErrStocktakeNotFound is returned when a stocktake does not exist.
+	ErrStocktakeNotFound = errors.New("stocktake not found")
+	// ErrStocktakeNotDraft is returned when an operation requires a draft stocktake.
+	ErrStocktakeNotDraft = errors.New("stocktake is not in draft status")
+	// ErrStocktakeNotActive is returned when an operation requires an active stocktake.
+	ErrStocktakeNotActive = errors.New("stocktake is not in progress")
+	// ErrStocktakeItemNotFound is returned when a stocktake item does not exist.
 	ErrStocktakeItemNotFound = errors.New("stocktake item not found")
-	ErrNotAllItemsCounted    = errors.New("not all items have been counted")
+	// ErrNotAllItemsCounted is returned when a stocktake completion is attempted with uncounted items.
+	ErrNotAllItemsCounted = errors.New("not all items have been counted")
 )
 
 // StocktakeService provides business logic for stocktaking.
@@ -316,7 +321,7 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 				return fmt.Errorf("next PZ number: %w", err)
 			}
 			docNumber := fmt.Sprintf("PZ/%d/%03d", year, seq)
-			notes := fmt.Sprintf("Inwentaryzacja: %s - nadwyżki", existing.Name)
+			notes := fmt.Sprintf("Stocktake: %s - surplus", existing.Name)
 
 			doc := &model.WarehouseDocument{
 				ID:             uuid.New(),
@@ -364,7 +369,7 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 				return fmt.Errorf("next WZ number: %w", err)
 			}
 			docNumber := fmt.Sprintf("WZ/%d/%03d", year, seq)
-			notes := fmt.Sprintf("Inwentaryzacja: %s - niedobory", existing.Name)
+			notes := fmt.Sprintf("Stocktake: %s - shortages", existing.Name)
 
 			doc := &model.WarehouseDocument{
 				ID:             uuid.New(),

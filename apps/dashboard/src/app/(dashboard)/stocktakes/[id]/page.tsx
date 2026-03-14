@@ -56,13 +56,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import type { StocktakeItem } from "@/types/api";
-
-const statusLabels: Record<string, string> = {
-  draft: "Szkic",
-  in_progress: "W trakcie",
-  completed: "Zakończona",
-  cancelled: "Anulowana",
-};
+import { useTranslations } from "next-intl";
 
 const statusVariants: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
@@ -74,6 +68,15 @@ const statusVariants: Record<string, string> = {
 };
 
 export default function StocktakeDetailPage() {
+  const t = useTranslations("stocktakes");
+  const tc = useTranslations("common");
+
+  const statusLabels: Record<string, string> = {
+    draft: t("statusDraft"),
+    in_progress: t("statusInProgress"),
+    completed: t("statusCompleted"),
+    cancelled: t("statusCancelled"),
+  };
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -109,15 +112,15 @@ export default function StocktakeDetailPage() {
 
   const handleStart = useCallback(() => {
     startStocktake.mutate(id, {
-      onSuccess: () => toast.success("Inwentaryzacja została rozpoczęta"),
+      onSuccess: () => toast.success(t("inwentaryzacjaZostalaRozpoczeta")),
       onError: (error) => toast.error(getErrorMessage(error)),
     });
-  }, [id, startStocktake]);
+  }, [id, startStocktake, t]);
 
   const handleComplete = useCallback(() => {
     completeStocktake.mutate(id, {
       onSuccess: () => {
-        toast.success("Inwentaryzacja została zakończona");
+        toast.success(t("inwentaryzacjazostałazakonczona"));
         setShowCompleteConfirm(false);
       },
       onError: (error) => {
@@ -125,12 +128,12 @@ export default function StocktakeDetailPage() {
         setShowCompleteConfirm(false);
       },
     });
-  }, [id, completeStocktake]);
+  }, [id, completeStocktake, t]);
 
   const handleCancel = useCallback(() => {
     cancelStocktake.mutate(id, {
       onSuccess: () => {
-        toast.success("Inwentaryzacja została anulowana");
+        toast.success(t("inwentaryzacjazostałaanulowana"));
         setShowCancelConfirm(false);
       },
       onError: (error) => {
@@ -138,23 +141,23 @@ export default function StocktakeDetailPage() {
         setShowCancelConfirm(false);
       },
     });
-  }, [id, cancelStocktake]);
+  }, [id, cancelStocktake, t]);
 
   const handleDelete = useCallback(() => {
     deleteStocktake.mutate(id, {
       onSuccess: () => {
-        toast.success("Inwentaryzacja została usunięta");
+        toast.success(t("inwentaryzacjazostałausunieta"));
         router.push("/stocktakes");
       },
       onError: (error) => toast.error(getErrorMessage(error)),
     });
-  }, [id, deleteStocktake, router]);
+  }, [id, deleteStocktake, router, t]);
 
   const handleCountSubmit = useCallback(
     (itemId: string, value: string) => {
       const qty = parseInt(value, 10);
       if (isNaN(qty) || qty < 0) {
-        toast.error("Podaj poprawną ilość");
+        toast.error(t("podajPoprawnaIlosc"));
         return;
       }
 
@@ -169,7 +172,7 @@ export default function StocktakeDetailPage() {
         }
       );
     },
-    [recordCount]
+    [recordCount, t]
   );
 
   if (isLoading) {
@@ -181,14 +184,14 @@ export default function StocktakeDetailPage() {
       <AdminGuard>
         <div className="text-center py-12">
           <p className="text-muted-foreground">
-            Nie znaleziono inwentaryzacji.
+            {t("stocktakeNotFound")}
           </p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => router.push("/stocktakes")}
           >
-            Powrót do listy
+            {t("powrotDoListy")}
           </Button>
         </div>
       </AdminGuard>
@@ -215,7 +218,7 @@ export default function StocktakeDetailPage() {
               onClick={() => router.push("/stocktakes")}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Powrót
+              {t("powrot")}
             </Button>
             <h1 className="text-2xl font-bold tracking-tight">
               {stocktake.name}
@@ -241,14 +244,14 @@ export default function StocktakeDetailPage() {
               <>
                 <Button onClick={handleStart} disabled={startStocktake.isPending}>
                   <Play className="h-4 w-4 mr-2" />
-                  {startStocktake.isPending ? "Uruchamianie..." : "Rozpocznij"}
+                  {startStocktake.isPending ? t("starting") : t("start")}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={() => setShowDeleteConfirm(true)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Usuń
+                  {t("delete")}
                 </Button>
               </>
             )}
@@ -263,14 +266,14 @@ export default function StocktakeDetailPage() {
                   }
                 >
                   <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Zakończ
+                  {t("zakoncz")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowCancelConfirm(true)}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  Anuluj
+                  {tc("cancel")}
                 </Button>
               </>
             )}
@@ -282,7 +285,7 @@ export default function StocktakeDetailPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Pozycje</CardDescription>
+                <CardDescription>{t("items")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{stats.total_items}</p>
@@ -290,7 +293,7 @@ export default function StocktakeDetailPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Zliczone</CardDescription>
+                <CardDescription>{t("counted")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">
@@ -300,7 +303,7 @@ export default function StocktakeDetailPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Rozbieżności</CardDescription>
+                <CardDescription>{t("rozbieznosci")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p
@@ -314,7 +317,7 @@ export default function StocktakeDetailPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Nadwyżki</CardDescription>
+                <CardDescription>{t("nadwyzki")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p
@@ -328,7 +331,7 @@ export default function StocktakeDetailPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Niedobory</CardDescription>
+                <CardDescription>{t("shortages")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p
@@ -347,7 +350,7 @@ export default function StocktakeDetailPage() {
         {stocktake.notes && (
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Uwagi</CardDescription>
+              <CardDescription>{t("notes")}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm">{stocktake.notes}</p>
@@ -358,7 +361,7 @@ export default function StocktakeDetailPage() {
         {/* Items */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Pozycje</h2>
+            <h2 className="text-lg font-semibold">{t("items")}</h2>
             <Tabs
               value={itemFilter}
               onValueChange={(v) => {
@@ -367,9 +370,9 @@ export default function StocktakeDetailPage() {
               }}
             >
               <TabsList>
-                <TabsTrigger value="all">Wszystkie</TabsTrigger>
-                <TabsTrigger value="uncounted">Niezliczone</TabsTrigger>
-                <TabsTrigger value="discrepancies">Rozbieżności</TabsTrigger>
+                <TabsTrigger value="all">{t("all")}</TabsTrigger>
+                <TabsTrigger value="uncounted">{t("uncounted")}</TabsTrigger>
+                <TabsTrigger value="discrepancies">{t("rozbieznosci")}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -378,11 +381,11 @@ export default function StocktakeDetailPage() {
             <LoadingSkeleton />
           ) : items.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              Brak pozycji{" "}
+              {t("noItems")}{" "}
               {itemFilter === "uncounted"
-                ? "do zliczenia"
+                ? t("toCount")
                 : itemFilter === "discrepancies"
-                ? "z rozbieżnościami"
+                ? t("zRozbieznosciami")
                 : ""}
             </p>
           ) : (
@@ -391,12 +394,12 @@ export default function StocktakeDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Produkt</TableHead>
+                      <TableHead>{t("product")}</TableHead>
                       <TableHead>SKU</TableHead>
-                      <TableHead className="text-right">Oczekiwane</TableHead>
-                      <TableHead className="text-right">Zliczone</TableHead>
-                      <TableHead className="text-right">Różnica</TableHead>
-                      <TableHead>Uwagi</TableHead>
+                      <TableHead className="text-right">{t("expected")}</TableHead>
+                      <TableHead className="text-right">{t("counted")}</TableHead>
+                      <TableHead className="text-right">{t("roznica")}</TableHead>
+                      <TableHead>{t("notes")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -460,7 +463,7 @@ export default function StocktakeDetailPage() {
                                   item.counted_quantity
                                 ) : (
                                   <span className="text-muted-foreground italic">
-                                    kliknij
+                                    {t("click")}
                                   </span>
                                 )}
                               </button>
@@ -503,8 +506,7 @@ export default function StocktakeDetailPage() {
               {totalItems > limit && (
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
-                    Wyświetlono {offset + 1}-{Math.min(offset + limit, totalItems)}{" "}
-                    z {totalItems}
+                    {t("showingRange", { from: offset + 1, to: Math.min(offset + limit, totalItems), total: totalItems })}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -513,7 +515,7 @@ export default function StocktakeDetailPage() {
                       disabled={offset === 0}
                       onClick={() => setOffset(Math.max(0, offset - limit))}
                     >
-                      Poprzednia
+                      {t("previous")}
                     </Button>
                     <Button
                       variant="outline"
@@ -521,7 +523,7 @@ export default function StocktakeDetailPage() {
                       disabled={offset + limit >= totalItems}
                       onClick={() => setOffset(offset + limit)}
                     >
-                      Następna
+                      {t("next")}
                     </Button>
                   </div>
                 </div>
@@ -535,9 +537,9 @@ export default function StocktakeDetailPage() {
       <ConfirmDialog
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
-        title="Usuń inwentaryzację"
-        description="Czy na pewno chcesz usunąć tę inwentaryzację? Operacji nie można cofnąć."
-        confirmLabel="Usuń"
+        title={t("usunInwentaryzacje")}
+        description={t("czyNaPewnoChceszUsunacTeInwentaryzacjeOperacjiNieM")}
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteStocktake.isPending}
@@ -547,29 +549,27 @@ export default function StocktakeDetailPage() {
       <Dialog open={showCompleteConfirm} onOpenChange={setShowCompleteConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Zakończ inwentaryzację</DialogTitle>
+            <DialogTitle>{t("zakonczInwentaryzacje")}</DialogTitle>
             <DialogDescription>
-              Czy na pewno chcesz zakończyć tę inwentaryzację? Zostaną
-              automatycznie wygenerowane dokumenty korygujące (PZ dla nadwyżek,
-              WZ dla niedoborów) i zaktualizowane stany magazynowe.
+              {t("czyNaPewnoChceszZakonczycTeInwentaryzacje")}
             </DialogDescription>
           </DialogHeader>
           {stats && stats.discrepancies > 0 && (
             <div className="rounded-md border p-4 bg-muted/50">
-              <p className="text-sm font-medium mb-2">Podsumowanie rozbieżności:</p>
+              <p className="text-sm font-medium mb-2">{t("podsumowanieRozbieznosci")}</p>
               <ul className="text-sm space-y-1">
                 <li className="text-green-600">
-                  Nadwyżki: {stats.surplus_count} pozycji
+                  {t("surplusItems", { count: stats.surplus_count })}
                 </li>
                 <li className="text-red-600">
-                  Niedobory: {stats.shortage_count} pozycji
+                  {t("shortageItems", { count: stats.shortage_count })}
                 </li>
               </ul>
             </div>
           )}
           {stats && stats.discrepancies === 0 && (
             <p className="text-sm text-muted-foreground">
-              Nie wykryto żadnych rozbieżności. Stany magazynowe nie zostaną zmienione.
+              {t("nieWykrytoZadnychRozbieznosciStanyMagazynoweNie")}
             </p>
           )}
           <DialogFooter>
@@ -577,15 +577,15 @@ export default function StocktakeDetailPage() {
               variant="outline"
               onClick={() => setShowCompleteConfirm(false)}
             >
-              Anuluj
+              {tc("cancel")}
             </Button>
             <Button
               onClick={handleComplete}
               disabled={completeStocktake.isPending}
             >
               {completeStocktake.isPending
-                ? "Kończenie..."
-                : "Zakończ inwentaryzację"}
+                ? t("konczenie")
+                : t("zakonczInwentaryzacje")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -595,9 +595,9 @@ export default function StocktakeDetailPage() {
       <ConfirmDialog
         open={showCancelConfirm}
         onOpenChange={setShowCancelConfirm}
-        title="Anuluj inwentaryzację"
-        description="Czy na pewno chcesz anulować tę inwentaryzację? Zliczone dane zostaną zachowane, ale stany magazynowe nie będą zmienione."
-        confirmLabel="Anuluj inwentaryzację"
+        title={t("anulujInwentaryzacje")}
+        description={t("czyNaPewnoChceszAnulowacTeInwentaryzacjeZliczoneDa")}
+        confirmLabel={t("anulujInwentaryzacje")}
         variant="destructive"
         onConfirm={handleCancel}
         isLoading={cancelStocktake.isPending}

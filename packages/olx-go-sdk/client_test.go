@@ -58,7 +58,7 @@ func TestDoSetsAuthHeader(t *testing.T) {
 			t.Errorf("Version = %q, want %q", version, "2.0")
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -76,9 +76,9 @@ func TestDoSetsAuthHeader(t *testing.T) {
 }
 
 func TestDoHandlesErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte(`{"error":"access_denied","message":"Insufficient permissions"}`))
+		_, _ = w.Write([]byte(`{"error":"access_denied","message":"Insufficient permissions"}`))
 	}))
 	defer srv.Close()
 
@@ -118,16 +118,16 @@ func TestListAdverts(t *testing.T) {
 		resp := AdvertListResponse{
 			Data: []Advert{
 				{
-					ID:    12345,
-					Title: "Test Product",
-					Status: "active",
-					Price: &AdvertPrice{Value: 99.99, Currency: "PLN"},
+					ID:      12345,
+					Title:   "Test Product",
+					Status:  "active",
+					Price:   &AdvertPrice{Value: 99.99, Currency: "PLN"},
 					Contact: &Contact{Name: "Jan Kowalski", Email: "jan@test.pl"},
 				},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -161,13 +161,13 @@ func TestGetAdvert(t *testing.T) {
 			Data Advert `json:"data"`
 		}{
 			Data: Advert{
-				ID:    12345,
-				Title: "Test Product",
+				ID:     12345,
+				Title:  "Test Product",
 				Status: "active",
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -222,7 +222,7 @@ func TestListTransactions(t *testing.T) {
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
@@ -318,8 +318,8 @@ func TestCreateAdvert(t *testing.T) {
 		}
 
 		var body struct {
-			Title      string `json:"title"`
-			CategoryID int    `json:"category_id"`
+			Title       string `json:"title"`
+			CategoryID  int    `json:"category_id"`
 			Description string `json:"description"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -336,7 +336,7 @@ func TestCreateAdvert(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":{"id":99999,"title":"Test","status":"new"}}`))
+		_, _ = w.Write([]byte(`{"data":{"id":99999,"title":"Test","status":"new"}}`))
 	}))
 	defer srv.Close()
 
@@ -375,7 +375,7 @@ func TestUpdateAdvert(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":{"id":12345,"title":"Updated","status":"active"}}`))
+		_, _ = w.Write([]byte(`{"data":{"id":12345,"title":"Updated","status":"active"}}`))
 	}))
 	defer srv.Close()
 
@@ -517,7 +517,7 @@ func TestListCategories(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":[{"id":100,"name":"Elektronika","is_leaf":false}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"id":100,"name":"Elektronika","is_leaf":false}]}`))
 	}))
 	defer srv.Close()
 
@@ -555,7 +555,7 @@ func TestGetCategory(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":{"id":100,"name":"Elektronika","is_leaf":false,"photos_limit":8}}`))
+		_, _ = w.Write([]byte(`{"data":{"id":100,"name":"Elektronika","is_leaf":false,"photos_limit":8}}`))
 	}))
 	defer srv.Close()
 
@@ -593,7 +593,7 @@ func TestGetCategoryAttributes(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":[{"code":"state","label":"Stan","validation":{"type":"attribute","required":true}}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"code":"state","label":"Stan","validation":{"type":"attribute","required":true}}]}`))
 	}))
 	defer srv.Close()
 
@@ -637,7 +637,7 @@ func TestSuggestCategory(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"data":[{"id":200,"name":"Smartfony","path":["Elektronika","Telefony","Smartfony"]}]}`))
+		_, _ = w.Write([]byte(`{"data":[{"id":200,"name":"Smartfony","path":["Elektronika","Telefony","Smartfony"]}]}`))
 	}))
 	defer srv.Close()
 
@@ -676,9 +676,9 @@ func containsPath(urlPath, expected string) bool {
 
 func TestMapTransactionStatus(t *testing.T) {
 	tests := []struct {
-		olx      string
-		wantOMS  string
-		wantOK   bool
+		olx     string
+		wantOMS string
+		wantOK  bool
 	}{
 		{"pending", "new", true},
 		{"completed", "confirmed", true},

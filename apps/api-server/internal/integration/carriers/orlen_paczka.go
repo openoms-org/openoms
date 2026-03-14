@@ -31,7 +31,7 @@ type OrlenPaczkaProvider struct {
 }
 
 // NewOrlenPaczkaProvider creates an Orlen Paczka CarrierProvider from encrypted credentials.
-func NewOrlenPaczkaProvider(credentials json.RawMessage, settings json.RawMessage) (*OrlenPaczkaProvider, error) {
+func NewOrlenPaczkaProvider(credentials json.RawMessage, _ json.RawMessage) (*OrlenPaczkaProvider, error) {
 	var creds OrlenPaczkaCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("orlen_paczka: parse credentials: %w", err)
@@ -50,8 +50,10 @@ func NewOrlenPaczkaProvider(credentials json.RawMessage, settings json.RawMessag
 	}, nil
 }
 
+// ProviderName returns the carrier provider identifier.
 func (p *OrlenPaczkaProvider) ProviderName() string { return "orlen_paczka" }
 
+// CreateShipment creates an Orlen Paczka shipment and returns the response with tracking info.
 func (p *OrlenPaczkaProvider) CreateShipment(ctx context.Context, req integration.CarrierShipmentRequest) (*integration.CarrierShipmentResponse, error) {
 	orlenReq := &orlensdk.CreateShipmentRequest{
 		Receiver: orlensdk.Receiver{
@@ -101,10 +103,12 @@ func (p *OrlenPaczkaProvider) CreateShipment(ctx context.Context, req integratio
 	}, nil
 }
 
-func (p *OrlenPaczkaProvider) GetLabel(ctx context.Context, externalID string, format string) ([]byte, error) {
+// GetLabel downloads the shipping label for the given Orlen Paczka shipment.
+func (p *OrlenPaczkaProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
 	return p.client.Shipments.GetLabel(ctx, externalID)
 }
 
+// GetTracking returns tracking events for the given Orlen Paczka shipment.
 func (p *OrlenPaczkaProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
 	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
 	if err != nil {
@@ -124,14 +128,17 @@ func (p *OrlenPaczkaProvider) GetTracking(ctx context.Context, trackingNumber st
 	return events, nil
 }
 
+// CancelShipment cancels an Orlen Paczka shipment by its external ID.
 func (p *OrlenPaczkaProvider) CancelShipment(ctx context.Context, externalID string) error {
 	return p.client.Shipments.Cancel(ctx, externalID)
 }
 
+// MapStatus maps an Orlen Paczka carrier status to the internal shipment status.
 func (p *OrlenPaczkaProvider) MapStatus(carrierStatus string) (string, bool) {
 	return orlensdk.MapStatus(carrierStatus)
 }
 
+// GetRates returns estimated shipping rates for Orlen Paczka.
 func (p *OrlenPaczkaProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
 	// TODO: Implement real Orlen Paczka rate API integration.
 	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
@@ -169,8 +176,10 @@ func (p *OrlenPaczkaProvider) GetRates(_ context.Context, req integration.RateRe
 	return rates, nil
 }
 
+// SupportsPickupPoints reports that Orlen Paczka supports pickup point delivery.
 func (p *OrlenPaczkaProvider) SupportsPickupPoints() bool { return true }
 
+// SearchPickupPoints searches for Orlen Paczka pickup points matching the given query.
 func (p *OrlenPaczkaProvider) SearchPickupPoints(ctx context.Context, query string) ([]integration.PickupPoint, error) {
 	resp, err := p.client.Points.SearchPoints(ctx, query, 10)
 	if err != nil {

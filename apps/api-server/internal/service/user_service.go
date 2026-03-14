@@ -17,13 +17,19 @@ import (
 )
 
 var (
-	ErrCannotDeleteSelf      = errors.New("cannot delete your own account")
+	// ErrCannotDeleteSelf is returned when a user attempts to delete their own account.
+	ErrCannotDeleteSelf = errors.New("cannot delete your own account")
+	// ErrCannotDeleteLastOwner is returned when deleting the sole remaining owner of a tenant.
 	ErrCannotDeleteLastOwner = errors.New("cannot delete the last owner of the tenant")
-	ErrDuplicateEmail        = errors.New("email already exists in this tenant")
-	ErrOwnerRoleEscalation   = errors.New("only owners can assign the owner role")
-	ErrUserLimitExceeded     = errors.New("user limit exceeded")
+	// ErrDuplicateEmail is returned when a user with the same email already exists.
+	ErrDuplicateEmail = errors.New("email already exists in this tenant")
+	// ErrOwnerRoleEscalation is returned when a non-owner attempts to assign the owner role.
+	ErrOwnerRoleEscalation = errors.New("only owners can assign the owner role")
+	// ErrUserLimitExceeded is returned when a tenant has reached its maximum number of users.
+	ErrUserLimitExceeded = errors.New("user limit exceeded")
 )
 
+// UserService handles user management within a tenant.
 type UserService struct {
 	userRepo    repository.UserRepo
 	auditRepo   repository.AuditRepo
@@ -31,6 +37,7 @@ type UserService struct {
 	pool        *pgxpool.Pool
 }
 
+// NewUserService creates a new UserService.
 func NewUserService(
 	userRepo repository.UserRepo,
 	auditRepo repository.AuditRepo,
@@ -45,6 +52,7 @@ func NewUserService(
 	}
 }
 
+// GetCurrentUser returns the authenticated user's profile.
 func (s *UserService) GetCurrentUser(ctx context.Context, tenantID, userID uuid.UUID) (*model.User, error) {
 	var user *model.User
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -61,6 +69,7 @@ func (s *UserService) GetCurrentUser(ctx context.Context, tenantID, userID uuid.
 	return user, nil
 }
 
+// ListUsers returns all users belonging to a tenant.
 func (s *UserService) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]model.User, error) {
 	var users []model.User
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -71,6 +80,7 @@ func (s *UserService) ListUsers(ctx context.Context, tenantID uuid.UUID) ([]mode
 	return users, err
 }
 
+// CreateUser adds a new user to a tenant.
 func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req model.CreateUserRequest, actorID uuid.UUID, ip string) (*model.User, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -136,6 +146,7 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 	return user, nil
 }
 
+// UpdateUser modifies an existing user's profile and role.
 func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID, req model.UpdateUserRequest, actorID uuid.UUID, actorRole string, ip string) (*model.User, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -179,6 +190,13 @@ func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID
 			}
 			user.RoleID = req.RoleID
 		}
+		if req.Language != nil {
+			changes["language"] = map[string]any{"old": user.Language, "new": *req.Language}
+			if err := s.userRepo.UpdateLanguage(ctx, tx, userID, req.Language); err != nil {
+				return fmt.Errorf("update language: %w", err)
+			}
+			user.Language = req.Language
+		}
 
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
@@ -193,6 +211,7 @@ func (s *UserService) UpdateUser(ctx context.Context, tenantID, userID uuid.UUID
 	return user, err
 }
 
+// DeleteUser removes a user from a tenant.
 func (s *UserService) DeleteUser(ctx context.Context, tenantID, targetID, actorID uuid.UUID, ip string) error {
 	if targetID == actorID {
 		return ErrCannotDeleteSelf

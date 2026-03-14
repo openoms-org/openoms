@@ -1,3 +1,4 @@
+// Package model defines the core domain types, request/response DTOs, and validation logic.
 package model
 
 import (

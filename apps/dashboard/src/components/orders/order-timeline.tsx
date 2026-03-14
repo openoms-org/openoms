@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { pl } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Plus,
   ArrowRightLeft,
@@ -18,13 +20,6 @@ import { ORDER_STATUSES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { cn } from "@/lib/utils";
 import type { AuditLogEntry } from "@/types/api";
-
-const ACTION_LABELS: Record<string, string> = {
-  "order.created": "Utworzono zamówienie",
-  "order.updated": "Zaktualizowano zamówienie",
-  "order.deleted": "Usunięto zamówienie",
-  "order.status_changed": "Zmieniono status",
-};
 
 function getActionIcon(action: string) {
   switch (action) {
@@ -69,11 +64,12 @@ function EntryChanges({ entry, orderStatuses }: { entry: AuditLogEntry; orderSta
   );
 }
 
-function TimelineEntry({ entry, orderStatuses }: { entry: AuditLogEntry; orderStatuses: Record<string, { label: string; color: string }> }) {
-  const label = ACTION_LABELS[entry.action] || entry.action;
+function TimelineEntry({ entry, orderStatuses, actionLabels, locale }: { entry: AuditLogEntry; orderStatuses: Record<string, { label: string; color: string }>; actionLabels: Record<string, string>; locale: string }) {
+  const label = actionLabels[entry.action] || entry.action;
+  const dateLocale = locale === "pl" ? pl : enUS;
   const relativeTime = formatDistanceToNow(new Date(entry.created_at), {
     addSuffix: true,
-    locale: pl,
+    locale: dateLocale,
   });
 
   return (
@@ -101,11 +97,20 @@ interface OrderTimelineProps {
 }
 
 export function OrderTimeline({ orderId }: OrderTimelineProps) {
+  const t = useTranslations("orders");
+  const locale = useLocale();
   const { data: entries, isLoading } = useOrderAudit(orderId);
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
   const hasEntries = !!(entries && entries.length > 0);
   const [open, setOpen] = useState(hasEntries);
+
+  const actionLabels: Record<string, string> = {
+    "order.created": t("timeline.actions.order.created"),
+    "order.updated": t("timeline.actions.order.updated"),
+    "order.deleted": t("timeline.actions.order.deleted"),
+    "order.status_changed": t("timeline.actions.order.status_changed"),
+  };
 
   return (
     <Card>
@@ -115,7 +120,7 @@ export function OrderTimeline({ orderId }: OrderTimelineProps) {
       >
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-semibold">Historia zamówienia</h3>
+          <h3 className="font-semibold">{t("timeline.title")}</h3>
           {hasEntries && (
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {entries.length}
@@ -140,12 +145,12 @@ export function OrderTimeline({ orderId }: OrderTimelineProps) {
           ) : !entries || entries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Clock className="h-8 w-8 text-muted-foreground/50 mb-2" />
-              <p className="text-sm text-muted-foreground">Brak historii</p>
+              <p className="text-sm text-muted-foreground">{t("timeline.noHistory")}</p>
             </div>
           ) : (
             <div>
               {entries.map((entry) => (
-                <TimelineEntry key={entry.id} entry={entry} orderStatuses={orderStatuses} />
+                <TimelineEntry key={entry.id} entry={entry} orderStatuses={orderStatuses} actionLabels={actionLabels} locale={locale} />
               ))}
             </div>
           )}

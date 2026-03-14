@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronsUpDown, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ export function OrderSearchCombobox({
   onValueChange,
   disabled,
 }: OrderSearchComboboxProps) {
+  const t = useTranslations("shared.orderSearch");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -91,7 +93,7 @@ export function OrderSearchCombobox({
     if (value) {
       return `${shortId(value)}...`;
     }
-    return "Wybierz zamówienie...";
+    return t("placeholder");
   };
 
   return (
@@ -111,7 +113,7 @@ export function OrderSearchCombobox({
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Szukaj zamówienia..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onValueChange={setSearch}
           />
@@ -121,7 +123,7 @@ export function OrderSearchCombobox({
                 <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             ) : orders.length === 0 ? (
-              <CommandEmpty>Nie znaleziono zamówień.</CommandEmpty>
+              <CommandEmpty>{t("noResults")}</CommandEmpty>
             ) : (
               <CommandGroup>
                 {orders.map((order) => (

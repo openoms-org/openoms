@@ -24,6 +24,7 @@ type DelayedActionWorker struct {
 	logger      *slog.Logger
 }
 
+// NewDelayedActionWorker creates a new DelayedActionWorker.
 func NewDelayedActionWorker(
 	pool *pgxpool.Pool,
 	delayedRepo repository.DelayedActionRepo,
@@ -38,14 +39,17 @@ func NewDelayedActionWorker(
 	}
 }
 
+// Name returns the worker identifier.
 func (w *DelayedActionWorker) Name() string {
 	return "delayed_action_executor"
 }
 
+// Interval returns how frequently the worker should run.
 func (w *DelayedActionWorker) Interval() time.Duration {
 	return 30 * time.Second
 }
 
+// Run executes pending delayed automation actions.
 func (w *DelayedActionWorker) Run(ctx context.Context) error {
 	// Query pending actions directly (bypassing RLS for cross-tenant)
 	var pending []model.DelayedAction

@@ -24,6 +24,7 @@ import { useGenerateLabel } from "@/hooks/use-shipments";
 import { CarrierFields, type CarrierFieldValues } from "@/components/shipments/carrier-fields";
 import { SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import type { Order, Shipment, GenerateLabelRequest } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface GenerateLabelDialogProps {
   shipmentId: string;
@@ -53,10 +54,10 @@ function buildInitialValues(provider: string, shipment?: Shipment): CarrierField
   return { ...defaults, ...carrierData };
 }
 
-function getDialogTitle(provider: string): string {
+function getDialogTitle(provider: string, t: (key: string, params?: Record<string, string>) => string): string {
   const label = SHIPMENT_PROVIDER_LABELS[provider];
-  if (label) return `Generuj etykietę ${label}`;
-  return `Generuj etykietę — ${provider.toUpperCase()}`;
+  if (label) return t("generateLabelFor", { carrier: label });
+  return t("generateLabelFor", { carrier: provider.toUpperCase() });
 }
 
 export function GenerateLabelDialog({
@@ -67,6 +68,7 @@ export function GenerateLabelDialog({
   open,
   onOpenChange,
 }: GenerateLabelDialogProps) {
+  const t = useTranslations("shipments");
   const generateLabel = useGenerateLabel(shipmentId);
 
   const [carrierValues, setCarrierValues] = useState<CarrierFieldValues>(
@@ -103,11 +105,11 @@ export function GenerateLabelDialog({
 
     generateLabel.mutate(data, {
       onSuccess: () => {
-        toast.success("Etykieta wygenerowana");
+        toast.success(t("labelGenerated"));
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error(error.message || "Nie udało się wygenerować etykiety");
+        toast.error(error.message || t("nieUdałoSieWygenerowacEtykiety"));
       },
     });
   };
@@ -118,9 +120,9 @@ export function GenerateLabelDialog({
         className={isLocker ? "max-w-3xl" : ""}
       >
         <DialogHeader>
-          <DialogTitle>{getDialogTitle(provider)}</DialogTitle>
+          <DialogTitle>{getDialogTitle(provider, t)}</DialogTitle>
           <DialogDescription>
-            Wypełnij dane przesyłki, aby wygenerować etykietę.
+            {t("wypełnijDanePrzesyłkiAbyWygenerowacEtykiete")}
           </DialogDescription>
         </DialogHeader>
 
@@ -134,7 +136,7 @@ export function GenerateLabelDialog({
 
           {/* Label format — shared across all carriers */}
           <div className="space-y-2">
-            <Label>Format etykiety</Label>
+            <Label>{t("labelFormat")}</Label>
             <Select
               value={labelFormat}
               onValueChange={setLabelFormat}
@@ -144,8 +146,8 @@ export function GenerateLabelDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="zpl">ZPL (drukarka termiczna)</SelectItem>
-                <SelectItem value="epl">EPL (drukarka termiczna)</SelectItem>
+                <SelectItem value="zpl">{t("zplThermalPrinter")}</SelectItem>
+                <SelectItem value="epl">{t("eplThermalPrinter")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -153,14 +155,14 @@ export function GenerateLabelDialog({
           {/* Receiver preview */}
           {order && (
             <div className="space-y-2 rounded-md border p-3">
-              <Label>Odbiorca</Label>
+              <Label>{t("receiver")}</Label>
               <div className="space-y-1 text-sm">
                 <p>
-                  <span className="text-muted-foreground">Imię i nazwisko: </span>
+                  <span className="text-muted-foreground">{t("imieINazwisko")} </span>
                   {order.customer_name}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Telefon: </span>
+                  <span className="text-muted-foreground">{t("phone")}: </span>
                   {order.customer_phone ?? "-"}
                 </p>
                 <p>
@@ -169,7 +171,7 @@ export function GenerateLabelDialog({
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Dane odbiorcy pobrane z zamówienia
+                {t("daneOdbiorcyPobraneZZamowienia")}
               </p>
             </div>
           )}
@@ -183,7 +185,7 @@ export function GenerateLabelDialog({
             {generateLabel.isPending && (
               <Loader2 className="h-4 w-4 animate-spin" />
             )}
-            Generuj etykietę
+            {t("generujEtykiete")}
           </Button>
         </DialogFooter>
       </DialogContent>

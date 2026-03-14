@@ -82,17 +82,17 @@ func TestExchangeCode(t *testing.T) {
 			t.Errorf("Authorization header missing Basic prefix, got %q", auth)
 		}
 
-		if err := r.ParseForm(); err != nil {
+		if err := r.ParseForm(); err != nil { //nolint:gosec // test handler
 			t.Fatalf("ParseForm: %v", err)
 		}
 
-		if v := r.FormValue("grant_type"); v != "authorization_code" {
+		if v := r.FormValue("grant_type"); v != "authorization_code" { //nolint:gosec // test handler
 			t.Errorf("grant_type = %q, want authorization_code", v)
 		}
-		if v := r.FormValue("code"); v != "test-auth-code" {
+		if v := r.FormValue("code"); v != "test-auth-code" { //nolint:gosec // test handler
 			t.Errorf("code = %q, want test-auth-code", v)
 		}
-		if v := r.FormValue("redirect_uri"); v != "https://example.com/callback" {
+		if v := r.FormValue("redirect_uri"); v != "https://example.com/callback" { //nolint:gosec // test handler
 			t.Errorf("redirect_uri = %q, want https://example.com/callback", v)
 		}
 
@@ -104,7 +104,7 @@ func TestExchangeCode(t *testing.T) {
 			TokenType:             "User Access Token",
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp) //nolint:gosec // G117: test response
 	}))
 	defer srv.Close()
 

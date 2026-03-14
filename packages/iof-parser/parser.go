@@ -28,8 +28,8 @@ type Product struct {
 // IOF XML structures
 
 type xmlOffer struct {
-	XMLName  xml.Name     `xml:"offer"`
-	Products xmlProducts  `xml:"products"`
+	XMLName  xml.Name    `xml:"offer"`
+	Products xmlProducts `xml:"products"`
 }
 
 type xmlProducts struct {
@@ -37,16 +37,16 @@ type xmlProducts struct {
 }
 
 type xmlProduct struct {
-	ID           string          `xml:"id,attr"`
-	CodeProducer string          `xml:"code_producer,attr"`
-	Producer     xmlProducer     `xml:"producer"`
-	Category     xmlCategory     `xml:"category"`
-	Description  xmlDescription  `xml:"description"`
-	Price        xmlPrice        `xml:"price"`
-	Sizes        xmlSizes        `xml:"sizes"`
-	Images       xmlImages       `xml:"images"`
-	Codes        []xmlCode       `xml:"code"`
-	Attrs        xmlAttrs        `xml:"attrs"`
+	ID           string         `xml:"id,attr"`
+	CodeProducer string         `xml:"code_producer,attr"`
+	Producer     xmlProducer    `xml:"producer"`
+	Category     xmlCategory    `xml:"category"`
+	Description  xmlDescription `xml:"description"`
+	Price        xmlPrice       `xml:"price"`
+	Sizes        xmlSizes       `xml:"sizes"`
+	Images       xmlImages      `xml:"images"`
+	Codes        []xmlCode      `xml:"code"`
+	Attrs        xmlAttrs       `xml:"attrs"`
 }
 
 type xmlAttrs struct {
@@ -131,7 +131,7 @@ func ParseURL(ctx context.Context, url string, client *http.Client) ([]Product, 
 	if err != nil {
 		return nil, fmt.Errorf("fetch IOF feed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("IOF feed returned status %d", resp.StatusCode)

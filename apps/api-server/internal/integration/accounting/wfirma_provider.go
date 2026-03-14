@@ -1,3 +1,4 @@
+// Package accounting implements invoicing provider integrations (wFirma).
 package accounting
 
 import (
@@ -28,7 +29,7 @@ type WFirmaProvider struct {
 }
 
 // NewWFirmaProvider creates a new wFirma invoicing provider.
-func NewWFirmaProvider(credentials json.RawMessage, settings json.RawMessage) (*WFirmaProvider, error) {
+func NewWFirmaProvider(credentials json.RawMessage, _ json.RawMessage) (*WFirmaProvider, error) {
 	var creds WFirmaCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("wfirma: invalid credentials: %w", err)
@@ -42,10 +43,12 @@ func NewWFirmaProvider(credentials json.RawMessage, settings json.RawMessage) (*
 	return &WFirmaProvider{client: client}, nil
 }
 
+// ProviderName returns the invoicing provider identifier.
 func (p *WFirmaProvider) ProviderName() string {
 	return "wfirma"
 }
 
+// CreateInvoice creates a new invoice in wFirma and returns the result.
 func (p *WFirmaProvider) CreateInvoice(ctx context.Context, req integration.InvoiceRequest) (*integration.InvoiceResult, error) {
 	items := make([]sdk.InvoiceItem, 0, len(req.Items))
 	for _, item := range req.Items {
@@ -86,6 +89,7 @@ func (p *WFirmaProvider) CreateInvoice(ctx context.Context, req integration.Invo
 	}, nil
 }
 
+// GetInvoice retrieves a wFirma invoice by its external ID.
 func (p *WFirmaProvider) GetInvoice(ctx context.Context, externalID string) (*integration.InvoiceResult, error) {
 	id, err := sdk.ParseExternalID(externalID)
 	if err != nil {
@@ -104,6 +108,7 @@ func (p *WFirmaProvider) GetInvoice(ctx context.Context, externalID string) (*in
 	}, nil
 }
 
+// GetPDF downloads the PDF for a wFirma invoice by its external ID.
 func (p *WFirmaProvider) GetPDF(ctx context.Context, externalID string) ([]byte, error) {
 	id, err := sdk.ParseExternalID(externalID)
 	if err != nil {
@@ -118,7 +123,8 @@ func (p *WFirmaProvider) GetPDF(ctx context.Context, externalID string) ([]byte,
 	return data, nil
 }
 
-func (p *WFirmaProvider) CancelInvoice(ctx context.Context, externalID string) error {
+// CancelInvoice is not supported by wFirma; use correction invoices instead.
+func (p *WFirmaProvider) CancelInvoice(_ context.Context, _ string) error {
 	// wFirma does not have a direct cancel endpoint exposed via this SDK.
 	// The invoice can be corrected instead (correction invoice).
 	return fmt.Errorf("wfirma: cancel not supported, use correction invoice instead")

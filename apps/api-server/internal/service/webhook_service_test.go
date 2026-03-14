@@ -10,7 +10,7 @@ import (
 )
 
 func TestVerifyHMAC_Valid(t *testing.T) {
-	secret := "my-webhook-secret"
+	secret := "my-webhook-secret" // #nosec G101 -- test dummy secret
 	body := []byte(`{"event":"order.created"}`)
 
 	mac := hmac.New(sha256.New, []byte(secret))

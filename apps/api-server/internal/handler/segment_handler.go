@@ -13,14 +13,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+// SegmentHandler handles HTTP requests for customer segment management.
 type SegmentHandler struct {
 	segmentService *service.SegmentService
 }
 
+// NewSegmentHandler creates a new SegmentHandler.
 func NewSegmentHandler(segmentService *service.SegmentService) *SegmentHandler {
 	return &SegmentHandler{segmentService: segmentService}
 }
 
+// List returns all customer segments for the tenant.
 func (h *SegmentHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	pagination := model.ParsePagination(r)
@@ -37,6 +40,7 @@ func (h *SegmentHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Get returns a single customer segment by ID.
 func (h *SegmentHandler) Get(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -58,6 +62,7 @@ func (h *SegmentHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, segment)
 }
 
+// Create inserts a new customer segment.
 func (h *SegmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -80,6 +85,7 @@ func (h *SegmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, segment)
 }
 
+// Update modifies an existing customer segment.
 func (h *SegmentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -113,6 +119,7 @@ func (h *SegmentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, segment)
 }
 
+// Delete removes a customer segment by ID.
 func (h *SegmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -136,6 +143,7 @@ func (h *SegmentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ListMembers returns all customers in a segment.
 func (h *SegmentHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -166,6 +174,7 @@ func (h *SegmentHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// AddMember adds a customer to a segment.
 func (h *SegmentHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -199,6 +208,7 @@ func (h *SegmentHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+// RemoveMember removes a customer from a segment.
 func (h *SegmentHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	actorID := middleware.UserIDFromContext(r.Context())
@@ -228,6 +238,7 @@ func (h *SegmentHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// RunRFMAnalysis triggers RFM scoring and segment assignment for the tenant.
 func (h *SegmentHandler) RunRFMAnalysis(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -239,6 +250,7 @@ func (h *SegmentHandler) RunRFMAnalysis(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, results)
 }
 
+// GetCustomerSegments returns all segments a customer belongs to.
 func (h *SegmentHandler) GetCustomerSegments(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 

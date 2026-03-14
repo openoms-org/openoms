@@ -24,12 +24,14 @@ type listingStock struct {
 	StockQty   int
 }
 
+// StockSyncWorker synchronizes product stock levels to marketplace listings.
 type StockSyncWorker struct {
 	pool          *pgxpool.Pool
 	encryptionKey []byte
 	logger        *slog.Logger
 }
 
+// NewStockSyncWorker creates a new StockSyncWorker.
 func NewStockSyncWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.Logger) *StockSyncWorker {
 	return &StockSyncWorker{
 		pool:          pool,
@@ -38,14 +40,17 @@ func NewStockSyncWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.L
 	}
 }
 
+// Name returns the unique name of this worker.
 func (w *StockSyncWorker) Name() string {
 	return "stock_sync"
 }
 
+// Interval returns how often this worker should run.
 func (w *StockSyncWorker) Interval() time.Duration {
 	return 5 * time.Minute
 }
 
+// Run pushes current stock quantities to all active marketplace integrations.
 func (w *StockSyncWorker) Run(ctx context.Context) error {
 	// Get all active marketplace integrations (all providers)
 	tis, err := ListAllActiveMarketplaceIntegrations(ctx, w.pool)

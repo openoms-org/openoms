@@ -121,6 +121,7 @@ export interface UpdateUserRequest {
   name?: string;
   role?: "owner" | "admin" | "member";
   role_id?: string;
+  language?: string;
 }
 
 // === Core Models ===
@@ -131,6 +132,7 @@ export interface User {
   name: string;
   role: "owner" | "admin" | "member";
   role_id?: string;
+  language?: string | null;
   last_login_at?: string;
   last_logout_at?: string;
   created_at: string;

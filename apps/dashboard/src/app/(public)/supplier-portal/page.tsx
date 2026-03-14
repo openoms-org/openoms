@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -558,8 +559,9 @@ function OrderDetail({
 // --- Main Page ---
 
 export default function SupplierPortalPage() {
+  const t = useTranslations("suppliers");
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Ładowanie...</p></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">{t("loading")}</p></div>}>
       <SupplierPortalContent />
     </Suspense>
   );

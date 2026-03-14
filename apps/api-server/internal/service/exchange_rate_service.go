@@ -20,16 +20,20 @@ import (
 )
 
 var (
+	// ErrExchangeRateNotFound is returned when an exchange rate does not exist.
 	ErrExchangeRateNotFound = errors.New("exchange rate not found")
-	ErrRateNotAvailable     = errors.New("exchange rate not available for this currency pair")
+	// ErrRateNotAvailable is returned when no exchange rate exists for a currency pair.
+	ErrRateNotAvailable = errors.New("exchange rate not available for this currency pair")
 )
 
+// ExchangeRateService handles business logic for currency exchange rates.
 type ExchangeRateService struct {
 	exchangeRateRepo repository.ExchangeRateRepo
 	auditRepo        repository.AuditRepo
 	pool             *pgxpool.Pool
 }
 
+// NewExchangeRateService creates a new ExchangeRateService.
 func NewExchangeRateService(
 	exchangeRateRepo repository.ExchangeRateRepo,
 	auditRepo repository.AuditRepo,
@@ -42,6 +46,7 @@ func NewExchangeRateService(
 	}
 }
 
+// List returns exchange rates for a tenant matching the given filter.
 func (s *ExchangeRateService) List(ctx context.Context, tenantID uuid.UUID, filter model.ExchangeRateListFilter) ([]model.ExchangeRate, int, error) {
 	var rates []model.ExchangeRate
 	var total int
@@ -53,6 +58,7 @@ func (s *ExchangeRateService) List(ctx context.Context, tenantID uuid.UUID, filt
 	return rates, total, err
 }
 
+// Get returns a single exchange rate by ID.
 func (s *ExchangeRateService) Get(ctx context.Context, tenantID, id uuid.UUID) (*model.ExchangeRate, error) {
 	var rate *model.ExchangeRate
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -69,6 +75,7 @@ func (s *ExchangeRateService) Get(ctx context.Context, tenantID, id uuid.UUID) (
 	return rate, nil
 }
 
+// Create inserts a new exchange rate.
 func (s *ExchangeRateService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateExchangeRateRequest, actorID uuid.UUID, ip string) (*model.ExchangeRate, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -112,6 +119,7 @@ func (s *ExchangeRateService) Create(ctx context.Context, tenantID uuid.UUID, re
 	return rate, nil
 }
 
+// Update modifies an existing exchange rate.
 func (s *ExchangeRateService) Update(ctx context.Context, tenantID, id uuid.UUID, req model.UpdateExchangeRateRequest, actorID uuid.UUID, ip string) (*model.ExchangeRate, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -152,6 +160,7 @@ func (s *ExchangeRateService) Update(ctx context.Context, tenantID, id uuid.UUID
 	return rate, nil
 }
 
+// Delete removes an exchange rate by ID.
 func (s *ExchangeRateService) Delete(ctx context.Context, tenantID, id uuid.UUID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		rate, err := s.exchangeRateRepo.FindByID(ctx, tx, id)
@@ -178,6 +187,7 @@ func (s *ExchangeRateService) Delete(ctx context.Context, tenantID, id uuid.UUID
 	})
 }
 
+// ConvertAmount converts a monetary amount from one currency to another.
 func (s *ExchangeRateService) ConvertAmount(ctx context.Context, tenantID uuid.UUID, amount float64, from, to string) (*model.ConvertAmountResponse, error) {
 	if from == to {
 		return &model.ConvertAmountResponse{
@@ -261,7 +271,7 @@ func (s *ExchangeRateService) FetchNBPRates(ctx context.Context, tenantID uuid.U
 	if err != nil {
 		return 0, fmt.Errorf("fetch NBP rates: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("NBP API returned status %d", resp.StatusCode)

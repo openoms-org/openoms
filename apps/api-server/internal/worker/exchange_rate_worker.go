@@ -18,6 +18,7 @@ type ExchangeRateWorker struct {
 	logger              *slog.Logger
 }
 
+// NewExchangeRateWorker creates a new ExchangeRateWorker.
 func NewExchangeRateWorker(pool *pgxpool.Pool, exchangeRateService *service.ExchangeRateService, logger *slog.Logger) *ExchangeRateWorker {
 	return &ExchangeRateWorker{
 		pool:                pool,
@@ -26,14 +27,17 @@ func NewExchangeRateWorker(pool *pgxpool.Pool, exchangeRateService *service.Exch
 	}
 }
 
+// Name returns the worker identifier.
 func (w *ExchangeRateWorker) Name() string {
 	return "exchange_rate_fetcher"
 }
 
+// Interval returns how frequently the worker should run.
 func (w *ExchangeRateWorker) Interval() time.Duration {
 	return 24 * time.Hour
 }
 
+// Run fetches latest exchange rates for all tenants.
 func (w *ExchangeRateWorker) Run(ctx context.Context) error {
 	// Get all tenant IDs
 	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")

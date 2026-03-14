@@ -18,6 +18,7 @@ import type {
   BarcodeLookupResponse,
   ScannedItem,
 } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 interface ScannedEntry {
   sku: string;
@@ -26,6 +27,7 @@ interface ScannedEntry {
 }
 
 export default function PackingPage() {
+  const t = useTranslations("packing");
   const [orderSearch, setOrderSearch] = useState("");
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -106,7 +108,7 @@ export default function PackingPage() {
       }
 
       if (!sku) {
-        toast.error("Produkt nie ma SKU, nie można dodać do pakowania");
+        toast.error(t("productNoSku"));
         setBarcodeInput("");
         return;
       }
@@ -116,14 +118,14 @@ export default function PackingPage() {
       const alreadyScanned = getScannedQuantity(sku);
 
       if (expected === 0) {
-        toast.error(`Produkt ${sku} nie znajduje się w tym zamówieniu`);
+        toast.error(t("productNotInOrder", { sku }));
         setBarcodeInput("");
         return;
       }
 
       if (alreadyScanned >= expected) {
         toast.warning(
-          `Produkt ${sku} już w pełni zeskanowany (${expected}/${expected})`
+          t("productFullyScanned", { sku, count: expected })
         );
         setBarcodeInput("");
         return;
@@ -139,7 +141,7 @@ export default function PackingPage() {
         return [...prev, { sku, name, quantity: 1 }];
       });
 
-      toast.success(`Zeskanowano: ${name} (${sku})`);
+      toast.success(t("scannedProduct", { name, sku }));
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -162,7 +164,7 @@ export default function PackingPage() {
         method: "POST",
         body: JSON.stringify({ scanned_items: packItems }),
       });
-      toast.success("Zamówienie zostało spakowane!");
+      toast.success(t("orderPacked"));
       setSelectedOrder(null);
       setScannedItems([]);
     } catch (err) {
@@ -183,8 +185,8 @@ export default function PackingPage() {
   return (
     <AdminGuard>
       <PageHeader
-        title="Stacja pakowania"
-        description="Skanuj kody kreskowe, aby potwierdzić zawartość zamówienia"
+        title={t("title")}
+        description={t("description")}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -192,21 +194,21 @@ export default function PackingPage() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Wybierz zamówienie</CardTitle>
+              <CardTitle className="text-base">{t("selectOrder")}</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleOrderSearch} className="flex gap-2 mb-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="ID lub klient..."
+                    placeholder={t("searchPlaceholder")}
                     value={orderSearch}
                     onChange={(e) => setOrderSearch(e.target.value)}
                     className="pl-9"
                   />
                 </div>
                 <Button type="submit" variant="outline" size="sm">
-                  Szukaj
+                  {t("search")}
                 </Button>
               </form>
 
@@ -226,7 +228,7 @@ export default function PackingPage() {
                     className="mt-1"
                     onClick={handleReset}
                   >
-                    Zmień zamówienie
+                    {t("changeOrder")}
                   </Button>
                 </div>
               )}
@@ -249,7 +251,7 @@ export default function PackingPage() {
                   ))}
                   {ordersData.items.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Brak wyników
+                      {t("noResultsFound")}
                     </p>
                   )}
                 </div>
@@ -265,8 +267,7 @@ export default function PackingPage() {
               <CardContent className="py-12 text-center">
                 <ScanBarcode className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
-                  Wybierz zamówienie z panelu po lewej stronie, aby rozpocząć
-                  pakowanie
+                  {t("selectOrderPrompt")}
                 </p>
               </CardContent>
             </Card>
@@ -280,7 +281,7 @@ export default function PackingPage() {
                       <ScanBarcode className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                       <Input
                         ref={barcodeRef}
-                        placeholder="Skanuj kod kreskowy lub wpisz SKU/EAN..."
+                        placeholder={t("barcodePlaceholder")}
                         value={barcodeInput}
                         onChange={(e) => setBarcodeInput(e.target.value)}
                         className="pl-11 text-lg h-12"
@@ -288,7 +289,7 @@ export default function PackingPage() {
                       />
                     </div>
                     <Button type="submit" size="lg">
-                      Skanuj
+                      {t("scan")}
                     </Button>
                   </form>
                 </CardContent>
@@ -298,13 +299,13 @@ export default function PackingPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    Pozycje zamówienia
+                    {t("form.orderItems")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {orderItems.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      Brak pozycji w zamówieniu
+                      {t("noItemsInOrder")}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -367,7 +368,7 @@ export default function PackingPage() {
           {selectedOrder && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Podsumowanie</CardTitle>
+                <CardTitle className="text-base">{t("summary")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -384,20 +385,20 @@ export default function PackingPage() {
                   ))}
                   {scannedItems.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      Brak zeskanowanych produktów
+                      {t("noScannedProducts")}
                     </p>
                   )}
                 </div>
 
                 <div className="pt-2 border-t">
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Zeskanowano pozycji:</span>
+                    <span>{t("scannedItems")}:</span>
                     <span className="font-medium">
                       {scannedItems.reduce((s, e) => s + e.quantity, 0)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Oczekiwano pozycji:</span>
+                    <span>{t("expectedItems")}:</span>
                     <span className="font-medium">
                       {orderItems.reduce((s, item) => s + item.quantity, 0)}
                     </span>
@@ -408,7 +409,7 @@ export default function PackingPage() {
                   <div className="p-3 rounded-md bg-success/15 border border-success/30">
                     <p className="text-sm text-success font-medium flex items-center gap-2">
                       <Check className="h-4 w-4" />
-                      Wszystkie pozycje zeskanowane
+                      {t("allItemsScanned")}
                     </p>
                   </div>
                 )}
@@ -419,7 +420,7 @@ export default function PackingPage() {
                   disabled={!allItemsScanned || isPacking}
                   onClick={handleConfirmPacking}
                 >
-                  {isPacking ? "Pakowanie..." : "Potwierdź pakowanie"}
+                  {isPacking ? t("packing") : t("confirmPacking")}
                 </Button>
 
                 <Button
@@ -428,7 +429,7 @@ export default function PackingPage() {
                   onClick={() => setScannedItems([])}
                 >
                   <X className="h-4 w-4 mr-2" />
-                  Wyczyść skanowanie
+                  {t("clearScanning")}
                 </Button>
               </CardContent>
             </Card>

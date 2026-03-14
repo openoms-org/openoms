@@ -53,7 +53,7 @@ func TestDoSetsAuthorizationHeader(t *testing.T) {
 			t.Errorf("Accept = %q, want application/json", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -74,7 +74,7 @@ func TestDoSetsContentTypeForBody(t *testing.T) {
 			t.Errorf("Content-Type = %q, want application/json", r.Header.Get("Content-Type"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -103,7 +103,7 @@ func TestOrdersList(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{
+		_ = json.NewEncoder(w).Encode(OrdersResponse{
 			Orders: []Order{
 				{
 					ID:           "MKL-001",
@@ -158,7 +158,7 @@ func TestOrdersListWithLastUpdated(t *testing.T) {
 			t.Errorf("start_update_date = %q, want 2024-01-15T00:00:00Z", r.URL.Query().Get("start_update_date"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{Orders: []Order{}})
+		_ = json.NewEncoder(w).Encode(OrdersResponse{Orders: []Order{}})
 	}))
 	defer srv.Close()
 
@@ -185,7 +185,7 @@ func TestOrdersGet(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{
+		_ = json.NewEncoder(w).Encode(OrdersResponse{
 			Orders: []Order{
 				{
 					ID:     "MKL-123",
@@ -224,9 +224,9 @@ func TestOrdersGet(t *testing.T) {
 }
 
 func TestOrdersGetNotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OrdersResponse{Orders: []Order{}})
+		_ = json.NewEncoder(w).Encode(OrdersResponse{Orders: []Order{}})
 	}))
 	defer srv.Close()
 
@@ -325,7 +325,7 @@ func TestOffersGetOffer(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OfferResponse{
+		_ = json.NewEncoder(w).Encode(OfferResponse{
 			Offers: []OfferDetail{
 				{SKU: "SKU-001", Price: 29.99, Quantity: 15, Active: true},
 			},
@@ -356,9 +356,9 @@ func TestOffersGetOffer(t *testing.T) {
 }
 
 func TestOffersGetOfferNotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(OfferResponse{Offers: []OfferDetail{}})
+		_ = json.NewEncoder(w).Encode(OfferResponse{Offers: []OfferDetail{}})
 	}))
 	defer srv.Close()
 
@@ -377,9 +377,9 @@ func TestOffersGetOfferNotFound(t *testing.T) {
 }
 
 func TestServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Internal server error",
 		})
 	}))
@@ -407,9 +407,9 @@ func TestServerError(t *testing.T) {
 }
 
 func TestBadRequestError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message": "Invalid request",
 			"code":    "VALIDATION_ERROR",
 		})
@@ -435,10 +435,10 @@ func TestBadRequestError(t *testing.T) {
 }
 
 func TestInvalidJSONResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{invalid json}`))
+		_, _ = w.Write([]byte(`{invalid json}`))
 	}))
 	defer srv.Close()
 

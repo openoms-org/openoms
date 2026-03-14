@@ -27,13 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Stocktake } from "@/types/api";
-
-const statusLabels: Record<string, string> = {
-  draft: "Szkic",
-  in_progress: "W trakcie",
-  completed: "Zakończona",
-  cancelled: "Anulowana",
-};
+import { useTranslations } from "next-intl";
 
 const statusVariants: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
@@ -45,6 +39,13 @@ const statusVariants: Record<string, string> = {
 };
 
 function StocktakeStatusBadge({ status }: { status: string }) {
+  const t = useTranslations("stocktakes");
+  const statusLabels: Record<string, string> = {
+    draft: t("statusDraft"),
+    in_progress: t("statusInProgress"),
+    completed: t("statusCompleted"),
+    cancelled: t("statusCancelled"),
+  };
   return (
     <Badge variant="outline" className={statusVariants[status] || ""}>
       {statusLabels[status] || status}
@@ -53,6 +54,7 @@ function StocktakeStatusBadge({ status }: { status: string }) {
 }
 
 export default function StocktakesPage() {
+  const t = useTranslations("stocktakes");
   const router = useRouter();
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -76,24 +78,24 @@ export default function StocktakesPage() {
     <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Inwentaryzacja</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("stocktake")}</h1>
           <p className="text-muted-foreground">
-            Zarządzaj procesami inwentaryzacji magazynów
+            {t("zarzadzajProcesamiInwentaryzacjiMagazynow")}
           </p>
         </div>
         <Button onClick={() => router.push("/stocktakes/new")}>
           <Plus className="h-4 w-4 mr-2" />
-          Nowa inwentaryzacja
+          {t("newStocktake")}
         </Button>
       </div>
 
       <div className="flex gap-4 mb-4">
         <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
           <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Wszystkie magazyny" />
+            <SelectValue placeholder={t("allWarehouses")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie magazyny</SelectItem>
+            <SelectItem value="all">{t("allWarehouses")}</SelectItem>
             {warehouses.map((w) => (
               <SelectItem key={w.id} value={w.id}>
                 {w.name}
@@ -104,14 +106,14 @@ export default function StocktakesPage() {
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Wszystkie statusy" />
+            <SelectValue placeholder={t("allStatuses")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie statusy</SelectItem>
-            <SelectItem value="draft">Szkic</SelectItem>
-            <SelectItem value="in_progress">W trakcie</SelectItem>
-            <SelectItem value="completed">Zakończona</SelectItem>
-            <SelectItem value="cancelled">Anulowana</SelectItem>
+            <SelectItem value="all">{t("allStatuses")}</SelectItem>
+            <SelectItem value="draft">{t("statusDraft")}</SelectItem>
+            <SelectItem value="in_progress">{t("statusInProgress")}</SelectItem>
+            <SelectItem value="completed">{t("statusCompleted")}</SelectItem>
+            <SelectItem value="cancelled">{t("statusCancelled")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -119,7 +121,7 @@ export default function StocktakesPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -127,7 +129,7 @@ export default function StocktakesPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Spróbuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -135,20 +137,20 @@ export default function StocktakesPage() {
       {stocktakes.length === 0 ? (
         <EmptyState
           icon={ClipboardCheck}
-          title="Brak inwentaryzacji"
-          description="Utwórz nową inwentaryzację, aby rozpocząć liczenie stanów magazynowych."
+          title={t("noStocktakes")}
+          description={t("utworzNowaInwentaryzacjeAbyRozpoczacLiczenieStanow")}
         />
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>Magazyn</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Pozycje</TableHead>
-                <TableHead>Rozbieżności</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("warehouse")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("items")}</TableHead>
+                <TableHead>{t("rozbieznosci")}</TableHead>
+                <TableHead>{t("created")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

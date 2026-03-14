@@ -18,13 +18,13 @@ func TestInvoicesGet(t *testing.T) {
 		}
 
 		var req InvoicesRequest
-		json.NewDecoder(r.Body).Decode(&req)
+		_ = json.NewDecoder(r.Body).Decode(&req)
 		if len(req.Documents) != 1 {
 			t.Fatalf("expected 1 document, got %d", len(req.Documents))
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvoicesResponse{
+		_ = json.NewEncoder(w).Encode(InvoicesResponse{
 			Invoices: []InvoiceDocument{
 				{
 					Header: InvoiceDocumentHeader{
@@ -82,7 +82,7 @@ func TestInvoiceGetImage(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(InvoiceImageResponse{
+		_ = json.NewEncoder(w).Encode(InvoiceImageResponse{
 			ImageBase64: "JVBERi0xLjQ=",
 		})
 	}))
@@ -109,7 +109,7 @@ func TestInvoiceConfigureNotify(t *testing.T) {
 		}
 
 		var cfg DocumentNotifyConfig
-		json.NewDecoder(r.Body).Decode(&cfg)
+		_ = json.NewDecoder(r.Body).Decode(&cfg)
 		if cfg.EndpointURL != "https://example.com/webhook" {
 			t.Fatalf("expected endpoint URL, got %s", cfg.EndpointURL)
 		}
@@ -118,7 +118,7 @@ func TestInvoiceConfigureNotify(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
+		_ = json.NewEncoder(w).Encode(APIResult{ResultType: "INFORMATION"})
 	}))
 	defer srv.Close()
 

@@ -26,6 +26,7 @@ type LoginRequest struct {
 	TenantSlug string `json:"tenant_slug"`
 }
 
+// Validate validates the login request.
 func (r *LoginRequest) Validate() error {
 	if strings.TrimSpace(r.Email) == "" {
 		return errors.New("email is required")
@@ -44,6 +45,7 @@ type RegisterRequest struct {
 	Email                   string         `json:"email"`
 	Password                string         `json:"password"`
 	Name                    string         `json:"name"`
+	Language                string         `json:"language,omitempty"`
 	TenantName              string         `json:"tenant_name"`
 	TenantSlug              string         `json:"tenant_slug"`
 	InviteToken             string         `json:"invite_token,omitempty"`
@@ -54,6 +56,7 @@ type RegisterRequest struct {
 	CheckoutSessionInterval string         `json:"-"` // set internally from checkout session
 }
 
+// Validate validates the register request.
 func (r *RegisterRequest) Validate() error {
 	if err := validateEmail(r.Email); err != nil {
 		return err
@@ -73,7 +76,33 @@ func (r *RegisterRequest) Validate() error {
 	if err := validateMaxLength("tenant_name", r.TenantName, MaxNameLength); err != nil {
 		return err
 	}
+	if r.Language != "" {
+		switch r.Language {
+		case "pl", "en":
+			// valid
+		default:
+			return errors.New("language must be one of: pl, en")
+		}
+	}
 	return validateSlug(r.TenantSlug)
+}
+
+// UpdateMeRequest is the body of PATCH /v1/users/me (self-service).
+type UpdateMeRequest struct {
+	Language *string `json:"language,omitempty"`
+}
+
+// Validate validates the update-me request.
+func (r *UpdateMeRequest) Validate() error {
+	if r.Language == nil {
+		return errors.New("language is required")
+	}
+	switch *r.Language {
+	case "pl", "en":
+		return nil
+	default:
+		return errors.New("language must be one of: pl, en")
+	}
 }
 
 // TokenResponse is returned by login and register endpoints.
@@ -136,6 +165,7 @@ type CreateUserRequest struct {
 	MaxUsers int `json:"-"`
 }
 
+// Validate validates the create user request.
 func (r *CreateUserRequest) Validate() error {
 	if err := validateEmail(r.Email); err != nil {
 		return err
@@ -154,14 +184,16 @@ func (r *CreateUserRequest) Validate() error {
 
 // UpdateUserRequest is the body of PATCH /v1/users/{id}.
 type UpdateUserRequest struct {
-	Name   *string    `json:"name,omitempty"`
-	Role   *string    `json:"role,omitempty"`
-	RoleID *uuid.UUID `json:"role_id,omitempty"`
+	Name     *string    `json:"name,omitempty"`
+	Role     *string    `json:"role,omitempty"`
+	RoleID   *uuid.UUID `json:"role_id,omitempty"`
+	Language *string    `json:"language,omitempty"`
 }
 
+// Validate validates the update user request.
 func (r *UpdateUserRequest) Validate() error {
-	if r.Name == nil && r.Role == nil && r.RoleID == nil {
-		return errors.New("at least one field (name, role, or role_id) must be provided")
+	if r.Name == nil && r.Role == nil && r.RoleID == nil && r.Language == nil {
+		return errors.New("at least one field (name, role, role_id, or language) must be provided")
 	}
 	if r.Role != nil {
 		switch *r.Role {
@@ -169,6 +201,14 @@ func (r *UpdateUserRequest) Validate() error {
 			// valid
 		default:
 			return errors.New("role must be one of: owner, admin, member")
+		}
+	}
+	if r.Language != nil && *r.Language != "" {
+		switch *r.Language {
+		case "pl", "en":
+			// valid
+		default:
+			return errors.New("language must be one of: pl, en")
 		}
 	}
 	return nil

@@ -19,10 +19,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
-var (
-	ErrRepricingRuleNotFound = errors.New("repricing rule not found")
-)
+// ErrRepricingRuleNotFound is returned when a repricing rule does not exist.
+var ErrRepricingRuleNotFound = errors.New("repricing rule not found")
 
+// RepricingService handles business logic for dynamic repricing rules.
 type RepricingService struct {
 	repricingRepo repository.RepricingRepo
 	productRepo   repository.ProductRepo
@@ -31,6 +31,7 @@ type RepricingService struct {
 	logger        *slog.Logger
 }
 
+// NewRepricingService creates a new RepricingService.
 func NewRepricingService(
 	repricingRepo repository.RepricingRepo,
 	productRepo repository.ProductRepo,
@@ -47,6 +48,7 @@ func NewRepricingService(
 	}
 }
 
+// List returns a paginated list of repricing rules.
 func (s *RepricingService) List(ctx context.Context, tenantID uuid.UUID, filter model.RepricingRuleListFilter) (model.ListResponse[model.RepricingRule], error) {
 	var resp model.ListResponse[model.RepricingRule]
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -68,6 +70,7 @@ func (s *RepricingService) List(ctx context.Context, tenantID uuid.UUID, filter 
 	return resp, err
 }
 
+// Get returns a single repricing rule by ID.
 func (s *RepricingService) Get(ctx context.Context, tenantID, ruleID uuid.UUID) (*model.RepricingRule, error) {
 	var rule *model.RepricingRule
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -84,6 +87,7 @@ func (s *RepricingService) Get(ctx context.Context, tenantID, ruleID uuid.UUID) 
 	return rule, nil
 }
 
+// Create inserts a new repricing rule.
 func (s *RepricingService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateRepricingRuleRequest, actorID uuid.UUID, ip string) (*model.RepricingRule, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -134,6 +138,7 @@ func (s *RepricingService) Create(ctx context.Context, tenantID uuid.UUID, req m
 	return rule, nil
 }
 
+// Update modifies an existing repricing rule.
 func (s *RepricingService) Update(ctx context.Context, tenantID, ruleID uuid.UUID, req model.UpdateRepricingRuleRequest, actorID uuid.UUID, ip string) (*model.RepricingRule, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -170,6 +175,7 @@ func (s *RepricingService) Update(ctx context.Context, tenantID, ruleID uuid.UUI
 	return rule, err
 }
 
+// Delete removes a repricing rule by ID.
 func (s *RepricingService) Delete(ctx context.Context, tenantID, ruleID, actorID uuid.UUID, ip string) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.repricingRepo.FindRuleByID(ctx, tx, ruleID)
@@ -465,8 +471,8 @@ func (s *RepricingService) applyTimeStrategy(product model.Product, rule model.R
 			if len(parts) == 2 {
 				startHour := 0
 				endHour := 23
-				fmt.Sscanf(parts[0], "%d", &startHour)
-				fmt.Sscanf(parts[1], "%d", &endHour)
+				_, _ = fmt.Sscanf(parts[0], "%d", &startHour)
+				_, _ = fmt.Sscanf(parts[1], "%d", &endHour)
 				if currentHour < startHour || currentHour > endHour {
 					continue
 				}

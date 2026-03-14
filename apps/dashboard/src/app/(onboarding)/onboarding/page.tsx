@@ -15,24 +15,26 @@ import {
   useDismissOnboarding,
 } from "@/hooks/use-onboarding-wizard";
 import { apiClient } from "@/lib/api-client";
+import { useTranslations } from "next-intl";
 
 // ---------------------------------------------------------------------------
 // Step labels for the stepper
 // ---------------------------------------------------------------------------
-const STEPS = [
-  { number: 1, label: "Dane firmy" },
-  { number: 2, label: "Magazyn" },
-  { number: 3, label: "Integracja" },
-  { number: 4, label: "Zespół" },
+const STEP_LABEL_KEYS = [
+  { number: 1, labelKey: "stepTitles.companyData" },
+  { number: 2, labelKey: "stepTitles.defaultWarehouse" },
+  { number: 3, labelKey: "stepTitles.firstIntegration" },
+  { number: 4, labelKey: "stepTitles.inviteTeam" },
 ];
 
 // ---------------------------------------------------------------------------
 // Stepper header
 // ---------------------------------------------------------------------------
 function Stepper({ currentStep, completedSteps }: { currentStep: number; completedSteps: number[] }) {
+  const t = useTranslations("onboarding");
   return (
     <div className="flex items-center gap-2 mb-8">
-      {STEPS.map((step, idx) => {
+      {STEP_LABEL_KEYS.map((step, idx) => {
         const isCompleted = completedSteps.includes(step.number);
         const isActive = step.number === currentStep;
 
@@ -55,10 +57,10 @@ function Stepper({ currentStep, completedSteps }: { currentStep: number; complet
                   isActive ? "text-foreground font-medium" : "text-muted-foreground"
                 }`}
               >
-                {step.label}
+                {t(step.labelKey)}
               </span>
             </div>
-            {idx < STEPS.length - 1 && (
+            {idx < STEP_LABEL_KEYS.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mx-2 mt-[-1rem] ${
                   completedSteps.includes(step.number) ? "bg-primary" : "bg-muted"
@@ -76,6 +78,7 @@ function Stepper({ currentStep, completedSteps }: { currentStep: number; complet
 // Step 1: Company details
 // ---------------------------------------------------------------------------
 function Step1Company({ onNext }: { onNext: () => void }) {
+  const t = useTranslations("onboarding");
   const updateStep = useUpdateOnboardingStep();
   const [form, setForm] = useState({
     company_name: "",
@@ -100,15 +103,15 @@ function Step1Company({ onNext }: { onNext: () => void }) {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.company_name.trim()) e.company_name = "Nazwa firmy jest wymagana";
-    if (!form.nip.trim()) e.nip = "NIP jest wymagany";
-    else if (!validateNip(form.nip)) e.nip = "Podaj poprawny numer NIP";
+    if (!form.company_name.trim()) e.company_name = t("validation.companyNameRequired");
+    if (!form.nip.trim()) e.nip = t("validation.nipRequired");
+    else if (!validateNip(form.nip)) e.nip = t("validation.nipInvalid");
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      e.email = "Podaj poprawny adres email";
+      e.email = t("validation.emailInvalid");
     if (form.post_code && !/^\d{2}-\d{3}$/.test(form.post_code))
-      e.post_code = "Kod pocztowy musi mieć format XX-XXX";
+      e.post_code = t("validation.postCodeFormat");
     if (form.phone && !/^\+?[\d\s\-()]{7,20}$/.test(form.phone))
-      e.phone = "Podaj poprawny numer telefonu";
+      e.phone = t("validation.phoneInvalid");
     return e;
   };
 
@@ -135,7 +138,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
       await updateStep.mutateAsync({ step: 1, action: "completed" });
       onNext();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
+      toast.error(err instanceof Error ? err.message : t("error"));
     }
   };
 
@@ -144,7 +147,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="company_name">
-            Nazwa firmy <span className="text-destructive">*</span>
+            {t("form.companyName")} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="company_name"
@@ -170,16 +173,16 @@ function Step1Company({ onNext }: { onNext: () => void }) {
           {errors.nip && <p className="text-xs text-destructive">{errors.nip}</p>}
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="address">Ulica i numer</Label>
+          <Label htmlFor="address">{t("form.street")}</Label>
           <Input
             id="address"
             value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
-            placeholder="ul. Przykładowa 1"
+            placeholder={t("form.streetPlaceholder")}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="city">Miasto</Label>
+          <Label htmlFor="city">{t("form.city")}</Label>
           <Input
             id="city"
             value={form.city}
@@ -187,7 +190,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="post_code">Kod pocztowy</Label>
+          <Label htmlFor="post_code">{t("form.postCode")}</Label>
           <Input
             id="post_code"
             value={form.post_code}
@@ -196,7 +199,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">Telefon</Label>
+          <Label htmlFor="phone">{t("form.phone")}</Label>
           <Input
             id="phone"
             value={form.phone}
@@ -216,7 +219,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={updateStep.isPending}>
           {updateStep.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Dalej
+          {t("next")}
         </Button>
       </div>
     </form>
@@ -227,6 +230,7 @@ function Step1Company({ onNext }: { onNext: () => void }) {
 // Step 2: Warehouse
 // ---------------------------------------------------------------------------
 function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const t = useTranslations("onboarding");
   const updateStep = useUpdateOnboardingStep();
   const [form, setForm] = useState({
     name: "",
@@ -238,7 +242,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      toast.error("Nazwa magazynu jest wymagana");
+      toast.error(t("validation.warehouseNameRequired"));
       return;
     }
     try {
@@ -249,7 +253,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
       await updateStep.mutateAsync({ step: 2, action: "completed" });
       onNext();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
+      toast.error(err instanceof Error ? err.message : t("error"));
     }
   };
 
@@ -258,17 +262,17 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="wh_name">
-            Nazwa magazynu <span className="text-destructive">*</span>
+            {t("form.warehouseName")} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="wh_name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Magazyn główny"
+            placeholder={t("form.mainWarehouse")}
           />
         </div>
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="wh_address">Ulica i numer</Label>
+          <Label htmlFor="wh_address">{t("form.street")}</Label>
           <Input
             id="wh_address"
             value={form.address}
@@ -276,7 +280,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="wh_city">Miasto</Label>
+          <Label htmlFor="wh_city">{t("form.city")}</Label>
           <Input
             id="wh_city"
             value={form.city}
@@ -284,7 +288,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="wh_post_code">Kod pocztowy</Label>
+          <Label htmlFor="wh_post_code">{t("form.postCode")}</Label>
           <Input
             id="wh_post_code"
             value={form.post_code}
@@ -295,11 +299,11 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
       </div>
       <div className="flex justify-between pt-2">
         <Button type="button" variant="ghost" onClick={onSkip}>
-          Pomiń
+          {t("dismiss")}
         </Button>
         <Button type="submit" disabled={updateStep.isPending}>
           {updateStep.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Dalej
+          {t("next")}
         </Button>
       </div>
     </form>
@@ -310,6 +314,7 @@ function Step2Warehouse({ onNext, onSkip }: { onNext: () => void; onSkip: () => 
 // Step 3: Integration
 // ---------------------------------------------------------------------------
 function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const t = useTranslations("onboarding");
   const router = useRouter();
   const updateStep = useUpdateOnboardingStep();
   const [provider, setProvider] = useState("");
@@ -329,7 +334,7 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!provider) {
-      toast.error("Wybierz dostawcę");
+      toast.error(t("validation.selectProvider"));
       return;
     }
     if (selectedProvider?.oauth) {
@@ -346,7 +351,7 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
       await updateStep.mutateAsync({ step: 3, action: "completed" });
       onNext();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
+      toast.error(err instanceof Error ? err.message : t("error"));
     }
   };
 
@@ -373,28 +378,28 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
       </div>
       {provider && selectedProvider?.oauth && (
         <p className="text-sm text-muted-foreground">
-          Allegro wymaga autoryzacji OAuth. Po kliknięciu &quot;Dalej&quot; zostaniesz przekierowany do strony integracji.
+          {t("oauthRedirectNotice")}
         </p>
       )}
       {provider && !selectedProvider?.oauth && (
         <div className="space-y-2">
-          <Label htmlFor="api_key">Klucz API</Label>
+          <Label htmlFor="api_key">{t("form.apiKey")}</Label>
           <Input
             id="api_key"
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Wklej klucz API"
+            placeholder={t("form.pasteApiKey")}
           />
         </div>
       )}
       <div className="flex justify-between pt-2">
         <Button type="button" variant="ghost" onClick={onSkip}>
-          Pomiń
+          {t("dismiss")}
         </Button>
         <Button type="submit" disabled={updateStep.isPending || !provider}>
           {updateStep.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Dalej
+          {t("next")}
         </Button>
       </div>
     </form>
@@ -405,6 +410,7 @@ function Step3Integration({ onNext, onSkip }: { onNext: () => void; onSkip: () =
 // Step 4: Team
 // ---------------------------------------------------------------------------
 function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const t = useTranslations("onboarding");
   const updateStep = useUpdateOnboardingStep();
   const completeOnboarding = useCompleteOnboarding();
   const [email, setEmail] = useState("");
@@ -421,9 +427,9 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
       });
       setInvited((prev) => [...prev, email]);
       setEmail("");
-      toast.success("Zaproszenie wysłane");
+      toast.success(t("inviteSent"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
+      toast.error(err instanceof Error ? err.message : t("error"));
     } finally {
       setSending(false);
     }
@@ -435,7 +441,7 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
       await completeOnboarding.mutateAsync();
       onNext();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
+      toast.error(err instanceof Error ? err.message : t("error"));
     }
   };
 
@@ -446,11 +452,11 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="adres@email.pl"
+          placeholder={t("form.emailPlaceholder")}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleInvite(); } }}
         />
         <Button type="button" variant="outline" onClick={handleInvite} disabled={sending || !email.trim()}>
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Wyślij"}
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("sendInvite")}
         </Button>
       </div>
       {invited.length > 0 && (
@@ -473,11 +479,11 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
               await completeOnboarding.mutateAsync();
               onSkip();
             } catch (err) {
-              toast.error(err instanceof Error ? err.message : "Wystąpił błąd");
+              toast.error(err instanceof Error ? err.message : t("error"));
             }
           }}
         >
-          Pomiń
+          {t("dismiss")}
         </Button>
         <Button
           type="button"
@@ -487,7 +493,7 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
           {(updateStep.isPending || completeOnboarding.isPending) && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          Zakończ konfigurację
+          {t("finishSetup")}
         </Button>
       </div>
     </div>
@@ -498,6 +504,7 @@ function Step4Team({ onNext, onSkip }: { onNext: () => void; onSkip: () => void 
 // Completion screen
 // ---------------------------------------------------------------------------
 function CompletionScreen() {
+  const t = useTranslations("onboarding");
   const router = useRouter();
   return (
     <div className="flex flex-col items-center gap-6 py-8 text-center">
@@ -505,13 +512,13 @@ function CompletionScreen() {
         <CheckCircle2 className="h-10 w-10 text-green-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold">Gotowe!</h2>
+        <h2 className="text-2xl font-bold">{t("allDone")}</h2>
         <p className="text-muted-foreground mt-1">
-          Konfiguracja zakończona. Możesz teraz korzystać z systemu.
+          {t("setupCompleteMessage")}
         </p>
       </div>
       <Button size="lg" onClick={() => router.replace("/")}>
-        Przejdź do panelu
+        {t("goToDashboard")}
       </Button>
     </div>
   );
@@ -521,6 +528,7 @@ function CompletionScreen() {
 // Main page
 // ---------------------------------------------------------------------------
 export default function OnboardingPage() {
+  const t = useTranslations("onboarding");
   const router = useRouter();
   const { data: status, isLoading, isError } = useOnboardingStatus();
   const updateStep = useUpdateOnboardingStep();
@@ -543,9 +551,9 @@ export default function OnboardingPage() {
     return (
       <div className="flex items-center justify-center py-24 text-center">
         <div className="space-y-2">
-          <p className="text-destructive font-medium">Nie udało się załadować statusu konfiguracji</p>
+          <p className="text-destructive font-medium">{t("failedToLoadStatus")}</p>
           <Button variant="outline" onClick={() => router.replace("/")}>
-            Wróć do panelu
+            {t("backToDashboard")}
           </Button>
         </div>
       </div>
@@ -579,7 +587,7 @@ export default function OnboardingPage() {
     try {
       await updateStep.mutateAsync({ step, action: "skipped" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Nie udało się zapisać pominięcia kroku");
+      toast.error(err instanceof Error ? err.message : t("failedToSaveSkip"));
       return;
     }
     const next = step + 1;
@@ -600,25 +608,25 @@ export default function OnboardingPage() {
   };
 
   const stepTitles: Record<number, string> = {
-    1: "Dane firmy",
-    2: "Domyślny magazyn",
-    3: "Pierwsza integracja",
-    4: "Zaproś zespół",
+    1: t("stepTitles.companyData"),
+    2: t("stepTitles.defaultWarehouse"),
+    3: t("stepTitles.firstIntegration"),
+    4: t("stepTitles.inviteTeam"),
   };
 
   const stepDescriptions: Record<number, string> = {
-    1: "Uzupełnij dane firmy potrzebne do faktur i wysyłek.",
-    2: "Dodaj magazyn, z którego będą realizowane zamówienia.",
-    3: "Połącz się z platformą sprzedażową lub kurierem.",
-    4: "Zaproś członków zespołu do systemu.",
+    1: t("stepDescriptions.companyData"),
+    2: t("stepDescriptions.defaultWarehouse"),
+    3: t("stepDescriptions.firstIntegration"),
+    4: t("stepDescriptions.inviteTeam"),
   };
 
   return (
     <div className="space-y-2">
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold">Konfiguracja systemu</h1>
+        <h1 className="text-2xl font-bold">{t("systemSetup")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Skonfiguruj system, aby móc w pełni z niego korzystać
+          {t("setupSubtitle")}
         </p>
       </div>
 
@@ -654,7 +662,7 @@ export default function OnboardingPage() {
 
       <div className="flex justify-center pt-4">
         <Button variant="ghost" size="sm" onClick={handleFinishLater}>
-          Dokończ później
+          {t("finishLater")}
         </Button>
       </div>
     </div>

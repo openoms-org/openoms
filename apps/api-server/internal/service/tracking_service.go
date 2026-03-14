@@ -18,8 +18,10 @@ import (
 )
 
 var (
+	// ErrTrackingNotFound is returned when a tracking lookup finds no matching order.
 	ErrTrackingNotFound = errors.New("order not found")
-	ErrTrackingEmail    = errors.New("email does not match order")
+	// ErrTrackingEmail is returned when the provided email does not match the order's customer email.
+	ErrTrackingEmail = errors.New("email does not match order")
 )
 
 // TrackingService provides public order tracking lookups.
@@ -31,6 +33,7 @@ type TrackingService struct {
 	pool         *pgxpool.Pool
 }
 
+// NewTrackingService creates a new TrackingService.
 func NewTrackingService(
 	tenantRepo repository.TenantRepo,
 	orderRepo repository.OrderRepo,

@@ -13,10 +13,12 @@ import (
 // DelayedActionRepository implements persistence for delayed automation actions.
 type DelayedActionRepository struct{}
 
+// NewDelayedActionRepository creates a new DelayedActionRepository.
 func NewDelayedActionRepository() *DelayedActionRepository {
 	return &DelayedActionRepository{}
 }
 
+// Create inserts a new delayed action.
 func (r *DelayedActionRepository) Create(ctx context.Context, tx pgx.Tx, da *model.DelayedAction) error {
 	return tx.QueryRow(ctx,
 		`INSERT INTO automation_delayed_actions (
@@ -65,6 +67,7 @@ func (r *DelayedActionRepository) ListPending(ctx context.Context, tx pgx.Tx) ([
 	return scanDelayedActions(rows)
 }
 
+// MarkExecuted marks a delayed action as executed, recording any error message.
 func (r *DelayedActionRepository) MarkExecuted(ctx context.Context, tx pgx.Tx, id uuid.UUID, errMsg *string) error {
 	_, err := tx.Exec(ctx,
 		`UPDATE automation_delayed_actions

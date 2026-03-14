@@ -1,3 +1,4 @@
+// Package main is the entry point for the api-server.
 package main
 
 import (
@@ -56,15 +57,21 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("failed to load config", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	if err := cfg.Validate(); err != nil {
 		slog.Error("invalid configuration", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	// Connect to Redis (for rate limiting and token blacklist)
@@ -124,7 +131,7 @@ func main() {
 	pool, err := database.Connect(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 	defer pool.Close()
 	slog.Info("connected to PostgreSQL")
@@ -138,8 +145,7 @@ func main() {
 	workerPool, err := database.Connect(context.Background(), workerDBURL)
 	if err != nil {
 		slog.Error("failed to connect worker database", "error", err)
-		pool.Close()
-		os.Exit(1) //nolint:gocritic // pool closed above
+		return fmt.Errorf("failed to connect worker database: %w", err)
 	}
 	defer workerPool.Close()
 
@@ -149,15 +155,15 @@ func main() {
 		s3Store, err := storage.NewS3Storage(cfg.S3Region, cfg.S3Bucket, cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3PublicURL)
 		if err != nil {
 			slog.Error("failed to initialize S3 storage", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to initialize S3 storage: %w", err)
 		}
 		objectStorage = s3Store
 		slog.Info("using S3 storage", "bucket", cfg.S3Bucket)
 	} else {
 		// Create upload directory for local storage
-		if err := os.MkdirAll(cfg.UploadDir, 0755); err != nil {
+		if err := os.MkdirAll(cfg.UploadDir, 0750); err != nil {
 			slog.Error("failed to create upload directory", "error", err)
-			os.Exit(1)
+			return fmt.Errorf("failed to create upload directory: %w", err)
 		}
 		objectStorage = storage.NewLocalStorage(cfg.UploadDir, cfg.BaseURL)
 		slog.Info("using local storage", "dir", cfg.UploadDir)
@@ -167,14 +173,14 @@ func main() {
 	encryptionKey, err := hex.DecodeString(cfg.EncryptionKey)
 	if err != nil {
 		slog.Error("invalid ENCRYPTION_KEY (must be 64-char hex string)", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid ENCRYPTION_KEY: %w", err)
 	}
 
 	// Initialize token service (Ed25519 key derivation)
 	tokenSvc, err := service.NewTokenService(cfg.JWTSecret)
 	if err != nil {
 		slog.Error("failed to initialize token service", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to initialize token service: %w", err)
 	}
 	slog.Info("token service initialized (Ed25519)")
 
@@ -411,7 +417,7 @@ func main() {
 	licensePublicKey, err := cfg.ParseLicensePublicKey()
 	if err != nil {
 		slog.Error("failed to parse LICENSE_PUBLIC_KEY", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to parse LICENSE_PUBLIC_KEY: %w", err)
 	}
 	if licensePublicKey != nil {
 		licenseRepo := repository.NewLicenseRepository()
@@ -670,7 +676,8 @@ func main() {
 		billingPlans, err := cfg.ParseBillingPlans()
 		if err != nil {
 			slog.Error("failed to parse BILLING_PLANS", "error", err)
-			os.Exit(1)
+			wsCancel()
+			return fmt.Errorf("failed to parse BILLING_PLANS: %w", err)
 		}
 
 		billingRepo := repository.NewBillingRepository()
@@ -900,6 +907,7 @@ func main() {
 	wsCancel()
 	workerMgr.Stop()
 	slog.Info("server stopped")
+	return nil
 }
 
 // newListingActivatorFactory returns a factory function that creates ListingActivatorProvider

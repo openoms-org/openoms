@@ -14,10 +14,13 @@ import (
 )
 
 var (
+	// ErrProductNotFound is returned when a product does not exist.
 	ErrProductNotFound = errors.New("product not found")
-	ErrDuplicateSKU    = errors.New("product with this SKU already exists in this tenant")
+	// ErrDuplicateSKU is returned when a product with the same SKU already exists.
+	ErrDuplicateSKU = errors.New("product with this SKU already exists in this tenant")
 )
 
+// ProductService handles business logic for product management.
 type ProductService struct {
 	productRepo       repository.ProductRepo
 	auditRepo         repository.AuditRepo
@@ -37,6 +40,7 @@ func (s *ProductService) SetStockSyncService(svc *StockSyncService) {
 	s.stockSyncService = svc
 }
 
+// NewProductService creates a new ProductService.
 func NewProductService(
 	productRepo repository.ProductRepo,
 	auditRepo repository.AuditRepo,
@@ -51,6 +55,7 @@ func NewProductService(
 	}
 }
 
+// List returns a paginated list of products.
 func (s *ProductService) List(ctx context.Context, tenantID uuid.UUID, filter model.ProductListFilter) ([]model.Product, int, error) {
 	var products []model.Product
 	var total int
@@ -62,6 +67,7 @@ func (s *ProductService) List(ctx context.Context, tenantID uuid.UUID, filter mo
 	return products, total, err
 }
 
+// Get returns a single product by ID.
 func (s *ProductService) Get(ctx context.Context, tenantID, productID uuid.UUID) (*model.Product, error) {
 	var product *model.Product
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -78,6 +84,7 @@ func (s *ProductService) Get(ctx context.Context, tenantID, productID uuid.UUID)
 	return product, nil
 }
 
+// Create inserts a new product.
 func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req model.CreateProductRequest, actorID uuid.UUID, ip string) (*model.Product, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -164,6 +171,7 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 	return product, nil
 }
 
+// Update modifies an existing product.
 func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UUID, req model.UpdateProductRequest, actorID uuid.UUID, ip string) (*model.Product, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
@@ -239,6 +247,7 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 	return product, err
 }
 
+// Delete removes a product by ID.
 func (s *ProductService) Delete(ctx context.Context, tenantID, productID uuid.UUID, actorID uuid.UUID, ip string) error {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		product, err := s.productRepo.FindByID(ctx, tx, productID)

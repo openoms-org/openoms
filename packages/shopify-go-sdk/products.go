@@ -22,7 +22,7 @@ type ProductListParams struct {
 }
 
 // List retrieves a list of products.
-func (s *ProductService) List(ctx context.Context, params ProductListParams) ([]ShopifyProduct, error) {
+func (s *ProductService) List(ctx context.Context, params ProductListParams) ([]Product, error) {
 	path := "/products.json"
 
 	v := url.Values{}
@@ -46,7 +46,7 @@ func (s *ProductService) List(ctx context.Context, params ProductListParams) ([]
 	}
 
 	var wrapper struct {
-		Products []ShopifyProduct `json:"products"`
+		Products []Product `json:"products"`
 	}
 	if err := s.client.do(ctx, "GET", path, nil, &wrapper); err != nil {
 		return nil, err
@@ -55,9 +55,9 @@ func (s *ProductService) List(ctx context.Context, params ProductListParams) ([]
 }
 
 // Get retrieves a single product by ID.
-func (s *ProductService) Get(ctx context.Context, id int64) (*ShopifyProduct, error) {
+func (s *ProductService) Get(ctx context.Context, id int64) (*Product, error) {
 	var wrapper struct {
-		Product ShopifyProduct `json:"product"`
+		Product Product `json:"product"`
 	}
 	if err := s.client.do(ctx, "GET", fmt.Sprintf("/products/%d.json", id), nil, &wrapper); err != nil {
 		return nil, err

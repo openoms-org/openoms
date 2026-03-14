@@ -91,7 +91,7 @@ func TestDoSetsAuthorizationHeader(t *testing.T) {
 			t.Errorf("Authorization = %q, want %q", auth, "Bearer test-token")
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -110,9 +110,9 @@ func TestDoSetsAuthorizationHeader(t *testing.T) {
 }
 
 func TestDoHandlesErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"code":"NOT_FOUND","message":"Resource not found"}`))
+		_, _ = w.Write([]byte(`{"code":"NOT_FOUND","message":"Resource not found"}`))
 	}))
 	defer srv.Close()
 
@@ -141,9 +141,9 @@ func TestDoHandlesErrorResponse(t *testing.T) {
 }
 
 func TestDoNonDecodableErrorResponse(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
-		w.Write([]byte(`<html>Bad Gateway</html>`))
+		_, _ = w.Write([]byte(`<html>Bad Gateway</html>`))
 	}))
 	defer srv.Close()
 
@@ -177,7 +177,7 @@ func TestDoWithRequestBody(t *testing.T) {
 		gotContentType = r.Header.Get("Content-Type")
 		gotBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"id":"123"}`))
+		_, _ = w.Write([]byte(`{"id":"123"}`))
 	}))
 	defer srv.Close()
 
@@ -257,9 +257,9 @@ func TestWithRateLimitOption(t *testing.T) {
 }
 
 func TestDoDecodeResponseError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`not json at all`))
+		_, _ = w.Write([]byte(`not json at all`))
 	}))
 	defer srv.Close()
 

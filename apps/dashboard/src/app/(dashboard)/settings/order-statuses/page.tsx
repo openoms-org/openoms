@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Trash2, Plus } from "lucide-react";
 import type { StatusDef, OrderStatusConfig } from "@/types/api";
+import { useTranslations } from "next-intl";
 
 const COLOR_OPTIONS = Object.entries(COLOR_PRESETS).map(([key, classes]) => ({
   key,
@@ -24,6 +25,8 @@ const COLOR_OPTIONS = Object.entries(COLOR_PRESETS).map(([key, classes]) => ({
 }));
 
 export default function OrderStatusesPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const { data: config, isLoading } = useOrderStatuses();
   const updateStatuses = useUpdateOrderStatuses();
 
@@ -46,11 +49,10 @@ export default function OrderStatusesPage() {
     const removed = statuses[index];
     const newStatuses = statuses.filter((_, i) => i !== index);
     setStatuses(newStatuses);
-    // Remove from transitions
     const newTransitions = { ...transitions };
     delete newTransitions[removed.key];
     for (const [from, targets] of Object.entries(newTransitions)) {
-      newTransitions[from] = targets.filter((t) => t !== removed.key);
+      newTransitions[from] = targets.filter((tr) => tr !== removed.key);
     }
     setTransitions(newTransitions);
   };
@@ -65,7 +67,7 @@ export default function OrderStatusesPage() {
     const newTransitions = { ...transitions };
     const targets = newTransitions[from] || [];
     if (targets.includes(to)) {
-      newTransitions[from] = targets.filter((t) => t !== to);
+      newTransitions[from] = targets.filter((tr) => tr !== to);
     } else {
       newTransitions[from] = [...targets, to];
     }
@@ -73,17 +75,16 @@ export default function OrderStatusesPage() {
   };
 
   const handleSave = async () => {
-    // Validate
     for (const s of statuses) {
       if (!s.key || !s.label) {
-        toast.error("Wszystkie statusy muszą mieć klucz i etykietę");
+        toast.error(t("wszystkieStatusyMuszaMiecKluczIEtykiete"));
         return;
       }
     }
 
     const keys = statuses.map((s) => s.key);
     if (new Set(keys).size !== keys.length) {
-      toast.error("Klucze statusów muszą być unikalne");
+      toast.error(t("kluczeStatusowMuszaBycUnikalne"));
       return;
     }
 
@@ -94,44 +95,44 @@ export default function OrderStatusesPage() {
 
     try {
       await updateStatuses.mutateAsync(configToSave);
-      toast.success("Statusy zamówień zostały zapisane");
+      toast.success(t("statusyZamowienZostałyZapisane"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Błąd podczas zapisywania"
+        error instanceof Error ? error.message : t("bładPodczasZapisywania")
       );
     }
   };
 
   if (isLoading) {
-    return <div className="p-6">Ładowanie...</div>;
+    return <div className="p-6">{t("loading")}</div>;
   }
 
   return (
     <AdminGuard>
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Statusy zamówień</h1>
+        <h1 className="text-2xl font-bold">{t("orderStatuses")}</h1>
         <p className="text-muted-foreground mt-1">
-          Zdefiniuj statusy i przejścia dla zamówień
+          {t("zdefiniujStatusyIPrzejsciaDlaZamowien")}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Statusy</CardTitle>
+          <CardTitle>{t("orderStatuses")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {statuses.map((status, index) => (
             <div key={index} className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
               <Input
-                placeholder="Klucz (np. new)"
+                placeholder="key (e.g. new)"
                 value={status.key}
                 onChange={(e) => handleStatusChange(index, "key", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
                 className="w-40"
               />
               <Input
-                placeholder="Etykieta (np. Nowe)"
+                placeholder="label (e.g. New)"
                 value={status.label}
                 onChange={(e) => handleStatusChange(index, "label", e.target.value)}
                 className="w-48"
@@ -165,14 +166,14 @@ export default function OrderStatusesPage() {
           ))}
           <Button variant="outline" size="sm" onClick={handleAddStatus}>
             <Plus className="mr-2 h-4 w-4" />
-            Dodaj status
+            {tc("add")}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Przejścia</CardTitle>
+          <CardTitle>{t("przejscia")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -208,7 +209,7 @@ export default function OrderStatusesPage() {
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={updateStatuses.isPending}>
-          {updateStatuses.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
+          {updateStatuses.isPending ? tc("saving") : tc("saveChanges")}
         </Button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -14,16 +14,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
-const loginSchema = z.object({
-  tenant_slug: z.string().min(1, "Slug organizacji jest wymagany"),
-  email: z.string().email("Nieprawidłowy adres email"),
-  password: z.string().min(1, "Hasło jest wymagane"),
-});
+function createLoginSchema(t: (key: string) => string) {
+  return z.object({
+    tenant_slug: z.string().min(1, t("validation.orgRequired")),
+    email: z.string().email(t("validation.emailInvalid")),
+    password: z.string().min(1, t("validation.passwordRequired")),
+  });
+}
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = z.infer<ReturnType<typeof createLoginSchema>>;
 
 export default function LoginPage() {
+  const t = useTranslations("auth");
   const { login, verify2FALogin } = useAuth();
   const config = usePublicConfig();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +37,8 @@ export default function LoginPage() {
   const [totpCode, setTotpCode] = useState("");
   const [isVerifying2FA, setIsVerifying2FA] = useState(false);
   const codeInputRef = useRef<HTMLInputElement>(null);
+
+  const loginSchema = useMemo(() => createLoginSchema(t), [t]);
 
   const {
     register,
@@ -94,14 +100,14 @@ export default function LoginPage() {
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <ShieldCheck className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Weryfikacja 2FA</CardTitle>
+            <CardTitle className="text-2xl">{t("twoFa.title")}</CardTitle>
             <CardDescription>
-              Kod z aplikacji uwierzytelniającej
+              {t("twoFa.subtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="totp_code">Kod weryfikacyjny</Label>
+              <Label htmlFor="totp_code">{t("twoFa.codeLabel")}</Label>
               <Input
                 ref={codeInputRef}
                 id="totp_code"
@@ -116,7 +122,7 @@ export default function LoginPage() {
                 disabled={isVerifying2FA}
               />
               <p className="text-xs text-muted-foreground text-center">
-                Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej
+                {t("twoFa.codeHint")}
               </p>
             </div>
           </CardContent>
@@ -126,7 +132,7 @@ export default function LoginPage() {
               disabled={totpCode.length !== 6 || isVerifying2FA}
               onClick={() => handleTotpCodeChange(totpCode)}
             >
-              {isVerifying2FA ? "Weryfikacja..." : "Zweryfikuj"}
+              {isVerifying2FA ? t("twoFa.verifying") : t("twoFa.verify")}
             </Button>
             <button
               type="button"
@@ -137,7 +143,7 @@ export default function LoginPage() {
                 setTotpCode("");
               }}
             >
-              Wróć do logowania
+              {t("twoFa.backToLogin")}
             </button>
           </CardFooter>
         </Card>
@@ -153,13 +159,13 @@ export default function LoginPage() {
       </div>
       <Card className="w-full">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Logowanie</CardTitle>
-          <CardDescription>Zaloguj się do panelu OpenOMS</CardDescription>
+          <CardTitle className="text-2xl">{t("login.title")}</CardTitle>
+          <CardDescription>{t("login.subtitle")}</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="tenant_slug">Organizacja <span className="text-destructive">*</span></Label>
+              <Label htmlFor="tenant_slug">{t("login.organization")} <span className="text-destructive">*</span></Label>
               <Input
                 id="tenant_slug"
                 placeholder="moja-firma"
@@ -184,7 +190,7 @@ export default function LoginPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Hasło <span className="text-destructive">*</span></Label>
+              <Label htmlFor="password">{t("login.password")}<span className="text-destructive">*</span></Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -198,7 +204,7 @@ export default function LoginPage() {
                   className="absolute right-0 top-0 flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowPassword((prev) => !prev)}
                   tabIndex={-1}
-                  aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
+                  aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -214,13 +220,13 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Logowanie..." : "Zaloguj się"}
+              {isSubmitting ? t("login.submitting") : t("login.submit")}
             </Button>
             {(config.registration_mode === "open" || (config.registration_mode === "invite" && config.license_enabled)) && (
               <p className="text-sm text-muted-foreground">
-                Nie masz konta?{" "}
+                {t("login.noAccount")}{" "}
                 <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-                  Zarejestruj się
+                  {t("login.register")}
                 </Link>
               </p>
             )}

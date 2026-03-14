@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -105,7 +104,7 @@ type returnSlipData struct {
 // --- Default templates ---
 
 const defaultPackingSlipTemplate = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>List przewozowy</title>
+<html><head><meta charset="utf-8"><title>Packing Slip</title>
 <style>
 body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
 .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
@@ -118,19 +117,19 @@ th { background: #f5f5f5; }
 </style></head><body>
 <div class="header">
   <div class="company">{{.CompanyName}}<br>{{.CompanyAddress}}<br>NIP: {{.CompanyNIP}}</div>
-  <div>Zamówienie: {{.OrderID}}<br>Data: {{.OrderDate}}<br>Źródło: {{.Source}}</div>
+  <div>Order: {{.OrderID}}<br>Date: {{.OrderDate}}<br>Source: {{.Source}}</div>
 </div>
-<h3>Dane klienta</h3>
+<h3>Customer</h3>
 <p>{{.CustomerName}}<br>{{.ShippingAddress}}</p>
-<h3>Pozycje</h3>
-<table><thead><tr><th>Lp.</th><th>Nazwa</th><th>SKU</th><th>Ilość</th><th>Cena</th><th>Wartość</th></tr></thead>
+<h3>Items</h3>
+<table><thead><tr><th>#</th><th>Name</th><th>SKU</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead>
 <tbody>{{range $i, $item := .Items}}<tr><td>{{inc $i}}</td><td>{{$item.Name}}</td><td>{{$item.SKU}}</td><td>{{$item.Quantity}}</td><td>{{$item.Price}}</td><td>{{$item.Total}}</td></tr>{{end}}</tbody></table>
-<p class="total">Razem: {{.TotalAmount}} {{.Currency}}</p>
-{{if .Notes}}<p><strong>Uwagi:</strong> {{.Notes}}</p>{{end}}
+<p class="total">Total: {{.TotalAmount}} {{.Currency}}</p>
+{{if .Notes}}<p><strong>Notes:</strong> {{.Notes}}</p>{{end}}
 </body></html>`
 
 const defaultOrderSummaryTemplate = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Podsumowanie zamówienia</title>
+<html><head><meta charset="utf-8"><title>Order Summary</title>
 <style>
 body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
 .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
@@ -147,36 +146,36 @@ th { background: #f5f5f5; }
 </style></head><body>
 <div class="header">
   <div class="company">{{.CompanyName}}<br>{{.CompanyAddress}}<br>NIP: {{.CompanyNIP}}</div>
-  <div>Zamówienie: {{.OrderID}}<br>Data: {{.OrderDate}}<br>Status: {{.Status}}</div>
+  <div>Order: {{.OrderID}}<br>Date: {{.OrderDate}}<br>Status: {{.Status}}</div>
 </div>
 <div class="section">
-<h3>Dane klienta</h3>
+<h3>Customer</h3>
 <div class="grid">
 <div><p><strong>{{.CustomerName}}</strong></p>
 {{if .CustomerEmail}}<p>Email: {{.CustomerEmail}}</p>{{end}}
-{{if .CustomerPhone}}<p>Tel: {{.CustomerPhone}}</p>{{end}}
+{{if .CustomerPhone}}<p>Phone: {{.CustomerPhone}}</p>{{end}}
 </div>
 <div>
-{{if .ShippingAddress}}<p><strong>Address dostawy:</strong><br>{{.ShippingAddress}}</p>{{end}}
-{{if .BillingAddress}}<p><strong>Address rozliczeniowy:</strong><br>{{.BillingAddress}}</p>{{end}}
+{{if .ShippingAddress}}<p><strong>Shipping address:</strong><br>{{.ShippingAddress}}</p>{{end}}
+{{if .BillingAddress}}<p><strong>Billing address:</strong><br>{{.BillingAddress}}</p>{{end}}
 </div>
 </div>
 </div>
 <div class="section">
-<h3>Pozycje</h3>
-<table><thead><tr><th>Lp.</th><th>Nazwa</th><th>SKU</th><th>Ilość</th><th>Cena</th><th>Wartość</th></tr></thead>
+<h3>Items</h3>
+<table><thead><tr><th>#</th><th>Name</th><th>SKU</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead>
 <tbody>{{range $i, $item := .Items}}<tr><td>{{inc $i}}</td><td>{{$item.Name}}</td><td>{{$item.SKU}}</td><td>{{$item.Quantity}}</td><td>{{$item.Price}}</td><td>{{$item.Total}}</td></tr>{{end}}</tbody></table>
-<p class="total">Razem: {{.TotalAmount}} {{.Currency}}</p>
+<p class="total">Total: {{.TotalAmount}} {{.Currency}}</p>
 </div>
 <div class="section">
-<h3>Płatność</h3>
-<p>Status: {{.PaymentStatus}}{{if .PaymentMethod}} | Metoda: {{.PaymentMethod}}{{end}}</p>
+<h3>Payment</h3>
+<p>Status: {{.PaymentStatus}}{{if .PaymentMethod}} | Method: {{.PaymentMethod}}{{end}}</p>
 </div>
-{{if .Notes}}<div class="section"><h3>Uwagi</h3><p>{{.Notes}}</p></div>{{end}}
+{{if .Notes}}<div class="section"><h3>Notes</h3><p>{{.Notes}}</p></div>{{end}}
 </body></html>`
 
 const defaultReturnSlipTemplate = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Formularz zwrotu</title>
+<html><head><meta charset="utf-8"><title>Return Form</title>
 <style>
 body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
 .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
@@ -189,15 +188,15 @@ th { background: #f5f5f5; }
 </style></head><body>
 <div class="header">
   <div class="company">{{.CompanyName}}<br>{{.CompanyAddress}}<br>NIP: {{.CompanyNIP}}</div>
-  <div>Zwrot: {{.ReturnID}}<br>Zamówienie: {{.OrderID}}<br>Data: {{.ReturnDate}}<br>Status: {{.Status}}</div>
+  <div>Return: {{.ReturnID}}<br>Order: {{.OrderID}}<br>Date: {{.ReturnDate}}<br>Status: {{.Status}}</div>
 </div>
-<h3>Powód zwrotu</h3>
+<h3>Return Reason</h3>
 <p>{{.Reason}}</p>
-{{if .Items}}<h3>Pozycje</h3>
-<table><thead><tr><th>Lp.</th><th>Nazwa</th><th>SKU</th><th>Ilość</th></tr></thead>
+{{if .Items}}<h3>Items</h3>
+<table><thead><tr><th>#</th><th>Name</th><th>SKU</th><th>Qty</th></tr></thead>
 <tbody>{{range $i, $item := .Items}}<tr><td>{{inc $i}}</td><td>{{$item.Name}}</td><td>{{$item.SKU}}</td><td>{{$item.Quantity}}</td></tr>{{end}}</tbody></table>{{end}}
-<p class="total">Kwota zwrotu: {{.RefundAmount}}</p>
-{{if .Notes}}<p><strong>Uwagi:</strong> {{.Notes}}</p>{{end}}
+<p class="total">Refund amount: {{.RefundAmount}}</p>
+{{if .Notes}}<p><strong>Notes:</strong> {{.Notes}}</p>{{end}}
 </body></html>`
 
 // templateFuncs provides helper functions for templates.
@@ -217,7 +216,7 @@ func (h *PrintHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, tenant
 	}
 	var allSettings map[string]json.RawMessage
 	if err := json.Unmarshal(settings, &allSettings); err != nil {
-		return nil
+		return err
 	}
 	raw, ok := allSettings[key]
 	if !ok {
@@ -252,13 +251,13 @@ func (h *PrintHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, ten
 
 func (h *PrintHandler) loadCompanySettings(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) model.CompanySettings {
 	var cs model.CompanySettings
-	h.getSettingsSection(ctx, tx, tenantID, "company", &cs) //nolint:errcheck
+	h.getSettingsSection(ctx, tx, tenantID, "company", &cs) //nolint:errcheck,gosec
 	return cs
 }
 
 func (h *PrintHandler) loadPrintTemplates(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) PrintTemplatesConfig {
 	var cfg PrintTemplatesConfig
-	h.getSettingsSection(ctx, tx, tenantID, "print_templates", &cfg) //nolint:errcheck
+	h.getSettingsSection(ctx, tx, tenantID, "print_templates", &cfg) //nolint:errcheck,gosec
 	return cfg
 }
 
@@ -355,7 +354,7 @@ func writeHTML(w http.ResponseWriter, html []byte) {
 	w.Header().Set("Content-Security-Policy", "script-src 'none'; object-src 'none'")
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.WriteHeader(http.StatusOK)
-	w.Write(html) //nolint:errcheck
+	_, _ = w.Write(html)
 }
 
 func shortUUID(id uuid.UUID) string {
@@ -364,13 +363,6 @@ func shortUUID(id uuid.UUID) string {
 		return s[:8]
 	}
 	return s
-}
-
-func formatTime(t *time.Time) string {
-	if t == nil {
-		return ""
-	}
-	return t.Format("2006-01-02 15:04")
 }
 
 func derefStr(s *string) string {
