@@ -61,7 +61,7 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiClientError) {
     switch (error.status) {
       case 401:
-        return "errors.sessionExpired";
+        return error.message || "errors.sessionExpired";
       case 402:
         return error.message || "errors.noActiveSubscription";
       case 403:
