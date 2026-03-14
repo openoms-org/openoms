@@ -15,7 +15,7 @@ spec:
       provider:
         job:
           spec:
-            backoffLimit: 2
+            backoffLimit: 0
             template:
               spec:
                 restartPolicy: Never
@@ -29,10 +29,18 @@ spec:
                       - /bin/sh
                       - -c
                       - |
-                        set -e
-                        echo "Checking health endpoint..."
-                        curl -sf --max-time 10 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/health
-                        echo ""
+                        echo "Waiting for preview pods to become ready..."
+                        for i in $(seq 1 30); do
+                          if curl -sf --max-time 5 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/health >/dev/null 2>&1; then
+                            echo "Health endpoint ready (attempt $i)"
+                            break
+                          fi
+                          if [ "$i" = "30" ]; then
+                            echo "FAIL: health endpoint not ready after 30 attempts (150s)"
+                            exit 1
+                          fi
+                          sleep 5
+                        done
                         echo "Checking config endpoint..."
                         curl -sf --max-time 10 http://{{ include "openoms.fullname" . }}-api-preview:{{ .Values.apiServer.service.port | default 8080 }}/v1/config/public > /dev/null
                         echo "Smoke tests passed"
