@@ -255,7 +255,7 @@ func (p *FedExProvider) GetRates(_ context.Context, req integration.RateRequest)
 // SupportsPickupPoints reports that FedEx does not support pickup point delivery.
 func (p *FedExProvider) SupportsPickupPoints() bool { return false }
 
-// SearchPickupPoints is not supported by FedEx and always returns nil.
+// SearchPickupPoints is not supported by FedEx.
 func (p *FedExProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
-	return nil, nil
+	return nil, fmt.Errorf("fedex: pickup point search not supported")
 }

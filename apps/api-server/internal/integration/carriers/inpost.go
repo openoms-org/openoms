@@ -121,7 +121,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 	// InPost generates offers asynchronously. Poll until offers are available, then buy.
 	shipmentID := shipment.ID
 	var offerID int64
-	for attempt := range 10 {
+	for attempt := range 20 {
 		if len(shipment.Offers) > 0 {
 			offerID = shipment.Offers[0].ID
 			break
@@ -130,7 +130,12 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 		if shipment.Status == "confirmed" {
 			break
 		}
-		time.Sleep(time.Duration(500+attempt*500) * time.Millisecond)
+		backoff := time.Duration(500+attempt*500) * time.Millisecond
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(backoff):
+		}
 		polled, err := p.client.Shipments.Get(ctx, shipmentID)
 		if err != nil {
 			p.logger.Warn("inpost: poll shipment failed", "id", shipmentID, "error", err)

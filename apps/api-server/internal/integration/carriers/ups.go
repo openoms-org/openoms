@@ -196,7 +196,7 @@ func (p *UPSProvider) GetRates(_ context.Context, req integration.RateRequest) (
 // SupportsPickupPoints reports that UPS does not support pickup point delivery.
 func (p *UPSProvider) SupportsPickupPoints() bool { return false }
 
-// SearchPickupPoints is not supported by UPS and always returns nil.
+// SearchPickupPoints is not supported by UPS.
 func (p *UPSProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
-	return nil, nil
+	return nil, fmt.Errorf("ups: pickup point search not supported")
 }

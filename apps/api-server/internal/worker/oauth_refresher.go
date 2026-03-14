@@ -10,11 +10,13 @@ import (
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 	amazonsdk "github.com/openoms-org/openoms/packages/amazon-sp-sdk"
+	ebaysdk "github.com/openoms-org/openoms/packages/ebay-go-sdk"
 	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	allegroIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	amazonIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/amazon"
+	ebayIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/ebay"
 	olxIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/olx"
 )
 
@@ -51,7 +53,7 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 	rows, err := w.pool.Query(ctx,
 		`SELECT id, tenant_id, credentials, provider
 		 FROM integrations
-		 WHERE status = 'active' AND provider IN ('allegro', 'olx', 'amazon')`,
+		 WHERE status = 'active' AND provider IN ('allegro', 'olx', 'amazon', 'ebay')`,
 	)
 	if err != nil {
 		return err
@@ -114,6 +116,19 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 				continue // manual setup or no OAuth tokens yet
 			}
 			tokenExpiry = creds.TokenExpiry
+		case "ebay":
+			var creds ebayIntegration.Credentials
+			if err := json.Unmarshal(credJSON, &creds); err != nil {
+				w.logger.Error("oauth refresh: parse credentials", "integration_id", ir.id, "error", err)
+				continue
+			}
+			if creds.RefreshToken == "" {
+				continue
+			}
+			// eBay SDK auto-refreshes access tokens on each API call.
+			// Proactively refresh here to detect expired refresh tokens early.
+			// Use a synthetic expiry to always attempt refresh.
+			tokenExpiry = time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
 		default:
 			continue
 		}
@@ -144,6 +159,8 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			newCredJSON, err = w.refreshOLX(ctx, credJSON, expiry)
 		case "amazon":
 			newCredJSON, err = w.refreshAmazon(ctx, credJSON, expiry)
+		case "ebay":
+			newCredJSON, err = w.refreshEbay(ctx, credJSON)
 		}
 		if err != nil {
 			w.logger.Error("oauth refresh: refresh failed", "integration_id", ir.id, "error", err)
@@ -260,4 +277,25 @@ func (w *OAuthRefresher) refreshAmazon(ctx context.Context, credJSON []byte, exp
 	}
 	creds.TokenExpiry = newExpiry.Format(time.RFC3339)
 	return json.Marshal(creds) // #nosec G117 -- ClientSecret is a legitimate credential field
+}
+
+func (w *OAuthRefresher) refreshEbay(ctx context.Context, credJSON []byte) ([]byte, error) {
+	var creds ebayIntegration.Credentials
+	if err := json.Unmarshal(credJSON, &creds); err != nil {
+		return nil, err
+	}
+
+	var opts []ebaysdk.Option
+	if creds.Sandbox {
+		opts = append(opts, ebaysdk.WithSandbox())
+	}
+
+	client := ebaysdk.NewClient(creds.AppID, creds.CertID, creds.DevID, creds.RefreshToken, opts...)
+	if _, err := client.RefreshAccessToken(ctx); err != nil {
+		return nil, err
+	}
+
+	// eBay credentials don't store access tokens — return unchanged.
+	// The refresh call validates that the refresh_token is still valid.
+	return credJSON, nil
 }

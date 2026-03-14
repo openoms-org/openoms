@@ -170,11 +170,55 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*ExchangeCodeRe
 	return &result, nil
 }
 
-// tokenResponse represents the OAuth2 token endpoint response.
-type tokenResponse struct {
+// TokenResponse represents the OAuth2 token endpoint response.
+type TokenResponse struct {
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int    `json:"expires_in"`
 	TokenType   string `json:"token_type"`
+}
+
+// tokenResponse is an alias kept for internal use.
+type tokenResponse = TokenResponse
+
+// RefreshAccessToken forces a token refresh and returns the new token response.
+// Used by the OAuth refresher worker to proactively verify the refresh token is valid.
+func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error) {
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", c.refreshToken)
+	data.Set("scope", "https://api.ebay.com/oauth/api_scope/sell.fulfillment https://api.ebay.com/oauth/api_scope/sell.inventory")
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("ebay: create token request: %w", err)
+	}
+
+	auth := base64.StdEncoding.EncodeToString([]byte(c.appID + ":" + c.certID))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ebay: token request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ebay: token refresh failed (HTTP %d): %s", resp.StatusCode, string(body))
+	}
+
+	var tokenResp TokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return nil, fmt.Errorf("ebay: decode token response: %w", err)
+	}
+
+	c.tokenMu.Lock()
+	c.accessToken = tokenResp.AccessToken
+	c.tokenExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+	c.tokenMu.Unlock()
+
+	return &tokenResp, nil
 }
 
 // ensureAccessToken refreshes the OAuth2 access token if it is expired or missing.

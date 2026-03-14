@@ -314,7 +314,7 @@ func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) (
 // SupportsPickupPoints reports that DHL does not support pickup point delivery.
 func (p *DHLProvider) SupportsPickupPoints() bool { return false }
 
-// SearchPickupPoints is not supported by DHL and always returns nil.
+// SearchPickupPoints is not supported by DHL.
 func (p *DHLProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
-	return nil, nil
+	return nil, fmt.Errorf("dhl: pickup point search not supported")
 }
