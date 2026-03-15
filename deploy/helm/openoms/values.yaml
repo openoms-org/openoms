@@ -201,3 +201,19 @@ blueGreen:
   scaleDownDelaySeconds: 300
   prePromotionAnalysis: true
   abortScaleDownDelaySeconds: 30
+
+autoscaling:
+  api:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    scaleDownStabilizationSeconds: 300
+  dashboard:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    scaleDownStabilizationSeconds: 300
+    targetCPUUtilizationPercentage: 70
+    scaleDownStabilizationSeconds: 300

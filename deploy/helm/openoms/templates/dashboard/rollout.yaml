@@ -35,6 +35,15 @@ spec:
       securityContext:
         {{- toYaml .Values.dashboard.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: 15
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    {{- include "openoms.dashboard.selectorLabels" . | nindent 20 }}
+                topologyKey: kubernetes.io/hostname
       initContainers:
         - name: env-replace
           image: {{ include "openoms.dashboard.image" . }}
