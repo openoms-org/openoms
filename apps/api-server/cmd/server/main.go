@@ -184,11 +184,19 @@ func run() error {
 	}
 	slog.Info("token service initialized (Ed25519)")
 
-	// Warn about missing webhook secrets
+	// Validate webhook secrets — required in production, warn in development
 	if cfg.AllegroWebhookSecret == "" {
+		if !cfg.IsDevelopment() {
+			slog.Error("ALLEGRO_WEBHOOK_SECRET is empty in production — refusing to start without webhook signature verification")
+			return fmt.Errorf("ALLEGRO_WEBHOOK_SECRET is required in production")
+		}
 		slog.Warn("ALLEGRO_WEBHOOK_SECRET is empty — Allegro webhook signature verification is DISABLED")
 	}
 	if cfg.InPostWebhookSecret == "" {
+		if !cfg.IsDevelopment() {
+			slog.Error("INPOST_WEBHOOK_SECRET is empty in production — refusing to start without webhook signature verification")
+			return fmt.Errorf("INPOST_WEBHOOK_SECRET is required in production")
+		}
 		slog.Warn("INPOST_WEBHOOK_SECRET is empty — InPost webhook signature verification is DISABLED")
 	}
 

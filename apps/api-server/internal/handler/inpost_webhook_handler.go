@@ -44,13 +44,13 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 	// Verify HMAC-SHA256 signature
 	signature := r.Header.Get("X-InPost-Signature")
 	if signature == "" {
-		slog.Warn("inpost webhook: missing signature header")
+		slog.Warn("inpost webhook: missing signature header", "source_ip", r.RemoteAddr, "provider", "inpost")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
 	if err := inpostsdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
-		slog.Warn("inpost webhook: invalid signature", "error", err)
+		slog.Warn("inpost webhook: invalid signature", "error", err, "source_ip", r.RemoteAddr, "provider", "inpost")
 		w.WriteHeader(http.StatusOK)
 		return
 	}
