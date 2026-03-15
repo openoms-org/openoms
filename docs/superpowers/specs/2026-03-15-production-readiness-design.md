@@ -25,13 +25,16 @@ Bottom-up: monitoring first (can't improve what you can't measure), then securit
 
 **Problem:** Alloy DaemonSet is configured in Helm chart (`monitoring/alloy-daemonset.yaml`) but metrics are not reaching Grafana Cloud Prometheus. `up` query returns 0 active targets.
 
+**Likely root cause:** Alloy NetworkPolicy (`alloy-networkpolicy.yaml`) only allows egress to ports 6443 (k8s API) and 10250 (kubelet). Missing HTTPS egress (port 443) to Grafana Cloud remote_write endpoint, and missing egress to API pod port 8080 for `/metrics` scraping.
+
 **Actions:**
 1. Diagnose why Alloy is not sending metrics:
-   - Check if Alloy pods are running (`kubectl get pods -n openoms -l app=alloy`)
+   - Check if Alloy pods are running (`kubectl get pods -n openoms -l app.kubernetes.io/component=alloy`)
    - Check Alloy logs for connection/auth errors
-   - Verify Grafana Cloud remote_write credentials (endpoint URL, username, API key)
+   - **Fix Alloy NetworkPolicy** — add egress rules for port 443 (Grafana Cloud) and port 8080 (API `/metrics`)
+   - Verify `openoms-monitoring` secret exists (contains `GRAFANA_REMOTE_WRITE_URL`, `GRAFANA_USER`, `GRAFANA_TOKEN`)
    - Verify `METRICS_TOKEN` secret matches what API server expects on `/metrics`
-2. Fix configuration and redeploy
+2. Fix configuration and redeploy (PR in **public repo** for NetworkPolicy template, enterprise for values if needed)
 3. Verify metrics flow:
    - `openoms_http_requests_total` (request count by status/route)
    - `openoms_http_request_duration_seconds_bucket` (latency histogram)
@@ -40,7 +43,7 @@ Bottom-up: monitoring first (can't improve what you can't measure), then securit
    - `container_memory_working_set_bytes` (pod memory via cAdvisor)
 4. Confirm existing dashboards populate with data
 
-**Deliverable:** 1 PR (enterprise), metrics visible in Grafana dashboards.
+**Deliverable:** 1 PR (public repo — NetworkPolicy fix) + possibly 1 PR (enterprise — secret/values). Metrics visible in Grafana dashboards.
 
 **Success criteria:** `sum(rate(openoms_http_requests_total[5m])) > 0` in Grafana.
 
@@ -56,7 +59,7 @@ Bottom-up: monitoring first (can't improve what you can't measure), then securit
    - API error rate (5xx) > 5% for 5 minutes
    - Pod restart count > 3 in 15 minutes
    - Health check (`/health`) failing for 3 minutes
-   - Backup CronJob failed
+   - Backup CronJob failed (via Loki log-based alert — backup emits no Prometheus metrics)
 
    **Warning (investigate within hours):**
    - P95 latency > 2s for 5 minutes
@@ -85,6 +88,8 @@ Bottom-up: monitoring first (can't improve what you can't measure), then securit
    - **Option B:** Grafana Infinity datasource (already provisioned) — query Cloudflare API directly from Grafana
    - **Recommended:** Option A (exporter) — works with existing Prometheus pipeline, alertable
 2. Deploy exporter with Cloudflare API token (read-only: Zone Analytics)
+   - Pod spec must comply with PSS `enforce: restricted` (runAsNonRoot, readOnlyRootFilesystem, drop ALL, seccomp RuntimeDefault)
+   - Verify chosen exporter image runs as non-root, or build custom
 3. Create dashboard: request rate at edge, cache hit ratio, WAF blocks, threat events, bandwidth
 4. Alert: WAF block spike > 100/min, unusual traffic pattern
 
@@ -95,15 +100,15 @@ Bottom-up: monitoring first (can't improve what you can't measure), then securit
 **Problem:** Daily backup CronJob runs, but restore never tested. Unknown if backups are valid.
 
 **Actions:**
-1. Download latest backup from S3 (`openoms-backups/daily/`)
-2. Spin up temporary PostgreSQL pod
+1. Download latest backup from S3 (`openoms-backups/daily/`) — via `kubectl run` ephemeral pod inside cluster (operator needs S3 credentials in-cluster, not locally)
+2. Spin up temporary PostgreSQL pod (isolated, NOT connected to production Supabase — use a throwaway `postgres:16-alpine` pod)
 3. Restore backup, verify:
    - Table count matches production
    - Row counts on key tables (tenants, orders, users)
    - RLS policies intact
    - SECURITY DEFINER functions present
 4. Document restore procedure as runbook
-5. Verify Redis no-persistence is intentional (confirm: WS tickets, rate limits, token blacklist are all ephemeral)
+5. Document that Redis is intentionally non-persistent (WS tickets, rate limits, token blacklist are all ephemeral — already confirmed, needs documentation so future operators don't re-enable persistence thinking it's misconfigured)
 
 **Deliverable:** 1 PR (enterprise) with restore runbook + optional monthly restore test CronJob.
 
@@ -117,6 +122,7 @@ Bottom-up: monitoring first (can't improve what you can't measure), then securit
    - Per-path annotations for `/v1/auth/login` (10/min), `/v1/public/returns` (30/min)
    - Note: Cloudflare WAF already does edge rate limiting — ingress rate limiting is defense-in-depth
 2. **Network policies review:**
+   - Reconcile dual-source policies: enterprise manifest (`network-policies.yaml`) vs Helm chart (`networkpolicy.yaml`) — decide on single source of truth (recommend Helm-managed)
    - Verify default-deny is active (`kubectl get networkpolicy -A`)
    - Test: pod in openoms namespace cannot reach internet directly
    - Test: pod outside openoms namespace cannot reach API pods
@@ -142,10 +148,12 @@ Bottom-up: monitoring first (can't improve what you can't measure), then securit
    - Run against staging (not production)
 
 2. **HPA configuration:**
-   - API server: scale on CPU (target 70%) or custom metric (`openoms_http_active_requests`)
+   - API server: scale on CPU (target 70%) — use built-in metrics-server (k3s ships with it)
    - Dashboard: scale on CPU (target 70%)
+   - Worker: intentionally excluded from HPA (single instance with distributed locks, scale manually if needed)
    - Min: 2 replicas (HA), Max: 5 (cost control on CX32 workers)
    - Scale-down stabilization: 300s (prevent flapping)
+   - Note: custom Prometheus metrics (e.g. `openoms_http_active_requests`) require KEDA or Prometheus Adapter — defer to future iteration, CPU-based HPA is sufficient for now
 
 3. **Pod anti-affinity:**
    - Prefer scheduling API replicas on different nodes
@@ -182,7 +190,7 @@ Phase 4 (autoscaling) ← requires Phase 0 data (1+ week of metrics)
 
 | Phase | Public repo (Helm chart) | Enterprise repo |
 |-------|--------------------------|-----------------|
-| 0 | — | Alloy config fix, values |
+| 0 | Alloy NetworkPolicy fix | Values/secrets if needed |
 | 1 | — | Alert provisioning |
 | 2 | — | Cloudflare exporter deploy |
 | 2b | — | Restore runbook |
