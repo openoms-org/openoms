@@ -120,9 +120,9 @@ export default function IntegrationsPage() {
                 const dedicatedPages: Record<string, string> = {
                   allegro: "/marketplaces/allegro",
                   amazon: "/marketplaces/amazon",
-                  shoper: "/integrations/shoper",
-                  prestashop: "/integrations/prestashop",
-                  shopify: "/integrations/shopify",
+                  shoper: "/marketplaces/shoper",
+                  prestashop: "/marketplaces/prestashop",
+                  shopify: "/marketplaces/shopify",
                 };
                 const href = dedicatedPages[integration.provider] ?? `/integrations/${integration.id}`;
                 return (
