@@ -1,0 +1,32 @@
+{{- if .Values.autoscaling.dashboard.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "openoms.fullname" . }}-dashboard
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
+spec:
+  scaleTargetRef:
+    {{- if .Values.blueGreen.enabled }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+    {{- else }}
+    apiVersion: apps/v1
+    kind: Deployment
+    {{- end }}
+    name: {{ include "openoms.fullname" . }}-dashboard
+  minReplicas: {{ .Values.autoscaling.dashboard.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.dashboard.maxReplicas }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: {{ .Values.autoscaling.dashboard.scaleDownStabilizationSeconds }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.dashboard.targetCPUUtilizationPercentage }}
+{{- end }}
