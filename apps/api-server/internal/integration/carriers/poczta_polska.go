@@ -186,7 +186,7 @@ func (p *PocztaPolskaProvider) GetRates(_ context.Context, req integration.RateR
 // SupportsPickupPoints reports that Poczta Polska does not support pickup point delivery.
 func (p *PocztaPolskaProvider) SupportsPickupPoints() bool { return false }
 
-// SearchPickupPoints is not supported by Poczta Polska and always returns nil.
+// SearchPickupPoints is not supported by Poczta Polska.
 func (p *PocztaPolskaProvider) SearchPickupPoints(_ context.Context, _ string) ([]integration.PickupPoint, error) {
-	return nil, nil
+	return nil, fmt.Errorf("poczta_polska: pickup point search not supported")
 }

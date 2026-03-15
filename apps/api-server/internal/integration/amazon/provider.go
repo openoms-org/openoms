@@ -13,6 +13,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -68,6 +69,8 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 		opts = append(opts, amazonsdk.WithSandbox())
 	}
 
+	opts = append(opts, amazonsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
+
 	client := amazonsdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
 
 	return &Provider{
@@ -105,7 +108,11 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 
 		for _, order := range resp.Payload.Orders {
 			// Rate limit: Amazon allows ~1 req/sec for orders
-			time.Sleep(time.Second)
+			select {
+			case <-ctx.Done():
+				return allOrders, newCursor, ctx.Err()
+			case <-time.After(time.Second):
+			}
 
 			items, err := p.fetchAllItems(ctx, order.AmazonOrderID)
 			if err != nil {
@@ -128,7 +135,11 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 			break
 		}
 		nextToken = resp.Payload.NextToken
-		time.Sleep(time.Second) // rate limit between pages
+		select {
+		case <-ctx.Done():
+			return allOrders, newCursor, ctx.Err()
+		case <-time.After(time.Second):
+		}
 	}
 
 	return allOrders, newCursor, nil
@@ -150,7 +161,11 @@ func (p *Provider) fetchAllItems(ctx context.Context, orderID string) ([]amazons
 			break
 		}
 		nextToken = resp.Payload.NextToken
-		time.Sleep(time.Second) // rate limit
+		select {
+		case <-ctx.Done():
+			return all, ctx.Err()
+		case <-time.After(time.Second):
+		}
 	}
 
 	return all, nil

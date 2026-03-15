@@ -98,13 +98,23 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 
 		credJSON, err := crypto.Decrypt(ti.Credentials, p.encryptionKey)
 		if err != nil {
-			p.logger.Error("failed to decrypt credentials", "integration_id", ti.IntegrationID, "error", err)
+			p.logger.Error("failed to decrypt credentials",
+				"integration_id", ti.IntegrationID,
+				"provider", p.providerName,
+				"tenant_id", ti.TenantID,
+				"error", err,
+			)
 			continue
 		}
 
 		provider, err := integration.NewMarketplaceProvider(p.providerName, credJSON, ti.Settings)
 		if err != nil {
-			p.logger.Error("failed to create provider", "integration_id", ti.IntegrationID, "error", err)
+			p.logger.Error("failed to create provider",
+				"integration_id", ti.IntegrationID,
+				"provider", p.providerName,
+				"tenant_id", ti.TenantID,
+				"error", err,
+			)
 			continue
 		}
 		cursor := ""
@@ -114,7 +124,12 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 
 		orders, newCursor, err := provider.PollOrders(ctx, cursor)
 		if err != nil {
-			p.logger.Error("failed to poll orders", "integration_id", ti.IntegrationID, "error", err)
+			p.logger.Error("failed to poll orders",
+				"integration_id", ti.IntegrationID,
+				"provider", p.providerName,
+				"tenant_id", ti.TenantID,
+				"error", err,
+			)
 			continue
 		}
 

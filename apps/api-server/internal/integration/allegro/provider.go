@@ -13,6 +13,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -54,6 +55,8 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 	if creds.Sandbox {
 		opts = append(opts, allegrosdk.WithSandbox())
 	}
+
+	opts = append(opts, allegrosdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 
 	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
 

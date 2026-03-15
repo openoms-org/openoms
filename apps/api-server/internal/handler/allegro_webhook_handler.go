@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 )
@@ -89,7 +90,11 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 			"order_id", orderID,
 		)
 		if h.orderSyncer != nil && orderID != "" {
-			go h.orderSyncer.ImportOrder(context.Background(), orderID)
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				h.orderSyncer.ImportOrder(ctx, orderID)
+			}()
 		}
 
 	case "ORDER_STATUS_CHANGED":
@@ -98,7 +103,11 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 			"order_id", orderID,
 		)
 		if h.orderSyncer != nil && orderID != "" {
-			go h.orderSyncer.UpdateOrderStatus(context.Background(), orderID)
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+				h.orderSyncer.UpdateOrderStatus(ctx, orderID)
+			}()
 		}
 
 	default:
