@@ -88,6 +88,11 @@ func (c *Config) IsDevelopment() bool {
 	return c.Env == "development"
 }
 
+// IsProduction reports whether the server is running in production mode.
+func (c *Config) IsProduction() bool {
+	return c.Env == "production"
+}
+
 // Validate checks critical config values and returns an error for fatal
 // misconfigurations. Non-fatal issues are logged as warnings.
 func (c *Config) Validate() error {
