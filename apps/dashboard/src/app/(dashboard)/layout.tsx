@@ -12,6 +12,7 @@ import { SidebarProvider } from "@/components/layout/sidebar-context";
 import { TableDensityProvider } from "@/lib/table-density";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useServiceWorker } from "@/hooks/use-service-worker";
+import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { useOnboardingStatus } from "@/hooks/use-onboarding-wizard";
 
@@ -36,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
 
   useServiceWorker();
+  useSessionTimeout();
 
   if (isLoading) {
     return (
