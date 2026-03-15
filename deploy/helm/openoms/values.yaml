@@ -150,6 +150,12 @@ ingress:
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Rate limiting — defense-in-depth (Cloudflare WAF handles edge rate limiting)
+    # These limits protect against internal cluster abuse; all external traffic
+    # arrives via cloudflared pods so per-IP limiting sees cloudflared's pod IP.
+    nginx.ingress.kubernetes.io/limit-rps: "50"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    nginx.ingress.kubernetes.io/limit-connections: "20"
   tls:
     enabled: false  # set true + add cert-manager annotation for non-tunnel setups
   api:

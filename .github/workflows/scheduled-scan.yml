@@ -1,0 +1,32 @@
+name: Scheduled Security Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 6 AM UTC
+  workflow_dispatch: {}
+
+permissions:
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: [openoms-api, openoms-dashboard, openoms-migrate]
+    steps:
+      - name: Scan ${{ matrix.image }}
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: ghcr.io/openoms-org/${{ matrix.image }}:latest
+          format: sarif
+          output: ${{ matrix.image }}-results.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ${{ matrix.image }}-results.sarif
+          category: ${{ matrix.image }}-weekly
