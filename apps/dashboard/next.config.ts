@@ -43,9 +43,9 @@ const nextConfig: NextConfig = {
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
         {
           key: "Content-Security-Policy",
-          // unsafe-inline required: Next.js injects inline scripts for __NEXT_DATA__ and chunk loading
-          // without nonce support. strict-dynamic causes modern browsers to ignore unsafe-inline.
-          value: `default-src 'self'; script-src 'self' 'unsafe-inline' 'strict-dynamic' https://geowidget.inpost.pl https://static.cloudflareinsights.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl https://cloudflareinsights.com https://api.stripe.com https://*.sentry.io ${getWsDirectives()}; font-src 'self' data:; frame-src https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
+          // unsafe-inline required: Next.js injects inline scripts for __NEXT_DATA__ and chunk loading.
+          // Do NOT add strict-dynamic — it causes browsers to ignore unsafe-inline.
+          value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://geowidget.inpost.pl https://static.cloudflareinsights.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl https://cloudflareinsights.com https://api.stripe.com https://*.sentry.io ${getWsDirectives()}; font-src 'self' data:; frame-src https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
         },
       ],
     },
