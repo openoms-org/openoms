@@ -35,7 +35,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: {{ include "openoms.fullname" . }}-dashboard
+                    {{- include "openoms.dashboard.selectorLabels" . | nindent 20 }}
                 topologyKey: kubernetes.io/hostname
       initContainers:
         - name: env-replace

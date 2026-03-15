@@ -38,7 +38,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: {{ include "openoms.fullname" . }}-api
+                    {{- include "openoms.apiServer.selectorLabels" . | nindent 20 }}
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: api-server
