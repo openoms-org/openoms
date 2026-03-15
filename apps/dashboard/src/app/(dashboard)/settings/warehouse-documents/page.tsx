@@ -34,12 +34,6 @@ import {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Szkic",
-  confirmed: "Zatwierdzony",
-  cancelled: "Anulowany",
-};
-
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
   confirmed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
@@ -85,7 +79,7 @@ export default function WarehouseDocumentsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Dokumenty magazynowe
+            {t("title")}
           </h1>
           <p className="text-muted-foreground">
             {t("zarzadzajDokumentamiPzWzIMm")}
@@ -94,7 +88,7 @@ export default function WarehouseDocumentsPage() {
         <Button asChild>
           <Link href="/settings/warehouse-documents/new">
             <Plus className="h-4 w-4 mr-2" />
-            Nowy dokument
+            {t("newDocumentAction")}
           </Link>
         </Button>
       </div>
@@ -102,10 +96,10 @@ export default function WarehouseDocumentsPage() {
       <div className="flex gap-4 mb-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Typ dokumentu" />
+            <SelectValue placeholder={t("docTypeLabel")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie typy</SelectItem>
+            <SelectItem value="all">{t("allTypes")}</SelectItem>
             <SelectItem value="PZ">PZ</SelectItem>
             <SelectItem value="WZ">WZ</SelectItem>
             <SelectItem value="MM">MM</SelectItem>
@@ -114,13 +108,13 @@ export default function WarehouseDocumentsPage() {
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("columns.status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie statusy</SelectItem>
-            <SelectItem value="draft">Szkic</SelectItem>
-            <SelectItem value="confirmed">Zatwierdzony</SelectItem>
-            <SelectItem value="cancelled">Anulowany</SelectItem>
+            <SelectItem value="all">{t("allStatuses")}</SelectItem>
+            <SelectItem value="draft">{t("statusDraft")}</SelectItem>
+            <SelectItem value="confirmed">{t("statusConfirmed")}</SelectItem>
+            <SelectItem value="cancelled">{t("statusCancelled")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -147,7 +141,7 @@ export default function WarehouseDocumentsPage() {
           title={t("brakDokumentowMagazynowych")}
           description={t("utworzPierwszyDokumentPzWzLubMmAbyZarzadzacRuchemT")}
           action={{
-            label: "Nowy dokument",
+            label: t("newDocumentAction"),
             href: "/settings/warehouse-documents/new",
           }}
         />
@@ -156,11 +150,11 @@ export default function WarehouseDocumentsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Numer</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Utworzono</TableHead>
-                <TableHead>Zatwierdzono</TableHead>
+                <TableHead>{t("columns.number")}</TableHead>
+                <TableHead>{t("columns.type")}</TableHead>
+                <TableHead>{t("columns.status")}</TableHead>
+                <TableHead>{t("columns.createdAt")}</TableHead>
+                <TableHead>{t("columns.confirmedAt")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -184,7 +178,7 @@ export default function WarehouseDocumentsPage() {
                       variant="outline"
                       className={STATUS_COLORS[doc.status] || ""}
                     >
-                      {STATUS_LABELS[doc.status] || doc.status}
+                      {t(`status${doc.status.charAt(0).toUpperCase()}${doc.status.slice(1)}`, { defaultValue: doc.status })}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatDate(doc.created_at)}</TableCell>

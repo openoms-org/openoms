@@ -1,0 +1,101 @@
+{
+  "reconciliation": {
+    "title": "Payment reconciliation",
+    "subtitle": "Reconcile payment gateway transactions with orders",
+    "importSettlement": "Import settlement",
+    "importSettlementCsv": "Import CSV settlement",
+    "importDialogDescription": "Select a payment provider and upload a CSV settlement file.",
+    "paymentProvider": "Payment provider",
+    "csvFile": "CSV file",
+    "cancel": "Cancel",
+    "csvFileHint": "Max 10 MB. PayU/Przelewy24: separator \";\"",
+    "import": "Import",
+    "importSuccess": "Imported settlement: {provider} from {date}",
+    "matched": "Matched",
+    "unmatched": "Unmatched",
+    "discrepancies": "Discrepancies",
+    "amountDifferences": "Amount differences",
+    "fees": "Fees",
+    "totalGatewayFees": "Total gateway fees",
+    "allProviders": "All providers",
+    "allStatuses": "All statuses",
+    "dateFrom": "From:",
+    "dateTo": "To:",
+    "loadError": "An error occurred while loading data. Try refreshing the page.",
+    "retry": "Try again",
+    "columns": {
+      "provider": "Provider",
+      "settlementDate": "Settlement date",
+      "settlementId": "Settlement ID",
+      "grossAmount": "Gross amount",
+      "fees": "Fees",
+      "netAmount": "Net amount",
+      "currency": "Currency",
+      "status": "Status",
+      "importedAt": "Imported"
+    },
+    "emptyState": "No settlements. Import your first CSV settlement.",
+    "providerLabels": {
+      "payu": "PayU",
+      "przelewy24": "Przelewy24",
+      "tpay": "Tpay",
+      "stripe": "Stripe",
+      "manual": "Manual"
+    },
+    "statusLabels": {
+      "pending": "Pending",
+      "matched": "Matched",
+      "partial_match": "Partial",
+      "unmatched": "Unmatched"
+    },
+    "detail": {
+      "backToReconciliation": "Back to reconciliation",
+      "back": "Back",
+      "settlementTitle": "Settlement {provider}",
+      "autoMatch": "Auto-match",
+      "autoMatchResult": "Auto-matching: {matched} matched, {unmatched} unmatched, {discrepancy} discrepancies",
+      "manualMatchSuccess": "Transaction has been manually linked to the order",
+      "unlinkSuccess": "Link has been removed",
+      "loadError": "Failed to load settlement.",
+      "grossAmount": "Gross amount",
+      "fees": "Fees",
+      "netAmount": "Net amount",
+      "notes": "Notes",
+      "transactions": "Transactions ({count})",
+      "transactionColumns": {
+        "externalId": "External ID",
+        "type": "Type",
+        "date": "Date",
+        "amount": "Amount",
+        "fee": "Fee",
+        "net": "Net",
+        "status": "Status",
+        "order": "Order",
+        "notes": "Notes",
+        "actions": "Actions"
+      },
+      "emptyTransactions": "No transactions in this settlement.",
+      "link": "Link",
+      "unlink": "Unlink",
+      "reassign": "Reassign",
+      "manualMatchTitle": "Manual transaction linking",
+      "manualMatchDescription": "Enter the order ID you want to link this transaction to.",
+      "orderId": "Order ID (UUID)",
+      "orderIdPlaceholder": "e.g. a1b2c3d4-e5f6-...",
+      "notesOptional": "Notes (optional)",
+      "notesPlaceholder": "Reason for manual linking..."
+    },
+    "matchStatusLabels": {
+      "matched": "Matched",
+      "unmatched": "Unmatched",
+      "discrepancy": "Discrepancy",
+      "manual_match": "Manual"
+    },
+    "txTypeLabels": {
+      "payment": "Payment",
+      "refund": "Refund",
+      "chargeback": "Chargeback",
+      "fee": "Fee"
+    }
+  }
+}

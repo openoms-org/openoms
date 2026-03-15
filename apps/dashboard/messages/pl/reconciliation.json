@@ -1,0 +1,101 @@
+{
+  "reconciliation": {
+    "title": "Rozliczenia płatności",
+    "subtitle": "Uzgadnianie transakcji z bramek płatniczych z zamówieniami",
+    "importSettlement": "Importuj rozliczenie",
+    "importSettlementCsv": "Importuj rozliczenie CSV",
+    "importDialogDescription": "Wybierz dostawcę płatności i plik CSV z rozliczeniem.",
+    "paymentProvider": "Dostawca płatności",
+    "csvFile": "Plik CSV",
+    "cancel": "Anuluj",
+    "csvFileHint": "Maks. 10 MB. PayU/Przelewy24: separator \";\"",
+    "import": "Importuj",
+    "importSuccess": "Zaimportowano rozliczenie: {provider} z {date}",
+    "matched": "Uzgodnione",
+    "unmatched": "Nieuzgodnione",
+    "discrepancies": "Rozbieżności",
+    "amountDifferences": "Różnice kwotowe",
+    "fees": "Prowizje",
+    "totalGatewayFees": "Suma prowizji bramek",
+    "allProviders": "Wszyscy dostawcy",
+    "allStatuses": "Wszystkie statusy",
+    "dateFrom": "Od:",
+    "dateTo": "Do:",
+    "loadError": "Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.",
+    "retry": "Spróbuj ponownie",
+    "columns": {
+      "provider": "Dostawca",
+      "settlementDate": "Data rozliczenia",
+      "settlementId": "ID rozliczenia",
+      "grossAmount": "Kwota brutto",
+      "fees": "Prowizje",
+      "netAmount": "Kwota netto",
+      "currency": "Waluta",
+      "status": "Status",
+      "importedAt": "Zaimportowano"
+    },
+    "emptyState": "Brak rozliczeń. Zaimportuj pierwsze rozliczenie CSV.",
+    "providerLabels": {
+      "payu": "PayU",
+      "przelewy24": "Przelewy24",
+      "tpay": "Tpay",
+      "stripe": "Stripe",
+      "manual": "Ręczne"
+    },
+    "statusLabels": {
+      "pending": "Oczekujące",
+      "matched": "Uzgodnione",
+      "partial_match": "Częściowe",
+      "unmatched": "Nieuzgodnione"
+    },
+    "detail": {
+      "backToReconciliation": "Powrót do rozliczeń",
+      "back": "Powrót",
+      "settlementTitle": "Rozliczenie {provider}",
+      "autoMatch": "Automatyczne uzgadnianie",
+      "autoMatchResult": "Automatyczne uzgadnianie: {matched} uzgodnionych, {unmatched} nieuzgodnionych, {discrepancy} rozbieżności",
+      "manualMatchSuccess": "Transakcja została ręcznie powiązana z zamówieniem",
+      "unlinkSuccess": "Powiązanie zostało usunięte",
+      "loadError": "Nie udało się załadować rozliczenia.",
+      "grossAmount": "Kwota brutto",
+      "fees": "Prowizje",
+      "netAmount": "Kwota netto",
+      "notes": "Notatki",
+      "transactions": "Transakcje ({count})",
+      "transactionColumns": {
+        "externalId": "ID zewnętrzne",
+        "type": "Typ",
+        "date": "Data",
+        "amount": "Kwota",
+        "fee": "Prowizja",
+        "net": "Netto",
+        "status": "Status",
+        "order": "Zamówienie",
+        "notes": "Notatki",
+        "actions": "Akcje"
+      },
+      "emptyTransactions": "Brak transakcji w tym rozliczeniu.",
+      "link": "Powiąż",
+      "unlink": "Odepnij",
+      "reassign": "Przepnij",
+      "manualMatchTitle": "Ręczne powiązanie transakcji",
+      "manualMatchDescription": "Wpisz ID zamówienia, z którym chcesz powiązać tę transakcję.",
+      "orderId": "ID zamówienia (UUID)",
+      "orderIdPlaceholder": "np. a1b2c3d4-e5f6-...",
+      "notesOptional": "Notatki (opcjonalnie)",
+      "notesPlaceholder": "Powód ręcznego powiązania..."
+    },
+    "matchStatusLabels": {
+      "matched": "Uzgodnione",
+      "unmatched": "Nieuzgodnione",
+      "discrepancy": "Rozbieżność",
+      "manual_match": "Ręczne"
+    },
+    "txTypeLabels": {
+      "payment": "Płatność",
+      "refund": "Zwrot",
+      "chargeback": "Chargeback",
+      "fee": "Prowizja"
+    }
+  }
+}

@@ -90,7 +90,7 @@ function ProductSearchInput({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Szukaj produktu..."
+        placeholder={t("searchProduct")}
       />
       {open && search && (
         <div className="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-md border bg-popover shadow-md">
@@ -202,7 +202,7 @@ export default function NewWarehouseDocumentPage() {
           </Link>
         </Button>
         <h1 className="text-2xl font-bold tracking-tight">
-          Nowy dokument magazynowy
+          {t("newDocument")}
         </h1>
         <p className="text-muted-foreground">
           {t("utworzDokumentPzWzLubMm")}
@@ -211,10 +211,10 @@ export default function NewWarehouseDocumentPage() {
 
       <div className="max-w-2xl space-y-6">
         <div className="space-y-2">
-          <Label>Typ dokumentu *</Label>
+          <Label>{t("docTypeLabel")}</Label>
           <Select value={docType} onValueChange={setDocType}>
             <SelectTrigger>
-              <SelectValue placeholder="Wybierz typ" />
+              <SelectValue placeholder={t("selectType")} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="PZ">{t("pzPrzyjecieZewnetrzne")}</SelectItem>
@@ -226,11 +226,11 @@ export default function NewWarehouseDocumentPage() {
 
         <div className="space-y-2">
           <Label>
-            {docType === "MM" ? t("magazynZrodłowy") : "Magazyn *"}
+            {docType === "MM" ? t("magazynZrodłowy") : t("warehouseLabel")}
           </Label>
           <Select value={warehouseId} onValueChange={setWarehouseId}>
             <SelectTrigger>
-              <SelectValue placeholder="Wybierz magazyn" />
+              <SelectValue placeholder={t("selectWarehouse")} />
             </SelectTrigger>
             <SelectContent>
               {warehouses.map((w) => (
@@ -244,13 +244,13 @@ export default function NewWarehouseDocumentPage() {
 
         {docType === "MM" && (
           <div className="space-y-2">
-            <Label>Magazyn docelowy *</Label>
+            <Label>{t("targetWarehouseLabel")}</Label>
             <Select
               value={targetWarehouseId}
               onValueChange={setTargetWarehouseId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Wybierz magazyn docelowy" />
+                <SelectValue placeholder={t("selectTargetWarehouse")} />
               </SelectTrigger>
               <SelectContent>
                 {warehouses
@@ -267,13 +267,13 @@ export default function NewWarehouseDocumentPage() {
 
         {docType === "PZ" && (
           <div className="space-y-2">
-            <Label>Dostawca</Label>
+            <Label>{t("supplierLabel")}</Label>
             <Select value={supplierId} onValueChange={setSupplierId}>
               <SelectTrigger>
                 <SelectValue placeholder={t("wybierzDostawceOpcjonalnie")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Brak</SelectItem>
+                <SelectItem value="none">---</SelectItem>
                 {suppliers.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name} {s.code ? `(${s.code})` : ""}
@@ -285,18 +285,18 @@ export default function NewWarehouseDocumentPage() {
         )}
 
         <div className="space-y-2">
-          <Label>Uwagi</Label>
+          <Label>{t("notesLabel")}</Label>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Opcjonalne uwagi do dokumentu"
+            placeholder={t("notesPlaceholder")}
             rows={3}
           />
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-base font-semibold">Pozycje *</Label>
+            <Label className="text-base font-semibold">{t("itemsLabel")}</Label>
             <Button variant="outline" size="sm" onClick={addItem}>
               <Plus className="h-4 w-4 mr-1" />
               {t("form.addItem")}
@@ -309,7 +309,7 @@ export default function NewWarehouseDocumentPage() {
               className="flex gap-3 items-end rounded-md border p-3"
             >
               <div className="flex-1 space-y-1">
-                <Label className="text-xs">Produkt</Label>
+                <Label className="text-xs">{t("productLabel")}</Label>
                 <ProductSearchInput
                   value={item.product_id}
                   displayName={item.product_name}
@@ -332,7 +332,7 @@ export default function NewWarehouseDocumentPage() {
                 />
               </div>
               <div className="w-28 space-y-1">
-                <Label className="text-xs">Cena jedn.</Label>
+                <Label className="text-xs">{t("unitPriceLabel")}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -362,7 +362,7 @@ export default function NewWarehouseDocumentPage() {
 
         <div className="flex gap-3 pt-4">
           <Button variant="outline" asChild>
-            <Link href="/settings/warehouse-documents">Anuluj</Link>
+            <Link href="/settings/warehouse-documents">{t("cancelButton")}</Link>
           </Button>
           <Button
             onClick={handleSubmit}
@@ -373,7 +373,7 @@ export default function NewWarehouseDocumentPage() {
               items.some((i) => !i.product_id)
             }
           >
-            {createDocument.isPending ? "Tworzenie..." : t("utworzDokument")}
+            {createDocument.isPending ? t("creating") : t("utworzDokument")}
           </Button>
         </div>
       </div>

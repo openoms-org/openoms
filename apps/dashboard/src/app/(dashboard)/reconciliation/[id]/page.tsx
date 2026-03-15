@@ -41,34 +41,20 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { PaymentTransaction } from "@/types/api";
+import { useTranslations } from "next-intl";
 
-const PROVIDER_LABELS: Record<string, string> = {
-  payu: "PayU",
-  przelewy24: "Przelewy24",
-  tpay: "Tpay",
-  stripe: "Stripe",
-  manual: "Reczne",
+const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pending: "secondary",
+  matched: "default",
+  partial_match: "outline",
+  unmatched: "destructive",
 };
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Oczekujace", variant: "secondary" },
-  matched: { label: "Uzgodnione", variant: "default" },
-  partial_match: { label: "Czesciowe", variant: "outline" },
-  unmatched: { label: "Nieuzgodnione", variant: "destructive" },
-};
-
-const MATCH_STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  matched: { label: "Uzgodnione", variant: "default" },
-  unmatched: { label: "Nieuzgodnione", variant: "destructive" },
-  discrepancy: { label: "Rozbieznosc", variant: "outline" },
-  manual_match: { label: "Reczne", variant: "secondary" },
-};
-
-const TX_TYPE_LABELS: Record<string, string> = {
-  payment: "Platnosc",
-  refund: "Zwrot",
-  chargeback: "Chargeback",
-  fee: "Prowizja",
+const MATCH_STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  matched: "default",
+  unmatched: "destructive",
+  discrepancy: "outline",
+  manual_match: "secondary",
 };
 
 function formatCurrency(amount: number, currency: string = "PLN"): string {
@@ -80,6 +66,7 @@ function formatCurrency(amount: number, currency: string = "PLN"): string {
 }
 
 export default function SettlementDetailPage() {
+  const t = useTranslations("reconciliation");
   const params = useParams();
   const router = useRouter();
   const settlementId = params.id as string;
@@ -99,7 +86,7 @@ export default function SettlementDetailPage() {
     try {
       const result = await autoMatch.mutateAsync(settlementId);
       toast.success(
-        `Automatyczne uzgadnianie: ${result.matched} uzgodnionych, ${result.unmatched} nieuzgodnionych, ${result.discrepancy} rozbieznosci`
+        t("detail.autoMatchResult", { matched: result.matched, unmatched: result.unmatched, discrepancy: result.discrepancy })
       );
       refetch();
     } catch (error) {
@@ -117,7 +104,7 @@ export default function SettlementDetailPage() {
           notes: matchNotes || undefined,
         },
       });
-      toast.success("Transakcja zostala recznie powiazana z zamowieniem");
+      toast.success(t("detail.manualMatchSuccess"));
       setMatchDialogOpen(false);
       setMatchOrderId("");
       setMatchNotes("");
@@ -130,7 +117,7 @@ export default function SettlementDetailPage() {
   const handleUnmatch = async (transactionId: string) => {
     try {
       await unmatch.mutateAsync(transactionId);
-      toast.success("Powiazanie zostalo usuniete");
+      toast.success(t("detail.unlinkSuccess"));
       refetch();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -163,11 +150,11 @@ export default function SettlementDetailPage() {
       <div className="space-y-4">
         <Button variant="ghost" onClick={() => router.push("/reconciliation")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Powrot do rozliczen
+          {t("detail.backToReconciliation")}
         </Button>
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Nie udalo sie zaladowac rozliczenia.
+            {t("detail.loadError")}
           </p>
           <Button
             variant="outline"
@@ -175,17 +162,15 @@ export default function SettlementDetailPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            {t("retry")}
           </Button>
         </div>
       </div>
     );
   }
 
-  const statusInfo = STATUS_LABELS[settlement.status] || {
-    label: settlement.status,
-    variant: "secondary" as const,
-  };
+  const statusVariant = STATUS_VARIANTS[settlement.status] || "secondary";
+  const statusLabel = t(`statusLabels.${settlement.status}`, { defaultValue: settlement.status });
 
   const matchedCount = settlement.transactions.filter(
     (t) => t.match_status === "matched" || t.match_status === "manual_match"
@@ -208,14 +193,14 @@ export default function SettlementDetailPage() {
             onClick={() => router.push("/reconciliation")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Powrot
+            {t("detail.back")}
           </Button>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">
-                Rozliczenie {PROVIDER_LABELS[settlement.provider] || settlement.provider}
+                {t("detail.settlementTitle", { provider: t(`providerLabels.${settlement.provider}`, { defaultValue: settlement.provider }) })}
               </h1>
-              <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+              <Badge variant={statusVariant}>{statusLabel}</Badge>
             </div>
             <p className="text-muted-foreground mt-1">
               {settlement.settlement_date}
@@ -236,7 +221,7 @@ export default function SettlementDetailPage() {
           ) : (
             <Wand2 className="mr-2 h-4 w-4" />
           )}
-          Automatyczne uzgadnianie
+          {t("detail.autoMatch")}
         </Button>
       </div>
 
@@ -245,7 +230,7 @@ export default function SettlementDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Kwota brutto
+              {t("detail.grossAmount")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -257,7 +242,7 @@ export default function SettlementDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Prowizje
+              {t("detail.fees")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -269,7 +254,7 @@ export default function SettlementDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Kwota netto
+              {t("detail.netAmount")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -281,7 +266,7 @@ export default function SettlementDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-600">
-              Uzgodnione
+              {t("matched")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -291,7 +276,7 @@ export default function SettlementDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-red-600">
-              Nieuzgodnione
+              {t("unmatched")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -301,7 +286,7 @@ export default function SettlementDetailPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-yellow-600">
-              Rozbieznosci
+              {t("discrepancies")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -313,7 +298,7 @@ export default function SettlementDetailPage() {
       {settlement.notes && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Notatki</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("detail.notes")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">{settlement.notes}</p>
@@ -324,37 +309,35 @@ export default function SettlementDetailPage() {
       {/* Transactions table */}
       <div>
         <h2 className="text-lg font-semibold mb-4">
-          Transakcje ({settlement.transactions.length})
+          {t("detail.transactions", { count: settlement.transactions.length })}
         </h2>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID zewnetrzne</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead className="text-right">Kwota</TableHead>
-                <TableHead className="text-right">Prowizja</TableHead>
-                <TableHead className="text-right">Netto</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Zamowienie</TableHead>
-                <TableHead>Notatki</TableHead>
-                <TableHead className="text-right">Akcje</TableHead>
+                <TableHead>{t("detail.transactionColumns.externalId")}</TableHead>
+                <TableHead>{t("detail.transactionColumns.type")}</TableHead>
+                <TableHead>{t("detail.transactionColumns.date")}</TableHead>
+                <TableHead className="text-right">{t("detail.transactionColumns.amount")}</TableHead>
+                <TableHead className="text-right">{t("detail.transactionColumns.fee")}</TableHead>
+                <TableHead className="text-right">{t("detail.transactionColumns.net")}</TableHead>
+                <TableHead>{t("detail.transactionColumns.status")}</TableHead>
+                <TableHead>{t("detail.transactionColumns.order")}</TableHead>
+                <TableHead>{t("detail.transactionColumns.notes")}</TableHead>
+                <TableHead className="text-right">{t("detail.transactionColumns.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {settlement.transactions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                    Brak transakcji w tym rozliczeniu.
+                    {t("detail.emptyTransactions")}
                   </TableCell>
                 </TableRow>
               )}
               {settlement.transactions.map((txn: PaymentTransaction) => {
-                const matchInfo = MATCH_STATUS_LABELS[txn.match_status] || {
-                  label: txn.match_status,
-                  variant: "secondary" as const,
-                };
+                const matchVariant = MATCH_STATUS_VARIANTS[txn.match_status] || "secondary";
+                const matchLabel = t(`matchStatusLabels.${txn.match_status}`, { defaultValue: txn.match_status });
                 const isUnmatched = txn.match_status === "unmatched";
                 const isDiscrepancy = txn.match_status === "discrepancy";
                 const isMatched = txn.match_status === "matched" || txn.match_status === "manual_match";
@@ -370,7 +353,7 @@ export default function SettlementDetailPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
-                        {TX_TYPE_LABELS[txn.transaction_type] || txn.transaction_type}
+                        {t(`txTypeLabels.${txn.transaction_type}`, { defaultValue: txn.transaction_type })}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
@@ -386,7 +369,7 @@ export default function SettlementDetailPage() {
                       {formatCurrency(txn.net_amount, txn.currency)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={matchInfo.variant}>{matchInfo.label}</Badge>
+                      <Badge variant={matchVariant}>{matchLabel}</Badge>
                     </TableCell>
                     <TableCell>
                       {txn.order_id ? (
@@ -418,7 +401,7 @@ export default function SettlementDetailPage() {
                             onClick={() => openMatchDialog(txn.id)}
                           >
                             <Link2 className="mr-1 h-3 w-3" />
-                            Powiaz
+                            {t("detail.link")}
                           </Button>
                         )}
                         {isMatched && (
@@ -429,7 +412,7 @@ export default function SettlementDetailPage() {
                             disabled={unmatch.isPending}
                           >
                             <Unlink className="mr-1 h-3 w-3" />
-                            Odepnij
+                            {t("detail.unlink")}
                           </Button>
                         )}
                         {isDiscrepancy && (
@@ -440,7 +423,7 @@ export default function SettlementDetailPage() {
                               onClick={() => openMatchDialog(txn.id)}
                             >
                               <Link2 className="mr-1 h-3 w-3" />
-                              Przepnij
+                              {t("detail.reassign")}
                             </Button>
                             {txn.order_id && (
                               <Button
@@ -468,29 +451,29 @@ export default function SettlementDetailPage() {
       <Dialog open={matchDialogOpen} onOpenChange={setMatchDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reczne powiazanie transakcji</DialogTitle>
+            <DialogTitle>{t("detail.manualMatchTitle")}</DialogTitle>
             <DialogDescription>
-              Wpisz ID zamowienia, z ktorym chcesz powiazac te transakcje.
+              {t("detail.manualMatchDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="order-id">ID zamowienia (UUID)</Label>
+              <Label htmlFor="order-id">{t("detail.orderId")}</Label>
               <Input
                 id="order-id"
                 value={matchOrderId}
                 onChange={(e) => setMatchOrderId(e.target.value)}
-                placeholder="np. a1b2c3d4-e5f6-..."
+                placeholder={t("detail.orderIdPlaceholder")}
                 className="font-mono text-sm"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="match-notes">Notatki (opcjonalnie)</Label>
+              <Label htmlFor="match-notes">{t("detail.notesOptional")}</Label>
               <Input
                 id="match-notes"
                 value={matchNotes}
                 onChange={(e) => setMatchNotes(e.target.value)}
-                placeholder="Powod recznego powiazania..."
+                placeholder={t("detail.notesPlaceholder")}
               />
             </div>
           </div>
@@ -499,7 +482,7 @@ export default function SettlementDetailPage() {
               variant="outline"
               onClick={() => setMatchDialogOpen(false)}
             >
-              Anuluj
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleManualMatch}
@@ -508,7 +491,7 @@ export default function SettlementDetailPage() {
               {manualMatch.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Powiaz
+              {t("detail.link")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -77,7 +77,7 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Dostawca",
+      header: t("columns.provider"),
       accessorKey: "provider" as const,
       sortable: true,
       cell: (shipment: Shipment) => (
@@ -85,7 +85,7 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Status",
+      header: t("columns.status"),
       accessorKey: "status" as const,
       sortable: true,
       cell: (shipment: Shipment) => (
@@ -102,7 +102,7 @@ export default function ShipmentsPage() {
       ),
     },
     {
-      header: "Data utworzenia",
+      header: t("columns.createdAt"),
       accessorKey: "created_at" as const,
       sortable: true,
       cell: (shipment: Shipment) => (
@@ -141,7 +141,7 @@ export default function ShipmentsPage() {
                       await batchLabels.mutateAsync({
                         shipment_ids: Array.from(selectedIds),
                       });
-                      toast.success("Etykiety zostaly pobrane");
+                      toast.success(t("labelsDownloaded"));
                     } catch (error) {
                       toast.error(getErrorMessage(error));
                     }
@@ -149,7 +149,7 @@ export default function ShipmentsPage() {
                   disabled={batchLabels.isPending}
                 >
                   <Printer className="h-4 w-4" />
-                  Drukuj etykiety ({selectedIds.size})
+                  {t("printLabels", { count: selectedIds.size })}
                 </Button>
                 {dispatchEligible.length > 0 && (
                   <Button
@@ -157,7 +157,7 @@ export default function ShipmentsPage() {
                     onClick={() => setShowDispatchDialog(true)}
                   >
                     <PackageCheck className="h-4 w-4" />
-                    Zamow kuriera ({dispatchEligible.length})
+                    {t("orderCourier", { count: dispatchEligible.length })}
                   </Button>
                 )}
               </>

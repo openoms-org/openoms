@@ -243,7 +243,7 @@ export default function ReturnDetailPage() {
                     </Link>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
+                    <p className="text-sm text-muted-foreground">{t("columns.status")}</p>
                     <div className="mt-1">
                       <StatusBadge status={returnData.status} statusMap={RETURN_STATUSES} />
                     </div>
