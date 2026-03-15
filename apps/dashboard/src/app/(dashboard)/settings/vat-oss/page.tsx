@@ -74,7 +74,7 @@ export default function VATOSSSettingsPage() {
         err instanceof Error ? err.message : t("saveFailed");
       toast.error(message);
     }
-  }, [form, updateConfig]);
+  }, [form, updateConfig, t]);
 
   const thresholdPercent = threshold
     ? Math.min(

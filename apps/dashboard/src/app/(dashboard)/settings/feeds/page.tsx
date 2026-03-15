@@ -106,7 +106,7 @@ export default function FeedSettingsPage() {
       () => toast.success(tf("urlCopied")),
       () => toast.error(tf("urlCopyFailed"))
     );
-  }, []);
+  }, [tf]);
 
   const handleCategoryToggle = (categoryKey: string) => {
     setForm((prev) => {
