@@ -88,7 +88,7 @@ export default function WarehousesPage() {
     <AdminGuard>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Magazyny</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">
             {t("subtitle")}
           </p>
@@ -97,33 +97,33 @@ export default function WarehousesPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Nowy magazyn
+              {t("newWarehouse")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nowy magazyn</DialogTitle>
+              <DialogTitle>{t("newWarehouse")}</DialogTitle>
               <DialogDescription>
-                Dodaj nowy magazyn do systemu
+                {t("addDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="new-name">Nazwa</Label>
+                <Label htmlFor="new-name">{t("columns.name")}</Label>
                 <Input
                   id="new-name"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="np. Magazyn Centralny"
+                  placeholder={t("namePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-code">Kod</Label>
+                <Label htmlFor="new-code">{t("columns.code")}</Label>
                 <Input
                   id="new-code"
                   value={newCode}
                   onChange={(e) => setNewCode(e.target.value)}
-                  placeholder="np. WH-01"
+                  placeholder={t("codePlaceholder")}
                 />
               </div>
             </div>
@@ -132,13 +132,13 @@ export default function WarehousesPage() {
                 variant="outline"
                 onClick={() => setShowCreate(false)}
               >
-                Anuluj
+                {t("cancel")}
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={!newName.trim() || createWarehouse.isPending}
               >
-                {createWarehouse.isPending ? "Tworzenie..." : tc("create")}
+                {createWarehouse.isPending ? t("creating") : tc("create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -172,11 +172,11 @@ export default function WarehousesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nazwa</TableHead>
-                <TableHead>Kod</TableHead>
+                <TableHead>{t("columns.name")}</TableHead>
+                <TableHead>{t("columns.code")}</TableHead>
                 <TableHead>{t("columns.default")}</TableHead>
-                <TableHead>Aktywny</TableHead>
-                <TableHead>Utworzono</TableHead>
+                <TableHead>{t("columns.active")}</TableHead>
+                <TableHead>{t("columns.createdAt")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -195,9 +195,9 @@ export default function WarehousesPage() {
                   <TableCell>{warehouse.code || "---"}</TableCell>
                   <TableCell>
                     {warehouse.is_default ? (
-                      <Badge variant="default">Tak</Badge>
+                      <Badge variant="default">{t("yes")}</Badge>
                     ) : (
-                      <span className="text-muted-foreground">Nie</span>
+                      <span className="text-muted-foreground">{t("no")}</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -206,14 +206,14 @@ export default function WarehousesPage() {
                         variant="outline"
                         className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                       >
-                        Aktywny
+                        {t("columns.active")}
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
                         className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                       >
-                        Nieaktywny
+                        {t("inactive")}
                       </Badge>
                     )}
                   </TableCell>

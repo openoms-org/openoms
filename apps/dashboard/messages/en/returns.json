@@ -88,6 +88,13 @@
     "return": {
       "requested": "Requested"
     },
+    "statuses": {
+      "all": "All",
+      "approved": "Approved",
+      "received": "Received",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
     "returnCreated": "Return has been created",
     "returnData": "Return details",
     "returnDeleted": "Return has been deleted",

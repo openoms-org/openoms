@@ -41,20 +41,13 @@ import {
 import { getErrorMessage } from "@/lib/api-client";
 import { Upload, Loader2, CreditCard, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import type { PaymentSettlement } from "@/types/api";
+import { useTranslations } from "next-intl";
 
-const PROVIDER_LABELS: Record<string, string> = {
-  payu: "PayU",
-  przelewy24: "Przelewy24",
-  tpay: "Tpay",
-  stripe: "Stripe",
-  manual: "Reczne",
-};
-
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  pending: { label: "Oczekujace", variant: "secondary" },
-  matched: { label: "Uzgodnione", variant: "default" },
-  partial_match: { label: "Czesciowe", variant: "outline" },
-  unmatched: { label: "Nieuzgodnione", variant: "destructive" },
+const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pending: "secondary",
+  matched: "default",
+  partial_match: "outline",
+  unmatched: "destructive",
 };
 
 function formatCurrency(amount: number, currency: string = "PLN"): string {
@@ -66,6 +59,7 @@ function formatCurrency(amount: number, currency: string = "PLN"): string {
 }
 
 export default function ReconciliationPage() {
+  const t = useTranslations("reconciliation");
   const router = useRouter();
   const [providerFilter, setProviderFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -103,7 +97,7 @@ export default function ReconciliationPage() {
         provider: importProvider,
       });
       toast.success(
-        `Zaimportowano rozliczenie: ${result.provider} z ${result.settlement_date}`
+        t("importSuccess", { provider: result.provider, date: result.settlement_date })
       );
       setImportOpen(false);
       setImportFile(null);
@@ -127,28 +121,28 @@ export default function ReconciliationPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Rozliczenia platnosci</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Uzgadnianie transakcji z bramek platniczych z zamowieniami
+            {t("subtitle")}
           </p>
         </div>
         <Dialog open={importOpen} onOpenChange={setImportOpen}>
           <DialogTrigger asChild>
             <Button>
               <Upload className="mr-2 h-4 w-4" />
-              Importuj rozliczenie
+              {t("importSettlement")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Importuj rozliczenie CSV</DialogTitle>
+              <DialogTitle>{t("importSettlementCsv")}</DialogTitle>
               <DialogDescription>
-                Wybierz dostawce platnosci i plik CSV z rozliczeniem.
+                {t("importDialogDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="import-provider">Dostawca platnosci</Label>
+                <Label htmlFor="import-provider">{t("paymentProvider")}</Label>
                 <Select
                   value={importProvider}
                   onValueChange={setImportProvider}
@@ -157,16 +151,16 @@ export default function ReconciliationPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(PROVIDER_LABELS).map(([key, label]) => (
+                    {(["payu", "przelewy24", "tpay", "stripe", "manual"] as const).map((key) => (
                       <SelectItem key={key} value={key}>
-                        {label}
+                        {t(`providerLabels.${key}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="import-file">Plik CSV</Label>
+                <Label htmlFor="import-file">{t("csvFile")}</Label>
                 <Input
                   id="import-file"
                   type="file"
@@ -176,7 +170,7 @@ export default function ReconciliationPage() {
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Maks. 10 MB. PayU/Przelewy24: separator &quot;;&quot;
+                  {t("csvFileHint")}
                 </p>
               </div>
             </div>
@@ -185,7 +179,7 @@ export default function ReconciliationPage() {
                 variant="outline"
                 onClick={() => setImportOpen(false)}
               >
-                Anuluj
+                {t("cancel")}
               </Button>
               <Button
                 onClick={handleImport}
@@ -194,7 +188,7 @@ export default function ReconciliationPage() {
                 {importCSV.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Importuj
+                {t("import")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -206,7 +200,7 @@ export default function ReconciliationPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Uzgodnione</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("matched")}</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
@@ -218,7 +212,7 @@ export default function ReconciliationPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nieuzgodnione</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("unmatched")}</CardTitle>
               <XCircle className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
@@ -230,19 +224,19 @@ export default function ReconciliationPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rozbieznosci</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("discrepancies")}</CardTitle>
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{summary.discrepancy_count}</div>
               <p className="text-xs text-muted-foreground">
-                Roznice kwotowe
+                {t("amountDifferences")}
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Prowizje</CardTitle>
+              <CardTitle className="text-sm font-medium">{t("fees")}</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -250,7 +244,7 @@ export default function ReconciliationPage() {
                 {formatCurrency(summary.total_fees)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Suma prowizji bramek
+                {t("totalGatewayFees")}
               </p>
             </CardContent>
           </Card>
@@ -265,13 +259,13 @@ export default function ReconciliationPage() {
             onValueChange={handleProviderChange}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Dostawca" />
+              <SelectValue placeholder={t("columns.provider")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszyscy dostawcy</SelectItem>
-              {Object.entries(PROVIDER_LABELS).map(([key, label]) => (
+              <SelectItem value="all">{t("allProviders")}</SelectItem>
+              {(["payu", "przelewy24", "tpay", "stripe", "manual"] as const).map((key) => (
                 <SelectItem key={key} value={key}>
-                  {label}
+                  {t(`providerLabels.${key}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -286,17 +280,17 @@ export default function ReconciliationPage() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie statusy</SelectItem>
-              {Object.entries(STATUS_LABELS).map(([key, { label }]) => (
+              <SelectItem value="all">{t("allStatuses")}</SelectItem>
+              {(["pending", "matched", "partial_match", "unmatched"] as const).map((key) => (
                 <SelectItem key={key} value={key}>
-                  {label}
+                  {t(`statusLabels.${key}`)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Label className="text-sm whitespace-nowrap">Od:</Label>
+          <Label className="text-sm whitespace-nowrap">{t("dateFrom")}</Label>
           <Input
             type="date"
             value={dateFrom}
@@ -308,7 +302,7 @@ export default function ReconciliationPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Label className="text-sm whitespace-nowrap">Do:</Label>
+          <Label className="text-sm whitespace-nowrap">{t("dateTo")}</Label>
           <Input
             type="date"
             value={dateTo}
@@ -325,7 +319,7 @@ export default function ReconciliationPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            {t("loadError")}
           </p>
           <Button
             variant="outline"
@@ -333,7 +327,7 @@ export default function ReconciliationPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -343,15 +337,15 @@ export default function ReconciliationPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Dostawca</TableHead>
-              <TableHead>Data rozliczenia</TableHead>
-              <TableHead>ID rozliczenia</TableHead>
-              <TableHead className="text-right">Kwota brutto</TableHead>
-              <TableHead className="text-right">Prowizje</TableHead>
-              <TableHead className="text-right">Kwota netto</TableHead>
-              <TableHead>Waluta</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Zaimportowano</TableHead>
+              <TableHead>{t("columns.provider")}</TableHead>
+              <TableHead>{t("columns.settlementDate")}</TableHead>
+              <TableHead>{t("columns.settlementId")}</TableHead>
+              <TableHead className="text-right">{t("columns.grossAmount")}</TableHead>
+              <TableHead className="text-right">{t("columns.fees")}</TableHead>
+              <TableHead className="text-right">{t("columns.netAmount")}</TableHead>
+              <TableHead>{t("columns.currency")}</TableHead>
+              <TableHead>{t("columns.status")}</TableHead>
+              <TableHead>{t("columns.importedAt")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -365,15 +359,13 @@ export default function ReconciliationPage() {
             {!isLoading && (!settlements?.items || settlements.items.length === 0) && (
               <TableRow>
                 <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                  Brak rozliczen. Zaimportuj pierwsze rozliczenie CSV.
+                  {t("emptyState")}
                 </TableCell>
               </TableRow>
             )}
             {settlements?.items?.map((settlement: PaymentSettlement) => {
-              const statusInfo = STATUS_LABELS[settlement.status] || {
-                label: settlement.status,
-                variant: "secondary" as const,
-              };
+              const statusVariant = STATUS_VARIANTS[settlement.status] || "secondary";
+              const statusLabel = t(`statusLabels.${settlement.status}`, { defaultValue: settlement.status });
               return (
                 <TableRow
                   key={settlement.id}
@@ -383,7 +375,7 @@ export default function ReconciliationPage() {
                   }
                 >
                   <TableCell className="font-medium">
-                    {PROVIDER_LABELS[settlement.provider] || settlement.provider}
+                    {t(`providerLabels.${settlement.provider}`, { defaultValue: settlement.provider })}
                   </TableCell>
                   <TableCell>{settlement.settlement_date}</TableCell>
                   <TableCell className="text-muted-foreground text-xs font-mono">
@@ -400,7 +392,7 @@ export default function ReconciliationPage() {
                   </TableCell>
                   <TableCell>{settlement.currency}</TableCell>
                   <TableCell>
-                    <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                    <Badge variant={statusVariant}>{statusLabel}</Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {new Date(settlement.imported_at).toLocaleDateString("pl-PL")}

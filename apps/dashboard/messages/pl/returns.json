@@ -88,6 +88,13 @@
     "return": {
       "requested": "Zgłoszony"
     },
+    "statuses": {
+      "all": "Wszystkie",
+      "approved": "Zatwierdzone",
+      "received": "Odebrane",
+      "rejected": "Odrzucone",
+      "cancelled": "Anulowane"
+    },
     "returnCreated": "Zwrot został utworzony",
     "returnData": "Dane zwrotu",
     "returnDeleted": "Zwrot został usunięty",

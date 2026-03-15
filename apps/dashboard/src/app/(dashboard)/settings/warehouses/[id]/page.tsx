@@ -100,7 +100,7 @@ export default function WarehouseDetailPage() {
   if (!warehouse) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Nie znaleziono magazynu
+        {t("notFound")}
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function WarehouseDetailPage() {
         active,
       },
       {
-        onSuccess: () => toast.success("Magazyn zaktualizowany"),
+        onSuccess: () => toast.success(t("updated")),
         onError: (error) =>
           toast.error(getErrorMessage(error)),
       }
@@ -132,7 +132,7 @@ export default function WarehouseDetailPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Stan magazynowy zaktualizowany");
+          toast.success(t("stockUpdated"));
           setShowAddStock(false);
           setSelectedProductId("");
           setStockQuantity("0");
@@ -168,7 +168,7 @@ export default function WarehouseDetailPage() {
             {warehouse.name}
           </h1>
           <p className="text-muted-foreground">
-            {warehouse.code ? `Kod: ${warehouse.code} | ` : ""}Utworzono:{" "}
+            {warehouse.code ? `${t("codeLabel")} ${warehouse.code} | ` : ""}{t("createdLabel")}{" "}
             {formatDate(warehouse.created_at)}
           </p>
         </div>
@@ -178,14 +178,14 @@ export default function WarehouseDetailPage() {
             variant="outline"
             className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
           >
-            Aktywny
+            {t("columns.active")}
           </Badge>
         ) : (
           <Badge
             variant="outline"
             className="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
           >
-            Nieaktywny
+            {t("inactive")}
           </Badge>
         )}
       </div>
@@ -193,12 +193,12 @@ export default function WarehouseDetailPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Dane magazynu</CardTitle>
-            <CardDescription>Edytuj informacje o magazynie</CardDescription>
+            <CardTitle>{t("warehouseData")}</CardTitle>
+            <CardDescription>{t("editWarehouseDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nazwa</Label>
+              <Label htmlFor="name">{t("columns.name")}</Label>
               <Input
                 id="name"
                 value={name}
@@ -206,12 +206,12 @@ export default function WarehouseDetailPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="code">Kod</Label>
+              <Label htmlFor="code">{t("columns.code")}</Label>
               <Input
                 id="code"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="np. WH-01"
+                placeholder={t("codePlaceholder")}
               />
             </div>
             <div className="flex items-center gap-4">
@@ -229,7 +229,7 @@ export default function WarehouseDetailPage() {
                   onCheckedChange={setActive}
                   id="active"
                 />
-                <Label htmlFor="active">Aktywny</Label>
+                <Label htmlFor="active">{t("columns.active")}</Label>
               </div>
             </div>
             <Button
@@ -237,26 +237,26 @@ export default function WarehouseDetailPage() {
               disabled={updateWarehouse.isPending}
               className="w-full"
             >
-              {updateWarehouse.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
+              {updateWarehouse.isPending ? t("saving") : t("saveChanges")}
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Informacje</CardTitle>
+            <CardTitle>{t("info")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Pozycje magazynowe</span>
+              <span className="text-muted-foreground">{t("stockItems")}</span>
               <span>{stockData?.total ?? 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Utworzono</span>
+              <span className="text-muted-foreground">{t("columns.createdAt")}</span>
               <span>{formatDate(warehouse.created_at)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Zaktualizowano</span>
+              <span className="text-muted-foreground">{t("updatedLabel")}</span>
               <span>{formatDate(warehouse.updated_at)}</span>
             </div>
           </CardContent>
@@ -266,7 +266,7 @@ export default function WarehouseDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Stan magazynowy ({stockData?.total ?? 0})</CardTitle>
+            <CardTitle>{t("stockTitle", { count: stockData?.total ?? 0 })}</CardTitle>
             <CardDescription>
               {t("stanyMagazynoweProduktowWTymMagazynie")}
             </CardDescription>
@@ -275,25 +275,25 @@ export default function WarehouseDetailPage() {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Dodaj produkt
+                {t("addProduct")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Dodaj stan magazynowy</DialogTitle>
+                <DialogTitle>{t("addStockTitle")}</DialogTitle>
                 <DialogDescription>
-                  Dodaj lub zaktualizuj stan magazynowy produktu
+                  {t("addStockDescription")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Produkt</Label>
+                  <Label>{t("product")}</Label>
                   <Select
                     value={selectedProductId}
                     onValueChange={setSelectedProductId}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Wybierz produkt" />
+                      <SelectValue placeholder={t("selectProduct")} />
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((p) => (
@@ -317,7 +317,7 @@ export default function WarehouseDetailPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="stock-reserved">Zarezerwowane</Label>
+                    <Label htmlFor="stock-reserved">{t("reserved")}</Label>
                     <Input
                       id="stock-reserved"
                       type="number"
@@ -327,7 +327,7 @@ export default function WarehouseDetailPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="stock-min">Min. stan</Label>
+                    <Label htmlFor="stock-min">{t("minStock")}</Label>
                     <Input
                       id="stock-min"
                       type="number"
@@ -343,13 +343,13 @@ export default function WarehouseDetailPage() {
                   variant="outline"
                   onClick={() => setShowAddStock(false)}
                 >
-                  Anuluj
+                  {t("cancel")}
                 </Button>
                 <Button
                   onClick={handleAddStock}
                   disabled={!selectedProductId || upsertStock.isPending}
                 >
-                  {upsertStock.isPending ? "Zapisywanie..." : "Zapisz"}
+                  {upsertStock.isPending ? t("saving") : t("save")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -367,12 +367,12 @@ export default function WarehouseDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produkt</TableHead>
+                  <TableHead>{t("product")}</TableHead>
                   <TableHead className="text-right">{t("quantity")}</TableHead>
-                  <TableHead className="text-right">Zarezerwowane</TableHead>
+                  <TableHead className="text-right">{t("reserved")}</TableHead>
                   <TableHead className="text-right">{t("dostepne")}</TableHead>
-                  <TableHead className="text-right">Min. stan</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">{t("minStock")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -402,7 +402,7 @@ export default function WarehouseDetailPage() {
                             variant="outline"
                             className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                           >
-                            Niski stan
+                            {t("lowStock")}
                           </Badge>
                         ) : (
                           <Badge

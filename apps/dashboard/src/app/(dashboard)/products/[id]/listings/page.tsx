@@ -776,6 +776,7 @@ function CreateWooCommerceListingDialog({
   product: Product;
   onClose: () => void;
 }) {
+  const tl = useTranslations("listings");
   const { data: integrations } = useIntegrations();
   const wooIntegrationId = useMemo(
     () => integrations?.find((i) => i.provider === "woocommerce")?.id ?? "",
@@ -825,7 +826,7 @@ function CreateWooCommerceListingDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Wystaw na WooCommerce</DialogTitle>
+          <DialogTitle>{tl("woo.title")}</DialogTitle>
           <DialogDescription>
             Publikacja produktu &quot;{product.name}&quot; w sklepie WooCommerce
           </DialogDescription>
@@ -927,13 +928,7 @@ const EBAY_MARKETPLACES = [
   { value: "EBAY_GB", label: "eBay UK" },
 ] as const;
 
-const EBAY_CONDITIONS = [
-  { value: "NEW", label: "Nowy" },
-  { value: "LIKE_NEW", label: "Jak nowy" },
-  { value: "VERY_GOOD", label: "Bardzo dobry" },
-  { value: "GOOD", label: "Dobry" },
-  { value: "ACCEPTABLE", label: "Akceptowalny" },
-] as const;
+const EBAY_CONDITION_KEYS = ["NEW", "LIKE_NEW", "VERY_GOOD", "GOOD", "ACCEPTABLE"] as const;
 
 function CreateEbayListingDialog({
   product,
@@ -944,6 +939,7 @@ function CreateEbayListingDialog({
   integrationId: string;
   onClose: () => void;
 }) {
+  const tl = useTranslations("listings");
   const [categoryId, setCategoryId] = useState("");
   const [marketplaceId, setMarketplaceId] = useState("EBAY_PL");
   const [condition, setCondition] = useState("NEW");
@@ -999,7 +995,7 @@ function CreateEbayListingDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Wystaw na eBay</DialogTitle>
+          <DialogTitle>{tl("ebay.title")}</DialogTitle>
           <DialogDescription>
             Publikacja produktu &quot;{product.name}&quot; na eBay
           </DialogDescription>
@@ -1043,9 +1039,9 @@ function CreateEbayListingDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {EBAY_CONDITIONS.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
+                  {EBAY_CONDITION_KEYS.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {tl(`ebay.conditions.${key}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1675,6 +1671,7 @@ function CreateAllegroListingDialog({
   product: Product;
   onClose: () => void;
 }) {
+  const tl = useTranslations("listings");
   const [step, setStep] = useState(1);
 
   // Integration ID from existing integrations
@@ -2240,15 +2237,13 @@ function CreateAllegroListingDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Wystaw na Allegro — krok {step} z 5</DialogTitle>
+          <DialogTitle>{tl("allegro.title", { step })}</DialogTitle>
           <DialogDescription>
-            {step === 1 && "Wybierz kategorie Allegro dla produktu"}
-            {step === 2 && "Wypelnij parametry wymagane przez kategorie"}
-            {step === 3 && "Edytuj opis oferty"}
-            {step === 4 &&
-              "Wybierz ustawienia dostawy i polityki sprzedazy"}
-            {step === 5 &&
-              "Ustaw cene, stan magazynowy i lokalizacje"}
+            {step === 1 && tl("allegro.step1")}
+            {step === 2 && tl("allegro.step2")}
+            {step === 3 && tl("allegro.step3")}
+            {step === 4 && tl("allegro.step4")}
+            {step === 5 && tl("allegro.step5")}
           </DialogDescription>
         </DialogHeader>
 

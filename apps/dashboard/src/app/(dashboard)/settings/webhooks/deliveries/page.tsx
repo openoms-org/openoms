@@ -107,7 +107,7 @@ export default function WebhookDeliveriesPage() {
       cell: (row) => EVENT_LABELS[row.event_type] || row.event_type,
     },
     {
-      header: "Status",
+      header: t("webhookDeliveries.columns.status"),
       accessorKey: "status",
       cell: (row) => (
         <Badge

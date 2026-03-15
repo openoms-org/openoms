@@ -67,15 +67,17 @@ export default function FeedSettingsPage() {
     }
   }, [feedSettings]);
 
+  const tf = useTranslations("settings.feeds");
+
   const handleSave = async () => {
     try {
       await updateFeedSettings.mutateAsync(form);
-      toast.success("Ustawienia zapisane");
+      toast.success(tf("settingsSaved"));
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Nie udalo sie zapisac ustawien";
+          : tf("saveFailed");
       toast.error(message);
     }
   };
@@ -89,20 +91,20 @@ export default function FeedSettingsPage() {
         ceneo_feed_token: result.ceneo_feed_token,
         google_feed_token: result.google_feed_token,
       }));
-      toast.success(`Token ${label} wygenerowany ponownie`);
+      toast.success(tf("tokenRegenerated", { label }));
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : `Nie udalo sie wygenerowac tokena ${label}`;
+          : tf("tokenRegenFailed", { label });
       toast.error(message);
     }
   };
 
   const handleCopyURL = useCallback((url: string) => {
     navigator.clipboard.writeText(url).then(
-      () => toast.success("URL skopiowany do schowka"),
-      () => toast.error("Nie udalo sie skopiowac URL")
+      () => toast.success(tf("urlCopied")),
+      () => toast.error(tf("urlCopyFailed"))
     );
   }, []);
 
@@ -138,7 +140,7 @@ export default function FeedSettingsPage() {
     <AdminGuard>
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Feedy produktowe</h1>
+          <h1 className="text-2xl font-bold">{tf("title")}</h1>
           <p className="text-muted-foreground">
             {t("generujPlikiXmlDlaPorownywarekCenI")}
           </p>
@@ -153,7 +155,7 @@ export default function FeedSettingsPage() {
                   Ceneo
                   {form.ceneo_enabled && (
                     <Badge variant="default" className="text-xs">
-                      Aktywny
+                      {tf("active")}
                     </Badge>
                   )}
                 </CardTitle>
@@ -173,7 +175,7 @@ export default function FeedSettingsPage() {
             <CardContent className="space-y-3">
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">
-                  URL feeda Ceneo
+                  {tf("ceneoFeedUrl")}
                 </Label>
                 <FeedURLField
                   url={buildFeedURL("ceneo", tenantId, form.ceneo_feed_token)}
@@ -195,14 +197,14 @@ export default function FeedSettingsPage() {
                 ) : (
                   <RefreshCw className="h-4 w-4" />
                 )}
-                Wygeneruj nowy token
+                {tf("regenerateToken")}
               </Button>
             </CardContent>
           )}
           {form.ceneo_enabled && !form.ceneo_feed_token && (
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Zapisz ustawienia, aby wygenerowac token i uzyskac URL feeda.
+                {tf("saveNoToken")}
               </p>
             </CardContent>
           )}
@@ -217,12 +219,12 @@ export default function FeedSettingsPage() {
                   Google Shopping
                   {form.google_enabled && (
                     <Badge variant="default" className="text-xs">
-                      Aktywny
+                      {tf("active")}
                     </Badge>
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Feed RSS/XML dla Google Merchant Center
+                  {tf("googleDescription")}
                 </CardDescription>
               </div>
               <Switch
@@ -237,7 +239,7 @@ export default function FeedSettingsPage() {
             <CardContent className="space-y-3">
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">
-                  URL feeda Google Shopping
+                  {tf("googleFeedUrl")}
                 </Label>
                 <FeedURLField
                   url={buildFeedURL("google", tenantId, form.google_feed_token)}
@@ -259,14 +261,14 @@ export default function FeedSettingsPage() {
                 ) : (
                   <RefreshCw className="h-4 w-4" />
                 )}
-                Wygeneruj nowy token
+                {tf("regenerateToken")}
               </Button>
             </CardContent>
           )}
           {form.google_enabled && !form.google_feed_token && (
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Zapisz ustawienia, aby wygenerowac token i uzyskac URL feeda.
+                {tf("saveNoToken")}
               </p>
             </CardContent>
           )}
@@ -283,7 +285,7 @@ export default function FeedSettingsPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Domyslna waluta</Label>
+                <Label>{tf("defaultCurrency")}</Label>
                 <Input
                   value={form.default_currency}
                   onChange={(e) =>
@@ -293,7 +295,7 @@ export default function FeedSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Domyslny koszt wysylki</Label>
+                <Label>{tf("defaultShippingCost")}</Label>
                 <Input
                   value={form.default_shipping_cost}
                   onChange={(e) =>
@@ -309,7 +311,7 @@ export default function FeedSettingsPage() {
 
             <div className="flex items-center justify-between rounded-md border p-4">
               <div>
-                <p className="font-medium">Ukryj produkty bez stanu</p>
+                <p className="font-medium">{tf("hideOutOfStock")}</p>
                 <p className="text-sm text-muted-foreground">
                   {t("nieUwzgledniajProduktowZZerowymStanemMagazynowym")}
                 </p>
@@ -328,9 +330,9 @@ export default function FeedSettingsPage() {
         {categories.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Wykluczone kategorie</CardTitle>
+              <CardTitle>{tf("excludedCategories")}</CardTitle>
               <CardDescription>
-                Produkty z zaznaczonych kategorii nie pojawia sie w feedach
+                {tf("excludedCategoriesDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -375,7 +377,7 @@ export default function FeedSettingsPage() {
             ) : (
               <Save className="h-4 w-4" />
             )}
-            Zapisz ustawienia
+            {tf("saveSettings")}
           </Button>
         </div>
       </div>
@@ -398,14 +400,13 @@ function FeedURLField({
         className="font-mono text-xs"
         onClick={(e) => (e.target as HTMLInputElement).select()}
       />
-      <Button variant="outline" size="icon" onClick={onCopy} title="Kopiuj">
+      <Button variant="outline" size="icon" onClick={onCopy}>
         <Copy className="h-4 w-4" />
       </Button>
       <Button
         variant="outline"
         size="icon"
         onClick={() => window.open(url, "_blank")}
-        title="Otworz"
       >
         <ExternalLink className="h-4 w-4" />
       </Button>

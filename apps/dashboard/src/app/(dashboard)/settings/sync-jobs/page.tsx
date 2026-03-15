@@ -109,7 +109,7 @@ export default function SyncJobsPage() {
       ),
     },
     {
-      header: "Status",
+      header: t("columns.status"),
       accessorKey: "status",
       cell: (row) => statusBadge(row.status),
     },

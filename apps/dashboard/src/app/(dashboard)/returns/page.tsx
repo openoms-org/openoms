@@ -37,7 +37,7 @@ export default function ReturnsPage() {
 
   const columns: ColumnDef<Return>[] = [
     {
-      header: "Status",
+      header: t("columns.status"),
       accessorKey: "status",
       cell: (row) => <StatusBadge status={row.status} statusMap={RETURN_STATUSES} />,
     },
@@ -64,12 +64,12 @@ export default function ReturnsPage() {
       ),
     },
     {
-      header: "Kwota zwrotu",
+      header: t("columns.refundAmount"),
       accessorKey: "refund_amount",
       cell: (row) => formatCurrency(row.refund_amount),
     },
     {
-      header: "Data",
+      header: t("columns.date"),
       accessorKey: "created_at",
       cell: (row) => formatDate(row.created_at),
     },
@@ -93,13 +93,13 @@ export default function ReturnsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Zwroty</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground mt-1">
             {t("subtitle")}
           </p>
         </div>
         <Button asChild>
-          <Link href="/returns/new">Nowy zwrot</Link>
+          <Link href="/returns/new">{t("newReturn")}</Link>
         </Button>
       </div>
 
@@ -107,16 +107,16 @@ export default function ReturnsPage() {
         <div className="w-[200px]">
           <Select value={statusFilter || "all"} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t("columns.status")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Wszystkie</SelectItem>
+              <SelectItem value="all">{t("statuses.all")}</SelectItem>
               <SelectItem value="requested">{t("return.requested")}</SelectItem>
-              <SelectItem value="approved">Zatwierdzone</SelectItem>
-              <SelectItem value="received">Odebrane</SelectItem>
+              <SelectItem value="approved">{t("statuses.approved")}</SelectItem>
+              <SelectItem value="received">{t("statuses.received")}</SelectItem>
               <SelectItem value="refunded">{t("order.refunded")}</SelectItem>
-              <SelectItem value="rejected">Odrzucone</SelectItem>
-              <SelectItem value="cancelled">Anulowane</SelectItem>
+              <SelectItem value="rejected">{t("statuses.rejected")}</SelectItem>
+              <SelectItem value="cancelled">{t("statuses.cancelled")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -148,7 +148,7 @@ export default function ReturnsPage() {
               icon={RotateCcw}
               title={t("empty.title")}
               description={t("empty.description")}
-              action={{ label: "Nowy zwrot", href: "/returns/new" }}
+              action={{ label: t("newReturn"), href: "/returns/new" }}
             />
           }
           onRowClick={(row) => router.push(`/returns/${row.id}`)}
