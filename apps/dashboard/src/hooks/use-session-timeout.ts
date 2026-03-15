@@ -16,8 +16,8 @@ const THROTTLE_MS = 30 * 1000; // update activity timestamp at most every 30 sec
  */
 export function useSessionTimeout() {
   const router = useRouter();
-  const lastActivityRef = useRef(Date.now());
-  const lastUpdateRef = useRef(Date.now());
+  const lastActivityRef = useRef(0);
+  const lastUpdateRef = useRef(0);
 
   const handleActivity = useCallback(() => {
     const now = Date.now();
