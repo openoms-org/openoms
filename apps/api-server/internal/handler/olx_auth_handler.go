@@ -79,7 +79,7 @@ func (h *OlxAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	client := olxsdk.NewClient(creds.ClientID, creds.ClientSecret, "",
 		olxsdk.WithRedirectURI(h.redirectURI()),
 	)
-	authURL := client.AuthorizationURL(state, "read", "write", "v2")
+	authURL := client.AuthorizationURL(state, "read", "write", "v2", "partner")
 
 	slog.Info("olx OAuth: generated auth URL",
 		"redirect_uri", h.redirectURI(),

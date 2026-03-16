@@ -142,6 +142,7 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 		data.Set("refresh_token", c.refreshToken)
 	} else {
 		data.Set("grant_type", "client_credentials")
+		data.Set("scope", "read write v2 partner")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL, strings.NewReader(data.Encode()))
