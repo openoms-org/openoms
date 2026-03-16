@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# pre-push hook — runs local-ci.sh (quick mode) before allowing push
+# Skip with: git push --no-verify (use sparingly!)
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SCRIPT="$REPO_ROOT/scripts/local-ci.sh"
+
+if [ ! -x "$SCRIPT" ]; then
+    echo "Warning: local-ci.sh not found or not executable, skipping pre-push checks"
+    exit 0
+fi
+
+echo ""
+echo "Running local CI checks before push..."
+echo ""
+
+if ! "$SCRIPT" --quick; then
+    echo ""
+    echo "Push blocked — fix the errors above and try again."
+    echo "Skip with: git push --no-verify"
+    exit 1
+fi

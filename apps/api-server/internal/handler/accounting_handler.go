@@ -286,7 +286,8 @@ func (h *AccountingHandler) getSettingsSection(ctx context.Context, tx pgx.Tx, t
 
 // updateSettingsSection merges a value into the tenant's JSON settings blob under the given key.
 func (h *AccountingHandler) updateSettingsSection(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, key string, value any) error {
-	existing, err := h.tenantRepo.GetSettings(ctx, tx, tenantID)
+	// FOR UPDATE prevents concurrent read-modify-write races on the settings blob.
+	existing, err := h.tenantRepo.GetSettingsForUpdate(ctx, tx, tenantID)
 	if err != nil {
 		return err
 	}
