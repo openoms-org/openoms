@@ -846,8 +846,10 @@ func run() error {
 		EbayListings:               ebayListingsHandler,
 	})
 
-	// Start background workers (use workerPool for cross-tenant queries)
-	workerMgr := worker.NewManager(workerPool, slog.Default())
+	// Start background workers (use workerPool for cross-tenant queries).
+	// Pass Redis client for distributed locking — prevents duplicate worker
+	// execution when HPA scales to multiple pods.
+	workerMgr := worker.NewManager(workerPool, slog.Default(), redisClient)
 	workerMgr.Register(worker.NewOAuthRefresher(workerPool, encryptionKey, slog.Default()))
 	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, labelService, slog.Default()))
 	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()))
