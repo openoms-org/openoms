@@ -25,13 +25,25 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
   - [x] Pod anti-affinity (prefer different nodes, PR #133)
   - [x] Network policy consolidation (Helm as single source, enterprise PR #44)
   - [x] k6 load tests (auth flow + orders CRUD, enterprise PR #43)
-  - [ ] Cloudflare metrics in Grafana (OPE-13/14)
-  - [ ] Resource limits tuning (OPE-7, needs metrics analysis)
-- Sentry bug fixes:
+  - [x] Cloudflare metrics dashboard script (enterprise PR #46)
+  - [x] Resource limits tuning — Alloy memory 64→200Mi request (PR #160)
+  - [x] Distributed lock ownership — UUID + Lua release (PR #164)
+  - [x] Polish diacritics in translations (PR #164)
+  - [x] Settings JSONB race fix — SELECT FOR UPDATE (PR #166)
+  - [x] Accounting TestConnection — real API call (PR #167)
+  - [x] NetworkPolicy tightened — dashboard can't reach PG/Redis (enterprise PR #50)
+  - [x] PG/Redis metrics exporters enabled (enterprise PR #49)
+  - [x] ARC RBAC scoped to namespaces (enterprise PR #47)
+  - [x] Stripe keys moved to GitHub Secrets (enterprise PR #48)
+  - [x] CI/CD cleanup — encryption key, Trivy pin, Chart version, registrationMode (PR #165)
+  - [x] CVE-2026-22184 zlib fix (PR #159)
+- Sentry bug fixes (all resolved):
   - [x] OPE-28: Supplier sync conn closed — async background sync (PR #135)
   - [x] OPE-29: OLX CategorySuggestion id type — already fixed
   - [x] OPE-30/31: OLX OAuth missing partner scope (PR #134)
   - [x] OPE-32: Dashboard routing regression — dedicatedPages fix (PR #134)
+- Full audit (39 issues created, 56/85 done in Linear)
+- Dependencies: Go deps + GitHub Actions bumped via Dependabot
 
 ## Recently Completed
 - 2026-03-03: GLS carrier production-ready COMPLETE — SDK hardening + label retrieval + service type mapping:
@@ -102,6 +114,7 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - 2026-02-17: Gap analysis vs competitors (BaseLinker, Sellasist, Apilo)
 
 ## Recent Deploys
+- 2026-03-16: Full audit fixes — distributed lock, settings race, TestConnection, NetworkPolicy, metrics exporters, ARC RBAC, Stripe secrets, i18n diacritics, CVE fix, Dependabot deps
 - 2026-03-16: OPE-28 supplier sync async fix (PR #135), OPE-30/31/32 OLX + dashboard fix (PR #134)
 - 2026-03-15: Production readiness — HPA (PR #133), security hardening (PR #132), alerts provisioned, DR runbooks
 - 2026-03-15: CSP strict-dynamic hotfix, i18n audit (PR #131), integration audit (PR #129), security audit (PR #130)
