@@ -20,6 +20,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useIntegrations,
@@ -51,15 +52,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Integration } from "@/types/api";
 
-const MARKETPLACES = [
-  { id: "A1C3SOZRARQ6R3", label: "amazon.pl (Polska)" },
-  { id: "A1PA6795UKMFR9", label: "amazon.de (Niemcy)" },
-  { id: "A1F83G8C2ARO7P", label: "amazon.co.uk (Wielka Brytania)" },
-  { id: "A13V1IB3VIYZZH", label: "amazon.fr (Francja)" },
-  { id: "APJ6JRA9NG5V4", label: "amazon.it (Wlochy)" },
-  { id: "A1RKKUPIHCS9HS", label: "amazon.es (Hiszpania)" },
-  { id: "A21TJRUUN4KGV", label: "amazon.in (Indie)" },
-  { id: "ATVPDKIKX0DER", label: "amazon.com (USA)" },
+const MARKETPLACE_IDS = [
+  { id: "A1C3SOZRARQ6R3", key: "pl" },
+  { id: "A1PA6795UKMFR9", key: "de" },
+  { id: "A1F83G8C2ARO7P", key: "uk" },
+  { id: "A13V1IB3VIYZZH", key: "fr" },
+  { id: "APJ6JRA9NG5V4", key: "it" },
+  { id: "A1RKKUPIHCS9HS", key: "es" },
+  { id: "A21TJRUUN4KGV", key: "in" },
+  { id: "ATVPDKIKX0DER", key: "us" },
 ];
 
 function getRedirectURI() {
@@ -67,10 +68,6 @@ function getRedirectURI() {
     return `${window.location.origin}/marketplaces/amazon`;
   }
   return "";
-}
-
-function getMarketplaceLabel(id: string) {
-  return MARKETPLACES.find((m) => m.id === id)?.label ?? id;
 }
 
 export default function AmazonIntegrationPage() {
@@ -115,6 +112,7 @@ function OAuthCallback({
   state: string;
   sellingPartnerId: string;
 }) {
+  const t = useTranslations("marketplaces");
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading"
   );
@@ -140,10 +138,10 @@ function OAuthCallback({
       .catch((err) => {
         setStatus("error");
         setErrorMsg(
-          err instanceof Error ? err.message : "Autoryzacja nie powiodla sie"
+          err instanceof Error ? err.message : t("amazon.authFailed")
         );
       });
-  }, [code, state, sellingPartnerId]);
+  }, [code, state, sellingPartnerId, t]);
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
@@ -153,7 +151,7 @@ function OAuthCallback({
             <>
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Laczenie z Amazon...
+                {t("amazon.connecting")}
               </p>
             </>
           )}
@@ -161,7 +159,7 @@ function OAuthCallback({
             <>
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <p className="text-sm font-medium">
-                Polaczono z Amazon! Okno zamknie sie automatycznie.
+                {t("amazon.connectedSuccess")}
               </p>
             </>
           )}
@@ -174,7 +172,7 @@ function OAuthCallback({
                 size="sm"
                 onClick={() => window.close()}
               >
-                Zamknij okno
+                {t("amazon.closeWindow")}
               </Button>
             </>
           )}
@@ -185,6 +183,7 @@ function OAuthCallback({
 }
 
 function AmazonMainPage() {
+  const t = useTranslations("marketplaces");
   const { data: integrations, isLoading, refetch } = useIntegrations();
 
   const amazon = useMemo(
@@ -211,9 +210,9 @@ function AmazonMainPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Konfiguracja Amazon SP-API</h1>
+            <h1 className="text-2xl font-bold">{t("amazon.title")}</h1>
             <p className="text-muted-foreground">
-              Polacz swoje konto Amazon Seller, aby synchronizowac zamowienia
+              {t("amazon.subtitle")}
             </p>
           </div>
         </div>
@@ -263,11 +262,12 @@ function CopyableField({ label, value }: { label: string; value: string }) {
 }
 
 function SetupState({ onCreated }: { onCreated: () => void }) {
+  const t = useTranslations("marketplaces");
   const createIntegration = useCreateIntegration();
   const [applicationId, setApplicationId] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-  const [marketplaceId, setMarketplaceId] = useState(MARKETPLACES[0].id);
+  const [marketplaceId, setMarketplaceId] = useState(MARKETPLACE_IDS[0].id);
   const [showSecret, setShowSecret] = useState(false);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [showManualSetup, setShowManualSetup] = useState(false);
@@ -293,9 +293,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         );
 
         if (!popup) {
-          toast.error(
-            "Przegladarka zablokowala okno popup. Zezwol na wyskakujace okna i sprobuj ponownie."
-          );
+          toast.error(t("amazon.popupBlocked"));
           setIsAuthorizing(false);
           onDone();
           return;
@@ -309,12 +307,12 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
           }
         }, 500);
       } catch {
-        toast.error("Nie udalo sie pobrac adresu autoryzacji Amazon");
+        toast.error(t("amazon.authUrlError"));
         setIsAuthorizing(false);
         onDone();
       }
     },
-    []
+    [t]
   );
 
   const handleSaveAndAuthorize = () => {
@@ -324,9 +322,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       !clientSecret.trim() ||
       !marketplaceId
     ) {
-      toast.error(
-        "Application ID, Client ID, Client Secret i Marketplace sa wymagane"
-      );
+      toast.error(t("amazon.setup.fieldsRequired"));
       return;
     }
 
@@ -344,14 +340,14 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       },
       {
         onSuccess: () => {
-          toast.success("Dane Amazon zapisane. Otwieranie autoryzacji...");
+          toast.success(t("amazon.setup.savedOpeningAuth"));
           openOAuthPopup(() => onCreated());
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Blad podczas zapisywania danych"
+              : t("amazon.setup.saveError")
           );
         },
       }
@@ -365,7 +361,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
       !refreshToken.trim() ||
       !marketplaceId
     ) {
-      toast.error("Wszystkie pola sa wymagane");
+      toast.error(t("amazon.setup.allFieldsRequired"));
       return;
     }
 
@@ -380,13 +376,13 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
           sandbox,
         }),
       });
-      toast.success("Integracja Amazon zostala skonfigurowana");
+      toast.success(t("amazon.setup.manualSetupSuccess"));
       onCreated();
     } catch (err) {
       toast.error(
         err instanceof Error
           ? err.message
-          : "Nie udalo sie skonfigurowac integracji"
+          : t("amazon.setup.manualSetupError")
       );
     }
   };
@@ -395,50 +391,53 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Krok 1: Przygotuj aplikacje Amazon SP-API</CardTitle>
+          <CardTitle>{t("amazon.setup.step1Title")}</CardTitle>
           <CardDescription>
-            Przed polaczeniem potrzebujesz aplikacji zarejestrowanej w Amazon
-            Developer Console.
+            {t("amazon.setup.step1Description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <ol className="list-decimal list-inside space-y-2 text-sm">
             <li>
-              Przejdz do{" "}
+              {t("amazon.setup.step1GoTo")}{" "}
               <a
                 href="https://sellercentral.amazon.pl/apps/manage"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-primary underline"
               >
-                Amazon Seller Central &gt; Develop Apps
+                {t("amazon.setup.step1DevelopApps")}
                 <ExternalLink className="h-3 w-3" />
               </a>
             </li>
-            <li>Utworz nowa aplikacje lub uzyj istniejacej</li>
+            <li>{t("amazon.setup.step1CreateApp")}</li>
             <li>
-              W ustawieniach aplikacji, w polu{" "}
-              <strong>OAuth Redirect URI</strong> wklej ponizszy adres:
+              {t.rich("amazon.setup.step1RedirectUri", {
+                field: (chunks) => <strong>{chunks}</strong>,
+              })}
             </li>
           </ol>
 
           <CopyableField
-            label="Adres przekierowania (Redirect URI)"
+            label={t("amazon.setup.redirectUriLabel")}
             value={redirectURI}
           />
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
             <p className="text-xs text-amber-800 dark:text-amber-200">
-              Redirect URI musi byc <strong>dokladnie taki sam</strong> jak
-              powyzej. Roznica w nawet jednym znaku spowoduje blad autoryzacji.
+              {t.rich("amazon.setup.redirectUriWarning", {
+                exact: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
           </div>
 
           <ol className="list-decimal list-inside space-y-2 text-sm" start={4}>
             <li>
-              Skopiuj <strong>Application ID</strong>,{" "}
-              <strong>LWA Client ID</strong> i{" "}
-              <strong>LWA Client Secret</strong>
+              {t.rich("amazon.setup.step1CopyKeys", {
+                applicationId: (chunks) => <strong>{chunks}</strong>,
+                clientId: (chunks) => <strong>{chunks}</strong>,
+                clientSecret: (chunks) => <strong>{chunks}</strong>,
+              })}
             </li>
           </ol>
         </CardContent>
@@ -446,41 +445,40 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Krok 2: Wprowadz dane aplikacji</CardTitle>
+          <CardTitle>{t("amazon.setup.step2Title")}</CardTitle>
           <CardDescription>
-            Wklej dane z Amazon Developer Console, a nastepnie przejdz do
-            autoryzacji OAuth.
+            {t("amazon.setup.step2Description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="application-id">Application ID</Label>
+            <Label htmlFor="application-id">{t("amazon.setup.applicationIdLabel")}</Label>
             <Input
               id="application-id"
-              placeholder="amzn1.sellerapps.app.xxx"
+              placeholder={t("amazon.setup.applicationIdPlaceholder")}
               value={applicationId}
               onChange={(e) => setApplicationId(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              ID aplikacji z Amazon Developer Console (wymagane do OAuth)
+              {t("amazon.setup.applicationIdHelp")}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="client-id">Client ID (LWA)</Label>
+            <Label htmlFor="client-id">{t("amazon.setup.clientIdLabel")}</Label>
             <Input
               id="client-id"
-              placeholder="amzn1.application-oa2-client.xxx"
+              placeholder={t("amazon.setup.clientIdPlaceholder")}
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="client-secret">Client Secret (LWA)</Label>
+            <Label htmlFor="client-secret">{t("amazon.setup.clientSecretLabel")}</Label>
             <div className="relative">
               <Input
                 id="client-secret"
                 type={showSecret ? "text" : "password"}
-                placeholder="Klucz tajny aplikacji"
+                placeholder={t("amazon.setup.clientSecretPlaceholder")}
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
                 className="pr-10"
@@ -501,15 +499,15 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Marketplace</Label>
+            <Label>{t("amazon.setup.marketplaceLabel")}</Label>
             <Select value={marketplaceId} onValueChange={setMarketplaceId}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Wybierz marketplace" />
+                <SelectValue placeholder={t("amazon.setup.marketplacePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                {MARKETPLACES.map((mp) => (
+                {MARKETPLACE_IDS.map((mp) => (
                   <SelectItem key={mp.id} value={mp.id}>
-                    {mp.label}
+                    {t(`amazon.marketplaceLabels.${mp.key}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -524,7 +522,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               className="h-4 w-4 rounded border-border"
             />
             <Label htmlFor="sandbox" className="text-sm font-normal">
-              Tryb sandbox (testowy)
+              {t("amazon.setup.sandboxLabel")}
             </Label>
           </div>
 
@@ -542,7 +540,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             <Save className="mr-2 h-4 w-4" />
-            Zapisz i polacz z Amazon
+            {t("amazon.setup.saveAndConnect")}
           </Button>
 
           <div className="border-t pt-4">
@@ -554,27 +552,26 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
               className="text-muted-foreground"
             >
               <Wrench className="mr-2 h-4 w-4" />
-              Konfiguracja reczna (dla prywatnych aplikacji)
+              {t("amazon.setup.manualSetupToggle")}
             </Button>
           </div>
 
           {showManualSetup && (
             <div className="rounded-md border p-4 space-y-4">
               <p className="text-sm text-muted-foreground">
-                Jesli masz prywatna aplikacje (self-authorized), mozesz wkleic
-                Refresh Token bezposrednio zamiast korzystac z autoryzacji OAuth.
+                {t("amazon.setup.manualSetupDescription")}
               </p>
               <div className="space-y-2">
-                <Label htmlFor="refresh-token">Refresh Token</Label>
+                <Label htmlFor="refresh-token">{t("amazon.setup.refreshTokenLabel")}</Label>
                 <Input
                   id="refresh-token"
                   type="password"
-                  placeholder="Atzr|..."
+                  placeholder={t("amazon.setup.refreshTokenPlaceholder")}
                   value={refreshToken}
                   onChange={(e) => setRefreshToken(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Token uzyskany po autoryzacji aplikacji w Amazon Seller Central
+                  {t("amazon.setup.refreshTokenHelp")}
                 </p>
               </div>
               <Button
@@ -586,7 +583,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
                   !refreshToken.trim()
                 }
               >
-                Zapisz i zweryfikuj (konfiguracja reczna)
+                {t("amazon.setup.manualSaveButton")}
               </Button>
             </div>
           )}
@@ -603,6 +600,7 @@ function ConnectedState({
   integration: Integration;
   onRefetch: () => void;
 }) {
+  const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
   const deleteIntegration = useDeleteIntegration();
   const [isReauthorizing, setIsReauthorizing] = useState(false);
@@ -612,14 +610,14 @@ function ConnectedState({
       { status: "inactive" },
       {
         onSuccess: () => {
-          toast.success("Integracja Amazon zostala dezaktywowana");
+          toast.success(t("amazon.deactivated"));
           onRefetch();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Blad podczas dezaktywacji integracji"
+              : t("amazon.deactivateError")
           );
         },
       }
@@ -627,23 +625,19 @@ function ConnectedState({
   };
 
   const handleDelete = () => {
-    if (
-      !confirm(
-        "Czy na pewno chcesz usunac integracje Amazon? Ta operacja jest nieodwracalna."
-      )
-    ) {
+    if (!confirm(t("amazon.deleteConfirm"))) {
       return;
     }
     deleteIntegration.mutate(integration.id, {
       onSuccess: () => {
-        toast.success("Integracja Amazon zostala usunieta");
+        toast.success(t("amazon.deleted"));
         onRefetch();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Blad podczas usuwania integracji"
+            : t("amazon.deleteError")
         );
       },
     });
@@ -666,9 +660,7 @@ function ConnectedState({
         );
 
         if (!popup) {
-          toast.error(
-            "Przegladarka zablokowala okno popup. Zezwol na wyskakujace okna."
-          );
+          toast.error(t("amazon.popupBlockedShort"));
           setIsReauthorizing(false);
           return;
         }
@@ -681,12 +673,12 @@ function ConnectedState({
           }
         }, 500);
       } catch {
-        toast.error("Nie udalo sie pobrac adresu autoryzacji");
+        toast.error(t("amazon.authUrlError"));
         setIsReauthorizing(false);
       }
     };
     doAuth();
-  }, [onRefetch]);
+  }, [onRefetch, t]);
 
   const needsOAuth = integration.status !== "active";
 
@@ -695,17 +687,15 @@ function ConnectedState({
       {needsOAuth && (
         <Card className="border-amber-200 dark:border-amber-800">
           <CardHeader>
-            <CardTitle>Autoryzacja OAuth</CardTitle>
+            <CardTitle>{t("amazon.oauth.title")}</CardTitle>
             <CardDescription>
-              Dane aplikacji zostaly zapisane. Kliknij ponizej, aby autoryzowac
-              dostep do konta Amazon. Otworzy sie okno popup z logowaniem Seller
-              Central.
+              {t("amazon.oauth.description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <CopyableField
-                label="Redirect URI (musi byc zarejestrowany w Amazon)"
+                label={t("amazon.oauth.redirectUriLabel")}
                 value={getRedirectURI()}
               />
               <Button
@@ -718,7 +708,7 @@ function ConnectedState({
                 ) : (
                   <ExternalLink className="mr-2 h-4 w-4" />
                 )}
-                Polacz z Amazon
+                {t("amazon.connectButton")}
               </Button>
             </div>
           </CardContent>
@@ -728,12 +718,12 @@ function ConnectedState({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Status polaczenia</CardTitle>
+            <CardTitle>{t("amazon.status.connectionStatus")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="text-sm text-muted-foreground">{t("amazon.status.statusLabel")}</p>
                 <div className="mt-1">
                   <StatusBadge
                     status={integration.status}
@@ -743,21 +733,21 @@ function ConnectedState({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Dane uwierzytelniajace
+                  {t("amazon.status.credentials")}
                 </p>
                 <p className="mt-1 font-medium">
-                  {integration.has_credentials ? "Skonfigurowane" : "Brak"}
+                  {integration.has_credentials ? t("amazon.status.configured") : t("amazon.status.notConfigured")}
                 </p>
               </div>
               {integration.label && (
                 <div>
-                  <p className="text-sm text-muted-foreground">Etykieta</p>
+                  <p className="text-sm text-muted-foreground">{t("amazon.status.label")}</p>
                   <p className="mt-1 font-medium">{integration.label}</p>
                 </div>
               )}
               <div>
                 <p className="text-sm text-muted-foreground">
-                  Ostatnia synchronizacja
+                  {t("amazon.status.lastSync")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.last_sync_at
@@ -766,11 +756,11 @@ function ConnectedState({
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">ID integracji</p>
+                <p className="text-sm text-muted-foreground">{t("amazon.status.integrationId")}</p>
                 <p className="mt-1 font-mono text-xs">{integration.id}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Data utworzenia</p>
+                <p className="text-sm text-muted-foreground">{t("amazon.status.createdAt")}</p>
                 <p className="mt-1 font-medium">
                   {formatDate(integration.created_at)}
                 </p>
@@ -780,7 +770,7 @@ function ConnectedState({
             {integration.status === "error" && integration.error_message && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
                 <p className="text-sm font-medium text-destructive">
-                  Blad integracji
+                  {t("amazon.integrationError")}
                 </p>
                 <p className="mt-1 text-sm text-destructive/80">
                   {integration.error_message}
@@ -792,7 +782,7 @@ function ConnectedState({
 
         <Card>
           <CardHeader>
-            <CardTitle>Akcje</CardTitle>
+            <CardTitle>{t("amazon.actions.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {integration.status === "active" && (
@@ -807,7 +797,7 @@ function ConnectedState({
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                Odswiez token
+                {t("amazon.refreshToken")}
               </Button>
             )}
             <Button
@@ -824,7 +814,7 @@ function ConnectedState({
               ) : (
                 <Unplug className="mr-2 h-4 w-4" />
               )}
-              Dezaktywuj
+              {t("amazon.deactivate")}
             </Button>
             <Button
               className="w-full"
@@ -837,7 +827,7 @@ function ConnectedState({
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Usun integracje
+              {t("amazon.deleteIntegration")}
             </Button>
           </CardContent>
         </Card>
@@ -851,6 +841,7 @@ function ConnectedState({
 }
 
 function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
+  const t = useTranslations("marketplaces");
   const [applicationId, setApplicationId] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -860,7 +851,7 @@ function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
 
   const handleUpdateCredentials = async () => {
     if (!clientId.trim() || !clientSecret.trim()) {
-      toast.error("Client ID i Client Secret sa wymagane");
+      toast.error(t("amazon.credentials.clientIdRequired"));
       return;
     }
 
@@ -882,9 +873,7 @@ function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
         body: JSON.stringify(body),
       });
 
-      toast.success(
-        "Dane zaktualizowane. Kliknij 'Polacz z Amazon' aby ponownie autoryzowac."
-      );
+      toast.success(t("amazon.credentials.updated"));
       setApplicationId("");
       setClientId("");
       setClientSecret("");
@@ -894,7 +883,7 @@ function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Blad podczas aktualizacji danych"
+          : t("amazon.credentials.updateError")
       );
     } finally {
       setIsSaving(false);
@@ -904,38 +893,37 @@ function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zmien dane aplikacji</CardTitle>
+        <CardTitle>{t("amazon.credentials.title")}</CardTitle>
         <CardDescription>
-          Zaktualizuj dane aplikacji Amazon. Po zmianie konieczna bedzie ponowna
-          autoryzacja OAuth.
+          {t("amazon.credentials.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="edit-application-id">Application ID</Label>
+          <Label htmlFor="edit-application-id">{t("amazon.setup.applicationIdLabel")}</Label>
           <Input
             id="edit-application-id"
-            placeholder="Nowy Application ID"
+            placeholder={t("amazon.credentials.newApplicationId")}
             value={applicationId}
             onChange={(e) => setApplicationId(e.target.value)}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit-client-id">Client ID (LWA)</Label>
+          <Label htmlFor="edit-client-id">{t("amazon.setup.clientIdLabel")}</Label>
           <Input
             id="edit-client-id"
-            placeholder="Nowy Client ID"
+            placeholder={t("amazon.credentials.newClientId")}
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit-client-secret">Client Secret (LWA)</Label>
+          <Label htmlFor="edit-client-secret">{t("amazon.setup.clientSecretLabel")}</Label>
           <div className="relative">
             <Input
               id="edit-client-secret"
               type={showSecret ? "text" : "password"}
-              placeholder="Nowy Client Secret"
+              placeholder={t("amazon.credentials.newClientSecret")}
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
               className="pr-10"
@@ -956,15 +944,15 @@ function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Marketplace</Label>
+          <Label>{t("amazon.setup.marketplaceLabel")}</Label>
           <Select value={marketplaceId} onValueChange={setMarketplaceId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Bez zmian" />
+              <SelectValue placeholder={t("amazon.credentials.marketplaceNoChange")} />
             </SelectTrigger>
             <SelectContent>
-              {MARKETPLACES.map((mp) => (
+              {MARKETPLACE_IDS.map((mp) => (
                 <SelectItem key={mp.id} value={mp.id}>
-                  {mp.label}
+                  {t(`amazon.marketplaceLabels.${mp.key}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -978,7 +966,7 @@ function CredentialsCard({ onUpdated }: { onUpdated: () => void }) {
         >
           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <Save className="mr-2 h-4 w-4" />
-          Zaktualizuj dane
+          {t("amazon.credentials.updateButton")}
         </Button>
       </CardContent>
     </Card>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCreateAutomationRule } from "@/hooks/use-automation";
 import { useConvertWorkflow, useValidateWorkflow } from "@/hooks/use-workflows";
@@ -16,12 +17,13 @@ import type { WorkflowDefinition, WorkflowNode } from "@/types/api";
 const MAX_HISTORY = 50;
 
 export default function NewWorkflowEditorPage() {
+  const t = useTranslations("workflows");
   const router = useRouter();
   const createRule = useCreateAutomationRule();
   const convertWorkflow = useConvertWorkflow();
   const validateWorkflow = useValidateWorkflow();
 
-  const [name, setName] = useState("Nowy workflow");
+  const [name, setName] = useState(t("editor.defaultName"));
   const [isActive, setIsActive] = useState(false);
   const [definition, setDefinition] = useState<WorkflowDefinition>(createEmptyWorkflow());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function NewWorkflowEditorPage() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setName(parsed.name || "Nowy workflow");
+        setName(parsed.name || t("editor.defaultName"));
         setDefinition(parsed.definition || createEmptyWorkflow());
         setHistory([parsed.definition || createEmptyWorkflow()]);
         setHistoryIndex(0);
@@ -102,7 +104,7 @@ export default function NewWorkflowEditorPage() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Nazwa workflow jest wymagana");
+      toast.error(t("editor.nameRequired"));
       return;
     }
 
@@ -110,11 +112,11 @@ export default function NewWorkflowEditorPage() {
     try {
       const validation = await validateWorkflow.mutateAsync(definition);
       if (!validation.valid) {
-        toast.error(validation.errors[0] || "Workflow zawiera bledy");
+        toast.error(validation.errors[0] || t("editor.validationError"));
         return;
       }
     } catch {
-      toast.error("Blad walidacji workflow");
+      toast.error(t("editor.validationFailed"));
       return;
     }
 
@@ -135,16 +137,16 @@ export default function NewWorkflowEditorPage() {
         actions: result.actions,
       });
 
-      toast.success("Workflow zostal utworzony");
+      toast.success(t("editor.createSuccess"));
       router.push("/workflows");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nie udalo sie zapisac workflow";
+      const message = err instanceof Error ? err.message : t("editor.createError");
       toast.error(message);
     }
   };
 
   const handleTest = () => {
-    toast.info("Funkcja testu - zapisz workflow i uzyj testu w edytorze tekstowym");
+    toast.info(t("editor.testHint"));
   };
 
   const handleNodeUpdate = useCallback(

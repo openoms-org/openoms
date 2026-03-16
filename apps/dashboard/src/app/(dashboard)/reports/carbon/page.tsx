@@ -17,6 +17,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { useTranslations } from "next-intl";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const CHART_COLORS = [
 ];
 
 export default function CarbonReportPage() {
+  const t = useTranslations("reports");
   const [dateFrom, setDateFrom] = useState(
     format(subMonths(new Date(), 3), "yyyy-MM-dd")
   );
@@ -84,16 +86,15 @@ export default function CarbonReportPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Leaf className="h-6 w-6 text-green-600" />
-              Slad weglowy
+              {t("carbon.title")}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Szacunkowy slad weglowy przesylek — na podstawie kuriera, dystansu
-              i wagi
+              {t("carbon.subtitle")}
             </p>
           </div>
           <Button variant="outline" onClick={handleDownload}>
             <Download className="h-4 w-4" />
-            Pobierz raport CSV
+            {t("carbon.downloadCsv")}
           </Button>
         </div>
 
@@ -103,7 +104,7 @@ export default function CarbonReportPage() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <label htmlFor="date-from" className="text-sm font-medium">
-                  Od:
+                  {t("carbon.dateFrom")}
                 </label>
                 <Input
                   id="date-from"
@@ -115,7 +116,7 @@ export default function CarbonReportPage() {
               </div>
               <div className="flex items-center gap-2">
                 <label htmlFor="date-to" className="text-sm font-medium">
-                  Do:
+                  {t("carbon.dateTo")}
                 </label>
                 <Input
                   id="date-to"
@@ -141,7 +142,7 @@ export default function CarbonReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Calkowite CO2
+                  {t("carbon.totalCo2")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -149,7 +150,7 @@ export default function CarbonReportPage() {
                   {stats.total_carbon_kg.toFixed(1)} kg
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  z {stats.total_shipments} przesylek
+                  {t("carbon.fromShipments", { count: stats.total_shipments })}
                 </p>
               </CardContent>
             </Card>
@@ -157,7 +158,7 @@ export default function CarbonReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Srednie na przesylke
+                  {t("carbon.avgPerShipment")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -165,7 +166,7 @@ export default function CarbonReportPage() {
                   {stats.avg_carbon_per_shipment.toFixed(3)} kg
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  CO2 na przesylke
+                  {t("carbon.co2PerShipment")}
                 </p>
               </CardContent>
             </Card>
@@ -173,7 +174,7 @@ export default function CarbonReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Laczny dystans
+                  {t("carbon.totalDistance")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -181,7 +182,7 @@ export default function CarbonReportPage() {
                   {stats.total_distance_km.toFixed(0)} km
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  szacunkowy dystans dostaw
+                  {t("carbon.estimatedDeliveryDistance")}
                 </p>
               </CardContent>
             </Card>
@@ -189,13 +190,13 @@ export default function CarbonReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Liczba przesylek
+                  {t("carbon.shipmentCount")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{stats.total_shipments}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  z danymi o emisji
+                  {t("carbon.withEmissionData")}
                 </p>
               </CardContent>
             </Card>
@@ -207,14 +208,14 @@ export default function CarbonReportPage() {
           {/* Monthly trend */}
           <Card>
             <CardHeader>
-              <CardTitle>Trend miesieczny CO2</CardTitle>
+              <CardTitle>{t("carbon.monthlyTrend")}</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <Skeleton className="h-[300px] w-full" />
               ) : !monthlyData || monthlyData.length === 0 ? (
                 <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                  Brak danych
+                  {t("carbon.noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
@@ -238,7 +239,7 @@ export default function CarbonReportPage() {
                       // @ts-expect-error Recharts formatter type mismatch
                       formatter={(value: number) => [
                         `${value.toFixed(3)} kg CO2`,
-                        "Emisja",
+                        t("carbon.tooltipEmission"),
                       ]}
                       contentStyle={{
                         backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -261,14 +262,14 @@ export default function CarbonReportPage() {
           {/* By carrier pie chart */}
           <Card>
             <CardHeader>
-              <CardTitle>CO2 wg kuriera</CardTitle>
+              <CardTitle>{t("carbon.co2ByCarrier")}</CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <Skeleton className="h-[300px] w-full" />
               ) : !stats?.by_carrier || stats.by_carrier.length === 0 ? (
                 <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                  Brak danych
+                  {t("carbon.noData")}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
@@ -304,7 +305,7 @@ export default function CarbonReportPage() {
                       // @ts-expect-error Recharts formatter type mismatch
                       formatter={(value: number) => [
                         `${value.toFixed(3)} kg CO2`,
-                        "Emisja",
+                        t("carbon.tooltipEmission"),
                       ]}
                       contentStyle={{
                         backgroundColor: isDark ? "#18181b" : "#ffffff",
@@ -325,7 +326,7 @@ export default function CarbonReportPage() {
         {stats?.by_carrier && stats.by_carrier.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Szczegoly wg kuriera</CardTitle>
+              <CardTitle>{t("carbon.carrierDetails")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -333,16 +334,16 @@ export default function CarbonReportPage() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2 pr-4 font-medium">
-                        Kurier
+                        {t("carbon.colCarrier")}
                       </th>
                       <th className="text-right py-2 px-4 font-medium">
-                        Przesylki
+                        {t("carbon.colShipments")}
                       </th>
                       <th className="text-right py-2 px-4 font-medium">
-                        Calkowite CO2 (kg)
+                        {t("carbon.colTotalCo2")}
                       </th>
                       <th className="text-right py-2 pl-4 font-medium">
-                        Srednie CO2 (kg)
+                        {t("carbon.colAvgCo2")}
                       </th>
                     </tr>
                   </thead>
@@ -376,12 +377,10 @@ export default function CarbonReportPage() {
               <TrendingDown className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-green-800 dark:text-green-300">
-                  Wskazowka ekologiczna
+                  {t("carbon.ecoTipTitle")}
                 </p>
                 <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                  Przesylki InPost generuja srednio o {savingsPercent}% mniej
-                  CO2 niz inne kurierskie. Zoptymalizowana siec paczkomatow
-                  zmniejsza slad weglowy na ostatniej mili dostawy.
+                  {t("carbon.ecoTipText", { percent: savingsPercent })}
                 </p>
               </div>
             </CardContent>
@@ -390,9 +389,7 @@ export default function CarbonReportPage() {
 
         {/* Disclaimer */}
         <p className="text-xs text-muted-foreground text-center">
-          Dane sa szacunkowe, obliczone na podstawie wspolczynnikow emisji
-          DEFRA/GLEC Framework. Rzeczywiste emisje moga sie roznic w zaleznosci
-          od trasy, pojazdu i obciazenia.
+          {t("carbon.disclaimer")}
         </p>
       </div>
     </AdminGuard>

@@ -1,0 +1,38 @@
+{
+  "workflows": {
+    "title": "Workflow Builder",
+    "description": "Wizualny edytor automatyzacji typu drag-and-drop",
+    "textEditor": "Edytor tekstowy",
+    "newWorkflow": "Nowy workflow",
+    "errorLoading": "Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.",
+    "retry": "Sprobuj ponownie",
+    "statusActive": "Aktywny",
+    "statusDraft": "Wersja robocza",
+    "executions": "{count} wykonan",
+    "emptyTitle": "Brak workflow",
+    "emptyDescription": "Utworz swoj pierwszy wizualny workflow automatyzacji",
+    "deleteConfirm": "Czy na pewno chcesz usunac ten workflow?",
+    "deleteConfirmDescription": "Ta operacja jest nieodwracalna. Workflow zostanie trwale usuniety.",
+    "deleteSuccess": "Workflow zostal usuniety",
+    "deleteError": "Nie udalo sie usunac workflow",
+    "new": {
+      "title": "Nowy workflow",
+      "description": "Wybierz szablon lub zacznij od pustego canvas",
+      "back": "Wstecz",
+      "emptyCanvas": "Pusty canvas",
+      "emptyCanvasDescription": "Zacznij od zera - przeciagaj elementy na canvas",
+      "templates": "Szablony",
+      "nodesCount": "{count} wezlow",
+      "edgesCount": "{count} polaczen"
+    },
+    "editor": {
+      "defaultName": "Nowy workflow",
+      "nameRequired": "Nazwa workflow jest wymagana",
+      "validationError": "Workflow zawiera bledy",
+      "validationFailed": "Blad walidacji workflow",
+      "createSuccess": "Workflow zostal utworzony",
+      "createError": "Nie udalo sie zapisac workflow",
+      "testHint": "Funkcja testu - zapisz workflow i uzyj testu w edytorze tekstowym"
+    }
+  }
+}

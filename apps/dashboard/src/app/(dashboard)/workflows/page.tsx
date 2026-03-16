@@ -7,6 +7,7 @@ import { AdminGuard } from "@/components/shared/admin-guard";
 import { useAutomationRules, useDeleteAutomationRule } from "@/hooks/use-automation";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,19 +29,26 @@ export default function WorkflowsPage() {
   const router = useRouter();
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useAutomationRules({ limit, offset });
   const deleteRule = useDeleteAutomationRule();
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("Czy na pewno chcesz usunac ten workflow?")) return;
+    setDeleteId(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteId) return;
     try {
-      await deleteRule.mutateAsync(id);
-      toast.success("Workflow zostal usuniety");
+      await deleteRule.mutateAsync(deleteId);
+      toast.success(t("deleteSuccess"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nie udalo sie usunac workflow";
+      const message = err instanceof Error ? err.message : t("deleteError");
       toast.error(message);
+    } finally {
+      setDeleteId(null);
     }
   };
 
@@ -49,9 +57,9 @@ export default function WorkflowsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Workflow Builder</h1>
+            <h1 className="text-2xl font-bold">{t("title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Wizualny edytor automatyzacji typu drag-and-drop
+              {t("description")}
             </p>
           </div>
           <div className="flex gap-2">
@@ -60,11 +68,11 @@ export default function WorkflowsPage() {
               onClick={() => router.push("/settings/automation")}
             >
               <GitBranch className="h-4 w-4" />
-              Edytor tekstowy
+              {t("textEditor")}
             </Button>
             <Button onClick={() => router.push("/workflows/new")}>
               <Plus className="h-4 w-4" />
-              Nowy workflow
+              {t("newWorkflow")}
             </Button>
           </div>
         </div>
@@ -72,10 +80,10 @@ export default function WorkflowsPage() {
         {isError && (
           <div className="rounded-md border border-destructive bg-destructive/10 p-4">
             <p className="text-sm text-destructive">
-              Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+              {t("errorLoading")}
             </p>
             <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
-              Sprobuj ponownie
+              {t("retry")}
             </Button>
           </div>
         )}
@@ -113,7 +121,7 @@ export default function WorkflowsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => handleDelete(e, rule.id)}
+                          onClick={(e) => handleDeleteClick(e, rule.id)}
                           disabled={deleteRule.isPending}
                         >
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -137,11 +145,11 @@ export default function WorkflowsPage() {
                               : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                           }`}
                         >
-                          {rule.enabled ? "Aktywny" : "Wersja robocza"}
+                          {rule.enabled ? t("statusActive") : t("statusDraft")}
                         </Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {rule.fire_count} wykonan
+                        {t("executions", { count: rule.fire_count })}
                       </span>
                     </div>
                   </CardContent>
@@ -150,13 +158,13 @@ export default function WorkflowsPage() {
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                 <Zap className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">Brak workflow</h3>
+                <h3 className="text-lg font-medium">{t("emptyTitle")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {t("utworzSwojPierwszyWizualnyWorkflowAutomatyzacji")}
+                  {t("emptyDescription")}
                 </p>
                 <Button className="mt-4" onClick={() => router.push("/workflows/new")}>
                   <Plus className="h-4 w-4" />
-                  Nowy workflow
+                  {t("newWorkflow")}
                 </Button>
               </div>
             )}
@@ -176,6 +184,16 @@ export default function WorkflowsPage() {
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        title={t("deleteConfirm")}
+        description={t("deleteConfirmDescription")}
+        variant="destructive"
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteRule.isPending}
+      />
     </AdminGuard>
   );
 }

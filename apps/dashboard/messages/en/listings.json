@@ -262,6 +262,39 @@
     "paramEnter": "Enter {name}",
     "searchOptions": "Search ({count} options)...",
     "noResults": "No results",
-    "typeToSearch": "Type text to search among {count} options"
+    "typeToSearch": "Type text to search among {count} options",
+
+    "sync": {
+      "title": "Listing sync",
+      "subtitle": "Manage product and offer synchronization with marketplace platforms",
+      "newConfig": "New configuration",
+      "emptyTitle": "No sync configurations",
+      "emptyDescription": "Add your first configuration to start syncing offers with marketplace.",
+      "addConfig": "Add configuration",
+      "fetchError": "Failed to fetch sync configurations",
+      "retry": "Retry",
+      "deleteConfirm": "Are you sure you want to delete this sync configuration?",
+      "deleteSuccess": "Configuration deleted",
+      "statusActive": "Active",
+      "statusPaused": "Paused",
+      "statusError": "Error",
+      "directionPush": "Push to marketplace",
+      "directionPull": "Pull from marketplace",
+      "directionBidirectional": "Bidirectional",
+      "direction": "Direction",
+      "priceRule": "Price rule",
+      "priceRuleSame": "No change",
+      "priceRuleMarkupPct": "Percentage markup",
+      "priceRuleMarkupFixed": "Fixed markup",
+      "priceRuleCustom": "Custom",
+      "stockBuffer": "Stock buffer",
+      "pieces": "pcs",
+      "interval": "Interval",
+      "lastSync": "Last sync: {date}",
+      "syncButton": "Sync now",
+      "autoSyncEnabled": "Auto-sync enabled",
+      "autoSyncDisabled": "Auto-sync disabled",
+      "unknownProvider": "Unknown"
+    }
   }
 }

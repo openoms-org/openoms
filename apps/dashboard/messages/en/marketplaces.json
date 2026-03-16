@@ -1,0 +1,102 @@
+{
+  "marketplaces": {
+    "amazon": {
+      "title": "Amazon SP-API Configuration",
+      "subtitle": "Connect your Amazon Seller account to synchronize orders",
+      "connecting": "Connecting to Amazon...",
+      "connectedSuccess": "Connected to Amazon! The window will close automatically.",
+      "authFailed": "Authorization failed",
+      "closeWindow": "Close window",
+      "connectButton": "Connect with Amazon",
+      "refreshToken": "Refresh token",
+      "deactivate": "Deactivate",
+      "deleteIntegration": "Delete integration",
+      "deleteConfirm": "Are you sure you want to delete the Amazon integration? This action is irreversible.",
+      "deactivated": "Amazon integration has been deactivated",
+      "deleted": "Amazon integration has been deleted",
+      "deactivateError": "Error deactivating integration",
+      "deleteError": "Error deleting integration",
+      "integrationError": "Integration error",
+      "popupBlocked": "Browser blocked the popup window. Allow popups and try again.",
+      "popupBlockedShort": "Browser blocked the popup window. Allow popups.",
+      "authUrlError": "Failed to get Amazon authorization URL",
+      "setup": {
+        "step1Title": "Step 1: Prepare an Amazon SP-API application",
+        "step1Description": "Before connecting, you need an application registered in the Amazon Developer Console.",
+        "step1GoTo": "Go to",
+        "step1DevelopApps": "Amazon Seller Central > Develop Apps",
+        "step1CreateApp": "Create a new application or use an existing one",
+        "step1RedirectUri": "In the application settings, in the <field>OAuth Redirect URI</field> field, paste the address below:",
+        "redirectUriLabel": "Redirect URI",
+        "redirectUriWarning": "The Redirect URI must be <exact>exactly the same</exact> as above. Even a single character difference will cause an authorization error.",
+        "step1CopyKeys": "Copy the <applicationId>Application ID</applicationId>, <clientId>LWA Client ID</clientId> and <clientSecret>LWA Client Secret</clientSecret>",
+        "step2Title": "Step 2: Enter application details",
+        "step2Description": "Paste the details from the Amazon Developer Console, then proceed to OAuth authorization.",
+        "applicationIdLabel": "Application ID",
+        "applicationIdPlaceholder": "amzn1.sellerapps.app.xxx",
+        "applicationIdHelp": "Application ID from Amazon Developer Console (required for OAuth)",
+        "clientIdLabel": "Client ID (LWA)",
+        "clientIdPlaceholder": "amzn1.application-oa2-client.xxx",
+        "clientSecretLabel": "Client Secret (LWA)",
+        "clientSecretPlaceholder": "Application secret key",
+        "marketplaceLabel": "Marketplace",
+        "marketplacePlaceholder": "Select marketplace",
+        "sandboxLabel": "Sandbox mode (test)",
+        "saveAndConnect": "Save and connect with Amazon",
+        "savedOpeningAuth": "Amazon data saved. Opening authorization...",
+        "saveError": "Error saving data",
+        "fieldsRequired": "Application ID, Client ID, Client Secret and Marketplace are required",
+        "manualSetupToggle": "Manual configuration (for private applications)",
+        "manualSetupDescription": "If you have a private application (self-authorized), you can paste the Refresh Token directly instead of using OAuth authorization.",
+        "refreshTokenLabel": "Refresh Token",
+        "refreshTokenPlaceholder": "Atzr|...",
+        "refreshTokenHelp": "Token obtained after authorizing the application in Amazon Seller Central",
+        "allFieldsRequired": "All fields are required",
+        "manualSetupSuccess": "Amazon integration has been configured",
+        "manualSetupError": "Failed to configure the integration",
+        "manualSaveButton": "Save and verify (manual configuration)"
+      },
+      "status": {
+        "connectionStatus": "Connection status",
+        "statusLabel": "Status",
+        "credentials": "Authentication credentials",
+        "configured": "Configured",
+        "notConfigured": "None",
+        "label": "Label",
+        "lastSync": "Last synchronization",
+        "integrationId": "Integration ID",
+        "createdAt": "Created on"
+      },
+      "actions": {
+        "title": "Actions"
+      },
+      "oauth": {
+        "title": "OAuth Authorization",
+        "description": "Application details have been saved. Click below to authorize access to the Amazon account. A popup window with Seller Central login will open.",
+        "redirectUriLabel": "Redirect URI (must be registered in Amazon)"
+      },
+      "credentials": {
+        "title": "Change application details",
+        "description": "Update Amazon application details. After changing, OAuth re-authorization will be required.",
+        "newApplicationId": "New Application ID",
+        "newClientId": "New Client ID",
+        "newClientSecret": "New Client Secret",
+        "marketplaceNoChange": "No change",
+        "clientIdRequired": "Client ID and Client Secret are required",
+        "updated": "Data updated. Click 'Connect with Amazon' to re-authorize.",
+        "updateError": "Error updating data",
+        "updateButton": "Update data"
+      },
+      "marketplaceLabels": {
+        "pl": "amazon.pl (Poland)",
+        "de": "amazon.de (Germany)",
+        "uk": "amazon.co.uk (United Kingdom)",
+        "fr": "amazon.fr (France)",
+        "it": "amazon.it (Italy)",
+        "es": "amazon.es (Spain)",
+        "in": "amazon.in (India)",
+        "us": "amazon.com (USA)"
+      }
+    }
+  }
+}
