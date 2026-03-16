@@ -37,7 +37,7 @@ jobs:
             golangci-lint run --fix --timeout=5m "./$dir/..." || true
           done
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"
@@ -155,7 +155,7 @@ jobs:
         working-directory: packages/ebay-go-sdk
         run: govulncheck ./...
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"
@@ -369,7 +369,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"
