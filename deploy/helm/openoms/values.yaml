@@ -215,5 +215,3 @@ autoscaling:
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     scaleDownStabilizationSeconds: 300
-    targetCPUUtilizationPercentage: 70
-    scaleDownStabilizationSeconds: 300
