@@ -8,7 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// DistributedLock provides Redis SETNX-based distributed locking for workers.
+// DistributedLock provides Redis-based distributed locking for workers.
 // When multiple API pods run simultaneously (HPA), this ensures only one pod
 // executes each worker at a time, preventing duplicate order polling,
 // duplicate delayed actions, and duplicate notifications.
@@ -31,7 +31,14 @@ func (d *DistributedLock) Acquire(ctx context.Context, workerName string, ttl ti
 		return true, nil // No Redis = single-pod mode, always proceed
 	}
 	key := fmt.Sprintf("%s:worker-lock:%s", d.prefix, workerName)
-	return d.client.SetNX(ctx, key, "locked", ttl).Result()
+	ok, err := d.client.SetArgs(ctx, key, "locked", redis.SetArgs{
+		Mode: "NX",
+		TTL:  ttl,
+	}).Result()
+	if err == redis.Nil {
+		return false, nil // Key already exists — another pod holds the lock
+	}
+	return ok == "OK", err
 }
 
 // Release releases the lock for the given worker name.
