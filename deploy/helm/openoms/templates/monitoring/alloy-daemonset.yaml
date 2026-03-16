@@ -20,6 +20,11 @@ spec:
     spec:
       serviceAccountName: {{ include "openoms.fullname" . }}-alloy
       automountServiceAccountToken: true
+      # Alloy requires root to read /var/log and /var/lib/docker/containers
+      # for log collection. Container-level securityContext compensates:
+      # readOnlyRootFilesystem: true, allowPrivilegeEscalation: false,
+      # capabilities.drop: ALL (only DAC_READ_SEARCH added).
+      # Namespace PSS must allow this pod (baseline, not restricted).
       securityContext:
         runAsNonRoot: false
         runAsUser: 0

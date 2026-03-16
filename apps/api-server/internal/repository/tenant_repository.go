@@ -81,6 +81,17 @@ func (r *TenantRepository) GetSettings(ctx context.Context, tx pgx.Tx, id uuid.U
 	return settings, nil
 }
 
+// GetSettingsForUpdate returns settings with a row-level lock (FOR UPDATE) to prevent
+// concurrent read-modify-write races on the settings JSONB blob.
+func (r *TenantRepository) GetSettingsForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (json.RawMessage, error) {
+	var settings json.RawMessage
+	err := tx.QueryRow(ctx, "SELECT settings FROM tenants WHERE id = $1 FOR UPDATE", id).Scan(&settings)
+	if err != nil {
+		return nil, fmt.Errorf("get tenant settings for update: %w", err)
+	}
+	return settings, nil
+}
+
 // ListAllTenantIDs returns all tenant IDs (cross-tenant, runs on pool directly).
 func (r *TenantRepository) ListAllTenantIDs(ctx context.Context, pool *pgxpool.Pool) ([]uuid.UUID, error) {
 	rows, err := pool.Query(ctx, "SELECT id FROM tenants")

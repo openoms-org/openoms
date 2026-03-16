@@ -77,6 +77,7 @@ type TenantRepo interface {
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	Create(ctx context.Context, tx pgx.Tx, tenant *model.Tenant) error
 	GetSettings(ctx context.Context, tx pgx.Tx, id uuid.UUID) (json.RawMessage, error)
+	GetSettingsForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (json.RawMessage, error)
 	ListAllTenantIDs(ctx context.Context, pool *pgxpool.Pool) ([]uuid.UUID, error)
 	UpdateSettings(ctx context.Context, tx pgx.Tx, id uuid.UUID, settings json.RawMessage) error
 }
