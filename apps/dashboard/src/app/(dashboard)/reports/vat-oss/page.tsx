@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,18 +27,18 @@ import {
   useDownloadOSSReportCSV,
 } from "@/hooks/use-vat-oss";
 
-const QUARTERS = [
-  { value: "1", label: "Q1 (sty-mar)" },
-  { value: "2", label: "Q2 (kwi-cze)" },
-  { value: "3", label: "Q3 (lip-wrz)" },
-  { value: "4", label: "Q4 (paz-gru)" },
-];
+const QUARTER_KEYS: Record<string, string> = {
+  "1": "vatOss.q1",
+  "2": "vatOss.q2",
+  "3": "vatOss.q3",
+  "4": "vatOss.q4",
+};
 
-const QUARTER_DEADLINES: Record<number, string> = {
-  1: "30 kwietnia",
-  2: "31 lipca",
-  3: "31 pazdziernika",
-  4: "31 stycznia (nastepnego roku)",
+const DEADLINE_KEYS: Record<number, string> = {
+  1: "vatOss.deadlineQ1",
+  2: "vatOss.deadlineQ2",
+  3: "vatOss.deadlineQ3",
+  4: "vatOss.deadlineQ4",
 };
 
 // Country flag emoji from country code
@@ -50,6 +51,7 @@ function countryFlag(code: string): string {
 }
 
 export default function VATOSSReportPage() {
+  const t = useTranslations("reports");
   const now = new Date();
   const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
   const currentYear = now.getFullYear();
@@ -85,11 +87,10 @@ export default function VATOSSReportPage() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Receipt className="h-6 w-6" />
-              Raport VAT OSS
+              {t("vatOss.title")}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Kwartalne zestawienie sprzedazy transgranicznej w UE z obliczeniem
-              VAT
+              {t("vatOss.subtitle")}
             </p>
           </div>
           <Button
@@ -98,7 +99,7 @@ export default function VATOSSReportPage() {
             disabled={!report || report.by_country.length === 0}
           >
             <Download className="h-4 w-4" />
-            Pobierz CSV
+            {t("vatOss.downloadCsv")}
           </Button>
         </div>
 
@@ -107,7 +108,7 @@ export default function VATOSSReportPage() {
           <CardContent className="py-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Kwartal:</label>
+                <label className="text-sm font-medium">{t("vatOss.quarter")}</label>
                 <Select
                   value={String(quarter)}
                   onValueChange={(v) => setQuarter(parseInt(v, 10))}
@@ -116,16 +117,16 @@ export default function VATOSSReportPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {QUARTERS.map((q) => (
-                      <SelectItem key={q.value} value={q.value}>
-                        {q.label}
+                    {["1", "2", "3", "4"].map((q) => (
+                      <SelectItem key={q} value={q}>
+                        {t(QUARTER_KEYS[q])}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium">Rok:</label>
+                <label className="text-sm font-medium">{t("vatOss.year")}</label>
                 <Select
                   value={String(year)}
                   onValueChange={(v) => setYear(parseInt(v, 10))}
@@ -143,7 +144,7 @@ export default function VATOSSReportPage() {
                 </Select>
               </div>
               <p className="text-xs text-muted-foreground ml-auto">
-                Termin deklaracji: {QUARTER_DEADLINES[quarter]}
+                {t("vatOss.declarationDeadline", { deadline: t(DEADLINE_KEYS[quarter]) })}
               </p>
             </div>
           </CardContent>
@@ -161,7 +162,7 @@ export default function VATOSSReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Sprzedaz transgraniczna
+                  {t("vatOss.crossBorderSales")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -173,7 +174,7 @@ export default function VATOSSReportPage() {
                   EUR
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {totalOrders} zamowien w Q{quarter} {year}
+                  {t("vatOss.ordersInQuarter", { count: totalOrders, quarter, year })}
                 </p>
               </CardContent>
             </Card>
@@ -181,7 +182,7 @@ export default function VATOSSReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Nalezny VAT
+                  {t("vatOss.vatDue")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -193,7 +194,7 @@ export default function VATOSSReportPage() {
                   EUR
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  VAT do zadeklarowania w ramach OSS
+                  {t("vatOss.vatToReport")}
                 </p>
               </CardContent>
             </Card>
@@ -201,7 +202,7 @@ export default function VATOSSReportPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Kraje sprzedazy
+                  {t("vatOss.salesCountries")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -210,7 +211,7 @@ export default function VATOSSReportPage() {
                   {totalCountries}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  krajow UE z zamowieniami
+                  {t("vatOss.euCountriesWithOrders")}
                 </p>
               </CardContent>
             </Card>
@@ -223,25 +224,25 @@ export default function VATOSSReportPage() {
         ) : report && report.by_country.length > 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle>Zestawienie wg krajow</CardTitle>
+              <CardTitle>{t("vatOss.breakdownByCountry")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2 pr-4 font-medium">Kraj</th>
+                      <th className="text-left py-2 pr-4 font-medium">{t("vatOss.colCountry")}</th>
                       <th className="text-right py-2 px-4 font-medium">
-                        Zamowienia
+                        {t("vatOss.colOrders")}
                       </th>
                       <th className="text-right py-2 px-4 font-medium">
-                        Sprzedaz (EUR)
+                        {t("vatOss.colSales")}
                       </th>
                       <th className="text-right py-2 px-4 font-medium">
-                        Stawka VAT
+                        {t("vatOss.colVatRate")}
                       </th>
                       <th className="text-right py-2 pl-4 font-medium">
-                        Kwota VAT (EUR)
+                        {t("vatOss.colVatAmount")}
                       </th>
                     </tr>
                   </thead>
@@ -279,7 +280,7 @@ export default function VATOSSReportPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t font-semibold">
-                      <td className="py-2 pr-4">RAZEM</td>
+                      <td className="py-2 pr-4">{t("vatOss.total")}</td>
                       <td className="text-right py-2 px-4">{totalOrders}</td>
                       <td className="text-right py-2 px-4">
                         {report.total_sales.toLocaleString("pl-PL", {
@@ -302,7 +303,7 @@ export default function VATOSSReportPage() {
           <Card>
             <CardContent className="py-8">
               <p className="text-center text-muted-foreground">
-                Brak sprzedazy transgranicznej w Q{quarter} {year}
+                {t("vatOss.noSalesInQuarter", { quarter, year })}
               </p>
             </CardContent>
           </Card>
@@ -315,7 +316,7 @@ export default function VATOSSReportPage() {
             onClick={() => setShowRatesTable((prev) => !prev)}
           >
             <CardTitle className="flex items-center justify-between">
-              <span>Stawki VAT w krajach UE</span>
+              <span>{t("vatOss.euVatRates")}</span>
               {showRatesTable ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
@@ -328,7 +329,7 @@ export default function VATOSSReportPage() {
               {ratesLoading ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Ladowanie stawek...
+                  {t("vatOss.loadingRates")}
                 </div>
               ) : allRates ? (
                 <div className="overflow-x-auto">
@@ -336,19 +337,19 @@ export default function VATOSSReportPage() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left py-2 pr-4 font-medium">
-                          Kraj
+                          {t("vatOss.colCountry")}
                         </th>
                         <th className="text-right py-2 px-4 font-medium">
-                          Standardowa
+                          {t("vatOss.colStandard")}
                         </th>
                         <th className="text-right py-2 px-4 font-medium">
-                          Obnizona 1
+                          {t("vatOss.colReduced1")}
                         </th>
                         <th className="text-right py-2 px-4 font-medium">
-                          Obnizona 2
+                          {t("vatOss.colReduced2")}
                         </th>
                         <th className="text-right py-2 pl-4 font-medium">
-                          Super obnizona
+                          {t("vatOss.colSuperReduced")}
                         </th>
                       </tr>
                     </thead>
@@ -391,7 +392,7 @@ export default function VATOSSReportPage() {
                 </div>
               ) : (
                 <p className="text-muted-foreground">
-                  Nie udalo sie zaladowac stawek VAT
+                  {t("vatOss.ratesLoadError")}
                 </p>
               )}
             </CardContent>
@@ -400,9 +401,7 @@ export default function VATOSSReportPage() {
 
         {/* Disclaimer */}
         <p className="text-xs text-muted-foreground text-center">
-          Raport jest informacyjny i nie zastepuje oficjalnej deklaracji OSS.
-          Stawki VAT sa aktualizowane okresowo — zweryfikuj biezace stawki
-          na stronie Komisji Europejskiej przed zlozeniem deklaracji.
+          {t("vatOss.disclaimer")}
         </p>
       </div>
     </AdminGuard>

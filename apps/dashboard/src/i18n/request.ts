@@ -55,17 +55,20 @@ const MODULES = [
   "invoices",
   "layout",
   "listings",
+  "marketplaces",
   "misc",
   "operations",
   "orders",
   "products",
   "reconciliation",
+  "reports",
   "returns",
   "settings",
   "shipments",
   "statuses",
   "suppliers",
   "warehouses",
+  "workflows",
 ] as const;
 
 async function loadMessages(

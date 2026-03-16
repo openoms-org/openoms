@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Clock,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   useListingSyncConfigs,
   useDeleteListingSyncConfig,
@@ -31,41 +32,38 @@ import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { ListingSyncConfig } from "@/types/api";
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; icon: React.ReactNode; variant: "default" | "secondary" | "destructive" | "outline" }
-> = {
-  active: {
-    label: "Aktywna",
-    icon: <CheckCircle className="h-3.5 w-3.5" />,
-    variant: "default",
-  },
-  paused: {
-    label: "Wstrzymana",
-    icon: <Pause className="h-3.5 w-3.5" />,
-    variant: "secondary",
-  },
-  error: {
-    label: "Blad",
-    icon: <AlertCircle className="h-3.5 w-3.5" />,
-    variant: "destructive",
-  },
+const STATUS_ICON: Record<string, React.ReactNode> = {
+  active: <CheckCircle className="h-3.5 w-3.5" />,
+  paused: <Pause className="h-3.5 w-3.5" />,
+  error: <AlertCircle className="h-3.5 w-3.5" />,
 };
 
-const DIRECTION_LABELS: Record<string, string> = {
-  push: "Wyslij do marketplace",
-  pull: "Pobierz z marketplace",
-  bidirectional: "Dwukierunkowa",
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  active: "default",
+  paused: "secondary",
+  error: "destructive",
 };
 
-const PRICE_RULE_LABELS: Record<string, string> = {
-  same: "Bez zmian",
-  markup_pct: "Narzut procentowy",
-  markup_fixed: "Narzut stalowy",
-  custom: "Niestandardowa",
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  active: "sync.statusActive",
+  paused: "sync.statusPaused",
+  error: "sync.statusError",
 };
 
-function getProviderLabel(provider?: string): string {
+const DIRECTION_LABEL_KEYS: Record<string, string> = {
+  push: "sync.directionPush",
+  pull: "sync.directionPull",
+  bidirectional: "sync.directionBidirectional",
+};
+
+const PRICE_RULE_LABEL_KEYS: Record<string, string> = {
+  same: "sync.priceRuleSame",
+  markup_pct: "sync.priceRuleMarkupPct",
+  markup_fixed: "sync.priceRuleMarkupFixed",
+  custom: "sync.priceRuleCustom",
+};
+
+function getProviderLabel(provider?: string, unknownLabel?: string): string {
   const labels: Record<string, string> = {
     allegro: "Allegro",
     amazon: "Amazon",
@@ -76,10 +74,11 @@ function getProviderLabel(provider?: string): string {
     erli: "Erli",
     mirakl: "Mirakl/Empik",
   };
-  return provider ? labels[provider] || provider : "Nieznany";
+  return provider ? labels[provider] || provider : (unknownLabel ?? "Unknown");
 }
 
 export default function ListingSyncPage() {
+  const t = useTranslations("listings");
   const router = useRouter();
   const [limit] = useState(20);
   const [offset] = useState(0);
@@ -91,10 +90,10 @@ export default function ListingSyncPage() {
   const deleteConfig = useDeleteListingSyncConfig();
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Czy na pewno chcesz usunac te konfiguracje synchronizacji?")) return;
+    if (!confirm(t("sync.deleteConfirm"))) return;
     try {
       await deleteConfig.mutateAsync(id);
-      toast.success("Konfiguracja usunieta");
+      toast.success(t("sync.deleteSuccess"));
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -113,10 +112,10 @@ export default function ListingSyncPage() {
       <div className="flex flex-col items-center gap-4 py-12">
         <AlertCircle className="h-8 w-8 text-destructive" />
         <p className="text-muted-foreground">
-          Nie udalo sie pobrac konfiguracji synchronizacji
+          {t("sync.fetchError")}
         </p>
         <Button variant="outline" onClick={() => refetch()}>
-          Ponow probe
+          {t("sync.retry")}
         </Button>
       </div>
     );
@@ -128,15 +127,15 @@ export default function ListingSyncPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Synchronizacja ofert</h1>
+          <h1 className="text-2xl font-bold">{t("sync.title")}</h1>
           <p className="text-muted-foreground">
-            Zarzadzaj synchronizacja produktow i ofert z platformami marketplace
+            {t("sync.subtitle")}
           </p>
         </div>
         <Link href="/listing-sync/new">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
-            Nowa konfiguracja
+            {t("sync.newConfig")}
           </Button>
         </Link>
       </div>
@@ -144,10 +143,10 @@ export default function ListingSyncPage() {
       {configs.length === 0 ? (
         <EmptyState
           icon={ArrowUpDown}
-          title="Brak konfiguracji synchronizacji"
-          description="Dodaj pierwsza konfiguracje, aby rozpoczac synchronizacje ofert z marketplace."
+          title={t("sync.emptyTitle")}
+          description={t("sync.emptyDescription")}
           action={{
-            label: "Dodaj konfiguracje",
+            label: t("sync.addConfig"),
             href: "/listing-sync/new",
           }}
         />
@@ -176,11 +175,14 @@ function ConfigCard({
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;
 }) {
+  const t = useTranslations("listings");
   const triggerSync = useTriggerSync(config.id);
   const updateConfig = useUpdateListingSyncConfig(config.id);
   const [syncing, setSyncing] = useState(false);
 
-  const statusCfg = STATUS_CONFIG[config.status] || STATUS_CONFIG.active;
+  const statusIcon = STATUS_ICON[config.status] || STATUS_ICON.active;
+  const statusVariant = STATUS_VARIANT[config.status] || STATUS_VARIANT.active;
+  const statusLabelKey = STATUS_LABEL_KEYS[config.status] || STATUS_LABEL_KEYS.active;
 
   const handleSync = async () => {
     setSyncing(true);
@@ -198,7 +200,7 @@ function ConfigCard({
     try {
       await updateConfig.mutateAsync({ auto_sync: checked });
       toast.success(
-        checked ? "Auto-synchronizacja wlaczona" : "Auto-synchronizacja wylaczona"
+        checked ? t("sync.autoSyncEnabled") : t("sync.autoSyncDisabled")
       );
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -211,7 +213,7 @@ function ConfigCard({
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <CardTitle className="text-base">
-              {getProviderLabel(config.integration_provider)}
+              {getProviderLabel(config.integration_provider, t("sync.unknownProvider"))}
             </CardTitle>
             {config.integration_label && (
               <p className="text-sm text-muted-foreground">
@@ -219,24 +221,28 @@ function ConfigCard({
               </p>
             )}
           </div>
-          <Badge variant={statusCfg.variant} className="gap-1">
-            {statusCfg.icon}
-            {statusCfg.label}
+          <Badge variant={statusVariant} className="gap-1">
+            {statusIcon}
+            {t(statusLabelKey)}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-muted-foreground">Kierunek</span>
+            <span className="text-muted-foreground">{t("sync.direction")}</span>
             <p className="font-medium">
-              {DIRECTION_LABELS[config.sync_direction] || config.sync_direction}
+              {DIRECTION_LABEL_KEYS[config.sync_direction]
+                ? t(DIRECTION_LABEL_KEYS[config.sync_direction])
+                : config.sync_direction}
             </p>
           </div>
           <div>
-            <span className="text-muted-foreground">Regula ceny</span>
+            <span className="text-muted-foreground">{t("sync.priceRule")}</span>
             <p className="font-medium">
-              {PRICE_RULE_LABELS[config.price_rule] || config.price_rule}
+              {PRICE_RULE_LABEL_KEYS[config.price_rule]
+                ? t(PRICE_RULE_LABEL_KEYS[config.price_rule])
+                : config.price_rule}
               {config.price_modifier !== 0 && (
                 <span className="ml-1 text-muted-foreground">
                   ({config.price_rule === "markup_pct" ? `${config.price_modifier}%` : `${config.price_modifier} PLN`})
@@ -246,12 +252,12 @@ function ConfigCard({
           </div>
           {config.stock_buffer > 0 && (
             <div>
-              <span className="text-muted-foreground">Bufor magazynowy</span>
-              <p className="font-medium">{config.stock_buffer} szt.</p>
+              <span className="text-muted-foreground">{t("sync.stockBuffer")}</span>
+              <p className="font-medium">{config.stock_buffer} {t("sync.pieces")}</p>
             </div>
           )}
           <div>
-            <span className="text-muted-foreground">Interwat</span>
+            <span className="text-muted-foreground">{t("sync.interval")}</span>
             <p className="font-medium">{config.sync_interval_minutes} min</p>
           </div>
         </div>
@@ -259,7 +265,7 @@ function ConfigCard({
         {config.last_sync_at && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5" />
-            Ostatnia synchronizacja: {formatDate(config.last_sync_at)}
+            {t("sync.lastSync", { date: formatDate(config.last_sync_at) })}
           </div>
         )}
 
@@ -291,7 +297,7 @@ function ConfigCard({
               ) : (
                 <Play className="mr-1 h-3.5 w-3.5" />
               )}
-              Synchronizuj
+              {t("sync.syncButton")}
             </Button>
             <Button
               size="sm"

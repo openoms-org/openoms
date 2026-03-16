@@ -27,7 +27,7 @@ export default function NewWorkflowPage() {
     // Store the empty definition in sessionStorage for the editor to pick up
     const def = createEmptyWorkflow();
     sessionStorage.setItem("workflow-new", JSON.stringify({
-      name: "Nowy workflow",
+      name: t("new.title"),
       definition: def,
     }));
     router.push("/workflows/new-editor");
@@ -48,12 +48,12 @@ export default function NewWorkflowPage() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.push("/workflows")}>
             <ArrowLeft className="h-4 w-4" />
-            {t("wroc")}
+            {t("new.back")}
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Nowy workflow</h1>
+            <h1 className="text-2xl font-bold">{t("new.title")}</h1>
             <p className="text-muted-foreground">
-              Wybierz szablon lub zacznij od pustego canvas
+              {t("new.description")}
             </p>
           </div>
         </div>
@@ -68,9 +68,9 @@ export default function NewWorkflowPage() {
               <Plus className="h-8 w-8 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Pusty canvas</h3>
+              <h3 className="text-lg font-semibold">{t("new.emptyCanvas")}</h3>
               <p className="text-sm text-muted-foreground">
-                Zacznij od zera - przeciagaj elementy na canvas
+                {t("new.emptyCanvasDescription")}
               </p>
             </div>
           </CardContent>
@@ -78,7 +78,7 @@ export default function NewWorkflowPage() {
 
         {/* Templates */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Szablony</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("new.templates")}</h2>
           {isLoading ? (
             <LoadingSkeleton />
           ) : (
@@ -100,9 +100,9 @@ export default function NewWorkflowPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{template.definition.nodes.length} wezlow</span>
+                      <span>{t("new.nodesCount", { count: template.definition.nodes.length })}</span>
                       <span className="text-muted-foreground/40">|</span>
-                      <span>{template.definition.edges.length} polaczen</span>
+                      <span>{t("new.edgesCount", { count: template.definition.edges.length })}</span>
                     </div>
                   </CardContent>
                 </Card>

@@ -22,6 +22,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useTranslations } from "next-intl";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,20 +66,20 @@ const ABC_COLORS: Record<string, string> = {
   C: "#6b7280",
 };
 
-function urgencyBadge(urgency: string) {
+function urgencyBadge(urgency: string, t: (key: string) => string) {
   switch (urgency) {
     case "critical":
-      return <Badge variant="destructive">Krytyczny</Badge>;
+      return <Badge variant="destructive">{t("forecast.statusCritical")}</Badge>;
     case "soon":
       return (
         <Badge className="bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30">
-          Wkrotce
+          {t("forecast.statusSoon")}
         </Badge>
       );
     case "planned":
       return (
         <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30">
-          Planowany
+          {t("forecast.statusPlanned")}
         </Badge>
       );
     default:
@@ -91,6 +92,7 @@ function SummaryCards({
 }: {
   recommendations: ReorderRecommendation[] | undefined;
 }) {
+  const t = useTranslations("reports");
   if (!recommendations) return null;
 
   const critical = recommendations.filter((r) => r.urgency === "critical").length;
@@ -112,7 +114,7 @@ function SummaryCards({
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Krytyczne</p>
+              <p className="text-sm text-muted-foreground">{t("forecast.cardCritical")}</p>
               <p className="text-2xl font-bold">{critical}</p>
             </div>
           </div>
@@ -125,7 +127,7 @@ function SummaryCards({
               <Clock className="h-5 w-5 text-yellow-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Wkrotce</p>
+              <p className="text-sm text-muted-foreground">{t("forecast.cardSoon")}</p>
               <p className="text-2xl font-bold">{soon}</p>
             </div>
           </div>
@@ -138,7 +140,7 @@ function SummaryCards({
               <ShoppingCart className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Planowane</p>
+              <p className="text-sm text-muted-foreground">{t("forecast.cardPlanned")}</p>
               <p className="text-2xl font-bold">{planned}</p>
             </div>
           </div>
@@ -152,7 +154,7 @@ function SummaryCards({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">
-                Srednia dni do wyczerpania
+                {t("forecast.avgDaysToStockout")}
               </p>
               <p className="text-2xl font-bold">{avgDaysOfStock.toFixed(1)}</p>
             </div>
@@ -164,6 +166,7 @@ function SummaryCards({
 }
 
 function ReorderTable() {
+  const t = useTranslations("reports");
   const router = useRouter();
   const { data: recommendations, isLoading } = useReorderRecommendations();
 
@@ -172,8 +175,7 @@ function ReorderTable() {
     return (
       <Card>
         <CardContent className="flex h-[200px] items-center justify-center text-muted-foreground">
-          Brak rekomendacji dostawy - wszystkie produkty maja wystarczajacy stan
-          magazynowy.
+          {t("forecast.noRecommendations")}
         </CardContent>
       </Card>
     );
@@ -183,15 +185,14 @@ function ReorderTable() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Rekomendacje dostawy
+          {t("forecast.reorderRecommendations")}
           <TooltipProvider>
             <UITooltip>
               <TooltipTrigger>
                 <Info className="h-4 w-4 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                Rekomendacje oparte na prognozowanym popycie, aktualnym stanie
-                magazynowym i zdefiniowanym czasie realizacji dostawy.
+                {t("forecast.reorderTooltip")}
               </TooltipContent>
             </UITooltip>
           </TooltipProvider>
@@ -201,15 +202,15 @@ function ReorderTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Produkt</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead className="text-right">Stan</TableHead>
-              <TableHead className="text-right">Prognoza</TableHead>
-              <TableHead className="text-right">Dni do wyczerpania</TableHead>
-              <TableHead className="text-right">Zalecana ilosc</TableHead>
-              <TableHead>Dostawca</TableHead>
-              <TableHead className="text-right">Szac. koszt</TableHead>
-              <TableHead>Pilnosc</TableHead>
+              <TableHead>{t("forecast.colProduct")}</TableHead>
+              <TableHead>{t("forecast.colSku")}</TableHead>
+              <TableHead className="text-right">{t("forecast.colStock")}</TableHead>
+              <TableHead className="text-right">{t("forecast.colForecast")}</TableHead>
+              <TableHead className="text-right">{t("forecast.colDaysToStockout")}</TableHead>
+              <TableHead className="text-right">{t("forecast.colRecommendedQty")}</TableHead>
+              <TableHead>{t("forecast.colSupplier")}</TableHead>
+              <TableHead className="text-right">{t("forecast.colEstCost")}</TableHead>
+              <TableHead>{t("forecast.colUrgency")}</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -245,7 +246,7 @@ function ReorderTable() {
                     ? formatCurrency(rec.estimated_cost, "PLN")
                     : "-"}
                 </TableCell>
-                <TableCell>{urgencyBadge(rec.urgency)}</TableCell>
+                <TableCell>{urgencyBadge(rec.urgency, t)}</TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
@@ -261,7 +262,7 @@ function ReorderTable() {
                       router.push(`/purchase-orders/new?${params.toString()}`);
                     }}
                   >
-                    Zamow
+                    {t("forecast.order")}
                     <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </TableCell>
@@ -275,6 +276,7 @@ function ReorderTable() {
 }
 
 function VelocityChart() {
+  const t = useTranslations("reports");
   const { data: velocity, isLoading } = useProductVelocity();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -286,7 +288,7 @@ function VelocityChart() {
     return (
       <Card>
         <CardContent className="flex h-[200px] items-center justify-center text-muted-foreground">
-          Brak danych o predkosci sprzedazy
+          {t("forecast.noVelocityData")}
         </CardContent>
       </Card>
     );
@@ -303,19 +305,19 @@ function VelocityChart() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Predkosc sprzedazy (top 20)
+          {t("forecast.velocityTitle")}
           <div className="flex gap-2 ml-auto text-sm font-normal">
             <span className="flex items-center gap-1">
               <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: ABC_COLORS.A }} />
-              Klasa A (80% przychodu)
+              {t("forecast.classA")}
             </span>
             <span className="flex items-center gap-1">
               <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: ABC_COLORS.B }} />
-              Klasa B (15%)
+              {t("forecast.classB")}
             </span>
             <span className="flex items-center gap-1">
               <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: ABC_COLORS.C }} />
-              Klasa C (5%)
+              {t("forecast.classC")}
             </span>
           </div>
         </CardTitle>
@@ -343,7 +345,7 @@ function VelocityChart() {
             />
             <Tooltip
               // @ts-expect-error Recharts formatter type mismatch
-              formatter={(value: number) => [formatCurrency(value, "PLN"), "Przychod"]}
+              formatter={(value: number) => [formatCurrency(value, "PLN"), t("forecast.tooltipRevenue")]}
               contentStyle={{
                 backgroundColor: isDark ? "#18181b" : "#ffffff",
                 borderColor: isDark ? "#27272a" : "#e4e4e7",
@@ -367,6 +369,7 @@ function VelocityChart() {
 }
 
 function ConfigDialog() {
+  const t = useTranslations("reports");
   const { data: config, isLoading } = useForecastConfig();
   const updateConfig = useUpdateForecastConfig();
   const [localConfig, setLocalConfig] = useState<ForecastConfig | null>(null);
@@ -391,12 +394,12 @@ function ConfigDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Settings2 className="h-4 w-4 mr-2" />
-          Konfiguracja
+          {t("forecast.configuration")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Konfiguracja prognozy</DialogTitle>
+          <DialogTitle>{t("forecast.configTitle")}</DialogTitle>
         </DialogHeader>
         {isLoading || !localConfig ? (
           <Skeleton className="h-[200px] w-full" />
@@ -404,7 +407,7 @@ function ConfigDialog() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="lead_time">
-                Domyslny czas realizacji dostawy (dni)
+                {t("forecast.defaultLeadTime")}
               </Label>
               <Input
                 id="lead_time"
@@ -422,7 +425,7 @@ function ConfigDialog() {
             </div>
             <div>
               <Label htmlFor="safety_stock">
-                Zapas bezpieczenstwa (dni)
+                {t("forecast.safetyStockDays")}
               </Label>
               <Input
                 id="safety_stock"
@@ -440,7 +443,7 @@ function ConfigDialog() {
             </div>
             <div>
               <Label htmlFor="forecast_horizon">
-                Horyzont prognozy (dni)
+                {t("forecast.forecastHorizon")}
               </Label>
               <Input
                 id="forecast_horizon"
@@ -461,7 +464,7 @@ function ConfigDialog() {
               disabled={updateConfig.isPending}
               className="w-full"
             >
-              {updateConfig.isPending ? "Zapisywanie..." : "Zapisz"}
+              {updateConfig.isPending ? t("forecast.saving") : t("forecast.save")}
             </Button>
           </div>
         )}
@@ -471,6 +474,7 @@ function ConfigDialog() {
 }
 
 export default function ForecastPage() {
+  const t = useTranslations("reports");
   const { data: recommendations } = useReorderRecommendations();
 
   return (
@@ -478,10 +482,9 @@ export default function ForecastPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Prognoza popytu</h1>
+            <h1 className="text-2xl font-bold">{t("forecast.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Analiza predkosc sprzedazy, prognoza popytu i rekomendacje
-              uzupelnienia magazynu
+              {t("forecast.subtitle")}
             </p>
           </div>
           <ConfigDialog />
@@ -493,9 +496,7 @@ export default function ForecastPage() {
           <div className="flex items-start gap-2">
             <Info className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
             <div>
-              Prognozy oparte na analizie statystycznej historii zamowien z
-              ostatnich 90 dni. Uwzgledniaja trend sprzedazy i sezonowosc
-              tygodniowa. Dokladnosc rosnie wraz z iloscia danych historycznych.
+              {t("forecast.infoText")}
             </div>
           </div>
         </div>
