@@ -41,8 +41,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Non-root user for security; strip npm (unused at runtime, removes CVEs)
-RUN addgroup --system --gid 1001 nodejs && \
+# Patch OS-level CVEs and set up non-root user; strip npm (unused at runtime)
+RUN apk upgrade --no-cache && \
+    addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
     rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
