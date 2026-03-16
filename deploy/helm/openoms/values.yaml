@@ -10,6 +10,7 @@ apiServer:
   service:
     port: 8080  # K8s Service port (match containerPort for Cloudflare Tunnel)
   env: production
+  registrationMode: open  # override to "invite" in production values
   baseUrl: https://api.openoms.example.com
   frontendUrl: https://app.openoms.example.com
   uploadDir: /tmp/uploads
