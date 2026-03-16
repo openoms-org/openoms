@@ -102,11 +102,12 @@ func (m *Manager) guardedRun(ctx context.Context, w Worker, running *atomic.Bool
 	// but auto-expires if the pod crashes.
 	if m.lock != nil {
 		acquired, err := m.lock.Acquire(ctx, w.Name(), w.Interval()+30*time.Second)
-		if err != nil {
+		switch {
+		case err != nil:
 			m.logger.Warn("distributed lock error, proceeding anyway", "worker", w.Name(), "error", err)
-		} else if !acquired {
+		case !acquired:
 			return // Another pod holds the lock
-		} else {
+		default:
 			defer m.lock.Release(ctx, w.Name())
 		}
 	}
