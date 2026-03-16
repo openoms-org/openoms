@@ -130,7 +130,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.30.0
         with:
           image-ref: ghcr.io/openoms-org/${{ matrix.image }}:${{ github.sha }}
           format: sarif
