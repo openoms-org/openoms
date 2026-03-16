@@ -169,8 +169,7 @@ secrets:
   createPlainSecret: false
   name: openoms-secrets
 
-imagePullSecrets:
-  - name: ghcr-pull-secret
+imagePullSecrets: []  # GHCR images are public; override if using private registry
 
 networkPolicy:
   enabled: false  # set true in production for namespace-level isolation

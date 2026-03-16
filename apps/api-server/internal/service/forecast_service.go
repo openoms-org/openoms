@@ -107,13 +107,14 @@ func (s *ForecastService) getForecastConfig(ctx context.Context, tx pgx.Tx, tena
 
 // fetchSalesHistory queries orders from the last 90 days and returns per-product daily sales.
 func (s *ForecastService) fetchSalesHistory(ctx context.Context, tx pgx.Tx) (map[uuid.UUID]*productSalesData, error) {
-	// Query all orders from last 90 days with items
+	// Query orders from last 90 days with items (capped at 50k to prevent OOM)
 	rows, err := tx.Query(ctx, `
 		SELECT o.items, o.total_amount, o.created_at
 		FROM orders o
 		WHERE o.created_at >= NOW() - INTERVAL '90 days'
 		  AND o.status NOT IN ('cancelled', 'refunded')
 		ORDER BY o.created_at ASC
+		LIMIT 50000
 	`)
 	if err != nil {
 		return nil, err
