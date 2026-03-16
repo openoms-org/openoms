@@ -10,6 +10,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 // Worker is the interface for background workers.
@@ -20,22 +21,27 @@ type Worker interface {
 }
 
 // Manager manages background workers.
-// TODO: For multi-instance deployment, use Redis SETNX-based distributed
-// locking to ensure only one instance runs each worker at a time.
 type Manager struct {
 	pool    *pgxpool.Pool
 	workers []Worker
 	wg      sync.WaitGroup
 	cancel  context.CancelFunc
 	logger  *slog.Logger
+	lock    *DistributedLock
 }
 
 // NewManager creates a new worker Manager.
-func NewManager(pool *pgxpool.Pool, logger *slog.Logger) *Manager {
-	return &Manager{
+// If redisClient is nil, the manager operates in single-pod mode (no distributed locking).
+func NewManager(pool *pgxpool.Pool, logger *slog.Logger, redisClient ...*redis.Client) *Manager {
+	m := &Manager{
 		pool:   pool,
 		logger: logger,
 	}
+	if len(redisClient) > 0 && redisClient[0] != nil {
+		m.lock = NewDistributedLock(redisClient[0], "openoms")
+		logger.Info("worker manager using distributed locking (Redis)")
+	}
+	return m
 }
 
 // Register adds a worker to the manager's run list.
@@ -88,8 +94,25 @@ func (m *Manager) runWorker(ctx context.Context, w Worker) {
 	}
 }
 
-// guardedRun ensures only one execution of a worker at a time.
+// guardedRun ensures only one execution of a worker at a time, both in-process
+// (via atomic.Bool) and across pods (via Redis SETNX distributed lock).
 func (m *Manager) guardedRun(ctx context.Context, w Worker, running *atomic.Bool) {
+	// Distributed lock: prevent multiple pods from running the same worker.
+	// TTL = worker interval + 30s buffer so the lock outlives a single execution
+	// but auto-expires if the pod crashes.
+	if m.lock != nil {
+		acquired, err := m.lock.Acquire(ctx, w.Name(), w.Interval()+30*time.Second)
+		switch {
+		case err != nil:
+			m.logger.Warn("distributed lock error, proceeding anyway", "worker", w.Name(), "error", err)
+		case !acquired:
+			return // Another pod holds the lock
+		default:
+			defer m.lock.Release(ctx, w.Name())
+		}
+	}
+
+	// In-process guard: prevent overlapping executions within the same pod.
 	if !running.CompareAndSwap(false, true) {
 		m.logger.Warn("worker still running, skipping tick", "name", w.Name())
 		return
