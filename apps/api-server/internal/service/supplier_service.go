@@ -631,7 +631,13 @@ func (s *SupplierService) ValidateSyncable(ctx context.Context, tenantID, suppli
 	if supplier == nil {
 		return ErrSupplierNotFound
 	}
-	if (supplier.FeedURL == nil || *supplier.FeedURL == "") && !integration.HasSupplierProvider(supplier.FeedFormat) {
+	if integration.HasSupplierProvider(supplier.FeedFormat) {
+		if supplier.IntegrationID == nil {
+			return fmt.Errorf("supplier uses provider %q but has no integration configured: %w", supplier.FeedFormat, ErrNoFeedURL)
+		}
+		return nil
+	}
+	if supplier.FeedURL == nil || *supplier.FeedURL == "" {
 		return ErrNoFeedURL
 	}
 	return nil
