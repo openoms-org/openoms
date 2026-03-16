@@ -124,4 +124,4 @@ Monitoring → BaseLinker import → Landing page → 3 carriers
 Note: Billing done (PR #67+), onboarding done (PR #80+), Allegro done (PR #58).
 
 ## Estimated Hours Remaining to MVP
-~350h (tight fit in 600h capacity over 11 weeks)
+~300h (tight fit in 490h capacity over 9 weeks)
