@@ -62,7 +62,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "happy-dom": "^20.6.1",
-    "jsdom": "^27.0.1",
+    "jsdom": "^29.0.0",
     "msw": "^2.12.10",
     "shadcn": "^3.8.4",
     "tailwindcss": "^4",
