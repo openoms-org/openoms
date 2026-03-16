@@ -108,6 +108,12 @@ spec:
                   name: {{ include "openoms.secretName" . }}
                   key: OPENAI_API_KEY
                   optional: true
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
           livenessProbe:
             httpGet:
               path: /health
@@ -116,6 +122,14 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           securityContext:

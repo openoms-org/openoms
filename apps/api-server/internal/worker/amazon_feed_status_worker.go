@@ -142,7 +142,7 @@ func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 }
 
 func (w *AmazonFeedStatusWorker) resolveListings(ctx context.Context, tenantID uuid.UUID, listings []pendingFeedListing, status string, errMsg *string) {
-	_ = database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
+	if err := database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
 		for _, l := range listings {
 			var execErr error
 			switch status {
@@ -166,5 +166,7 @@ func (w *AmazonFeedStatusWorker) resolveListings(ctx context.Context, tenantID u
 			}
 		}
 		return nil
-	})
+	}); err != nil {
+		w.logger.Error("amazon feed status: transaction failed", "tenant_id", tenantID, "listings", len(listings), "error", err)
+	}
 }
