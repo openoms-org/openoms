@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -240,8 +241,8 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Try creating the provider — this validates credentials format
-	_, provErr := integration.NewInvoicingProvider(providerName, credsRaw, invoicingRaw)
+	// Create the provider and make a real API call to verify credentials.
+	provider, provErr := integration.NewInvoicingProvider(providerName, credsRaw, invoicingRaw)
 	if provErr != nil {
 		slog.Error("accounting test connection failed", "provider", providerName, "error", provErr)
 		writeJSON(w, http.StatusOK, map[string]any{
@@ -249,6 +250,23 @@ func (h *AccountingHandler) TestConnection(w http.ResponseWriter, r *http.Reques
 			"message": "Failed to connect: " + provErr.Error(),
 		})
 		return
+	}
+
+	// Fetch a non-existent invoice to verify API credentials work.
+	// Expected: "not found" error = credentials OK; auth error = credentials wrong.
+	_, testErr := provider.GetInvoice(r.Context(), "test-connection-probe")
+	if testErr != nil {
+		errMsg := testErr.Error()
+		// Auth errors indicate wrong credentials
+		if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "403") ||
+			strings.Contains(errMsg, "unauthorized") || strings.Contains(errMsg, "forbidden") {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"success": false,
+				"message": "Authentication failed — check your API key",
+			})
+			return
+		}
+		// "not found" or other errors mean credentials are valid
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
