@@ -1,22 +1,37 @@
 # Project State
-Updated: 2026-03-03
+Updated: 2026-03-16
 
 ## Target
-Open production for paying customers: **May 2026** (~11 weeks remaining)
+Open production for paying customers: **May 2026** (~9 weeks remaining)
 
 ## Pricing Model
 Subscription tiers based on order volume. Plan names and pricing configured at runtime via BILLING_PLANS env var.
 
 ## Current Focus (P0 — must do next)
-- [x] Billing/Subscription integration (Stripe) — **DONE** (PR #67+: Stripe Checkout, webhooks, billing tables, runtime plan config via BILLING_PLANS env)
-- [ ] Monitoring/Alerting (Grafana/Sentry) — **10% done, SaaS requirement**
-- [x] Allegro competitive parity — **DONE** (PR #58: offer import, stock sync, messaging, KSeF auto-send)
-- [x] Onboarding wizard (first-time user flow) — **DONE** (PR #80+: backend endpoints, JSONB state tracking, frontend stepper UI)
+- [x] Billing/Subscription integration (Stripe) — **DONE** (PR #67+)
+- [x] Monitoring/Alerting (Grafana/Sentry) — **DONE** (Alloy metrics, 9 Grafana alerts, Sentry connected)
+- [x] Allegro competitive parity — **DONE** (PR #58)
+- [x] Onboarding wizard — **DONE** (PR #80+)
 
 ## In Progress
-- [x] Supabase migration — DONE (simple_protocol JSONB fix deployed 2026-02-20)
-- [x] CSRF cross-subdomain fix — DONE (PR #36, double-submit cookie with Domain=.openoms.org)
-- [x] Security audit HIGH findings — DONE (all 4 HIGH fixed in PR #36, additional fixes in PR #38)
+- Production Readiness (Linear project, 18/22 done):
+  - [x] Metrics pipeline (Alloy → Grafana Cloud, verified 18M samples)
+  - [x] Grafana alerting (9 rules: error rate, latency, memory, CPU, disk, health, backup, panics, restarts)
+  - [x] DR runbooks (backup restore, Redis persistence)
+  - [x] Ingress rate limiting (nginx annotations, defense-in-depth)
+  - [x] Weekly image scanning (Trivy → GitHub Security tab)
+  - [x] Probes verification (confirmed on live cluster)
+  - [x] HPA autoscaling (conditional Rollout/Deployment, PR #133)
+  - [x] Pod anti-affinity (prefer different nodes, PR #133)
+  - [x] Network policy consolidation (Helm as single source, enterprise PR #44)
+  - [x] k6 load tests (auth flow + orders CRUD, enterprise PR #43)
+  - [ ] Cloudflare metrics in Grafana (OPE-13/14)
+  - [ ] Resource limits tuning (OPE-7, needs metrics analysis)
+- Sentry bug fixes:
+  - [x] OPE-28: Supplier sync conn closed — async background sync (PR #135)
+  - [x] OPE-29: OLX CategorySuggestion id type — already fixed
+  - [x] OPE-30/31: OLX OAuth missing partner scope (PR #134)
+  - [x] OPE-32: Dashboard routing regression — dedicatedPages fix (PR #134)
 
 ## Recently Completed
 - 2026-03-03: GLS carrier production-ready COMPLETE — SDK hardening + label retrieval + service type mapping:
@@ -87,6 +102,9 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - 2026-02-17: Gap analysis vs competitors (BaseLinker, Sellasist, Apilo)
 
 ## Recent Deploys
+- 2026-03-16: OPE-28 supplier sync async fix (PR #135), OPE-30/31/32 OLX + dashboard fix (PR #134)
+- 2026-03-15: Production readiness — HPA (PR #133), security hardening (PR #132), alerts provisioned, DR runbooks
+- 2026-03-15: CSP strict-dynamic hotfix, i18n audit (PR #131), integration audit (PR #129), security audit (PR #130)
 - 2026-03-02: PRs #83-86 merged — shipments NULL fix, billing tests, onboarding 401 fix
 - 2026-03-01: PRs #76-82 merged — carrier SDK fixes (DHL, DPD, GLS, Erli), onboarding wizard, carrier fields
 - 2026-02-25: PR #58 merged — Allegro competitive parity (offer import, stock sync, messaging, KSeF auto-send, audit fixes)
@@ -106,4 +124,4 @@ Monitoring → BaseLinker import → Landing page → 3 carriers
 Note: Billing done (PR #67+), onboarding done (PR #80+), Allegro done (PR #58).
 
 ## Estimated Hours Remaining to MVP
-~350h (tight fit in 600h capacity over 11 weeks)
+~300h (tight fit in 490h capacity over 9 weeks)
