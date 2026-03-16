@@ -1,13 +1,17 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -147,6 +151,8 @@ func (h *SupplierHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // Sync triggers a product feed sync for a supplier.
+// Responds immediately with 202 Accepted and runs the sync in the background
+// to avoid connection timeouts on large feeds.
 func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
@@ -156,7 +162,8 @@ func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.supplierService.SyncFeed(r.Context(), tenantID, supplierID)
+	// Validate supplier exists and has a feed URL before accepting
+	err = h.supplierService.ValidateSyncable(r.Context(), tenantID, supplierID)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrSupplierNotFound):
@@ -164,11 +171,26 @@ func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrNoFeedURL):
 			writeError(w, http.StatusBadRequest, "supplier has no feed URL configured")
 		default:
-			writeServerError(w, "failed to sync feed", err)
+			writeServerError(w, "failed to validate supplier", err)
 		}
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"message": "feed synced successfully"})
+
+	// Run sync in background — detached from request context to avoid
+	// "conn closed" errors when HTTP client disconnects during long syncs.
+	asyncutil.SafeGo(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		if syncErr := h.supplierService.SyncFeed(ctx, tenantID, supplierID); syncErr != nil {
+			slog.Error("background supplier sync failed",
+				"tenant_id", tenantID,
+				"supplier_id", supplierID,
+				"error", syncErr,
+			)
+		}
+	})
+
+	writeJSON(w, http.StatusAccepted, map[string]string{"message": "feed sync started"})
 }
 
 // ListProducts returns a paginated list of products for a supplier.

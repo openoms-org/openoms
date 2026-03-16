@@ -616,6 +616,33 @@ func (s *SupplierService) ImportProducts(ctx context.Context, tenantID, supplier
 	return resp, nil
 }
 
+// ValidateSyncable checks that a supplier exists and has a feed URL configured.
+// Used by the handler to validate before starting an async sync.
+func (s *SupplierService) ValidateSyncable(ctx context.Context, tenantID, supplierID uuid.UUID) error {
+	var supplier *model.Supplier
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var err error
+		supplier, err = s.supplierRepo.FindByID(ctx, tx, supplierID)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	if supplier == nil {
+		return ErrSupplierNotFound
+	}
+	if integration.HasSupplierProvider(supplier.FeedFormat) {
+		if supplier.IntegrationID == nil {
+			return fmt.Errorf("supplier uses provider %q but has no integration configured: %w", supplier.FeedFormat, ErrNoFeedURL)
+		}
+		return nil
+	}
+	if supplier.FeedURL == nil || *supplier.FeedURL == "" {
+		return ErrNoFeedURL
+	}
+	return nil
+}
+
 // SyncFeed fetches the supplier's product feed URL and reconciles products.
 func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uuid.UUID) error {
 	var supplier *model.Supplier
