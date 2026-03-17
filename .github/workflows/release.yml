@@ -114,7 +114,7 @@ jobs:
     name: Scan ${{ matrix.image }}
     runs-on: ubuntu-latest
     needs: [build-api, build-dashboard, build-migrate]
-    continue-on-error: true
+    # Trivy scan is now blocking — CRITICAL/HIGH CVEs prevent deploy
     permissions:
       packages: read
       security-events: write

@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -656,11 +657,12 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 			)
 		case entry.Used:
 			// REUSE DETECTED — token theft scenario; invalidate entire family
-			slog.Warn("refresh token reuse detected, invalidating token family",
+			slog.Error("SECURITY: refresh token reuse detected — possible token theft",
 				"family_id", entry.FamilyID,
 				"user_id", claims.Subject,
 				"tenant_id", claims.TenantID,
 			)
+			sentry.CaptureMessage("refresh token reuse detected: family=" + entry.FamilyID + " user=" + claims.Subject)
 			_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
 			_ = s.refreshStore.DeleteToken(ctx, tokenHash)
 			return nil, "", ErrRefreshTokenReuse
