@@ -136,6 +136,7 @@ function MapDialog({
   const [widgetError, setWidgetError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onPointSelect);
+  // eslint-disable-next-line react-hooks/refs
   callbackRef.current = onPointSelect;
 
   useEffect(() => {

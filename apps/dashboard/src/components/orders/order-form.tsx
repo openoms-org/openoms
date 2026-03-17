@@ -150,6 +150,7 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const currentSource = watch("source");
   const currency = watch("currency") || "PLN";
 

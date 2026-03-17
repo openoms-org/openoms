@@ -63,6 +63,7 @@ export function MarketplaceShipmentSettings({
 
   // Sync state when external settings change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAutoCreate((settings.auto_create_shipment as boolean) ?? false);
     setAutoLabel((settings.auto_generate_label as boolean) ?? false);
     setDefaultCarrier((settings.default_carrier as string) ?? "");

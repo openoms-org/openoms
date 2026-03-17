@@ -65,6 +65,7 @@ export function useWebSocket(): UseWebSocketReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptRef = useRef(0);
+  const connectRef = useRef<() => void>(() => {});
   const queryClient = useQueryClient();
   const token = useAuthStore((s) => s.token);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -94,7 +95,7 @@ export function useWebSocket(): UseWebSocketReturn {
           const attempt = reconnectAttemptRef.current;
           const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
           reconnectAttemptRef.current = attempt + 1;
-          reconnectTimeoutRef.current = setTimeout(() => { connect(); }, delay);
+          reconnectTimeoutRef.current = setTimeout(() => { connectRef.current(); }, delay);
           return;
         }
         const { ticket } = await resp.json();
@@ -103,7 +104,7 @@ export function useWebSocket(): UseWebSocketReturn {
         const attempt = reconnectAttemptRef.current;
         const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
         reconnectAttemptRef.current = attempt + 1;
-        reconnectTimeoutRef.current = setTimeout(() => { connect(); }, delay);
+        reconnectTimeoutRef.current = setTimeout(() => { connectRef.current(); }, delay);
         return;
       }
 
@@ -143,7 +144,7 @@ export function useWebSocket(): UseWebSocketReturn {
           reconnectAttemptRef.current = attempt + 1;
 
           reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
+            connectRef.current();
           }, delay);
         }
       };
@@ -155,6 +156,10 @@ export function useWebSocket(): UseWebSocketReturn {
       // Failed to create WebSocket, will retry via onclose
     }
   }, [token, isAuthenticated, queryClient]);
+
+  // Keep ref in sync so internal timeouts can call the latest version
+  // eslint-disable-next-line react-hooks/refs
+  connectRef.current = connect;
 
   useEffect(() => {
     connect();

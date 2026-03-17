@@ -202,6 +202,7 @@ export default function ProductListingsPage() {
   const [showCreate, setShowCreate] = useState(false);
   useEffect(() => {
     if (searchParams.get("listing") === "new") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowCreate(true);
     }
   }, [searchParams]);

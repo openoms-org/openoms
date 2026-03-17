@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { useAuthStore } from "@/lib/auth";
 import { useOnboarding } from "@/hooks/use-onboarding";
@@ -24,10 +24,10 @@ function QuickStartCard() {
   const [dismissed, setDismissed] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard: read localStorage after mount to avoid mismatch
     setDismissed(localStorage.getItem(QUICKSTART_DISMISSED_KEY) === "true");
   }, []);
 
-  // null = not yet hydrated from localStorage, avoid layout shift
   if (dismissed === null || !allCompleted || dismissed) return null;
 
   const handleDismiss = () => {

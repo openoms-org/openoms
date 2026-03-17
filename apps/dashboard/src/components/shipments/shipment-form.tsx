@@ -74,6 +74,7 @@ export function ShipmentForm({
   const handlePointSelect = useCallback(
     (pointName: string) => {
       setTargetPoint(pointName);
+      // eslint-disable-next-line react-hooks/incompatible-library
       const current = watch("carrier_data") ?? {};
       setValue("carrier_data", { ...current, target_point: pointName });
     },

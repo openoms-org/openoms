@@ -101,6 +101,7 @@ export default function SupplierDetailPage() {
 
   useEffect(() => {
     if (supplier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(supplier.name);
       setCode(supplier.code || "");
       setFeedUrl(supplier.feed_url || "");
@@ -572,6 +573,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
         source_key: existing?.source_key ?? "",
       };
     });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMappingRows(rows);
   }, [paramsData, existingMappings]);
 

@@ -16,6 +16,16 @@ interface OnboardingStep {
   completed: boolean;
 }
 
+interface Integration {
+  provider: string;
+  status: string;
+}
+
+interface DashboardStats {
+  order_counts?: { total?: number };
+  product_count?: number;
+}
+
 export function useOnboarding() {
   const queryClient = useQueryClient();
 
@@ -31,12 +41,12 @@ export function useOnboarding() {
 
   const { data: integrations } = useQuery({
     queryKey: ["integrations"],
-    queryFn: () => apiClient<any[]>("/v1/integrations"),
+    queryFn: () => apiClient<Integration[]>("/v1/integrations"),
   });
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
-    queryFn: () => apiClient<any>("/v1/stats/dashboard"),
+    queryFn: () => apiClient<DashboardStats>("/v1/stats/dashboard"),
   });
 
   const dismiss = useMutation({
@@ -61,7 +71,7 @@ export function useOnboarding() {
       title: "Po\u0142\u0105cz z Allegro",
       description: "Zaimportuj zam\u00f3wienia i produkty z Allegro.",
       href: "/integrations",
-      completed: Array.isArray(integrations) && integrations.some((i: any) => i.provider === "allegro" && i.status === "active"),
+      completed: Array.isArray(integrations) && integrations.some((i) => i.provider === "allegro" && i.status === "active"),
     },
     {
       key: "product",

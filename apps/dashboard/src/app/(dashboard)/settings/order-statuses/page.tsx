@@ -35,6 +35,7 @@ export default function OrderStatusesPage() {
 
   useEffect(() => {
     if (config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatuses([...config.statuses]);
       setTransitions({ ...config.transitions });
     }

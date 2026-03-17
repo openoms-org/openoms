@@ -27,7 +27,7 @@ export function createCrudHooks<
   TEntity,
   TCreate = Partial<TEntity>,
   TUpdate = Partial<TEntity>,
-  TParams extends object = {},
+  TParams extends object = object,
 >(options: CrudHooksOptions) {
   const { resourceKey, basePath, updateMethod = "PATCH" } = options;
 

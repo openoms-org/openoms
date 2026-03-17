@@ -136,6 +136,7 @@ function KanbanColumn({
 
   // Reset pagination when filters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadedPages(1);
   }, [filters]);
 

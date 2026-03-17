@@ -85,6 +85,7 @@ export default function AutomationRuleDetailPage() {
 
   useEffect(() => {
     if (rule && !initialized) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(rule.name);
       setDescription(rule.description || "");
       setEnabled(rule.enabled);

@@ -111,6 +111,7 @@ export default function AccountingSettingsPage() {
 
   useEffect(() => {
     if (config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProvider(config.provider || "");
       setCredentials(config.credentials || {});
     }

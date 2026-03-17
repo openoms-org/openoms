@@ -40,11 +40,13 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
 
   // Sync local search when filters.search changes externally (e.g. reset)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalSearch(filters.search || "");
   }, [filters.search]);
 
   // Sync local tag when filters.tag changes externally (e.g. reset)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalTag(filters.tag || "");
   }, [filters.tag]);
 

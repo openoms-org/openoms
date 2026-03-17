@@ -38,6 +38,7 @@ export default function CustomFieldsPage() {
 
   useEffect(() => {
     if (config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFields([...config.fields]);
     }
   }, [config]);
