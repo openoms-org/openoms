@@ -20,7 +20,7 @@ func computeHMACSHA256(secret string, body []byte) string {
 }
 
 func TestSecurity_Webhook_InPostRejectsWhenNoSecret(t *testing.T) {
-	h := NewInPostWebhookHandler("") // empty secret
+	h := NewInPostWebhookHandler("", nil) // empty secret
 	req := httptest.NewRequest("POST", "/v1/webhooks/inpost", strings.NewReader(`{"type":"test"}`))
 	rr := httptest.NewRecorder()
 	h.HandleWebhook(rr, req)
@@ -37,7 +37,7 @@ func TestSecurity_Webhook_AllegroRejectsWhenNoSecret(t *testing.T) {
 
 func TestSecurity_Webhook_InPostValidSignaturePasses(t *testing.T) {
 	secret := "test-webhook-secret" //nolint:gosec // test credential
-	h := NewInPostWebhookHandler(secret)
+	h := NewInPostWebhookHandler(secret, nil)
 
 	body := []byte(`{"type":"shipment_status_changed","payload":{"shipment_id":123,"tracking_number":"ABC123","status":"delivered"}}`)
 	sig := computeHMACSHA256(secret, body)
@@ -50,7 +50,7 @@ func TestSecurity_Webhook_InPostValidSignaturePasses(t *testing.T) {
 }
 
 func TestSecurity_Webhook_InPostInvalidSignatureRejected(t *testing.T) {
-	h := NewInPostWebhookHandler("real-secret")
+	h := NewInPostWebhookHandler("real-secret", nil)
 	body := []byte(`{"type":"test","payload":{}}`)
 	req := httptest.NewRequest("POST", "/v1/webhooks/inpost", bytes.NewReader(body))
 	req.Header.Set("X-InPost-Signature", "invalid-signature")
