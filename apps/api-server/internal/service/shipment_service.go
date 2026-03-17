@@ -630,3 +630,43 @@ func (s *ShipmentService) estimateCarbon(ctx context.Context, tx pgx.Tx, tenantI
 	method := "estimate"
 	shipment.CarbonMethod = &method
 }
+
+// UpdateStatusByTrackingNumber finds a shipment by tracking number (cross-tenant)
+// and updates its status. Used by InPost webhook handler.
+func (s *ShipmentService) UpdateStatusByTrackingNumber(ctx context.Context, trackingNumber, newStatus string) error {
+	// Cross-tenant lookup — uses pool directly (no WithTenant) via SECURITY DEFINER-like pattern.
+	// The tracking_number column is not tenant-scoped in the query because webhooks don't know the tenant.
+	var shipmentID, tenantID uuid.UUID
+	err := s.pool.QueryRow(ctx,
+		"SELECT id, tenant_id FROM shipments WHERE tracking_number = $1 LIMIT 1",
+		trackingNumber,
+	).Scan(&shipmentID, &tenantID)
+	if err != nil {
+		return fmt.Errorf("find shipment by tracking number %q: %w", trackingNumber, err)
+	}
+
+	// Now update within tenant context
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx,
+			"UPDATE shipments SET status = $1, updated_at = NOW() WHERE id = $2",
+			newStatus, shipmentID)
+		if err != nil {
+			return fmt.Errorf("update shipment status: %w", err)
+		}
+
+		// Trigger automation and webhooks
+		if s.automationService != nil {
+			FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.status_changed", shipmentID, map[string]any{
+				"status": newStatus,
+			})
+		}
+		if s.webhookDispatch != nil {
+			s.webhookDispatch.Dispatch(ctx, tenantID, "shipment.status_changed", map[string]any{
+				"shipment_id": shipmentID,
+				"status":      newStatus,
+			})
+		}
+
+		return nil
+	})
+}

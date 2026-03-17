@@ -216,11 +216,9 @@ func (h *OLXListingsHandler) CreateListing(w http.ResponseWriter, r *http.Reques
 		slog.Error("olx listings: failed to push offer", "error", err, "tenant_id", tenantID)
 		var apiErr *olxsdk.APIError
 		if errors.As(err, &apiErr) && apiErr.StatusCode < 500 {
-			msg := "OLX: " + apiErr.Message
-			if msg == "OLX: " {
-				msg = "OLX: " + apiErr.Error()
-			}
-			writeError(w, http.StatusUnprocessableEntity, msg)
+			// Do not forward raw OLX API error messages to client — may contain internal details
+			slog.Warn("olx listings: client error from OLX API", "status", apiErr.StatusCode, "message", apiErr.Message)
+			writeError(w, http.StatusUnprocessableEntity, "OLX rejected the listing — check listing data and try again")
 			return
 		}
 		writeError(w, http.StatusBadGateway, "failed to publish listing on OLX")

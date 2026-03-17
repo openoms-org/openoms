@@ -22,7 +22,7 @@ import (
 // ===========================================================================
 
 func TestInPostWebhookHandler_MissingWebhookSecret(t *testing.T) {
-	h := NewInPostWebhookHandler("")
+	h := NewInPostWebhookHandler("", nil)
 
 	body := `{"type":"shipment_status_changed","payload":{}}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/inpost", strings.NewReader(body))
@@ -35,7 +35,7 @@ func TestInPostWebhookHandler_MissingWebhookSecret(t *testing.T) {
 }
 
 func TestInPostWebhookHandler_MissingSignatureHeader(t *testing.T) {
-	h := NewInPostWebhookHandler("test-secret")
+	h := NewInPostWebhookHandler("test-secret", nil)
 
 	body := `{"type":"shipment_status_changed","payload":{}}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/inpost", strings.NewReader(body))
@@ -49,7 +49,7 @@ func TestInPostWebhookHandler_MissingSignatureHeader(t *testing.T) {
 }
 
 func TestInPostWebhookHandler_InvalidHMACSignature(t *testing.T) {
-	h := NewInPostWebhookHandler("test-secret")
+	h := NewInPostWebhookHandler("test-secret", nil)
 
 	body := `{"type":"shipment_status_changed","payload":{}}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/inpost", strings.NewReader(body))
@@ -64,7 +64,7 @@ func TestInPostWebhookHandler_InvalidHMACSignature(t *testing.T) {
 
 func TestInPostWebhookHandler_InvalidJSONBody(t *testing.T) {
 	secret := "test-secret"
-	h := NewInPostWebhookHandler(secret)
+	h := NewInPostWebhookHandler(secret, nil)
 
 	// Invalid JSON that will pass HMAC verification but fail JSON parsing
 	body := []byte(`not valid json`)
@@ -84,7 +84,7 @@ func TestInPostWebhookHandler_InvalidJSONBody(t *testing.T) {
 
 func TestInPostWebhookHandler_ValidSignature(t *testing.T) {
 	secret := "test-secret"
-	h := NewInPostWebhookHandler(secret)
+	h := NewInPostWebhookHandler(secret, nil)
 
 	body := []byte(`{"type":"shipment_created","payload":{}}`)
 	mac := hmac.New(sha256.New, []byte(secret))
