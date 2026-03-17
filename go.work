@@ -1,32 +1,33 @@
-go 1.25.7
+go 1.26.1
 
 use (
 	./apps/api-server
+	./apps/orchestrator
 	./packages/allegro-go-sdk
-	./packages/btp-go-sdk
 	./packages/amazon-sp-sdk
+	./packages/btp-go-sdk
 	./packages/dhl-go-sdk
 	./packages/dpd-go-sdk
+	./packages/ebay-go-sdk
 	./packages/erli-go-sdk
 	./packages/fakturownia-go-sdk
+	./packages/fedex-go-sdk
 	./packages/gls-go-sdk
+	./packages/infakt-go-sdk
 	./packages/inpost-go-sdk
 	./packages/iof-parser
-	./packages/mirakl-go-sdk
-	./packages/order-engine
-	./packages/ups-go-sdk
-	./packages/poczta-polska-go-sdk
-	./packages/orlen-paczka-go-sdk
-	./packages/fedex-go-sdk
-	./packages/smsapi-go-sdk
-	./packages/woocommerce-go-sdk
-	./packages/ebay-go-sdk
 	./packages/kaufland-go-sdk
-	./packages/olx-go-sdk
 	./packages/ksef-go-sdk
-	./packages/wfirma-go-sdk
-	./packages/infakt-go-sdk
-	./packages/shoper-go-sdk
+	./packages/mirakl-go-sdk
+	./packages/olx-go-sdk
+	./packages/order-engine
+	./packages/orlen-paczka-go-sdk
+	./packages/poczta-polska-go-sdk
 	./packages/prestashop-go-sdk
+	./packages/shoper-go-sdk
 	./packages/shopify-go-sdk
+	./packages/smsapi-go-sdk
+	./packages/ups-go-sdk
+	./packages/wfirma-go-sdk
+	./packages/woocommerce-go-sdk
 )
