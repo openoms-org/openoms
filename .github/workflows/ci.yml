@@ -488,9 +488,9 @@ jobs:
           go build -o api-server ./cmd/server
           DATABASE_URL="postgres://openoms:openoms_dev@localhost:5432/openoms_dev?sslmode=disable" \
           REDIS_URL="redis://localhost:6379" \
+          JWT_SECRET="test-secret-for-ci" \
+          ENCRYPTION_KEY="a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b" \
           ./api-server &
-        env:
-          JWT_SECRET: test-secret-for-ci
       - name: Wait for API server
         run: timeout 30 bash -c 'until curl -sf http://localhost:8080/health; do sleep 1; done'
       - name: Install dashboard dependencies
