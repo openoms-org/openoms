@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	inpostsdk "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
@@ -70,10 +71,14 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 
 	slog.Info("inpost webhook: received event", "event_type", event.Type)
 
-	// Dispatch by event type
+	// Always return 200 OK to InPost immediately — don't block on processing.
+	// InPost retries on non-200, so we ACK first and process async.
+	w.WriteHeader(http.StatusOK)
+
+	// Dispatch by event type (async — response already sent)
 	switch event.Type {
 	case "shipment_status_changed":
-		h.handleShipmentStatusChanged(event)
+		asyncutil.SafeGo(func() { h.handleShipmentStatusChanged(event) })
 	case "shipment_created":
 		slog.Info("inpost webhook: shipment created")
 	case "dispatch_order_status_changed":
@@ -81,9 +86,6 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 	default:
 		slog.Debug("inpost webhook: unhandled event type", "type", event.Type)
 	}
-
-	// Always return 200 OK to InPost so it doesn't retry
-	w.WriteHeader(http.StatusOK)
 }
 
 // handleShipmentStatusChanged processes a shipment status change event from InPost.
@@ -119,7 +121,7 @@ func (h *InPostWebhookHandler) handleShipmentStatusChanged(event *inpostsdk.Webh
 	if h.shipmentService != nil && payload.TrackingNumber != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		if err := h.shipmentService.UpdateStatusByTrackingNumber(ctx, payload.TrackingNumber, omsStatus); err != nil {
+		if err := h.shipmentService.UpdateStatusByTrackingNumber(ctx, payload.TrackingNumber, "inpost", omsStatus); err != nil {
 			slog.Error("inpost webhook: failed to update shipment status",
 				"tracking_number", payload.TrackingNumber,
 				"oms_status", omsStatus,

@@ -631,42 +631,49 @@ func (s *ShipmentService) estimateCarbon(ctx context.Context, tx pgx.Tx, tenantI
 	shipment.CarbonMethod = &method
 }
 
-// UpdateStatusByTrackingNumber finds a shipment by tracking number (cross-tenant)
-// and updates its status. Used by InPost webhook handler.
-func (s *ShipmentService) UpdateStatusByTrackingNumber(ctx context.Context, trackingNumber, newStatus string) error {
-	// Cross-tenant lookup — uses pool directly (no WithTenant) via SECURITY DEFINER-like pattern.
-	// The tracking_number column is not tenant-scoped in the query because webhooks don't know the tenant.
+// UpdateStatusByTrackingNumber finds a shipment by tracking number and provider
+// (cross-tenant) and updates its status. Used by webhook handlers.
+func (s *ShipmentService) UpdateStatusByTrackingNumber(ctx context.Context, trackingNumber, provider, newStatus string) error {
+	// Cross-tenant lookup — uses pool directly (no WithTenant).
+	// Scoped by both tracking_number AND provider to avoid ambiguity when
+	// different carriers reuse the same tracking number format.
 	var shipmentID, tenantID uuid.UUID
+	var oldStatus string
 	err := s.pool.QueryRow(ctx,
-		"SELECT id, tenant_id FROM shipments WHERE tracking_number = $1 LIMIT 1",
-		trackingNumber,
-	).Scan(&shipmentID, &tenantID)
+		"SELECT id, tenant_id, status FROM shipments WHERE tracking_number = $1 AND provider = $2 LIMIT 1",
+		trackingNumber, provider,
+	).Scan(&shipmentID, &tenantID, &oldStatus)
 	if err != nil {
-		return fmt.Errorf("find shipment by tracking number %q: %w", trackingNumber, err)
+		return fmt.Errorf("find shipment by tracking number %q provider %q: %w", trackingNumber, provider, err)
 	}
 
-	// Now update within tenant context
-	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+	// Skip if status hasn't changed
+	if oldStatus == newStatus {
+		return nil
+	}
+
+	// Phase 1: Update status in DB within tenant context
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			"UPDATE shipments SET status = $1, updated_at = NOW() WHERE id = $2",
 			newStatus, shipmentID)
-		if err != nil {
-			return fmt.Errorf("update shipment status: %w", err)
-		}
+		return err
+	}); err != nil {
+		return fmt.Errorf("update shipment status: %w", err)
+	}
 
-		// Trigger automation and webhooks
-		if s.automationService != nil {
-			FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.status_changed", shipmentID, map[string]any{
-				"status": newStatus,
-			})
-		}
-		if s.webhookDispatch != nil {
-			s.webhookDispatch.Dispatch(ctx, tenantID, "shipment.status_changed", map[string]any{
-				"shipment_id": shipmentID,
-				"status":      newStatus,
-			})
-		}
+	// Phase 2: Side effects AFTER commit — automation and webhooks
+	eventData := map[string]any{
+		"shipment_id": shipmentID,
+		"old_status":  oldStatus,
+		"status":      newStatus,
+	}
+	if s.automationService != nil {
+		FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.status_changed", shipmentID, eventData)
+	}
+	if s.webhookDispatch != nil {
+		s.webhookDispatch.Dispatch(ctx, tenantID, "shipment.status_changed", eventData)
+	}
 
-		return nil
-	})
+	return nil
 }
