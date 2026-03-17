@@ -522,3 +522,55 @@ jobs:
 
       - name: Build Dashboard image
         run: docker build -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard
+
+  auto-merge-gate:
+    name: Auto-Merge Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    needs:
+      - lint-strict
+      - vet
+      - test
+      - security-tests
+      - security
+      - frontend
+      - e2e
+      - docker
+      - migration-safety
+    if: startsWith(github.event.pull_request.head.ref, 'bot/')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check CodeRabbit reviews
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UNRESOLVED=$(gh api graphql -f query='
+            query($owner:String!, $repo:String!, $pr:Int!) {
+              repository(owner:$owner, name:$repo) {
+                pullRequest(number:$pr) {
+                  reviewThreads(first:100) {
+                    nodes { isResolved comments(first:1) { nodes { author { login } } } }
+                  }
+                }
+              }
+            }' -f owner="${{ github.repository_owner }}" \
+               -f repo="${{ github.event.repository.name }}" \
+               -F pr=${{ github.event.pull_request.number }} \
+            --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
+                   | select(.isResolved == false)
+                   | select(.comments.nodes[0].author.login == "coderabbitai")]
+                   | length')
+          if [ "$UNRESOLVED" -gt 0 ]; then
+            echo "::warning::$UNRESOLVED unresolved CodeRabbit threads"
+            exit 1
+          fi
+      - name: Auto-merge
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --squash \
+            --delete-branch
