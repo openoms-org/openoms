@@ -71,16 +71,66 @@ const MODULES = [
   "workflows",
 ] as const;
 
+function convertDotKeys(
+  obj: Record<string, unknown>
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const converted =
+      value !== null && typeof value === "object" && !Array.isArray(value)
+        ? convertDotKeys(value as Record<string, unknown>)
+        : value;
+
+    if (key.includes(".")) {
+      const parts = key.split(".");
+      let current = result;
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (!(parts[i] in current) || typeof current[parts[i]] !== "object") {
+          current[parts[i]] = {};
+        }
+        current = current[parts[i]] as Record<string, unknown>;
+      }
+      const last = parts[parts.length - 1];
+      if (
+        typeof current[last] === "object" &&
+        typeof converted === "object" &&
+        converted !== null
+      ) {
+        current[last] = deepMerge(
+          current[last] as Record<string, unknown>,
+          converted as Record<string, unknown>
+        );
+      } else {
+        current[last] = converted;
+      }
+    } else if (
+      typeof result[key] === "object" &&
+      typeof converted === "object" &&
+      converted !== null &&
+      !Array.isArray(converted)
+    ) {
+      result[key] = deepMerge(
+        result[key] as Record<string, unknown>,
+        converted as Record<string, unknown>
+      );
+    } else {
+      result[key] = converted;
+    }
+  }
+  return result;
+}
+
 async function loadMessages(
   locale: SupportedLocale
 ): Promise<Record<string, unknown>> {
   const chunks = await Promise.all(
     MODULES.map((mod) => import(`../../messages/${locale}/${mod}.json`))
   );
-  return chunks.reduce<Record<string, unknown>>(
+  const merged = chunks.reduce<Record<string, unknown>>(
     (acc, chunk) => deepMerge(acc, chunk.default ?? chunk),
     {}
   );
+  return convertDotKeys(merged);
 }
 
 export default getRequestConfig(async () => {
