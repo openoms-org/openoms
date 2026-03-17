@@ -80,11 +80,13 @@ spec:
                   echo "Cleanup done"
                   {{- end }}
               env:
+                # Use migration (superuser) URL for backups — app URL is RLS-restricted
+                # and would produce incomplete dumps missing other tenants' data.
                 - name: DATABASE_URL
                   valueFrom:
                     secretKeyRef:
                       name: {{ include "openoms.secretName" . }}
-                      key: DATABASE_URL
+                      key: MIGRATION_DATABASE_URL
                 - name: S3_BUCKET
                   value: {{ .Values.backup.s3.bucket | quote }}
                 - name: S3_PREFIX
