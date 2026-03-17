@@ -50,13 +50,13 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 	// Verify HMAC-SHA256 signature
 	signature := r.Header.Get("X-InPost-Signature")
 	if signature == "" {
-		slog.Warn("inpost webhook: missing signature header", "source_ip", r.RemoteAddr, "provider", "inpost")
+		slog.Warn("inpost webhook: missing signature header", "source_ip", r.RemoteAddr, "provider", "inpost") //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
 	if err := inpostsdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
-		slog.Warn("inpost webhook: invalid signature", "error", err, "source_ip", r.RemoteAddr, "provider", "inpost")
+		slog.Warn("inpost webhook: invalid signature", "error", err, "source_ip", r.RemoteAddr, "provider", "inpost") //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
 		w.WriteHeader(http.StatusOK)
 		return
 	}

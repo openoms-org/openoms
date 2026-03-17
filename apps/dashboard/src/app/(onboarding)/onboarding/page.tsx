@@ -543,6 +543,7 @@ export default function OnboardingPage() {
       return;
     }
     if (localStep === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalStep(status.current_step);
     }
   }, [status, router, localStep]);

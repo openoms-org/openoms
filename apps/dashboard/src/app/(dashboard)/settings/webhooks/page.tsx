@@ -49,6 +49,7 @@ export default function WebhooksPage() {
 
   useEffect(() => {
     if (config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEndpoints(config.endpoints.map((e) => ({ ...e })));
     }
   }, [config]);

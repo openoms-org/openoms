@@ -1458,7 +1458,7 @@ export interface WarehouseListParams extends PaginationParams {
   active?: boolean;
 }
 
-export interface WarehouseStockListParams extends PaginationParams {}
+export type WarehouseStockListParams = PaginationParams;
 
 // === Inventory Settings ===
 export interface InventorySettings {
@@ -1868,7 +1868,7 @@ export interface UpdateRoleRequest {
   permissions?: string[];
 }
 
-export interface RoleListParams extends PaginationParams {}
+export type RoleListParams = PaginationParams;
 
 export interface PermissionGroup {
   group: string;
@@ -2709,7 +2709,7 @@ export interface AddSegmentMemberRequest {
   customer_id: string;
 }
 
-export interface SegmentListParams extends PaginationParams {}
+export type SegmentListParams = PaginationParams;
 
 // === Loyalty Programs ===
 export interface LoyaltyProgram {
@@ -2772,7 +2772,7 @@ export interface RedeemPointsRequest {
   points: number;
 }
 
-export interface LoyaltyProgramListParams extends PaginationParams {}
+export type LoyaltyProgramListParams = PaginationParams;
 
 // === Listing Sync ===
 export interface ListingSyncConfig {

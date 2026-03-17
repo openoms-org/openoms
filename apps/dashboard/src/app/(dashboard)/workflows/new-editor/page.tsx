@@ -40,6 +40,7 @@ export default function NewWorkflowEditorPage() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setName(parsed.name || t("editor.defaultName"));
         setDefinition(parsed.definition || createEmptyWorkflow());
         setHistory([parsed.definition || createEmptyWorkflow()]);

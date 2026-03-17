@@ -64,6 +64,7 @@ export default function PrintTemplatesPage() {
 
   useEffect(() => {
     if (templates) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         ...DEFAULT_CONFIG,
         ...templates,

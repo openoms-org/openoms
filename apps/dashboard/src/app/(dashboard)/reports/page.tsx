@@ -393,10 +393,11 @@ function PaymentMethodChart() {
                 paddingAngle={4}
                 dataKey="value"
                 nameKey="name"
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                /* eslint-disable @typescript-eslint/no-explicit-any */
                 label={((props: any) =>
                   `${props.name ?? ""} (${((props.percent ?? 0) * 100).toFixed(0)}%)`
                 ) as any}
+                /* eslint-enable @typescript-eslint/no-explicit-any */
               >
                 {chartData.map((_, index) => (
                   <Cell

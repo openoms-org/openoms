@@ -59,6 +59,7 @@ export default function FeedSettingsPage() {
 
   useEffect(() => {
     if (feedSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         ...DEFAULT_FEED_CONFIG,
         ...feedSettings,

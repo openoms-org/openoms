@@ -8,6 +8,7 @@ on:
 
 env:
   GO_VERSION: "1.25.8"
+  NODE_VERSION: "22"
 
 jobs:
   auto-format:
@@ -115,6 +116,53 @@ jobs:
           working-directory: packages/ebay-go-sdk
           args: --timeout=5m
           only-new-issues: true
+
+  lint-strict:
+    name: Lint (strict)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Lint api-server
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: apps/api-server
+      - name: Lint allegro-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/allegro-go-sdk
+      - name: Lint inpost-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/inpost-go-sdk
+      - name: Lint order-engine
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/order-engine
+      - name: Lint erli-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/erli-go-sdk
+      - name: Lint ebay-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/ebay-go-sdk
 
   security:
     name: Security
@@ -391,6 +439,78 @@ jobs:
         working-directory: apps/dashboard
         run: npx next build
 
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Informational until locale/SSR issues are fixed
+    permissions:
+      contents: read
+    needs: [frontend]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openoms
+          POSTGRES_PASSWORD: openoms_dev
+          POSTGRES_DB: openoms_dev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/dashboard/package-lock.json
+      - name: Run all migrations
+        run: |
+          for f in $(ls apps/api-server/migrations/*.up.sql | sort); do
+            echo "Running migration: $f"
+            PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f "$f"
+          done
+      - name: Seed test data
+        run: PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f scripts/seed.sql
+      - name: Start API server
+        run: |
+          cd apps/api-server
+          go build -o api-server ./cmd/server
+          DATABASE_URL="postgres://openoms:openoms_dev@localhost:5432/openoms_dev?sslmode=disable" \
+          REDIS_URL="redis://localhost:6379" \
+          JWT_SECRET="ci-test-jwt-secret-not-for-production" \
+          ENCRYPTION_KEY="a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2" \
+          ./api-server &
+      - name: Wait for API server
+        run: timeout 30 bash -c 'until curl -sf http://localhost:8080/health; do sleep 1; done'
+      - name: Install dashboard dependencies
+        run: cd apps/dashboard && npm ci
+      - name: Install Playwright
+        run: cd apps/dashboard && npx playwright install --with-deps chromium
+      - name: Run Playwright tests
+        run: cd apps/dashboard && npx playwright test
+        env:
+          CI: "true"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/dashboard/playwright-report/
+          retention-days: 7
+
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -405,3 +525,55 @@ jobs:
 
       - name: Build Dashboard image
         run: docker build -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard
+
+  auto-merge-gate:
+    name: Auto-Merge Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    needs:
+      - lint-strict
+      - vet
+      - test
+      - security-tests
+      - security
+      - frontend
+      - e2e
+      - docker
+      - migration-safety
+    if: startsWith(github.event.pull_request.head.ref, 'bot/')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check CodeRabbit reviews
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UNRESOLVED=$(gh api graphql -f query='
+            query($owner:String!, $repo:String!, $pr:Int!) {
+              repository(owner:$owner, name:$repo) {
+                pullRequest(number:$pr) {
+                  reviewThreads(first:100) {
+                    nodes { isResolved comments(first:20) { nodes { author { login } } } }
+                  }
+                }
+              }
+            }' -f owner="${{ github.repository_owner }}" \
+               -f repo="${{ github.event.repository.name }}" \
+               -F pr=${{ github.event.pull_request.number }} \
+            --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
+                   | select(.isResolved == false)
+                   | select(any(.comments.nodes[]?; .author.login == "coderabbitai"))]
+                   | length')
+          if [ "$UNRESOLVED" -gt 0 ]; then
+            echo "::warning::$UNRESOLVED unresolved CodeRabbit threads"
+            exit 1
+          fi
+      - name: Auto-merge
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --squash \
+            --delete-branch

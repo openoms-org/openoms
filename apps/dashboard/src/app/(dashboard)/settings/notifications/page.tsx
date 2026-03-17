@@ -104,11 +104,13 @@ export default function NotificationsPage() {
   const [testPhone, setTestPhone] = useState("");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (emailSettings) setEmailForm(emailSettings);
   }, [emailSettings]);
 
   useEffect(() => {
     if (smsSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSmsForm({
         ...smsSettings,
         templates: { ...DEFAULT_TEMPLATES, ...smsSettings.templates },

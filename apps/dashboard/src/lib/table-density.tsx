@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
 
 export type TableDensity = "compact" | "comfortable" | "spacious";
 
@@ -15,14 +15,11 @@ const TableDensityContext = createContext<TableDensityContextType>({
 });
 
 export function TableDensityProvider({ children }: { children: React.ReactNode }) {
-  const [density, setDensity] = useState<TableDensity>("comfortable");
-
-  useEffect(() => {
+  const [density, setDensity] = useState<TableDensity>(() => {
+    if (typeof window === "undefined") return "comfortable";
     const saved = localStorage.getItem("table-density") as TableDensity | null;
-    if (saved && ["compact", "comfortable", "spacious"].includes(saved)) {
-      setDensity(saved);
-    }
-  }, []);
+    return saved && ["compact", "comfortable", "spacious"].includes(saved) ? saved : "comfortable";
+  });
 
   const handleSetDensity = (d: TableDensity) => {
     setDensity(d);

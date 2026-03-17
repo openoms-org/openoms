@@ -77,6 +77,7 @@ export default function NewRecurringOrderPage() {
     name: "items",
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const frequency = watch("frequency");
 
   const onSubmit = (data: FormValues) => {

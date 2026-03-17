@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -43,14 +43,11 @@ import type { Order } from "@/types/api";
 type ViewMode = "table" | "kanban";
 
 function useViewMode(): [ViewMode, (mode: ViewMode) => void] {
-  const [view, setViewState] = useState<ViewMode>("table");
-
-  useEffect(() => {
+  const [view, setViewState] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "table";
     const saved = localStorage.getItem("orders-view-mode");
-    if (saved === "kanban" || saved === "table") {
-      setViewState(saved);
-    }
-  }, []);
+    return saved === "kanban" || saved === "table" ? saved : "table";
+  });
 
   const setView = (mode: ViewMode) => {
     setViewState(mode);

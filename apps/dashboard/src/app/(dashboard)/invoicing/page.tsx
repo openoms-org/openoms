@@ -78,6 +78,7 @@ export default function InvoicingPage() {
 
   useEffect(() => {
     if (settings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         ...DEFAULT_SETTINGS,
         ...settings,

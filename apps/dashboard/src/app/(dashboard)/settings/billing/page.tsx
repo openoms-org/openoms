@@ -50,6 +50,7 @@ export default function BillingSettingsPage() {
 
   useEffect(() => {
     if (subscription?.status === "trialing" && subscription.trial_end) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDaysLeft(computeDaysLeft(subscription.trial_end));
     }
   }, [subscription?.status, subscription?.trial_end]);

@@ -65,6 +65,7 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     if (role) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(role.name);
       setDescription(role.description || "");
       setPermissions(role.permissions || []);

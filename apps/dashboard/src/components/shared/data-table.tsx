@@ -100,6 +100,7 @@ export function DataTable<T>({
       colIdx++;
     }
     if (Object.keys(widths).length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setColWidths(widths);
       initialized.current = true;
     }

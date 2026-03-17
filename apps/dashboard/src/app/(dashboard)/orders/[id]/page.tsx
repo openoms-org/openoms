@@ -155,6 +155,7 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     if (order && !internalNotesDirty) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setInternalNotes(order.internal_notes || "");
     }
   }, [order, internalNotesDirty]);
@@ -1208,6 +1209,7 @@ function CreateTicketDialog({
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSubject("");
       setDescription("");
       setEmail(customerEmail);
@@ -1404,6 +1406,7 @@ function AddPackageDialog({
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProvider("manual");
       setTrackingNumber("");
       setWeight("");
@@ -1555,6 +1558,7 @@ function AllegroFulfillmentDialog({
 
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFulfillmentStatus("SENT");
       setCarrierId("");
       setWaybill("");

@@ -44,6 +44,7 @@ export function useGroupExpansion() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as string[];
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setExpandedGroups(new Set(parsed));
       }
     } catch {
@@ -56,6 +57,7 @@ export function useGroupExpansion() {
   useEffect(() => {
     const activeGroup = findActiveGroup(pathname);
     if (activeGroup) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExpandedGroups((prev) => {
         if (prev.has(activeGroup)) return prev;
         const next = new Set(prev);

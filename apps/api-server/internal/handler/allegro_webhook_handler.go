@@ -54,13 +54,13 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 	// Verify HMAC-SHA256 signature
 	signature := r.Header.Get("X-Allegro-Signature")
 	if signature == "" {
-		slog.Warn("allegro webhook: missing signature header", "source_ip", r.RemoteAddr, "provider", "allegro")
+		slog.Warn("allegro webhook: missing signature header", "source_ip", r.RemoteAddr, "provider", "allegro") //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
 	if err := allegrosdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
-		slog.Warn("allegro webhook: invalid signature", "error", err, "source_ip", r.RemoteAddr, "provider", "allegro")
+		slog.Warn("allegro webhook: invalid signature", "error", err, "source_ip", r.RemoteAddr, "provider", "allegro") //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
 		w.WriteHeader(http.StatusOK)
 		return
 	}

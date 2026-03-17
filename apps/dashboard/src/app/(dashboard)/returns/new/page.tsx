@@ -65,6 +65,7 @@ export default function NewReturnPage() {
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const orderId = watch("order_id");
 
   // Fetch order items when order_id changes

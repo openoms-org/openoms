@@ -49,6 +49,7 @@ export default function WorkflowEditorPage() {
   // Load rule and workflow
   useEffect(() => {
     if (rule && workflowDef && !initialized) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(rule.name);
       setIsActive(rule.enabled);
       setDefinition(workflowDef);

@@ -64,6 +64,7 @@ function PricingContent() {
           interval: yearly ? "year" : "month",
         }),
       });
+      // eslint-disable-next-line react-hooks/immutability
       window.location.href = res.checkout_url;
     } catch (error) {
       toast.error(getErrorMessage(error));

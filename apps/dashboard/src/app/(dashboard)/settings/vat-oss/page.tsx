@@ -61,6 +61,7 @@ export default function VATOSSSettingsPage() {
 
   useEffect(() => {
     if (config) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({ ...DEFAULT_CONFIG, ...config });
     }
   }, [config]);

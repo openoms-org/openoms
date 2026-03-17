@@ -86,6 +86,7 @@ export default function WarehouseDetailPage() {
 
   useEffect(() => {
     if (warehouse) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(warehouse.name);
       setCode(warehouse.code || "");
       setIsDefault(warehouse.is_default);

@@ -85,6 +85,7 @@ export function IntegrationForm({
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const selectedProvider = editProvider ?? watch("provider");
   const fields = selectedProvider ? (PROVIDER_CREDENTIAL_FIELDS[selectedProvider] ?? []) : [];
 
