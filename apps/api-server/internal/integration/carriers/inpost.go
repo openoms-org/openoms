@@ -12,6 +12,7 @@ import (
 	inpostsdk "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -45,6 +46,7 @@ func NewInPostProvider(credentials json.RawMessage, _ json.RawMessage) (*InPostP
 		opts = append(opts, inpostsdk.WithSandbox())
 	}
 
+	opts = append(opts, inpostsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := inpostsdk.NewClient(creds.APIToken, creds.OrganizationID, opts...)
 
 	return &InPostProvider{

@@ -10,6 +10,7 @@ import (
 	fedexsdk "github.com/openoms-org/openoms/packages/fedex-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -44,6 +45,7 @@ func NewFedExProvider(credentials json.RawMessage, _ json.RawMessage) (*FedExPro
 		opts = append(opts, fedexsdk.WithSandbox())
 	}
 
+	opts = append(opts, fedexsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := fedexsdk.NewClient(creds.ClientID, creds.ClientSecret, creds.AccountNumber, opts...)
 
 	return &FedExProvider{

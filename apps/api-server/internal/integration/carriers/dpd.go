@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	dpdsdk "github.com/openoms-org/openoms/packages/dpd-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -43,6 +45,7 @@ func NewDPDProvider(credentials json.RawMessage, _ json.RawMessage) (*DPDProvide
 		opts = append(opts, dpdsdk.WithSandbox())
 	}
 
+	opts = append(opts, dpdsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := dpdsdk.NewClient(creds.Login, creds.Password, creds.MasterFid, opts...)
 
 	return &DPDProvider{

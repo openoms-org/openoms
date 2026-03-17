@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	upssdk "github.com/openoms-org/openoms/packages/ups-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -42,6 +44,7 @@ func NewUPSProvider(credentials json.RawMessage, _ json.RawMessage) (*UPSProvide
 		opts = append(opts, upssdk.WithSandbox())
 	}
 
+	opts = append(opts, upssdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := upssdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
 
 	return &UPSProvider{

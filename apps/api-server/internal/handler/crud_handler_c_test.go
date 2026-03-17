@@ -442,7 +442,7 @@ func TestTrackingHandler_MissingAllParams(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "tenant_slug, order_id, and email query parameter are required", resp["error"])
+	assert.Equal(t, "tenant_slug, order_id, and email are required", resp["error"])
 }
 
 func TestTrackingHandler_MissingEmail(t *testing.T) {
@@ -462,7 +462,7 @@ func TestTrackingHandler_MissingEmail(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "tenant_slug, order_id, and email query parameter are required", resp["error"])
+	assert.Equal(t, "tenant_slug, order_id, and email are required", resp["error"])
 }
 
 func TestTrackingHandler_MissingTenantSlug(t *testing.T) {
@@ -482,7 +482,7 @@ func TestTrackingHandler_MissingTenantSlug(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "tenant_slug, order_id, and email query parameter are required", resp["error"])
+	assert.Equal(t, "tenant_slug, order_id, and email are required", resp["error"])
 }
 
 func TestTrackingHandler_MissingOrderID(t *testing.T) {
@@ -502,7 +502,7 @@ func TestTrackingHandler_MissingOrderID(t *testing.T) {
 	var resp map[string]string
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
-	assert.Equal(t, "tenant_slug, order_id, and email query parameter are required", resp["error"])
+	assert.Equal(t, "tenant_slug, order_id, and email are required", resp["error"])
 }
 
 // ===========================================================================
