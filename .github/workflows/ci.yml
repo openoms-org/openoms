@@ -551,7 +551,7 @@ jobs:
               repository(owner:$owner, name:$repo) {
                 pullRequest(number:$pr) {
                   reviewThreads(first:100) {
-                    nodes { isResolved comments(first:1) { nodes { author { login } } } }
+                    nodes { isResolved comments(first:20) { nodes { author { login } } } }
                   }
                 }
               }
@@ -560,7 +560,7 @@ jobs:
                -F pr=${{ github.event.pull_request.number }} \
             --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
                    | select(.isResolved == false)
-                   | select(.comments.nodes[0].author.login == "coderabbitai")]
+                   | select(any(.comments.nodes[]?; .author.login == "coderabbitai"))]
                    | length')
           if [ "$UNRESOLVED" -gt 0 ]; then
             echo "::warning::$UNRESOLVED unresolved CodeRabbit threads"
