@@ -487,7 +487,7 @@ func run() error {
 	allegroWebhookHandler := handler.NewAllegroWebhookHandler(cfg.AllegroWebhookSecret, allegroWebhookSyncer)
 
 	// InPost webhook handler (public endpoint, HMAC-verified)
-	inpostWebhookHandler := handler.NewInPostWebhookHandler(cfg.InPostWebhookSecret)
+	inpostWebhookHandler := handler.NewInPostWebhookHandler(cfg.InPostWebhookSecret, shipmentService)
 
 	// Allegro account & offers handler
 	allegroAccountHandler := handler.NewAllegroAccountHandler(integrationService, encryptionKey)

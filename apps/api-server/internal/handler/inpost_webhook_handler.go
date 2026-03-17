@@ -1,23 +1,28 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	inpostsdk "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
 
 // InPostWebhookHandler handles incoming InPost webhook events.
 type InPostWebhookHandler struct {
-	webhookSecret string
+	webhookSecret   string
+	shipmentService *service.ShipmentService
 }
 
 // NewInPostWebhookHandler creates a new InPostWebhookHandler.
-func NewInPostWebhookHandler(webhookSecret string) *InPostWebhookHandler {
+func NewInPostWebhookHandler(webhookSecret string, shipmentSvc *service.ShipmentService) *InPostWebhookHandler {
 	return &InPostWebhookHandler{
-		webhookSecret: webhookSecret,
+		webhookSecret:   webhookSecret,
+		shipmentService: shipmentSvc,
 	}
 }
 
@@ -108,4 +113,18 @@ func (h *InPostWebhookHandler) handleShipmentStatusChanged(event *inpostsdk.Webh
 		"inpost_status", payload.Status,
 		"oms_status", omsStatus,
 	)
+
+	// Update shipment status in DB via shipment service.
+	// Uses tracking number to find shipment (cross-tenant via service).
+	if h.shipmentService != nil && payload.TrackingNumber != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := h.shipmentService.UpdateStatusByTrackingNumber(ctx, payload.TrackingNumber, omsStatus); err != nil {
+			slog.Error("inpost webhook: failed to update shipment status",
+				"tracking_number", payload.TrackingNumber,
+				"oms_status", omsStatus,
+				"error", err,
+			)
+		}
+	}
 }
