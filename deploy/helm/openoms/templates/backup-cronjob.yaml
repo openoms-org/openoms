@@ -30,7 +30,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: backup
-              image: postgres:16-alpine
+              image: postgres:17-alpine
               command:
                 - /bin/sh
                 - -c
