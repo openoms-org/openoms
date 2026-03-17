@@ -288,6 +288,18 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		if s.lockout != nil {
 			_ = s.lockout.RecordFailure(ctx, req.TenantSlug, req.Email)
 		}
+		// Log failed login to audit trail for forensic analysis
+		_ = database.WithTenant(ctx, s.pool, tenant.ID, func(tx pgx.Tx) error {
+			return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+				TenantID:   tenant.ID,
+				UserID:     userWithPwd.ID,
+				Action:     "user.login_failed",
+				EntityType: "user",
+				EntityID:   userWithPwd.ID,
+				Changes:    map[string]string{"email": req.Email},
+				IPAddress:  "",
+			})
+		})
 		return nil, ErrInvalidCredentials
 	}
 
@@ -633,8 +645,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 		entry, err := s.refreshStore.GetToken(ctx, tokenHash)
 		switch {
 		case err != nil:
-			slog.Warn("refresh token store lookup failed, proceeding without rotation", "error", err)
-			// fail open — continue without rotation check
+			slog.Error("refresh token store lookup failed, rejecting refresh for safety", "error", err)
+			return nil, "", ErrInvalidCredentials
 		case entry == nil:
 			// Token not found in store — may happen after server restart with in-memory store.
 			// JWT signature already validates authenticity, so fail open and start a new family.

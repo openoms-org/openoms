@@ -242,12 +242,15 @@ func (s *BundleService) DecrementComponentStock(ctx context.Context, tx pgx.Tx, 
 
 	for _, c := range components {
 		decrementQty := c.Quantity * quantity
-		_, err := tx.Exec(ctx,
+		tag, err := tx.Exec(ctx,
 			"UPDATE products SET stock_quantity = stock_quantity - $1, updated_at = NOW() WHERE id = $2 AND stock_quantity >= $1",
 			decrementQty, c.ComponentProductID,
 		)
 		if err != nil {
 			return fmt.Errorf("decrement stock for component %s: %w", c.ComponentProductID, err)
+		}
+		if tag.RowsAffected() == 0 {
+			return fmt.Errorf("insufficient stock for bundle component %s (need %d)", c.ComponentProductID, decrementQty)
 		}
 	}
 	return nil

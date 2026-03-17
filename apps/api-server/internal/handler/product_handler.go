@@ -258,7 +258,9 @@ func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const batchSize = 500
+	const maxRows = 50000
 	offset := 0
+	totalRows := 0
 
 	for {
 		filter.PaginationParams = model.PaginationParams{Limit: batchSize, Offset: offset}
@@ -334,6 +336,10 @@ func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		totalRows += len(products)
+		if totalRows >= maxRows {
+			break
+		}
 		offset += batchSize
 	}
 }
