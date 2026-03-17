@@ -116,6 +116,53 @@ jobs:
           args: --timeout=5m
           only-new-issues: true
 
+  lint-strict:
+    name: Lint (strict)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Lint api-server
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: apps/api-server
+      - name: Lint allegro-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/allegro-go-sdk
+      - name: Lint inpost-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/inpost-go-sdk
+      - name: Lint order-engine
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/order-engine
+      - name: Lint erli-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/erli-go-sdk
+      - name: Lint ebay-go-sdk
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.9.0
+          args: --timeout=5m
+          working-directory: packages/ebay-go-sdk
+
   security:
     name: Security
     runs-on: ubuntu-latest
