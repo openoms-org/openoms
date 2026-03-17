@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -20,14 +21,29 @@ func NewTrackingHandler(trackingService *service.TrackingService) *TrackingHandl
 	return &TrackingHandler{trackingService: trackingService}
 }
 
-// TrackOrder handles GET /v1/tracking/{tenant_slug}/{order_id}?email=...
+// TrackOrder handles POST /v1/tracking/{tenant_slug}/{order_id}
+// Email is accepted from JSON body (preferred) or query param (legacy, deprecated).
+// Using POST body prevents PII (customer email) from appearing in access logs.
 func (h *TrackingHandler) TrackOrder(w http.ResponseWriter, r *http.Request) {
 	tenantSlug := chi.URLParam(r, "tenant_slug")
 	orderID := chi.URLParam(r, "order_id")
-	email := strings.TrimSpace(r.URL.Query().Get("email"))
+
+	// Prefer email from POST body, fall back to query param for backward compat
+	var email string
+	if r.Method == http.MethodPost && r.Body != nil {
+		var body struct {
+			Email string `json:"email"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			email = strings.TrimSpace(body.Email)
+		}
+	}
+	if email == "" {
+		email = strings.TrimSpace(r.URL.Query().Get("email"))
+	}
 
 	if tenantSlug == "" || orderID == "" || email == "" {
-		writeError(w, http.StatusBadRequest, "tenant_slug, order_id, and email query parameter are required")
+		writeError(w, http.StatusBadRequest, "tenant_slug, order_id, and email are required")
 		return
 	}
 

@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	glssdk "github.com/openoms-org/openoms/packages/gls-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -44,6 +46,7 @@ func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage) (*GLSProvide
 		opts = append(opts, glssdk.WithSandbox())
 	}
 
+	opts = append(opts, glssdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{

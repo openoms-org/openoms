@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	pocztasdk "github.com/openoms-org/openoms/packages/poczta-polska-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -42,6 +44,7 @@ func NewPocztaPolskaProvider(credentials json.RawMessage, _ json.RawMessage) (*P
 		opts = append(opts, pocztasdk.WithSandbox())
 	}
 
+	opts = append(opts, pocztasdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := pocztasdk.NewClient(creds.APIKey, creds.PartnerID, opts...)
 
 	return &PocztaPolskaProvider{

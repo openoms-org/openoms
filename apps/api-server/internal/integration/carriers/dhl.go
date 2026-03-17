@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 	"unicode"
 
 	dhlsdk "github.com/openoms-org/openoms/packages/dhl-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -45,7 +47,9 @@ func NewDHLProvider(credentials json.RawMessage, _ json.RawMessage) (*DHLProvide
 		return nil, fmt.Errorf("dhl: DHL24 WebAPI2 does not support sandbox mode — remove the sandbox flag from credentials or use DHL test account numbers")
 	}
 
-	client := dhlsdk.NewClient(creds.Username, creds.Password, creds.AccountNumber)
+	client := dhlsdk.NewClient(creds.Username, creds.Password, creds.AccountNumber,
+		dhlsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)),
+	)
 
 	return &DHLProvider{
 		client: client,

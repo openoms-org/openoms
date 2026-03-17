@@ -62,6 +62,11 @@ func (h *ReconciliationHandler) ImportCSV(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusBadRequest, "file too large or invalid form data (max 10MB)")
 		return
 	}
+	defer func() {
+		if r.MultipartForm != nil {
+			_ = r.MultipartForm.RemoveAll()
+		}
+	}()
 
 	provider := r.FormValue("provider")
 	if provider == "" {
@@ -78,7 +83,11 @@ func (h *ReconciliationHandler) ImportCSV(w http.ResponseWriter, r *http.Request
 
 	settlement, err := h.reconciliationService.ImportCSV(r.Context(), tenantID, provider, file)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		if isValidationError(err) {
+			writeError(w, http.StatusBadRequest, err.Error())
+		} else {
+			writeServerError(w, "failed to import reconciliation CSV", err)
+		}
 		return
 	}
 

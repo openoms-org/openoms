@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
 	orlensdk "github.com/openoms-org/openoms/packages/orlen-paczka-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -42,6 +44,7 @@ func NewOrlenPaczkaProvider(credentials json.RawMessage, _ json.RawMessage) (*Or
 		opts = append(opts, orlensdk.WithSandbox())
 	}
 
+	opts = append(opts, orlensdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := orlensdk.NewClient(creds.APIKey, creds.PartnerID, opts...)
 
 	return &OrlenPaczkaProvider{
