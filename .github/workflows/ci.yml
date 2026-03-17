@@ -482,6 +482,8 @@ jobs:
             echo "Running migration: $f"
             PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f "$f"
           done
+      - name: Seed test data
+        run: PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f scripts/seed.sql
       - name: Start API server
         run: |
           cd apps/api-server
