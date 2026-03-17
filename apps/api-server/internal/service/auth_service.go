@@ -297,7 +297,7 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 				EntityType: "user",
 				EntityID:   userWithPwd.ID,
 				Changes:    map[string]string{"email": req.Email},
-				IPAddress:  "",
+				IPAddress:  ipAddress,
 			})
 		})
 		return nil, ErrInvalidCredentials
