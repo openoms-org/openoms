@@ -47,8 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useServiceWorker();
   useSessionTimeout();
 
-  // Show skeleton while loading auth, or while redirect is pending
-  if (isLoading || !isAuthenticated) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Skeleton className="h-8 w-32" />
