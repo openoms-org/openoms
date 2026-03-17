@@ -21,9 +21,9 @@ func NewTrackingHandler(trackingService *service.TrackingService) *TrackingHandl
 	return &TrackingHandler{trackingService: trackingService}
 }
 
-// TrackOrder handles POST /v1/tracking/{tenant_slug}/{order_id}
-// Email is accepted from JSON body (preferred) or query param (legacy, deprecated).
-// Using POST body prevents PII (customer email) from appearing in access logs.
+// TrackOrder handles GET and POST /v1/tracking/{tenant_slug}/{order_id}
+// Email from POST JSON body (preferred) or GET query param (legacy).
+// POST body prevents PII (email) from appearing in access logs.
 func (h *TrackingHandler) TrackOrder(w http.ResponseWriter, r *http.Request) {
 	tenantSlug := chi.URLParam(r, "tenant_slug")
 	orderID := chi.URLParam(r, "order_id")

@@ -255,7 +255,7 @@ func New(deps RouterDeps) *chi.Mux {
 	// POST preferred (email in body, not in URL/logs). GET kept for backward compat.
 	r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).
 		Get("/v1/tracking/{tenant_slug}/{order_id}", deps.Tracking.TrackOrder)
-	r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).
+	r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute), middleware.MaxBodySize(1<<20)).
 		Post("/v1/tracking/{tenant_slug}/{order_id}", deps.Tracking.TrackOrder)
 
 	// Public supplier portal routes — no JWT, token-authenticated, rate-limited (30 req/min per IP)
