@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -75,8 +76,11 @@ func (h *AllegroHandler) UpdateFulfillment(w http.ResponseWriter, r *http.Reques
 	// Get order from DB to find external_id
 	order, err := h.orderService.Get(ctx, tenantID, orderID)
 	if err != nil {
-		slog.Error("allegro fulfillment: get order failed", "error", err)
-		writeError(w, http.StatusNotFound, "order not found")
+		if errors.Is(err, service.ErrOrderNotFound) {
+			writeError(w, http.StatusNotFound, "order not found")
+		} else {
+			writeServerError(w, "failed to get order", err)
+		}
 		return
 	}
 	if order.ExternalID == nil || *order.ExternalID == "" {
@@ -129,8 +133,11 @@ func (h *AllegroHandler) AddTracking(w http.ResponseWriter, r *http.Request) {
 	// Get order from DB
 	order, err := h.orderService.Get(ctx, tenantID, orderID)
 	if err != nil {
-		slog.Error("allegro tracking: get order failed", "error", err)
-		writeError(w, http.StatusNotFound, "order not found")
+		if errors.Is(err, service.ErrOrderNotFound) {
+			writeError(w, http.StatusNotFound, "order not found")
+		} else {
+			writeServerError(w, "failed to get order", err)
+		}
 		return
 	}
 	if order.ExternalID == nil || *order.ExternalID == "" {

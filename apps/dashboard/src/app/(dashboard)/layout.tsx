@@ -19,8 +19,16 @@ import { useOnboardingStatus } from "@/hooks/use-onboarding-wizard";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { data: onboardingStatus } = useOnboardingStatus();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Redirect to login if auth restoration failed
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
     if (onboardingStatus && !onboardingStatus.completed && !onboardingStatus.dismissed) {
