@@ -182,7 +182,7 @@ func (h *SupplierHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 		if syncErr := h.supplierService.SyncFeed(ctx, tenantID, supplierID); syncErr != nil {
-			slog.Error("background supplier sync failed",
+			slog.Error("background supplier sync failed", //nolint:gosec // G706: tenantID and supplierID are UUIDs from auth context, not user input
 				"tenant_id", tenantID,
 				"supplier_id", supplierID,
 				"error", syncErr,
