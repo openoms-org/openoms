@@ -129,7 +129,7 @@ func extractField(row []string, fieldIdx map[string]int, field string) string {
 
 // PreviewCSV parses a customer CSV and returns a preview with stats.
 func (s *CustomerImportService) PreviewCSV(ctx context.Context, tenantID uuid.UUID, file io.Reader) (*CustomerImportPreview, error) {
-	raw, err := io.ReadAll(file)
+	raw, err := io.ReadAll(io.LimitReader(file, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)
 	}
@@ -229,7 +229,7 @@ func (s *CustomerImportService) ImportCSV(
 	userID uuid.UUID,
 	ip string,
 ) (*CustomerImportResult, error) {
-	raw, err := io.ReadAll(file)
+	raw, err := io.ReadAll(io.LimitReader(file, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)
 	}

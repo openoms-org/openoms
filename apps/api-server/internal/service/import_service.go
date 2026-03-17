@@ -76,7 +76,7 @@ func stripBOM(data []byte) []byte {
 
 // ParseCSV reads a CSV file, returns headers and up to 10 sample rows.
 func (s *ImportService) ParseCSV(file io.Reader) (*model.ImportPreviewResponse, error) {
-	raw, err := io.ReadAll(file)
+	raw, err := io.ReadAll(io.LimitReader(file, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)
 	}
@@ -203,7 +203,7 @@ func (s *ImportService) ImportOrders(
 	userID uuid.UUID,
 	ip string,
 ) (*model.ImportResult, error) {
-	raw, err := io.ReadAll(file)
+	raw, err := io.ReadAll(io.LimitReader(file, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)
 	}

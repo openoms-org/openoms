@@ -257,9 +257,13 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Run migrations
+      - name: Run all migrations
         run: |
-          PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f apps/api-server/migrations/000001_init_schema.up.sql
+          # Apply all migration files in order (not just 000001)
+          for f in $(ls apps/api-server/migrations/*.up.sql | sort); do
+            echo "Applying: $(basename $f)"
+            PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f "$f"
+          done
 
       - name: Test api-server
         working-directory: apps/api-server

@@ -62,7 +62,7 @@ type ProductImportResult struct {
 
 // PreviewCSV parses a CSV and returns a preview with stats.
 func (s *ProductImportService) PreviewCSV(ctx context.Context, tenantID uuid.UUID, file io.Reader) (*ProductImportPreview, error) {
-	raw, err := io.ReadAll(file)
+	raw, err := io.ReadAll(io.LimitReader(file, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)
 	}
@@ -168,7 +168,7 @@ func (s *ProductImportService) ImportCSV(
 	userID uuid.UUID,
 	ip string,
 ) (*ProductImportResult, error) {
-	raw, err := io.ReadAll(file)
+	raw, err := io.ReadAll(io.LimitReader(file, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("read csv: %w", err)
 	}
