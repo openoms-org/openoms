@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { buildSearchParams } from "@/lib/search-params";
 import type {
   ListingSyncConfig,
   ListingSyncLog,
@@ -14,12 +15,7 @@ import type {
 } from "@/types/api";
 
 function buildParams(params: Record<string, unknown>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== "") {
-      search.set(key, String(value));
-    }
-  }
+  const search = buildSearchParams(params);
   const str = search.toString();
   return str ? `?${str}` : "";
 }
