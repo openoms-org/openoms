@@ -242,7 +242,7 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		result, createErr := provider.CreateInvoice(ctx, invoiceReq)
 
 		// Phase 3: Update invoice with provider result in a new short transaction.
-		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if updateErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 			if createErr != nil {
 				errMsg := createErr.Error()
 				inv.ErrorMessage = &errMsg
@@ -254,15 +254,19 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 				inv.Status = "issued"
 			}
 			return s.invoiceRepo.Update(ctx, tx, inv)
-		})
+		}); updateErr != nil {
+			slog.Error("failed to update invoice after provider call", "invoice_id", inv.ID, "error", updateErr)
+		}
 	} else {
 		// Provider creation failed — mark invoice as error
-		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if updateErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 			errMsg := provErr.Error()
 			inv.ErrorMessage = &errMsg
 			inv.Status = "error"
 			return s.invoiceRepo.Update(ctx, tx, inv)
-		})
+		}); updateErr != nil {
+			slog.Error("failed to mark invoice as error", "invoice_id", inv.ID, "error", updateErr)
+		}
 	}
 
 	// Trigger KSeF auto-send after successful creation
