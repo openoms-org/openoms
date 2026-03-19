@@ -65,6 +65,21 @@ func (s *S3Storage) Upload(ctx context.Context, key string, reader io.Reader, co
 	return url, nil
 }
 
+// Get retrieves a file from S3 by key.
+func (s *S3Storage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	input := &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	}
+
+	output, err := s.client.GetObject(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("getting from S3 (bucket=%s, key=%s): %w", s.bucket, key, err)
+	}
+
+	return output.Body, nil
+}
+
 // Delete removes a file from S3 by key.
 func (s *S3Storage) Delete(ctx context.Context, key string) error {
 	input := &s3.DeleteObjectInput{
