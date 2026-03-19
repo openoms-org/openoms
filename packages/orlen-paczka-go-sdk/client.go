@@ -113,7 +113,7 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("orlenpaczka: failed to read response: %w", err)
 	}

@@ -158,7 +158,7 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*ExchangeCodeRe
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 		return nil, fmt.Errorf("ebay: exchange code failed (HTTP %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -204,7 +204,7 @@ func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error)
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 		return nil, fmt.Errorf("ebay: token refresh failed (HTTP %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -253,7 +253,7 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 		return fmt.Errorf("ebay: token refresh failed (HTTP %d): %s", resp.StatusCode, string(body))
 	}
 
