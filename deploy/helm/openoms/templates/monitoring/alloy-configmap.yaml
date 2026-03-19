@@ -81,6 +81,26 @@ data:
       }
     }
 
+    // ── PostgreSQL metrics (Bitnami exporter sidecar) ───────────
+    prometheus.scrape "postgres" {
+      targets = [{
+        __address__ = "postgres-postgresql-metrics.apps-core.svc.cluster.local:9187",
+      }]
+      forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+      scrape_interval = "30s"
+      metrics_path = "/metrics"
+    }
+
+    // ── Redis metrics (Bitnami exporter sidecar) ──────────────
+    prometheus.scrape "redis" {
+      targets = [{
+        __address__ = "redis-master.apps-core.svc.cluster.local:9121",
+      }]
+      forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+      scrape_interval = "30s"
+      metrics_path = "/metrics"
+    }
+
     prometheus.remote_write "grafana_cloud" {
       endpoint {
         url = env("GRAFANA_REMOTE_WRITE_URL")

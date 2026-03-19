@@ -128,6 +128,8 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 	}
 
 	var inv *model.Invoice
+	var savedProviderName string
+	var savedItems []integration.InvoiceItem
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		// Verify order exists
 		order, err := s.orderRepo.FindByID(ctx, tx, req.OrderID)
@@ -190,57 +192,9 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 			return err
 		}
 
-		// Try to create invoice with provider
-		provider, provErr := s.getProvider(ctx, tx, tenantID, providerName)
-		if provErr != nil {
-			errMsg := provErr.Error()
-			invoice.ErrorMessage = &errMsg
-			invoice.Status = "error"
-			if updateErr := s.invoiceRepo.Update(ctx, tx, invoice); updateErr != nil {
-				slog.Error("failed to update invoice after provider call", "invoice_id", invoice.ID, "error", updateErr)
-			}
-		} else {
-			customerName := req.CustomerName
-			if customerName == "" {
-				customerName = order.CustomerName
-			}
-			customerEmail := req.CustomerEmail
-			if customerEmail == "" && order.CustomerEmail != nil {
-				customerEmail = *order.CustomerEmail
-			}
-
-			invoiceReq := integration.InvoiceRequest{
-				OrderID:       order.ID.String(),
-				CustomerName:  customerName,
-				CustomerEmail: customerEmail,
-				NIP:           req.NIP,
-				Items:         items,
-				TotalNet:      totalNet,
-				TotalGross:    totalGross,
-				Currency:      order.Currency,
-				IssueDate:     issueDate,
-				DueDate:       dueDate,
-				PaymentMethod: req.PaymentMethod,
-				Notes:         req.Notes,
-			}
-
-			result, createErr := provider.CreateInvoice(ctx, invoiceReq)
-			if createErr != nil {
-				errMsg := createErr.Error()
-				invoice.ErrorMessage = &errMsg
-				invoice.Status = "error"
-			} else {
-				invoice.ExternalID = &result.ExternalID
-				invoice.ExternalNumber = &result.ExternalNumber
-				invoice.PDFURL = &result.PDFURL
-				invoice.Status = "issued"
-			}
-			if updateErr := s.invoiceRepo.Update(ctx, tx, invoice); updateErr != nil {
-				slog.Error("failed to update invoice after provider call", "invoice_id", invoice.ID, "error", updateErr)
-			}
-		}
-
 		inv = invoice
+		savedProviderName = providerName
+		savedItems = items
 
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
@@ -252,13 +206,75 @@ func (s *InvoiceService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 			IPAddress:  ip,
 		})
 	})
+	if err != nil {
+		return inv, err
+	}
 
-	// Trigger KSeF auto-send after successful creation (outside the transaction)
-	if err == nil && inv != nil && inv.Status == "issued" {
+	// Phase 2: Call invoicing provider OUTSIDE the main transaction.
+	// This prevents holding a DB connection during a potentially slow HTTP call.
+	var provider integration.InvoicingProvider
+	var provErr error
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		provider, provErr = s.getProvider(ctx, tx, tenantID, savedProviderName)
+		return nil
+	})
+	if provErr == nil {
+		customerName := req.CustomerName
+		if customerName == "" && inv != nil {
+			customerName = req.CustomerName
+		}
+
+		invoiceReq := integration.InvoiceRequest{
+			OrderID:       req.OrderID.String(),
+			CustomerName:  customerName,
+			CustomerEmail: req.CustomerEmail,
+			NIP:           req.NIP,
+			Items:         savedItems,
+			TotalNet:      *inv.TotalNet,
+			TotalGross:    *inv.TotalGross,
+			Currency:      inv.Currency,
+			IssueDate:     *inv.IssueDate,
+			DueDate:       *inv.DueDate,
+			PaymentMethod: req.PaymentMethod,
+			Notes:         req.Notes,
+		}
+
+		result, createErr := provider.CreateInvoice(ctx, invoiceReq)
+
+		// Phase 3: Update invoice with provider result in a new short transaction.
+		if updateErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			if createErr != nil {
+				errMsg := createErr.Error()
+				inv.ErrorMessage = &errMsg
+				inv.Status = "error"
+			} else {
+				inv.ExternalID = &result.ExternalID
+				inv.ExternalNumber = &result.ExternalNumber
+				inv.PDFURL = &result.PDFURL
+				inv.Status = "issued"
+			}
+			return s.invoiceRepo.Update(ctx, tx, inv)
+		}); updateErr != nil {
+			slog.Error("failed to update invoice after provider call", "invoice_id", inv.ID, "error", updateErr)
+		}
+	} else {
+		// Provider creation failed — mark invoice as error
+		if updateErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			errMsg := provErr.Error()
+			inv.ErrorMessage = &errMsg
+			inv.Status = "error"
+			return s.invoiceRepo.Update(ctx, tx, inv)
+		}); updateErr != nil {
+			slog.Error("failed to mark invoice as error", "invoice_id", inv.ID, "error", updateErr)
+		}
+	}
+
+	// Trigger KSeF auto-send after successful creation
+	if inv != nil && inv.Status == "issued" {
 		s.triggerKSeFAutoSend(tenantID, inv.ID)
 	}
 
-	return inv, err
+	return inv, nil
 }
 
 // Cancel voids an existing invoice via the invoicing provider.

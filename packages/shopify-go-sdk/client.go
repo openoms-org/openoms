@@ -111,7 +111,7 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 		if len(respBody) > 0 {
 			_ = json.Unmarshal(respBody, apiErr)
 			if apiErr.Message == "" {

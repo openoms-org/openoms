@@ -209,7 +209,7 @@ func (c *Client) doRawOnce(ctx context.Context, method, path string, body any) (
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	raw, err := io.ReadAll(resp.Body)
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("btp: read response: %w", err)
 	}
@@ -251,7 +251,7 @@ func (c *Client) doMultipart(ctx context.Context, path string, bodyBuf *bytes.Bu
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	raw, err := io.ReadAll(resp.Body)
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 	if err != nil {
 		return fmt.Errorf("btp: read response: %w", err)
 	}
