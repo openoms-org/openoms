@@ -32,9 +32,9 @@ type GLSCredentials struct {
 
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
 type GLSProvider struct {
-	client    *glssdk.Client
-	logger    *slog.Logger
-	storage   storage.ObjectStorage
+	client  *glssdk.Client
+	logger  *slog.Logger
+	storage storage.ObjectStorage
 }
 
 // NewGLSProvider creates a GLS CarrierProvider from encrypted credentials.
@@ -53,9 +53,9 @@ func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage, storage stor
 	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{
-		client:    client,
-		logger:    slog.Default().With("provider", "gls"),
-		storage:   storage,
+		client:  client,
+		logger:  slog.Default().With("provider", "gls"),
+		storage: storage,
 	}, nil
 }
 
@@ -63,7 +63,6 @@ func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage, storage stor
 func (p *GLSProvider) SetStorage(s storage.ObjectStorage) {
 	p.storage = s
 }
-
 
 // ProviderName returns the carrier provider identifier.
 func (p *GLSProvider) ProviderName() string { return "gls" }
@@ -191,7 +190,6 @@ func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string)
 
 	return io.ReadAll(reader)
 }
-
 
 // GetTracking returns tracking events for the given GLS shipment.
 func (p *GLSProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
