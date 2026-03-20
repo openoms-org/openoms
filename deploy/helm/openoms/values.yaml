@@ -130,7 +130,7 @@ dashboard:
     fsGroup: 1001
   securityContext:
     allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: false
+    readOnlyRootFilesystem: true  # initContainer copies .next to emptyDir at runtime
     capabilities:
       drop: ['ALL']
     seccompProfile:

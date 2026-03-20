@@ -389,7 +389,7 @@ jobs:
 
       - name: Check migration backward-compatibility
         run: |
-          DANGEROUS_OPS="DROP COLUMN|DROP TABLE|RENAME COLUMN|ALTER.*TYPE|DROP INDEX"
+          DANGEROUS_OPS="DROP COLUMN|DROP TABLE|DROP SCHEMA|DROP FUNCTION|DROP INDEX|RENAME COLUMN|ALTER.*TYPE|ALTER.*SET NOT NULL|ADD.*NOT NULL(?!.*DEFAULT)|TRUNCATE"
           NEW_MIGRATIONS=$(git diff --name-only origin/main... -- apps/api-server/migrations/ 2>/dev/null || true)
           if [ -z "$NEW_MIGRATIONS" ]; then
             echo "No new migrations found — skipping"
