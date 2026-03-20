@@ -1,6 +1,7 @@
 package carriers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -13,6 +14,33 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 )
+
+// testStorage is an in-memory ObjectStorage for tests.
+type testStorage struct {
+	data map[string][]byte
+}
+
+func (s *testStorage) Upload(_ context.Context, key string, reader io.Reader, _ string) (string, error) {
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+	s.data[key] = data
+	return "http://test/" + key, nil
+}
+
+func (s *testStorage) Get(_ context.Context, key string) (io.ReadCloser, error) {
+	data, ok := s.data[key]
+	if !ok {
+		return nil, io.EOF
+	}
+	return io.NopCloser(bytes.NewReader(data)), nil
+}
+
+func (s *testStorage) Delete(_ context.Context, key string) error {
+	delete(s.data, key)
+	return nil
+}
 
 // =============================================================================
 // GLS Provider — Integration Specification Tests
@@ -33,9 +61,9 @@ func newTestGLSProvider(t *testing.T, serverURL string) *GLSProvider {
 		glssdk.WithBaseURL(serverURL),
 	)
 	return &GLSProvider{
-		client:    client,
-		logger:    slog.Default().With("provider", "gls-test"),
-		labelData: make(map[string][]byte),
+		client:  client,
+		logger:  slog.Default().With("provider", "gls-test"),
+		storage: &testStorage{data: make(map[string][]byte)},
 	}
 }
 

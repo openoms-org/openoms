@@ -1,10 +1,12 @@
 package carriers
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"time"
 
@@ -12,11 +14,12 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
+	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 )
 
 func init() {
 	integration.RegisterCarrierProvider("gls", func(credentials json.RawMessage, settings json.RawMessage) (integration.CarrierProvider, error) {
-		return NewGLSProvider(credentials, settings)
+		return NewGLSProvider(credentials, settings, nil) // Pass nil for storage, will be injected later
 	})
 }
 
@@ -29,13 +32,13 @@ type GLSCredentials struct {
 
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
 type GLSProvider struct {
-	client    *glssdk.Client
-	logger    *slog.Logger
-	labelData map[string][]byte // externalID → decoded PDF label from CreateShipment
+	client  *glssdk.Client
+	logger  *slog.Logger
+	storage storage.ObjectStorage
 }
 
 // NewGLSProvider creates a GLS CarrierProvider from encrypted credentials.
-func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage) (*GLSProvider, error) {
+func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage, storage storage.ObjectStorage) (*GLSProvider, error) {
 	var creds GLSCredentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("gls: parse credentials: %w", err)
@@ -50,10 +53,15 @@ func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage) (*GLSProvide
 	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{
-		client:    client,
-		logger:    slog.Default().With("provider", "gls"),
-		labelData: make(map[string][]byte),
+		client:  client,
+		logger:  slog.Default().With("provider", "gls"),
+		storage: storage,
 	}, nil
+}
+
+// SetStorage injects the object storage dependency.
+func (p *GLSProvider) SetStorage(s storage.ObjectStorage) {
+	p.storage = s
 }
 
 // ProviderName returns the carrier provider identifier.
@@ -150,13 +158,17 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}
 
 	// GLS returns labels inline in the create response (no separate label API).
-	// Decode and cache the label so GetLabel can return it for this provider instance.
+	// Decode and upload the label to object storage.
 	if externalID != "" && len(resp.PrintData) > 0 {
 		decoded, err := base64.StdEncoding.DecodeString(resp.PrintData[0])
 		if err != nil {
 			p.logger.Error("failed to decode label from create response", "externalID", externalID, "error", err)
 		} else if len(decoded) > 0 {
-			p.labelData[externalID] = decoded
+			key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
+			_, err := p.storage.Upload(ctx, key, bytes.NewReader(decoded), "application/pdf")
+			if err != nil {
+				p.logger.Error("failed to upload label to storage", "externalID", externalID, "key", key, "error", err)
+			}
 		}
 	}
 
@@ -167,15 +179,16 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}, nil
 }
 
-// GetLabel returns the label for a shipment created in this session. GLS returns
-// labels inline during CreateShipment (CreatedShipment.PrintData[].Data as base64)
-// and has no separate label retrieval endpoint. The decoded label is cached by
-// CreateShipment and returned here by externalID.
-func (p *GLSProvider) GetLabel(_ context.Context, externalID string, _ string) ([]byte, error) {
-	if data, ok := p.labelData[externalID]; ok {
-		return data, nil
+// GetLabel retrieves the label from object storage.
+func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
+	key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
+	reader, err := p.storage.Get(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("gls: get label from storage: %w", err)
 	}
-	return nil, fmt.Errorf("gls: labels are embedded in the create shipment response — use PrintData from CreateShipment")
+	defer reader.Close()
+
+	return io.ReadAll(reader)
 }
 
 // GetTracking returns tracking events for the given GLS shipment.

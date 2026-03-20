@@ -114,20 +114,14 @@ func TestGLS_CreateShipment_UnknownServiceTypeReturnsError(t *testing.T) {
 
 // --- GetLabel (GLS labels are inline in create response) ---
 
-func TestGLS_GetLabel_ReturnsMeaningfulError(t *testing.T) {
-	// GLS ShipIT API returns labels inline during shipment creation
-	// (CreatedShipment.PrintData[].Data). The adapter must return a clear
-	// error explaining this — not proxy an opaque SDK error.
+func TestGLS_GetLabel_ReturnsErrorForMissingLabel(t *testing.T) {
+	// GLS labels are now persisted to storage after CreateShipment.
+	// GetLabel for a non-existent tracking number should return an error.
 	provider := newTestGLSProvider(t, "http://unused")
 
 	_, err := provider.GetLabel(context.Background(), "GLS0001234567", "pdf")
 	if err == nil {
-		t.Fatal("GetLabel() should return error — GLS labels are embedded in create response")
-	}
-	// The error must mention that labels come from the create response,
-	// so callers know how to get the label data.
-	if !strings.Contains(err.Error(), "embedded") && !strings.Contains(err.Error(), "create") {
-		t.Errorf("error should explain labels are embedded in create response, got: %v", err)
+		t.Fatal("GetLabel() should return error for non-existent label")
 	}
 }
 
