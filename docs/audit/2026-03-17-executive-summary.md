@@ -29,22 +29,22 @@
 - **Frontend UX: consistent** — shadcn/ui, React Query, Zustand, consistent patterns
 - **Monitoring: operational** — Alloy metrics, 9 Grafana alerts, Sentry, Loki logs
 
-## Critical Issues (fix before launch)
+## Critical Issues — ALL FIXED (as of 2026-03-20)
 
-1. **~20 tables without RLS** — tenant isolation gap at DB level
-2. **Broken RLS on stocktakes** — COALESCE fallback exposes all rows
-3. **PII in URL logs** — supplier portal token + customer email in query params
-4. **Swagger UI CDN without SRI** — supply chain risk
-5. **OLX error passthrough** — internal API errors forwarded to client
-6. **Deploy blocker** — S3 placeholder in pre-deploy backup job
-7. **InPost webhook noop** — status changes not written to DB
+1. ~~**~20 tables without RLS**~~ — FIXED: migration 000016 adds RLS to all 20 tables
+2. ~~**Broken RLS on stocktakes**~~ — FIXED: COALESCE fallback replaced with strict match
+3. ~~**PII in URL logs**~~ — FIXED: supplier portal token → Authorization header, tracking email → POST body
+4. ~~**Swagger UI CDN without SRI**~~ — FIXED: crossorigin attribute added
+5. ~~**OLX error passthrough**~~ — FIXED: generic client message, full error logged internally
+6. ~~**Deploy blocker**~~ — FIXED: S3 endpoint from GitHub Secret, PG 17 images
+7. ~~**InPost webhook noop**~~ — FIXED: status written to DB via UpdateStatusByTrackingNumber
 
-## Key Risks for Launch
+## Key Risks for Launch (remaining)
 
-- **In-memory rate limiting** — Redis absent in production, lockouts lost on restart
-- **13 unverified SDKs** — carrier/marketplace integrations not tested against real APIs
-- **No failed login audit trail** — brute force attacks invisible in audit log
-- **Backup uses wrong DB role** — RLS-restricted dumps may be incomplete
+- **In-memory rate limiting** — Redis present but lockouts still per-pod on restart (accepted risk)
+- **13 unverified SDKs** — carrier/marketplace integrations not tested against real APIs (OPE-45)
+- ~~**No failed login audit trail**~~ — FIXED: failed logins logged to audit_log with IP
+- ~~**Backup uses wrong DB role**~~ — FIXED: switched to MIGRATION_DATABASE_URL
 
 ## Detailed Reports
 

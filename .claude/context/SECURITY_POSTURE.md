@@ -9,6 +9,26 @@ DPD carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
 Production readiness security hardening: 2026-03-15 (ingress rate limiting, weekly Trivy image scan, network policy consolidation, session timeout hook, CSP strict-dynamic removed — Next.js requires unsafe-inline for __NEXT_DATA__ scripts, strict-dynamic was blocking all inline execution)
 Integration audit: 2026-03-15 (context leak fixes in webhook handlers, Amazon sleep→context-aware, eBay OAuth refresh, InPost polling increase, carrier SearchPickupPoints error handling)
 Sentry bug fixes: 2026-03-16 (OPE-28: supplier sync async to prevent conn closed, OPE-30/31: OLX OAuth partner scope added, OPE-32: dashboard routing fix)
+Full system audit (8 modules): 2026-03-17 — Score 3.3/5. 7 critical found, all fixed. See docs/audit/2026-03-17-executive-summary.md
+Critical fixes (2026-03-17 to 2026-03-20):
+- RLS added to 20 tenant-scoped tables (migration 000016) — was ZERO database-level isolation
+- Broken RLS fallback on stocktakes fixed (COALESCE → strict match)
+- PII removed from access logs (supplier portal token, customer email tracking URL)
+- InPost webhook now writes shipment status to DB (was logging only)
+- OLX API error messages sanitized (was forwarding raw errors to client)
+- ARC runner RBAC scoped from cluster-admin to namespace roles + ClusterRole
+- All 8 carrier SDKs now have 30s HTTP timeouts (was no timeout)
+- Auth refresh: fail-close on Redis error (was fail-open)
+- Invoice service: HTTP calls extracted from DB transactions (three-phase pattern)
+- io.LimitReader(10MB) on 12 SDK client.go response bodies
+- Failed login attempts now logged to audit_log
+- Token reuse detection upgraded to Error + Sentry event
+- Dashboard auth guard: redirect to /login when !isAuthenticated
+- npm vulns: flatted prototype pollution + next 16.2.0 (5 CVEs)
+- GLS labels persisted to S3 (was in-memory, lost on pod restart)
+- Staging RBAC bootstrap via ClusterRoleBinding (ephemeral namespace fix)
+- seccompProfile RuntimeDefault added to production values
+- Trivy scan now blocking in release pipeline (was continue-on-error)
 GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HIGH findings. SDK uses Basic Auth + io.LimitReader(10MB) on all responses. Label data from CreateShipment is decoded and cached per-provider-instance so GetLabel returns real PDF bytes. Service type validation prevents invalid API calls via mapGLSServiceType allowlist. Shipper/ContactID limitation documented (GLS uses pre-registered ContactID, not inline address). Hardcoded placeholder rates in GetRates tracked in backlog (MEDIUM). Production tests verify service type mapping, unknown type rejection, label retrieval, COD/insurance mapping, shipper handling, and reference propagation. Commits: 9b05da4)
 
 ## Unfixed Findings
