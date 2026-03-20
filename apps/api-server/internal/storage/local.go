@@ -57,6 +57,16 @@ func (s *LocalStorage) Upload(_ context.Context, key string, reader io.Reader, _
 	return url, nil
 }
 
+// Get retrieves a file by key from the local filesystem.
+func (s *LocalStorage) Get(_ context.Context, key string) (io.ReadCloser, error) {
+	fullPath := filepath.Clean(filepath.Join(s.baseDir, key))
+	f, err := os.Open(fullPath) // #nosec G304 -- path is cleaned and joined under baseDir
+	if err != nil {
+		return nil, fmt.Errorf("opening file %s: %w", fullPath, err)
+	}
+	return f, nil
+}
+
 // Delete removes a file at baseDir/key.
 func (s *LocalStorage) Delete(_ context.Context, key string) error {
 	fullPath := filepath.Join(s.baseDir, key)
