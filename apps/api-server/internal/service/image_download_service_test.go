@@ -223,6 +223,10 @@ func (m *mockObjectStorage) Upload(_ context.Context, key string, reader io.Read
 	return m.uploadURL, nil
 }
 
+func (m *mockObjectStorage) Get(_ context.Context, _ string) (io.ReadCloser, error) {
+	return nil, nil
+}
+
 func (m *mockObjectStorage) Delete(_ context.Context, _ string) error {
 	return nil
 }
