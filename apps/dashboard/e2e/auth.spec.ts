@@ -5,7 +5,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 test.describe('Authentication', () => {
   test('shows login form with all fields', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 30000 });
+    await expect(page.getByText('Logowanie')).toBeVisible();
     await expect(page.getByLabel('Organizacja')).toBeVisible();
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();

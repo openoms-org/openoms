@@ -7,13 +7,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 2,
   workers: 1,
   reporter: process.env.CI ? 'github' : 'html',
-  timeout: 60_000,
+  timeout: 30_000,
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    actionTimeout: 15_000,
-    navigationTimeout: 30_000,
+    actionTimeout: 10_000,
+    navigationTimeout: 15_000,
   },
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
@@ -38,9 +38,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI ? 'npm run build && npm start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });
