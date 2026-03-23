@@ -67,12 +67,12 @@ test.describe.serial('Return Lifecycle', () => {
       page.getByText('Produkt niezgodny z opisem - test E2E'),
     ).toBeVisible({ timeout: 10000 });
 
-    // Click "Zatwierdź" (Approve) transition button
-    await page.getByRole('button', { name: 'Zatwierdź' }).click();
-    await waitForToast(page, /status|zmienion|zatwierdzony/i);
+    // Click approve transition button (seed data may use English labels)
+    await page.getByRole('button', { name: /Approved|Zatwierdź|Zaakceptowane/ }).click();
+    await waitForToast(page, /status|zmienion|zatwierdzony|changed/i);
 
     // Verify new status
-    await expect(page.getByText(/Zatwierdzon/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Approved|Zatwierdzon|Zaakceptowane/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('mark return as received', async ({ page }) => {
