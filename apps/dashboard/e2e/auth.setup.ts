@@ -34,7 +34,6 @@ setup('authenticate', async ({ page }) => {
 
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
-  // Wait for React to hydrate — dev mode loads many async chunks
-  await expect(page.getByText('Panel główny')).toBeVisible({ timeout: 30000 });
+  await expect(page.getByText('Panel główny')).toBeVisible({ timeout: 15000 });
   await page.context().storageState({ path: authFile });
 });

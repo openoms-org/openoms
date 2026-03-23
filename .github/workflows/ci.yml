@@ -446,7 +446,6 @@ jobs:
   e2e:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
-    continue-on-error: true  # Informational until locale/SSR issues are fixed
     permissions:
       contents: read
     needs: [frontend]

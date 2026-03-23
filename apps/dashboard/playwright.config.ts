@@ -14,6 +14,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     actionTimeout: 10_000,
     navigationTimeout: 15_000,
+    locale: 'pl-PL',
+    extraHTTPHeaders: { 'Accept-Language': 'pl' },
   },
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
