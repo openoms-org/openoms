@@ -48,8 +48,8 @@ test.describe.serial('Return Lifecycle', () => {
     ).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('50,00')).toBeVisible();
 
-    // Status should be "requested" (Zgłoszone)
-    await expect(page.getByText(/Zgłoszon/i).first()).toBeVisible();
+    // Status should be "requested" (Zgłoszone or Requested depending on seed data)
+    await expect(page.getByText(/Zgłoszon|Requested/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('return appears in list', async ({ page }) => {

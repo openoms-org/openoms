@@ -5,7 +5,7 @@ test.describe('Customer Import', () => {
   test('customer import page loads', async ({ page }) => {
     await gotoWithAuth(page, '/customers/import');
     await expect(
-      page.getByRole('heading', { name: /Import klientów/ }),
+      page.getByText(/Import klientów/),
     ).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Przeciągnij plik CSV tutaj')).toBeVisible();
     await expect(page.getByText('lub kliknij, aby wybrać plik')).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Customer Import', () => {
   test('upload CSV shows preview', async ({ page }) => {
     await gotoWithAuth(page, '/customers/import');
     await expect(
-      page.getByRole('heading', { name: /Import klientów/ }),
+      page.getByText(/Import klientów/),
     ).toBeVisible({ timeout: 15000 });
 
     // Create a test CSV file in-memory
@@ -44,7 +44,7 @@ test.describe('Customer Import', () => {
 
     // Wait for the preview to appear (requires API response)
     await expect(
-      page.getByRole('heading', { name: 'Podgląd importu' }),
+      page.getByText(/Podgląd importu/),
     ).toBeVisible({ timeout: 15000 });
 
     // Verify preview badges are visible

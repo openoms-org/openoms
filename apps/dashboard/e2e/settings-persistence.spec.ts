@@ -77,7 +77,7 @@ test.describe('Settings Persistence', () => {
 
     // Fill the last (newly added) key and label
     await page.getByPlaceholder(/key.*new|Klucz.*new/i).last().fill('e2e_test');
-    await page.getByPlaceholder(/label.*Nowe|Etykieta.*Nowe/i).last().fill('Test E2E');
+    await page.getByPlaceholder(/label.*New|Etykieta.*Nowe/i).last().fill('Test E2E');
 
     // Save
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
