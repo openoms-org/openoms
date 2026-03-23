@@ -53,10 +53,10 @@ test.describe('Settings Persistence', () => {
     ).toBeVisible({ timeout: 10000 });
 
     // Wait for existing statuses to load from API before counting
-    await expect(page.getByPlaceholder('Klucz (np. new)').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByPlaceholder(/key.*new|Klucz.*new/i).first()).toBeVisible({ timeout: 10000 });
 
     // Remove any leftover e2e_test entries from prior runs to avoid duplicate key errors
-    const keyInputs = page.getByPlaceholder('Klucz (np. new)');
+    const keyInputs = page.getByPlaceholder(/key.*new|Klucz.*new/i);
     const count = await keyInputs.count();
     for (let i = count - 1; i >= 0; i--) {
       const val = await keyInputs.nth(i).inputValue();
@@ -76,8 +76,8 @@ test.describe('Settings Persistence', () => {
     await expect(keyInputs).toHaveCount(keysBefore + 1, { timeout: 3000 });
 
     // Fill the last (newly added) key and label
-    await page.getByPlaceholder('Klucz (np. new)').last().fill('e2e_test');
-    await page.getByPlaceholder('Etykieta (np. Nowe)').last().fill('Test E2E');
+    await page.getByPlaceholder(/key.*new|Klucz.*new/i).last().fill('e2e_test');
+    await page.getByPlaceholder(/label.*Nowe|Etykieta.*Nowe/i).last().fill('Test E2E');
 
     // Save
     await page.getByRole('button', { name: 'Zapisz zmiany' }).click();

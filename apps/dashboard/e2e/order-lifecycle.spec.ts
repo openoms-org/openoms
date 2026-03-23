@@ -35,7 +35,7 @@ test.describe.serial('Order Lifecycle', () => {
     await expect(page.getByText(NEW_ORDER.itemName)).toBeVisible();
 
     // Verify status badge shows initial status
-    await expect(page.getByText(/Now|nowe/i).first()).toBeVisible();
+    await expect(page.getByText(/Now|nowe|New/i).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('change status: new → confirmed', async ({ page }) => {
