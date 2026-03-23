@@ -39,7 +39,7 @@ export default defineConfig({
   ],
   webServer: {
     command: process.env.CI
-      ? 'npm run build && node .next/standalone/server.js'
+      ? 'npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && PORT=3000 node .next/standalone/server.js'
       : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
