@@ -7,13 +7,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 2,
   workers: 1,
   reporter: process.env.CI ? 'github' : 'html',
-  timeout: 30_000,
+  timeout: 60_000,
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    actionTimeout: 10_000,
-    navigationTimeout: 15_000,
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
   },
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },

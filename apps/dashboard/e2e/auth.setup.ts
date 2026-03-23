@@ -33,16 +33,8 @@ setup('authenticate', async ({ page }) => {
   }
 
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
-  // Debug: log page content if dashboard text not found
-  const dashboardVisible = await page.getByText('Panel główny').isVisible().catch(() => false);
-  if (!dashboardVisible) {
-    const html = await page.content();
-    const title = await page.title();
-    console.log(`[auth.setup] Page title: ${title}`);
-    console.log(`[auth.setup] Page URL: ${page.url()}`);
-    console.log(`[auth.setup] Page HTML (first 2000 chars): ${html.substring(0, 2000)}`);
-  }
-  await expect(page.getByText('Panel główny')).toBeVisible({ timeout: 15000 });
+  await page.waitForLoadState('domcontentloaded');
+  // Wait for React to hydrate — dev mode loads many async chunks
+  await expect(page.getByText('Panel główny')).toBeVisible({ timeout: 30000 });
   await page.context().storageState({ path: authFile });
 });
