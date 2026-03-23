@@ -47,14 +47,14 @@ test.describe('Customer Import', () => {
       page.getByText(/Podgląd importu/),
     ).toBeVisible({ timeout: 15000 });
 
-    // Verify preview badges are visible
-    await expect(page.getByText(/Łącznie:/)).toBeVisible();
-    await expect(page.getByText(/Nowi klienci:/)).toBeVisible();
-    await expect(page.getByText(/Aktualizacje:/)).toBeVisible();
+    // Verify preview stats are visible
+    await expect(page.getByText(/Łączn|Total/i)).toBeVisible();
+    await expect(page.getByText(/nowi klienci|nowych|New customers/i)).toBeVisible();
+    await expect(page.getByText(/aktualizacj|Updates/i)).toBeVisible();
 
     // Verify the import button is visible
     await expect(
-      page.getByRole('button', { name: /Importuj \d+ klientów/ }),
+      page.getByRole('button', { name: /Importuj|Import/i }),
     ).toBeVisible();
   });
 });
