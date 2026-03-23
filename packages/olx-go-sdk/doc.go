@@ -7,5 +7,4 @@
 //   - Advert listing and retrieval
 //   - Transaction listing for classifieds orders
 //   - OAuth2 access token authentication
-//
 package olx
