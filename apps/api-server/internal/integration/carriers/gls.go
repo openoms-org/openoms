@@ -186,7 +186,7 @@ func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string)
 	if err != nil {
 		return nil, fmt.Errorf("gls: get label from storage: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	return io.ReadAll(reader)
 }
