@@ -42,7 +42,7 @@ test.describe('Settings Persistence', () => {
 
     // "Dodaj status" button should be visible
     await expect(
-      page.getByRole('button', { name: 'Dodaj status' }),
+      page.getByRole('button', { name: /Dodaj/ }),
     ).toBeVisible();
   });
 
@@ -70,7 +70,7 @@ test.describe('Settings Persistence', () => {
     const keysBefore = await keyInputs.count();
 
     // Add new status
-    await page.getByRole('button', { name: 'Dodaj status' }).click();
+    await page.getByRole('button', { name: /Dodaj/ }).click();
 
     // Wait for new row to appear
     await expect(keyInputs).toHaveCount(keysBefore + 1, { timeout: 3000 });

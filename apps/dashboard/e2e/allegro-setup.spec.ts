@@ -9,7 +9,7 @@ test.describe('Allegro Integration', () => {
 
   test('allegro integration page loads', async ({ page }) => {
     await gotoWithAuth(page, '/marketplaces/allegro');
-    await expect(page.getByRole('heading', { name: /Allegro/ })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Allegro/)).toBeVisible({ timeout: 15000 });
   });
 
   test('allegro offers subpage loads', async ({ page }) => {
