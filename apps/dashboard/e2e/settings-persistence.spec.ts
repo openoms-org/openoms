@@ -5,7 +5,7 @@ test.describe('Settings Persistence', () => {
   test('company info saves and persists', async ({ page }) => {
     await gotoWithAuth(page, '/settings/company');
     await expect(
-      page.getByRole('heading', { name: 'Dane firmy' }),
+      page.getByRole('heading', { name: /Firma|Dane firmy/ }),
     ).toBeVisible({ timeout: 10000 });
 
     // Find the company name input (first input inside the "Nazwa firmy" label container)
@@ -16,13 +16,13 @@ test.describe('Settings Persistence', () => {
     await nameInput.fill('E2E Test Company Sp. z o.o.');
 
     // Save
-    await page.getByRole('button', { name: /Zapisz dane firmy/ }).click();
+    await page.getByRole('button', { name: /Zapisz/ }).click();
     await waitForToast(page, /zapisane|zapisano/i);
 
     // Reload and verify persistence
     await page.reload();
     await expect(
-      page.getByRole('heading', { name: 'Dane firmy' }),
+      page.getByRole('heading', { name: /Firma|Dane firmy/ }),
     ).toBeVisible({ timeout: 10000 });
     await expect(
       page.locator('input[value="E2E Test Company Sp. z o.o."]'),

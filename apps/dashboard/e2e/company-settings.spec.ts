@@ -4,7 +4,7 @@ import { gotoWithAuth } from './helpers/actions';
 test.describe('Company Settings', () => {
   test('loads company settings page with form', async ({ page }) => {
     await gotoWithAuth(page, '/settings/company');
-    await expect(page.getByRole('heading', { name: 'Dane firmy' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /Firma|Dane firmy/ })).toBeVisible({ timeout: 10000 });
 
     // Form fields should be visible
     await expect(page.getByText('Nazwa firmy')).toBeVisible({ timeout: 5000 });

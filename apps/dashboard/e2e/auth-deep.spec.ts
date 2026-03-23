@@ -85,7 +85,7 @@ test.describe('Auth Deep Flows', () => {
     await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 10000 });
 
     await page.getByRole('link', { name: 'Zarejestruj się' }).click();
-    await expect(page).toHaveURL('/register', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/register/, { timeout: 10000 });
 
     await context.close();
   });

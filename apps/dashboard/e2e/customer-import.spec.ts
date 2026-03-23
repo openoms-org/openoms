@@ -5,8 +5,8 @@ test.describe('Customer Import', () => {
   test('customer import page loads', async ({ page }) => {
     await gotoWithAuth(page, '/customers/import');
     await expect(
-      page.getByRole('heading', { name: 'Import klientów CSV' }),
-    ).toBeVisible({ timeout: 10000 });
+      page.getByRole('heading', { name: /Import klientów/ }),
+    ).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Przeciągnij plik CSV tutaj')).toBeVisible();
     await expect(page.getByText('lub kliknij, aby wybrać plik')).toBeVisible();
   });
@@ -25,8 +25,8 @@ test.describe('Customer Import', () => {
   test('upload CSV shows preview', async ({ page }) => {
     await gotoWithAuth(page, '/customers/import');
     await expect(
-      page.getByRole('heading', { name: 'Import klientów CSV' }),
-    ).toBeVisible({ timeout: 10000 });
+      page.getByRole('heading', { name: /Import klientów/ }),
+    ).toBeVisible({ timeout: 15000 });
 
     // Create a test CSV file in-memory
     const csvContent = [

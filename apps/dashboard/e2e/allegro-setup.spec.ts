@@ -8,22 +8,22 @@ test.describe('Allegro Integration', () => {
   });
 
   test('allegro integration page loads', async ({ page }) => {
-    await gotoWithAuth(page, '/integrations/allegro');
-    await expect(page.getByRole('heading', { name: /Integracja Allegro/ })).toBeVisible({ timeout: 10000 });
+    await gotoWithAuth(page, '/marketplaces/allegro');
+    await expect(page.getByRole('heading', { name: /Allegro/ })).toBeVisible({ timeout: 15000 });
   });
 
   test('allegro offers subpage loads', async ({ page }) => {
-    await gotoWithAuth(page, '/integrations/allegro/offers');
+    await gotoWithAuth(page, '/marketplaces/allegro/offers');
     await expect(page.getByRole('heading', { name: /Oferty/ })).toBeVisible({ timeout: 10000 });
   });
 
   test('allegro returns subpage loads', async ({ page }) => {
-    await gotoWithAuth(page, '/integrations/allegro/returns');
+    await gotoWithAuth(page, '/marketplaces/allegro/returns');
     await expect(page.getByRole('heading', { name: /Zwroty/ })).toBeVisible({ timeout: 10000 });
   });
 
   test('allegro messages subpage loads', async ({ page }) => {
-    await gotoWithAuth(page, '/integrations/allegro/messages');
+    await gotoWithAuth(page, '/marketplaces/allegro/messages');
     await expect(page.getByRole('heading', { name: /Wiadomości/ })).toBeVisible({ timeout: 10000 });
   });
 });

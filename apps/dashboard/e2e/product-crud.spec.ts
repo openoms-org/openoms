@@ -78,7 +78,7 @@ test.describe.serial('Product CRUD', () => {
 
     // Enter edit mode
     await page.getByRole('button', { name: 'Edytuj' }).click();
-    await expect(page.getByText('Edycja produktu')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Edytuj produkt|Edycja produktu/)).toBeVisible({ timeout: 5000 });
 
     // Update price
     await page.locator('#price').fill('199.99');

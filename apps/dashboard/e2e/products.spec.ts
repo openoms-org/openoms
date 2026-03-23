@@ -23,7 +23,7 @@ test.describe('Products', () => {
   });
 
   test('new product button navigates correctly', async ({ page }) => {
-    await page.getByRole('link', { name: 'Nowy produkt' }).click();
+    await page.getByRole('link', { name: /Dodaj produkt|Nowy produkt/ }).click();
     await expect(page).toHaveURL('/products/new', { timeout: 10000 });
   });
 
