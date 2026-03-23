@@ -180,6 +180,7 @@ func (p *PocztaPolskaProvider) GetRates(_ context.Context, req integration.RateR
 			Currency:      "PLN",
 			EstimatedDays: 2,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 

@@ -133,7 +133,8 @@
       "service": "Usługa",
       "type": "Typ",
       "weightKg": "Waga (kg)",
-      "widthCm": "Szerokość (cm)"
+      "widthCm": "Szerokość (cm)",
+      "estimateDisclaimer": "Podane ceny są szacunkowe i mogą się różnić od rzeczywistych stawek przewoźnika. Ostateczna cena zostanie ustalona przy tworzeniu przesyłki."
     },
     "ratesFetchFailed": "Nie udało się pobrać stawek",
     "receiver": "Odbiorca",

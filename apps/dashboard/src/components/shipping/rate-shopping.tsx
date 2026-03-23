@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ChevronDown, ChevronUp, Loader2, Truck, Zap, Tag } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Loader2, Truck, Zap, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -281,6 +281,13 @@ export function RateShopping({
           {hasSearched && !error && rates.length === 0 && (
             <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
               {t("rateShopping.noRatesFound")}
+            </div>
+          )}
+
+          {rates.length > 0 && rates.some((r) => r.is_estimate) && (
+            <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{t("rateShopping.estimateDisclaimer")}</span>
             </div>
           )}
 

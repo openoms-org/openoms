@@ -103,6 +103,7 @@ type Rate struct {
 	Currency      string  `json:"currency"`
 	EstimatedDays int     `json:"estimated_days"`
 	PickupPoint   bool    `json:"pickup_point"`
+	IsEstimate    bool    `json:"is_estimate"`
 }
 
 // CarrierProvider defines the interface for carrier/shipping integrations

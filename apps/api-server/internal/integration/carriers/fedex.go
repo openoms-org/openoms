@@ -248,6 +248,7 @@ func (p *FedExProvider) GetRates(_ context.Context, req integration.RateRequest)
 			Currency:      "PLN",
 			EstimatedDays: 3,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 

@@ -298,6 +298,7 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 				Currency:      "PLN",
 				EstimatedDays: 2,
 				PickupPoint:   true,
+				IsEstimate:    true,
 			})
 		}
 		if fitsB {
@@ -313,6 +314,7 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 				Currency:      "PLN",
 				EstimatedDays: 2,
 				PickupPoint:   true,
+				IsEstimate:    true,
 			})
 		}
 		if fitsC {
@@ -328,6 +330,7 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 				Currency:      "PLN",
 				EstimatedDays: 2,
 				PickupPoint:   true,
+				IsEstimate:    true,
 			})
 		}
 
@@ -348,6 +351,7 @@ func (p *InPostProvider) GetRates(_ context.Context, req integration.RateRequest
 				Currency:      "PLN",
 				EstimatedDays: 1,
 				PickupPoint:   false,
+				IsEstimate:    true,
 			})
 		}
 	}
