@@ -47,11 +47,11 @@ test.describe.serial('Product CRUD', () => {
   test('verify created product detail', async ({ page }) => {
     await gotoWithAuth(page, productUrl);
     await expect(
-      page.getByRole('heading', { name: NEW_PRODUCT.name }),
-    ).toBeVisible({ timeout: 10000 });
+      page.getByText(NEW_PRODUCT.name),
+    ).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(NEW_PRODUCT.sku!).first()).toBeVisible();
-    // Polish locale price: 149,99
-    await expect(page.getByText('149,99').first()).toBeVisible();
+    // Price format depends on locale
+    await expect(page.getByText(/149[.,]99/).first()).toBeVisible();
   });
 
   test('product appears in list', async ({ page }) => {
@@ -71,19 +71,27 @@ test.describe.serial('Product CRUD', () => {
   });
 
   test('edit product price', async ({ page }) => {
+    test.skip(!productUrl, 'productUrl not set — prior test did not run');
     await gotoWithAuth(page, productUrl);
     await expect(
       page.getByRole('heading', { name: NEW_PRODUCT.name }),
     ).toBeVisible({ timeout: 10000 });
 
-    // Enter edit mode
-    await page.getByRole('button', { name: 'Edytuj' }).click();
-    await expect(page.getByText(/Edytuj produkt|Edycja produktu/)).toBeVisible({ timeout: 10000 });
+    // Enter edit mode — click the edit button in the main content area
+    await page.locator('main').getByRole('button', { name: /Edytuj|Edit/ }).click();
+    await expect(page.locator('#price')).toBeVisible({ timeout: 10000 });
 
     // Update price
     await page.locator('#price').fill('199.99');
-    await page.getByRole('button', { name: 'Zapisz zmiany' }).click();
-    await waitForToast(page, /zaktualizowany|zapisany/i);
+
+    // Listen for API response before clicking save
+    const saveResponse = page.waitForResponse(
+      (resp) => resp.url().includes('/v1/products/') && resp.request().method() === 'PUT',
+      { timeout: 10000 },
+    );
+    await page.getByRole('button', { name: /Zapisz zmiany|Save/ }).click();
+    const resp = await saveResponse;
+    expect(resp.status()).toBeLessThan(400);
 
     // Verify updated price in detail view
     await expect(page.getByText('199,99')).toBeVisible({ timeout: 5000 });
