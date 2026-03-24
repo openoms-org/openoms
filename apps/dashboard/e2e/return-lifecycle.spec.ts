@@ -77,13 +77,13 @@ test.describe.serial('Return Lifecycle', () => {
 
   test('mark return as received', async ({ page }) => {
     await gotoWithAuth(page, returnUrl);
-    await expect(page.getByText(/Zatwierdzon/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Approved|Zatwierdzon|Zaakceptowane/i).first()).toBeVisible({ timeout: 10000 });
 
-    // Click "Oznacz jako odebrane" transition button
-    await page.getByRole('button', { name: 'Oznacz jako odebrane' }).click();
-    await waitForToast(page, /status|zmienion|odebran/i);
+    // Click received transition button (seed data may use English labels)
+    await page.getByRole('button', { name: /Received|Odebran|Oznacz jako odebrane/ }).click();
+    await waitForToast(page, /status|zmienion|odebran|changed/i);
 
-    await expect(page.getByText(/Odebran/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Received|Odebran/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('edit return reason', async ({ page }) => {
