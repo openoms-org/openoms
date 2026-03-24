@@ -209,6 +209,7 @@ func (p *DPDProvider) GetRates(_ context.Context, req integration.RateRequest) (
 			Currency:      "PLN",
 			EstimatedDays: 2,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 

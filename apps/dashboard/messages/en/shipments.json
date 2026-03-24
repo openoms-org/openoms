@@ -133,7 +133,8 @@
       "service": "Service",
       "type": "Type",
       "weightKg": "Weight Kg",
-      "widthCm": "Width Cm"
+      "widthCm": "Width Cm",
+      "estimateDisclaimer": "Prices shown are estimates and may differ from actual carrier rates. Final price will be determined when creating the shipment."
     },
     "ratesFetchFailed": "Failed to retrieve rates",
     "receiver": "Receiver",

@@ -173,6 +173,7 @@ func (p *OrlenPaczkaProvider) GetRates(_ context.Context, req integration.RateRe
 			Currency:      "PLN",
 			EstimatedDays: 3,
 			PickupPoint:   true,
+			IsEstimate:    true,
 		})
 	}
 

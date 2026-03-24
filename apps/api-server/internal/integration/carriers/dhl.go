@@ -249,6 +249,7 @@ func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) (
 			Currency:      "PLN",
 			EstimatedDays: 2,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 	if w <= 5 {
@@ -264,6 +265,7 @@ func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) (
 			Currency:      "PLN",
 			EstimatedDays: 2,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 	if w <= 10 {
@@ -279,6 +281,7 @@ func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) (
 			Currency:      "PLN",
 			EstimatedDays: 2,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 	if w <= 20 {
@@ -294,6 +297,7 @@ func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) (
 			Currency:      "PLN",
 			EstimatedDays: 2,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 	if w <= 31.5 {
@@ -309,6 +313,7 @@ func (p *DHLProvider) GetRates(_ context.Context, req integration.RateRequest) (
 			Currency:      "PLN",
 			EstimatedDays: 2,
 			PickupPoint:   false,
+			IsEstimate:    true,
 		})
 	}
 

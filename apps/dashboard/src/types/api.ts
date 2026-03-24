@@ -2021,6 +2021,7 @@ export interface ShippingRate {
   currency: string;
   estimated_days: number;
   pickup_point: boolean;
+  is_estimate: boolean;
 }
 
 export interface GetRatesRequest {
