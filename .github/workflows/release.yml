@@ -157,7 +157,7 @@ jobs:
           DEPLOY_TOKEN: ${{ secrets.ENTERPRISE_DEPLOY_TOKEN }}
           DEPLOY_REPO: ${{ secrets.DEPLOY_REPO }}
         if: ${{ env.DEPLOY_TOKEN != '' && env.DEPLOY_REPO != '' }}
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.ENTERPRISE_DEPLOY_TOKEN }}
           repository: ${{ secrets.DEPLOY_REPO }}
