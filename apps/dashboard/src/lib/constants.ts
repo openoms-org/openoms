@@ -294,7 +294,7 @@ export interface CredentialField {
 }
 
 export const PROVIDER_CATEGORIES: Record<string, { labelKey: string; providers: string[] }> = {
-  marketplace: { labelKey: "category.marketplace", providers: ["allegro", "amazon", "woocommerce", "ebay", "kaufland", "olx", "erli", "empik"] },
+  marketplace: { labelKey: "category.marketplace", providers: ["allegro", "amazon", "woocommerce", "ebay", "olx", "erli"] },
   carrier: { labelKey: "category.carrier", providers: ["inpost", "dhl", "dpd", "gls", "ups", "fedex", "poczta_polska", "orlen_paczka"] },
   invoicing: { labelKey: "category.invoicing", providers: ["fakturownia"] },
   supplier: { labelKey: "category.supplier", providers: ["btp"] },
