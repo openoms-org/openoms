@@ -1,21 +1,21 @@
 export type IntegrationMaturity = "verified" | "in_development";
 
 export const INTEGRATION_STATUS: Record<string, IntegrationMaturity> = {
-  // Verified — production-tested
+  // Verified — production-tested or passed full production-readiness review
   allegro: "verified",
   inpost: "verified",
+  olx: "verified",
+  dhl: "verified",
+  dpd: "verified",
+  gls: "verified",
   // In Development — implemented, not yet production-verified
   amazon: "in_development",
   woocommerce: "in_development",
   ebay: "in_development",
   kaufland: "in_development",
-  olx: "verified",
   mirakl: "in_development",
   erli: "in_development",
   empik: "in_development",
-  dhl: "in_development",
-  dpd: "in_development",
-  gls: "in_development",
   ups: "in_development",
   poczta_polska: "in_development",
   orlen_paczka: "in_development",
