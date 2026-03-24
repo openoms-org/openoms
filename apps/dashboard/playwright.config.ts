@@ -14,6 +14,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     actionTimeout: 10_000,
     navigationTimeout: 15_000,
+    locale: 'pl-PL',
+    extraHTTPHeaders: { 'Accept-Language': 'pl' },
   },
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
@@ -38,9 +40,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI
+      ? 'npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && PORT=3000 node .next/standalone/server.js'
+      : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });

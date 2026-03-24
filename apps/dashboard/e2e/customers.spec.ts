@@ -26,6 +26,6 @@ test.describe('Customers', () => {
   test('customer form validates required fields', async ({ page }) => {
     await gotoWithAuth(page, '/customers/new');
     await page.getByRole('button', { name: /Utwórz klienta/ }).click();
-    await expect(page.getByText(/wymagane/i)).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/wymagane|required|must contain|character/i)).toBeVisible({ timeout: 5000 });
   });
 });

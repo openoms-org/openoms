@@ -18,6 +18,8 @@ function getWsDirectives(): string {
   }
 }
 
+const isDev = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
@@ -45,7 +47,8 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           // unsafe-inline required: Next.js injects inline scripts for __NEXT_DATA__ and chunk loading.
           // Do NOT add strict-dynamic — it causes browsers to ignore unsafe-inline.
-          value: `default-src 'self'; script-src 'self' 'unsafe-inline' https://geowidget.inpost.pl https://static.cloudflareinsights.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl https://cloudflareinsights.com https://api.stripe.com https://*.sentry.io ${getWsDirectives()}; font-src 'self' data:; frame-src https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
+          // unsafe-eval needed in dev mode: React 19 uses eval() for dev-time debugging (callstack reconstruction).
+          value: `default-src 'self'; script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://geowidget.inpost.pl https://static.cloudflareinsights.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://geowidget.inpost.pl; img-src 'self' data: https: blob:; connect-src 'self' ${apiUrl} https://*.inpost.pl https://cloudflareinsights.com https://api.stripe.com https://*.sentry.io ${getWsDirectives()}; font-src 'self' data:; frame-src https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
         },
       ],
     },

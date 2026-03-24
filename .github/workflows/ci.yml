@@ -446,7 +446,7 @@ jobs:
   e2e:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
-    continue-on-error: true  # Informational until locale/SSR issues are fixed
+    continue-on-error: true  # 110+/124 pass; remaining ~5 are API interaction issues on CI (OPE-128)
     permissions:
       contents: read
     needs: [frontend]

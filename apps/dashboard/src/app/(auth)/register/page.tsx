@@ -49,8 +49,13 @@ function PricingContent() {
       .finally(() => setIsLoading(false));
   }, [config.billing_enabled]);
 
+  useEffect(() => {
+    if (!config.billing_enabled) {
+      router.replace("/register/invite");
+    }
+  }, [config.billing_enabled, router]);
+
   if (!config.billing_enabled) {
-    router.replace("/register/invite");
     return null;
   }
 

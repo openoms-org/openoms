@@ -48,8 +48,8 @@ test.describe.serial('Return Lifecycle', () => {
     ).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('50,00')).toBeVisible();
 
-    // Status should be "requested" (Zgłoszone)
-    await expect(page.getByText(/Zgłoszon/i).first()).toBeVisible();
+    // Status should be "requested" (Zgłoszone or Requested depending on seed data)
+    await expect(page.getByText(/Zgłoszon|Requested/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('return appears in list', async ({ page }) => {
@@ -67,23 +67,23 @@ test.describe.serial('Return Lifecycle', () => {
       page.getByText('Produkt niezgodny z opisem - test E2E'),
     ).toBeVisible({ timeout: 10000 });
 
-    // Click "Zatwierdź" (Approve) transition button
-    await page.getByRole('button', { name: 'Zatwierdź' }).click();
-    await waitForToast(page, /status|zmienion|zatwierdzony/i);
+    // Click approve transition button (seed data may use English labels)
+    await page.getByRole('button', { name: /Approved|Zatwierdź|Zaakceptowane/ }).click();
+    await waitForToast(page, /status|zmienion|zatwierdzony|changed/i);
 
     // Verify new status
-    await expect(page.getByText(/Zatwierdzon/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Approved|Zatwierdzon|Zaakceptowane/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('mark return as received', async ({ page }) => {
     await gotoWithAuth(page, returnUrl);
-    await expect(page.getByText(/Zatwierdzon/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Approved|Zatwierdzon|Zaakceptowane/i).first()).toBeVisible({ timeout: 10000 });
 
-    // Click "Oznacz jako odebrane" transition button
-    await page.getByRole('button', { name: 'Oznacz jako odebrane' }).click();
-    await waitForToast(page, /status|zmienion|odebran/i);
+    // Click received transition button (seed data may use English labels)
+    await page.getByRole('button', { name: /Received|Odebran|Oznacz jako odebrane/ }).click();
+    await waitForToast(page, /status|zmienion|odebran|changed/i);
 
-    await expect(page.getByText(/Odebran/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Received|Odebran/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('edit return reason', async ({ page }) => {

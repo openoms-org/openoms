@@ -5,7 +5,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 test.describe('Authentication', () => {
   test('shows login form with all fields', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.getByText('Logowanie')).toBeVisible();
+    await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 15000 });
     await expect(page.getByLabel('Organizacja')).toBeVisible();
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();
@@ -14,6 +14,7 @@ test.describe('Authentication', () => {
 
   test('shows validation errors for empty form submission', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: 'Zaloguj się' }).click();
     await expect(page.getByText('Slug organizacji jest wymagany')).toBeVisible();
     await expect(page.getByText('Hasło jest wymagane')).toBeVisible();
@@ -21,21 +22,21 @@ test.describe('Authentication', () => {
 
   test('shows error for invalid credentials', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 15000 });
     await page.getByLabel('Organizacja').fill('dev');
     await page.getByLabel('Email').fill('wrong@example.com');
     await page.locator('#password').fill('wrongpassword');
     await page.getByRole('button', { name: 'Zaloguj się' }).click();
-    // Wait for error toast
     await expect(page.locator('[data-sonner-toast]')).toBeVisible({ timeout: 5000 });
   });
 
   test('successfully logs in with valid credentials', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 15000 });
     await page.getByLabel('Organizacja').fill('dev');
     await page.getByLabel('Email').fill('admin@dev.local');
     await page.locator('#password').fill('password123');
 
-    // Use Promise.all to click and wait for API response simultaneously
     const [response] = await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/v1/auth/login'), {
         timeout: 10000,
@@ -49,6 +50,7 @@ test.describe('Authentication', () => {
 
   test('can toggle password visibility', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 15000 });
     const passwordInput = page.locator('#password');
     await expect(passwordInput).toHaveAttribute('type', 'password');
     await page.getByRole('button', { name: 'Pokaż hasło' }).click();
@@ -59,8 +61,8 @@ test.describe('Authentication', () => {
 
   test('register link navigates to registration page', async ({ page }) => {
     await page.goto('/login');
+    await expect(page.getByText('Logowanie')).toBeVisible({ timeout: 15000 });
     await page.getByRole('link', { name: 'Zarejestruj się' }).click();
-    // Registration mode may route to /register, /register/invite, etc.
     await expect(page).toHaveURL(/\/register/, { timeout: 10000 });
   });
 });

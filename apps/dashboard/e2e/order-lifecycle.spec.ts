@@ -34,31 +34,31 @@ test.describe.serial('Order Lifecycle', () => {
     // Verify order item is displayed
     await expect(page.getByText(NEW_ORDER.itemName)).toBeVisible();
 
-    // Verify status badge shows initial status
-    await expect(page.getByText(/Now|nowe/i).first()).toBeVisible();
+    // Verify status badge shows initial status (seed data uses English labels)
+    await expect(page.getByText(/New|Nowe/i).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('change status: new → confirmed', async ({ page }) => {
     await gotoWithAuth(page, orderUrl);
     await expect(page.getByText(NEW_ORDER.customerName)).toBeVisible({ timeout: 10000 });
 
-    // Click "Potwierdzone" transition button (normal transition, no dialog)
-    await page.getByRole('button', { name: 'Potwierdzone' }).click();
-    await waitForToast(page, /status|zmienion/i);
+    // Click "Confirmed" transition button (seed data uses English labels)
+    await page.getByRole('button', { name: /Confirmed|Potwierdzone/ }).click();
+    await waitForToast(page, /status|zmienion|changed/i);
 
     // Verify new status badge
-    await expect(page.getByText('Potwierdzone').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Confirmed|Potwierdzone/).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('change status: confirmed → processing', async ({ page }) => {
     await gotoWithAuth(page, orderUrl);
     await expect(page.getByText(NEW_ORDER.customerName)).toBeVisible({ timeout: 10000 });
 
-    // Click "W realizacji" transition button
-    await page.getByRole('button', { name: 'W realizacji' }).click();
-    await waitForToast(page, /status|zmienion/i);
+    // Click "Processing" transition button (seed data uses English labels)
+    await page.getByRole('button', { name: /Processing|W realizacji/ }).click();
+    await waitForToast(page, /status|zmienion|changed/i);
 
-    await expect(page.getByText('W realizacji').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Processing|W realizacji/).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('save internal notes', async ({ page }) => {
