@@ -41,7 +41,7 @@ export function Sidebar() {
   }, []);
 
   const filteredItems = navItems.filter(
-    (item) => !item.adminOnly || isAdmin
+    (item) => !item.hidden && (!item.adminOnly || isAdmin)
   );
 
   const ungroupedItems = filteredItems.filter((item) => !item.group);

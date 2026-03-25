@@ -70,6 +70,8 @@ export interface NavItem {
   /** Group key matching NavGroup.key — used for grouping and translated via "navigation.groups.*" */
   group?: string;
   children?: NavItem[];
+  /** Hide from navigation — feature not ready for production */
+  hidden?: boolean;
 }
 
 export interface NavGroup {
@@ -153,8 +155,8 @@ export const navItems: NavItem[] = [
   { href: "/orders/import", label: "orderImport", icon: Upload, group: "tools" },
   { href: "/products/import", label: "productImport", icon: FileUp, group: "tools" },
   { href: "/tools/bg-removal", label: "bgRemoval", icon: Eraser, group: "tools" },
-  { href: "/settings/marketing", label: "marketing", icon: Send, adminOnly: true, group: "tools" },
-  { href: "/settings/helpdesk", label: "helpdesk", icon: Headphones, adminOnly: true, group: "tools" },
+  { href: "/settings/marketing", label: "marketing", icon: Send, adminOnly: true, group: "tools", hidden: true },
+  { href: "/settings/helpdesk", label: "helpdesk", icon: Headphones, adminOnly: true, group: "tools", hidden: true },
   { href: "/settings/currencies", label: "currencies", icon: Coins, adminOnly: true, group: "tools" },
   { href: "/recurring-orders", label: "subscriptions", icon: Repeat, group: "tools" },
   { href: "/loyalty", label: "loyalty", icon: Award, group: "tools" },
@@ -170,10 +172,10 @@ export const navItems: NavItem[] = [
   { href: "/settings/custom-fields", label: "customFields", icon: TextCursorInput, adminOnly: true, group: "settings" },
   { href: "/settings/price-lists", label: "priceLists", icon: BadgePercent, adminOnly: true, group: "settings" },
   { href: "/settings/accounting", label: "accounting", icon: Calculator, adminOnly: true, group: "settings" },
-  { href: "/settings/ksef", label: "ksef", icon: FileCheck, adminOnly: true, group: "settings" },
+  { href: "/settings/ksef", label: "ksef", icon: FileCheck, adminOnly: true, group: "settings", hidden: true },
   { href: "/settings/vat-oss", label: "vatOss", icon: Landmark, adminOnly: true, group: "settings" },
   { href: "/settings/inventory", label: "inventoryControl", icon: PackageSearch, adminOnly: true, group: "settings" },
-  { href: "/settings/notifications", label: "notifications", icon: Bell, adminOnly: true, group: "settings" },
+  { href: "/settings/notifications", label: "notifications", icon: Bell, adminOnly: true, group: "settings", hidden: true },
   { href: "/settings/sms", label: "sms", icon: MessageSquare, adminOnly: true, group: "settings" },
   { href: "/settings/webhooks", label: "webhooks", icon: Webhook, adminOnly: true, group: "settings" },
   { href: "/settings/webhooks/deliveries", label: "webhookDeliveries", icon: MailCheck, adminOnly: true, group: "settings" },

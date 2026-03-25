@@ -41,7 +41,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const tNav = useTranslations("navigation");
 
   const allNavItems = flattenNavItems(navItems).filter(
-    (item) => !item.adminOnly || isAdmin
+    (item) => !item.hidden && (!item.adminOnly || isAdmin)
   );
 
   const handleSelect = useCallback(
