@@ -358,19 +358,27 @@ func (s *ListingSyncService) PullListings(ctx context.Context, tenantID uuid.UUI
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
+		// Batch-fetch all linked products
+		productIDs := make([]uuid.UUID, 0, len(listings))
+		for _, l := range listings {
+			productIDs = append(productIDs, l.ProductID)
+		}
+		products, prodErr := s.productRepo.FindByIDs(ctx, tx, productIDs)
+		if prodErr != nil {
+			return fmt.Errorf("batch fetch products: %w", prodErr)
+		}
+		productMap := make(map[uuid.UUID]*model.Product, len(products))
+		for i := range products {
+			productMap[products[i].ID] = &products[i]
+		}
+
 		for _, listing := range listings {
 			if listing.ExternalID == nil || *listing.ExternalID == "" {
 				s.logSyncEntry(ctx, tx, tenantID, configID, "pull", "offer", nil, nil, "skipped", "no external_id")
 				continue
 			}
 
-			// Verify the linked product exists
-			product, findErr := s.productRepo.FindByID(ctx, tx, listing.ProductID)
-			if findErr != nil {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "pull", "offer", &listing.ProductID, listing.ExternalID, "failed", findErr.Error())
-				result.ItemsFailed++
-				continue
-			}
+			product := productMap[listing.ProductID]
 			if product == nil {
 				s.logSyncEntry(ctx, tx, tenantID, configID, "pull", "offer", &listing.ProductID, listing.ExternalID, "skipped", "product not found")
 				continue
@@ -417,9 +425,23 @@ func (s *ListingSyncService) SyncPrices(ctx context.Context, tenantID uuid.UUID,
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
+		// Batch-fetch all linked products
+		productIDs := make([]uuid.UUID, 0, len(listings))
+		for _, l := range listings {
+			productIDs = append(productIDs, l.ProductID)
+		}
+		products, prodErr := s.productRepo.FindByIDs(ctx, tx, productIDs)
+		if prodErr != nil {
+			return fmt.Errorf("batch fetch products: %w", prodErr)
+		}
+		productMap := make(map[uuid.UUID]*model.Product, len(products))
+		for i := range products {
+			productMap[products[i].ID] = &products[i]
+		}
+
 		for _, listing := range listings {
-			product, findErr := s.productRepo.FindByID(ctx, tx, listing.ProductID)
-			if findErr != nil || product == nil {
+			product := productMap[listing.ProductID]
+			if product == nil {
 				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "price", &listing.ProductID, listing.ExternalID, "failed", "product not found")
 				result.ItemsFailed++
 				continue
@@ -473,9 +495,23 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
+		// Batch-fetch all linked products
+		productIDs := make([]uuid.UUID, 0, len(listings))
+		for _, l := range listings {
+			productIDs = append(productIDs, l.ProductID)
+		}
+		products, prodErr := s.productRepo.FindByIDs(ctx, tx, productIDs)
+		if prodErr != nil {
+			return fmt.Errorf("batch fetch products: %w", prodErr)
+		}
+		productMap := make(map[uuid.UUID]*model.Product, len(products))
+		for i := range products {
+			productMap[products[i].ID] = &products[i]
+		}
+
 		for _, listing := range listings {
-			product, findErr := s.productRepo.FindByID(ctx, tx, listing.ProductID)
-			if findErr != nil || product == nil {
+			product := productMap[listing.ProductID]
+			if product == nil {
 				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "stock", &listing.ProductID, listing.ExternalID, "failed", "product not found")
 				result.ItemsFailed++
 				continue

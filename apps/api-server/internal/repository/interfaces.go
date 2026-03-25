@@ -40,6 +40,7 @@ type DelayedActionRepo interface {
 type OrderRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.OrderListFilter) ([]model.Order, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Order, error)
+	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (map[uuid.UUID]*model.Order, error)
 	Create(ctx context.Context, tx pgx.Tx, order *model.Order) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateOrderRequest) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, shippedAt, deliveredAt *time.Time) error

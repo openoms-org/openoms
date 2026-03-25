@@ -568,11 +568,17 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 			return fmt.Errorf("%w: %q", ErrUnknownStatus, req.Status)
 		}
 
+		// Batch fetch all orders in one query
+		ordersMap, err := s.orderRepo.FindByIDs(ctx, tx, req.OrderIDs)
+		if err != nil {
+			return fmt.Errorf("batch fetch orders: %w", err)
+		}
+
 		for _, orderID := range req.OrderIDs {
 			result := model.BulkStatusResult{OrderID: orderID}
 
-			existing, err := s.orderRepo.FindByID(ctx, tx, orderID)
-			if err != nil || existing == nil {
+			existing := ordersMap[orderID]
+			if existing == nil {
 				result.Error = "order not found"
 				resp.Results = append(resp.Results, result)
 				resp.Failed++
