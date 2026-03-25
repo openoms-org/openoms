@@ -26,6 +26,24 @@ vi.mock("next-themes", () => ({
   useTheme: vi.fn(() => ({ theme: "light", setTheme: vi.fn() })),
 }));
 
+// Mock next-intl
+vi.mock("next-intl", () => ({
+  useTranslations: vi.fn(() => (key: string) => key),
+}));
+
+// Ensure localStorage is available (happy-dom may lag behind)
+if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localStorage.getItem !== "function") {
+  const store: Record<string, string> = {};
+  globalThis.localStorage = {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    length: 0,
+  } as Storage;
+}
+
 // Import the layout after setting up mocks
 import DashboardLayout from "@/app/(dashboard)/layout";
 
