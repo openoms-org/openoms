@@ -52,17 +52,19 @@ func (s *OrderGroupService) MergeOrders(ctx context.Context, tenantID, userID uu
 
 	var group *model.OrderGroup
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		// Fetch all source orders
+		// Batch fetch all source orders
+		ordersMap, err := s.orderRepo.FindByIDs(ctx, tx, req.OrderIDs)
+		if err != nil {
+			return fmt.Errorf("batch fetch orders: %w", err)
+		}
+
 		var orders []model.Order
 		var totalAmount float64
 		var allItems []json.RawMessage
 		var currency string
 
 		for _, orderID := range req.OrderIDs {
-			order, err := s.orderRepo.FindByID(ctx, tx, orderID)
-			if err != nil {
-				return err
-			}
+			order := ordersMap[orderID]
 			if order == nil {
 				return NewValidationError(fmt.Errorf("order %s not found", orderID))
 			}

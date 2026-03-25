@@ -113,6 +113,30 @@ func (r *OrderRepository) List(ctx context.Context, tx pgx.Tx, filter model.Orde
 	return orders, total, rows.Err()
 }
 
+// FindByIDs returns orders by their IDs as a map keyed by order ID.
+func (r *OrderRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (map[uuid.UUID]*model.Order, error) {
+	if len(ids) == 0 {
+		return make(map[uuid.UUID]*model.Order), nil
+	}
+	rows, err := tx.Query(ctx,
+		fmt.Sprintf(`SELECT %s FROM orders WHERE id = ANY($1)`, orderSelectColumns), ids,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("find orders by ids: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[uuid.UUID]*model.Order, len(ids))
+	for rows.Next() {
+		o, err := scanOrder(rows)
+		if err != nil {
+			return nil, fmt.Errorf("find orders by ids: scan: %w", err)
+		}
+		result[o.ID] = &o
+	}
+	return result, rows.Err()
+}
+
 // FindByID returns an order by its ID.
 func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Order, error) {
 	o, err := scanOrder(tx.QueryRow(ctx,

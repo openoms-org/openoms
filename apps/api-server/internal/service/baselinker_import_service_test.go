@@ -37,6 +37,10 @@ func (m *mockOrderRepo) FindByID(_ context.Context, _ pgx.Tx, _ uuid.UUID) (*mod
 	return nil, nil
 }
 
+func (m *mockOrderRepo) FindByIDs(_ context.Context, _ pgx.Tx, _ []uuid.UUID) (map[uuid.UUID]*model.Order, error) {
+	return make(map[uuid.UUID]*model.Order), nil
+}
+
 func (m *mockOrderRepo) Create(_ context.Context, _ pgx.Tx, order *model.Order) error {
 	m.created = append(m.created, order)
 	return nil
