@@ -47,7 +47,7 @@ test.describe.serial('Product CRUD', () => {
   test('verify created product detail', async ({ page }) => {
     await gotoWithAuth(page, productUrl);
     await expect(
-      page.getByText(NEW_PRODUCT.name),
+      page.getByText(NEW_PRODUCT.name).first(),
     ).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(NEW_PRODUCT.sku!).first()).toBeVisible();
     // Price format depends on locale
