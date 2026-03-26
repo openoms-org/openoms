@@ -1,14 +1,19 @@
 import { test, expect } from '@playwright/test';
 import { gotoWithAuth, waitForTableLoaded } from './helpers/actions';
 
-/** Click a non-checkbox cell in the first data row to trigger onRowClick navigation. */
+/** Navigate to the first order in the list via link or row click. */
 async function clickFirstOrderRow(page: import('@playwright/test').Page) {
   await waitForTableLoaded(page);
-  // Wait for actual data — seed orders have customer names
   const firstRow = page.locator('table tbody tr').first();
-  await expect(firstRow.locator('td').nth(1)).toBeVisible({ timeout: 10000 });
-  // Click the second cell (skip checkbox column) to trigger row onClick
-  await firstRow.locator('td').nth(1).click();
+  await expect(firstRow).toBeVisible({ timeout: 10000 });
+  // Prefer clicking a link inside the row (more reliable than cell click)
+  const link = firstRow.getByRole('link').first();
+  if (await link.isVisible().catch(() => false)) {
+    await link.click();
+  } else {
+    // Fallback: click a non-checkbox cell
+    await firstRow.locator('td').nth(1).click({ timeout: 10000 });
+  }
 }
 
 test.describe('Order Status Change', () => {

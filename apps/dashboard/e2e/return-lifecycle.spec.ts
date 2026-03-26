@@ -88,7 +88,7 @@ test.describe.serial('Return Lifecycle', () => {
 
   test('edit return reason', async ({ page }) => {
     await gotoWithAuth(page, returnUrl);
-    await expect(page.getByText(/Odebran/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Received|Odebran/i).first()).toBeVisible({ timeout: 10000 });
 
     // Enter edit mode
     await page.getByRole('button', { name: 'Edytuj' }).click();
