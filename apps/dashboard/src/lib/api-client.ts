@@ -50,9 +50,6 @@ export class ApiClientError extends Error {
 }
 
 /**
- * Returns a user-friendly error message based on the HTTP status code.
- */
-/**
  * Returns an i18n error key for the given error.
  * Components should translate the returned key via t().
  * For backward compat, returns the server's error.message if available.
@@ -110,15 +107,20 @@ async function handlePaymentRequired(res: Response): Promise<never> {
   throw new ApiClientError(402, body.message || "errors.noActiveSubscription");
 }
 
-export async function apiClient<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+/**
+ * Core fetch wrapper with auth, CSRF, 401 auto-refresh, and 402 handling.
+ * All public API functions delegate to this.
+ */
+async function fetchWithAuth(
+  url: string,
+  init: RequestInit = {},
+  extraHeaders: Record<string, string> = {},
+): Promise<Response> {
   const token = useAuthStore.getState().token;
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
+    ...extraHeaders,
+    ...(init.headers as Record<string, string>),
   };
 
   if (token) {
@@ -126,27 +128,19 @@ export async function apiClient<T>(
   }
 
   const csrfToken = getCSRFToken();
-  if (csrfToken && options.method && options.method !== "GET") {
+  const method = init.method ?? "GET";
+  if (csrfToken && method !== "GET") {
     headers["X-CSRF-Token"] = csrfToken;
   }
 
-  let res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  });
+  let res = await fetch(url, { ...init, headers, credentials: "include" });
 
   // Auto-refresh on 401
   if (res.status === 401 && token) {
     const newToken = await getValidToken();
     if (newToken) {
       headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers,
-        credentials: "include",
-      });
-      // If still 401 after refresh, clear auth and throw
+      res = await fetch(url, { ...init, headers, credentials: "include" });
       if (res.status === 401) {
         useAuthStore.getState().clearAuth();
       }
@@ -157,14 +151,25 @@ export async function apiClient<T>(
     await handlePaymentRequired(res);
   }
 
+  return res;
+}
+
+export async function apiClient<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await fetchWithAuth(
+    `${API_URL}${path}`,
+    options,
+    { "Content-Type": "application/json" },
+  );
+
   if (!res.ok) {
     const body: ApiError = await res.json().catch(() => ({ error: "Request failed" }));
     throw new ApiClientError(res.status, body.error);
   }
 
-  // Handle 204 No Content
   if (res.status === 204) return undefined as T;
-
   return res.json();
 }
 
@@ -172,46 +177,7 @@ export async function apiFetch(
   path: string,
   init?: RequestInit
 ): Promise<Response> {
-  const token = useAuthStore.getState().token;
-
-  const headers: Record<string, string> = {
-    ...(init?.headers as Record<string, string>),
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const csrfToken = getCSRFToken();
-  if (csrfToken && init?.method && init.method !== "GET") {
-    headers["X-CSRF-Token"] = csrfToken;
-  }
-
-  let res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers,
-    credentials: "include",
-  });
-
-  // Auto-refresh on 401
-  if (res.status === 401 && token) {
-    const newToken = await getValidToken();
-    if (newToken) {
-      headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(`${API_URL}${path}`, {
-        ...init,
-        headers,
-        credentials: "include",
-      });
-      if (res.status === 401) {
-        useAuthStore.getState().clearAuth();
-      }
-    }
-  }
-
-  if (res.status === 402) {
-    await handlePaymentRequired(res);
-  }
+  const res = await fetchWithAuth(`${API_URL}${path}`, init ?? {});
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: "Request failed" }));
@@ -222,44 +188,13 @@ export async function apiFetch(
 }
 
 export async function uploadFile(file: File): Promise<{ url: string }> {
-  const token = useAuthStore.getState().token;
+  const fd = new FormData();
+  fd.append("file", file);
 
-  function buildFormData(): FormData {
-    const fd = new FormData();
-    fd.append("file", file);
-    return fd;
-  }
-
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const csrfToken = getCSRFToken();
-  if (csrfToken) {
-    headers["X-CSRF-Token"] = csrfToken;
-  }
-
-  let res = await fetch(`${API_URL}/v1/uploads`, {
+  const res = await fetchWithAuth(`${API_URL}/v1/uploads`, {
     method: "POST",
-    headers,
-    body: buildFormData(),
-    credentials: "include",
+    body: fd,
   });
-
-  // Auto-refresh on 401
-  if (res.status === 401 && token) {
-    const newToken = await getValidToken();
-    if (newToken) {
-      headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(`${API_URL}/v1/uploads`, {
-        method: "POST",
-        headers,
-        body: buildFormData(),
-        credentials: "include",
-      });
-    }
-  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: "Upload failed" }));

@@ -6,6 +6,19 @@ import { useAuthStore } from "@/lib/auth";
 
 const API_URL = "http://localhost:8080";
 
+// Ensure localStorage is available (happy-dom may lag behind)
+if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localStorage.getItem !== "function") {
+  const store: Record<string, string> = {};
+  globalThis.localStorage = {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    length: 0,
+  } as Storage;
+}
+
 // ---------------------------------------------------------------------------
 // Mocks for Next.js navigation
 // ---------------------------------------------------------------------------
