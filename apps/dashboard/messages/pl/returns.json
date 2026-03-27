@@ -1,45 +1,44 @@
 {
   "returnRequest": {
+    "backToForm": "Powrót do formularza",
+    "checkReturnStatus": "Sprawdź status zwrotu",
+    "describeReturnReason": "Opisz powód zwrotu...",
     "detail": {
       "reportReturn": "Zgłoś zwrot"
     },
+    "enterOrderNumberAndEmail": "Podaj numer zamówienia i adres email, który został",
     "error": "Błąd",
-    "jegoStatusPodPonizszymLinkiem": "jego status pod poniższym linkiem.",
+    "fillFormToSubmitReturn": "Wypełnij formularz, aby zgłosić zwrot zamówienia.",
     "lastUpdate": "Ostatnia aktualizacja",
     "loading": "Ładowanie...",
-    "nieUdałoSiePołaczycZSerwerem": "Nie udało się połączyć z serwerem.",
-    "nieUdałoSiePołaczycZSerweremSprobujPonownie": "Nie udało się połączyć z serwerem. Spróbuj ponownie.",
-    "nieudałosiepołaczyczserwerem": "Nie udało się połączyć z serwerem.",
-    "numerZamowieniaId": "Numer zamówienia (ID)",
-    "opiszPowodZwrotu": "Opisz powód zwrotu...",
-    "podajNumerZamowieniaIAdresEmailKtory": "Podaj numer zamówienia i adres email, który został",
-    "postep": "Postęp",
-    "powodZwrotu": "Powód zwrotu",
-    "powrotDoFormularza": "Powrót do formularza",
+    "orderNumberId": "Numer zamówienia (ID)",
     "productsToReturn": "Produkty do zwrotu",
+    "progress": "Postęp",
+    "requestRegisteredWillReceiveInfo": "Twoje zgłoszenie zostało zarejestrowane. Otrzymasz informacje o zmianach statusu.",
+    "returnCancelled": "Zwrot został anulowany.",
+    "returnCancelledGeneric": "Zwrot został anulowany.",
     "returnLabel": "Etykieta zwrotu",
     "returnNotFound": "Nie znaleziono zwrotu",
+    "returnReason": "Powód zwrotu",
+    "returnRequestAcceptedTrack": "Twoje zgłoszenie zwrotu zostało przyjęte. Możesz śledzić",
+    "returnRequestRejected": "Twoje zgłoszenie zwrotu zostało odrzucone.",
+    "returnRequestRejectedGeneric": "Twoje zgłoszenie zwrotu zostało odrzucone.",
     "returnStatus": "Status zwrotu",
-    "sprawdzStatusZwrotu": "Sprawdź status zwrotu",
+    "returnStatusLoadError": "Wystąpił błąd podczas ładowania statusu zwrotu.",
+    "returnStatusLoadErrorGeneric": "Wystąpił błąd podczas ładowania statusu zwrotu.",
+    "returnSubmitError": "Wystąpił błąd podczas składania zwrotu",
+    "returnSubmitted": "Zwrot został zgłoszony",
+    "sending": "Wysyłanie...",
+    "serverConnectionError": "Nie udało się połączyć z serwerem.",
+    "serverConnectionErrorGeneric": "Nie udało się połączyć z serwerem.",
+    "serverConnectionErrorRetry": "Nie udało się połączyć z serwerem. Spróbuj ponownie.",
+    "statusAtLinkBelow": "jego status pod poniższym linkiem.",
+    "submitAnotherReturn": "Zgłoś kolejny zwrot",
     "submittedAt": "Zgłoszono",
-    "twojeZgłoszenieZostałoZarejestrowaneOtrzymaszInfor": "Twoje zgłoszenie zostało zarejestrowane. Otrzymasz informacje o zmianach statusu.",
-    "twojeZgłoszenieZwrotuZostałoOdrzucone": "Twoje zgłoszenie zwrotu zostało odrzucone.",
-    "twojeZgłoszenieZwrotuZostałoPrzyjeteMozeszSledzic": "Twoje zgłoszenie zwrotu zostało przyjęte. Możesz śledzić",
-    "twojezgłoszeniezwrotuzostałoodrzucone": "Twoje zgłoszenie zwrotu zostało odrzucone.",
-    "uzytyPrzySkładaniuZamowienia": "użyty przy składaniu zamówienia.",
-    "wypełnijFormularzAbyZgłosicZwrotZamowienia": "Wypełnij formularz, aby zgłosić zwrot zamówienia.",
-    "wystapiłBładPodczasSkładaniaZwrotu": "Wystąpił błąd podczas składania zwrotu",
-    "wystapiłBładPodczasŁadowaniaStatusuZwrotu": "Wystąpił błąd podczas ładowania statusu zwrotu.",
-    "wystapiłbładpodczasładowaniastatusuzwrotu": "Wystąpił błąd podczas ładowania statusu zwrotu.",
-    "wysyłanie": "Wysyłanie...",
-    "zgłosKolejnyZwrot": "Zgłoś kolejny zwrot",
-    "zwrotZostałAnulowany": "Zwrot został anulowany.",
-    "zwrotZostałZgłoszony": "Zwrot został zgłoszony",
-    "zwrotzostałanulowany": "Zwrot został anulowany."
+    "usedWhenPlacingOrder": "użyty przy składaniu zamówienia."
   },
   "returns": {
     "additionalInfoOptional": "Dodatkowe informacje (opcjonalne)",
-    "brakPozycjiWZamowieniu": "Brak pozycji w zamówieniu",
     "cancel": "Anuluj",
     "changeStatus": "Zmiana statusu",
     "columns": {
@@ -50,6 +49,7 @@
       "status": "Status"
     },
     "createReturn": "Utwórz zwrot",
+    "createReturn2": "Utwórz zwrot",
     "created": "Utworzono",
     "createdOn": "Utworzony {date}",
     "creating": "Tworzenie...",
@@ -68,18 +68,22 @@
       "title": "Brak zwrotów"
     },
     "enterReturnReason": "Podaj powód zwrotu",
+    "enterReturnReason2": "Podaj powód zwrotu",
     "fillFormForNewReturn": "Wypełnij formularz, aby zgłosić nowy zwrot",
+    "fillFormForNewReturn2": "Wypełnij Formular z Aby Zgłosic Nowy Zwrot",
     "inOrder": "W zamówieniu",
+    "inOrderLabel": "w zamówieniu",
     "loadError": "Nie udało się załadować danych",
     "loadingOrderItems": "Wczytywanie pozycji zamówienia...",
+    "loadingOrderItems2": "Wczytywanie pozycji zamówienia...",
     "newReturn": "Nowy zwrot",
     "noItemsInOrder": "Brak pozycji w zamówieniu",
+    "noItemsInOrder2": "Brak pozycji w zamówieniu",
     "notFound": "Nie znaleziono zwrotu",
     "notes": "Notatki",
     "order": {
       "refunded": "Zwrócone"
     },
-    "podajPowodZwrotu": "Podaj powód zwrotu",
     "product": "Produkt",
     "productsToReturn": "Produkty do zwrotu",
     "refundAmount": "Kwota zwrotu",
@@ -88,21 +92,22 @@
     "return": {
       "requested": "Zgłoszony"
     },
-    "statuses": {
-      "all": "Wszystkie",
-      "approved": "Zatwierdzone",
-      "received": "Odebrane",
-      "rejected": "Odrzucone",
-      "cancelled": "Anulowane"
-    },
     "returnCreated": "Zwrot został utworzony",
     "returnData": "Dane zwrotu",
     "returnDeleted": "Zwrot został usunięty",
     "returnTitle": "Zwrot #{id}",
     "returnUpdated": "Zwrot został zaktualizowany",
+    "returnWasCreated": "Zwrot został utworzony",
     "saveChanges": "Zapisz zmiany",
     "saving": "Zapisywanie...",
     "statusChanged": "Status zwrotu został zmieniony",
+    "statuses": {
+      "all": "Wszystkie",
+      "approved": "Zatwierdzone",
+      "cancelled": "Anulowane",
+      "received": "Odebrane",
+      "rejected": "Odrzucone"
+    },
     "subtitle": "Zarządzaj zwrotami i reklamacjami",
     "title": "Zwroty",
     "toReturn": "Do zwrotu",
@@ -115,15 +120,10 @@
       "rejected": "Odrzuć"
     },
     "updated": "Zaktualizowano",
-    "utworzZwrot": "Utwórz zwrot",
     "validation": {
       "amountPositive": "Kwota musi być dodatnia",
       "orderIdRequired": "ID zamówienia jest wymagane",
       "reasonRequired": "Powód jest wymagany"
-    },
-    "wZamowieniu": "w zamówieniu",
-    "wczytywaniePozycjiZamowienia": "Wczytywanie pozycji zamówienia...",
-    "wypełnijFormularzAbyZgłosicNowyZwrot": "Wypełnij Formular z Aby Zgłosic Nowy Zwrot",
-    "zwrotzostałutworzony": "Zwrot został utworzony"
+    }
   }
 }

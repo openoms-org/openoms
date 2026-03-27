@@ -251,12 +251,12 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
     if (isActive) {
       deactivate.mutate(offer.id, {
         onSuccess: () => toast.success(t("offerDeactivated")),
-        onError: () => toast.error(t("nieUdałoSieDezaktywowacOferty")),
+        onError: () => toast.error(t("offerDeactivationError")),
       });
     } else {
       activate.mutate(offer.id, {
         onSuccess: () => toast.success(t("offerActivated")),
-        onError: () => toast.error(t("nieUdałoSieAktywowacOferty")),
+        onError: () => toast.error(t("offerActivationError")),
       });
     }
   };
@@ -264,7 +264,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
   const handleSaveStock = () => {
     const qty = parseInt(stockValue, 10);
     if (isNaN(qty) || qty < 0) {
-      toast.error(t("nieprawidłowaWartoscStanu"));
+      toast.error(t("invalidStockValue"));
       return;
     }
     updateStock.mutate(
@@ -274,7 +274,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
           toast.success(t("stockUpdated"));
           setEditingStock(false);
         },
-        onError: () => toast.error(t("nieUdałoSieZaktualizowacStanu")),
+        onError: () => toast.error(t("stockUpdateError")),
       }
     );
   };
@@ -282,7 +282,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
   const handleSavePrice = () => {
     const amt = parseFloat(priceValue);
     if (isNaN(amt) || amt < 0) {
-      toast.error(t("nieprawidłowaWartoscCeny"));
+      toast.error(t("invalidPriceValue"));
       return;
     }
     updatePrice.mutate(
@@ -296,7 +296,7 @@ function OfferRow({ offer }: { offer: AllegroOffer }) {
           toast.success(t("priceUpdated"));
           setEditingPrice(false);
         },
-        onError: () => toast.error(t("nieUdałoSieZaktualizowacCeny")),
+        onError: () => toast.error(t("priceUpdateError")),
       }
     );
   };

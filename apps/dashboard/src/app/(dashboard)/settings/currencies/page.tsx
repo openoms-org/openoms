@@ -71,7 +71,7 @@ export default function CurrenciesPage() {
     if (!deleteId) return;
     deleteRate.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("kursZostałUsuniety"));
+        toast.success(t("exchangeRateDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -95,7 +95,7 @@ export default function CurrenciesPage() {
       },
       {
         onSuccess: () => {
-          toast.success(t("kursZostałDodany"));
+          toast.success(t("exchangeRateAdded"));
           setShowCreate(false);
           setRate("");
         },

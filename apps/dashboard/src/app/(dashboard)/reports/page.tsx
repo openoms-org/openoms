@@ -63,7 +63,7 @@ function RevenueBySourceChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("przychodWgZrodłaOstatnie30Dni")}</CardTitle>
+        <CardTitle>{t("revenueBySourceLast30Days")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -372,7 +372,7 @@ function PaymentMethodChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("metodyPłatnosci")}</CardTitle>
+        <CardTitle>{t("paymentMethods")}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -431,7 +431,7 @@ export default function ReportsPage() {
       <div>
         <h1 className="text-2xl font-bold">{t("reports")}</h1>
         <p className="text-muted-foreground mt-1">
-          {t("szczegołoweStatystykiIAnalizySprzedazy")}
+          {t("detailedSalesStatisticsAndAnalytics")}
         </p>
       </div>
 
@@ -440,7 +440,7 @@ export default function ReportsPage() {
           <TabsTrigger value="revenue">{t("revenue")}</TabsTrigger>
           <TabsTrigger value="products">{t("products")}</TabsTrigger>
           <TabsTrigger value="trends">{t("trends")}</TabsTrigger>
-          <TabsTrigger value="payments">{t("płatnosci")}</TabsTrigger>
+          <TabsTrigger value="payments">{t("payments")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="space-y-6">

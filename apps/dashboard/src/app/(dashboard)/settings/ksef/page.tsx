@@ -74,7 +74,7 @@ export default function KSeFSettingsPage() {
       toast.success(t("settingsSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieudałosiezapisacustawien");
+        err instanceof Error ? err.message : t("ksefSettingsSaveError");
       toast.error(message);
     }
   };
@@ -91,7 +91,7 @@ export default function KSeFSettingsPage() {
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieudałosieprzetestowacpołaczenia");
+        err instanceof Error ? err.message : t("ksefConnectionTestError");
       toast.error(message);
       setTestResult({ success: false, message });
     }
@@ -122,7 +122,7 @@ export default function KSeFSettingsPage() {
           <CardHeader>
             <CardTitle>{t("integrationStatus")}</CardTitle>
             <CardDescription>
-              {t("właczLubWyłaczWysyłanieFakturDoKsef")}
+              {t("enableOrDisableSendingInvoicesToKsef")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -134,7 +134,7 @@ export default function KSeFSettingsPage() {
                 }
               />
               <span className="text-sm">
-                {form.enabled ? t("ksefWłaczony") : t("ksefWyłaczony")}
+                {form.enabled ? t("ksefEnabled") : t("ksefDisabled")}
               </span>
             </div>
           </CardContent>
@@ -143,9 +143,9 @@ export default function KSeFSettingsPage() {
         {/* Auto-send */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("automatyczneWysyłanie")}</CardTitle>
+            <CardTitle>{t("automaticSending")}</CardTitle>
             <CardDescription>
-              {t("automatycznieWysyłajNowoUtworzoneFakturyDoKsef")}
+              {t("autoSendNewInvoicesToKsef")}
               {t("autoSendRetry")}
             </CardDescription>
           </CardHeader>
@@ -159,12 +159,12 @@ export default function KSeFSettingsPage() {
                 disabled={!form.enabled}
               />
               <span className="text-sm">
-                {form.auto_send ? t("autosendWłaczony") : t("autosendWyłaczony")}
+                {form.auto_send ? t("autosendEnabled") : t("autosendDisabled")}
               </span>
             </div>
             {!form.enabled && form.auto_send && (
               <p className="text-xs text-muted-foreground mt-2">
-                {t("właczIntegracjeKsefAbyKorzystacZAutomatycznego")}
+                {t("enableKsefForAutoSending")}
               </p>
             )}
           </CardContent>
@@ -310,9 +310,9 @@ export default function KSeFSettingsPage() {
         {/* Test connection */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("testpołaczenia")}</CardTitle>
+            <CardTitle>{t("ksefConnectionTest")}</CardTitle>
             <CardDescription>
-              {t("sprawdzCzyPołaczenieZKsefDziałaPoprawnie")}
+              {t("checkKsefConnectionWorks")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

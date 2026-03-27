@@ -1,13 +1,12 @@
 {
   "auth": {
     "alreadyHaveAccount": "Masz już konto?",
-    "brakIdentyfikatoraSesjiPłatnosci": "Brak identyfikatora sesji płatności",
-    "brakIdentyfikatoraSesjiWrocNaStroneWyboruPlanu": "Brak identyfikatora sesji. Wróć na stronę wyboru planu.",
+    "checkingPaymentStatus": "Sprawdzamy status Twojej płatności",
     "chooseAnotherPlan": "Wybierz inny plan",
     "choosePlan": "Wybierz plan",
     "completeInviteRegistration": "Dokończ rejestrację z zaproszenia",
+    "completeRegistration": "Dokończ rejestrację",
     "createAccount": "Utwórz konto",
-    "dokonczRejestracje": "Dokończ rejestrację",
     "form": {
       "fullName": "Imię i nazwisko",
       "orgName": "Nazwa organizacji",
@@ -28,10 +27,15 @@
       "title": "Logowanie"
     },
     "logout": "Wyloguj się",
-    "minimum8Znakow": "Minimum 8 znaków",
+    "minimum8Characters": "Minimum 8 znaków",
+    "missingPaymentSessionId": "Brak identyfikatora sesji płatności",
+    "missingSessionIdGoBackToPlanSelection": "Brak identyfikatora sesji. Wróć na stronę wyboru planu.",
     "missingTokenUseInviteLink": "Brak tokenu. Użyj linku otrzymanego w zaproszeniu lub po zakupie subskrypcji.",
-    "nieUdałoSieZweryfikowacPłatnosciSprobujPonownieZaC": "Nie udało się zweryfikować płatności. Spróbuj ponownie za chwilę.",
-    "płatnoscNieZostałaJeszczePotwierdzonaSprobujOdswie": "Płatność nie została jeszcze potwierdzona. Spróbuj odświeżyć stronę za chwilę.",
+    "paymentNotYetConfirmedRefresh": "Płatność nie została jeszcze potwierdzona. Spróbuj odświeżyć stronę za chwilę.",
+    "paymentSessionAlreadyUsed": "Ta sesja płatności została już wykorzystana",
+    "paymentSessionNotFound": "Sesja płatności nie została znaleziona",
+    "paymentVerification": "Weryfikacja płatności...",
+    "paymentVerificationFailedRetry": "Nie udało się zweryfikować płatności. Spróbuj ponownie za chwilę.",
     "register": {
       "freeTrialStart": "{days} dni za darmo na start",
       "haveAccount": "Masz już konto?",
@@ -53,9 +57,6 @@
       "yearlyTotal": "{price} rocznie"
     },
     "registering": "Rejestracja...",
-    "sesjaPłatnosciNieZostałaZnaleziona": "Sesja płatności nie została znaleziona",
-    "sprawdzamyStatusTwojejPłatnosci": "Sprawdzamy status Twojej płatności",
-    "taSesjaPłatnosciZostałaJuzWykorzystana": "Ta sesja płatności została już wykorzystana",
     "twoFa": {
       "backToLogin": "Wróć do logowania",
       "codeHint": "Wpisz 6-cyfrowy kod z aplikacji uwierzytelniającej",
@@ -76,8 +77,7 @@
       "passwordRequired": "Hasło jest wymagane",
       "passwordUppercase": "Hasło musi zawierać wielką literę",
       "slugFormat": "Slug może zawierać tylko małe litery, cyfry i myślniki"
-    },
-    "weryfikacjaPłatnosci": "Weryfikacja płatności..."
+    }
   },
   "breadcrumbs": {
     "allegro": "Allegro",
@@ -200,10 +200,10 @@
       "tooManyRequestsMessage": "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.",
       "tryAgain": "Spróbuj ponownie"
     },
+    "invalid": "nieprawidłow",
     "mobileNav": {
       "openMenu": "Otwórz menu"
     },
-    "nieprawidłow": "nieprawidłow",
     "noData": "Brak danych",
     "odnowSubskrypcje": "Odnów subskrypcję →",
     "orderSearch": {

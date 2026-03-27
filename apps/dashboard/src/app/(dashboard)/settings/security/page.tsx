@@ -83,7 +83,7 @@ export default function SecuritySettingsPage() {
         body: JSON.stringify({ code }),
       }),
     onSuccess: () => {
-      toast.success(t("uwierzytelnianiedwuskładnikowezostałowłaczone"));
+      toast.success(t("twoFactorAuthEnabled"));
       setShowSetupDialog(false);
       setSetupData(null);
       setVerifyCode("");
@@ -102,7 +102,7 @@ export default function SecuritySettingsPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      toast.success(t("uwierzytelnianiedwuskładnikowezostałowyłaczone"));
+      toast.success(t("twoFactorAuthDisabled"));
       setShowDisableDialog(false);
       setDisablePassword("");
       setDisableCode("");
@@ -204,11 +204,11 @@ export default function SecuritySettingsPage() {
 
           <div className="rounded-lg bg-muted/50 p-4">
             <h4 className="text-sm font-medium mb-2">
-              {t("jakDziałaUwierzytelnianieDwuskładnikowe")}
+              {t("howTwoFactorAuthWorks")}
             </h4>
             <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
               <li>{t("zainstalujAplikacjeUwierzytelniajacaGoogleAuthenti")}</li>
-              <li>{t("kliknijquotwłacz2faquotizeskanujkodqrwaplikacji")}</li>
+              <li>{t("clickEnable2faAndScanQrCode")}</li>
               <li>{t("wpisz6cyfrowyKodZAplikacjiAbyPotwierdzic")}</li>
               <li>{t("przyKazdymLogowaniuBedzieszProszonyOKodZAplikacji")}</li>
             </ol>
@@ -314,7 +314,7 @@ export default function SecuritySettingsPage() {
               {verifyMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {t("potwierdzIWłacz")}
+              {t("confirmAndEnable")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -324,10 +324,10 @@ export default function SecuritySettingsPage() {
       <Dialog open={showDisableDialog} onOpenChange={setShowDisableDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("wyłaczuwierzytelnianiedwuskładnikowe")}</DialogTitle>
+            <DialogTitle>{t("disableTwoFactorAuth")}</DialogTitle>
             <DialogDescription>
-              {t("podajHasłoIAktualnyKod2faAby")}
-              {t("dwuskładnikoweTwojeKontoBedzieMniejBezpieczne")}
+              {t("enterPasswordAndCurrent2faCode")}
+              {t("twoFactorAccountLessSecure")}
             </DialogDescription>
           </DialogHeader>
 

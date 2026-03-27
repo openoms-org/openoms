@@ -96,7 +96,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
       .catch((err) => {
         setStatus("error");
         setErrorMsg(
-          err instanceof Error ? err.message : t("autoryzacjaNiePowiodłaSie")
+          err instanceof Error ? err.message : t("authorizationFailed")
         );
       });
   }, [code, state]);
@@ -109,7 +109,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                {t("łaczenieZAllegro")}
+                {t("connectingToAllegro")}
               </p>
             </>
           )}
@@ -117,7 +117,7 @@ function OAuthCallback({ code, state }: { code: string; state: string }) {
             <>
               <CheckCircle2 className="h-8 w-8 text-green-600" />
               <p className="text-sm font-medium">
-                {t("połaczonoZAllegroOknoZamknieSieAutomatycznie")}
+                {t("connectedToAllegroWindowWillClose")}
               </p>
             </>
           )}
@@ -170,7 +170,7 @@ function AllegroMainPage() {
           <div>
             <h1 className="text-2xl font-bold">{t("allegroIntegration")}</h1>
             <p className="text-muted-foreground">
-              {t("połaczSwojeKontoAllegroAbySynchronizowacZamowienia")}
+              {t("connectAllegroAccountToSyncOrders")}
             </p>
           </div>
         </div>
@@ -250,7 +250,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 
       if (!popup) {
         toast.error(
-          t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac")
+          t("browserBlockedPopupAllowPopups")
         );
         setIsAuthorizing(false);
         onDone();
@@ -265,7 +265,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         }
       }, 500);
     } catch {
-      toast.error(t("nieUdałoSiePobracAdresuAutoryzacjiAllegro"));
+      toast.error(t("allegroAuthUrlFetchError"));
       setIsAuthorizing(false);
       onDone();
     }
@@ -297,7 +297,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
           toast.error(
             error instanceof Error
               ? error.message
-              : t("bładPodczasZapisywaniaDanych")
+              : t("dataSaveError")
           );
         },
       }
@@ -311,7 +311,7 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         <CardHeader>
           <CardTitle>{t("krok1ZarejestrujAplikacjeWAllegro")}</CardTitle>
           <CardDescription>
-            {t("przedPołaczeniemMusiszUtworzycAplikacjeWPanelu")}
+            {t("createAppInPanelBeforeConnecting")}
             Allegro.
           </CardDescription>
         </CardHeader>
@@ -453,14 +453,14 @@ function ConnectedState({
       { status: "inactive" },
       {
         onSuccess: () => {
-          toast.success(t("integracjaAllegroZostałaDezaktywowana"));
+          toast.success(t("allegroIntegrationDeactivated"));
           onRefetch();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : t("bładPodczasDezaktywacjiIntegracji")
+              : t("integrationDeactivationError")
           );
         },
       }
@@ -477,14 +477,14 @@ function ConnectedState({
     }
     deleteIntegration.mutate(integration.id, {
       onSuccess: () => {
-        toast.success(t("integracjaAllegroZostałaUsunieta"));
+        toast.success(t("allegroIntegrationDeleted"));
         onRefetch();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : t("bładPodczasUsuwaniaIntegracji")
+            : t("integrationDeleteError")
         );
       },
     });
@@ -519,7 +519,7 @@ function ConnectedState({
 
         if (!popup) {
           toast.error(
-            t("przegladarkaZablokowałaOknoPopupZezwolNaWyskakujac1")
+            t("browserBlockedPopupAllowPopups1")
           );
           setIsReauthorizing(false);
           return;
@@ -533,7 +533,7 @@ function ConnectedState({
           }
         }, 500);
       } catch {
-        toast.error(t("nieUdałoSiePobracAdresuAutoryzacji"));
+        toast.error(t("authUrlFetchError"));
         setIsReauthorizing(false);
       }
     };
@@ -551,7 +551,7 @@ function ConnectedState({
           <CardHeader>
             <CardTitle>{t("oauthAuthorization")}</CardTitle>
             <CardDescription>
-              {t("daneAplikacjiZostałyZapisaneKliknijPonizejAby")}
+              {t("appDataSavedClickBelowTo")}
               {t("dostepDoKontaAllegroOtworzySieOkno")}
             </CardDescription>
           </CardHeader>
@@ -584,13 +584,13 @@ function ConnectedState({
           <CardHeader>
             <CardTitle className="text-sm">{t("oauthDiagnostics")}</CardTitle>
             <CardDescription>
-              {t("jesliAllegroPokazujeBładSprawdzCzyPonizsze")}
+              {t("ifAllegroShowsErrorCheckBelow")}
               {t("sieZKonfiguracjaAplikacjiWDeveloperCenter")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <CopyableField
-              label={t("redirectUriWysłanyDoAllegro")}
+              label={t("redirectUriSentToAllegro")}
               value={debugInfo.redirect_uri}
             />
             <div className="space-y-1">
@@ -603,7 +603,7 @@ function ConnectedState({
             </div>
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950">
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                <strong>{t("czestePrzyczynyBłedu")}</strong>
+                <strong>{t("commonErrorCauses")}</strong>
               </p>
               <ul className="mt-1 list-disc list-inside text-xs text-amber-800 dark:text-amber-200 space-y-1">
                 <li>
@@ -616,7 +616,7 @@ function ConnectedState({
                   <strong>identyczny</strong> (bez trailing slash)
                 </li>
                 <li>
-                  {t("aplikacjaNieMaWłaczonegoQuotbrowserAccessquotW")}
+                  {t("appDoesNotHaveBrowserAccessEnabled")}
                   ustawieniach
                 </li>
               </ul>
@@ -635,7 +635,7 @@ function ConnectedState({
         {/* Status card */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("statusPołaczenia")}</CardTitle>
+            <CardTitle>{t("connectionStatus")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -650,7 +650,7 @@ function ConnectedState({
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
-                  {t("daneUwierzytelniajace")}
+                  {t("authCredentials")}
                 </p>
                 <p className="mt-1 font-medium">
                   {integration.has_credentials ? t("configured") : t("none")}
@@ -697,7 +697,7 @@ function ConnectedState({
             {integration.status === "error" && integration.error_message && (
               <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
                 <p className="text-sm font-medium text-destructive">
-                  {t("bładIntegracji")}
+                  {t("integrationError")}
                 </p>
                 <p className="mt-1 text-sm text-destructive/80">
                   {integration.error_message}
@@ -763,7 +763,7 @@ function ConnectedState({
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              {t("usunIntegracje")}
+              {t("deleteIntegration")}
             </Button>
           </CardContent>
         </Card>
@@ -786,14 +786,14 @@ function ConnectedState({
             { settings: newSettings },
             {
               onSuccess: () => {
-                toast.success(t("ustawieniaPrzesyłekZostałyZapisane"));
+                toast.success(t("shipmentSettingsSaved"));
                 onRefetch();
               },
               onError: (error) => {
                 toast.error(
                   error instanceof Error
                     ? error.message
-                    : t("bładPodczasZapisywaniaUstawienPrzesyłek")
+                    : t("shipmentSettingsSaveError")
                 );
               },
             }
@@ -905,7 +905,7 @@ function CredentialsCard({
       {
         onSuccess: () => {
           toast.success(
-            t("daneZaktualizowaneKliknijPołaczZAllegroAbyPonownie")
+            t("dataUpdatedClickConnectToAllegroToReAuth")
           );
           setClientId("");
           setClientSecret("");
@@ -915,7 +915,7 @@ function CredentialsCard({
           toast.error(
             error instanceof Error
               ? error.message
-              : t("bładPodczasAktualizacjiDanych")
+              : t("dataUpdateError")
           );
         },
       }

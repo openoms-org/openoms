@@ -1,169 +1,169 @@
 {
-  "statuses": {
-    "order": {
-      "new": "New",
-      "confirmed": "Confirmed",
-      "processing": "Processing",
-      "ready_to_ship": "Ready to ship",
-      "shipped": "Shipped",
-      "in_transit": "In transit",
-      "out_for_delivery": "Out for delivery",
-      "delivered": "Delivered",
-      "completed": "Completed",
-      "on_hold": "On hold",
-      "cancelled": "Cancelled",
-      "refunded": "Refunded",
-      "merged": "Merged",
-      "split": "Split"
-    },
-    "shipment": {
-      "created": "Created",
-      "label_ready": "Label ready",
-      "picked_up": "Picked up",
-      "in_transit": "In transit",
-      "out_for_delivery": "Out for delivery",
-      "delivered": "Delivered",
-      "returned": "Returned",
-      "failed": "Failed"
-    },
-    "return": {
-      "requested": "Requested",
-      "approved": "Approved",
-      "received": "Received",
-      "refunded": "Refunded",
-      "rejected": "Rejected",
-      "cancelled": "Cancelled"
-    },
-    "invoice": {
-      "draft": "Draft",
-      "issued": "Issued",
-      "sent": "Sent",
-      "paid": "Paid",
-      "partially_paid": "Partially paid",
-      "cancelled": "Cancelled",
-      "error": "Error"
-    },
-    "payment": {
-      "pending": "Pending",
-      "paid": "Paid",
-      "partially_paid": "Partial",
-      "refunded": "Refunded",
-      "failed": "Failed"
-    },
-    "ksef": {
-      "not_sent": "Not sent",
-      "pending": "Pending",
-      "accepted": "Accepted",
-      "rejected": "Rejected"
-    },
-    "purchaseOrder": {
-      "draft": "Draft",
-      "sent": "Sent",
-      "partially_received": "Partially received",
-      "received": "Received",
-      "cancelled": "Cancelled"
-    },
-    "supplier": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "error": "Error"
-    },
-    "integration": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "error": "Error"
-    },
-    "warehouseDocument": {
-      "draft": "Draft",
-      "confirmed": "Confirmed",
-      "cancelled": "Cancelled"
-    },
-    "stocktake": {
-      "draft": "Draft",
-      "in_progress": "In progress",
-      "completed": "Completed",
-      "cancelled": "Cancelled"
-    },
-    "syncJob": {
-      "running": "Running",
-      "completed": "Completed",
-      "failed": "Failed"
-    }
+  "invoiceTypes": {
+    "correction": "Correction",
+    "proforma": "Proforma",
+    "receipt": "Receipt",
+    "standard": "Standard",
+    "vat": "VAT Invoice"
+  },
+  "paymentMethods": {
+    "BLIK": "BLIK",
+    "PayU": "PayU",
+    "Przelewy24": "Przelewy24",
+    "card": "Card",
+    "cod": "Cash on delivery",
+    "transfer": "Bank transfer"
   },
   "priorities": {
-    "urgent": "Urgent",
     "high": "High",
+    "low": "Low",
     "normal": "Normal",
-    "low": "Low"
+    "urgent": "Urgent"
   },
   "roles": {
-    "owner": "Owner",
-    "member": "Member",
-    "rolaZostałaZapisana": "Role has been saved",
-    "rolaZostałaUsunieta": "Role has been deleted",
-    "rolaZostałaUtworzona": "Role has been created",
     "brakRol": "No roles",
-    "utworzPierwszaRoleAbyZarzadzacUprawnieniamiUzytkow": "Create the first role to manage user permissions.",
-    "usunRole": "Delete role",
+    "cancelButton": "Cancel",
+    "columns": {
+      "createdAt": "Created",
+      "description": "Description",
+      "name": "Name",
+      "permissions": "Permissions",
+      "type": "Type"
+    },
+    "creating": "Creating...",
+    "customRole": "Custom",
     "czyNaPewnoChceszUsunacTeRoleUzytkownicyZTaRolaStra": "Are you sure you want to delete this role? Users with this role will lose their assigned permissions.",
-    "zarzadzajRolamiIUprawnieniamiUzytkownikow": "Manage roles and user permissions",
-    "utworzNowaRoleIPrzypiszUprawnienia": "Create a new role and assign permissions",
-    "title": "Roles",
-    "newRole": "New role",
-    "newRoleDialog": "New role",
-    "nameLabel": "Name",
-    "namePlaceholder": "e.g. Warehouse worker",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Optional role description",
-    "cancelButton": "Cancel",
-    "creating": "Creating...",
-    "columns": {
-      "name": "Name",
-      "description": "Description",
-      "permissions": "Permissions",
-      "type": "Type",
-      "createdAt": "Created"
-    },
-    "permissionsCount": "{count} permissions",
-    "systemRole": "System",
-    "customRole": "Custom",
     "detail": {
-      "systemRole": "System role",
       "customRole": "Custom role",
-      "notFound": "Role not found",
-      "saving": "Saving...",
-      "saveButton": "Save",
-      "nameLabel": "Name",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Optional role description",
-      "permissions": "Permissions",
-      "permView": "View",
+      "nameLabel": "Name",
+      "notFound": "Role not found",
       "permCreate": "Create",
-      "permEdit": "Edit",
       "permDelete": "Delete",
+      "permEdit": "Edit",
       "permExport": "Export",
+      "permManageAutomation": "Manage automation",
       "permManageIntegrations": "Manage integrations",
       "permManageSettings": "Manage settings",
       "permManageUsers": "Manage users",
-      "permViewReports": "View reports",
+      "permManageWarehouses": "Manage warehouses",
+      "permView": "View",
       "permViewAudit": "View audit log",
-      "permManageAutomation": "Manage automation",
-      "permManageWarehouses": "Manage warehouses"
+      "permViewReports": "View reports",
+      "permissions": "Permissions",
+      "saveButton": "Save",
+      "saving": "Saving...",
+      "systemRole": "System role"
+    },
+    "member": "Member",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Warehouse worker",
+    "newRole": "New role",
+    "newRoleDialog": "New role",
+    "owner": "Owner",
+    "permissionsCount": "{count} permissions",
+    "roleCreated": "Role has been created",
+    "roleDeleted": "Role has been deleted",
+    "roleSaved": "Role has been saved",
+    "systemRole": "System",
+    "title": "Roles",
+    "usunRole": "Delete role",
+    "utworzNowaRoleIPrzypiszUprawnienia": "Create a new role and assign permissions",
+    "utworzPierwszaRoleAbyZarzadzacUprawnieniamiUzytkow": "Create the first role to manage user permissions.",
+    "zarzadzajRolamiIUprawnieniamiUzytkownikow": "Manage roles and user permissions"
+  },
+  "statuses": {
+    "integration": {
+      "active": "Active",
+      "error": "Error",
+      "inactive": "Inactive"
+    },
+    "invoice": {
+      "cancelled": "Cancelled",
+      "draft": "Draft",
+      "error": "Error",
+      "issued": "Issued",
+      "paid": "Paid",
+      "partially_paid": "Partially paid",
+      "sent": "Sent"
+    },
+    "ksef": {
+      "accepted": "Accepted",
+      "not_sent": "Not sent",
+      "pending": "Pending",
+      "rejected": "Rejected"
+    },
+    "order": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "confirmed": "Confirmed",
+      "delivered": "Delivered",
+      "in_transit": "In transit",
+      "merged": "Merged",
+      "new": "New",
+      "on_hold": "On hold",
+      "out_for_delivery": "Out for delivery",
+      "processing": "Processing",
+      "ready_to_ship": "Ready to ship",
+      "refunded": "Refunded",
+      "shipped": "Shipped",
+      "split": "Split"
+    },
+    "payment": {
+      "failed": "Failed",
+      "paid": "Paid",
+      "partially_paid": "Partial",
+      "pending": "Pending",
+      "refunded": "Refunded"
+    },
+    "purchaseOrder": {
+      "cancelled": "Cancelled",
+      "draft": "Draft",
+      "partially_received": "Partially received",
+      "received": "Received",
+      "sent": "Sent"
+    },
+    "return": {
+      "approved": "Approved",
+      "cancelled": "Cancelled",
+      "received": "Received",
+      "refunded": "Refunded",
+      "rejected": "Rejected",
+      "requested": "Requested"
+    },
+    "shipment": {
+      "created": "Created",
+      "delivered": "Delivered",
+      "failed": "Failed",
+      "in_transit": "In transit",
+      "label_ready": "Label ready",
+      "out_for_delivery": "Out for delivery",
+      "picked_up": "Picked up",
+      "returned": "Returned"
+    },
+    "stocktake": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "draft": "Draft",
+      "in_progress": "In progress"
+    },
+    "supplier": {
+      "active": "Active",
+      "error": "Error",
+      "inactive": "Inactive"
+    },
+    "syncJob": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "running": "Running"
+    },
+    "warehouseDocument": {
+      "cancelled": "Cancelled",
+      "confirmed": "Confirmed",
+      "draft": "Draft"
     }
-  },
-  "invoiceTypes": {
-    "standard": "Standard",
-    "vat": "VAT Invoice",
-    "proforma": "Proforma",
-    "correction": "Correction",
-    "receipt": "Receipt"
-  },
-  "paymentMethods": {
-    "transfer": "Bank transfer",
-    "cod": "Cash on delivery",
-    "card": "Card",
-    "PayU": "PayU",
-    "Przelewy24": "Przelewy24",
-    "BLIK": "BLIK"
   }
 }

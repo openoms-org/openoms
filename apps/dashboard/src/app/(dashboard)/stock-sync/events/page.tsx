@@ -136,9 +136,9 @@ export default function StockSyncEventsPage() {
                     <TableHead className="text-right">{t("newStock")}</TableHead>
                     <TableHead className="text-right">{t("dostepny")}</TableHead>
                     <TableHead className="text-right">
-                      {t("kanałyPowiadomione")}
+                      {t("channelsNotified")}
                     </TableHead>
-                    <TableHead className="text-right">{t("błedy1")}</TableHead>
+                    <TableHead className="text-right">{t("errors1")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

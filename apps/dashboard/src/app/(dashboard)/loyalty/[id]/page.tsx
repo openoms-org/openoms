@@ -135,7 +135,7 @@ export default function LoyaltyProgramDetailPage() {
   const handleStatusChange = async (status: string) => {
     try {
       await updateProgram.mutateAsync({ status: status as UpdateLoyaltyProgramRequest["status"] });
-      toast.success(t("statusprogramuzostałzmieniony"));
+      toast.success(t("programStatusChanged"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -144,7 +144,7 @@ export default function LoyaltyProgramDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteProgram.mutateAsync(params.id);
-      toast.success(t("programzostałusuniety"));
+      toast.success(t("programDeleted"));
       router.push("/loyalty");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -158,7 +158,7 @@ export default function LoyaltyProgramDetailPage() {
         points: awardPointsValue,
         reason: awardReason,
       });
-      toast.success(t("punktyzostałyprzyznane"));
+      toast.success(t("pointsAwarded"));
       setShowAwardDialog(false);
       setAwardCustomerId("");
       setAwardPointsValue(0);
@@ -175,7 +175,7 @@ export default function LoyaltyProgramDetailPage() {
         customer_id: redeemCustomerId,
         points: redeemPointsValue,
       });
-      toast.success(t("punktyzostaływymienione"));
+      toast.success(t("pointsRedeemed"));
       setShowRedeemDialog(false);
       setRedeemCustomerId("");
       setRedeemPointsValue(0);

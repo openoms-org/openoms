@@ -47,7 +47,7 @@ export default function IntegrationsPage() {
     if (!deleteId) return;
     deleteIntegration.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("integracjazostałausunieta"));
+        toast.success(t("integrationWasDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -60,7 +60,7 @@ export default function IntegrationsPage() {
     <AdminGuard>
       <PageHeader
         title={t("integrations")}
-        description={t("zarzadzajpołaczeniamizzewnetrznymiserwisami")}
+        description={t("manageExternalConnections")}
         action={{ label: t("newIntegration"), href: "/integrations/new" }}
       />
 
@@ -73,7 +73,7 @@ export default function IntegrationsPage() {
             <Link href="/marketplaces" className="font-medium underline">Marketplace</Link>{" "}
             {t("and")}{" "}
             <Link href="/invoicing" className="font-medium underline">{t("invoicing")}</Link>{" "}
-            {t("majaTerazWłasneSekcjeWMenu")}
+            {t("haveOwnMenuSections")}
           </p>
         </CardContent>
       </Card>
@@ -98,7 +98,7 @@ export default function IntegrationsPage() {
         <EmptyState
           icon={Plug}
           title={t("noIntegrations")}
-          description={t("dodajpierwszaintegracjeabypołaczycsiezzewnetrznymi")}
+          description={t("addFirstIntegrationToConnect")}
           action={{ label: t("newIntegration"), href: "/integrations/new" }}
         />
       ) : (
@@ -108,7 +108,7 @@ export default function IntegrationsPage() {
               <TableRow>
                 <TableHead>{t("provider")}</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>{t("daneUwierzytelniajace")}</TableHead>
+                <TableHead>{t("authCredentials")}</TableHead>
                 <TableHead>{t("lastSync")}</TableHead>
                 <TableHead>{t("createdAt")}</TableHead>
                 <TableHead className="w-[60px]" />
@@ -185,8 +185,8 @@ export default function IntegrationsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title={t("usunIntegracje")}
-        description={t("czyNaPewnoChceszUsunacTeIntegracjeTaOperacjaJestNi")}
+        title={t("deleteIntegration")}
+        description={t("deleteIntegrationConfirm")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}

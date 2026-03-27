@@ -159,7 +159,7 @@ export function ShipmentForm({
       </div>
 
       <Button type="submit" disabled={isLoading}>
-        {isLoading ? t("saving") : shipment ? t("saveChanges") : t("utworzPrzesyłke")}
+        {isLoading ? t("saving") : shipment ? t("saveChanges") : t("createShipment")}
       </Button>
     </form>
   );

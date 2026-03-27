@@ -71,11 +71,11 @@ export default function BillingSettingsPage() {
         <div className="mx-auto max-w-4xl space-y-6">
           <div>
             <h1 className="text-2xl font-bold">{t("title")}</h1>
-            <p className="text-muted-foreground">{t("zarzadzajPlanemIPłatnosciami")}</p>
+            <p className="text-muted-foreground">{t("managePlanAndPayments")}</p>
           </div>
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              {t("nieUdałoSieZaładowacDanychSubskrypcji")}
+              {t("subscriptionDataLoadError")}
             </CardContent>
           </Card>
         </div>
@@ -88,7 +88,7 @@ export default function BillingSettingsPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold">{t("title")}</h1>
-          <p className="text-muted-foreground">{t("zarzadzajPlanemIPłatnosciami")}</p>
+          <p className="text-muted-foreground">{t("managePlanAndPayments")}</p>
         </div>
 
         {/* Plan & Status */}

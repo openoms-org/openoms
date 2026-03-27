@@ -56,14 +56,14 @@ export default function PublicReturnStatusPage() {
           if (res.status === 404) {
             setError(t("returnNotFound"));
           } else {
-            setError(t("wystapiłbładpodczasładowaniastatusuzwrotu"));
+            setError(t("returnStatusLoadError"));
           }
           return;
         }
         const statusData: PublicReturnStatus = await res.json();
         setData(statusData);
       } catch {
-        setError(t("nieudałosiepołaczyczserwerem"));
+        setError(t("serverConnectionError"));
       } finally {
         setIsLoading(false);
       }
@@ -118,7 +118,7 @@ export default function PublicReturnStatusPage() {
                 <Button variant="outline" className="mt-4" asChild>
                   <Link href="/return-request">
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    {t("powrotDoFormularza")}
+                    {t("backToForm")}
                   </Link>
                 </Button>
               </div>
@@ -144,7 +144,7 @@ export default function PublicReturnStatusPage() {
               {!isTerminal && (
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium text-muted-foreground">
-                    {t("postep")}
+                    {t("progress")}
                   </h3>
                   <div className="flex items-center gap-1">
                     {STATUS_ORDER.map((status, index) => {
@@ -178,8 +178,8 @@ export default function PublicReturnStatusPage() {
                 <div className="rounded-md bg-destructive/15 border border-destructive/30 p-4">
                   <p className="text-sm text-destructive">
                     {data.status === "rejected"
-                      ? t("twojezgłoszeniezwrotuzostałoodrzucone")
-                      : t("zwrotzostałanulowany")}
+                      ? t("returnRequestRejected")
+                      : t("returnCancelled")}
                   </p>
                 </div>
               )}
@@ -187,7 +187,7 @@ export default function PublicReturnStatusPage() {
               {/* Reason */}
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                  {t("powodZwrotu")}
+                  {t("returnReason")}
                 </h3>
                 <p className="text-sm">{data.reason}</p>
               </div>
@@ -221,7 +221,7 @@ export default function PublicReturnStatusPage() {
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/return-request">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  {t("zgłosKolejnyZwrot")}
+                  {t("submitAnotherReturn")}
                 </Link>
               </Button>
             </CardContent>

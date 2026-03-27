@@ -208,7 +208,7 @@ export default function ProductVariantsPage() {
 
     createVariant.mutate(data, {
       onSuccess: () => {
-        toast.success(t("wariantZostałDodany"));
+        toast.success(t("variantAdded"));
         setShowCreateDialog(false);
         resetCreateForm();
       },
@@ -222,7 +222,7 @@ export default function ProductVariantsPage() {
     if (!deleteVariantId) return;
     deleteVariant.mutate(deleteVariantId, {
       onSuccess: () => {
-        toast.success(t("wariantZostałUsuniety"));
+        toast.success(t("variantDeleted"));
         setDeleteVariantId(null);
       },
       onError: (error) => {
@@ -609,7 +609,7 @@ function EditVariantDialog({
 
     updateVariant.mutate(data, {
       onSuccess: () => {
-        toast.success(t("wariantZostałZaktualizowany"));
+        toast.success(t("variantUpdated"));
         onOpenChange(false);
       },
       onError: (error) => {

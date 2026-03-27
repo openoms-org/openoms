@@ -210,14 +210,14 @@ export default function SupplierDetailPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>{t("interwałsynchronizacji")}</Label>
+              <Label>{t("syncIntervalLabel")}</Label>
               <Select value={syncInterval} onValueChange={setSyncInterval}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="5">{t("every5Min")}</SelectItem>
                   <SelectItem value="15">{t("every15Min")}</SelectItem>
                   <SelectItem value="30">{t("every30Min")}</SelectItem>
-                  <SelectItem value="60">{t("co1Godzine")}</SelectItem>
+                  <SelectItem value="60">{t("every1Hour")}</SelectItem>
                   <SelectItem value="120">{t("every2Hours")}</SelectItem>
                   <SelectItem value="360">{t("every6Hours")}</SelectItem>
                   <SelectItem value="720">{t("every12Hours")}</SelectItem>
@@ -253,7 +253,7 @@ export default function SupplierDetailPage() {
               <span>{supplier.last_sync_at ? formatDate(supplier.last_sync_at) : t("never")}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{t("interwałsynca")}</span>
+              <span className="text-muted-foreground">{t("syncIntervalShort")}</span>
               <span>{supplier.sync_interval_minutes >= 60 ? `${supplier.sync_interval_minutes / 60}h` : `${supplier.sync_interval_minutes} min`}</span>
             </div>
             <div className="flex justify-between">
@@ -377,7 +377,7 @@ export default function SupplierDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("kategoriazrodłowa")}</TableHead>
+                  <TableHead>{t("sourceCategory")}</TableHead>
                   <TableHead>{t("omsCategory")}</TableHead>
                   <TableHead>{tc("status")}</TableHead>
                   <TableHead className="w-[100px]">{tc("actions")}</TableHead>
@@ -409,7 +409,7 @@ export default function SupplierDetailPage() {
                               }
                             );
                           }}
-                          placeholder={t("przypiszKategorie")}
+                          placeholder={t("assignCategory")}
                           className="w-[220px]"
                         />
                       </TableCell>
@@ -460,7 +460,7 @@ export default function SupplierDetailPage() {
                             title={tc("delete")}
                             onClick={() => {
                               deleteMapping.mutate(mapping.id, {
-                                onSuccess: () => toast.success(t("mapowanieUsuniete")),
+                                onSuccess: () => toast.success(t("mappingDeleted")),
                                 onError: (error) => toast.error(getErrorMessage(error)),
                               });
                             }}
@@ -498,7 +498,7 @@ export default function SupplierDetailPage() {
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-2xl font-bold">{productsData?.total ?? 0}</p>
-              <p className="text-xs text-muted-foreground">{t("łacznie1")}</p>
+              <p className="text-xs text-muted-foreground">{t("total1")}</p>
             </div>
             <div>
               <p className="text-2xl font-bold">{products.filter((p) => p.product_id).length}</p>

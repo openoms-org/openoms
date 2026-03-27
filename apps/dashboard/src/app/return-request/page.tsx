@@ -60,7 +60,7 @@ function PublicReturnForm() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: t("error") }));
-        setError(data.error || t("wystapiłBładPodczasSkładaniaZwrotu"));
+        setError(data.error || t("returnSubmitError"));
         return;
       }
 
@@ -68,7 +68,7 @@ function PublicReturnForm() {
       setReturnToken(data.return_token);
       setStep("success");
     } catch {
-      setError(t("nieUdałoSiePołaczycZSerweremSprobujPonownie"));
+      setError(t("serverConnectionErrorRetry"));
     } finally {
       setIsSubmitting(false);
     }
@@ -81,15 +81,15 @@ function PublicReturnForm() {
           <CardHeader>
             <CardTitle>{t("detail.reportReturn")}</CardTitle>
             <CardDescription>
-              {t("wypełnijFormularzAbyZgłosicZwrotZamowienia")}
-              {t("podajNumerZamowieniaIAdresEmailKtory")}
-              {t("uzytyPrzySkładaniuZamowienia")}
+              {t("fillFormToSubmitReturn")}
+              {t("enterOrderNumberAndEmail")}
+              {t("usedWhenPlacingOrder")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="order-id">{t("numerZamowieniaId")}</Label>
+                <Label htmlFor="order-id">{t("orderNumberId")}</Label>
                 <Input
                   id="order-id"
                   value={orderId}
@@ -110,12 +110,12 @@ function PublicReturnForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reason">{t("powodZwrotu")}</Label>
+                <Label htmlFor="reason">{t("returnReason")}</Label>
                 <Textarea
                   id="reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder={t("opiszPowodZwrotu")}
+                  placeholder={t("describeReturnReason")}
                   rows={3}
                   required
                 />
@@ -142,7 +142,7 @@ function PublicReturnForm() {
                 className="w-full"
                 disabled={isSubmitting || !orderId || !email || !reason}
               >
-                {isSubmitting ? t("wysyłanie") : t("detail.reportReturn")}
+                {isSubmitting ? t("sending") : t("detail.reportReturn")}
                 {!isSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
@@ -153,16 +153,16 @@ function PublicReturnForm() {
       {step === "success" && returnToken && (
         <Card>
           <CardHeader>
-            <CardTitle>{t("zwrotZostałZgłoszony")}</CardTitle>
+            <CardTitle>{t("returnSubmitted")}</CardTitle>
             <CardDescription>
-              {t("twojeZgłoszenieZwrotuZostałoPrzyjeteMozeszSledzic")}
-              {t("jegoStatusPodPonizszymLinkiem")}
+              {t("returnRequestAcceptedTrack")}
+              {t("statusAtLinkBelow")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-md bg-success/15 border border-success/30 p-4">
               <p className="text-sm text-success">
-                {t("twojeZgłoszenieZostałoZarejestrowaneOtrzymaszInfor")}
+                {t("requestRegisteredWillReceiveInfo")}
               </p>
             </div>
 
@@ -170,7 +170,7 @@ function PublicReturnForm() {
               className="w-full"
               onClick={() => router.push(`/return-request/${returnToken}`)}
             >
-              {t("sprawdzStatusZwrotu")}
+              {t("checkReturnStatus")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardContent>

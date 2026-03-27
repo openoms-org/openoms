@@ -113,7 +113,7 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
       },
       {
         onSuccess: () => {
-          toast.success(t("rolaZostałaZapisana"));
+          toast.success(t("roleSaved"));
           setDirty(false);
         },
         onError: (error) => {

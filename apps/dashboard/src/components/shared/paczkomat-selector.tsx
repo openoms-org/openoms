@@ -168,7 +168,7 @@ function MapDialog({
           const shadow = widget.shadowRoot;
           if (shadow) {
             const text = shadow.textContent || "";
-            if (text.includes(t("forbidden")) || text.includes(t("nieprawidłow"))) {
+            if (text.includes(t("forbidden")) || text.includes(t("invalid"))) {
               setWidgetError(true);
             }
           }

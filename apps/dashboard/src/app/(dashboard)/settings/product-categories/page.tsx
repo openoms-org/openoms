@@ -225,7 +225,7 @@ export default function ProductCategoriesPage() {
       toast.success(tp("categoryUpdated"));
       setEditState(null);
     } catch {
-      toast.error(t("bładpodczasaktualizacjikategorii"));
+      toast.error(t("categoryUpdateError"));
     }
   };
 
@@ -244,7 +244,7 @@ export default function ProductCategoriesPage() {
       await deleteCategory.mutateAsync(id);
       toast.success(t("kategoriaUsunieta"));
     } catch {
-      toast.error(t("bładpodczasusuwaniakategorii"));
+      toast.error(t("categoryDeleteError"));
     }
   };
 
@@ -275,7 +275,7 @@ export default function ProductCategoriesPage() {
       setNewCategoryColor("#6b7280");
       setShowAddForm(false);
     } catch {
-      toast.error(t("bładpodczastworzeniakategorii"));
+      toast.error(t("categoryCreateError"));
     }
   };
 

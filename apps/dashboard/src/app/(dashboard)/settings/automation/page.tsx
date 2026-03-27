@@ -55,12 +55,12 @@ export default function AutomationRulesPage() {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm(t("czynapewnochceszusunacteregułe"))) return;
+    if (!confirm(t("confirmDeleteRule"))) return;
     try {
       await deleteRule.mutateAsync(id);
-      toast.success(t("regułazostałausunieta"));
+      toast.success(t("automationRuleDeleted"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("nieudałosieusunacreguły");
+      const message = err instanceof Error ? err.message : t("ruleDeleteError");
       toast.error(message);
     }
   };
@@ -72,7 +72,7 @@ export default function AutomationRulesPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("pageTitle")}</h1>
           <p className="text-muted-foreground mt-1">
-            {t("regułyAutomatycznegoPrzetwarzaniaZdarzen")}
+            {t("automationRulesForEventProcessing")}
           </p>
           <p className="text-sm text-muted-foreground">
             {t("pageDescription")}
@@ -160,7 +160,7 @@ export default function AutomationRulesPage() {
                             : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
                         }
                       >
-                        {rule.enabled ? t("statusActive") : t("wyłaczona1")}
+                        {rule.enabled ? t("statusActive") : t("automationDisabled1")}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">{rule.fire_count}</TableCell>
@@ -179,7 +179,7 @@ export default function AutomationRulesPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                    {t("brakRegułAutomatyzacji")}
+                    {t("noAutomationRules")}
                   </TableCell>
                 </TableRow>
               )}

@@ -100,10 +100,10 @@ export default function WebhooksPage() {
 
     try {
       await updateConfig.mutateAsync(configToSave);
-      toast.success(t("konfiguracjaWebhookowZostałaZapisana"));
+      toast.success(t("webhookConfigSaved"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("bładPodczasZapisywania")
+        error instanceof Error ? error.message : t("savingError")
       );
     }
   };
@@ -122,7 +122,7 @@ export default function WebhooksPage() {
             {t("konfiguracjaEndpointowDoPowiadamianiaZewnetrznychS")}
           </p>
           <p className="text-sm text-muted-foreground">
-            {t("webhookiWysyłajaPowiadomieniaHttpPostDoZewnetrznyc")}
+            {t("webhooksSendHttpPostNotifications")}
           </p>
         </div>
         <Link href="/settings/webhooks/deliveries">

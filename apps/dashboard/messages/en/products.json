@@ -16,8 +16,6 @@
     "bulkDeleteResult": "Bulk Delete Result",
     "bulkImportErrors": "Bulk Import Errors",
     "bulkImportResult": "Bulk Import Result",
-    "błedy": "Błedy",
-    "błedyImportu": "Błedy Importu",
     "category": "Category",
     "categoryPlaceholder": "Category Placeholder",
     "createError": "Failed to create product",
@@ -122,6 +120,7 @@
     },
     "downloadPhotos": "Download Photos",
     "editProduct": "Edit product",
+    "errors": "Błedy",
     "exportCsv": "Export Csv",
     "filterByTag": "Filter By Tag",
     "form": {
@@ -190,6 +189,7 @@
     },
     "importCount": "Import Count",
     "importCsv": "Import Csv",
+    "importErrors": "Błedy Importu",
     "importFromAllegro": "Import From Allegro",
     "importProduktowCsv": "Import Produktow Csv",
     "importToCatalog": "Import To Catalog",
@@ -335,6 +335,9 @@
       "quantityInteger": "Quantity must be a whole number",
       "quantityMin": "Quantity must be greater than or equal to 0"
     },
+    "variantAdded": "Wariant Został Dodany",
+    "variantDeleted": "Wariant Został Usuniety",
+    "variantUpdated": "Wariant Został Zaktualizowany",
     "variants": {
       "actions": "Actions",
       "active": "Active",
@@ -367,9 +370,6 @@
       "weightKg": "Weight Kg",
       "yes": "Yes"
     },
-    "wariantZostałDodany": "Wariant Został Dodany",
-    "wariantZostałUsuniety": "Wariant Został Usuniety",
-    "wariantZostałZaktualizowany": "Wariant Został Zaktualizowany",
     "wartoscNpCzerwony": "Wartosc Np Czerwony",
     "wrocDoProduktow": "Wroc Do Produktow",
     "zmien": "Zmien"

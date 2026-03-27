@@ -1,38 +1,38 @@
 {
   "workflows": {
-    "title": "Workflow Builder",
+    "deleteConfirm": "Czy na pewno chcesz usunąć ten workflow?",
+    "deleteConfirmDescription": "Ta operacja jest nieodwracalna. Workflow zostanie trwale usunięty.",
+    "deleteError": "Nie udało się usunąć workflow",
+    "deleteSuccess": "Workflow został usunięty",
     "description": "Wizualny edytor automatyzacji typu drag-and-drop",
-    "textEditor": "Edytor tekstowy",
-    "newWorkflow": "Nowy workflow",
+    "editor": {
+      "createError": "Nie udało się zapisać workflow",
+      "createSuccess": "Workflow został utworzony",
+      "defaultName": "Nowy workflow",
+      "nameRequired": "Nazwa workflow jest wymagana",
+      "testHint": "Funkcja testu - zapisz workflow i użyj testu w edytorze tekstowym",
+      "validationError": "Workflow zawiera błędy",
+      "validationFailed": "Błąd walidacji workflow"
+    },
+    "emptyDescription": "Utwórz swój pierwszy wizualny workflow automatyzacji",
+    "emptyTitle": "Brak workflow",
     "errorLoading": "Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.",
+    "executions": "{count} wykonań",
+    "new": {
+      "back": "Wstecz",
+      "description": "Wybierz szablon lub zacznij od pustego canvas",
+      "edgesCount": "{count} połączeń",
+      "emptyCanvas": "Pusty canvas",
+      "emptyCanvasDescription": "Zacznij od zera - przeciągaj elementy na canvas",
+      "nodesCount": "{count} węzłów",
+      "templates": "Szablony",
+      "title": "Nowy workflow"
+    },
+    "newWorkflow": "Nowy workflow",
     "retry": "Spróbuj ponownie",
     "statusActive": "Aktywny",
     "statusDraft": "Wersja robocza",
-    "executions": "{count} wykonań",
-    "emptyTitle": "Brak workflow",
-    "emptyDescription": "Utwórz swój pierwszy wizualny workflow automatyzacji",
-    "deleteConfirm": "Czy na pewno chcesz usunąć ten workflow?",
-    "deleteConfirmDescription": "Ta operacja jest nieodwracalna. Workflow zostanie trwale usunięty.",
-    "deleteSuccess": "Workflow został usunięty",
-    "deleteError": "Nie udało się usunąć workflow",
-    "new": {
-      "title": "Nowy workflow",
-      "description": "Wybierz szablon lub zacznij od pustego canvas",
-      "back": "Wstecz",
-      "emptyCanvas": "Pusty canvas",
-      "emptyCanvasDescription": "Zacznij od zera - przeciągaj elementy na canvas",
-      "templates": "Szablony",
-      "nodesCount": "{count} węzłów",
-      "edgesCount": "{count} połączeń"
-    },
-    "editor": {
-      "defaultName": "Nowy workflow",
-      "nameRequired": "Nazwa workflow jest wymagana",
-      "validationError": "Workflow zawiera błędy",
-      "validationFailed": "Błąd walidacji workflow",
-      "createSuccess": "Workflow został utworzony",
-      "createError": "Nie udało się zapisać workflow",
-      "testHint": "Funkcja testu - zapisz workflow i użyj testu w edytorze tekstowym"
-    }
+    "textEditor": "Edytor tekstowy",
+    "title": "Workflow Builder"
   }
 }

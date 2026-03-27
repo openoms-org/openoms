@@ -159,7 +159,7 @@ export default function NewWarehouseDocumentPage() {
 
   const handleSubmit = () => {
     if (!docType || !warehouseId || items.some((i) => !i.product_id || i.quantity <= 0)) {
-      toast.error(t("wypełnijwszystkiewymaganepola"));
+      toast.error(t("fillAllRequiredFields"));
       return;
     }
 
@@ -226,7 +226,7 @@ export default function NewWarehouseDocumentPage() {
 
         <div className="space-y-2">
           <Label>
-            {docType === "MM" ? t("magazynZrodłowy") : t("warehouseLabel")}
+            {docType === "MM" ? t("sourceWarehouse") : t("warehouseLabel")}
           </Label>
           <Select value={warehouseId} onValueChange={setWarehouseId}>
             <SelectTrigger>

@@ -57,7 +57,7 @@ export default function RolesPage() {
     if (!deleteId) return;
     deleteRole.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("rolaZostałaUsunieta"));
+        toast.success(t("roleDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -76,7 +76,7 @@ export default function RolesPage() {
       },
       {
         onSuccess: (role) => {
-          toast.success(t("rolaZostałaUtworzona"));
+          toast.success(t("roleCreated"));
           setShowCreate(false);
           setNewName("");
           setNewDesc("");

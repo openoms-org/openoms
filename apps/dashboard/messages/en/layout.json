@@ -1,13 +1,12 @@
 {
   "auth": {
     "alreadyHaveAccount": "Already have an account?",
-    "brakIdentyfikatoraSesjiPłatnosci": "Missing payment session ID",
-    "brakIdentyfikatoraSesjiWrocNaStroneWyboruPlanu": "Missing session ID — go back to the plan selection page",
+    "checkingPaymentStatus": "Checking your payment status",
     "chooseAnotherPlan": "Choose another plan",
     "choosePlan": "Choose a plan",
     "completeInviteRegistration": "Complete registration with invitation",
+    "completeRegistration": "Complete registration",
     "createAccount": "Create account",
-    "dokonczRejestracje": "Complete registration",
     "form": {
       "fullName": "Full name",
       "orgName": "Organization name",
@@ -28,10 +27,15 @@
       "title": "Login"
     },
     "logout": "Log out",
-    "minimum8Znakow": "Minimum 8 characters",
+    "minimum8Characters": "Minimum 8 characters",
+    "missingPaymentSessionId": "Missing payment session ID",
+    "missingSessionIdGoBackToPlanSelection": "Missing session ID — go back to the plan selection page",
     "missingTokenUseInviteLink": "Missing token — use the link from your invitation",
-    "nieUdałoSieZweryfikowacPłatnosciSprobujPonownieZaC": "Failed to verify payment. Please try again in a moment.",
-    "płatnoscNieZostałaJeszczePotwierdzonaSprobujOdswie": "Payment has not been confirmed yet. Try refreshing the page.",
+    "paymentNotYetConfirmedRefresh": "Payment has not been confirmed yet. Try refreshing the page.",
+    "paymentSessionAlreadyUsed": "This payment session has already been used",
+    "paymentSessionNotFound": "Payment session not found",
+    "paymentVerification": "Payment verification",
+    "paymentVerificationFailedRetry": "Failed to verify payment. Please try again in a moment.",
     "register": {
       "freeTrialStart": "{days} days free to start",
       "haveAccount": "Already have an account?",
@@ -53,9 +57,6 @@
       "yearlyTotal": "{price} yearly"
     },
     "registering": "Registering...",
-    "sesjaPłatnosciNieZostałaZnaleziona": "Payment session not found",
-    "sprawdzamyStatusTwojejPłatnosci": "Checking your payment status",
-    "taSesjaPłatnosciZostałaJuzWykorzystana": "This payment session has already been used",
     "twoFa": {
       "backToLogin": "Back to login",
       "codeHint": "Enter the 6-digit code from your authenticator app",
@@ -76,8 +77,7 @@
       "passwordRequired": "Password is required",
       "passwordUppercase": "Password must contain an uppercase letter",
       "slugFormat": "Slug can only contain lowercase letters, digits, and hyphens"
-    },
-    "weryfikacjaPłatnosci": "Payment verification"
+    }
   },
   "breadcrumbs": {
     "allegro": "Allegro",
@@ -200,10 +200,10 @@
       "tooManyRequestsMessage": "Too many requests. Please wait a moment and try again.",
       "tryAgain": "Try again"
     },
+    "invalid": "Invalid",
     "mobileNav": {
       "openMenu": "Open menu"
     },
-    "nieprawidłow": "Invalid",
     "noData": "No data",
     "odnowSubskrypcje": "Renew subscription",
     "orderSearch": {

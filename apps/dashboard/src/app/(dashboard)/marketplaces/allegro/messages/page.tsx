@@ -104,7 +104,7 @@ function ThreadList({
   if (isError) {
     return (
       <div className="p-4 text-center space-y-2">
-        <p className="text-sm text-destructive">{t("bładŁadowaniaWatkow")}</p>
+        <p className="text-sm text-destructive">{t("threadLoadError")}</p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
           {t("retry")}
         </Button>
@@ -198,13 +198,13 @@ function MessageView({ threadId }: { threadId: string }) {
     sendMessage.mutate(text, {
       onSuccess: () => {
         setMessageText("");
-        toast.success(t("wiadomoscWysłana"));
+        toast.success(t("messageSent"));
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : t("nieUdałoSieWysłacWiadomosci")
+            : t("messageSendError")
         );
       },
     });
@@ -229,7 +229,7 @@ function MessageView({ threadId }: { threadId: string }) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-sm text-destructive">{t("bładŁadowaniaWiadomosci")}</p>
+          <p className="text-sm text-destructive">{t("messageLoadError")}</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             {t("retry")}
           </Button>
@@ -296,7 +296,7 @@ function MessageView({ threadId }: { threadId: string }) {
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t("napiszWiadomoscEnterAbyWysłacShiftenterNowaLinia")}
+            placeholder={t("typeMessageEnterToSendShiftEnterNewLine")}
             className="min-h-[60px] max-h-[120px] resize-none"
             disabled={sendMessage.isPending}
           />

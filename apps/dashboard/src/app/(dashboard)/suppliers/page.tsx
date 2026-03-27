@@ -45,7 +45,7 @@ export default function SuppliersPage() {
     if (!deleteId) return;
     deleteSupplier.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("dostawcazostałusuniety"));
+        toast.success(t("supplierDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {

@@ -75,7 +75,7 @@ export default function MarketingSettingsPage() {
       toast.success(t("marketing.mailchimpSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
+        err instanceof Error ? err.message : t("settingsSaveError");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -88,7 +88,7 @@ export default function MarketingSettingsPage() {
       toast.success(t("marketing.syncCompleted", { synced: result.synced, failed: result.failed }));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieUdałoSieZsynchronizowac");
+        err instanceof Error ? err.message : t("syncFailed");
       toast.error(message);
     }
   };
@@ -100,7 +100,7 @@ export default function MarketingSettingsPage() {
       setCampaignForm({ name: "", subject: "", content: "" });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieUdałoSieUtworzycKampanii");
+        err instanceof Error ? err.message : t("campaignCreationFailed");
       toast.error(message);
     }
   };
@@ -149,7 +149,7 @@ export default function MarketingSettingsPage() {
                   }`}
                 />
                 <span className="text-sm">
-                  {status?.enabled ? t("właczony") : t("wyłaczony1")}
+                  {status?.enabled ? t("enabled") : t("disabled1")}
                 </span>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function MarketingSettingsPage() {
               <div>
                 <p className="font-medium">{t("marketing.activeIntegration")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {t("właczSynchronizacjeKlientowZMailchimp")}
+                  {t("enableMailchimpCustomerSync")}
                 </p>
               </div>
               <Switch

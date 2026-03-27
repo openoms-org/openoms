@@ -109,7 +109,7 @@ export function GenerateLabelDialog({
         onOpenChange(false);
       },
       onError: (error) => {
-        toast.error(error.message || t("nieUdałoSieWygenerowacEtykiety"));
+        toast.error(error.message || t("labelGenerationError"));
       },
     });
   };
@@ -122,7 +122,7 @@ export function GenerateLabelDialog({
         <DialogHeader>
           <DialogTitle>{getDialogTitle(provider, t)}</DialogTitle>
           <DialogDescription>
-            {t("wypełnijDanePrzesyłkiAbyWygenerowacEtykiete")}
+            {t("fillShipmentDataToGenerateLabel")}
           </DialogDescription>
         </DialogHeader>
 

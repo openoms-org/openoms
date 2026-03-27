@@ -140,7 +140,7 @@ export default function NewPurchaseOrderPage() {
         if (sendAfterCreate) {
           sendPO.mutate(po.id, {
             onSuccess: () => {
-              toast.success(t("zamowieniezakupuzostałoutworzoneiwysłane"));
+              toast.success(t("purchaseOrderCreatedAndSent"));
               router.push(`/purchase-orders/${po.id}`);
             },
             onError: (error) => {
@@ -149,7 +149,7 @@ export default function NewPurchaseOrderPage() {
             },
           });
         } else {
-          toast.success(t("zamowieniezakupuzostałoutworzone"));
+          toast.success(t("purchaseOrderCreated"));
           router.push(`/purchase-orders/${po.id}`);
         }
       },

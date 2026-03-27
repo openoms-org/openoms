@@ -72,7 +72,7 @@ export default function HelpdeskSettingsPage() {
       toast.success(t("helpdesk.freshdeskSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
+        err instanceof Error ? err.message : t("settingsSaveError");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -85,7 +85,7 @@ export default function HelpdeskSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("helpdesk.title")}</h1>
           <p className="text-muted-foreground">
-            {t("integracjaZFreshdeskDoObsługiZgłoszenKlientow")}
+            {t("freshdeskIntegrationForCustomerTickets")}
           </p>
         </div>
 
@@ -101,7 +101,7 @@ export default function HelpdeskSettingsPage() {
               <div>
                 <p className="font-medium">{t("helpdesk.activeIntegration")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {t("właczTworzenieZgłoszenWFreshdeskZPoziomu")}
+                  {t("enableFreshdeskTicketCreation")}
                 </p>
               </div>
               <Switch
@@ -156,7 +156,7 @@ export default function HelpdeskSettingsPage() {
         {/* Recent tickets card */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("ostatnieZgłoszenia")}</CardTitle>
+            <CardTitle>{t("recentTickets")}</CardTitle>
           </CardHeader>
           <CardContent>
             {ticketsLoading ? (
@@ -202,7 +202,7 @@ export default function HelpdeskSettingsPage() {
               </Table>
             ) : (
               <p className="text-sm text-muted-foreground">
-                {t("brakZgłoszenSkonfigurujFreshdeskAbyZobaczycZgłosze")}
+                {t("noTicketsConfigureFreshdesk")}
               </p>
             )}
           </CardContent>

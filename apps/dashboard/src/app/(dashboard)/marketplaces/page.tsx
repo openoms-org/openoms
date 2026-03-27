@@ -66,7 +66,7 @@ export default function MarketplacesPage() {
     <AdminGuard>
       <PageHeader
         title="Marketplace"
-        description={t("zarzadzajpołaczeniamizplatformamisprzedazowymi")}
+        description={t("manageSalesPlatformConnections")}
         action={{ label: t("addMarketplace"), href: "/marketplaces/new" }}
       />
 
@@ -101,7 +101,7 @@ export default function MarketplacesPage() {
                 <TableHead>{t("platform")}</TableHead>
                 <TableHead>{t("label")}</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>{t("daneUwierzytelniajace")}</TableHead>
+                <TableHead>{t("authCredentials")}</TableHead>
                 <TableHead>{t("lastSync")}</TableHead>
                 <TableHead>{t("createdAt")}</TableHead>
                 <TableHead className="w-[60px]" />

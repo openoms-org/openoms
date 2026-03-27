@@ -49,7 +49,7 @@ export default function CustomersPage() {
     if (!deleteId) return;
     deleteCustomer.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("klientzostałusuniety"));
+        toast.success(t("customerDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -136,7 +136,7 @@ export default function CustomersPage() {
                   <TableHead>{t("form.phone")}</TableHead>
                   <TableHead>{t("form.company")}</TableHead>
                   <TableHead className="text-right">{t("zamowien")}</TableHead>
-                  <TableHead className="text-right">{t("wydanołacznie")}</TableHead>
+                  <TableHead className="text-right">{t("totalSpent")}</TableHead>
                   <TableHead>{tc("tags")}</TableHead>
                   <TableHead className="w-[60px]" />
                 </TableRow>

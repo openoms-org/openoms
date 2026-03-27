@@ -81,8 +81,8 @@ export default function RepricingPage() {
       await updateRule.mutateAsync({ status: newStatus });
       toast.success(
         newStatus === "active"
-          ? t("regułaaktywowana")
-          : t("reguławstrzymana")
+          ? t("ruleActivated")
+          : t("rulePaused")
       );
       refetch();
     } catch (error) {
@@ -144,7 +144,7 @@ export default function RepricingPage() {
       cell: (row) => <span className="text-sm">{row.products_affected}</span>,
     },
     {
-      header: t("ostatniwpływ"),
+      header: t("lastApplied"),
       accessorKey: "last_applied_at",
       cell: (row) =>
         row.last_applied_at ? (
@@ -183,7 +183,7 @@ export default function RepricingPage() {
         <div>
           <h1 className="text-2xl font-bold">Repricing</h1>
           <p className="text-muted-foreground mt-1">
-            {t("dynamiczneZarzadzanieCenamiProduktow")}
+            {t("dynamicProductPriceManagement")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -209,7 +209,7 @@ export default function RepricingPage() {
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-green-500" />
                 <span className="text-sm text-muted-foreground">
-                  {t("aktywneReguły")}
+                  {t("activeRules")}
                 </span>
               </div>
               <p className="mt-1 text-2xl font-bold">{summary.active_rules}</p>
@@ -233,7 +233,7 @@ export default function RepricingPage() {
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-purple-500" />
                 <span className="text-sm text-muted-foreground">
-                  {t("sredniaZmiana")}
+                  {t("averageChange")}
                 </span>
               </div>
               <p className="mt-1 text-2xl font-bold">
@@ -282,7 +282,7 @@ export default function RepricingPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            {t("wystapiłBładPodczasŁadowaniaDanych")}
+            {t("dataLoadError")}
           </p>
           <Button
             variant="outline"
@@ -303,8 +303,8 @@ export default function RepricingPage() {
           emptyState={
             <EmptyState
               icon={TrendingUp}
-              title={t("brakregułrepricing")}
-              description={t("utworzpierwszaregułedynamicznegoustalaniacen")}
+              title={t("noRepricingRules")}
+              description={t("createFirstDynamicPricingRule")}
               action={{ label: t("newRule"), href: "/repricing/new" }}
             />
           }
