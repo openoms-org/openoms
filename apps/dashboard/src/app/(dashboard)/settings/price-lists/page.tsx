@@ -77,7 +77,7 @@ export default function PriceListsPage() {
     if (!deleteId) return;
     deletePriceList.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("cennikZostałUsuniety"));
+        toast.success(t("priceListDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -97,7 +97,7 @@ export default function PriceListsPage() {
       },
       {
         onSuccess: () => {
-          toast.success(t("cennikZostałUtworzony"));
+          toast.success(t("priceListCreated"));
           setShowCreate(false);
           setNewName("");
           setNewDescription("");

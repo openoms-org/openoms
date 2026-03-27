@@ -121,7 +121,7 @@ export default function NewSupplierPage() {
     if (!hasBtpCreds) {
       createSupplier.mutate(data, {
         onSuccess: () => {
-          toast.success(t("dostawcazostałutworzony"));
+          toast.success(t("supplierCreated"));
           router.push("/suppliers");
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -147,7 +147,7 @@ export default function NewSupplierPage() {
         integration_id: integration.id,
       });
 
-      toast.success(t("dostawcazostałutworzonytrybhybrydowyxmlapi"));
+      toast.success(t("supplierCreatedHybridMode"));
       router.push("/suppliers");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -288,7 +288,7 @@ export default function NewSupplierPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="sync_interval_minutes">
-                      {t("interwałSynchronizacji")}
+                      {t("syncInterval")}
                     </Label>
                     <Select
                       defaultValue="60"
@@ -302,7 +302,7 @@ export default function NewSupplierPage() {
                       <SelectContent>
                         <SelectItem value="15">{t("every15Min")}</SelectItem>
                         <SelectItem value="30">{t("every30Min")}</SelectItem>
-                        <SelectItem value="60">{t("co1Godzine")}</SelectItem>
+                        <SelectItem value="60">{t("every1Hour")}</SelectItem>
                         <SelectItem value="120">{t("every2Hours")}</SelectItem>
                         <SelectItem value="360">{t("every6Hours")}</SelectItem>
                         <SelectItem value="720">{t("every12Hours")}</SelectItem>
@@ -334,7 +334,7 @@ export default function NewSupplierPage() {
                       <div className="border-t px-3 pb-3 pt-3 space-y-3">
                         <p className="text-xs text-muted-foreground">
                           {t("podajKluczeApiZPaneluBtpAby")}
-                          {t("hybrydowyPełnyKatalogZXmlAktualizacjeStanow")}
+                          {t("hybridFullCatalogFromXml")}
                           {t("przezApiMiedzySynchronizacjami")}
                         </p>
                         <div className="space-y-2">
@@ -371,7 +371,7 @@ export default function NewSupplierPage() {
                               aria-label={
                                 showXmlPrivateKey
                                   ? t("hideKey")
-                                  : t("pokazKlucz")
+                                  : t("showKey")
                               }
                             >
                               {showXmlPrivateKey ? (

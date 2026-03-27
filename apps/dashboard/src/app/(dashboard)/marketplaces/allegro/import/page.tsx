@@ -126,7 +126,7 @@ export default function AllegroImportPage() {
               icon={<SkipForward className="h-4 w-4" />}
             />
             <SummaryCard
-              title={t("błedy")}
+              title={t("errors")}
               value={result.errors}
               variant="error"
               icon={<AlertCircle className="h-4 w-4" />}
@@ -137,7 +137,7 @@ export default function AllegroImportPage() {
           {result.details && result.details.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>{t("szczegołyImportu")}</CardTitle>
+                <CardTitle>{t("importDetails")}</CardTitle>
                 <CardDescription>
                   {t("showingOfTotal", { shown: result.details.length, total: result.total_offers })}
                 </CardDescription>

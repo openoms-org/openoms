@@ -133,7 +133,7 @@ export default function AccountingSettingsPage() {
       toast.success(t("ustawieniaKsiegowosciZapisane"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
+        err instanceof Error ? err.message : t("settingsSaveError");
       toast.error(message);
     }
   };
@@ -160,7 +160,7 @@ export default function AccountingSettingsPage() {
       const message =
         err instanceof Error
           ? err.message
-          : t("nieUdałoSiePrzetestowacPołaczenia");
+          : t("connectionTestError");
       toast.error(message);
       setTestResult({ success: false, message });
     }
@@ -182,7 +182,7 @@ export default function AccountingSettingsPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("integracjeKsiegowe")}</h1>
           <p className="text-muted-foreground">
-            {t("połaczOpenomsZSystememFakturowaniaFakturowniaWfirm")}
+            {t("connectOpenomsToInvoicingSystem")}
             inFakt
           </p>
         </div>
@@ -190,7 +190,7 @@ export default function AccountingSettingsPage() {
         {/* Provider selection */}
         <Card>
           <CardHeader>
-            <CardTitle>{t("dostawcaUsługKsiegowych")}</CardTitle>
+            <CardTitle>{t("accountingServiceProvider")}</CardTitle>
             <CardDescription>
               {t("wybierzSystemKsiegowyZKtorymChceszZintegrowac")}
             </CardDescription>
@@ -276,7 +276,7 @@ export default function AccountingSettingsPage() {
         {provider && (
           <Card>
             <CardHeader>
-              <CardTitle>{t("testPołaczenia")}</CardTitle>
+              <CardTitle>{t("connectionTest")}</CardTitle>
               <CardDescription>
                 {t("sprawdzCzyDaneDostepoweSaPoprawne")}
               </CardDescription>
@@ -292,7 +292,7 @@ export default function AccountingSettingsPage() {
                 ) : (
                   <TestTube className="mr-2 h-4 w-4" />
                 )}
-                {t("testujPołaczenie")}
+                {t("testConnection")}
               </Button>
 
               {testResult && (

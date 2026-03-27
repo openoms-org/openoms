@@ -45,7 +45,7 @@ export default function InvoiceDetailPage() {
   const handleCancel = async () => {
     try {
       await cancelInvoice.mutateAsync(params.id);
-      toast.success(t("fakturazostałaanulowana"));
+      toast.success(t("invoiceCancelled"));
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
@@ -62,7 +62,7 @@ export default function InvoiceDetailPage() {
   const handleSendToKSeF = async () => {
     try {
       await sendToKSeF.mutateAsync(params.id);
-      toast.success(t("fakturawysłanadoksef"));
+      toast.success(t("invoiceSentToKsef"));
       refetch();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -245,7 +245,7 @@ export default function InvoiceDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    {t("terminPłatnosci")}
+                    {t("paymentDueDate")}
                   </p>
                   <p className="mt-1 text-sm">
                     {invoice.due_date ? formatDate(invoice.due_date) : "-"}
@@ -294,7 +294,7 @@ export default function InvoiceDetailPage() {
                 {invoice.ksef_sent_at && (
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      {t("dataWysłania")}
+                      {t("sendDate")}
                     </p>
                     <p className="mt-1 text-sm">
                       {formatDate(invoice.ksef_sent_at)}

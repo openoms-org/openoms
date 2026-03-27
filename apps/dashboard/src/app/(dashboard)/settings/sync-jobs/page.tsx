@@ -129,7 +129,7 @@ export default function SyncJobsPage() {
       cell: (row) => row.items_processed,
     },
     {
-      header: t("błedy1"),
+      header: t("errors1"),
       accessorKey: "items_failed",
       cell: (row) =>
         row.items_failed > 0 ? (
@@ -236,7 +236,7 @@ export default function SyncJobsPage() {
       <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{t("szczegołysynchronizacji")}</DialogTitle>
+            <DialogTitle>{t("syncDetails")}</DialogTitle>
             <DialogDescription>
               ID: {selectedJob?.id}
             </DialogDescription>
@@ -273,13 +273,13 @@ export default function SyncJobsPage() {
                   <p>{selectedJob.items_processed}</p>
                 </div>
                 <div>
-                  <span className="font-medium text-muted-foreground">{t("błedy1")}</span>
+                  <span className="font-medium text-muted-foreground">{t("errors1")}</span>
                   <p>{selectedJob.items_failed}</p>
                 </div>
               </div>
               {selectedJob.error_message && (
                 <div>
-                  <span className="font-medium text-muted-foreground text-sm">{t("komunikatbłedu")}</span>
+                  <span className="font-medium text-muted-foreground text-sm">{t("errorMessage")}</span>
                   <p className="text-destructive text-sm mt-1">{selectedJob.error_message}</p>
                 </div>
               )}

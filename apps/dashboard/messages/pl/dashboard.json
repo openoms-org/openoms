@@ -111,10 +111,10 @@
     "intervalMonth": "Miesięcznie",
     "intervalYear": "Rocznie",
     "maksUzytkownikow": "Maks. użytkowników",
+    "managePlanAndPayments": "Zarządzaj planem i płatnościami",
     "manageSubscription": "Zarządzaj subskrypcją",
     "maxIntegrations": "Maks. integracji",
     "nextRenewal": "Następne odnowienie:",
-    "nieUdałoSieZaładowacDanychSubskrypcji": "Nie udało się załadować danych subskrypcji.",
     "pastDue": "Płatność zaległa. Tworzenie nowych zasobów zostało zablokowane do momentu uregulowania należności.",
     "planLimits": "Limity planu",
     "renewSubscription": "Odnów subskrypcję",
@@ -123,12 +123,12 @@
     "statusPastDue": "Zaległa płatność",
     "statusSuspended": "Zawieszona",
     "statusTrialing": "Okres próbny",
+    "subscriptionDataLoadError": "Nie udało się załadować danych subskrypcji.",
     "suspended": "Subskrypcja została zawieszona. Odnów płatność aby kontynuować korzystanie z systemu.",
     "title": "Subskrypcja",
     "trial": "Okres próbny — pozostało {days} dni.",
     "trialEndsIn": "Okres próbny kończy się za",
     "twojPlan": "Twój plan",
-    "zamowienMiesiac": "Zamówień / miesiąc",
-    "zarzadzajPlanemIPłatnosciami": "Zarządzaj planem i płatnościami"
+    "zamowienMiesiac": "Zamówień / miesiąc"
   }
 }

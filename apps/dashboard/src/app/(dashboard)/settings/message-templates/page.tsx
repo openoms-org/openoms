@@ -147,7 +147,7 @@ export default function MessageTemplatesPage() {
     if (editingTemplate) {
       updateTemplate.mutate(payload, {
         onSuccess: () => {
-          toast.success(t("szablonZostałZaktualizowany"));
+          toast.success(t("templateUpdated"));
           closeDialog();
         },
         onError: (error) => {
@@ -157,7 +157,7 @@ export default function MessageTemplatesPage() {
     } else {
       createTemplate.mutate(payload, {
         onSuccess: () => {
-          toast.success(t("szablonZostałUtworzony"));
+          toast.success(t("templateCreated"));
           closeDialog();
         },
         onError: (error) => {
@@ -171,7 +171,7 @@ export default function MessageTemplatesPage() {
     if (!deleteId) return;
     deleteTemplate.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("szablonZostałUsuniety"));
+        toast.success(t("templateDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -234,7 +234,7 @@ export default function MessageTemplatesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("messageTemplates.columns.name")}</TableHead>
-                <TableHead>{t("kanał1")}</TableHead>
+                <TableHead>{t("channel1")}</TableHead>
                 <TableHead>{t("messageTemplates.columns.subject")}</TableHead>
                 <TableHead>{t("messageTemplates.columns.active")}</TableHead>
                 <TableHead>{t("messageTemplates.columns.createdAt")}</TableHead>
@@ -319,7 +319,7 @@ export default function MessageTemplatesPage() {
             </DialogTitle>
             <DialogDescription>
               {editingTemplate
-                ? t("zaktualizujSzczegołySzablonuWiadomosci")
+                ? t("updateMessageTemplateDetails")
                 : t("dodajNowySzablonWiadomosciDoSystemu")}
             </DialogDescription>
           </DialogHeader>
@@ -333,12 +333,12 @@ export default function MessageTemplatesPage() {
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, name: e.target.value }))
                 }
-                placeholder={t("npPotwierdzenieWysyłki")}
+                placeholder={t("egShipmentConfirmation")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tpl-channel">{t("kanał1")}</Label>
+              <Label htmlFor="tpl-channel">{t("channel1")}</Label>
               <Select
                 value={form.channel}
                 onValueChange={(value) =>
@@ -346,7 +346,7 @@ export default function MessageTemplatesPage() {
                 }
               >
                 <SelectTrigger id="tpl-channel">
-                  <SelectValue placeholder={t("wybierzkanał")} />
+                  <SelectValue placeholder={t("selectChannel")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="allegro">Allegro</SelectItem>

@@ -91,10 +91,10 @@ export default function CustomFieldsPage() {
 
     try {
       await updateCustomFields.mutateAsync(configToSave);
-      toast.success(t("polaDodatkoweZostałyZapisane"));
+      toast.success(t("customFieldsSaved"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("bładPodczasZapisywania")
+        error instanceof Error ? error.message : t("savingError")
       );
     }
   };

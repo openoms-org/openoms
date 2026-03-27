@@ -103,7 +103,7 @@ function StatusBadge({ status }: { status: string }) {
     ok: "OK",
     warning: t("noSync"),
     error: t("invoice.error"),
-    disabled: t("wyłaczony"),
+    disabled: t("disabled"),
   };
 
   return (
@@ -146,16 +146,16 @@ function AddChannelDialog() {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          {t("dodajKanał")}
+          {t("addChannel")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("nowykanałsynchronizacji")}</DialogTitle>
+          <DialogTitle>{t("newSyncChannel")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>{t("typkanału")}</Label>
+            <Label>{t("channelType")}</Label>
             <Select value={channelType} onValueChange={setChannelType}>
               <SelectTrigger>
                 <SelectValue />
@@ -234,7 +234,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
   };
 
   const handleDelete = async () => {
-    if (confirm(t("czyNaPewnoChceszUsunacTenKanał"))) {
+    if (confirm(t("confirmDeleteChannel"))) {
       await deleteChannel.mutateAsync(channel.id);
     }
   };
@@ -258,7 +258,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
             size="icon"
             onClick={handlePush}
             disabled={pushChannel.isPending || !channel.enabled}
-            title={t("synchronizujKanał")}
+            title={t("syncChannel")}
           >
             <RefreshCw
               className={`h-4 w-4 text-muted-foreground ${pushChannel.isPending ? "animate-spin" : ""}`}
@@ -267,7 +267,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
           <Switch
             checked={channel.enabled}
             onCheckedChange={handleToggle}
-            aria-label={t("właczwyłaczKanał")}
+            aria-label={t("enableDisableChannel")}
           />
           <Button
             variant="ghost"
@@ -294,7 +294,7 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
             <span>{channel.stock_buffer} {t("pcs")}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">{t("błedy24h")}</span>
+            <span className="text-muted-foreground">{t("errors24h")}</span>
             <span className={channel.error_count > 0 ? "text-red-600 font-medium" : ""}>
               {channel.error_count}
             </span>
@@ -339,7 +339,7 @@ export default function StockSyncPage() {
               {t("stockSync")}
             </h1>
             <p className="text-muted-foreground">
-              {t("synchronizacjaStanowMagazynowychZKanałamiSprzedazy")}
+              {t("stockSyncWithSalesChannels")}
               rzeczywistym
             </p>
             {dataUpdatedAt > 0 && (
@@ -385,7 +385,7 @@ export default function StockSyncPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
-                    {t("aktywneKanały")}
+                    {t("activeChannels")}
                   </CardTitle>
                   <Activity className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
@@ -435,7 +435,7 @@ export default function StockSyncPage() {
             {dashboard?.channel_summaries &&
             dashboard.channel_summaries.length > 0 ? (
               <div>
-                <h2 className="text-lg font-semibold mb-4">{t("kanałysynchronizacji")}</h2>
+                <h2 className="text-lg font-semibold mb-4">{t("syncChannels")}</h2>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {dashboard.channel_summaries.map((ch) => (
                     <ChannelCard key={ch.id} channel={ch} />
@@ -445,8 +445,8 @@ export default function StockSyncPage() {
             ) : (
               <EmptyState
                 icon={RefreshCw}
-                title={t("brakkanałowsynchronizacji")}
-                description={t("dodajkanałsprzedazyabyrozpoczacsynchronizacjestano")}
+                title={t("noSyncChannels")}
+                description={t("addSalesChannelToStartSync")}
               />
             )}
 

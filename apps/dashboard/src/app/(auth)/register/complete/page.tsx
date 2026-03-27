@@ -58,7 +58,7 @@ function CompleteRegistrationForm() {
 
   useEffect(() => {
     if (!sessionId) {
-      setError(t("brakIdentyfikatoraSesjiPłatnosci"));
+      setError(t("missingPaymentSessionId"));
       return;
     }
 
@@ -77,7 +77,7 @@ function CompleteRegistrationForm() {
           });
           if (!res.ok) {
             if (res.status === 404) {
-              setError(t("sesjaPłatnosciNieZostałaZnaleziona"));
+              setError(t("paymentSessionNotFound"));
               return;
             }
             throw new Error(t("errorBoundary.serverError"));
@@ -85,7 +85,7 @@ function CompleteRegistrationForm() {
           const data: CheckoutSessionStatus = await res.json();
 
           if (data.status === "registered") {
-            setError(t("taSesjaPłatnosciZostałaJuzWykorzystana"));
+            setError(t("paymentSessionAlreadyUsed"));
             return;
           }
 
@@ -101,7 +101,7 @@ function CompleteRegistrationForm() {
         } catch (err) {
           if (cancelled || (err instanceof DOMException && err.name === "AbortError")) return;
           if (attempt === maxAttempts - 1) {
-            setError(t("nieUdałoSieZweryfikowacPłatnosciSprobujPonownieZaC"));
+            setError(t("paymentVerificationFailedRetry"));
             return;
           }
           await new Promise((r) => setTimeout(r, intervalMs));
@@ -109,7 +109,7 @@ function CompleteRegistrationForm() {
       }
 
       if (!cancelled) {
-        setError(t("płatnoscNieZostałaJeszczePotwierdzonaSprobujOdswie"));
+        setError(t("paymentNotYetConfirmedRefresh"));
       }
     };
 
@@ -128,7 +128,7 @@ function CompleteRegistrationForm() {
           <CardTitle>{t("invoice.error")}</CardTitle>
         </CardHeader>
         <CardContent className="text-center text-muted-foreground">
-          <p>{t("brakIdentyfikatoraSesjiWrocNaStroneWyboruPlanu")}</p>
+          <p>{t("missingSessionIdGoBackToPlanSelection")}</p>
         </CardContent>
         <CardFooter className="justify-center">
           <Link href="/register">
@@ -164,8 +164,8 @@ function CompleteRegistrationForm() {
     return (
       <Card className="max-w-md mx-auto">
         <CardHeader className="text-center">
-          <CardTitle>{t("weryfikacjaPłatnosci")}</CardTitle>
-          <CardDescription>{t("sprawdzamyStatusTwojejPłatnosci")}</CardDescription>
+          <CardTitle>{t("paymentVerification")}</CardTitle>
+          <CardDescription>{t("checkingPaymentStatus")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-10 w-full" />
@@ -195,7 +195,7 @@ function CompleteRegistrationForm() {
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">{t("dokonczRejestracje")}</CardTitle>
+        <CardTitle className="text-2xl">{t("completeRegistration")}</CardTitle>
         <CardDescription>
           Plan: <span className="font-medium text-foreground">{session.plan}</span>
         </CardDescription>
@@ -247,7 +247,7 @@ function CompleteRegistrationForm() {
             <Input
               id="password"
               type="password"
-              placeholder={t("minimum8Znakow")}
+              placeholder={t("minimum8Characters")}
               aria-invalid={!!errors.password}
               {...register("password")}
             />

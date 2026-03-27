@@ -28,7 +28,7 @@ export default function NewIntegrationPage() {
   const handleSubmit = (data: CreateIntegrationRequest) => {
     createIntegration.mutate(data, {
       onSuccess: () => {
-        toast.success(t("integracjazostałautworzona"));
+        toast.success(t("integrationCreated"));
         router.push("/integrations");
       },
       onError: (error) => {
@@ -43,7 +43,7 @@ export default function NewIntegrationPage() {
     <AdminGuard>
       <PageHeader
         title={t("newIntegration")}
-        description={t("dodajnowepołaczeniezzewnetrznymserwisem")}
+        description={t("addNewExternalConnection")}
       />
 
       {dedicatedEntries.length > 0 && (
@@ -51,7 +51,7 @@ export default function NewIntegrationPage() {
           <CardHeader>
             <CardTitle className="text-base">{t("integrationsWithDedicatedWizard")}</CardTitle>
             <CardDescription>
-              {t("ponizszeIntegracjeWymagajaAutoryzacjiOauthIMaja")}
+              {t("integrationsRequireOauthAuth")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">

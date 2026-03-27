@@ -51,7 +51,7 @@ export default function InventorySettingsPage() {
         { strict_mode: false },
         {
           onSuccess: () => {
-            toast.success(t("trybScisłejKontroliMagazynowejWyłaczony"));
+            toast.success(t("strictInventoryControlDisabled"));
           },
           onError: (error) => {
             toast.error(getErrorMessage(error));
@@ -66,7 +66,7 @@ export default function InventorySettingsPage() {
       { strict_mode: true },
       {
         onSuccess: () => {
-          toast.success(t("trybScisłejKontroliMagazynowejWłaczony"));
+          toast.success(t("strictInventoryControlEnabled"));
           setShowWarning(false);
         },
         onError: (error) => {
@@ -100,10 +100,10 @@ export default function InventorySettingsPage() {
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
                 <Label htmlFor="strict-mode" className="text-base font-medium">
-                  {t("trybScisłejKontroliMagazynowej")}
+                  {t("strictInventoryControlMode")}
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  {t("gdyWłaczonyZmianyStanowMagazynowychMozliweTylko")}
+                  {t("whenEnabledStockChangesOnlyViaDocuments")}
                 </p>
               </div>
               <Switch
@@ -119,7 +119,7 @@ export default function InventorySettingsPage() {
                 <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-warning">
-                    {t("trybScisłejKontroliJestAktywny")}
+                    {t("strictInventoryControlActive")}
                   </p>
                   <p className="text-sm text-warning">
                     {t("inventory.strictModeWarning")}
@@ -135,18 +135,18 @@ export default function InventorySettingsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t("właczenieScisłejKontroliMagazynowej")}
+              {t("enableStrictInventoryControl")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("uwagaPoWłaczeniuNieBedzieMozliwaReczna")}
+              {t("warningNoManualStockChanges")}
               {t("inventory.allChangesMustGoThrough")}
-              {t("czyNaPewnoChceszWłaczycTenTryb")}
+              {t("confirmEnableThisMode")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmEnable}>
-              {updateSettings.isPending ? t("właczanie") : t("włacz1")}
+              {updateSettings.isPending ? t("enabling") : t("enable1")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

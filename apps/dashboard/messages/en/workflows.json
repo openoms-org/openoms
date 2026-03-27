@@ -1,38 +1,38 @@
 {
   "workflows": {
-    "title": "Workflow Builder",
+    "deleteConfirm": "Are you sure you want to delete this workflow?",
+    "deleteConfirmDescription": "This action cannot be undone. The workflow will be permanently deleted.",
+    "deleteError": "Failed to delete workflow",
+    "deleteSuccess": "Workflow has been deleted",
     "description": "Visual drag-and-drop automation editor",
-    "textEditor": "Text editor",
-    "newWorkflow": "New workflow",
+    "editor": {
+      "createError": "Failed to save workflow",
+      "createSuccess": "Workflow has been created",
+      "defaultName": "New workflow",
+      "nameRequired": "Workflow name is required",
+      "testHint": "Test function - save the workflow and use the test in the text editor",
+      "validationError": "Workflow contains errors",
+      "validationFailed": "Workflow validation failed"
+    },
+    "emptyDescription": "Create your first visual automation workflow",
+    "emptyTitle": "No workflows",
     "errorLoading": "An error occurred while loading data. Try refreshing the page.",
+    "executions": "{count} executions",
+    "new": {
+      "back": "Back",
+      "description": "Choose a template or start from a blank canvas",
+      "edgesCount": "{count} connections",
+      "emptyCanvas": "Blank canvas",
+      "emptyCanvasDescription": "Start from scratch - drag elements onto the canvas",
+      "nodesCount": "{count} nodes",
+      "templates": "Templates",
+      "title": "New workflow"
+    },
+    "newWorkflow": "New workflow",
     "retry": "Try again",
     "statusActive": "Active",
     "statusDraft": "Draft",
-    "executions": "{count} executions",
-    "emptyTitle": "No workflows",
-    "emptyDescription": "Create your first visual automation workflow",
-    "deleteConfirm": "Are you sure you want to delete this workflow?",
-    "deleteConfirmDescription": "This action cannot be undone. The workflow will be permanently deleted.",
-    "deleteSuccess": "Workflow has been deleted",
-    "deleteError": "Failed to delete workflow",
-    "new": {
-      "title": "New workflow",
-      "description": "Choose a template or start from a blank canvas",
-      "back": "Back",
-      "emptyCanvas": "Blank canvas",
-      "emptyCanvasDescription": "Start from scratch - drag elements onto the canvas",
-      "templates": "Templates",
-      "nodesCount": "{count} nodes",
-      "edgesCount": "{count} connections"
-    },
-    "editor": {
-      "defaultName": "New workflow",
-      "nameRequired": "Workflow name is required",
-      "validationError": "Workflow contains errors",
-      "validationFailed": "Workflow validation failed",
-      "createSuccess": "Workflow has been created",
-      "createError": "Failed to save workflow",
-      "testHint": "Test function - save the workflow and use the test in the text editor"
-    }
+    "textEditor": "Text editor",
+    "title": "Workflow Builder"
   }
 }

@@ -174,7 +174,7 @@ export default function EbayOffersPage() {
                   <p className="text-sm text-destructive">
                     {error instanceof Error
                       ? error.message
-                      : t("nieudałosiepobracofertzebay")}
+                      : t("ebayOffersFetchError")}
                   </p>
                 </CardContent>
               </Card>

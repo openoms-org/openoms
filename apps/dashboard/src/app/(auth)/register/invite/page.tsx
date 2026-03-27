@@ -159,7 +159,7 @@ function InviteRegisterForm() {
             <Input
               id="password"
               type="password"
-              placeholder={t("minimum8Znakow")}
+              placeholder={t("minimum8Characters")}
               aria-invalid={!!errors.password}
               {...register("password")}
             />

@@ -138,14 +138,14 @@ export default function ProductImportPage() {
                   {result.errors.length}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {t("błedy")}
+                  {t("errors")}
                 </p>
               </div>
             </div>
 
             {result.errors.length > 0 && (
               <div className="space-y-2">
-                <h3 className="font-medium text-destructive">{t("błedyImportu")}</h3>
+                <h3 className="font-medium text-destructive">{t("importErrors")}</h3>
                 <div className="max-h-60 overflow-y-auto rounded-md border">
                   <Table>
                     <TableHeader>

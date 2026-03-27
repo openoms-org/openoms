@@ -87,7 +87,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t("panelGłowny")}</h1>
+        <h1 className="text-2xl font-bold">{t("mainPanel")}</h1>
         {user?.name && (
           <p className="text-muted-foreground mt-1">Witaj, {user.name}!</p>
         )}

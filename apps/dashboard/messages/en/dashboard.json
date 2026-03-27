@@ -111,10 +111,10 @@
     "intervalMonth": "Monthly",
     "intervalYear": "Yearly",
     "maksUzytkownikow": "Max users",
+    "managePlanAndPayments": "Manage plan and payments",
     "manageSubscription": "Manage subscription",
     "maxIntegrations": "Max. integrations",
     "nextRenewal": "Next renewal:",
-    "nieUdałoSieZaładowacDanychSubskrypcji": "Failed to load subscription data",
     "pastDue": "Payment overdue. Creating new resources has been blocked until the outstanding payment is settled.",
     "planLimits": "Plan limits",
     "renewSubscription": "Renew subscription",
@@ -123,12 +123,12 @@
     "statusPastDue": "Overdue payment",
     "statusSuspended": "Suspended",
     "statusTrialing": "Trial period",
+    "subscriptionDataLoadError": "Failed to load subscription data",
     "suspended": "Subscription has been suspended. Renew your payment to continue using the system.",
     "title": "Subscription",
     "trial": "Trial period — {days} days remaining.",
     "trialEndsIn": "Trial period ends in",
     "twojPlan": "Your plan",
-    "zamowienMiesiac": "Orders / month",
-    "zarzadzajPlanemIPłatnosciami": "Manage plan and payments"
+    "zamowienMiesiac": "Orders / month"
   }
 }

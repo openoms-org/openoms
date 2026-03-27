@@ -78,7 +78,7 @@ export default function PrintTemplatesPage() {
       toast.success(tp("saved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieudałosiezapisacszablonow");
+        err instanceof Error ? err.message : t("templatesSaveError");
       toast.error(message);
     }
   };
@@ -112,7 +112,7 @@ export default function PrintTemplatesPage() {
         <CardHeader>
           <CardTitle>{t("zmienneSzablonow")}</CardTitle>
           <CardDescription>
-            {t("szablonyUzywajaSkładniGoHtmltemplateDostepneZmienn")}
+            {t("templatesUseGoHtmlTemplateSyntax")}
             {tp("templateVarInfo")}
           </CardDescription>
         </CardHeader>

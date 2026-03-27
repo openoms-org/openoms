@@ -120,7 +120,7 @@ export default function StocktakeDetailPage() {
   const handleComplete = useCallback(() => {
     completeStocktake.mutate(id, {
       onSuccess: () => {
-        toast.success(t("inwentaryzacjazostałazakonczona"));
+        toast.success(t("stocktakeCompleted"));
         setShowCompleteConfirm(false);
       },
       onError: (error) => {
@@ -133,7 +133,7 @@ export default function StocktakeDetailPage() {
   const handleCancel = useCallback(() => {
     cancelStocktake.mutate(id, {
       onSuccess: () => {
-        toast.success(t("inwentaryzacjazostałaanulowana"));
+        toast.success(t("stocktakeCancelled"));
         setShowCancelConfirm(false);
       },
       onError: (error) => {
@@ -146,7 +146,7 @@ export default function StocktakeDetailPage() {
   const handleDelete = useCallback(() => {
     deleteStocktake.mutate(id, {
       onSuccess: () => {
-        toast.success(t("inwentaryzacjazostałausunieta"));
+        toast.success(t("stocktakeDeleted"));
         router.push("/stocktakes");
       },
       onError: (error) => toast.error(getErrorMessage(error)),

@@ -248,7 +248,7 @@ function ReturnCard({
                 {ret.parcelSentByBuyer && (
                   <Badge variant="outline" className="text-[10px]">
                     <Package className="mr-1 h-3 w-3" />
-                    {t("paczkaWysłana")}
+                    {t("packageSent")}
                   </Badge>
                 )}
               </div>
@@ -347,14 +347,14 @@ function RejectDialog({
 
     rejectMutation.mutate(reason.trim(), {
       onSuccess: () => {
-        toast.success(t("zwrotZostałOdrzucony"));
+        toast.success(t("returnRejected"));
         onClose();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : t("nieUdałoSieOdrzucicZwrotu")
+            : t("returnRejectError")
         );
       },
     });
@@ -421,7 +421,7 @@ function RefundDialog({
       return;
     }
     if (!paymentId.trim()) {
-      toast.error(t("podajIdPłatnosci"));
+      toast.error(t("enterPaymentId"));
       return;
     }
 
@@ -442,14 +442,14 @@ function RefundDialog({
 
     createRefund.mutate(request, {
       onSuccess: () => {
-        toast.success(t("zwrotPieniedzyZostałUtworzony"));
+        toast.success(t("refundCreated"));
         onClose();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : t("nieUdałoSieUtworzycZwrotuPieniedzy")
+            : t("refundCreateError")
         );
       },
     });

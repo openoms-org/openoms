@@ -88,7 +88,7 @@ export default function CustomerDetailPage() {
     }
     try {
       await updateCustomer.mutateAsync(formData);
-      toast.success(t("daneklientazostałyzaktualizowane"));
+      toast.success(t("customerDataUpdated"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -98,7 +98,7 @@ export default function CustomerDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteCustomer.mutateAsync(params.id);
-      toast.success(t("klientzostałusuniety"));
+      toast.success(t("customerDeleted"));
       router.push("/customers");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -389,7 +389,7 @@ export default function CustomerDetailPage() {
                 <p className="mt-1 text-2xl font-bold">{customer.total_orders}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t("wydanołacznie")}</p>
+                <p className="text-sm text-muted-foreground">{t("totalSpent")}</p>
                 <p className="mt-1 text-2xl font-bold">
                   {formatCurrency(customer.total_spent)}
                 </p>

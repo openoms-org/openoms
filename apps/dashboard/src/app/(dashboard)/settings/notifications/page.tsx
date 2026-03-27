@@ -124,7 +124,7 @@ export default function NotificationsPage() {
       toast.success(tn("savedEmail"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieUdałoSieZapisacUstawien");
+        err instanceof Error ? err.message : t("settingsSaveError");
       toast.error(message);
     }
   };
@@ -132,10 +132,10 @@ export default function NotificationsPage() {
   const handleTestEmail = async () => {
     try {
       await sendTestEmail.mutateAsync(testEmailAddr);
-      toast.success(t("testowyEmailWysłany"));
+      toast.success(t("testEmailSent"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : t("nieUdałoSieWysłacTestowegoEmaila");
+        err instanceof Error ? err.message : t("testEmailSendError");
       toast.error(message);
     }
   };
@@ -148,7 +148,7 @@ export default function NotificationsPage() {
       const message =
         err instanceof Error
           ? err.message
-          : t("nieUdałoSieZapisacUstawienSms");
+          : t("smsSaveError");
       toast.error(message);
     }
   };
@@ -156,12 +156,12 @@ export default function NotificationsPage() {
   const handleTestSMS = async () => {
     try {
       await sendTestSMS.mutateAsync(testPhone);
-      toast.success(t("testowySmsWysłany"));
+      toast.success(t("testSmsSent"));
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : t("nieUdałoSieWysłacTestowegoSms");
+          : t("testSmsSendError");
       toast.error(message);
     }
   };
@@ -180,7 +180,7 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold">{tn("title")}</h1>
           <p className="text-muted-foreground">
-            {t("konfiguracjaKanałowPowiadomienDoKlientow")}
+            {t("notificationChannelConfiguration")}
           </p>
         </div>
 
@@ -203,7 +203,7 @@ export default function NotificationsPage() {
                     <div>
                       <p className="font-medium">{tn("emailNotifications")}</p>
                       <p className="text-sm text-muted-foreground">
-                        {t("wysyłajAutomatyczneEmailePrzyZmianieStatusuZamowie")}
+                        {t("sendAutoEmailOnStatusChange")}
                       </p>
                     </div>
                     <Switch
@@ -296,7 +296,7 @@ export default function NotificationsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {t("wybierzPrzyJakichZmianachStatusuWysyłacEmail")}
+                    {t("selectStatusChangesForEmail")}
                   </p>
                   <div className="space-y-3">
                     {EMAIL_NOTIFICATION_STATUSES.map(({ value, label }) => (
@@ -376,7 +376,7 @@ export default function NotificationsPage() {
                     <div>
                       <p className="font-medium">{tn("smsNotifications")}</p>
                       <p className="text-sm text-muted-foreground">
-                        {t("wysyłajAutomatyczneSmsyPrzyZmianieStatusuZamowieni")}
+                        {t("sendAutoSmsOnStatusChange")}
                       </p>
                     </div>
                     <Switch
@@ -430,7 +430,7 @@ export default function NotificationsPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {t("wybierzPrzyJakichZmianachStatusuWysyłacSms")}
+                    {t("selectStatusChangesForSms")}
                   </p>
                   <div className="space-y-3">
                     {SMS_NOTIFICATION_STATUSES.map(({ value, label }) => (

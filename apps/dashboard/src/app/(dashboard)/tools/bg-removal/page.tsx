@@ -30,7 +30,7 @@ export default function BGRemovalPage() {
     (file: File) => {
       const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
       if (!allowedTypes.includes(file.type)) {
-        toast.error(t("nieobsługiwanyTypPlikuDozwoloneJpegPngWebp"));
+        toast.error(t("unsupportedFileTypeAllowedJpegPngWebp"));
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -75,10 +75,10 @@ export default function BGRemovalPage() {
     removeBackground.mutate(originalFile, {
       onSuccess: (data) => {
         setResultUrl(data.url);
-        toast.success(t("tłoZostałoUsuniete"));
+        toast.success(t("backgroundRemoved"));
       },
       onError: (error) => {
-        toast.error(error instanceof Error ? error.message : t("bładUsuwaniaTła"));
+        toast.error(error instanceof Error ? error.message : t("backgroundRemovalError"));
       },
     });
   };
@@ -113,14 +113,14 @@ export default function BGRemovalPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("bgRemovalTitle")}</h1>
           <p className="text-muted-foreground">
-            {t("automatyczneUsuwanieTłaZeZdjecProduktowych")}
+            {t("autoBackgroundRemovalFromProductPhotos")}
           </p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Eraser className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h2 className="text-lg font-semibold mb-2">
-              {t("usuwanieTłaNieJestSkonfigurowane")}
+              {t("backgroundRemovalNotConfigured")}
             </h2>
             <p className="text-sm text-muted-foreground max-w-md">
               {t("abyKorzystacZTejFunkcjiAdministratorMusi")}{" "}
@@ -148,7 +148,7 @@ export default function BGRemovalPage() {
       <div>
         <h1 className="text-2xl font-bold">{t("bgRemovalTitle")}</h1>
         <p className="text-muted-foreground">
-          {t("automatyczneUsuwanieTłaZeZdjecProduktowychPowered")}
+          {t("autoBackgroundRemovalPowered")}
         </p>
       </div>
 
@@ -199,7 +199,7 @@ export default function BGRemovalPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">{t("oryginał")}</CardTitle>
+                <CardTitle className="text-base">{t("original")}</CardTitle>
                 <CardDescription>
                   {originalFile?.name} ({((originalFile?.size || 0) / 1024).toFixed(0)} KB)
                 </CardDescription>
@@ -217,7 +217,7 @@ export default function BGRemovalPage() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">{t("bezTła")}</CardTitle>
+                <CardTitle className="text-base">{t("noBackground")}</CardTitle>
                 <CardDescription>
                   {resultUrl ? t("gotowe") : t("kliknijUsunTloAbyPrzetworzyc")}
                 </CardDescription>
@@ -234,7 +234,7 @@ export default function BGRemovalPage() {
                   {resultUrl ? (
                     <img
                       src={resultUrl}
-                      alt={t("zdjecieBezTła")}
+                      alt={t("photoWithoutBackground")}
                       className="max-h-80 rounded object-contain"
                     />
                   ) : (
@@ -263,7 +263,7 @@ export default function BGRemovalPage() {
                 ) : (
                   <Eraser className="mr-2 h-4 w-4" />
                 )}
-                {t("usunTło1")}
+                {t("removeBackground1")}
               </Button>
             ) : (
               <Button onClick={handleDownload}>

@@ -101,7 +101,7 @@ export default function RepricingRuleDetailPage() {
   if (!rule) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">{t("regułanieznaleziona")}</p>
+        <p className="text-muted-foreground">{t("ruleNotFound")}</p>
         <Button asChild className="mt-4">
           <Link href="/repricing">{t("powrotDoListy")}</Link>
         </Button>
@@ -114,7 +114,7 @@ export default function RepricingRuleDetailPage() {
     try {
       await updateRule.mutateAsync({ status: newStatus });
       toast.success(
-        newStatus === "active" ? t("regułaAktywowana") : t("reguławstrzymana")
+        newStatus === "active" ? t("ruleActivated2") : t("rulePaused")
       );
       refetch();
     } catch (error) {
@@ -125,7 +125,7 @@ export default function RepricingRuleDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteRule.mutateAsync(params.id);
-      toast.success(t("regułausunieta"));
+      toast.success(t("ruleDeleted"));
       router.push("/repricing");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -378,7 +378,7 @@ export default function RepricingRuleDetailPage() {
             </Table>
           ) : (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              {t("brakZmianCenDlaTejReguły")}
+              {t("noPriceChangesForThisRule")}
             </p>
           )}
         </CardContent>
@@ -446,7 +446,7 @@ export default function RepricingRuleDetailPage() {
       <ConfirmDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        title={t("usunacregułe")}
+        title={t("deleteRule")}
         description={t("deleteRuleConfirmation", { name: rule.name })}
         confirmLabel={tc("delete")}
         variant="destructive"

@@ -131,7 +131,7 @@ export default function NewReturnPage() {
         notes: data.notes || undefined,
         items: selectedItems.length > 0 ? selectedItems : undefined,
       });
-      toast.success(t("zwrotzostałutworzony"));
+      toast.success(t("returnWasCreated"));
       router.push(`/returns/${result.id}`);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -149,7 +149,7 @@ export default function NewReturnPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("newReturn")}</h1>
           <p className="text-muted-foreground">
-            {t("wypełnijFormularzAbyZgłosicNowyZwrot")}
+            {t("fillFormForNewReturn2")}
           </p>
         </div>
       </div>

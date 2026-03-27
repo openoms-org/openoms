@@ -123,7 +123,7 @@ export default function NewRepricingRulePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error(t("nazwaregułyjestwymagana"));
+      toast.error(t("ruleNameRequired"));
       return;
     }
 
@@ -139,7 +139,7 @@ export default function NewRepricingRulePage() {
         max_price: maxPrice ? parseFloat(maxPrice) : undefined,
         channels: ["internal"],
       });
-      toast.success(t("regułarepricingzostałautworzona"));
+      toast.success(t("repricingRuleCreated"));
       router.push(`/repricing/${result.id}`);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -155,7 +155,7 @@ export default function NewRepricingRulePage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{t("nowaregułarepricing")}</h1>
+          <h1 className="text-2xl font-bold">{t("newRepricingRule")}</h1>
           <p className="text-muted-foreground">
             {t("skonfigurujStrategieDynamicznegoUstalaniaCen")}
           </p>
@@ -170,7 +170,7 @@ export default function NewRepricingRulePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">{t("nazwareguły")}</Label>
+              <Label htmlFor="name">{t("ruleName")}</Label>
               <Input
                 id="name"
                 value={name}
@@ -450,7 +450,7 @@ export default function NewRepricingRulePage() {
         {/* Submit */}
         <div className="flex items-center gap-2">
           <Button type="submit" disabled={createRule.isPending}>
-            {createRule.isPending ? t("creating") : t("utworzregułe")}
+            {createRule.isPending ? t("creating") : t("createRule")}
           </Button>
           <Button
             variant="outline"

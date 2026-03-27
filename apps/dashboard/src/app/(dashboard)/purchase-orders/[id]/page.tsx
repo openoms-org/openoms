@@ -110,7 +110,7 @@ export default function PurchaseOrderDetailPage() {
       { items: entries },
       {
         onSuccess: () => {
-          toast.success(t("pozycjezostałyprzyjete"));
+          toast.success(t("itemsReceived"));
           setShowReceiveDialog(false);
         },
         onError: (error) => toast.error(getErrorMessage(error)),
@@ -121,7 +121,7 @@ export default function PurchaseOrderDetailPage() {
   const handleCancel = () => {
     cancelPO.mutate(id, {
       onSuccess: () => {
-        toast.success(t("zamowieniezostałoanulowane"));
+        toast.success(t("orderCancelled"));
         setShowCancelDialog(false);
       },
       onError: (error) => toast.error(getErrorMessage(error)),

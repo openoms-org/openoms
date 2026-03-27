@@ -57,7 +57,7 @@ export default function PurchaseOrdersPage() {
     if (!deleteId) return;
     deletePO.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("zamowieniezakupuzostałousuniete"));
+        toast.success(t("purchaseOrderDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {

@@ -87,7 +87,7 @@ export default function NewAutomationRulePage() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error(t("nazwaregułyjestwymagana"));
+      toast.error(t("ruleNameRequired"));
       return;
     }
     if (!triggerEvent) {
@@ -105,10 +105,10 @@ export default function NewAutomationRulePage() {
         conditions,
         actions,
       });
-      toast.success(t("regułazostałautworzona"));
+      toast.success(t("automationRuleCreated"));
       router.push("/settings/automation");
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("nieudałosieutworzycreguły");
+      const message = err instanceof Error ? err.message : t("ruleCreateError");
       toast.error(message);
     }
   };
@@ -123,7 +123,7 @@ export default function NewAutomationRulePage() {
         <div>
           <h1 className="text-2xl font-bold">{t("newRule")}</h1>
           <p className="text-muted-foreground">
-            {t("utworzNowaRegułeAutomatyzacji")}
+            {t("createNewAutomationRule")}
           </p>
         </div>
       </div>
@@ -161,13 +161,13 @@ export default function NewAutomationRulePage() {
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("opcjonalnyopisreguły")}
+              placeholder={t("optionalRuleDescription")}
               rows={2}
             />
           </div>
           <div className="flex items-center gap-3">
             <Switch checked={enabled} onCheckedChange={setEnabled} />
-            <Label>{t("regułaaktywna")}</Label>
+            <Label>{t("ruleActive")}</Label>
           </div>
         </CardContent>
       </Card>
@@ -208,7 +208,7 @@ export default function NewAutomationRulePage() {
         <CardContent className="space-y-4">
           {conditions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              {t("brakWarunkowRegułaUruchomiSiePrzyKazdym")}
+              {t("noConditionsRuleTriggersOnEvery")}
             </p>
           ) : (
             conditions.map((condition, index) => (
@@ -397,7 +397,7 @@ export default function NewAutomationRulePage() {
           ) : (
             <Save className="h-4 w-4" />
           )}
-          {t("utworzRegułe")}
+          {t("createAutomationRule")}
         </Button>
       </div>
     </div>

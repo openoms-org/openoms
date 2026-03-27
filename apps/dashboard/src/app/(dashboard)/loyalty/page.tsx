@@ -116,12 +116,12 @@ export default function LoyaltyPage() {
       try {
         config = JSON.parse(configText);
       } catch {
-        toast.error(t("nieprawidłowyformatjsonwkonfiguracji"));
+        toast.error(t("invalidJsonFormatInConfig"));
         return;
       }
 
       await createProgram.mutateAsync({ ...formData, config });
-      toast.success(t("programlojalnosciowyzostałutworzony"));
+      toast.success(t("loyaltyProgramCreated"));
       setCreateOpen(false);
       setFormData({
         name: "",
@@ -138,7 +138,7 @@ export default function LoyaltyPage() {
     if (!deleteId) return;
     deleteProgram.mutate(deleteId, {
       onSuccess: () => {
-        toast.success(t("programzostałusuniety"));
+        toast.success(t("programDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {

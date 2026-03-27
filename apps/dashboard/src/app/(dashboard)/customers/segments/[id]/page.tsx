@@ -131,7 +131,7 @@ export default function SegmentDetailPage() {
         description: editDescription,
         color: editColor,
       });
-      toast.success(t("segmentzostałzaktualizowany"));
+      toast.success(t("segmentUpdated"));
       setIsEditing(false);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -141,7 +141,7 @@ export default function SegmentDetailPage() {
   const handleDelete = async () => {
     try {
       await deleteSegment.mutateAsync(params.id);
-      toast.success(t("segmentzostałusuniety"));
+      toast.success(t("segmentDeleted"));
       router.push("/customers/segments");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -152,7 +152,7 @@ export default function SegmentDetailPage() {
     if (!selectedCustomerId) return;
     try {
       await addMember.mutateAsync({ customer_id: selectedCustomerId });
-      toast.success(t("klientzostałdodanydosegmentu"));
+      toast.success(t("customerAddedToSegment"));
       setShowAddMemberDialog(false);
       setSelectedCustomerId("");
       setCustomerSearch("");
@@ -165,7 +165,7 @@ export default function SegmentDetailPage() {
     if (!removeCustomerId) return;
     removeMember.mutate(removeCustomerId, {
       onSuccess: () => {
-        toast.success(t("klientzostałusunietyzsegmentu"));
+        toast.success(t("customerRemovedFromSegment"));
         setRemoveCustomerId(null);
       },
       onError: (error) => {
@@ -297,7 +297,7 @@ export default function SegmentDetailPage() {
         {segment.rules && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>{t("reguły1")}</CardTitle>
+              <CardTitle>{t("rules1")}</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="rounded bg-muted p-3 text-sm font-mono overflow-auto">
@@ -310,7 +310,7 @@ export default function SegmentDetailPage() {
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle>{t("członkowie1")}</CardTitle>
+          <CardTitle>{t("members1")}</CardTitle>
           {segment.segment_type === "manual" && (
             <Button
               size="sm"

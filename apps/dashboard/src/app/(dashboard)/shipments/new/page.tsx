@@ -46,11 +46,11 @@ export default function NewShipmentPage() {
   const handleSubmit = (data: Parameters<typeof createShipment.mutate>[0]) => {
     createShipment.mutate(data, {
       onSuccess: (shipment) => {
-        toast.success(t("przesyłkaZostałaUtworzona"));
+        toast.success(t("shipmentCreated"));
         router.push(`/shipments/${shipment.id}`);
       },
       onError: (error) => {
-        toast.error(error.message || t("nieUdałoSieUtworzycPrzesyłki"));
+        toast.error(error.message || t("shipmentCreateError"));
       },
     });
   };
@@ -70,7 +70,7 @@ export default function NewShipmentPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("newShipment")}</h1>
           <p className="text-muted-foreground">
-            {t("utworzNowaPrzesyłkeDlaZamowienia")}
+            {t("createNewShipmentForOrder")}
           </p>
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function NewShipmentPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t("danePrzesyłki")}</CardTitle>
+          <CardTitle>{t("shipmentData")}</CardTitle>
         </CardHeader>
         <CardContent>
           <ShipmentForm

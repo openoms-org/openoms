@@ -138,7 +138,7 @@ function InPostFields({
     <>
       {/* Service type */}
       <div className="space-y-2">
-        <Label>{t("typUsługi")}</Label>
+        <Label>{t("serviceType")}</Label>
         <div className="flex flex-col gap-2">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -219,7 +219,7 @@ function InPostFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="small">{t("małyA83864cm")}</SelectItem>
+            <SelectItem value="small">{t("smallA83864cm")}</SelectItem>
             <SelectItem value="medium">{t("sredniB193864cm")}</SelectItem>
             <SelectItem value="large">{t("duzyC413864cm")}</SelectItem>
           </SelectContent>
@@ -240,7 +240,7 @@ function DHLFields({
   return (
     <>
       <div className="space-y-2">
-        <Label>{t("typUsługi")}</Label>
+        <Label>{t("serviceType")}</Label>
         <Select
           value={(values.service_type as string) ?? "dhl_parcel"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -272,7 +272,7 @@ function DPDFields({
   return (
     <>
       <div className="space-y-2">
-        <Label>{t("typUsługi")}</Label>
+        <Label>{t("serviceType")}</Label>
         <Select
           value={(values.service_type as string) ?? "dpd_classic"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -343,7 +343,7 @@ function GLSFields({
   return (
     <>
       <div className="space-y-2">
-        <Label>{t("typUsługi")}</Label>
+        <Label>{t("serviceType")}</Label>
         <Select
           value={(values.service_type as string) ?? "standard"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -376,7 +376,7 @@ function UPSFields({
   return (
     <>
       <div className="space-y-2">
-        <Label>{t("typUsługi")}</Label>
+        <Label>{t("serviceType")}</Label>
         <Select
           value={(values.service_type as string) ?? "11"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -409,7 +409,7 @@ function FedExFields({
   return (
     <>
       <div className="space-y-2">
-        <Label>{t("typUsługi")}</Label>
+        <Label>{t("serviceType")}</Label>
         <Select
           value={(values.service_type as string) ?? "FEDEX_INTERNATIONAL_PRIORITY"}
           onValueChange={(v) => onChange("service_type", v)}
@@ -441,7 +441,7 @@ function PocztaPolskaFields({
   return (
     <>
       <div className="space-y-2">
-        <Label>{t("typUsługi")}</Label>
+        <Label>{t("serviceType")}</Label>
         <Select
           value={(values.service_type as string) ?? "POCZTEX_KURIER_48"}
           onValueChange={(v) => onChange("service_type", v)}

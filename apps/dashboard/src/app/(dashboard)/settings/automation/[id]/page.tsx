@@ -116,7 +116,7 @@ export default function AutomationRuleDetailPage() {
           <ArrowLeft className="h-4 w-4" />
           {t("wroc")}
         </Button>
-        <p className="text-muted-foreground">{t("regułaniezostałaznaleziona")}</p>
+        <p className="text-muted-foreground">{t("automationRuleNotFound")}</p>
       </div>
     );
   }
@@ -147,7 +147,7 @@ export default function AutomationRuleDetailPage() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error(t("nazwaregułyjestwymagana"));
+      toast.error(t("ruleNameRequired"));
       return;
     }
 
@@ -161,21 +161,21 @@ export default function AutomationRuleDetailPage() {
         conditions,
         actions,
       });
-      toast.success(t("regułazostałazaktualizowana"));
+      toast.success(t("automationRuleUpdated"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("nieudałosiezaktualizowacreguły");
+      const message = err instanceof Error ? err.message : t("ruleUpdateError");
       toast.error(message);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm(t("czynapewnochceszusunacteregułe"))) return;
+    if (!confirm(t("confirmDeleteRule"))) return;
     try {
       await deleteRule.mutateAsync(id);
-      toast.success(t("regułazostałausunieta"));
+      toast.success(t("automationRuleDeleted"));
       router.push("/settings/automation");
     } catch (err) {
-      const message = err instanceof Error ? err.message : t("nieudałosieusunacreguły");
+      const message = err instanceof Error ? err.message : t("ruleDeleteError");
       toast.error(message);
     }
   };
@@ -187,9 +187,9 @@ export default function AutomationRuleDetailPage() {
       setTestResult(JSON.stringify(result, null, 2));
     } catch (err) {
       if (err instanceof SyntaxError) {
-        toast.error(t("nieprawidłowyformatjson"));
+        toast.error(t("invalidJsonFormat"));
       } else {
-        const message = err instanceof Error ? err.message : t("nieudałosieprzetestowacreguły");
+        const message = err instanceof Error ? err.message : t("ruleTestError");
         toast.error(message);
       }
     }
@@ -251,7 +251,7 @@ export default function AutomationRuleDetailPage() {
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder={t("nazwareguły")}
+                    placeholder={t("ruleName")}
                   />
                 </div>
                 <div className="space-y-2">
@@ -273,7 +273,7 @@ export default function AutomationRuleDetailPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Switch checked={enabled} onCheckedChange={setEnabled} />
-                <Label>{t("regułaaktywna")}</Label>
+                <Label>{t("ruleActive")}</Label>
               </div>
             </CardContent>
           </Card>
@@ -314,7 +314,7 @@ export default function AutomationRuleDetailPage() {
             <CardContent className="space-y-4">
               {conditions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {t("brakWarunkowRegułaUruchomiSiePrzyKazdym")}
+                  {t("noConditionsRuleTriggersOnEvery")}
                 </p>
               ) : (
                 conditions.map((condition, index) => (
@@ -550,7 +550,7 @@ export default function AutomationRuleDetailPage() {
                                     : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                                 }
                               >
-                                {log.conditions_met ? t("spełnione") : t("niespełnione1")}
+                                {log.conditions_met ? t("conditionMet") : t("conditionNotMet1")}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-sm text-destructive max-w-[200px] truncate">
@@ -576,7 +576,7 @@ export default function AutomationRuleDetailPage() {
         <TabsContent value="test" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>{t("testregułydryrun")}</CardTitle>
+              <CardTitle>{t("ruleTestDryRun")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">

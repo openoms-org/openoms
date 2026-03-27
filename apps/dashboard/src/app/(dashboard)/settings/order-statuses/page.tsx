@@ -96,10 +96,10 @@ export default function OrderStatusesPage() {
 
     try {
       await updateStatuses.mutateAsync(configToSave);
-      toast.success(t("statusyZamowienZostałyZapisane"));
+      toast.success(t("orderStatusesSaved"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("bładPodczasZapisywania")
+        error instanceof Error ? error.message : t("savingError")
       );
     }
   };

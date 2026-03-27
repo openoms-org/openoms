@@ -45,7 +45,7 @@ export default function NewStocktakePage() {
     e.preventDefault();
 
     if (!warehouseId || !name.trim()) {
-      toast.error(t("wypełnijwymaganepola"));
+      toast.error(t("fillRequiredFields"));
       return;
     }
 
@@ -57,7 +57,7 @@ export default function NewStocktakePage() {
       },
       {
         onSuccess: (data) => {
-          toast.success(t("inwentaryzacjazostałautworzona"));
+          toast.success(t("stocktakeCreated"));
           router.push(`/stocktakes/${data.id}`);
         },
         onError: (error) => {

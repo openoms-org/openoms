@@ -109,7 +109,7 @@ export function RateShopping({
           setHasSearched(true);
         },
         onError: (err) => {
-          setError(err instanceof Error ? err.message : t("nieUdałoSiePobracStawek"));
+          setError(err instanceof Error ? err.message : t("ratesFetchError"));
           setHasSearched(true);
         },
       }

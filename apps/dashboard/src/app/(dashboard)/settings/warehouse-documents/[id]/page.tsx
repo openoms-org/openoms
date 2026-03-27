@@ -78,7 +78,7 @@ export default function WarehouseDocumentDetailPage() {
       <AdminGuard>
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            {t("nieUdałoSieZaładowacDokumentu")}
+            {t("documentLoadError")}
           </p>
           <Button
             variant="outline"
@@ -96,7 +96,7 @@ export default function WarehouseDocumentDetailPage() {
   const handleConfirm = () => {
     confirmDoc.mutate(id, {
       onSuccess: () => {
-        toast.success(t("dokumentzostałzatwierdzonystanymagazynowezaktualiz"));
+        toast.success(t("documentConfirmedStockUpdated"));
         refetch();
       },
       onError: (error) => {
@@ -108,7 +108,7 @@ export default function WarehouseDocumentDetailPage() {
   const handleCancel = () => {
     cancelDoc.mutate(id, {
       onSuccess: () => {
-        toast.success(t("dokumentzostałanulowany"));
+        toast.success(t("documentCancelled"));
         refetch();
       },
       onError: (error) => {

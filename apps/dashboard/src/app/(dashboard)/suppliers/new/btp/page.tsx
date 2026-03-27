@@ -231,13 +231,13 @@ export default function BTPWizardPage() {
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-base">
-                    {t("gdzieZnalezcLinkDoPlikuXml")}
+                    {t("whereToFindXmlLink")}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <ol className="list-decimal list-inside space-y-1 pl-1">
-                  <li>{t("zalogujSieDoPaneluB2bHurtowni")}</li>
+                  <li>{t("loginToB2bPanel")}</li>
                   <li>
                     {t("btp.clickSideMenu")}{" "}
                     <span className="font-medium text-foreground">
@@ -262,9 +262,9 @@ export default function BTPWizardPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>{t("importKataloguProduktow")}</CardTitle>
+                <CardTitle>{t("importProductCatalog")}</CardTitle>
                 <CardDescription>
-                  {t("podajNazweDostawcyILinkDoPliku")}
+                  {t("enterSupplierNameAndFileLink")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -296,7 +296,7 @@ export default function BTPWizardPage() {
                       <>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
-                            {t("importowanieProduktow")}
+                            {t("importingProducts")}
                           </span>
                           <span className="font-medium tabular-nums">
                             {progress
@@ -324,7 +324,7 @@ export default function BTPWizardPage() {
                       <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                          <p>{t("importniepowiodłsie")}</p>
+                          <p>{t("importFailed")}</p>
                           {progress?.error && (
                             <p className="text-xs opacity-80">
                               {progress.error}
@@ -375,23 +375,23 @@ export default function BTPWizardPage() {
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-base">
-                    {t("gdzieZnalezcKluczeApi")}
+                    {t("whereToFindApiKeys")}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <ol className="list-decimal list-inside space-y-1 pl-1">
-                  <li>{t("zalogujSieDoPaneluB2bHurtowni")}</li>
+                  <li>{t("loginToB2bPanel")}</li>
                   <li>
                     {t("btp.goTo")}{" "}
                     <span className="font-medium text-foreground">
-                      {t("mojProfilZakładkaKlucze")}
+                      {t("myProfileKeysTab")}
                     </span>
                   </li>
-                  <li>{t("skopiujkluczpublicznyloginiprywatnyhasło")}</li>
+                  <li>{t("copyPublicAndPrivateKey")}</li>
                 </ol>
                 <p className="text-xs">
-                  {t("jesliZakładkaKluczeNieJestWidocznaSkontaktuj")}
+                  {t("ifKeysTabNotVisibleContact")}
                 </p>
               </CardContent>
             </Card>
@@ -400,7 +400,7 @@ export default function BTPWizardPage() {
               <CardHeader>
                 <CardTitle>{t("btp.apiKeysTitle")}</CardTitle>
                 <CardDescription>
-                  {t("podajKluczeDoSynchronizacjiStanowMagazynowychI")}
+                  {t("enterKeysForStockSync")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -435,7 +435,7 @@ export default function BTPWizardPage() {
                         onClick={() => setShowPrivateKey((prev) => !prev)}
                         tabIndex={-1}
                         aria-label={
-                          showPrivateKey ? t("btp.hideKey") : t("pokazKlucz")
+                          showPrivateKey ? t("btp.hideKey") : t("showKey")
                         }
                       >
                         {showPrivateKey ? (
@@ -461,7 +461,7 @@ export default function BTPWizardPage() {
                       placeholder="https://twoja-hurtownia.btp.pro"
                     />
                     <p className="text-xs text-muted-foreground">
-                      {t("pozostawPusteJesliNieZnaszSkonfigurujemy")}
+                      {t("leaveEmptyIfUnknown")}
                     </p>
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -490,14 +490,14 @@ export default function BTPWizardPage() {
                 <div className="flex items-center gap-2">
                   <Info className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-base">
-                    {t("jakDziałaSynchronizacja")}
+                    {t("howSyncWorks")}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <p>
-                  {t("btpWykorzystujeDwaZrodłaDanychKtoreSynchronizuja")}
-                  {t("niezaleznie")}
+                  {t("btpUsesTwoDataSources")}
+                  {t("independently")}
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border p-3 space-y-1">
@@ -506,8 +506,8 @@ export default function BTPWizardPage() {
                       {t("btp.xmlCatalog")}
                     </div>
                     <p className="text-xs">
-                      {t("pełnaListaProduktowDodawanieIUsuwanieProdukty")}
-                      {t("nieobecneWXmlZostanaUsunieteAIch")}
+                      {t("fullProductListAddRemove")}
+                      {t("missingFromXmlWillBeRemoved")}
                     </p>
                   </div>
                   <div className="rounded-lg border p-3 space-y-1">
@@ -517,8 +517,8 @@ export default function BTPWizardPage() {
                     </div>
                     <p className="text-xs">
                       {t("btp.realtimeStockAndPrices")}
-                      {t("daneZApiMajaZawszePriorytetXml")}
-                      {t("stanow")}
+                      {t("apiDataAlwaysPriority")}
+                      {t("stockLevelsNote")}
                     </p>
                   </div>
                 </div>
@@ -529,12 +529,12 @@ export default function BTPWizardPage() {
               <CardHeader>
                 <CardTitle>{t("btp.syncSettingsTitle")}</CardTitle>
                 <CardDescription>
-                  {t("ustawCzestotliwoscOdswiezaniaKataloguIStanow")}
+                  {t("setRefreshFrequency")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>{t("odswiezanieKataloguXml")}</Label>
+                  <Label>{t("xmlCatalogRefresh")}</Label>
                   <Select value={xmlInterval} onValueChange={setXmlInterval}>
                     <SelectTrigger>
                       <SelectValue />
@@ -546,11 +546,11 @@ export default function BTPWizardPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {t("jakCzestoSprawdzacNoweIUsunieteProdukty")}
+                    {t("howOftenCheckNewProducts")}
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>{t("synchronizacjaStanowApi")}</Label>
+                  <Label>{t("apiStockSync")}</Label>
                   <Select value={apiInterval} onValueChange={setApiInterval}>
                     <SelectTrigger>
                       <SelectValue />
@@ -558,11 +558,11 @@ export default function BTPWizardPage() {
                     <SelectContent>
                       <SelectItem value="15">{t("btp.every15m")}</SelectItem>
                       <SelectItem value="30">{t("btp.every30m")}</SelectItem>
-                      <SelectItem value="60">{t("co1Godzine")}</SelectItem>
+                      <SelectItem value="60">{t("every1Hour")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    {t("jakCzestoAktualizowacStanyMagazynoweICeny")}
+                    {t("howOftenUpdateStockAndPrices")}
                   </p>
                 </div>
                 <div className="flex gap-2 pt-2">
@@ -576,7 +576,7 @@ export default function BTPWizardPage() {
                         {tc("saving")}
                       </>
                     ) : (
-                      t("zakonczKonfiguracje")
+                      t("finishConfiguration")
                     )}
                   </Button>
                 </div>
