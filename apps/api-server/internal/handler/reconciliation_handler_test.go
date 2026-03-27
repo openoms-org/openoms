@@ -227,4 +227,8 @@ func TestReconciliation_ImportCSV_RejectsNonMultipartForm(t *testing.T) {
 	h.ImportCSV(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.NotEmpty(t, resp["error"])
 }
