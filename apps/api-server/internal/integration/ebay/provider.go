@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
+
 	ebaysdk "github.com/openoms-org/openoms/packages/ebay-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
@@ -66,6 +68,7 @@ func NewProvider(credentials json.RawMessage, settings json.RawMessage) (*Provid
 	if creds.Sandbox {
 		opts = append(opts, ebaysdk.WithSandbox())
 	}
+	opts = append(opts, ebaysdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 
 	client := ebaysdk.NewClient(creds.AppID, creds.CertID, creds.DevID, creds.RefreshToken, opts...)
 
