@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 
 interface OnboardingSettings {
   dismissed: boolean;
@@ -28,25 +29,30 @@ interface DashboardStats {
 
 export function useOnboarding() {
   const queryClient = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   const { data: settings } = useQuery({
     queryKey: ["settings", "onboarding"],
     queryFn: () => apiClient<OnboardingSettings>("/v1/settings/onboarding"),
+    enabled: isAuthenticated,
   });
 
   const { data: company } = useQuery({
     queryKey: ["settings", "company"],
     queryFn: () => apiClient<{ name?: string; nip?: string }>("/v1/settings/company"),
+    enabled: isAuthenticated,
   });
 
   const { data: integrations } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => apiClient<Integration[]>("/v1/integrations"),
+    enabled: isAuthenticated,
   });
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: () => apiClient<DashboardStats>("/v1/stats/dashboard"),
+    enabled: isAuthenticated,
   });
 
   const dismiss = useMutation({

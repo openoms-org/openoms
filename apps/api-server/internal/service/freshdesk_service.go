@@ -123,6 +123,13 @@ func (s *FreshdeskService) CreateTicket(ctx context.Context, tenantID uuid.UUID,
 		return nil, ErrFreshdeskNotConfigured
 	}
 
+	// Validate domain is a safe subdomain (prevent URL injection)
+	for _, ch := range settings.Domain {
+		if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-') {
+			return nil, fmt.Errorf("freshdesk: invalid domain %q — must contain only alphanumeric characters and hyphens", settings.Domain)
+		}
+	}
+
 	url := fmt.Sprintf("https://%s.freshdesk.com/api/v2/tickets", settings.Domain)
 
 	payload := map[string]any{

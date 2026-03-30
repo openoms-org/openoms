@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -52,7 +53,11 @@ func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider st
 		// credentials column is JSONB storing a JSON string value (e.g. "base64...").
 		// Unmarshal to strip the JSON quotes and get the raw base64 string.
 		if len(credsJSON) > 0 {
-			_ = json.Unmarshal(credsJSON, &ti.Credentials)
+			if err := json.Unmarshal(credsJSON, &ti.Credentials); err != nil {
+				slog.Warn("failed to unmarshal integration credentials",
+					"integration_id", ti.IntegrationID, "error", err)
+				continue
+			}
 		}
 		result = append(result, ti)
 	}
@@ -122,7 +127,11 @@ func ListAllActiveMarketplaceIntegrations(ctx context.Context, pool *pgxpool.Poo
 			return nil, err
 		}
 		if len(credsJSON) > 0 {
-			_ = json.Unmarshal(credsJSON, &ti.Credentials)
+			if err := json.Unmarshal(credsJSON, &ti.Credentials); err != nil {
+				slog.Warn("failed to unmarshal integration credentials",
+					"integration_id", ti.IntegrationID, "error", err)
+				continue
+			}
 		}
 		result = append(result, ti)
 	}

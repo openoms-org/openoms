@@ -309,7 +309,7 @@ export function DataTable<T>({
           const id = getRowId(row);
           return (
             <TableRow
-              key={rowIndex}
+              key={id}
               className={`hover:bg-muted/50 transition-colors ${onRowClick ? "cursor-pointer" : ""}`}
               onClick={() => onRowClick?.(row)}
             >

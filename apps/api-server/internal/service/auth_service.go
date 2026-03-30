@@ -234,7 +234,7 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 
 	s.storeRefreshTokenFamily(ctx, refreshToken, userID.String(), tenantID.String())
 
-	slog.Info("new tenant registered", "tenant_id", tenantID, "slug", req.TenantSlug, "user_email", req.Email)
+	slog.Info("new tenant registered", "tenant_id", tenantID, "slug", req.TenantSlug)
 
 	return &model.TokenResponse{
 		AccessToken: accessToken,
