@@ -103,9 +103,11 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 
 		allegroOrder, err := p.client.Orders.Get(ctx, orderID)
 		if err != nil {
-			p.logger.Error("failed to fetch order", "order_id", orderID, "event_id", event.ID, "error", err)
-			newCursor = event.ID // advance past unresolvable event to prevent cursor stall
-			continue
+			p.logger.Error("failed to fetch order — stopping batch, will retry from current cursor",
+				"order_id", orderID, "event_id", event.ID, "error", err)
+			// Don't advance cursor past this event — it will be retried on the next poll.
+			// Return successfully fetched orders so far to avoid losing work.
+			break
 		}
 
 		mo := p.mapAllegroOrder(allegroOrder)

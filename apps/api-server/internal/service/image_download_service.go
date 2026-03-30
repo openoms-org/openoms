@@ -210,11 +210,21 @@ func (s *ImageDownloadService) downloadImage(ctx context.Context, rawURL string)
 		contentType = "image/jpeg"
 	}
 
-	// Limit body to 10MB. Wrap in a cancelCloser so the context is
-	// cancelled when the caller finishes reading and closes the body.
-	limited := io.NopCloser(io.LimitReader(resp.Body, 10<<20))
+	// Limit body to 10MB. Wrap in a limitedReadCloser that caps reads
+	// but still closes the underlying resp.Body. Then wrap in cancelCloser
+	// so the context is cancelled when the caller finishes.
+	limited := &limitedReadCloser{Reader: io.LimitReader(resp.Body, 10<<20), Closer: resp.Body}
 	return &cancelCloser{ReadCloser: limited, cancel: cancel}, contentType, nil
 }
+
+// limitedReadCloser limits reads via Reader but delegates Close to the original body.
+type limitedReadCloser struct {
+	io.Reader
+	io.Closer
+}
+
+func (l *limitedReadCloser) Read(p []byte) (int, error) { return l.Reader.Read(p) }
+func (l *limitedReadCloser) Close() error               { return l.Closer.Close() }
 
 // cancelCloser wraps an io.ReadCloser and calls a cancel function on Close.
 type cancelCloser struct {
