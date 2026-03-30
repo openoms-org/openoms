@@ -125,7 +125,9 @@ func (s *FreshdeskService) CreateTicket(ctx context.Context, tenantID uuid.UUID,
 
 	// Validate domain is a safe subdomain (prevent URL injection)
 	for _, ch := range settings.Domain {
-		if !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '-') {
+		isAlpha := (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+		isDigit := ch >= '0' && ch <= '9'
+		if !isAlpha && !isDigit && ch != '-' {
 			return nil, fmt.Errorf("freshdesk: invalid domain %q — must contain only alphanumeric characters and hyphens", settings.Domain)
 		}
 	}
