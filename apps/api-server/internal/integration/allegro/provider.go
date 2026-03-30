@@ -103,7 +103,8 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 
 		allegroOrder, err := p.client.Orders.Get(ctx, orderID)
 		if err != nil {
-			p.logger.Error("failed to fetch order", "order_id", orderID, "error", err)
+			p.logger.Error("failed to fetch order", "order_id", orderID, "event_id", event.ID, "error", err)
+			newCursor = event.ID // advance past unresolvable event to prevent cursor stall
 			continue
 		}
 

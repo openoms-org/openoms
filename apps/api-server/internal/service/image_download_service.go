@@ -212,7 +212,7 @@ func (s *ImageDownloadService) downloadImage(ctx context.Context, rawURL string)
 
 	// Limit body to 10MB. Wrap in a cancelCloser so the context is
 	// cancelled when the caller finishes reading and closes the body.
-	limited := http.MaxBytesReader(nil, resp.Body, 10<<20)
+	limited := io.NopCloser(io.LimitReader(resp.Body, 10<<20))
 	return &cancelCloser{ReadCloser: limited, cancel: cancel}, contentType, nil
 }
 

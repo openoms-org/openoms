@@ -34,12 +34,10 @@ async function refreshToken(): Promise<string | null> {
 
 async function getValidToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
-  refreshPromise = refreshToken();
-  try {
-    return await refreshPromise;
-  } finally {
+  refreshPromise = refreshToken().finally(() => {
     refreshPromise = null;
-  }
+  });
+  return refreshPromise;
 }
 
 export class ApiClientError extends Error {

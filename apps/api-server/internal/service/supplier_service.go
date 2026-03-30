@@ -189,6 +189,13 @@ func (s *SupplierService) Update(ctx context.Context, tenantID, supplierID uuid.
 		return nil, NewValidationError(err)
 	}
 
+	// SSRF prevention: validate feed URL is not a private/internal address
+	if req.FeedURL != nil && *req.FeedURL != "" {
+		if netutil.IsPrivateURL(*req.FeedURL) {
+			return nil, NewValidationError(fmt.Errorf("feed URL must not point to a private network address"))
+		}
+	}
+
 	var supplier *model.Supplier
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
