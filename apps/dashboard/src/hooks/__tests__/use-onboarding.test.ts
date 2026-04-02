@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
 import { useOnboarding } from "@/hooks/use-onboarding";
+import { useAuthStore } from "@/lib/auth";
 
 const API_URL = "http://localhost:8080";
 
@@ -21,7 +22,15 @@ function createWrapper() {
 }
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
-afterEach(() => server.resetHandlers());
+beforeEach(() => {
+  // Set authenticated state so queries with enabled:isAuthenticated fire
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- minimal mock for auth guard
+  useAuthStore.getState().setAuth("test-token", { id: "test", email: "test@test.com", role: "admin", role_id: "test" } as any, { id: "test", slug: "test", name: "Test" } as any);
+});
+afterEach(() => {
+  useAuthStore.getState().clearAuth();
+  server.resetHandlers();
+});
 afterAll(() => server.close());
 
 describe("useOnboarding", () => {
