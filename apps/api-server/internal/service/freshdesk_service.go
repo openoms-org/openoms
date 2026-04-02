@@ -119,14 +119,18 @@ func (s *FreshdeskService) validatedFreshdeskURL(settings *FreshdeskSettings, pa
 	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
 		return "", ErrFreshdeskNotConfigured
 	}
-	for _, ch := range settings.Domain {
+	d := settings.Domain
+	if d[0] == '-' || d[len(d)-1] == '-' {
+		return "", fmt.Errorf("%w: invalid domain %q", ErrFreshdeskNotConfigured, d)
+	}
+	for _, ch := range d {
 		isAlpha := (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 		isDigit := ch >= '0' && ch <= '9'
 		if !isAlpha && !isDigit && ch != '-' {
-			return "", fmt.Errorf("%w: invalid domain %q", ErrFreshdeskNotConfigured, settings.Domain)
+			return "", fmt.Errorf("%w: invalid domain %q", ErrFreshdeskNotConfigured, d)
 		}
 	}
-	return fmt.Sprintf("https://%s.freshdesk.com/api/v2/%s", settings.Domain, path), nil
+	return fmt.Sprintf("https://%s.freshdesk.com/api/v2/%s", d, path), nil
 }
 
 // CreateTicket creates a Freshdesk support ticket linked to an order.
