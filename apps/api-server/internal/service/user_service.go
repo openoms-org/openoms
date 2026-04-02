@@ -140,7 +140,6 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 
 	slog.Info("new user created",
 		"user_id", user.ID,
-		"email", user.Email,
 	)
 
 	return user, nil

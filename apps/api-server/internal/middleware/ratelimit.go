@@ -70,13 +70,22 @@ type memoryEntry struct {
 type MemoryRateLimiter struct {
 	mu      sync.Mutex
 	entries map[string]*memoryEntry
+	done    chan struct{}
 }
 
 // NewMemoryRateLimiter creates a new in-memory rate limiter with background cleanup.
 func NewMemoryRateLimiter() *MemoryRateLimiter {
-	m := &MemoryRateLimiter{entries: make(map[string]*memoryEntry)}
+	m := &MemoryRateLimiter{
+		entries: make(map[string]*memoryEntry),
+		done:    make(chan struct{}),
+	}
 	go m.cleanup()
 	return m
+}
+
+// Close stops the background cleanup goroutine.
+func (m *MemoryRateLimiter) Close() {
+	close(m.done)
 }
 
 // Allow checks if a request is within the rate limit for the given key.
@@ -88,7 +97,7 @@ func (m *MemoryRateLimiter) Allow(_ context.Context, key string, limit int, wind
 	entry, exists := m.entries[key]
 	if !exists || now.After(entry.resetTime) {
 		m.entries[key] = &memoryEntry{count: 1, resetTime: now.Add(window)}
-		return true, nil
+		return 1 <= limit, nil
 	}
 
 	entry.count++
@@ -96,15 +105,21 @@ func (m *MemoryRateLimiter) Allow(_ context.Context, key string, limit int, wind
 }
 
 func (m *MemoryRateLimiter) cleanup() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
 	for {
-		time.Sleep(5 * time.Minute)
-		m.mu.Lock()
-		now := time.Now()
-		for key, entry := range m.entries {
-			if now.After(entry.resetTime) {
-				delete(m.entries, key)
+		select {
+		case <-ticker.C:
+			m.mu.Lock()
+			now := time.Now()
+			for key, entry := range m.entries {
+				if now.After(entry.resetTime) {
+					delete(m.entries, key)
+				}
 			}
+			m.mu.Unlock()
+		case <-m.done:
+			return
 		}
-		m.mu.Unlock()
 	}
 }

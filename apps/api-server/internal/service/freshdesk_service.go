@@ -113,17 +113,37 @@ func (s *FreshdeskService) doRequest(ctx context.Context, method, url, apiKey st
 	return respBytes, resp.StatusCode, nil
 }
 
+// validatedFreshdeskURL returns the base API URL for a tenant's Freshdesk instance.
+// It validates the domain is a safe subdomain to prevent URL injection.
+func (s *FreshdeskService) validatedFreshdeskURL(settings *FreshdeskSettings, path string) (string, error) {
+	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
+		return "", ErrFreshdeskNotConfigured
+	}
+	d := settings.Domain
+	if d[0] == '-' || d[len(d)-1] == '-' {
+		return "", fmt.Errorf("%w: invalid domain %q", ErrFreshdeskNotConfigured, d)
+	}
+	for _, ch := range d {
+		isAlpha := (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+		isDigit := ch >= '0' && ch <= '9'
+		if !isAlpha && !isDigit && ch != '-' {
+			return "", fmt.Errorf("%w: invalid domain %q", ErrFreshdeskNotConfigured, d)
+		}
+	}
+	return fmt.Sprintf("https://%s.freshdesk.com/api/v2/%s", d, path), nil
+}
+
 // CreateTicket creates a Freshdesk support ticket linked to an order.
 func (s *FreshdeskService) CreateTicket(ctx context.Context, tenantID uuid.UUID, orderID uuid.UUID, subject, description, email string) (*FreshdeskTicket, error) {
 	settings, err := s.GetSettings(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
-	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
-		return nil, ErrFreshdeskNotConfigured
-	}
 
-	url := fmt.Sprintf("https://%s.freshdesk.com/api/v2/tickets", settings.Domain)
+	url, err := s.validatedFreshdeskURL(settings, "tickets")
+	if err != nil {
+		return nil, err
+	}
 
 	payload := map[string]any{
 		"subject":     subject,
@@ -159,12 +179,13 @@ func (s *FreshdeskService) GetTickets(ctx context.Context, tenantID uuid.UUID, o
 	if err != nil {
 		return nil, err
 	}
-	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
-		return nil, ErrFreshdeskNotConfigured
+	baseURL, err := s.validatedFreshdeskURL(settings, "search/tickets")
+	if err != nil {
+		return nil, err
 	}
 
 	// Search for tickets tagged with the order ID
-	url := fmt.Sprintf("https://%s.freshdesk.com/api/v2/search/tickets?query=\"tag:'order-%s'\"", settings.Domain, orderID.String())
+	url := fmt.Sprintf("%s?query=\"tag:'order-%s'\"", baseURL, orderID.String())
 
 	respBytes, statusCode, err := s.doRequest(ctx, http.MethodGet, url, settings.APIKey, nil)
 	if err != nil {
@@ -190,11 +211,12 @@ func (s *FreshdeskService) ListAllTickets(ctx context.Context, tenantID uuid.UUI
 	if err != nil {
 		return nil, err
 	}
-	if !settings.Enabled || settings.APIKey == "" || settings.Domain == "" {
-		return nil, ErrFreshdeskNotConfigured
+	baseURL, err := s.validatedFreshdeskURL(settings, "tickets")
+	if err != nil {
+		return nil, err
 	}
 
-	url := fmt.Sprintf("https://%s.freshdesk.com/api/v2/tickets?per_page=30&order_by=created_at&order_type=desc", settings.Domain)
+	url := fmt.Sprintf("%s?per_page=30&order_by=created_at&order_type=desc", baseURL)
 
 	respBytes, statusCode, err := s.doRequest(ctx, http.MethodGet, url, settings.APIKey, nil)
 	if err != nil {
