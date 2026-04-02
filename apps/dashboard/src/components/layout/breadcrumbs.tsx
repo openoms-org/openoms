@@ -36,7 +36,7 @@ export function Breadcrumbs() {
     <nav className="flex items-center gap-1 text-sm text-muted-foreground">
       <Link
         href="/"
-        aria-label="Home"
+        aria-label={t("home")}
         className="flex items-center hover:text-foreground transition-colors"
       >
         <Home className="h-4 w-4" aria-hidden="true" />

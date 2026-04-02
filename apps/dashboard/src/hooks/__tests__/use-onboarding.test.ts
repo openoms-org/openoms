@@ -24,11 +24,16 @@ function createWrapper() {
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 beforeEach(() => {
   // Set authenticated state so queries with enabled:isAuthenticated fire
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- minimal mock for auth guard
-  useAuthStore.getState().setAuth("test-token", { id: "test", email: "test@test.com", role: "admin", role_id: "test" } as any, { id: "test", slug: "test", name: "Test" } as any);
+  useAuthStore.setState({
+    token: "test-token",
+    isAuthenticated: true,
+    isLoading: false,
+    user: { id: "test", email: "test@test.com", role: "admin", role_id: "test", name: "Test User" },
+    tenant: { id: "test", slug: "test", name: "Test", plan: "pro" },
+  });
 });
 afterEach(() => {
-  useAuthStore.getState().clearAuth();
+  useAuthStore.setState({ token: null, user: null, tenant: null, isAuthenticated: false, isLoading: true });
   server.resetHandlers();
 });
 afterAll(() => server.close());

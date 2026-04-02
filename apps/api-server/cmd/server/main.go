@@ -908,6 +908,9 @@ func run() error {
 	}
 	wsCancel()
 	workerMgr.Stop()
+	if closer, ok := rateLimiter.(interface{ Close() }); ok {
+		closer.Close()
+	}
 	slog.Info("server stopped")
 	return nil
 }
