@@ -123,7 +123,7 @@ func (s *FreshdeskService) validatedFreshdeskURL(settings *FreshdeskSettings, pa
 		isAlpha := (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 		isDigit := ch >= '0' && ch <= '9'
 		if !isAlpha && !isDigit && ch != '-' {
-			return "", NewValidationError(fmt.Errorf("freshdesk: invalid domain %q — must contain only alphanumeric characters and hyphens", settings.Domain))
+			return "", fmt.Errorf("%w: invalid domain %q", ErrFreshdeskNotConfigured, settings.Domain)
 		}
 	}
 	return fmt.Sprintf("https://%s.freshdesk.com/api/v2/%s", settings.Domain, path), nil
