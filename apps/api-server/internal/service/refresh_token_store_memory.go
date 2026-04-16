@@ -141,3 +141,6 @@ func (m *MemoryRefreshTokenStore) DeleteToken(_ context.Context, tokenHash strin
 	delete(m.tokens, tokenHash)
 	return nil
 }
+
+// IsPersistent returns false — in-memory store does not survive restarts.
+func (m *MemoryRefreshTokenStore) IsPersistent() bool { return false }

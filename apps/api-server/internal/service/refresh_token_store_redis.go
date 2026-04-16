@@ -119,3 +119,6 @@ func (r *RedisRefreshTokenStore) MarkTokenUsed(ctx context.Context, tokenHash st
 func (r *RedisRefreshTokenStore) DeleteToken(ctx context.Context, tokenHash string) error {
 	return r.client.Del(ctx, rtTokenPrefix+tokenHash).Err()
 }
+
+// IsPersistent returns true — Redis survives server restarts.
+func (r *RedisRefreshTokenStore) IsPersistent() bool { return true }

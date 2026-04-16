@@ -649,9 +649,17 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 			slog.Error("refresh token store lookup failed, rejecting refresh for safety", "error", err)
 			return nil, "", ErrInvalidCredentials
 		case entry == nil:
-			// Token not found in store — may happen after server restart with in-memory store.
-			// JWT signature already validates authenticity, so fail open and start a new family.
-			slog.Warn("refresh token not found in store, proceeding without rotation check",
+			if s.refreshStore.IsPersistent() {
+				// Persistent store (Redis) but token not found — reject to prevent replay attacks
+				slog.Error("refresh token not found in persistent store — rejecting",
+					"user_id", claims.Subject,
+					"tenant_id", claims.TenantID,
+				)
+				return nil, "", ErrInvalidCredentials
+			}
+			// In-memory store: token lost after restart. JWT signature validates authenticity,
+			// so fail open and start a new family.
+			slog.Warn("refresh token not found in ephemeral store, proceeding without rotation check",
 				"user_id", claims.Subject,
 				"tenant_id", claims.TenantID,
 			)
