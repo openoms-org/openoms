@@ -81,23 +81,32 @@ func (h *Hub) Run(ctx context.Context) {
 			slog.Debug("ws: client unregistered", "tenant_id", client.TenantID)
 
 		case evt := <-h.broadcast:
+			// Copy client set under lock to avoid holding lock during sends
 			h.mu.RLock()
-			clients, ok := h.tenants[evt.tenantID]
-			h.mu.RUnlock()
-			if !ok {
+			src := h.tenants[evt.tenantID]
+			if len(src) == 0 {
+				h.mu.RUnlock()
 				continue
 			}
-			for client := range clients {
+			snapshot := make([]*Client, 0, len(src))
+			for c := range src {
+				snapshot = append(snapshot, c)
+			}
+			h.mu.RUnlock()
+
+			for _, client := range snapshot {
 				select {
 				case client.send <- evt.data:
 				default:
 					// Client too slow, disconnect
 					h.mu.Lock()
 					if clients, ok := h.tenants[client.TenantID]; ok {
-						delete(clients, client)
-						close(client.send)
-						if len(clients) == 0 {
-							delete(h.tenants, client.TenantID)
+						if _, exists := clients[client]; exists {
+							delete(clients, client)
+							close(client.send)
+							if len(clients) == 0 {
+								delete(h.tenants, client.TenantID)
+							}
 						}
 					}
 					h.mu.Unlock()

@@ -82,34 +82,41 @@ func (p *Provider) ProviderName() string { return "olx" }
 // Client returns the underlying OLX SDK client for direct API access.
 func (p *Provider) Client() *olxsdk.Client { return p.client }
 
-// PollOrders polls OLX transactions (since OLX is classifieds, transactions map to orders).
+// PollOrders polls OLX transactions with pagination.
 func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration.MarketplaceOrder, string, error) {
-	params := olxsdk.TransactionListParams{
-		Limit: 50,
-	}
-	if cursor != "" {
-		params.CreatedAfter = cursor
-	}
-
-	resp, err := p.client.Transactions.ListTransactions(ctx, params)
-	if err != nil {
-		return nil, cursor, fmt.Errorf("olx: poll orders: %w", err)
-	}
-
-	if len(resp.Data) == 0 {
-		return nil, cursor, nil
-	}
-
 	var orders []integration.MarketplaceOrder
 	newCursor := cursor
+	offset := 0
+	const pageSize = 50
+	const maxPages = 10 // safety limit: 500 transactions max per poll
 
-	for _, tx := range resp.Data {
-		mo := p.mapOLXTransaction(&tx)
-		orders = append(orders, mo)
-
-		if tx.CreatedAt > newCursor {
-			newCursor = tx.CreatedAt
+	for page := range maxPages {
+		params := olxsdk.TransactionListParams{
+			Limit:  pageSize,
+			Offset: offset,
 		}
+		if cursor != "" {
+			params.CreatedAfter = cursor
+		}
+
+		resp, err := p.client.Transactions.ListTransactions(ctx, params)
+		if err != nil {
+			return orders, newCursor, fmt.Errorf("olx: poll orders (page %d): %w", page, err)
+		}
+
+		for _, tx := range resp.Data {
+			mo := p.mapOLXTransaction(&tx)
+			orders = append(orders, mo)
+			if tx.CreatedAt > newCursor {
+				newCursor = tx.CreatedAt
+			}
+		}
+
+		// No more pages
+		if len(resp.Data) < pageSize || resp.Links.Next == "" {
+			break
+		}
+		offset += pageSize
 	}
 
 	return orders, newCursor, nil

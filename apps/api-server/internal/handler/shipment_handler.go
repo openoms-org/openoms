@@ -106,6 +106,20 @@ func (h *ShipmentHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		filter.OrderID = &id
 	}
+	if ids := r.URL.Query().Get("order_ids"); ids != "" {
+		for raw := range strings.SplitSeq(ids, ",") {
+			id, err := uuid.Parse(strings.TrimSpace(raw))
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "invalid order_ids filter")
+				return
+			}
+			filter.OrderIDs = append(filter.OrderIDs, id)
+		}
+		if len(filter.OrderIDs) > 100 {
+			writeError(w, http.StatusBadRequest, "maximum 100 order_ids per request")
+			return
+		}
+	}
 
 	resp, err := h.shipmentService.List(r.Context(), tenantID, filter)
 	if err != nil {

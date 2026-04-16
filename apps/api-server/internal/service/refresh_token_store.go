@@ -38,4 +38,7 @@ type RefreshTokenStore interface {
 	MarkTokenUsed(ctx context.Context, tokenHash string) error
 	// DeleteToken removes a refresh token entry by its hash.
 	DeleteToken(ctx context.Context, tokenHash string) error
+	// IsPersistent returns true if the store survives server restarts (e.g. Redis).
+	// Used to decide fail-open vs fail-closed on token-not-found.
+	IsPersistent() bool
 }

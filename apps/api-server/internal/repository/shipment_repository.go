@@ -53,6 +53,9 @@ func (r *ShipmentRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 	if filter.OrderID != nil {
 		qb.Add("order_id = $%d", *filter.OrderID)
 	}
+	if len(filter.OrderIDs) > 0 {
+		qb.Add("order_id = ANY($%d)", filter.OrderIDs)
+	}
 
 	where := qb.WhereClause()
 

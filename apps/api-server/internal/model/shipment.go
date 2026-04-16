@@ -160,6 +160,7 @@ type ShipmentListFilter struct {
 	Status   *string
 	Provider *string
 	OrderID  *uuid.UUID
+	OrderIDs []uuid.UUID // batch filter: shipments for multiple orders
 	PaginationParams
 }
 
