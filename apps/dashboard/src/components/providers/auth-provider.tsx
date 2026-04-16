@@ -11,6 +11,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setLoading = useAuthStore((s) => s.setLoading);
 
   useEffect(() => {
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+
     const hydrate = async () => {
       const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
 
@@ -26,13 +29,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: "POST",
           credentials: "include",
         });
+        if (cancelled) return;
         if (res.ok) {
           const data: TokenResponse = await res.json();
           setAuth(data.access_token, data.user, data.tenant);
           document.cookie = `has_session=1; path=/; SameSite=Lax; max-age=2592000${secure}`;
         } else if (res.status === 429) {
-          // Rate-limited — keep existing session, don't log out
-          setLoading(false);
+          // Rate-limited — retry after 3s instead of logging out
+          retryTimer = setTimeout(() => {
+            if (cancelled) return;
+            fetch(`${API_URL}/v1/auth/refresh`, { method: "POST", credentials: "include" })
+              .then((r) => r.ok ? r.json() : Promise.reject(r))
+              .then((data: TokenResponse) => {
+                if (cancelled) return;
+                setAuth(data.access_token, data.user, data.tenant);
+                document.cookie = `has_session=1; path=/; SameSite=Lax; max-age=2592000${secure}`;
+              })
+              .catch(() => { if (!cancelled) setLoading(false); });
+          }, 3000);
         } else {
           clearAuth();
           setLoading(false);
@@ -40,10 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {
         // Network error — keep session if cookie exists, don't log out eagerly
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     hydrate();
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [setAuth, clearAuth, setLoading]);
 
   return <>{children}</>;

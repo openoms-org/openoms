@@ -163,7 +163,7 @@ func (c *Client) ExchangeCode(ctx context.Context, code string) (*ExchangeCodeRe
 	}
 
 	var result ExchangeCodeResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 10<<20)).Decode(&result); err != nil {
 		return nil, fmt.Errorf("ebay: decode exchange response: %w", err)
 	}
 
@@ -209,7 +209,7 @@ func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error)
 	}
 
 	var tokenResp TokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 10<<20)).Decode(&tokenResp); err != nil {
 		return nil, fmt.Errorf("ebay: decode token response: %w", err)
 	}
 
@@ -258,7 +258,7 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 	}
 
 	var tokenResp tokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 10<<20)).Decode(&tokenResp); err != nil {
 		return fmt.Errorf("ebay: decode token response: %w", err)
 	}
 
@@ -302,14 +302,14 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		if err := json.NewDecoder(resp.Body).Decode(apiErr); err != nil {
+		if err := json.NewDecoder(io.LimitReader(resp.Body, 10<<20)).Decode(apiErr); err != nil {
 			apiErr.Message = http.StatusText(resp.StatusCode)
 		}
 		return apiErr
 	}
 
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		if err := json.NewDecoder(io.LimitReader(resp.Body, 10<<20)).Decode(result); err != nil {
 			return fmt.Errorf("ebay: decode response: %w", err)
 		}
 	}

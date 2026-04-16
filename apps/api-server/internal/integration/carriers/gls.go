@@ -188,7 +188,7 @@ func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string)
 	}
 	defer func() { _ = reader.Close() }()
 
-	return io.ReadAll(reader)
+	return io.ReadAll(io.LimitReader(reader, 10<<20))
 }
 
 // GetTracking returns tracking events for the given GLS shipment.

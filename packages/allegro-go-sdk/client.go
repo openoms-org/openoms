@@ -390,7 +390,7 @@ func (c *Client) doUpload(ctx context.Context, path string, body any, result any
 	}
 
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBody)).Decode(result); err != nil {
 			return fmt.Errorf("allegro: decode upload response: %w", err)
 		}
 	}

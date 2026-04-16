@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -98,14 +99,14 @@ func (c *Client) postToken(ctx context.Context, data url.Values) (*TokenResponse
 
 	if resp.StatusCode != http.StatusOK {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		if err := json.NewDecoder(resp.Body).Decode(apiErr); err != nil {
+		if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(apiErr); err != nil {
 			apiErr.Message = http.StatusText(resp.StatusCode)
 		}
 		return nil, apiErr
 	}
 
 	var tok TokenResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tok); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&tok); err != nil {
 		return nil, fmt.Errorf("allegro: decode token response: %w", err)
 	}
 

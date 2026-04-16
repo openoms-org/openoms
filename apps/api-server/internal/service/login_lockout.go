@@ -23,16 +23,14 @@ const (
 	failurePrefix    = "login_failures:"
 )
 
-// lockoutDuration returns exponential backoff: 30s, 1m, 5m, 15m, 30m.
+// lockoutDuration returns exponential backoff: 1m, 5m, 15m, 30m.
 func lockoutDuration(failures int) time.Duration {
 	switch {
 	case failures <= 5:
-		return 30 * time.Second
-	case failures <= 7:
 		return 1 * time.Minute
-	case failures <= 10:
+	case failures <= 7:
 		return 5 * time.Minute
-	case failures <= 15:
+	case failures <= 10:
 		return 15 * time.Minute
 	default:
 		return 30 * time.Minute
