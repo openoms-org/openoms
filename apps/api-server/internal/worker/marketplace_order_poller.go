@@ -228,6 +228,14 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 			}
 		}
 
+		// Warn if cursor didn't advance — may indicate a stall
+		if newCursor == cursor && len(orders) == 0 {
+			p.logger.Warn("cursor unchanged after poll — possible stall",
+				"provider", p.providerName,
+				"tenant_id", ti.TenantID,
+				"cursor", cursor,
+			)
+		}
 		// Update sync cursor (bypasses RLS)
 		if newCursor != cursor {
 			if _, err := p.pool.Exec(ctx,

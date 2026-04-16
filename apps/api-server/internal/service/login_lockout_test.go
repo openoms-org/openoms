@@ -151,7 +151,7 @@ func TestLoginLockout_RecordFailure_TriggersLockout(t *testing.T) {
 	remaining, err = lockout.CheckLocked(ctx, "tenant1", "user@example.com")
 	require.NoError(t, err)
 	assert.True(t, remaining > 0, "5th failure should trigger lockout, got remaining=%v", remaining)
-	assert.True(t, remaining <= 30*time.Second, "first lockout should be at most 30s, got %v", remaining)
+	assert.True(t, remaining <= 1*time.Minute, "first lockout should be at most 1m, got %v", remaining)
 }
 
 func TestLoginLockout_RecordFailure_EscalatingDurations(t *testing.T) {
@@ -174,37 +174,35 @@ func TestLoginLockout_RecordFailure_EscalatingDurations(t *testing.T) {
 	remaining1, err := lockout.CheckLocked(ctx, "tenant1", "escalate@example.com")
 	require.NoError(t, err)
 	assert.True(t, remaining1 > 0, "should be locked after 5 failures")
-	assert.True(t, remaining1 <= 30*time.Second, "5 failures -> 30s lockout, got %v", remaining1)
+	assert.True(t, remaining1 <= 1*time.Minute, "5 failures -> 1m lockout, got %v", remaining1)
 
-	// Record failures 6 and 7 -> lockout escalates to 1m
+	// Record failures 6 and 7 -> lockout escalates to 5m
 	for range 2 {
 		err := lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
 		require.NoError(t, err)
 	}
 	remaining2, err := lockout.CheckLocked(ctx, "tenant1", "escalate@example.com")
 	require.NoError(t, err)
-	assert.True(t, remaining2 > 30*time.Second, "7 failures -> 1m lockout, got %v", remaining2)
-	assert.True(t, remaining2 <= 1*time.Minute, "7 failures -> 1m lockout, got %v", remaining2)
+	assert.True(t, remaining2 > 1*time.Minute, "7 failures -> 5m lockout, got %v", remaining2)
+	assert.True(t, remaining2 <= 5*time.Minute, "7 failures -> 5m lockout, got %v", remaining2)
 
-	// Record failures 8, 9, 10 -> lockout escalates to 5m
+	// Record failures 8, 9, 10 -> lockout escalates to 15m
 	for range 3 {
 		err := lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
 		require.NoError(t, err)
 	}
 	remaining3, err := lockout.CheckLocked(ctx, "tenant1", "escalate@example.com")
 	require.NoError(t, err)
-	assert.True(t, remaining3 > 1*time.Minute, "10 failures -> 5m lockout, got %v", remaining3)
-	assert.True(t, remaining3 <= 5*time.Minute, "10 failures -> 5m lockout, got %v", remaining3)
+	assert.True(t, remaining3 > 5*time.Minute, "10 failures -> 15m lockout, got %v", remaining3)
+	assert.True(t, remaining3 <= 15*time.Minute, "10 failures -> 15m lockout, got %v", remaining3)
 
-	// Record failures 11-15 -> lockout escalates to 15m
-	for range 5 {
-		err := lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
-		require.NoError(t, err)
-	}
+	// Record failure 11 -> lockout escalates to 30m
+	err = lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
+	require.NoError(t, err)
 	remaining4, err := lockout.CheckLocked(ctx, "tenant1", "escalate@example.com")
 	require.NoError(t, err)
-	assert.True(t, remaining4 > 5*time.Minute, "15 failures -> 15m lockout, got %v", remaining4)
-	assert.True(t, remaining4 <= 15*time.Minute, "15 failures -> 15m lockout, got %v", remaining4)
+	assert.True(t, remaining4 > 15*time.Minute, "11 failures -> 30m lockout, got %v", remaining4)
+	assert.True(t, remaining4 <= 30*time.Minute, "11 failures -> 30m lockout, got %v", remaining4)
 
 	// Record failure 16 -> lockout escalates to 30m
 	err = lockout.RecordFailure(ctx, "tenant1", "escalate@example.com")
@@ -335,15 +333,13 @@ func TestLoginLockout_LockoutDuration(t *testing.T) {
 		failures int
 		expected time.Duration
 	}{
-		{1, 30 * time.Second},
-		{5, 30 * time.Second},
-		{6, 1 * time.Minute},
-		{7, 1 * time.Minute},
-		{8, 5 * time.Minute},
-		{10, 5 * time.Minute},
-		{11, 15 * time.Minute},
-		{15, 15 * time.Minute},
-		{16, 30 * time.Minute},
+		{1, 1 * time.Minute},
+		{5, 1 * time.Minute},
+		{6, 5 * time.Minute},
+		{7, 5 * time.Minute},
+		{8, 15 * time.Minute},
+		{10, 15 * time.Minute},
+		{11, 30 * time.Minute},
 		{100, 30 * time.Minute},
 	}
 
