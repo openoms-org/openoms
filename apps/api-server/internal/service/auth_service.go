@@ -435,16 +435,38 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 }
 
 // Setup2FA generates a TOTP secret for the user and stores it encrypted.
-func (s *AuthService) Setup2FA(ctx context.Context, userID, tenantID uuid.UUID, email string) (*model.TwoFASetupResponse, error) {
-	// Prevent overwriting active 2FA without going through disable flow
+// Requires password re-authentication to prevent session-hijack amplification
+// (mirrors Disable2FA flow).
+func (s *AuthService) Setup2FA(ctx context.Context, userID, tenantID uuid.UUID, email, password string) (*model.TwoFASetupResponse, error) {
+	// Verify password first — prevents stolen session from enrolling attacker's TOTP
+	var user *model.User
 	var totpEnabled bool
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		var statusErr error
-		totpEnabled, _, statusErr = s.userRepo.GetTOTPStatus(ctx, tx, userID)
-		return statusErr
+		u, findErr := s.userRepo.FindByID(ctx, tx, userID)
+		if findErr != nil {
+			return findErr
+		}
+		user = u
+		enabled, _, statusErr := s.userRepo.GetTOTPStatus(ctx, tx, userID)
+		if statusErr != nil {
+			return statusErr
+		}
+		totpEnabled = enabled
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("check 2fa status: %w", err)
+		return nil, fmt.Errorf("load user for 2fa setup: %w", err)
+	}
+	if user == nil {
+		return nil, ErrInvalidCredentials
+	}
+	// Fetch user with password hash via FindForAuth (mirrors Disable2FA)
+	userWithPwd, err := s.userRepo.FindForAuth(ctx, user.Email, tenantID)
+	if err != nil || userWithPwd == nil {
+		return nil, ErrInvalidCredentials
+	}
+	if err := s.passwordSvc.Compare(userWithPwd.PasswordHash, password); err != nil {
+		return nil, ErrInvalidCredentials
 	}
 	if totpEnabled {
 		return nil, Err2FAAlreadyEnabled

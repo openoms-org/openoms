@@ -95,13 +95,10 @@ func (h *SupplierPortalHandler) GetPortalStatus(w http.ResponseWriter, r *http.R
 
 // ---------- Public portal endpoints (token auth) ----------
 
-// extractPortalToken gets the raw token from query param or Authorization header.
+// extractPortalToken gets the raw token from the Authorization header only.
+// Query-param fallback was removed because tokens leak via nginx/Cloudflare
+// access logs, browser history, and Referer headers (OPE-169).
 func extractPortalToken(r *http.Request) string {
-	// Query param first
-	if token := r.URL.Query().Get("token"); token != "" {
-		return strings.TrimSpace(token)
-	}
-	// Authorization: Bearer <token>
 	authHeader := r.Header.Get("Authorization")
 	if after, ok := strings.CutPrefix(authHeader, "Bearer "); ok {
 		return strings.TrimSpace(after)

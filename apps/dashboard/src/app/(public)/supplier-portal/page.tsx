@@ -76,11 +76,11 @@ function getStatusLabel(status: string): string {
 // --- API helpers ---
 
 async function portalFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const separator = path.includes("?") ? "&" : "?";
-  const res = await fetch(`${API_URL}${path}${separator}token=${encodeURIComponent(token)}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
       ...options?.headers,
     },
   });
@@ -569,14 +569,32 @@ export default function SupplierPortalPage() {
 
 function SupplierPortalContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
+  const [token, setToken] = useState("");
+  const [tokenReady, setTokenReady] = useState(false);
 
   const [portalData, setPortalData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
+  // One-time token hand-off: read from URL, store in sessionStorage, clean URL
+  // so the token doesn't leak via proxy logs, browser history, or Referer (OPE-169).
   useEffect(() => {
+    const urlToken = searchParams.get("token");
+    const stored = typeof window !== "undefined" ? sessionStorage.getItem("supplier_portal_token") : null;
+    if (urlToken) {
+      sessionStorage.setItem("supplier_portal_token", urlToken);
+      setToken(urlToken);
+      // Clean token from URL to prevent leak via history/Referer
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (stored) {
+      setToken(stored);
+    }
+    setTokenReady(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!tokenReady) return;
     if (!token) {
       setError("Brak tokenu dostepu. Sprawdz poprawnosc linku.");
       setLoading(false);
@@ -605,7 +623,7 @@ function SupplierPortalContent() {
     }
 
     loadOrders();
-  }, [token]);
+  }, [token, tokenReady]);
 
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-8 sm:py-16">

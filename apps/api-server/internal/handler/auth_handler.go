@@ -291,13 +291,28 @@ func (h *AuthHandler) TwoFALogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // TwoFASetup generates a TOTP secret and QR code for 2FA enrollment.
+// Requires password re-authentication to prevent session-hijack amplification.
 func (h *AuthHandler) TwoFASetup(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	claims := middleware.ClaimsFromContext(r.Context())
 
-	resp, err := h.authService.Setup2FA(r.Context(), userID, tenantID, claims.Email)
+	var req model.TwoFASetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Password == "" {
+		writeError(w, http.StatusBadRequest, "password is required")
+		return
+	}
+
+	resp, err := h.authService.Setup2FA(r.Context(), userID, tenantID, claims.Email, req.Password)
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			writeError(w, http.StatusUnauthorized, "invalid password")
+			return
+		}
 		writeServerError(w, "2FA setup failed", err)
 		return
 	}
