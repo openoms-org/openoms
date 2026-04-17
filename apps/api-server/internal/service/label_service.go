@@ -186,11 +186,41 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		// Resolve shipper address from default warehouse or tenant company settings
 		shipper = s.resolveShipper(ctx, tx, tenantID)
 
+		// Atomically claim the shipment for label generation (CAS on status).
+		// Concurrent callers that lose this race receive ErrShipmentNotCreated,
+		// preventing duplicate carrier-side shipments. Status is reset to
+		// "created" in deferred cleanup if the carrier call fails.
+		claimed, err := s.shipmentRepo.UpdateStatusIfCurrent(ctx, tx, shipmentID, "created", "generating_label")
+		if err != nil {
+			return err
+		}
+		if !claimed {
+			return ErrShipmentNotCreated
+		}
+
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	// If we fail after claiming the shipment but before persisting the label,
+	// roll back the status so the user can retry. Cleared once the second
+	// transaction succeeds.
+	resetStatus := true
+	defer func() {
+		if !resetStatus {
+			return
+		}
+		resetErr := database.WithTenant(context.WithoutCancel(ctx), s.pool, tenantID, func(tx pgx.Tx) error {
+			_, err := s.shipmentRepo.UpdateStatusIfCurrent(ctx, tx, shipmentID, "generating_label", "created")
+			return err
+		})
+		if resetErr != nil {
+			slog.Error("failed to reset shipment status after label generation failure",
+				"shipment_id", shipmentID, "error", resetErr)
+		}
+	}()
 
 	// Outside transaction: use carrier abstraction
 	carrier, err := integration.NewCarrierProvider(shipment.Provider, credJSON, integrationSettings)
@@ -340,6 +370,8 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		return nil, err
 	}
 
+	// Label generation succeeded and status was advanced to label_ready — no reset needed.
+	resetStatus = false
 	return updatedShipment, nil
 }
 

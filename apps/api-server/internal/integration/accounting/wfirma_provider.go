@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	sdk "github.com/openoms-org/openoms/packages/wfirma-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -38,7 +40,7 @@ func NewWFirmaProvider(credentials json.RawMessage, _ json.RawMessage) (*WFirmaP
 		return nil, fmt.Errorf("wfirma: api_key is required")
 	}
 
-	client := sdk.NewClient(creds.APIKey)
+	client := sdk.NewClient(creds.APIKey, sdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 
 	return &WFirmaProvider{client: client}, nil
 }

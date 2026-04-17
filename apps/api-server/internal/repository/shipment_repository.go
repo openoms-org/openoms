@@ -242,6 +242,20 @@ func (r *ShipmentRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// UpdateStatusIfCurrent atomically transitions a shipment's status only if it
+// currently equals expected. Returns true on success, false if the row was not
+// in the expected state (prevents concurrent label generation races).
+func (r *ShipmentRepository) UpdateStatusIfCurrent(ctx context.Context, tx pgx.Tx, id uuid.UUID, expected, newStatus string) (bool, error) {
+	ct, err := tx.Exec(ctx,
+		"UPDATE shipments SET status = $1, updated_at = NOW() WHERE id = $2 AND status = $3",
+		newStatus, id, expected,
+	)
+	if err != nil {
+		return false, fmt.Errorf("update shipment status (CAS): %w", err)
+	}
+	return ct.RowsAffected() == 1, nil
+}
+
 // Delete removes a shipment by its ID.
 func (r *ShipmentRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM shipments WHERE id = $1", id)

@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	sdk "github.com/openoms-org/openoms/packages/fakturownia-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -39,7 +41,7 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 		return nil, fmt.Errorf("fakturownia: api_token and subdomain are required")
 	}
 
-	client := sdk.NewClient(creds.Subdomain, creds.APIToken)
+	client := sdk.NewClient(creds.Subdomain, creds.APIToken, sdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 
 	return &Provider{client: client}, nil
 }

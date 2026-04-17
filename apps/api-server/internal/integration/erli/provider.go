@@ -13,6 +13,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -53,6 +54,7 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 	if creds.BaseURL != "" {
 		opts = append(opts, erlisdk.WithBaseURL(creds.BaseURL))
 	}
+	opts = append(opts, erlisdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 
 	client := erlisdk.NewClient(creds.APIToken, opts...)
 

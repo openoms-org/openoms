@@ -14,6 +14,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	ksef "github.com/openoms-org/openoms/packages/ksef-go-sdk"
 )
@@ -548,7 +549,7 @@ func (s *KSeFService) createClient(cfg KSeFSettings) *ksef.Client {
 	if cfg.Environment == "production" {
 		env = ksef.EnvironmentProduction
 	}
-	return ksef.NewClient(env)
+	return ksef.NewClient(env, ksef.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 }
 
 // buildInvoiceData converts an invoice and order into KSeF invoice data.

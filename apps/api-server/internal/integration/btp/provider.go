@@ -50,6 +50,7 @@ func NewProvider(credentials, _ json.RawMessage) (*Provider, error) {
 	if creds.BaseURL != "" {
 		opts = append(opts, btpsdk.WithBaseURL(creds.BaseURL))
 	}
+	opts = append(opts, btpsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 
 	client := btpsdk.NewClient(creds.Username, creds.Password, opts...)
 

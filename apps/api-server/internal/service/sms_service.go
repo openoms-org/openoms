@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	smsapi "github.com/openoms-org/openoms/packages/smsapi-go-sdk"
 )
@@ -96,7 +98,7 @@ func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID,
 	message := renderSMSTemplate(tmplStr, data)
 
 	// Send SMS
-	client := smsapi.NewClient(cfg.APIToken, smsapi.WithFrom(cfg.From))
+	client := smsapi.NewClient(cfg.APIToken, smsapi.WithFrom(cfg.From), smsapi.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	_, err := client.SendSMS(ctx, smsapi.SendSMSRequest{
 		To:      *order.CustomerPhone,
 		Message: message,
@@ -174,7 +176,7 @@ func (s *SMSService) SendShipmentStatusSMS(ctx context.Context, tenantID uuid.UU
 	message := renderSMSTemplate(tmplStr, data)
 
 	// Send SMS
-	client := smsapi.NewClient(cfg.APIToken, smsapi.WithFrom(cfg.From))
+	client := smsapi.NewClient(cfg.APIToken, smsapi.WithFrom(cfg.From), smsapi.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	_, err := client.SendSMS(ctx, smsapi.SendSMSRequest{
 		To:      *order.CustomerPhone,
 		Message: message,
@@ -188,7 +190,7 @@ func (s *SMSService) SendShipmentStatusSMS(ctx context.Context, tenantID uuid.UU
 
 // SendTestSMS sends a test SMS to the provided phone number.
 func (s *SMSService) SendTestSMS(ctx context.Context, settings model.SMSSettings, phone string) error {
-	client := smsapi.NewClient(settings.APIToken, smsapi.WithFrom(settings.From))
+	client := smsapi.NewClient(settings.APIToken, smsapi.WithFrom(settings.From), smsapi.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	_, err := client.SendSMS(ctx, smsapi.SendSMSRequest{
 		To:      phone,
 		Message: "OpenOMS — Testowy SMS. Jesli widzisz ta wiadomosc, konfiguracja SMSAPI dziala poprawnie.",
