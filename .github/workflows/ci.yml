@@ -50,7 +50,7 @@ jobs:
           npm ci
           npx eslint --fix src/ || true
 
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "style: auto-format code"
           commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
