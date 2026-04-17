@@ -212,8 +212,9 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 		if !resetStatus {
 			return
 		}
-		resetErr := database.WithTenant(context.WithoutCancel(ctx), s.pool, tenantID, func(tx pgx.Tx) error {
-			_, err := s.shipmentRepo.UpdateStatusIfCurrent(ctx, tx, shipmentID, "generating_label", "created")
+		resetCtx := context.WithoutCancel(ctx)
+		resetErr := database.WithTenant(resetCtx, s.pool, tenantID, func(tx pgx.Tx) error {
+			_, err := s.shipmentRepo.UpdateStatusIfCurrent(resetCtx, tx, shipmentID, "generating_label", "created")
 			return err
 		})
 		if resetErr != nil {
