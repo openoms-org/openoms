@@ -1,8 +1,8 @@
 # Project State
-Updated: 2026-03-20
+Updated: 2026-04-16
 
 ## Target
-Open production for paying customers: **May 2026** (~8 weeks remaining)
+Open production for paying customers: **May 2026**
 
 ## Pricing Model
 Subscription tiers based on order volume. Plan names and pricing configured at runtime via BILLING_PLANS env var.
@@ -12,22 +12,29 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - [x] Monitoring/Alerting (Grafana/Sentry) — **DONE** (Alloy metrics, 9 Grafana alerts, Sentry connected)
 - [x] Allegro competitive parity — **DONE** (PR #58)
 - [x] Onboarding wizard — **DONE** (PR #80+)
+- [x] Full System Audit #2 (6-module) — **DONE** (30 findings, all fixed)
 
 ## Completed
-- **Linear: 109/119 issues done** across Production Readiness + Full System Audit
+- **Linear: backlog clean** — all tracked issues resolved or closed
 - Production Readiness project: 22/22 DONE
-- Full System Audit (8 modules): 7 critical, 23 high, 57 medium, 63 low found → most fixed
-- Sentry bugs (5/5 resolved): supplier sync, OLX scope, dashboard routing, CategorySuggestion
-- CVE-2026-22184 (zlib), npm flatted + next 16.2.0 fixed
-
-## In Progress / Remaining (10 tasks)
-- OPE-45/46/47: SDK maturity decisions (13 unverified SDKs, hardcoded rates, Kaufland/Mirakl)
-- OPE-102: N+1 query fixes (BulkTransitionStatus, MergeOrders, listing sync)
-- OPE-120: Frontend API client code deduplication
-- OPE-81: i18n — 29 namespaces still need JSON files
-- OPE-53/54/55/56: Frontend quality (DevelopmentBanner, Polish keys, large components, handler tests)
+- System Audits: 2 complete rounds (2026-03-17 8-module + 2026-04-16 6-module)
+- Audit #2 findings (5 CRITICAL + 14 HIGH + 5 MEDIUM): all fixed across PRs #233/235/251/253
+- Security updates: Next.js 16.2.3, Go 1.25.9 (CVE-2026-32280/32282), Alpine base rebuild
+- Sentry bugs (5/5 resolved)
 
 ## Recently Completed
+- 2026-04-16: Security updates — Next.js 16.2.3, Go 1.25.9 (CVE-2026-32280/32282), Alpine libcrypto3/musl rebuild
+- 2026-04-16: Audit #2 final batch (PR #253) — WebSocket hub race fix, refresh token fail-close on Redis, OLX pagination, batch shipments filter (order_ids)
+- 2026-04-08: Audit #2 batch 3 (PR #251) — 7 io.LimitReader additions (Allegro/eBay SDK, GLS), AuthProvider 429 retry, lockout 30s→1m, worker cursor stall log
+- 2026-04-02: Audit #2 batch 2 (PR #235) — rate limiter Close(), off-by-one, Freshdesk domain injection validation, useOnboarding auth guards, PII removed from logs, DataTable key, breadcrumb a11y
+- 2026-03-30: Audit #2 batch 1 (PR #233) — token refresh mutex race, eBay HTTP timeout, Allegro cursor stall, MaxBytesReader panic, supplier SSRF
+- 2026-03-27: OPE-54 — 360 Polish i18n keys renamed to English camelCase across 119 files
+- 2026-03-25: OPE-56 — 963 lines of handler unit tests (8 handlers, 51 test cases)
+- 2026-03-24: OPE-120 — API client deduplication via fetchWithAuth wrapper
+- 2026-03-23: OPE-102 — N+1 batch queries via FindByIDs (BulkTransitionStatus, MergeOrders, ListingSync)
+- 2026-03-23: OPE-53 — hide incomplete features (KSeF, Marketing, Helpdesk, Notifications) from navigation
+- 2026-03-23: E2E infrastructure rework — 3/124 → 122/131 passing (SSR location fix, CSP eval, production build on CI, Polish locale, 15+ string fixes)
+- 2026-03-22: OPE-45/46/47 — SDK maturity (DHL/DPD/GLS verified), carrier rates marked as estimates, Kaufland/Empik removed from marketplace picker
 - 2026-03-20: Full system audit fixes batch 5 — invoice HTTP-out-of-TX, SDK LimitReader (12 packages), Alloy PG/Redis scrape targets
 - 2026-03-20: npm vulns fixed (flatted + next 16.2.0), cloudflared 2026.3.0, deploy debug timeout
 - 2026-03-20: GLS labels persisted to S3 storage (OPE-112), LocalStorage.Get method

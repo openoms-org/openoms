@@ -129,7 +129,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Scan image with Trivy
+      - name: Scan image with Trivy (SARIF for Security tab)
         uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: ghcr.io/openoms-org/${{ matrix.image }}:${{ github.sha }}
@@ -144,6 +144,15 @@ jobs:
         with:
           sarif_file: trivy-${{ matrix.image }}.sarif
           category: trivy-${{ matrix.image }}
+
+      - name: Scan image with Trivy (blocking on CRITICAL/HIGH)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ghcr.io/openoms-org/${{ matrix.image }}:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
 
   notify-deploy:
     name: Trigger Deploy

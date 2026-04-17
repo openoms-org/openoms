@@ -143,6 +143,12 @@ type TwoFADisableRequest struct {
 	Code     string `json:"code"`
 }
 
+// TwoFASetupRequest is the body of POST /v1/auth/2fa/setup. Requires password
+// re-authentication to prevent session-hijack amplification.
+type TwoFASetupRequest struct {
+	Password string `json:"password"`
+}
+
 // TwoFASetupResponse is returned by POST /v1/auth/2fa/setup.
 type TwoFASetupResponse struct {
 	Secret string `json:"secret"`

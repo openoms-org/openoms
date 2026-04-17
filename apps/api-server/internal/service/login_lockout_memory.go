@@ -16,11 +16,42 @@ type memEntry struct {
 type MemoryLoginLockoutStore struct {
 	mu      sync.Mutex
 	entries map[string]*memEntry
+	done    chan struct{}
 }
 
-// NewMemoryLoginLockoutStore creates a new in-memory lockout store.
+// NewMemoryLoginLockoutStore creates a new in-memory lockout store with background cleanup.
 func NewMemoryLoginLockoutStore() *MemoryLoginLockoutStore {
-	return &MemoryLoginLockoutStore{entries: make(map[string]*memEntry)}
+	m := &MemoryLoginLockoutStore{
+		entries: make(map[string]*memEntry),
+		done:    make(chan struct{}),
+	}
+	go m.cleanup()
+	return m
+}
+
+// Close stops the background cleanup goroutine.
+func (m *MemoryLoginLockoutStore) Close() {
+	close(m.done)
+}
+
+func (m *MemoryLoginLockoutStore) cleanup() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			m.mu.Lock()
+			now := time.Now()
+			for key, e := range m.entries {
+				if now.After(e.expiry) {
+					delete(m.entries, key)
+				}
+			}
+			m.mu.Unlock()
+		case <-m.done:
+			return
+		}
+	}
 }
 
 // IncrFailures increments the failure counter for the given key, resetting if the window has expired.

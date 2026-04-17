@@ -1,5 +1,32 @@
 # Security Posture
-Last full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PRs #43-56)
+Last full audit: 2026-04-16 (6-module audit — 5 CRITICAL + 14 HIGH + 5 MEDIUM, all fixed across PRs #233/#235/#251/#253/#254)
+Previous full audit: 2026-02-25 (4 rounds: PR #36, #38, #42, #58; test hardening: PRs #43-56)
+
+Audit #2 fixes (2026-03-30 to 2026-04-16):
+- WebSocket hub broadcast race — snapshot under RLock, check exists before close (OPE-132)
+- Refresh token fail-closed on Redis via IsPersistent() (OPE-133)
+- Token refresh mutex race — finally attached to promise (OPE-134)
+- Allegro poller — break on fetch failure, retry from current cursor (OPE-135)
+- eBay SDK HTTP timeout 30s (OPE-136)
+- MaxBytesReader(nil) → io.LimitReader + proper close (OPE-137)
+- Rate limiter goroutine leak fix + off-by-one (OPE-138/139)
+- SSRF on supplier Update — IsPrivateURL check (OPE-141)
+- Freshdesk domain URL injection — validation + sentinel error (OPE-142)
+- 7× io.LimitReader added (Allegro, eBay, GLS) (OPE-143/144/145/146)
+- AuthProvider 429 retry with cleanup (OPE-150)
+- Login lockout 30s → 1m initial (OPE-151)
+- OLX PollOrders pagination loop (OPE-147)
+- Batch shipments filter (order_ids) to avoid N+1 (OPE-148)
+- PII (email) removed from INFO logs — RODO (OPE-152)
+- DataTable React key: rowIndex → id (OPE-153)
+- Breadcrumb Home aria-label (OPE-154)
+
+Security updates (2026-04-16):
+- Next.js 16.2.1 → 16.2.3 (DoS via Server Components)
+- Go 1.25.8 → 1.25.9 in CI (CVE-2026-32280/32282)
+- Alpine libcrypto3/musl auto-rebuild
+
+
 Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixed: SOAP response parsing corrected, GLS model fields aligned, DHL service types validated, DPD COD form added)
 Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vectors, hardcoded values only, React auto-escape, commits 4ef72f9 + 62eef14)
 Billing/Stripe integration security audit: 2026-03-02 (PASS — Stripe webhook signature verification, checkout session anti-replay, SECURITY DEFINER for pre-registration, no Stripe Price IDs exposed to frontend, runtime config only)
