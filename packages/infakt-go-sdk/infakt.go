@@ -167,7 +167,7 @@ func (s *InvoiceService) List(ctx context.Context, params ListInvoicesParams) ([
 // DownloadPDF downloads the PDF of an invoice by its ID.
 func (s *InvoiceService) DownloadPDF(ctx context.Context, id int) ([]byte, error) {
 	path := fmt.Sprintf("/invoices/%d.pdf", id)
-	raw, err := s.client.doRaw(ctx, http.MethodGet, path, nil)
+	raw, err := s.client.doRawWithLimit(ctx, http.MethodGet, path, nil, 50<<20)
 	if err != nil {
 		return nil, err
 	}
@@ -212,8 +212,16 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 	return nil
 }
 
-// doRaw performs an API request and returns the raw response body.
+// doRaw performs an API request and returns the raw response body,
+// capped at 10 MiB (sufficient for JSON API responses).
 func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]byte, error) {
+	return c.doRawWithLimit(ctx, method, path, body, 10<<20)
+}
+
+// doRawWithLimit performs an API request and returns the raw response body,
+// capped at maxBytes. Callers downloading binary payloads (e.g. PDFs) should
+// pass a higher limit than the default used by doRaw.
+func (c *Client) doRawWithLimit(ctx context.Context, method, path string, body any, maxBytes int64) ([]byte, error) {
 	var reqBody io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -240,7 +248,7 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any) ([]by
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes))
 	if err != nil {
 		return nil, fmt.Errorf("infakt: failed to read response: %w", err)
 	}

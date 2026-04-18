@@ -76,7 +76,7 @@ func (s *PointService) doPoints(ctx context.Context, path string, result any) er
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if err != nil {
 		return fmt.Errorf("inpost: failed to read response: %w", err)
 	}

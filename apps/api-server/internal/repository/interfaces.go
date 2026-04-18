@@ -99,6 +99,7 @@ type ShipmentRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, shipment *model.Shipment) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateShipmentRequest) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
+	UpdateStatusIfCurrent(ctx context.Context, tx pgx.Tx, id uuid.UUID, expected, newStatus string) (bool, error)
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 

@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
 	sdk "github.com/openoms-org/openoms/packages/infakt-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 )
 
 func init() {
@@ -37,7 +39,7 @@ func NewInFaktProvider(credentials json.RawMessage, _ json.RawMessage) (*InFaktP
 		return nil, fmt.Errorf("infakt: api_key is required")
 	}
 
-	client := sdk.NewClient(creds.APIKey)
+	client := sdk.NewClient(creds.APIKey, sdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 
 	return &InFaktProvider{client: client}, nil
 }
