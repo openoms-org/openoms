@@ -103,7 +103,7 @@ func (s *AIService) callOpenAI(ctx context.Context, systemPrompt, userPrompt str
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBytes, err := io.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20))
 	if err != nil {
 		return "", fmt.Errorf("read response: %w", err)
 	}

@@ -73,7 +73,7 @@ func (s *BGRemovalService) RemoveBackground(ctx context.Context, imageData []byt
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBytes, err := io.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 25<<20))
 	if err != nil {
 		return nil, "", fmt.Errorf("read response: %w", err)
 	}
