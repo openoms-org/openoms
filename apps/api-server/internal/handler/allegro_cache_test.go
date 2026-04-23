@@ -71,6 +71,29 @@ func TestAllegroCache_SweepKeepsFresh(t *testing.T) {
 	}
 }
 
+func TestAllegroCache_GetReturnsRefreshedEntryAfterRace(t *testing.T) {
+	// Simulate the race: the first RLock-read sees an expired entry, but before
+	// the write-lock recheck another goroutine refreshes it via Set. Get must
+	// return the fresh value instead of forcing a redundant upstream fetch.
+	c := newAllegroCache(time.Hour)
+	defer c.Stop()
+
+	// Seed an already-expired entry directly so the first read path hits the
+	// expired branch.
+	c.mu.Lock()
+	c.entries["k"] = allegroCacheEntry{data: "stale", expiresAt: time.Now().Add(-time.Second)}
+	c.mu.Unlock()
+
+	// Refresh the entry — this models the concurrent Set that completes before
+	// the Get path re-acquires the write lock.
+	c.Set("k", "fresh")
+
+	got, ok := c.Get("k")
+	if !ok || got != "fresh" {
+		t.Fatalf("expected refreshed value 'fresh', got %v ok=%v", got, ok)
+	}
+}
+
 func TestAllegroCache_StopIsIdempotent(_ *testing.T) {
 	c := newAllegroCache(time.Hour)
 	c.Stop()

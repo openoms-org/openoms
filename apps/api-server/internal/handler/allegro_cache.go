@@ -46,12 +46,19 @@ func (c *allegroCache) Get(key string) (any, bool) {
 	}
 	if time.Now().After(entry.expiresAt) {
 		c.mu.Lock()
-		// Re-check under write lock: another goroutine may have refreshed the entry.
-		if e, ok := c.entries[key]; ok && time.Now().After(e.expiresAt) {
+		// Re-read under write lock: another goroutine may have refreshed the entry
+		// between RLock release and Lock acquire. In that case return the fresh value
+		// instead of forcing a redundant upstream fetch.
+		fresh, ok := c.entries[key]
+		if ok && time.Now().After(fresh.expiresAt) {
 			delete(c.entries, key)
+			ok = false
 		}
 		c.mu.Unlock()
-		return nil, false
+		if !ok {
+			return nil, false
+		}
+		return fresh.data, true
 	}
 	return entry.data, true
 }
