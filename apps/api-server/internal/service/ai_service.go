@@ -103,9 +103,13 @@ func (s *AIService) callOpenAI(ctx context.Context, systemPrompt, userPrompt str
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBytes, err := io.ReadAll(resp.Body)
+	const maxOpenAIResponseBytes = 10 << 20
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, maxOpenAIResponseBytes+1))
 	if err != nil {
 		return "", fmt.Errorf("read response: %w", err)
+	}
+	if len(respBytes) > maxOpenAIResponseBytes {
+		return "", fmt.Errorf("openai response exceeds %d bytes", maxOpenAIResponseBytes)
 	}
 
 	if resp.StatusCode != http.StatusOK {
