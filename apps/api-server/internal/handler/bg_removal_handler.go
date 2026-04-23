@@ -246,19 +246,39 @@ func (h *BGRemovalHandler) RemoveProductImageBackground(w http.ResponseWriter, r
 		return
 	}
 
-	// Update the product using the existing Update method
+	// Update the product. Re-fetch the images array inside the same transaction
+	// so we don't overwrite concurrent edits made between the initial read and
+	// now (TOCTOU race: add/remove/reorder would be lost otherwise).
 	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		if index == -1 {
 			return h.productRepo.Update(r.Context(), tx, productID, model.UpdateProductRequest{
 				ImageURL: &newURL,
 			})
 		}
-		// Update the specific image in the images array
-		images[index].URL = newURL
-		if images[index].Alt == "" {
-			images[index].Alt = productName + " (background removed)"
+
+		p, err := h.productRepo.FindByID(r.Context(), tx, productID)
+		if err != nil {
+			return err
 		}
-		imagesJSON, err := json.Marshal(images)
+		if p == nil {
+			return service.ErrProductNotFound
+		}
+
+		var current []productImage
+		if len(p.Images) > 0 {
+			if err := json.Unmarshal(p.Images, &current); err != nil {
+				return fmt.Errorf("unmarshal images: %w", err)
+			}
+		}
+		if index >= len(current) {
+			return fmt.Errorf("image index %d no longer valid (product has %d images)", index, len(current))
+		}
+
+		current[index].URL = newURL
+		if current[index].Alt == "" {
+			current[index].Alt = productName + " (background removed)"
+		}
+		imagesJSON, err := json.Marshal(current)
 		if err != nil {
 			return fmt.Errorf("marshal images: %w", err)
 		}
