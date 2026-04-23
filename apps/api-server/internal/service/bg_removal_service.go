@@ -73,9 +73,13 @@ func (s *BGRemovalService) RemoveBackground(ctx context.Context, imageData []byt
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 25<<20))
+	const maxRemoveBGResponseBytes = 25 << 20
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, maxRemoveBGResponseBytes+1))
 	if err != nil {
 		return nil, "", fmt.Errorf("read response: %w", err)
+	}
+	if len(respBytes) > maxRemoveBGResponseBytes {
+		return nil, "", fmt.Errorf("remove.bg response exceeds %d bytes", maxRemoveBGResponseBytes)
 	}
 
 	if resp.StatusCode != http.StatusOK {
