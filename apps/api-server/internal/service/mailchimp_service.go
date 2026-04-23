@@ -104,9 +104,13 @@ func (s *MailchimpService) doRequest(ctx context.Context, method, url, apiKey st
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	respBytes, err := io.ReadAll(resp.Body)
+	const maxMailchimpResponseBytes = 10 << 20
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, maxMailchimpResponseBytes+1))
 	if err != nil {
 		return nil, resp.StatusCode, fmt.Errorf("read response: %w", err)
+	}
+	if len(respBytes) > maxMailchimpResponseBytes {
+		return nil, resp.StatusCode, fmt.Errorf("mailchimp response exceeds %d bytes", maxMailchimpResponseBytes)
 	}
 
 	return respBytes, resp.StatusCode, nil
