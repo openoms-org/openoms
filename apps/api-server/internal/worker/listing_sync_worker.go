@@ -91,10 +91,14 @@ func (w *ListingSyncWorker) Run(ctx context.Context) error {
 				"error", syncErr,
 			)
 
-			// Update config with error
+			// Update config with error. Wrap in an IIFE so the deferred Rollback
+			// fires at the end of this iteration, not at function return.
 			errStr := syncErr.Error()
-			updateTx, txErr := w.pool.Begin(ctx)
-			if txErr == nil {
+			func() {
+				updateTx, txErr := w.pool.Begin(ctx)
+				if txErr != nil {
+					return
+				}
 				defer updateTx.Rollback(ctx) //nolint:errcheck
 				if _, execErr := updateTx.Exec(ctx,
 					"SELECT set_config('app.current_tenant_id', $1, true)",
@@ -104,7 +108,7 @@ func (w *ListingSyncWorker) Run(ctx context.Context) error {
 				}
 				_ = w.syncRepo.UpdateLastSync(ctx, updateTx, cfg.ID, &errStr)
 				_ = updateTx.Commit(ctx)
-			}
+			}()
 			continue
 		}
 

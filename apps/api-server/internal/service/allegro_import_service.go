@@ -35,7 +35,10 @@ type AllegroImportService struct {
 	pool               *pgxpool.Pool
 	stockSyncService   *StockSyncService
 	logger             *slog.Logger
-	importLocks        sync.Map // map[uuid.UUID]*sync.Mutex — per-tenant import concurrency guard
+	// importLocks records tenants with an in-flight import. Entries are deleted
+	// when the import finishes, so the map only grows to the number of concurrent
+	// imports (not the total number of tenants that ever imported).
+	importLocks sync.Map // map[uuid.UUID]struct{}
 }
 
 // SetStockSyncService sets the stock sync service for propagating stock changes after import.
@@ -69,12 +72,11 @@ func NewAllegroImportService(
 // already exist — re-imports where most offers are already linked skip the Get entirely.
 func (s *AllegroImportService) ImportOffers(ctx context.Context, tenantID uuid.UUID) (*model.AllegroImportResult, error) {
 	// Per-tenant concurrency guard: only one import at a time per tenant.
-	lockI, _ := s.importLocks.LoadOrStore(tenantID, &sync.Mutex{})
-	mu := lockI.(*sync.Mutex)
-	if !mu.TryLock() {
+	// LoadOrStore is atomic — a second caller sees loaded=true and is rejected.
+	if _, busy := s.importLocks.LoadOrStore(tenantID, struct{}{}); busy {
 		return nil, fmt.Errorf("import already in progress for this tenant")
 	}
-	defer mu.Unlock()
+	defer s.importLocks.Delete(tenantID)
 
 	// Build Allegro provider from encrypted credentials.
 	credJSON, integration, err := s.integrationService.GetDecryptedCredentialsByProvider(ctx, tenantID, "allegro")
