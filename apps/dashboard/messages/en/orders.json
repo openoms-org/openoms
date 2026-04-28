@@ -251,7 +251,8 @@
     "labels": {
       "downloaded": "Labels downloaded ({count})",
       "generate": "Generate labels ({count})",
-      "noLabels": "No shipments with labels for selected orders"
+      "noLabels": "No shipments with labels for selected orders",
+      "tooMany": "Too many shipments in the selected orders — narrow the selection and try again"
     },
     "merge": {
       "button": "Merge orders ({count})",

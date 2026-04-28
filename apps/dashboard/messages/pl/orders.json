@@ -251,7 +251,8 @@
     "labels": {
       "downloaded": "Pobrano etykiety ({count})",
       "generate": "Generuj etykiety ({count})",
-      "noLabels": "Brak przesyłek z etykietami dla wybranych zamówień"
+      "noLabels": "Brak przesyłek z etykietami dla wybranych zamówień",
+      "tooMany": "Zbyt wiele przesyłek w zaznaczonych zamówieniach — zawęź wybór i spróbuj ponownie"
     },
     "merge": {
       "button": "Scal zamówienia ({count})",
