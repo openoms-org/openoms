@@ -131,6 +131,90 @@ func (s *AuthService) storeRefreshTokenFamily(ctx context.Context, refreshToken,
 	}
 }
 
+func (s *AuthService) consumeStoredRefreshToken(ctx context.Context, tokenHash string, claims *model.AuthClaims) (*RefreshTokenFamily, error) {
+	entry, consumed, err := s.refreshStore.ConsumeToken(ctx, tokenHash)
+	switch {
+	case err != nil:
+		slog.Error("refresh token store consume failed, rejecting refresh for safety", "error", err)
+		return nil, ErrInvalidCredentials
+	case entry == nil:
+		if s.refreshStore.IsPersistent() {
+			// Persistent store (Redis) but token not found — reject to prevent replay attacks.
+			slog.Error("refresh token not found in persistent store — rejecting",
+				"user_id", claims.Subject,
+				"tenant_id", claims.TenantID,
+			)
+			return nil, ErrInvalidCredentials
+		}
+		// In-memory store: token lost after restart. JWT signature validates authenticity,
+		// so fail open and start a new family.
+		slog.Warn("refresh token not found in ephemeral store, proceeding without rotation check",
+			"user_id", claims.Subject,
+			"tenant_id", claims.TenantID,
+		)
+		return nil, nil
+	case !consumed:
+		// REUSE DETECTED — token theft scenario; invalidate entire family.
+		slog.Error("SECURITY: refresh token reuse detected — possible token theft",
+			"family_id", entry.FamilyID,
+			"user_id", claims.Subject,
+			"tenant_id", claims.TenantID,
+		)
+		sentry.CaptureMessage("refresh token reuse detected: family=" + entry.FamilyID + " user=" + claims.Subject)
+		_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
+		_ = s.refreshStore.DeleteToken(ctx, tokenHash)
+		return nil, ErrRefreshTokenReuse
+	}
+
+	if entry.FamilyID == "" {
+		slog.Error("refresh token entry has no family id",
+			"user_id", claims.Subject,
+			"tenant_id", claims.TenantID,
+		)
+		return nil, ErrInvalidCredentials
+	}
+
+	family, err := s.refreshStore.GetFamily(ctx, entry.FamilyID)
+	if err != nil {
+		slog.Error("refresh token family lookup failed, rejecting refresh for safety",
+			"family_id", entry.FamilyID,
+			"error", err,
+		)
+		return nil, ErrInvalidCredentials
+	}
+	if family == nil {
+		slog.Error("refresh token family is revoked or missing",
+			"family_id", entry.FamilyID,
+			"user_id", claims.Subject,
+			"tenant_id", claims.TenantID,
+		)
+		return nil, ErrInvalidCredentials
+	}
+	if family.UserID != claims.Subject || family.TenantID != claims.TenantID.String() {
+		slog.Error("refresh token family does not match token claims",
+			"family_id", entry.FamilyID,
+			"user_id", claims.Subject,
+			"tenant_id", claims.TenantID,
+		)
+		_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
+		_ = s.refreshStore.DeleteToken(ctx, tokenHash)
+		return nil, ErrInvalidCredentials
+	}
+	if family.CurrentTokenHash != "" && family.CurrentTokenHash != tokenHash {
+		slog.Error("SECURITY: non-current refresh token used — invalidating family",
+			"family_id", entry.FamilyID,
+			"user_id", claims.Subject,
+			"tenant_id", claims.TenantID,
+		)
+		sentry.CaptureMessage("non-current refresh token used: family=" + entry.FamilyID + " user=" + claims.Subject)
+		_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
+		_ = s.refreshStore.DeleteToken(ctx, tokenHash)
+		return nil, ErrRefreshTokenReuse
+	}
+
+	return family, nil
+}
+
 // Register creates a new tenant and owner user, returns tokens.
 func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, ipAddress string) (*model.TokenResponse, string, error) {
 	if err := req.Validate(); err != nil {
@@ -663,45 +747,15 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 
 	// Refresh token rotation: check for reuse before proceeding
 	var familyID string
+	var currentFamily *RefreshTokenFamily
 	if s.refreshStore != nil {
 		tokenHash := hashRefreshToken(refreshToken)
-		entry, err := s.refreshStore.GetToken(ctx, tokenHash)
-		switch {
-		case err != nil:
-			slog.Error("refresh token store lookup failed, rejecting refresh for safety", "error", err)
-			return nil, "", ErrInvalidCredentials
-		case entry == nil:
-			if s.refreshStore.IsPersistent() {
-				// Persistent store (Redis) but token not found — reject to prevent replay attacks
-				slog.Error("refresh token not found in persistent store — rejecting",
-					"user_id", claims.Subject,
-					"tenant_id", claims.TenantID,
-				)
-				return nil, "", ErrInvalidCredentials
-			}
-			// In-memory store: token lost after restart. JWT signature validates authenticity,
-			// so fail open and start a new family.
-			slog.Warn("refresh token not found in ephemeral store, proceeding without rotation check",
-				"user_id", claims.Subject,
-				"tenant_id", claims.TenantID,
-			)
-		case entry.Used:
-			// REUSE DETECTED — token theft scenario; invalidate entire family
-			slog.Error("SECURITY: refresh token reuse detected — possible token theft",
-				"family_id", entry.FamilyID,
-				"user_id", claims.Subject,
-				"tenant_id", claims.TenantID,
-			)
-			sentry.CaptureMessage("refresh token reuse detected: family=" + entry.FamilyID + " user=" + claims.Subject)
-			_ = s.refreshStore.DeleteFamily(ctx, entry.FamilyID)
-			_ = s.refreshStore.DeleteToken(ctx, tokenHash)
-			return nil, "", ErrRefreshTokenReuse
-		default:
-			// Mark old token as used
-			familyID = entry.FamilyID
-			if err := s.refreshStore.MarkTokenUsed(ctx, tokenHash); err != nil {
-				slog.Warn("failed to mark refresh token as used", "error", err)
-			}
+		currentFamily, err = s.consumeStoredRefreshToken(ctx, tokenHash, claims)
+		if err != nil {
+			return nil, "", err
+		}
+		if currentFamily != nil {
+			familyID = currentFamily.FamilyID
 		}
 	}
 
@@ -752,18 +806,15 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 				CreatedAt:        time.Now(),
 			}
 			if err := s.refreshStore.StoreFamily(ctx, family, refreshTokenTTL); err != nil {
-				slog.Warn("failed to store new refresh token family", "error", err)
+				slog.Error("failed to store new refresh token family, rejecting refresh for safety", "error", err)
+				return nil, "", ErrInvalidCredentials
 			}
-		} else {
+		} else if currentFamily != nil {
 			// Update existing family's current token hash
-			family, err := s.refreshStore.GetFamily(ctx, familyID)
-			if err != nil {
-				slog.Warn("failed to get token family for update", "error", err)
-			} else if family != nil {
-				family.CurrentTokenHash = newTokenHash
-				if err := s.refreshStore.UpdateFamily(ctx, family, refreshTokenTTL); err != nil {
-					slog.Warn("failed to update token family", "error", err)
-				}
+			currentFamily.CurrentTokenHash = newTokenHash
+			if err := s.refreshStore.UpdateFamily(ctx, currentFamily, refreshTokenTTL); err != nil {
+				slog.Error("failed to update token family, rejecting refresh for safety", "error", err)
+				return nil, "", ErrInvalidCredentials
 			}
 		}
 
@@ -772,7 +823,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 			Used:     false,
 		}
 		if err := s.refreshStore.StoreToken(ctx, newTokenHash, newEntry, refreshTokenTTL); err != nil {
-			slog.Warn("failed to store rotated refresh token", "error", err)
+			slog.Error("failed to store rotated refresh token, rejecting refresh for safety", "error", err)
+			return nil, "", ErrInvalidCredentials
 		}
 	}
 

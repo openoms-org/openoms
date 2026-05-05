@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -154,6 +155,80 @@ func TestMemoryRefreshTokenStore_MarkTokenUsedAndVerify(t *testing.T) {
 	// MarkTokenUsed on non-existent token should not error
 	err = store.MarkTokenUsed(ctx, "nonexistent-token")
 	require.NoError(t, err)
+}
+
+func TestMemoryRefreshTokenStore_ConsumeTokenAtomic(t *testing.T) {
+	store := NewMemoryRefreshTokenStore()
+	defer close(store.done)
+	ctx := context.Background()
+
+	tokenHash := "tok-consume-" + uuid.New().String()
+	entry := &RefreshTokenEntry{
+		FamilyID: "fam-consume",
+		Used:     false,
+	}
+	err := store.StoreToken(ctx, tokenHash, entry, 10*time.Minute)
+	require.NoError(t, err)
+
+	const workers = 32
+	start := make(chan struct{})
+	consumed := make(chan bool, workers)
+	errs := make(chan error, workers)
+
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			<-start
+			_, didConsume, consumeErr := store.ConsumeToken(ctx, tokenHash)
+			errs <- consumeErr
+			consumed <- didConsume
+		}()
+	}
+
+	close(start)
+	wg.Wait()
+	close(errs)
+	close(consumed)
+
+	for consumeErr := range errs {
+		require.NoError(t, consumeErr)
+	}
+
+	consumeCount := 0
+	for didConsume := range consumed {
+		if didConsume {
+			consumeCount++
+		}
+	}
+	assert.Equal(t, 1, consumeCount, "only one concurrent caller should consume the token")
+
+	got, err := store.GetToken(ctx, tokenHash)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.True(t, got.Used)
+}
+
+func TestMemoryRefreshTokenStore_ConsumeTokenAlreadyUsed(t *testing.T) {
+	store := NewMemoryRefreshTokenStore()
+	defer close(store.done)
+	ctx := context.Background()
+
+	tokenHash := "tok-used-" + uuid.New().String()
+	entry := &RefreshTokenEntry{
+		FamilyID: "fam-used",
+		Used:     true,
+	}
+	err := store.StoreToken(ctx, tokenHash, entry, 10*time.Minute)
+	require.NoError(t, err)
+
+	got, consumed, err := store.ConsumeToken(ctx, tokenHash)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.False(t, consumed)
+	assert.Equal(t, "fam-used", got.FamilyID)
+	assert.True(t, got.Used)
 }
 
 func TestMemoryRefreshTokenStore_TokenExpiryShortTTL(t *testing.T) {

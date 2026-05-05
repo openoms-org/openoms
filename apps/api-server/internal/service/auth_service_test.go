@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -265,4 +268,90 @@ func TestAuthService_Refresh_InvalidToken(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid refresh token")
+}
+
+func TestAuthService_ConsumeStoredRefreshTokenRejectsRevokedSibling(t *testing.T) {
+	store := NewMemoryRefreshTokenStore()
+	defer close(store.done)
+	svc := NewAuthService(nil, nil, nil, nil, nil, nil)
+	svc.SetRefreshTokenStore(store)
+
+	ctx := context.Background()
+	userID := uuid.New()
+	tenantID := uuid.New()
+	familyID := uuid.New().String()
+	currentHash := "current-" + uuid.New().String()
+	siblingHash := "sibling-" + uuid.New().String()
+	claims := &model.AuthClaims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: userID.String()},
+		TenantID:         tenantID,
+		Type:             "refresh",
+	}
+
+	err := store.StoreFamily(ctx, &RefreshTokenFamily{
+		FamilyID:         familyID,
+		UserID:           userID.String(),
+		TenantID:         tenantID.String(),
+		CurrentTokenHash: currentHash,
+		CreatedAt:        time.Now(),
+	}, 10*time.Minute)
+	require.NoError(t, err)
+	err = store.StoreToken(ctx, currentHash, &RefreshTokenEntry{FamilyID: familyID}, 10*time.Minute)
+	require.NoError(t, err)
+	err = store.StoreToken(ctx, siblingHash, &RefreshTokenEntry{FamilyID: familyID}, 10*time.Minute)
+	require.NoError(t, err)
+
+	family, err := svc.consumeStoredRefreshToken(ctx, currentHash, claims)
+	require.NoError(t, err)
+	require.NotNil(t, family)
+
+	err = store.DeleteFamily(ctx, familyID)
+	require.NoError(t, err)
+
+	family, err = svc.consumeStoredRefreshToken(ctx, siblingHash, claims)
+	require.ErrorIs(t, err, ErrInvalidCredentials)
+	assert.Nil(t, family)
+
+	siblingEntry, err := store.GetToken(ctx, siblingHash)
+	require.NoError(t, err)
+	require.NotNil(t, siblingEntry)
+	assert.True(t, siblingEntry.Used, "revoked sibling should be consumed before rejection")
+}
+
+func TestAuthService_ConsumeStoredRefreshTokenInvalidatesNonCurrentSibling(t *testing.T) {
+	store := NewMemoryRefreshTokenStore()
+	defer close(store.done)
+	svc := NewAuthService(nil, nil, nil, nil, nil, nil)
+	svc.SetRefreshTokenStore(store)
+
+	ctx := context.Background()
+	userID := uuid.New()
+	tenantID := uuid.New()
+	familyID := uuid.New().String()
+	currentHash := "current-" + uuid.New().String()
+	siblingHash := "sibling-" + uuid.New().String()
+	claims := &model.AuthClaims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: userID.String()},
+		TenantID:         tenantID,
+		Type:             "refresh",
+	}
+
+	err := store.StoreFamily(ctx, &RefreshTokenFamily{
+		FamilyID:         familyID,
+		UserID:           userID.String(),
+		TenantID:         tenantID.String(),
+		CurrentTokenHash: currentHash,
+		CreatedAt:        time.Now(),
+	}, 10*time.Minute)
+	require.NoError(t, err)
+	err = store.StoreToken(ctx, siblingHash, &RefreshTokenEntry{FamilyID: familyID}, 10*time.Minute)
+	require.NoError(t, err)
+
+	family, err := svc.consumeStoredRefreshToken(ctx, siblingHash, claims)
+	require.ErrorIs(t, err, ErrRefreshTokenReuse)
+	assert.Nil(t, family)
+
+	family, err = store.GetFamily(ctx, familyID)
+	require.NoError(t, err)
+	assert.Nil(t, family, "non-current sibling use should revoke the entire family")
 }

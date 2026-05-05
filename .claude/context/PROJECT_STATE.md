@@ -1,5 +1,5 @@
 # Project State
-Updated: 2026-04-16
+Updated: 2026-05-05
 
 ## Target
 Open production for paying customers: **May 2026**
@@ -23,6 +23,7 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - Sentry bugs (5/5 resolved)
 
 ## Recently Completed
+- 2026-05-05: OPE-209 — refresh token rotation hardened: atomic store consume, required non-revoked token family, non-current sibling invalidation, and no family resurrection after revocation.
 - 2026-04-16: Security updates — Next.js 16.2.3, Go 1.25.9 (CVE-2026-32280/32282), Alpine libcrypto3/musl rebuild
 - 2026-04-16: Audit #2 final batch (PR #253) — WebSocket hub race fix, refresh token fail-close on Redis, OLX pagination, batch shipments filter (order_ids)
 - 2026-04-08: Audit #2 batch 3 (PR #251) — 7 io.LimitReader additions (Allegro/eBay SDK, GLS), AuthProvider 429 retry, lockout 30s→1m, worker cursor stall log

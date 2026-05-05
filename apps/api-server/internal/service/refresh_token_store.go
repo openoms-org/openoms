@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+var errRefreshTokenFamilyNotFound = errors.New("refresh token family not found")
 
 // RefreshTokenFamily tracks a chain of rotated refresh tokens for one login session.
 type RefreshTokenFamily struct {
@@ -27,6 +30,7 @@ type RefreshTokenStore interface {
 	// GetFamily retrieves a token family by its ID. Returns nil if not found.
 	GetFamily(ctx context.Context, familyID string) (*RefreshTokenFamily, error)
 	// UpdateFamily overwrites an existing token family with a new TTL.
+	// It must not create a missing family.
 	UpdateFamily(ctx context.Context, family *RefreshTokenFamily, ttl time.Duration) error
 	// DeleteFamily removes a token family by its ID.
 	DeleteFamily(ctx context.Context, familyID string) error
@@ -36,6 +40,9 @@ type RefreshTokenStore interface {
 	GetToken(ctx context.Context, tokenHash string) (*RefreshTokenEntry, error)
 	// MarkTokenUsed sets the Used flag to true for the given token hash.
 	MarkTokenUsed(ctx context.Context, tokenHash string) error
+	// ConsumeToken atomically marks an unused token as used.
+	// It returns the token entry, whether this call consumed it, and any store error.
+	ConsumeToken(ctx context.Context, tokenHash string) (*RefreshTokenEntry, bool, error)
 	// DeleteToken removes a refresh token entry by its hash.
 	DeleteToken(ctx context.Context, tokenHash string) error
 	// IsPersistent returns true if the store survives server restarts (e.g. Redis).
