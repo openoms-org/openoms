@@ -335,17 +335,26 @@ export default function OrdersPage() {
               size="sm"
               onClick={async () => {
                 try {
-                  // Fetch shipments for selected orders and batch download labels
+                  // Fetch shipments for selected orders in batched requests.
+                  // Backend caps order_ids at 100 per call, so chunk the selection.
                   const orderIds = Array.from(selectedIds);
-                  const responses = await Promise.all(
-                    orderIds.map((orderId) =>
-                      apiClient<{ items: { id: string; label_url?: string }[] }>(
-                        `/v1/shipments?order_id=${orderId}&limit=100`
-                      ).catch(() => ({ items: [] }))
-                    )
-                  );
-                  const shipmentIds = responses
-                    .flatMap((r) => r.items)
+                  const CHUNK = 100;
+                  const PAGE_LIMIT = 1000;
+                  const shipments: { id: string; label_url?: string }[] = [];
+                  for (let i = 0; i < orderIds.length; i += CHUNK) {
+                    const chunk = orderIds.slice(i, i + CHUNK);
+                    const resp = await apiClient<{
+                      items: { id: string; label_url?: string }[];
+                      total: number;
+                    }>(
+                      `/v1/shipments?order_ids=${chunk.join(",")}&limit=${PAGE_LIMIT}`,
+                    );
+                    if (resp.total > resp.items.length) {
+                      throw new Error(t("labels.tooMany"));
+                    }
+                    shipments.push(...resp.items);
+                  }
+                  const shipmentIds = shipments
                     .filter((s) => s.label_url)
                     .map((s) => s.id);
 
