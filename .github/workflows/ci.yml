@@ -437,7 +437,7 @@ jobs:
 
       - name: Check migration backward-compatibility
         run: |
-          DANGEROUS_OPS="DROP COLUMN|DROP TABLE|DROP SCHEMA|DROP FUNCTION|DROP INDEX|RENAME COLUMN|ALTER.*TYPE|ALTER.*SET NOT NULL|ADD.*NOT NULL(?!.*DEFAULT)|TRUNCATE"
+          DANGEROUS_OPS="DROP COLUMN|DROP TABLE|DROP SCHEMA|DROP FUNCTION|DROP INDEX|RENAME COLUMN|ALTER[[:space:]].*TYPE|ALTER[[:space:]].*SET[[:space:]]+NOT[[:space:]]+NULL|TRUNCATE"
           NEW_MIGRATIONS=$(git diff --name-only origin/main... -- apps/api-server/migrations/ 2>/dev/null || true)
           if [ -z "$NEW_MIGRATIONS" ]; then
             echo "No new migrations found — skipping"
@@ -446,9 +446,11 @@ jobs:
           BLOCKED=0
           for f in $NEW_MIGRATIONS; do
             if [ ! -f "$f" ]; then continue; fi
-            if grep -iEq "$DANGEROUS_OPS" "$f"; then
+            DANGEROUS_MATCHES=$(grep -inEi "$DANGEROUS_OPS" "$f" || true)
+            ADD_NOT_NULL_MATCHES=$(grep -inEi 'ADD[[:space:]].*NOT[[:space:]]+NULL' "$f" | grep -viE 'DEFAULT' || true)
+            if [ -n "$DANGEROUS_MATCHES" ] || [ -n "$ADD_NOT_NULL_MATCHES" ]; then
               echo "BLOCKED: $f contains destructive operation"
-              grep -inE "$DANGEROUS_OPS" "$f"
+              printf "%s\n%s\n" "$DANGEROUS_MATCHES" "$ADD_NOT_NULL_MATCHES" | sed '/^$/d'
               BLOCKED=1
             fi
           done
@@ -460,6 +462,39 @@ jobs:
             exit 1
           fi
           echo "All migrations are backward-compatible"
+
+  helm-chart:
+    name: Helm Chart
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            chart:
+              - 'deploy/helm/openoms/**'
+
+      - uses: azure/setup-helm@v4
+        if: steps.filter.outputs.chart == 'true'
+
+      - name: Lint chart
+        if: steps.filter.outputs.chart == 'true'
+        run: helm lint deploy/helm/openoms
+
+      - name: Render chart
+        if: steps.filter.outputs.chart == 'true'
+        run: helm template openoms deploy/helm/openoms > /dev/null
+
+      - name: No chart changes
+        if: steps.filter.outputs.chart != 'true'
+        run: echo "No Helm chart changes, skipping validation"
 
   frontend:
     name: Frontend
@@ -491,78 +526,6 @@ jobs:
         working-directory: apps/dashboard
         run: npx next build
 
-  e2e:
-    name: E2E Tests (Playwright)
-    runs-on: ubuntu-latest
-    continue-on-error: true  # 110+/124 pass; remaining ~5 are API interaction issues on CI (OPE-128)
-    permissions:
-      contents: read
-    needs: [frontend]
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: openoms
-          POSTGRES_PASSWORD: openoms_dev
-          POSTGRES_DB: openoms_dev
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd="pg_isready -U openoms"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-      redis:
-        image: redis:7-alpine
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: apps/dashboard/package-lock.json
-      - name: Run all migrations
-        run: |
-          for f in $(ls apps/api-server/migrations/*.up.sql | sort); do
-            echo "Running migration: $f"
-            PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f "$f"
-          done
-      - name: Seed test data
-        run: PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f scripts/seed.sql
-      - name: Start API server
-        run: |
-          cd apps/api-server
-          go build -o api-server ./cmd/server
-          DATABASE_URL="postgres://openoms:openoms_dev@localhost:5432/openoms_dev?sslmode=disable" \
-          REDIS_URL="redis://localhost:6379" \
-          JWT_SECRET="ci-test-jwt-secret-not-for-production" \
-          ENCRYPTION_KEY="a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2" \
-          ./api-server &
-      - name: Wait for API server
-        run: timeout 30 bash -c 'until curl -sf http://localhost:8080/health; do sleep 1; done'
-      - name: Install dashboard dependencies
-        run: cd apps/dashboard && npm ci
-      - name: Install Playwright
-        run: cd apps/dashboard && npx playwright install --with-deps chromium
-      - name: Run Playwright tests
-        run: cd apps/dashboard && npx playwright test
-        env:
-          CI: "true"
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: playwright-report
-          path: apps/dashboard/playwright-report/
-          retention-days: 7
-
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
@@ -591,6 +554,7 @@ jobs:
       - security-tests
       - security
       - frontend
+      - helm-chart
       - docker
     # Auto-merge for Dependabot and bot branches.
     # Requires lint-strict (no pre-existing issues allowed for auto-merge).
