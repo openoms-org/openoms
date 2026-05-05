@@ -23,46 +23,57 @@ env:
   MIGRATE_IMAGE: ghcr.io/openoms-org/openoms-migrate
 
 jobs:
-  build-api:
-    name: Build API Image
+  release-api:
+    name: Release API Image
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v6
 
       - uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push API image
+      - name: Build API image for scan
         uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/api-server/Dockerfile
-          push: true
+          load: true
           tags: |
             ${{ env.API_IMAGE }}:${{ github.sha }}
-            ${{ env.API_IMAGE }}:latest
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
-  build-dashboard:
-    name: Build Dashboard Image
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
+      - name: Scan API image with Trivy (SARIF for Security tab)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          image-ref: ${{ env.API_IMAGE }}:${{ github.sha }}
+          format: sarif
+          output: trivy-openoms-api.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
 
-      - uses: docker/setup-buildx-action@v4
+      - name: Upload API Trivy results to Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-openoms-api.sarif
+          category: trivy-openoms-api
+
+      - name: Scan API image with Trivy (blocking on CRITICAL/HIGH)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          image-ref: ${{ env.API_IMAGE }}:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
 
       - name: Log in to GHCR
         uses: docker/login-action@v4
@@ -71,15 +82,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Dashboard image
+      - name: Push API SHA image
+        run: |
+          docker push "${API_IMAGE}:${GITHUB_SHA}"
+
+  release-dashboard:
+    name: Release Dashboard Image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build Dashboard image for scan
         uses: docker/build-push-action@v7
         with:
           context: apps/dashboard
           file: apps/dashboard/Dockerfile
-          push: true
+          load: true
           tags: |
             ${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}
-            ${{ env.DASHBOARD_IMAGE }}:latest
           build-args: |
             NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL_PLACEHOLDER
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN || 'SENTRY_DSN_PLACEHOLDER' }}
@@ -90,15 +116,117 @@ jobs:
           cache-from: type=gha,scope=dashboard
           cache-to: type=gha,mode=max,scope=dashboard
 
-  build-migrate:
-    name: Build Migrate Image
+      - name: Scan Dashboard image with Trivy (SARIF for Security tab)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          image-ref: ${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}
+          format: sarif
+          output: trivy-openoms-dashboard.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Dashboard Trivy results to Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-openoms-dashboard.sarif
+          category: trivy-openoms-dashboard
+
+      - name: Scan Dashboard image with Trivy (blocking on CRITICAL/HIGH)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          image-ref: ${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Dashboard SHA image
+        run: |
+          docker push "${DASHBOARD_IMAGE}:${GITHUB_SHA}"
+
+  release-migrate:
+    name: Release Migrate Image
     runs-on: ubuntu-latest
     permissions:
       packages: write
       contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v6
 
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build Migrate image for scan
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/Dockerfile.migrate
+          load: true
+          tags: |
+            ${{ env.MIGRATE_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=migrate
+          cache-to: type=gha,mode=max,scope=migrate
+
+      - name: Scan Migrate image with Trivy (SARIF for Security tab)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          image-ref: ${{ env.MIGRATE_IMAGE }}:${{ github.sha }}
+          format: sarif
+          output: trivy-openoms-migrate.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Migrate Trivy results to Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-openoms-migrate.sarif
+          category: trivy-openoms-migrate
+
+      - name: Scan Migrate image with Trivy (blocking on CRITICAL/HIGH)
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_IMAGE_SRC: docker
+        with:
+          image-ref: ${{ env.MIGRATE_IMAGE }}:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Migrate SHA image
+        run: |
+          docker push "${MIGRATE_IMAGE}:${GITHUB_SHA}"
+
+  promote-latest:
+    name: Promote Latest Tags
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    needs: [release-api, release-dashboard, release-migrate]
+    steps:
       - uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
@@ -108,68 +236,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Migrate image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: deploy/Dockerfile.migrate
-          push: true
-          tags: |
-            ${{ env.MIGRATE_IMAGE }}:${{ github.sha }}
-            ${{ env.MIGRATE_IMAGE }}:latest
-          cache-from: type=gha,scope=migrate
-          cache-to: type=gha,mode=max,scope=migrate
-
-  scan-images:
-    name: Scan ${{ matrix.image }}
-    runs-on: ubuntu-latest
-    needs: [build-api, build-dashboard, build-migrate]
-    # Trivy scan is now blocking — CRITICAL/HIGH CVEs prevent deploy
-    permissions:
-      packages: read
-      security-events: write
-    strategy:
-      matrix:
-        image: [openoms-api, openoms-dashboard, openoms-migrate]
-    steps:
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Scan image with Trivy (SARIF for Security tab)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ghcr.io/openoms-org/${{ matrix.image }}:${{ github.sha }}
-          format: sarif
-          output: trivy-${{ matrix.image }}.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-
-      - name: Upload Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always()
-        with:
-          sarif_file: trivy-${{ matrix.image }}.sarif
-          category: trivy-${{ matrix.image }}
-
-      - name: Scan image with Trivy (blocking on CRITICAL/HIGH)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ghcr.io/openoms-org/${{ matrix.image }}:${{ github.sha }}
-          format: table
-          exit-code: '1'
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
+      - name: Promote SHA images to latest
+        run: |
+          docker buildx imagetools create --tag "${API_IMAGE}:latest" "${API_IMAGE}:${GITHUB_SHA}"
+          docker buildx imagetools create --tag "${DASHBOARD_IMAGE}:latest" "${DASHBOARD_IMAGE}:${GITHUB_SHA}"
+          docker buildx imagetools create --tag "${MIGRATE_IMAGE}:latest" "${MIGRATE_IMAGE}:${GITHUB_SHA}"
 
   notify-deploy:
     name: Trigger Deploy
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [build-api, build-dashboard, build-migrate, scan-images]
+    needs: [promote-latest]
     steps:
       - name: Dispatch to deploy repo
         env:
@@ -188,7 +266,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [build-api, build-dashboard, build-migrate]
+    needs: [promote-latest]
     steps:
       - uses: actions/checkout@v6
         with:
