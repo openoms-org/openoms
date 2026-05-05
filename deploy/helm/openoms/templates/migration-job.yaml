@@ -28,7 +28,27 @@ spec:
       initContainers:
         - name: wait-for-db
           image: postgres:17-alpine
-          command: ['sh', '-c', 'for i in $(seq 1 12); do pg_isready -h {{ .Values.database.host | default "postgres" }} -U openoms -t 5 && exit 0; echo "Waiting for DB (attempt $i)..."; sleep 5; done; exit 1']
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              : "${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL is required}"
+              for i in $(seq 1 12); do
+                if pg_isready -d "$MIGRATION_DATABASE_URL" -t 5 >/dev/null; then
+                  exit 0
+                fi
+                echo "Waiting for migration database (attempt $i)..."
+                sleep 5
+              done
+              echo "Migration database is not ready"
+              exit 1
+          env:
+            - name: MIGRATION_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: MIGRATION_DATABASE_URL
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
