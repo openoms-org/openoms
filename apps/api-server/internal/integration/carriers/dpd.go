@@ -148,23 +148,8 @@ func (p *DPDProvider) GetLabel(ctx context.Context, externalID string, _ string)
 }
 
 // GetTracking returns tracking events for the given DPD shipment.
-func (p *DPDProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
-	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
-	if err != nil {
-		return nil, fmt.Errorf("dpd: get tracking: %w", err)
-	}
-
-	events := make([]integration.TrackingEvent, 0, len(resp.Events))
-	for _, ev := range resp.Events {
-		events = append(events, integration.TrackingEvent{
-			Status:    ev.Status,
-			Location:  ev.Location,
-			Timestamp: ev.DateTime,
-			Details:   ev.Description,
-		})
-	}
-
-	return events, nil
+func (p *DPDProvider) GetTracking(_ context.Context, _ string) ([]integration.TrackingEvent, error) {
+	return nil, fmt.Errorf("dpd: tracking not available via DPD REST API")
 }
 
 // CancelShipment cancels a DPD shipment by its external ID.
