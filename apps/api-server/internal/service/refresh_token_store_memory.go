@@ -88,8 +88,17 @@ func (m *MemoryRefreshTokenStore) GetFamily(_ context.Context, familyID string) 
 }
 
 // UpdateFamily overwrites an existing token family in memory with a new TTL.
-func (m *MemoryRefreshTokenStore) UpdateFamily(ctx context.Context, family *RefreshTokenFamily, ttl time.Duration) error {
-	return m.StoreFamily(ctx, family, ttl)
+func (m *MemoryRefreshTokenStore) UpdateFamily(_ context.Context, family *RefreshTokenFamily, ttl time.Duration) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	f, ok := m.families[family.FamilyID]
+	if !ok || time.Now().After(f.expiry) {
+		delete(m.families, family.FamilyID)
+		return errRefreshTokenFamilyNotFound
+	}
+	cp := *family
+	m.families[family.FamilyID] = &memRefreshFamily{family: &cp, expiry: time.Now().Add(ttl)}
+	return nil
 }
 
 // DeleteFamily removes a token family from memory.
@@ -132,6 +141,23 @@ func (m *MemoryRefreshTokenStore) MarkTokenUsed(_ context.Context, tokenHash str
 	}
 	t.entry.Used = true
 	return nil
+}
+
+// ConsumeToken atomically marks an unused token as used and returns its entry.
+func (m *MemoryRefreshTokenStore) ConsumeToken(_ context.Context, tokenHash string) (*RefreshTokenEntry, bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.tokens[tokenHash]
+	if !ok || time.Now().After(t.expiry) {
+		delete(m.tokens, tokenHash)
+		return nil, false, nil
+	}
+	cp := *t.entry
+	if t.entry.Used {
+		return &cp, false, nil
+	}
+	t.entry.Used = true
+	return &cp, true, nil
 }
 
 // DeleteToken removes a refresh token entry from memory.

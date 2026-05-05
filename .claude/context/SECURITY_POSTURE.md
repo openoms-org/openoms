@@ -26,6 +26,9 @@ Security updates (2026-04-16):
 - Go 1.25.8 → 1.25.9 in CI (CVE-2026-32280/32282)
 - Alpine libcrypto3/musl auto-rebuild
 
+Security updates (2026-05-05):
+- OPE-209: refresh token rotation now consumes token entries atomically, requires an existing non-revoked family, rejects non-current sibling tokens, and prevents family updates from recreating a revoked family.
+
 
 Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixed: SOAP response parsing corrected, GLS model fields aligned, DHL service types validated, DPD COD form added)
 Carrier fields fix security audit: 2026-03-01 (PASS — zero XSS/injection vectors, hardcoded values only, React auto-escape, commits 4ef72f9 + 62eef14)
@@ -173,6 +176,7 @@ GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
 - RBAC: Custom roles with granular permissions
 - CSRF: double-submit cookie (X-CSRF-Token header + csrf_token cookie, SameSite=Lax, Domain configurable)
 - Token blacklist: composite (Redis primary + in-memory fallback, prevents fail-open)
+- Refresh token rotation: Redis Lua/in-memory locked consume marks a token used atomically; every rotated token must belong to an existing current token family.
 - Rate limiting: atomic Redis Lua script (INCR+EXPIRE in single operation)
 - SSRF: noPrivateDialer on all outbound connections (webhooks, automation, supplier feeds) — IPv4 + IPv6 private ranges
 - Webhooks outgoing: HMAC-SHA256 signed
