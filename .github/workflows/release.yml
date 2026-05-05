@@ -4,7 +4,17 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "deploy/**"
+      - "go.work"
+      - "go.work.sum"
   workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
