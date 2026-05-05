@@ -81,7 +81,7 @@ jobs:
             ${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}
             ${{ env.DASHBOARD_IMAGE }}:latest
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:8080' }}
+            NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL_PLACEHOLDER
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN || 'SENTRY_DSN_PLACEHOLDER' }}
             NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN || '' }}
