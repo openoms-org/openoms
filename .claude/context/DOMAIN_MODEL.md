@@ -5,6 +5,7 @@
 ### Tenant
 - Company account (multi-tenant isolation via RLS)
 - Fields: name, slug (URL-friendly), plan (standard/plus/pro), settings (JSONB)
+- Secret fields stored in settings are encrypted at field level before DB write: email.smtp_pass, sms.api_token, ksef.token, invoicing.credentials, and webhooks.endpoints[].secret
 - One tenant = one e-commerce business
 
 ### User
