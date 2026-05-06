@@ -22,6 +22,8 @@ var (
 	ErrInvalidSignature = errors.New("invalid webhook signature")
 	// ErrUnknownProvider is returned when a webhook provider name is not recognised.
 	ErrUnknownProvider = errors.New("unknown webhook provider")
+	// ErrWebhookSecretNotConfigured is returned when a provider requires signatures but has no configured secret.
+	ErrWebhookSecretNotConfigured = errors.New("webhook secret not configured")
 )
 
 // WebhookService handles inbound webhook event verification and storage.
@@ -53,11 +55,12 @@ func (s *WebhookService) Receive(ctx context.Context, tenantID uuid.UUID, provid
 	if err != nil {
 		return nil, err
 	}
+	if secret == "" {
+		return nil, ErrWebhookSecretNotConfigured
+	}
 
-	if secret != "" {
-		if !verifyHMAC(body, signature, secret) {
-			return nil, ErrInvalidSignature
-		}
+	if !verifyHMAC(body, signature, secret) {
+		return nil, ErrInvalidSignature
 	}
 
 	eventType := extractEventType(provider, body)

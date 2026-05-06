@@ -1,8 +1,11 @@
 # API Contracts
-Version: 9 (bump after every endpoint change)
+Version: 10 (bump after every endpoint change)
 Updated: 2026-05-06
 
 ## Recently Changed
+- 2026-05-06: Generic webhook fail-closed hardening:
+  - `POST /v1/webhooks/{provider}/{tenant_id}` now rejects known providers with missing webhook secrets using `422 {"error":"webhook secret not configured"}`.
+  - Generic Allegro/InPost webhook events require HMAC verification; an empty configured secret no longer disables signature checks.
 - 2026-05-06: Registration mode hardening:
   - `REGISTRATION_MODE=closed` now denies `POST /v1/auth/register` with `403 {"error":"registration is disabled"}`.
   - Legacy `REGISTRATION_MODE=disabled` is accepted as a closed-registration alias.
@@ -160,7 +163,7 @@ GET    /v1/public/returns/:token     → ReturnStatus
 
 ### Webhooks Incoming
 ```
-POST   /v1/webhooks/:provider/:tenant_id   → 200 (generic webhook)
+POST   /v1/webhooks/:provider/:tenant_id   → 200 (generic webhook; HMAC required for known providers) | 422 when provider secret is not configured
 POST   /v1/webhooks/allegro                 → 200 (HMAC verified)
 POST   /v1/webhooks/inpost                  → 200 (HMAC-SHA256 verified)
 POST   /v1/webhooks/stripe                  → 200 (Stripe-Signature verified)
