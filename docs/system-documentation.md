@@ -351,7 +351,7 @@ OpenOMS/
 | `allegro_parameter_mappings` | Mapowania parametrow Allegro per dostawca | supplier_id, allegro_category_id, parameter_id, source_field |
 | `supplier_category_mappings` | Mapowania kategorii dostawca->OMS | supplier_id, supplier_category, product_category_id |
 | `supplier_messages` | Komunikacja z dostawcami | supplier_id, direction, subject, body |
-| `supplier_portal_tokens` | Tokeny portalu dostawcy | supplier_id, token, expires_at |
+| `supplier_portal_tokens` | Tokeny portalu dostawcy | supplier_id, token_hash, expires_at |
 | `dropship_orders` | Zamowienia dropship | order_id, supplier_id, status, external_id |
 | `dropship_order_items` | Pozycje zamowien dropship | dropship_order_id, supplier_product_id, quantity |
 | `listing_sync_configs` | Konfiguracja sync listingow | integration_id, product_id, sync_price, sync_stock |
@@ -726,11 +726,11 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | GET | `/v1/suppliers/btp-wizard/{id}/progress` | BTP wizard -- postep importu |
 | POST | `/v1/suppliers/btp-wizard/{id}/api-keys` | BTP wizard -- klucze API |
 | POST | `/v1/suppliers/btp-wizard/{id}/sync-settings` | BTP wizard -- ustawienia sync |
-| POST | `/v1/suppliers/{id}/portal/generate-link` | Wygenerowanie linku portalu dostawcy |
+| POST | `/v1/suppliers/{id}/portal/generate-link` | Wygenerowanie linku portalu dostawcy (`/supplier-portal#token=...`) |
 | POST | `/v1/suppliers/{id}/portal/revoke` | Cofniecie dostepu do portalu |
 | GET | `/v1/suppliers/{id}/portal/status` | Status portalu dostawcy |
 
-#### Portal dostawcy (publiczny, token)
+#### Portal dostawcy (publiczny, token w `Authorization: Bearer ...`)
 
 | Metoda | Sciezka | Opis |
 |--------|---------|------|

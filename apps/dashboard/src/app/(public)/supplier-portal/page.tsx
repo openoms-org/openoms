@@ -1,9 +1,11 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { useTranslations } from "next-intl";
+import {
+  getSupplierPortalTokenHandoff,
+  SUPPLIER_PORTAL_TOKEN_STORAGE_KEY,
+} from "@/lib/supplier-portal-token";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
@@ -559,16 +561,10 @@ function OrderDetail({
 // --- Main Page ---
 
 export default function SupplierPortalPage() {
-  const t = useTranslations("suppliers");
-  return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">{t("loading")}</p></div>}>
-      <SupplierPortalContent />
-    </Suspense>
-  );
+  return <SupplierPortalContent />;
 }
 
 function SupplierPortalContent() {
-  const searchParams = useSearchParams();
   const [token, setToken] = useState("");
   const [tokenReady, setTokenReady] = useState(false);
 
@@ -577,21 +573,22 @@ function SupplierPortalContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  // One-time token hand-off: read from URL, store in sessionStorage, clean URL
-  // so the token doesn't leak via proxy logs, browser history, or Referer (OPE-169).
+  // One-time token hand-off: read from the URL fragment, store in sessionStorage,
+  // and scrub token material from browser history before API calls.
   useEffect(() => {
-    const urlToken = searchParams.get("token");
-    const stored = typeof window !== "undefined" ? sessionStorage.getItem("supplier_portal_token") : null;
-    if (urlToken) {
-      sessionStorage.setItem("supplier_portal_token", urlToken);
-      setToken(urlToken);
-      // Clean token from URL to prevent leak via history/Referer
-      window.history.replaceState({}, "", window.location.pathname);
+    const { token: fragmentToken, cleanURL } = getSupplierPortalTokenHandoff(window.location.href);
+    const stored = sessionStorage.getItem(SUPPLIER_PORTAL_TOKEN_STORAGE_KEY);
+    if (fragmentToken) {
+      sessionStorage.setItem(SUPPLIER_PORTAL_TOKEN_STORAGE_KEY, fragmentToken);
+      setToken(fragmentToken);
     } else if (stored) {
       setToken(stored);
     }
+    if (cleanURL) {
+      window.history.replaceState({}, "", cleanURL);
+    }
     setTokenReady(true);
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
     if (!tokenReady) return;

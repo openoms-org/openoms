@@ -1,8 +1,11 @@
 # API Contracts
-Version: 10 (bump after every endpoint change)
+Version: 11 (bump after every endpoint change)
 Updated: 2026-05-06
 
 ## Recently Changed
+- 2026-05-06: Supplier portal token transport hardening:
+  - `POST /v1/suppliers/{id}/portal/generate-link` now returns dashboard URLs with the raw portal token in the URL fragment (`/supplier-portal#token=...`) instead of the query string.
+  - Public supplier portal endpoints continue to accept portal tokens only via `Authorization: Bearer ...`; query-string portal tokens are not accepted.
 - 2026-05-06: Generic webhook fail-closed hardening:
   - `POST /v1/webhooks/{provider}/{tenant_id}` now rejects known providers with missing webhook secrets using `422 {"error":"webhook secret not configured"}`.
   - Generic Allegro/InPost webhook events require HMAC verification; an empty configured secret no longer disables signature checks.

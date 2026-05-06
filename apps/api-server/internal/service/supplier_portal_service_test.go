@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"net/url"
 	"testing"
 
 	"github.com/google/uuid"
@@ -12,6 +13,27 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
+
+func TestBuildSupplierPortalLinkUsesFragmentToken(t *testing.T) {
+	link := buildSupplierPortalLink("https://app.openoms.org", "abc123")
+
+	parsed, err := url.Parse(link)
+	require.NoError(t, err)
+	fragmentValues, err := url.ParseQuery(parsed.Fragment)
+	require.NoError(t, err)
+
+	assert.Equal(t, "https", parsed.Scheme)
+	assert.Equal(t, "app.openoms.org", parsed.Host)
+	assert.Equal(t, "/supplier-portal", parsed.Path)
+	assert.Empty(t, parsed.RawQuery)
+	assert.Equal(t, "abc123", fragmentValues.Get("token"))
+}
+
+func TestBuildSupplierPortalLinkTrimsTrailingSlash(t *testing.T) {
+	link := buildSupplierPortalLink("https://app.openoms.org/", "abc123")
+
+	assert.Equal(t, "https://app.openoms.org/supplier-portal#token=abc123", link)
+}
 
 var _ repository.PurchaseOrderRepo = (*fakeSupplierPortalPurchaseOrderRepo)(nil)
 
