@@ -23,6 +23,7 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - Sentry bugs (5/5 resolved)
 
 ## Recently Completed
+- 2026-05-06: OPE-205 — generated supplier portal links now use URL fragments for raw portal tokens, and the public portal page rejects query-string token handoff.
 - 2026-05-06: OPE-201 — generic Allegro/InPost webhook intake now rejects known providers when the webhook secret is missing instead of accepting unsigned events.
 - 2026-05-06: OPE-202 — `REGISTRATION_MODE=closed` now blocks public registration; legacy `disabled` remains blocked and invalid runtime modes fail closed.
 - 2026-05-06: OPE-200 — supplier portal message listing now enforces purchase-order ownership for the supplier token and hides draft/foreign orders as not found.

@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -135,7 +137,7 @@ func (s *SupplierPortalService) GeneratePortalLink(ctx context.Context, tenantID
 		}
 
 		resp = &model.SupplierPortalLinkResponse{
-			URL:       fmt.Sprintf("%s/supplier-portal?token=%s", s.baseURL, rawToken),
+			URL:       buildSupplierPortalLink(s.baseURL, rawToken),
 			ExpiresAt: expiresAt,
 		}
 		return nil
@@ -144,6 +146,11 @@ func (s *SupplierPortalService) GeneratePortalLink(ctx context.Context, tenantID
 		return nil, err
 	}
 	return resp, nil
+}
+
+func buildSupplierPortalLink(baseURL, rawToken string) string {
+	fragment := url.Values{"token": []string{rawToken}}.Encode()
+	return fmt.Sprintf("%s/supplier-portal#%s", strings.TrimRight(baseURL, "/"), fragment)
 }
 
 // ValidateToken validates a raw token and returns the supplier.

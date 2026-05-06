@@ -2230,6 +2230,21 @@ func TestSupplierPortalHandler_ListOrders_MissingToken(t *testing.T) {
 	assert.Equal(t, "portal token required", resp["error"])
 }
 
+func TestSupplierPortalHandler_ListOrders_IgnoresQueryToken(t *testing.T) {
+	h := NewSupplierPortalHandler(nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/supplier-portal/orders?token=leaked", nil)
+	rr := httptest.NewRecorder()
+
+	h.ListOrders(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "portal token required", resp["error"])
+}
+
 func TestSupplierPortalHandler_GetOrder_MissingToken(t *testing.T) {
 	h := NewSupplierPortalHandler(nil)
 
