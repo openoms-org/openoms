@@ -463,18 +463,39 @@ func (s *SupplierPortalService) AddMessage(ctx context.Context, tenantID, suppli
 	return msg, nil
 }
 
-// ListMessages returns all messages for a PO.
-func (s *SupplierPortalService) ListMessages(ctx context.Context, tenantID, poID uuid.UUID) ([]model.SupplierMessage, error) {
+// ListMessages returns all messages for a supplier-owned PO.
+func (s *SupplierPortalService) ListMessages(ctx context.Context, tenantID, supplierID, poID uuid.UUID) ([]model.SupplierMessage, error) {
 	var messages []model.SupplierMessage
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error
-		messages, err = s.messageRepo.ListByPO(ctx, tx, poID)
+		messages, err = s.listMessagesForSupplier(ctx, tx, supplierID, poID)
 		return err
 	})
+	if err != nil {
+		return nil, err
+	}
 	if messages == nil {
 		messages = []model.SupplierMessage{}
 	}
-	return messages, err
+	return messages, nil
+}
+
+func (s *SupplierPortalService) listMessagesForSupplier(ctx context.Context, tx pgx.Tx, supplierID, poID uuid.UUID) ([]model.SupplierMessage, error) {
+	po, err := s.poRepo.FindByID(ctx, tx, poID)
+	if err != nil {
+		return nil, err
+	}
+	if po == nil {
+		return nil, ErrPortalPONotFound
+	}
+	if po.SupplierID == nil || *po.SupplierID != supplierID {
+		return nil, ErrPortalPONotOwned
+	}
+	if po.Status == "draft" {
+		return nil, ErrPortalPONotFound
+	}
+
+	return s.messageRepo.ListByPO(ctx, tx, poID)
 }
 
 // GetPortalStatus returns portal status for a supplier (for admin UI).

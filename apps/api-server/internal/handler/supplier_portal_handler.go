@@ -302,7 +302,7 @@ func (h *SupplierPortalHandler) ListMessages(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, tenantID, err := h.portalService.ValidateToken(r.Context(), rawToken)
+	supplier, tenantID, err := h.portalService.ValidateToken(r.Context(), rawToken)
 	if err != nil {
 		h.handlePortalAuthError(w, err)
 		return
@@ -314,9 +314,14 @@ func (h *SupplierPortalHandler) ListMessages(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	messages, err := h.portalService.ListMessages(r.Context(), tenantID, poID)
+	messages, err := h.portalService.ListMessages(r.Context(), tenantID, supplier.ID, poID)
 	if err != nil {
-		writeServerError(w, "failed to list messages", err)
+		switch {
+		case errors.Is(err, service.ErrPortalPONotFound), errors.Is(err, service.ErrPortalPONotOwned):
+			writeError(w, http.StatusNotFound, "purchase order not found")
+		default:
+			writeServerError(w, "failed to list messages", err)
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, messages)
