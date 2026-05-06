@@ -1,8 +1,13 @@
 # API Contracts
-Version: 8 (bump after every endpoint change)
-Updated: 2026-03-03
+Version: 9 (bump after every endpoint change)
+Updated: 2026-05-06
 
 ## Recently Changed
+- 2026-05-06: Registration mode hardening:
+  - `REGISTRATION_MODE=closed` now denies `POST /v1/auth/register` with `403 {"error":"registration is disabled"}`.
+  - Legacy `REGISTRATION_MODE=disabled` is accepted as a closed-registration alias.
+  - Unknown runtime registration modes fail closed in the auth handler instead of allowing open registration.
+  - Public config `registration_mode` values are `open`, `invite`, `closed`, or legacy `disabled`.
 - 2026-03-03: GLS REST API integration finalized (internal SDK contract, no public API endpoint changes):
   - `packages/gls-go-sdk/client.go`: Added `io.LimitReader(resp.Body, 10*1024*1024)` (10MB cap) on response body reads to prevent OOM
   - `packages/gls-go-sdk/doc.go`: Removed "In Development" status marking SDK as production-verified
@@ -62,6 +67,7 @@ Updated: 2026-03-03
 ### Auth (no tenant context, rate limited)
 ```
 POST /v1/auth/register     {tenant_name, tenant_slug, name, email, password, invite_token?, license_token?, checkout_session_id?} → {access_token, refresh_token_cookie, user, tenant}
+                           registration_mode=closed|disabled or invalid runtime mode → 403 {"error":"registration is disabled"}
 POST /v1/auth/login        {tenant_slug, email, password} → {access_token, user, tenant} | {requires_2fa, two_fa_token}
 POST /v1/auth/login/2fa    {two_fa_token, code} → {access_token, user, tenant}
 POST /v1/auth/refresh      (cookie: refresh_token) → {access_token}

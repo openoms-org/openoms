@@ -29,6 +29,7 @@ Security updates (2026-04-16):
 Security updates (2026-05-05):
 - OPE-209: refresh token rotation now consumes token entries atomically, requires an existing non-revoked family, rejects non-current sibling tokens, and prevents family updates from recreating a revoked family.
 - OPE-200: supplier portal message listing now verifies that the purchase order belongs to the supplier from the portal token before returning messages, and hides draft/foreign purchase orders as not found.
+- OPE-202: closed registration mode now denies registration, legacy disabled remains denied, and invalid runtime registration modes fail closed instead of opening registration.
 
 
 Carrier SDK audit (DHL, DPD, GLS): 2026-03-01 (PASS — all critical issues fixed: SOAP response parsing corrected, GLS model fields aligned, DHL service types validated, DPD COD form added)

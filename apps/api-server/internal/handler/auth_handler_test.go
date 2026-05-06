@@ -142,6 +142,38 @@ func TestAuthHandler_Register_Disabled(t *testing.T) {
 	assert.Equal(t, "registration is disabled", resp["error"])
 }
 
+func TestAuthHandler_Register_Closed(t *testing.T) {
+	h := &AuthHandler{registrationMode: "closed"}
+
+	body := `{"email":"jan@test.pl","password":"test1234","name":"Jan","tenant_name":"Test","tenant_slug":"test"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	h.Register(rr, req)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "registration is disabled", resp["error"])
+}
+
+func TestAuthHandler_Register_UnknownModeFailsClosed(t *testing.T) {
+	h := &AuthHandler{registrationMode: "typo"}
+
+	body := `{"email":"jan@test.pl","password":"test1234","name":"Jan","tenant_name":"Test","tenant_slug":"test"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/register", strings.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	h.Register(rr, req)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "registration is disabled", resp["error"])
+}
+
 func TestAuthHandler_Register_InviteMode_CheckoutSessionWithoutService(t *testing.T) {
 	// When in invite mode with checkout_session_id but no checkout service configured,
 	// it should fall through to the default case requiring a valid token.

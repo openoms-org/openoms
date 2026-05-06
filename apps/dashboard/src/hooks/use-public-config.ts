@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { API_URL } from "@/lib/api-client";
 
 interface PublicConfig {
-  registration_mode: "open" | "invite" | "disabled";
+  registration_mode: "open" | "invite" | "closed" | "disabled";
   license_enabled: boolean;
   billing_enabled: boolean;
   stripe_public_key?: string;

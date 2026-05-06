@@ -21,7 +21,7 @@ type AuthHandler struct {
 	checkoutSvc      *service.CheckoutService
 	wsTicketSvc      *service.WSTicketService
 	isDev            bool
-	registrationMode string // "open", "invite", "disabled"
+	registrationMode string // "open", "invite", "closed"; "disabled" is a legacy alias for closed
 	tokenBlacklist   *middleware.TokenBlacklist
 }
 
@@ -63,7 +63,7 @@ func (h *AuthHandler) SetCheckoutService(svc *service.CheckoutService) {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Check registration mode
 	switch h.registrationMode {
-	case "disabled":
+	case "closed", "disabled":
 		writeError(w, http.StatusForbidden, "registration is disabled")
 		return
 	case "invite":
@@ -71,7 +71,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	case "open":
 		// allow
 	default:
-		// treat unknown as open
+		slog.Error("invalid registration mode; failing closed", "mode", h.registrationMode)
+		writeError(w, http.StatusForbidden, "registration is disabled")
+		return
 	}
 
 	var req model.RegisterRequest

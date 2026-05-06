@@ -930,7 +930,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 
 | Metoda | Sciezka | Opis |
 |--------|---------|------|
-| GET | `/v1/config` | Konfiguracja publiczna (registration_mode, billing_enabled, stripe_public_key) |
+| GET | `/v1/config` | Konfiguracja publiczna (registration_mode: open/invite/closed/disabled, billing_enabled, stripe_public_key) |
 
 ---
 
