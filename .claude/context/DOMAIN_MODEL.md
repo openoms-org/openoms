@@ -102,6 +102,7 @@ CREATE POLICY xxx_tenant ON xxx
 ```
 
 ### Bypass RLS (SECURITY DEFINER functions only)
+- `PUBLIC EXECUTE` is revoked from bypass functions; app roles receive explicit grants, and CI checks migrated databases for regressions.
 - `find_tenant_by_slug(slug)` — Login flow
 - `find_user_for_auth(email, tenant_id)` — Login flow
 - `find_order_tenant_id(order_id)` — Public return form

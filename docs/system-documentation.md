@@ -382,6 +382,8 @@ OpenOMS/
 
 ### Funkcje SECURITY DEFINER (bypass RLS)
 
+`PUBLIC EXECUTE` jest cofany dla funkcji omijajacych RLS. Dostep jest nadawany jawnie tylko rolom aplikacyjnym, a CI sprawdza baze po migracjach pod katem regresji.
+
 | Funkcja | Cel |
 |---------|-----|
 | `find_tenant_by_slug(slug)` | Login: znalezienie tenanta po slug |
