@@ -5,11 +5,37 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func validConfigForValidation(registrationMode string) *Config {
+	return &Config{
+		Env:              "production",
+		EncryptionKey:    strings.Repeat("a", 64),
+		JWTSecret:        strings.Repeat("b", 32),
+		RegistrationMode: registrationMode,
+	}
+}
+
+func TestConfig_Validate_RegistrationModes(t *testing.T) {
+	for _, mode := range []string{"open", "invite", "closed", "disabled"} {
+		t.Run(mode, func(t *testing.T) {
+			err := validConfigForValidation(mode).Validate()
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestConfig_Validate_RegistrationModeRejectsUnknown(t *testing.T) {
+	err := validConfigForValidation("typo").Validate()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "REGISTRATION_MODE must be one of")
+}
 
 func TestConfig_ParseLicensePublicKey_Valid(t *testing.T) {
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)

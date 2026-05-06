@@ -52,7 +52,8 @@ type Config struct {
 
 	MetricsToken string `env:"METRICS_TOKEN"` // Bearer token for /metrics; if empty, metrics are disabled in production
 
-	// RegistrationMode controls public registration: "open" (default), "invite" (token required), "disabled".
+	// RegistrationMode controls public registration: "open" (default), "invite" (token required), "closed".
+	// "disabled" is accepted as a legacy alias for closed registration.
 	RegistrationMode string `env:"REGISTRATION_MODE" envDefault:"open"`
 
 	// LicensePublicKey is the base64-encoded Ed25519 public key for verifying license tokens.
@@ -111,10 +112,10 @@ func (c *Config) Validate() error {
 
 	// RegistrationMode must be one of the allowed values.
 	switch c.RegistrationMode {
-	case "open", "invite", "closed":
+	case "open", "invite", "closed", "disabled":
 		// valid
 	default:
-		return fmt.Errorf("REGISTRATION_MODE must be one of: open, invite, closed (got %q)", c.RegistrationMode)
+		return fmt.Errorf("REGISTRATION_MODE must be one of: open, invite, closed, disabled (got %q)", c.RegistrationMode)
 	}
 
 	// Warn if registration is open in non-development environments.

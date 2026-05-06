@@ -23,6 +23,7 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - Sentry bugs (5/5 resolved)
 
 ## Recently Completed
+- 2026-05-06: OPE-202 — `REGISTRATION_MODE=closed` now blocks public registration; legacy `disabled` remains blocked and invalid runtime modes fail closed.
 - 2026-05-06: OPE-200 — supplier portal message listing now enforces purchase-order ownership for the supplier token and hides draft/foreign orders as not found.
 - 2026-05-05: OPE-209 — refresh token rotation hardened: atomic store consume, required non-revoked token family, non-current sibling invalidation, and no family resurrection after revocation.
 - 2026-04-16: Security updates — Next.js 16.2.3, Go 1.25.9 (CVE-2026-32280/32282), Alpine libcrypto3/musl rebuild
