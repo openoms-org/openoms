@@ -313,6 +313,9 @@ jobs:
             PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f "$f"
           done
 
+      - name: Check SECURITY DEFINER grants
+        run: PGPASSWORD=openoms_dev psql -h localhost -U openoms -d openoms_dev -f scripts/check-security-definer-public-execute.sql
+
       - name: Test api-server
         working-directory: apps/api-server
         run: go test -race -cover ./...
