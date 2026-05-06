@@ -901,7 +901,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | GET | `/v1/order-statuses` | Statusy zamowien (read-only) |
 | GET | `/v1/custom-fields` | Pola niestandardowe (read-only) |
 | GET | `/v1/product-categories` | Kategorie produktow (read-only) |
-| POST | `/v1/webhooks/{provider}/{tenant_id}` | Webhook przychodzacy |
+| POST | `/v1/webhooks/{provider}/{tenant_id}` | Webhook przychodzacy; znani providerzy wymagaja skonfigurowanego sekretu HMAC |
 | POST | `/v1/webhooks/allegro` | Webhook Allegro (HMAC) |
 | POST | `/v1/webhooks/inpost` | Webhook InPost (HMAC-SHA256) |
 | POST | `/v1/webhooks/stripe` | Webhook Stripe (Stripe-Signature) |
@@ -1362,7 +1362,7 @@ Uprawnienia np.:
 | SSRF | noPrivateDialer na wszystkich polaczeniach wychodzacych (webhooks, automation, supplier feeds). IPv4 + IPv6 (w tym ::/128, ff00::/8). |
 | SSRF (WebSocket) | Walidacja Origin header + ticket-only auth (JWT w URL usuniety) |
 | Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). |
-| DoS | Max body size (1MB default, 10MB upload). MaxBytesReader na webhook handlerach. |
+| DoS / webhook poisoning | Max body size (1MB default, 10MB upload). MaxBytesReader na webhook handlerach. Webhooki znanych providerow fail-closed przy braku sekretu HMAC. |
 | Account takeover | 2FA/TOTP, bcrypt, Ed25519 JWT |
 | Info disclosure | Brak wersji w /health, brak X-Powered-By, /metrics chroniony tokenem |
 | MIME sniffing | X-Content-Type-Options: nosniff |

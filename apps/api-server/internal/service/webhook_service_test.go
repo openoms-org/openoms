@@ -1,12 +1,15 @@
 package service
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerifyHMAC_Valid(t *testing.T) {
@@ -73,4 +76,13 @@ func TestSecretForProvider_Unknown(t *testing.T) {
 	svc := NewWebhookService(nil, nil, "a", "b")
 	_, err := svc.secretForProvider("unknown")
 	assert.ErrorIs(t, err, ErrUnknownProvider)
+}
+
+func TestWebhookService_Receive_RejectsEmptyProviderSecret(t *testing.T) {
+	svc := NewWebhookService(nil, nil, "", "inpost-secret")
+
+	event, err := svc.Receive(context.Background(), uuid.New(), "allegro", "", []byte(`{"type":"ORDER_CREATED"}`))
+
+	require.ErrorIs(t, err, ErrWebhookSecretNotConfigured)
+	assert.Nil(t, event)
 }
