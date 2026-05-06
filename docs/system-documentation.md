@@ -1329,6 +1329,8 @@ Plaintext -> AES-256-GCM(key, random_nonce) -> Base64 -> DB
 DB -> Base64 decode -> AES-256-GCM decrypt -> Plaintext
 ```
 
+Pola sekretow w `tenants.settings` sa szyfrowane tym samym mechanizmem przed zapisem do JSONB: haslo SMTP, token SMS, token KSeF, credentials providerow fakturowania oraz sekrety endpointow webhookow. API zwraca je jako wartosci zamaskowane.
+
 Klucz: `ENCRYPTION_KEY` (64-char hex = 32 bajty)
 
 ### Hasla -- bcrypt (cost 12)

@@ -23,6 +23,7 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - Sentry bugs (5/5 resolved)
 
 ## Recently Completed
+- 2026-05-06: OPE-214 — tenant settings secrets are encrypted at rest inside `tenants.settings`, legacy plaintext settings are backfilled by worker startup, and settings responses/export mask sensitive fields.
 - 2026-05-06: OPE-213 — billing/license/tenant-plan SECURITY DEFINER functions now revoke default PUBLIC execute, with a CI database check preventing regressions.
 - 2026-05-06: OPE-205 — generated supplier portal links now use URL fragments for raw portal tokens, and the public portal page rejects query-string token handoff.
 - 2026-05-06: OPE-201 — generic Allegro/InPost webhook intake now rejects known providers when the webhook secret is missing instead of accepting unsigned events.

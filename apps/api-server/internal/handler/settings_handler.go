@@ -906,7 +906,7 @@ func (h *SettingsHandler) GetInvoicingSettings(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	writeJSON(w, http.StatusOK, invoicingCfg)
+	writeJSON(w, http.StatusOK, maskInvoicingSettings(invoicingCfg))
 }
 
 // UpdateInvoicingSettings replaces the tenant's invoicing provider configuration.
@@ -928,6 +928,14 @@ func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http
 	}
 
 	err := database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
+		var existingCfg map[string]any
+		if err := h.getSettingsSection(r.Context(), tx, tenantID, "invoicing", &existingCfg); err != nil {
+			return err
+		}
+		if credentials, ok := invoicingCfg["credentials"]; ok && existingCfg != nil {
+			invoicingCfg["credentials"] = preserveMaskedSecretValues(credentials, existingCfg["credentials"])
+		}
+
 		if err := h.updateSettingsSection(r.Context(), tx, tenantID, "invoicing", invoicingCfg); err != nil {
 			return err
 		}
@@ -945,7 +953,7 @@ func (h *SettingsHandler) UpdateInvoicingSettings(w http.ResponseWriter, r *http
 		return
 	}
 
-	writeJSON(w, http.StatusOK, invoicingCfg)
+	writeJSON(w, http.StatusOK, maskInvoicingSettings(invoicingCfg))
 }
 
 // GetSMSSettings returns the tenant's SMS provider configuration.
@@ -1182,6 +1190,19 @@ func maskSensitiveSettings(raw json.RawMessage) json.RawMessage {
 		}
 	}
 
+	// Mask KSeF token
+	if ksefRaw, ok := allSettings["ksef"]; ok {
+		var ksefCfg map[string]any
+		if err := json.Unmarshal(ksefRaw, &ksefCfg); err == nil {
+			if _, has := ksefCfg["token"]; has {
+				ksefCfg["token"] = "**REDACTED**"
+			}
+			if masked, err := json.Marshal(ksefCfg); err == nil {
+				allSettings["ksef"] = masked
+			}
+		}
+	}
+
 	// Mask webhook endpoint secrets
 	if whRaw, ok := allSettings["webhooks"]; ok {
 		var whCfg model.WebhookConfig
@@ -1269,7 +1290,7 @@ func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request)
 			return err
 		}
 
-		updatedSettings = newSettings
+		updatedSettings = maskSensitiveSettings(newSettings)
 
 		return h.auditRepo.Log(r.Context(), tx, model.AuditEntry{
 			TenantID:   tenantID,
@@ -1288,4 +1309,84 @@ func (h *SettingsHandler) ImportSettings(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(updatedSettings)
+}
+
+func maskInvoicingSettings(cfg map[string]any) map[string]any {
+	if cfg == nil {
+		return nil
+	}
+	masked := make(map[string]any, len(cfg))
+	for key, value := range cfg {
+		if key == "credentials" {
+			masked[key] = maskSecretValue(value)
+			continue
+		}
+		masked[key] = value
+	}
+	return masked
+}
+
+func maskSecretValue(value any) any {
+	switch v := value.(type) {
+	case string:
+		if v == "" {
+			return ""
+		}
+		return "••••••"
+	case map[string]any:
+		masked := make(map[string]any, len(v))
+		for key, child := range v {
+			masked[key] = maskSecretValue(child)
+		}
+		return masked
+	case []any:
+		masked := make([]any, len(v))
+		for i, child := range v {
+			masked[i] = maskSecretValue(child)
+		}
+		return masked
+	default:
+		return v
+	}
+}
+
+func preserveMaskedSecretValues(incoming any, existing any) any {
+	switch v := incoming.(type) {
+	case string:
+		if !isMaskedSecretValue(v) {
+			return v
+		}
+		if old, ok := existing.(string); ok {
+			return old
+		}
+		return ""
+	case map[string]any:
+		preserved := make(map[string]any, len(v))
+		existingMap, _ := existing.(map[string]any)
+		for key, child := range v {
+			var oldChild any
+			if existingMap != nil {
+				oldChild = existingMap[key]
+			}
+			preserved[key] = preserveMaskedSecretValues(child, oldChild)
+		}
+		return preserved
+	case []any:
+		preserved := make([]any, len(v))
+		existingSlice, _ := existing.([]any)
+		for i, child := range v {
+			var oldChild any
+			if i < len(existingSlice) {
+				oldChild = existingSlice[i]
+			}
+			preserved[i] = preserveMaskedSecretValues(child, oldChild)
+		}
+		return preserved
+	default:
+		return v
+	}
+}
+
+func isMaskedSecretValue(value string) bool {
+	return value == "••••••" || value == "******" || value == "**REDACTED**"
 }

@@ -195,7 +195,22 @@ func run() error {
 	// Initialize services
 	passwordSvc := service.NewPasswordService()
 
-	tenantRepo := repository.NewTenantRepository(pool)
+	tenantRepo := repository.NewTenantRepository(pool, encryptionKey)
+	if cfg.WorkersEnabled {
+		backfillCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		encryptedTenants, err := tenantRepo.BackfillSettingsSecretEncryption(backfillCtx, workerPool)
+		cancel()
+		if err != nil {
+			if cfg.IsDevelopment() {
+				slog.Warn("tenant settings secret encryption backfill failed", "error", err)
+			} else {
+				slog.Error("tenant settings secret encryption backfill failed", "error", err)
+				return fmt.Errorf("tenant settings secret encryption backfill: %w", err)
+			}
+		} else if encryptedTenants > 0 {
+			slog.Info("encrypted legacy tenant settings secrets", "tenants_updated", encryptedTenants)
+		}
+	}
 	userRepo := repository.NewUserRepository(pool)
 	auditRepo := repository.NewAuditRepository()
 	orderRepo := repository.NewOrderRepository()

@@ -27,6 +27,7 @@ Security updates (2026-04-16):
 - Alpine libcrypto3/musl auto-rebuild
 
 Security updates (2026-05-05):
+- OPE-214: tenant settings secrets are now field-encrypted with AES-256-GCM before storage in `tenants.settings`; repository reads decrypt for app use, worker startup backfills legacy plaintext values, and settings/invoicing/export responses mask secrets.
 - OPE-213: billing, license, and tenant-plan `SECURITY DEFINER` functions now revoke default `PUBLIC EXECUTE`; CI checks migrated databases for any public-executable `SECURITY DEFINER` functions.
 - OPE-205: generated supplier portal links now place the raw 30-day portal token in the URL fragment instead of the query string; the public portal page ignores query-string tokens and scrubs token material from browser history.
 - OPE-209: refresh token rotation now consumes token entries atomically, requires an existing non-revoked family, rejects non-current sibling tokens, and prevents family updates from recreating a revoked family.
@@ -177,6 +178,7 @@ GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
 - Passwords: bcrypt cost 12
 - 2FA: TOTP (Google Authenticator), encrypted secret in DB
 - Encryption: AES-256-GCM for integration credentials
+- Tenant settings secrets: SMTP password, SMS API token, KSeF token, invoicing credentials, and outgoing webhook secrets are field-encrypted inside `tenants.settings`; API/export responses mask them.
 - Multi-tenant: PostgreSQL RLS per transaction
 - RBAC: Custom roles with granular permissions
 - CSRF: double-submit cookie (X-CSRF-Token header + csrf_token cookie, SameSite=Lax, Domain configurable)

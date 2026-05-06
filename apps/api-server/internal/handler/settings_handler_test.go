@@ -350,6 +350,71 @@ func TestSettingsHandler_UpdateInvoicingSettings_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestSettingsHandler_MaskInvoicingSettings_MasksNestedCredentials(t *testing.T) {
+	cfg := map[string]any{
+		"provider": "fakturownia",
+		"credentials": map[string]any{
+			"api_key": "secret",
+			"nested": map[string]any{
+				"refresh_token": "refresh-secret",
+			},
+			"empty": "",
+		},
+	}
+
+	masked := maskInvoicingSettings(cfg)
+
+	credentials := masked["credentials"].(map[string]any)
+	assert.Equal(t, "••••••", credentials["api_key"])
+	assert.Equal(t, "••••••", credentials["nested"].(map[string]any)["refresh_token"])
+	assert.Equal(t, "", credentials["empty"])
+	assert.Equal(t, "secret", cfg["credentials"].(map[string]any)["api_key"])
+}
+
+func TestSettingsHandler_PreserveMaskedSecretValues(t *testing.T) {
+	incoming := map[string]any{
+		"api_key": "••••••",
+		"nested": map[string]any{
+			"refresh_token": "******",
+			"new_secret":    "new-value",
+		},
+		"empty_mask": "**REDACTED**",
+	}
+	existing := map[string]any{
+		"api_key": "old-secret",
+		"nested": map[string]any{
+			"refresh_token": "old-refresh",
+		},
+	}
+
+	preserved := preserveMaskedSecretValues(incoming, existing).(map[string]any)
+
+	assert.Equal(t, "old-secret", preserved["api_key"])
+	assert.Equal(t, "old-refresh", preserved["nested"].(map[string]any)["refresh_token"])
+	assert.Equal(t, "new-value", preserved["nested"].(map[string]any)["new_secret"])
+	assert.Equal(t, "", preserved["empty_mask"])
+}
+
+func TestSettingsHandler_MaskSensitiveSettings_MasksAllTenantSecrets(t *testing.T) {
+	raw := json.RawMessage(`{
+		"email":{"smtp_pass":"smtp-secret"},
+		"sms":{"api_token":"sms-secret"},
+		"ksef":{"token":"ksef-secret"},
+		"invoicing":{"credentials":{"api_key":"invoice-secret"}},
+		"webhooks":{"endpoints":[{"secret":"webhook-secret"}]}
+	}`)
+
+	masked := maskSensitiveSettings(raw)
+
+	text := string(masked)
+	assert.NotContains(t, text, "smtp-secret")
+	assert.NotContains(t, text, "sms-secret")
+	assert.NotContains(t, text, "ksef-secret")
+	assert.NotContains(t, text, "invoice-secret")
+	assert.NotContains(t, text, "webhook-secret")
+	assert.Contains(t, text, "**REDACTED**")
+}
+
 func TestSettingsHandler_IsPrivateWebhookURL(t *testing.T) {
 	tests := []struct {
 		url  string
