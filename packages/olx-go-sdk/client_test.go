@@ -625,46 +625,58 @@ func TestGetCategoryAttributes(t *testing.T) {
 }
 
 func TestSuggestCategory(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			t.Errorf("method = %q, want GET", r.Method)
-		}
-		if !containsPath(r.URL.Path, "/categories/suggestion") {
-			t.Errorf("path = %q, want /categories/suggestion", r.URL.Path)
-		}
-		if q := r.URL.Query().Get("q"); q != "telefon" {
-			t.Errorf("q = %q, want %q", q, "telefon")
-		}
+	tests := []struct {
+		name string
+		id   string
+	}{
+		{name: "numeric id", id: `200`},
+		{name: "string id", id: `"200"`},
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"data":[{"id":200,"name":"Smartfony","path":["Elektronika","Telefony","Smartfony"]}]}`))
-	}))
-	defer srv.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					t.Errorf("method = %q, want GET", r.Method)
+				}
+				if !containsPath(r.URL.Path, "/categories/suggestion") {
+					t.Errorf("path = %q, want /categories/suggestion", r.URL.Path)
+				}
+				if q := r.URL.Query().Get("q"); q != "telefon" {
+					t.Errorf("q = %q, want %q", q, "telefon")
+				}
 
-	c := NewClient("id", "secret", "",
-		WithBaseURL(srv.URL),
-		WithHTTPClient(srv.Client()),
-		WithAccessToken("test_token"),
-	)
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"data":[{"id":` + tt.id + `,"name":"Smartfony","path":["Elektronika","Telefony","Smartfony"]}]}`))
+			}))
+			defer srv.Close()
 
-	result, err := c.Categories.SuggestCategory(context.Background(), "telefon")
-	if err != nil {
-		t.Fatalf("SuggestCategory error: %v", err)
-	}
-	if len(result.Data) != 1 {
-		t.Fatalf("len(Data) = %d, want 1", len(result.Data))
-	}
-	if result.Data[0].ID != 200 {
-		t.Errorf("ID = %d, want 200", result.Data[0].ID)
-	}
-	if result.Data[0].Name != "Smartfony" {
-		t.Errorf("Name = %q, want %q", result.Data[0].Name, "Smartfony")
-	}
-	if len(result.Data[0].Path) != 3 {
-		t.Fatalf("len(Path) = %d, want 3", len(result.Data[0].Path))
-	}
-	if result.Data[0].Path[0] != "Elektronika" {
-		t.Errorf("Path[0] = %q, want %q", result.Data[0].Path[0], "Elektronika")
+			c := NewClient("id", "secret", "",
+				WithBaseURL(srv.URL),
+				WithHTTPClient(srv.Client()),
+				WithAccessToken("test_token"),
+			)
+
+			result, err := c.Categories.SuggestCategory(context.Background(), "telefon")
+			if err != nil {
+				t.Fatalf("SuggestCategory error: %v", err)
+			}
+			if len(result.Data) != 1 {
+				t.Fatalf("len(Data) = %d, want 1", len(result.Data))
+			}
+			if result.Data[0].ID != 200 {
+				t.Errorf("ID = %d, want 200", result.Data[0].ID)
+			}
+			if result.Data[0].Name != "Smartfony" {
+				t.Errorf("Name = %q, want %q", result.Data[0].Name, "Smartfony")
+			}
+			if len(result.Data[0].Path) != 3 {
+				t.Fatalf("len(Path) = %d, want 3", len(result.Data[0].Path))
+			}
+			if result.Data[0].Path[0] != "Elektronika" {
+				t.Errorf("Path[0] = %q, want %q", result.Data[0].Path[0], "Elektronika")
+			}
+		})
 	}
 }
 
