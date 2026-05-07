@@ -284,7 +284,7 @@ The CI/CD pipeline (`.github/workflows/release.yml`) builds Docker images, scans
 ### Infrastructure Requirements
 
 - PostgreSQL 16+
-- Redis 7+
+- Redis 7+ (required outside `development` unless `ALLOW_IN_MEMORY_STATE=true` is explicitly set for a single-node self-hosted deployment)
 - Reverse proxy (nginx / Caddy / Traefik / ingress-nginx) for TLS termination
 
 The Docker images are stateless and can be deployed behind a load balancer or on single-node setups like k3s.
