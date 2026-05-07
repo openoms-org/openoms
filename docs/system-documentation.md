@@ -318,7 +318,7 @@ OpenOMS/
 | `tenants` | Konta firm | name, slug, plan, settings JSONB |
 | `users` | Uzytkownicy | email, name, role, role_id, password_hash, totp_secret, totp_enabled |
 | `roles` | Role RBAC | name, permissions TEXT[], is_system |
-| `orders` | Zamowienia | status, items JSONB, total_amount, tags[], custom_fields, priority, internal_notes |
+| `orders` | Zamowienia | status, items JSONB, total_amount, tags[], custom_fields, priority, internal_notes; unikalne `(tenant_id, source, external_id)` dla niepustych external_id |
 | `shipments` | Przesylki | carrier, tracking_number, label_url, status, warehouse_id |
 | `returns` | Zwroty/RMA | status, reason, refund_amount, return_token, customer_email |
 | `products` | Produkty | sku, ean, price, stock_quantity, images JSONB, description, dimensions |
@@ -1810,6 +1810,7 @@ EbayImportService.ImportOffers()
 - Logowanie bledow per worker (slog)
 - Interfejs Worker: `Name()`, `Interval()`, `Run(ctx)`
 - Iteracja per-tenant (kazdy worker dziala dla wszystkich aktywnych tenantow)
+- Idempotentny import zamowien marketplace/BaseLinker: atomowy insert-or-skip oparty o czesciowy unikalny indeks `orders(tenant_id, source, external_id)` dla niepustych `external_id`
 
 ---
 

@@ -1,17 +1,20 @@
 package worker
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
 // ---------------------------------------------------------------------------
@@ -454,6 +457,77 @@ func TestBuildOrder_ExternalIDInRequestPassedThrough(t *testing.T) {
 	order := poller.buildOrder(mo, ti, req)
 	require.NotNil(t, order.ExternalID)
 	assert.Equal(t, externalID, *order.ExternalID)
+}
+
+// ---------------------------------------------------------------------------
+// insertMarketplaceOrderIfNotExists
+// ---------------------------------------------------------------------------
+
+func TestInsertMarketplaceOrderIfNotExists_SkipsExistingOrder(t *testing.T) {
+	repo := &marketplaceInsertOrderRepo{
+		existing:        &model.Order{ID: uuid.New()},
+		createIfCreated: true,
+	}
+
+	created, err := insertMarketplaceOrderIfNotExists(
+		context.Background(), nil, repo, "allegro", "A-100", &model.Order{ID: uuid.New()},
+	)
+
+	require.NoError(t, err)
+	assert.False(t, created)
+	assert.Equal(t, 1, repo.findCalls)
+	assert.Equal(t, 0, repo.createIfCalls)
+}
+
+func TestInsertMarketplaceOrderIfNotExists_SkipsConcurrentDuplicate(t *testing.T) {
+	repo := &marketplaceInsertOrderRepo{createIfCreated: false}
+
+	created, err := insertMarketplaceOrderIfNotExists(
+		context.Background(), nil, repo, "allegro", "A-100", &model.Order{ID: uuid.New()},
+	)
+
+	require.NoError(t, err)
+	assert.False(t, created)
+	assert.Equal(t, 1, repo.findCalls)
+	assert.Equal(t, 1, repo.createIfCalls)
+}
+
+func TestInsertMarketplaceOrderIfNotExists_CreatesNewOrder(t *testing.T) {
+	order := &model.Order{ID: uuid.New()}
+	repo := &marketplaceInsertOrderRepo{createIfCreated: true}
+
+	created, err := insertMarketplaceOrderIfNotExists(
+		context.Background(), nil, repo, "amazon", "AMZ-1", order,
+	)
+
+	require.NoError(t, err)
+	assert.True(t, created)
+	assert.Equal(t, 1, repo.findCalls)
+	assert.Equal(t, 1, repo.createIfCalls)
+	assert.Equal(t, order, repo.createdOrder)
+}
+
+type marketplaceInsertOrderRepo struct {
+	repository.OrderRepo
+	existing        *model.Order
+	createIfCreated bool
+	createdOrder    *model.Order
+	findCalls       int
+	createIfCalls   int
+}
+
+func (r *marketplaceInsertOrderRepo) FindByExternalID(_ context.Context, _ pgx.Tx, _, _ string) (*model.Order, error) {
+	r.findCalls++
+	return r.existing, nil
+}
+
+func (r *marketplaceInsertOrderRepo) CreateIfExternalIDNotExists(_ context.Context, _ pgx.Tx, order *model.Order) (bool, error) {
+	r.createIfCalls++
+	if !r.createIfCreated {
+		return false, nil
+	}
+	r.createdOrder = order
+	return true, nil
 }
 
 // ---------------------------------------------------------------------------

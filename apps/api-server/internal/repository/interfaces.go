@@ -42,6 +42,7 @@ type OrderRepo interface {
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Order, error)
 	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (map[uuid.UUID]*model.Order, error)
 	Create(ctx context.Context, tx pgx.Tx, order *model.Order) error
+	CreateIfExternalIDNotExists(ctx context.Context, tx pgx.Tx, order *model.Order) (bool, error)
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateOrderRequest) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, shippedAt, deliveredAt *time.Time) error
 	FindByExternalID(ctx context.Context, tx pgx.Tx, source, externalID string) (*model.Order, error)
