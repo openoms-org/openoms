@@ -59,6 +59,7 @@ uploads/
 /bin/
 tmp/
 apps/api-server/server
+apps/api-server/api-server
 
 # Script artifacts
 scripts/**/package-lock.json
