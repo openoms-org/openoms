@@ -16,6 +16,7 @@
 ### Order
 - Central entity — most connected in the system
 - Fields: status, items (JSONB array), shipping/billing address (JSONB), total_amount, tags[], custom_fields, priority, source (manual/allegro/amazon/woocommerce)
+- Imported external orders are unique per `(tenant_id, source, external_id)` when `external_id` is non-empty; marketplace and BaseLinker import paths use atomic insert-or-skip semantics to avoid duplicate side effects.
 - State machine: see below
 - Relations: → shipments (1:N), → returns (1:N), → invoices (1:N), → audit_log
 

@@ -176,17 +176,11 @@ func (s *AllegroWebhookSyncer) tryImportOrder(ctx context.Context, ti TenantInte
 	req := integration.MarketplaceOrderToCreateRequest(*mo, "allegro", ti.IntegrationID)
 	order := allegroOrderMapper(*mo, ti, req)
 
+	created := false
 	if err := database.WithTenant(ctx, s.pool, ti.TenantID, func(tx pgx.Tx) error {
-		// Double-check for duplicates (race condition with poller)
-		existing, err := s.orderRepo.FindByExternalID(ctx, tx, "allegro", mo.ExternalID)
-		if err != nil {
-			return err
-		}
-		if existing != nil {
-			return nil // already created by poller, skip
-		}
-
-		if err := s.orderRepo.Create(ctx, tx, &order); err != nil {
+		var err error
+		created, err = insertMarketplaceOrderIfNotExists(ctx, tx, s.orderRepo, "allegro", mo.ExternalID, &order)
+		if err != nil || !created {
 			return err
 		}
 
@@ -206,6 +200,14 @@ func (s *AllegroWebhookSyncer) tryImportOrder(ctx context.Context, ti TenantInte
 			"error", err,
 		)
 		return false
+	}
+	if !created {
+		s.logger.Debug("allegro webhook syncer: duplicate order skipped",
+			"tenant_id", ti.TenantID,
+			"allegro_order_id", allegroOrderID,
+			"integration_id", ti.IntegrationID,
+		)
+		return true
 	}
 
 	s.logger.Info("allegro webhook syncer: order imported via webhook",

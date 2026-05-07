@@ -143,16 +143,11 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 			req := integration.MarketplaceOrderToCreateRequest(mo, p.providerName, ti.IntegrationID)
 			order := p.buildOrder(mo, ti, req)
 
+			created := false
 			if err := database.WithTenant(ctx, p.pool, ti.TenantID, func(tx pgx.Tx) error {
-				existing, err := p.orderRepo.FindByExternalID(ctx, tx, p.providerName, mo.ExternalID)
-				if err != nil {
-					return err
-				}
-				if existing != nil {
-					return nil // duplicate, skip
-				}
-
-				if err := p.orderRepo.Create(ctx, tx, &order); err != nil {
+				var err error
+				created, err = insertMarketplaceOrderIfNotExists(ctx, tx, p.orderRepo, p.providerName, mo.ExternalID, &order)
+				if err != nil || !created {
 					return err
 				}
 
@@ -183,6 +178,14 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 				return nil
 			}); err != nil {
 				p.logger.Error("failed to create order", "integration_id", ti.IntegrationID, "external_id", mo.ExternalID, "error", err)
+				continue
+			}
+			if !created {
+				p.logger.Debug("worker: duplicate external order skipped",
+					"integration_id", ti.IntegrationID,
+					"external_id", mo.ExternalID,
+					"provider", p.providerName,
+				)
 				continue
 			}
 			totalOrders++
@@ -263,6 +266,25 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 
 	p.logger.Info(p.providerName+" order poller completed", "tenants", len(tis), "orders", totalOrders)
 	return nil
+}
+
+func insertMarketplaceOrderIfNotExists(
+	ctx context.Context,
+	tx pgx.Tx,
+	orderRepo repository.OrderRepo,
+	source string,
+	externalID string,
+	order *model.Order,
+) (bool, error) {
+	existing, err := orderRepo.FindByExternalID(ctx, tx, source, externalID)
+	if err != nil {
+		return false, err
+	}
+	if existing != nil {
+		return false, nil
+	}
+
+	return orderRepo.CreateIfExternalIDNotExists(ctx, tx, order)
 }
 
 func (p *MarketplaceOrderPoller) buildOrder(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order {

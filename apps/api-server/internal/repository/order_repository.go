@@ -153,12 +153,24 @@ func (r *OrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 
 // Create inserts a new order.
 func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Order) error {
+	_, err := r.insert(ctx, tx, order, "")
+	return err
+}
+
+// CreateIfExternalIDNotExists inserts an order atomically unless the tenant/source/external_id
+// tuple is already present. It returns false,nil for duplicate external orders.
+func (r *OrderRepository) CreateIfExternalIDNotExists(ctx context.Context, tx pgx.Tx, order *model.Order) (bool, error) {
+	return r.insert(ctx, tx, order, `ON CONFLICT (tenant_id, source, external_id)
+		WHERE external_id IS NOT NULL AND external_id <> '' DO NOTHING`)
+}
+
+func (r *OrderRepository) insert(ctx context.Context, tx pgx.Tx, order *model.Order, conflictClause string) (bool, error) {
 	tags := order.Tags
 	if tags == nil {
 		tags = []string{}
 	}
-	return tx.QueryRow(ctx,
-		`INSERT INTO orders (
+
+	query := `INSERT INTO orders (
 			id, tenant_id, external_id, source, integration_id, status,
 			customer_name, customer_email, customer_phone,
 			shipping_address, billing_address, items,
@@ -167,7 +179,10 @@ func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Or
 			payment_status, payment_method,
 			internal_notes, priority
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
-		RETURNING created_at, updated_at`,
+		` + conflictClause + `
+		RETURNING created_at, updated_at`
+
+	err := tx.QueryRow(ctx, query,
 		order.ID, order.TenantID, order.ExternalID, order.Source, order.IntegrationID, order.Status,
 		order.CustomerName, order.CustomerEmail, order.CustomerPhone,
 		order.ShippingAddress, order.BillingAddress, order.Items,
@@ -176,6 +191,13 @@ func (r *OrderRepository) Create(ctx context.Context, tx pgx.Tx, order *model.Or
 		order.PaymentStatus, order.PaymentMethod,
 		order.InternalNotes, order.Priority,
 	).Scan(&order.CreatedAt, &order.UpdatedAt)
+	if err != nil {
+		if conflictClause != "" && err == pgx.ErrNoRows {
+			return false, nil
+		}
+		return false, fmt.Errorf("insert order: %w", err)
+	}
+	return true, nil
 }
 
 // Update applies partial updates to an order.

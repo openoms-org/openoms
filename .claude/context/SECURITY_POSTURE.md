@@ -27,6 +27,7 @@ Security updates (2026-04-16):
 - Alpine libcrypto3/musl auto-rebuild
 
 Security updates (2026-05-05 to 2026-05-07):
+- OPE-203: imported marketplace/BaseLinker orders now have a partial database uniqueness guard on `(tenant_id, source, external_id)` for non-empty external IDs, and import paths use atomic insert-or-skip behavior so concurrent pollers/webhooks/imports do not trigger duplicate order side effects.
 - OPE-207: Tenant plan guard now enforces Stripe subscription status from `billing_subscriptions`/`subscription_status`; past_due/unpaid/incomplete/canceled/paused/incomplete_expired subscriptions block mutations and suspended subscriptions block authenticated API access.
 - OPE-215: Redis is now required at API startup outside development for shared auth/session/rate-limit/OAuth/WebSocket/worker-lock state; `ALLOW_IN_MEMORY_STATE=true` is an explicit single-node self-host override and is blocked by Helm for multi-replica deployments.
 - OPE-214: tenant settings secrets are now field-encrypted with AES-256-GCM before storage in `tenants.settings`; repository reads decrypt for app use, worker startup backfills legacy plaintext values, and settings/invoicing/export responses mask secrets.
@@ -196,5 +197,5 @@ GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
 - License tokens: Ed25519 signed JWTs with JTI replay protection (used_license_tokens table)
 - Headers: CSP, X-Frame-Options:DENY, X-Content-Type-Options:nosniff, Referrer-Policy:strict-origin-when-cross-origin
 - DB connection safety: three-phase pattern for external API calls (no DB held during HTTP), deferred KSeF session cleanup
-- Concurrency: per-tenant mutex on ImportOffers, unique index on product_listings(external_id, integration_id)
+- Concurrency: per-tenant mutex on ImportOffers, unique index on product_listings(external_id, integration_id), and partial unique index on orders(tenant_id, source, external_id) for idempotent marketplace/BaseLinker order imports
 - Input validation: message template body max 50k chars, name max 200 chars

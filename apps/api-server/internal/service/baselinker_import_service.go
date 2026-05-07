@@ -588,10 +588,19 @@ func (s *BaseLinkerImportService) importOrderGroup(
 		order.PaymentMethod = &paymentMethod
 	}
 
-	if err := s.orderRepo.Create(ctx, tx, &order); err != nil {
+	created, err := s.orderRepo.CreateIfExternalIDNotExists(ctx, tx, &order)
+	if err != nil {
 		errs = append(errs, model.ImportError{
 			Row:     rowNum,
 			Message: fmt.Sprintf("failed to create order: %s", err.Error()),
+		})
+		return errs
+	}
+	if !created {
+		errs = append(errs, model.ImportError{
+			Row:     rowNum,
+			Field:   "order_id",
+			Message: fmt.Sprintf("duplicate order_id: %s", externalID),
 		})
 		return errs
 	}

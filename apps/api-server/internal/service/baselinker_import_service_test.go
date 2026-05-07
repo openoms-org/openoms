@@ -19,8 +19,11 @@ import (
 
 // mockOrderRepo implements repository.OrderRepo for unit tests.
 type mockOrderRepo struct {
-	created          []*model.Order
-	externalIDLookup map[string]*model.Order // key: "source:external_id"
+	created                   []*model.Order
+	externalIDLookup          map[string]*model.Order // key: "source:external_id"
+	createIfExternalIDCreated *bool
+	createIfExternalIDErr     error
+	createIfExternalIDCalls   int
 }
 
 func newMockOrderRepo() *mockOrderRepo {
@@ -44,6 +47,18 @@ func (m *mockOrderRepo) FindByIDs(_ context.Context, _ pgx.Tx, _ []uuid.UUID) (m
 func (m *mockOrderRepo) Create(_ context.Context, _ pgx.Tx, order *model.Order) error {
 	m.created = append(m.created, order)
 	return nil
+}
+
+func (m *mockOrderRepo) CreateIfExternalIDNotExists(_ context.Context, _ pgx.Tx, order *model.Order) (bool, error) {
+	m.createIfExternalIDCalls++
+	if m.createIfExternalIDErr != nil {
+		return false, m.createIfExternalIDErr
+	}
+	if m.createIfExternalIDCreated != nil && !*m.createIfExternalIDCreated {
+		return false, nil
+	}
+	m.created = append(m.created, order)
+	return true, nil
 }
 
 func (m *mockOrderRepo) Update(_ context.Context, _ pgx.Tx, _ uuid.UUID, _ model.UpdateOrderRequest) error {
@@ -429,6 +444,44 @@ func TestBLImport_ImportOrderGroup_SkipsDuplicate(t *testing.T) {
 	assert.Contains(t, errs[0].Message, "duplicate order_id")
 	assert.Equal(t, 0, result.OrdersCreated)
 	assert.Empty(t, orderRepo.created)
+}
+
+func TestBLImport_ImportOrderGroup_SkipsDuplicateCreatedByConcurrentImporter(t *testing.T) {
+	orderRepo := newMockOrderRepo()
+	created := false
+	orderRepo.createIfExternalIDCreated = &created
+
+	svc := &BaseLinkerImportService{
+		orderRepo:    orderRepo,
+		customerRepo: newMockCustomerRepo(),
+		auditRepo:    &mockAuditRepo{},
+	}
+
+	tenantID := uuid.New()
+
+	headers := []string{"order_id", "delivery_fullname", "product_name"}
+	rows := [][]string{
+		{"BL-1001", "Jan Kowalski", "Product A"},
+	}
+	csvData := buildBLCSV(headers, rows)
+
+	_, records, headerIdx, err := parseBLOrderCSV(csvData)
+	require.NoError(t, err)
+
+	groups, err := groupByOrderID(records, headerIdx)
+	require.NoError(t, err)
+
+	result := &BLOrderImportResult{Errors: []model.ImportError{}}
+	statusConfig := &model.OrderStatusConfig{
+		Statuses: []model.StatusDef{{Key: "new", Label: "New"}},
+	}
+
+	errs := svc.importOrderGroup(context.Background(), nil, tenantID, groups[0], headerIdx, result, statusConfig, false)
+	require.NotNil(t, errs)
+	assert.Contains(t, errs[0].Message, "duplicate order_id")
+	assert.Equal(t, 0, result.OrdersCreated)
+	assert.Empty(t, orderRepo.created)
+	assert.Equal(t, 1, orderRepo.createIfExternalIDCalls)
 }
 
 func TestBLImport_ImportOrderGroup_CreatesCustomer(t *testing.T) {
