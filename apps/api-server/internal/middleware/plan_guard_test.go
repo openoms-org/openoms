@@ -155,3 +155,22 @@ func TestPlanGuard_SubscriptionCanceled_BlocksPOST(t *testing.T) {
 	assert.Equal(t, http.StatusPaymentRequired, rr.Code)
 	assert.Contains(t, rr.Body.String(), "subscription_inactive")
 }
+
+func TestPlanGuard_SubscriptionSuspended_BlocksAll(t *testing.T) {
+	cache := service.NewPlanCache(5 * time.Minute)
+	tenantID := uuid.New()
+	settings := json.RawMessage(`{"subscription_status":"suspended"}`)
+	cache.Set(tenantID, "plus", settings)
+
+	mw := TenantPlanGuard(cache, nil)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/orders", nil)
+	req = req.WithContext(context.WithValue(req.Context(), TenantIDKey, tenantID))
+	rr := httptest.NewRecorder()
+
+	mw.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusPaymentRequired, rr.Code)
+	assert.Contains(t, rr.Body.String(), "subscription_suspended")
+}

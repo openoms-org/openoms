@@ -155,7 +155,7 @@ GET    /v1/billing/checkout/{session_id}    → {plan, interval, email, status, 
 Note: Disabled when STRIPE_SECRET_KEY not set. Plans configured via BILLING_PLANS env var (JSON).
 
 ### Billing subscription (tenant-scoped, requires JWT)
-```
+```http
 GET    /v1/billing/subscription             → {plan, status, billing_interval?, trial_end?, current_period_end?, canceled_at?, limits?}
 ```
 Note: Authenticated API requests are guarded by subscription state. `past_due`/`unpaid`/`incomplete` and `canceled`/`paused`/`incomplete_expired` block mutations with HTTP 402; `suspended` blocks access with HTTP 402.

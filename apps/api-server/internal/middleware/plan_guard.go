@@ -108,8 +108,8 @@ func blockForSubscriptionStatus(w http.ResponseWriter, r *http.Request, status s
 		}
 		return false
 	case "suspended":
-		writePlanError(w, "subscription_inactive",
-			"subscription is not active")
+		writePlanError(w, "subscription_suspended",
+			"subscription has been suspended")
 		return true
 	default:
 		if isMutation(r.Method) {
