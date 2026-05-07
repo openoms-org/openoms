@@ -101,7 +101,12 @@ export default function TrackingPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${API_URL}/v1/tracking/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(orderId.trim())}?email=${encodeURIComponent(email.trim())}`
+        `${API_URL}/v1/tracking/${encodeURIComponent(tenantSlug)}/${encodeURIComponent(orderId.trim())}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        }
       );
       if (res.status === 404) {
         setError("Nie znaleziono zamowienia. Sprawdz numer zamowienia i email.");
