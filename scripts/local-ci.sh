@@ -68,9 +68,21 @@ run_check() {
 }
 
 save_results() {
+    local git_branch git_commit git_dirty
+    git_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+    git_commit=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+    if [ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+        git_dirty="true"
+    else
+        git_dirty="false"
+    fi
+
     {
-        echo "TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S)"
+        echo "TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         echo "MODE=$MODE"
+        echo "GIT_BRANCH=$git_branch"
+        echo "GIT_COMMIT=$git_commit"
+        echo "GIT_DIRTY=$git_dirty"
         echo "DURATION=$((SECONDS))s"
         echo "STATUS=$([ $FAILED -eq 0 ] && echo 'pass' || echo 'fail')"
         printf "%b" "$RESULTS"
@@ -155,7 +167,16 @@ run_check "eslint" bash -c '
 # ── 5. next build (skip in quick mode) ──
 if ! $QUICK; then
     run_check "next-build" bash -c '
-        cd "'"$REPO_ROOT"'/apps/dashboard" && npx next build 2>&1 | tail -20
+        cd "'"$REPO_ROOT"'/apps/dashboard"
+        tmp_output=$(mktemp)
+        if npx next build >"$tmp_output" 2>&1; then
+            rm -f "$tmp_output"
+            exit 0
+        fi
+        status=$?
+        tail -20 "$tmp_output"
+        rm -f "$tmp_output"
+        exit "$status"
     '
 fi
 
