@@ -920,6 +920,14 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | POST | `/v1/billing/checkout` | Tworzenie sesji Stripe Checkout |
 | GET | `/v1/billing/checkout/{session_id}` | Status sesji checkout |
 
+#### Billing (tenant-scoped, wymaga JWT)
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/billing/subscription` | Aktualny plan, status subskrypcji i limity tenanta |
+
+Plan guard egzekwuje status subskrypcji Stripe po stronie backendu: `past_due`/`unpaid`/`incomplete` oraz `canceled`/`paused`/`incomplete_expired` blokuja mutacje HTTP 402, a `suspended` blokuje uwierzytelniony dostep HTTP 402.
+
 #### Onboarding (wymaga JWT)
 
 | Metoda | Sciezka | Opis |

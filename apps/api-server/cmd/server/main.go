@@ -724,7 +724,7 @@ func run() error {
 		slog.Info("stripe billing enabled", "plans", len(billingPlans))
 
 		if cfg.StripeWebhookSecret != "" {
-			webhookSvc := service.NewStripeWebhookService(cfg.StripeWebhookSecret, billingRepo, pool)
+			webhookSvc := service.NewStripeWebhookService(cfg.StripeWebhookSecret, billingRepo, pool, planCache)
 			stripeWebhookHandler = handler.NewStripeWebhookHandler(webhookSvc)
 			slog.Info("stripe webhook handler enabled")
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -12,7 +13,8 @@ import (
 
 // PlanSettings represents the limits portion of tenant.settings JSONB.
 type PlanSettings struct {
-	Limits *PlanLimits `json:"limits,omitempty"`
+	Limits             *PlanLimits `json:"limits,omitempty"`
+	SubscriptionStatus string      `json:"subscription_status,omitempty"`
 }
 
 // PlanLimits defines per-plan resource limits.
@@ -53,31 +55,69 @@ func TenantPlanGuard(cache *service.PlanCache, pool *pgxpool.Pool) func(http.Han
 				return
 			}
 
+			var ps PlanSettings
+			if settings != nil {
+				_ = json.Unmarshal(settings, &ps)
+			}
+
+			if blockForSubscriptionStatus(w, r, ps.SubscriptionStatus) {
+				return
+			}
+
 			switch plan {
 			case "suspended":
-				writePlanError(w, http.StatusPaymentRequired, "subscription_suspended",
+				writePlanError(w, "subscription_suspended",
 					"subscription has been suspended")
 				return
 
 			case "past_due":
 				if isMutation(r.Method) {
-					writePlanError(w, http.StatusPaymentRequired, "payment_past_due",
+					writePlanError(w, "payment_past_due",
 						"payment past due, write operations are blocked")
 					return
 				}
 			}
 
 			// Store parsed settings in context for downstream limit checks
-			if settings != nil {
-				var ps PlanSettings
-				if json.Unmarshal(settings, &ps) == nil && ps.Limits != nil {
-					ctx := context.WithValue(r.Context(), planLimitsKey, ps.Limits)
-					r = r.WithContext(ctx)
-				}
+			if ps.Limits != nil {
+				ctx := context.WithValue(r.Context(), planLimitsKey, ps.Limits)
+				r = r.WithContext(ctx)
 			}
 
 			next.ServeHTTP(w, r)
 		})
+	}
+}
+
+func blockForSubscriptionStatus(w http.ResponseWriter, r *http.Request, status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "", "active", "trialing":
+		return false
+	case "past_due", "unpaid", "incomplete":
+		if isMutation(r.Method) {
+			writePlanError(w, "payment_past_due",
+				"payment past due, write operations are blocked")
+			return true
+		}
+		return false
+	case "canceled", "incomplete_expired", "paused":
+		if isMutation(r.Method) {
+			writePlanError(w, "subscription_inactive",
+				"subscription is not active")
+			return true
+		}
+		return false
+	case "suspended":
+		writePlanError(w, "subscription_inactive",
+			"subscription is not active")
+		return true
+	default:
+		if isMutation(r.Method) {
+			writePlanError(w, "subscription_inactive",
+				"subscription status is not active")
+			return true
+		}
+		return false
 	}
 }
 
@@ -102,9 +142,9 @@ func PlanLimitsFromContext(ctx context.Context) *PlanLimits {
 	return nil
 }
 
-func writePlanError(w http.ResponseWriter, status int, errorCode, message string) {
+func writePlanError(w http.ResponseWriter, errorCode, message string) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+	w.WriteHeader(http.StatusPaymentRequired)
 	_ = json.NewEncoder(w).Encode(map[string]string{
 		"error":   errorCode,
 		"message": message,

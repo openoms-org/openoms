@@ -30,7 +30,7 @@ func TestStripeWebhookHandler_MissingSignature(t *testing.T) {
 
 func TestStripeWebhookHandler_InvalidSignature(t *testing.T) {
 	// Create a real webhook service with a known secret — any payload with wrong signature fails
-	webhookSvc := service.NewStripeWebhookService("whsec_test_secret", nil, nil)
+	webhookSvc := service.NewStripeWebhookService("whsec_test_secret", nil, nil, nil)
 	h := NewStripeWebhookHandler(webhookSvc)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/stripe", strings.NewReader(`{}`))
