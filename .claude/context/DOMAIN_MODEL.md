@@ -56,8 +56,8 @@
 
 ### BillingSubscription
 - Stripe subscription state
-- Fields: tenant_id, stripe_subscription_id (UNIQUE), plan, billing_interval (month/year), status (trialing/active/past_due/canceled/suspended), trial_end, current_period_start, current_period_end, canceled_at
-- Status machine: trialing → active → past_due/canceled/suspended
+- Fields: tenant_id, stripe_subscription_id (UNIQUE), plan, billing_interval (month/year), status (incomplete/incomplete_expired/trialing/active/past_due/canceled/unpaid/paused), trial_end, current_period_start, current_period_end, canceled_at
+- Status machine follows Stripe subscription states; trialing/active allow normal API access, past_due/unpaid/incomplete/canceled/paused/incomplete_expired allow reads but block mutations, and suspended blocks authenticated API access via the tenant plan guard.
 
 ### BillingCheckoutSession
 - Pre-registration checkout state

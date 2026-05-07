@@ -23,14 +23,16 @@ type StripeWebhookService struct {
 	webhookSecret string
 	billingRepo   repository.BillingRepo
 	pool          *pgxpool.Pool
+	planCache     *PlanCache
 }
 
 // NewStripeWebhookService creates a new StripeWebhookService.
-func NewStripeWebhookService(webhookSecret string, billingRepo repository.BillingRepo, pool *pgxpool.Pool) *StripeWebhookService {
+func NewStripeWebhookService(webhookSecret string, billingRepo repository.BillingRepo, pool *pgxpool.Pool, planCache *PlanCache) *StripeWebhookService {
 	return &StripeWebhookService{
 		webhookSecret: webhookSecret,
 		billingRepo:   billingRepo,
 		pool:          pool,
+		planCache:     planCache,
 	}
 }
 
@@ -177,5 +179,9 @@ func (s *StripeWebhookService) syncTenantPlan(ctx context.Context, stripeCustome
 	settingsJSON, _ := json.Marshal(settings)
 	if err := s.billingRepo.SyncTenantPlan(ctx, s.pool, customer.TenantID, settingsJSON); err != nil {
 		slog.Error("failed to sync tenant plan status", "tenant_id", customer.TenantID, "error", err)
+		return
+	}
+	if s.planCache != nil {
+		s.planCache.Invalidate(customer.TenantID)
 	}
 }

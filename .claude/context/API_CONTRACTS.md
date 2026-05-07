@@ -1,8 +1,12 @@
 # API Contracts
-Version: 11 (bump after every endpoint change)
-Updated: 2026-05-06
+Version: 12 (bump after every endpoint change)
+Updated: 2026-05-07
 
 ## Recently Changed
+- 2026-05-07: Billing enforcement hardening:
+  - Tenant plan guard now enforces the current Stripe subscription status from the latest `billing_subscriptions.status` (merged into plan settings as `subscription_status`) instead of only `tenants.plan`.
+  - `past_due`, `unpaid`, and `incomplete` subscriptions allow reads but block mutating authenticated API requests with `402 {"error":"payment_past_due"}`.
+  - `canceled`, `paused`, and `incomplete_expired` subscriptions allow reads but block mutating authenticated API requests with `402 {"error":"subscription_inactive"}`; `suspended` remains a full access block.
 - 2026-05-06: Supplier portal token transport hardening:
   - `POST /v1/suppliers/{id}/portal/generate-link` now returns dashboard URLs with the raw portal token in the URL fragment (`/supplier-portal#token=...`) instead of the query string.
   - Public supplier portal endpoints continue to accept portal tokens only via `Authorization: Bearer ...`; query-string portal tokens are not accepted.
@@ -149,6 +153,12 @@ POST   /v1/billing/checkout                 {plan_id, interval: "month"|"year"} 
 GET    /v1/billing/checkout/{session_id}    → {plan, interval, email, status, limits}
 ```
 Note: Disabled when STRIPE_SECRET_KEY not set. Plans configured via BILLING_PLANS env var (JSON).
+
+### Billing subscription (tenant-scoped, requires JWT)
+```http
+GET    /v1/billing/subscription             → {plan, status, billing_interval?, trial_end?, current_period_end?, canceled_at?, limits?}
+```
+Note: Authenticated API requests are guarded by subscription state. `past_due`/`unpaid`/`incomplete` and `canceled`/`paused`/`incomplete_expired` block mutations with HTTP 402; `suspended` blocks access with HTTP 402.
 
 ### Onboarding (tenant-scoped, requires auth)
 ```

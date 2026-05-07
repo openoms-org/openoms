@@ -23,6 +23,7 @@ Subscription tiers based on order volume. Plan names and pricing configured at r
 - Sentry bugs (5/5 resolved)
 
 ## Recently Completed
+- 2026-05-07: OPE-207 — backend plan guard now enforces Stripe subscription status, blocks writes for past_due/unpaid/incomplete/canceled/paused/incomplete_expired subscriptions, blocks authenticated API access for suspended subscriptions, and invalidates cached plan state on Stripe webhook sync.
 - 2026-05-07: OPE-215 — API startup now requires Redis for shared auth/session/rate-limit/OAuth/WebSocket/worker-lock state outside development, with `ALLOW_IN_MEMORY_STATE` as an explicit single-node self-host override.
 - 2026-05-06: OPE-214 — tenant settings secrets are encrypted at rest inside `tenants.settings`, legacy plaintext settings are backfilled by worker startup, and settings responses/export mask sensitive fields.
 - 2026-05-06: OPE-213 — billing/license/tenant-plan SECURITY DEFINER functions now revoke default PUBLIC execute, with a CI database check preventing regressions.
