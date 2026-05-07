@@ -13,9 +13,17 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-RESULTS_FILE="/tmp/openoms-local-ci-results.txt"
 QUICK=false
 [[ "${1:-}" == "--quick" ]] && QUICK=true
+
+if $QUICK; then
+    MODE="quick"
+else
+    MODE="full"
+fi
+
+RESULTS_FILE="/tmp/openoms-local-ci-${MODE}-results.txt"
+LATEST_RESULTS_FILE="/tmp/openoms-local-ci-results.txt"
 
 # colors
 RED="\033[31m"
@@ -62,10 +70,12 @@ run_check() {
 save_results() {
     {
         echo "TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%S)"
+        echo "MODE=$MODE"
         echo "DURATION=$((SECONDS))s"
         echo "STATUS=$([ $FAILED -eq 0 ] && echo 'pass' || echo 'fail')"
         printf "%b" "$RESULTS"
     } > "$RESULTS_FILE"
+    cp "$RESULTS_FILE" "$LATEST_RESULTS_FILE"
 }
 
 # ── header ──
