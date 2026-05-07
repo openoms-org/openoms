@@ -34,6 +34,33 @@ type Advert struct {
 	ExternalID  string          `json:"external_id,omitempty"`
 }
 
+// FlexInt handles JSON integer values that may be either a number or a string.
+type FlexInt int
+
+// UnmarshalJSON handles JSON integer values that may be either a number or a string.
+func (i *FlexInt) UnmarshalJSON(data []byte) error {
+	var num int
+	if err := json.Unmarshal(data, &num); err == nil {
+		*i = FlexInt(num)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	*i = FlexInt(v)
+	return nil
+}
+
+// MarshalJSON encodes FlexInt as a JSON number.
+func (i FlexInt) MarshalJSON() ([]byte, error) {
+	return json.Marshal(int(i))
+}
+
 // FlexFloat handles JSON values that may be either a number or a string.
 type FlexFloat float64
 
@@ -224,9 +251,9 @@ type CategoryAttributeListResponse struct {
 }
 
 // CategorySuggestion is returned by GET /categories/suggestion.
-// Note: OLX returns id as a string in the suggestion response.
+// OLX may return id as either a JSON number or a string.
 type CategorySuggestion struct {
-	ID   any      `json:"id"`
+	ID   FlexInt  `json:"id"`
 	Name string   `json:"name"`
 	Path []string `json:"path"`
 }
