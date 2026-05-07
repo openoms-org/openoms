@@ -1362,7 +1362,7 @@ Uprawnienia np.:
 | Clickjacking | X-Frame-Options: DENY + CSP frame-ancestors 'none' |
 | Tenant leakage | RLS + FORCE ROW LEVEL SECURITY |
 | Token theft | SHA-256 hash w blacklist, httpOnly cookies |
-| Token revocation | Composite blacklist (Redis + in-memory fallback, zapobiega fail-open) |
+| Token revocation | Redis-backed composite blacklist; poza developmentem Redis jest wymagany, a in-memory fallback jest tylko lokalny/explicit single-node |
 | SSRF | noPrivateDialer na wszystkich polaczeniach wychodzacych (webhooks, automation, supplier feeds). IPv4 + IPv6 (w tym ::/128, ff00::/8). |
 | SSRF (WebSocket) | Walidacja Origin header + ticket-only auth (JWT w URL usuniety) |
 | Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). |
@@ -1887,7 +1887,9 @@ Akcja `delay` w regule automatyzacji tworzy wpis w tabeli `automation_delayed_ac
 ```bash
 # -- Serwer -----------------------
 PORT=8080
-ENV=production|development
+ENV=production|staging|development
+REDIS_URL=redis://redis-master.apps-core.svc.cluster.local:6379
+ALLOW_IN_MEMORY_STATE=false  # true tylko dla jawnego single-node/self-host bez Redis
 
 # -- Baza danych ------------------
 DATABASE_URL=postgres://openoms:pass@localhost:5433/openoms

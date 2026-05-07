@@ -1,0 +1,7 @@
+{{- $apiReplicas := int (default 1 .Values.apiServer.replicaCount) -}}
+{{- $apiMaxReplicas := int (default 1 .Values.autoscaling.api.maxReplicas) -}}
+{{- $workerReplicas := int (default 1 .Values.worker.replicaCount) -}}
+{{- $separateWorkers := eq (default "separate" .Values.workerStrategy) "separate" -}}
+{{- if and (.Values.apiServer.allowInMemoryState) (or (gt $apiReplicas 1) (and .Values.autoscaling.api.enabled (gt $apiMaxReplicas 1)) (and $separateWorkers (gt $workerReplicas 1))) -}}
+{{- fail "apiServer.allowInMemoryState=true is only supported for explicit single-node deployments; disable API autoscaling and keep API/worker replica counts at 1" -}}
+{{- end -}}

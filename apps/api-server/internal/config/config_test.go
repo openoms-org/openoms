@@ -37,6 +37,47 @@ func TestConfig_Validate_RegistrationModeRejectsUnknown(t *testing.T) {
 	assert.Contains(t, err.Error(), "REGISTRATION_MODE must be one of")
 }
 
+func TestConfig_InMemoryStatePolicy(t *testing.T) {
+	tests := []struct {
+		name         string
+		cfg          Config
+		allowState   bool
+		requireRedis bool
+	}{
+		{
+			name:         "development allows in-memory state by default",
+			cfg:          Config{Env: "development"},
+			allowState:   true,
+			requireRedis: false,
+		},
+		{
+			name:         "staging requires Redis by default",
+			cfg:          Config{Env: "staging"},
+			allowState:   false,
+			requireRedis: true,
+		},
+		{
+			name:         "production requires Redis by default",
+			cfg:          Config{Env: "production"},
+			allowState:   false,
+			requireRedis: true,
+		},
+		{
+			name:         "explicit opt-in allows in-memory state outside development",
+			cfg:          Config{Env: "production", AllowInMemoryState: true},
+			allowState:   true,
+			requireRedis: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.allowState, tt.cfg.AllowsInMemoryState())
+			assert.Equal(t, tt.requireRedis, tt.cfg.RequiresRedis())
+		})
+	}
+}
+
 func TestConfig_ParseLicensePublicKey_Valid(t *testing.T) {
 	pub, _, _ := ed25519.GenerateKey(rand.Reader)
 	encoded := base64.StdEncoding.EncodeToString(pub)

@@ -26,7 +26,8 @@ Security updates (2026-04-16):
 - Go 1.25.8 → 1.25.9 in CI (CVE-2026-32280/32282)
 - Alpine libcrypto3/musl auto-rebuild
 
-Security updates (2026-05-05):
+Security updates (2026-05-05 to 2026-05-07):
+- OPE-215: Redis is now required at API startup outside development for shared auth/session/rate-limit/OAuth/WebSocket/worker-lock state; `ALLOW_IN_MEMORY_STATE=true` is an explicit single-node self-host override and is blocked by Helm for multi-replica deployments.
 - OPE-214: tenant settings secrets are now field-encrypted with AES-256-GCM before storage in `tenants.settings`; repository reads decrypt for app use, worker startup backfills legacy plaintext values, and settings/invoicing/export responses mask secrets.
 - OPE-213: billing, license, and tenant-plan `SECURITY DEFINER` functions now revoke default `PUBLIC EXECUTE`; CI checks migrated databases for any public-executable `SECURITY DEFINER` functions.
 - OPE-205: generated supplier portal links now place the raw 30-day portal token in the URL fragment instead of the query string; the public portal page ignores query-string tokens and scrubs token material from browser history.
@@ -182,9 +183,10 @@ GLS carrier production-ready security audit: 2026-03-03 (PASS — no CRITICAL/HI
 - Multi-tenant: PostgreSQL RLS per transaction
 - RBAC: Custom roles with granular permissions
 - CSRF: double-submit cookie (X-CSRF-Token header + csrf_token cookie, SameSite=Lax, Domain configurable)
-- Token blacklist: composite (Redis primary + in-memory fallback, prevents fail-open)
+- Redis availability: API startup requires reachable Redis outside development unless `ALLOW_IN_MEMORY_STATE=true` is explicitly configured for a single-node deployment.
+- Token blacklist: composite Redis primary + instance-local memory fallback; Redis is the shared production store.
 - Refresh token rotation: Redis Lua/in-memory locked consume marks a token used atomically; every rotated token must belong to an existing current token family.
-- Rate limiting: atomic Redis Lua script (INCR+EXPIRE in single operation)
+- Rate limiting: atomic Redis Lua script (INCR+EXPIRE in single operation) outside development; memory limiter only for development/explicit single-node mode.
 - SSRF: noPrivateDialer on all outbound connections (webhooks, automation, supplier feeds) — IPv4 + IPv6 private ranges
 - Webhooks outgoing: HMAC-SHA256 signed
 - HSTS: Strict-Transport-Security in production

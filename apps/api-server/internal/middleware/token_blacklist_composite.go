@@ -3,8 +3,8 @@ package middleware
 import "time"
 
 // CompositeTokenBlacklist writes to both stores and reads from either.
-// This ensures revoked tokens stay blocked even when the primary store (Redis) is down,
-// because the in-memory fallback always catches recently-revoked tokens.
+// Redis remains the shared authoritative store in production; the in-memory
+// fallback only covers tokens revoked by the current process.
 type CompositeTokenBlacklist struct {
 	primary  TokenBlacklistStore // Redis (authoritative, shared across instances)
 	fallback TokenBlacklistStore // In-memory (always available, instance-local)

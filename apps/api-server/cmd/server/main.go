@@ -56,46 +56,15 @@ import (
 	stripe "github.com/stripe/stripe-go/v82"
 )
 
+const redisConnectTimeout = 5 * time.Second
+
 func main() {
 	if err := run(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	cfg, err := config.Load()
-	if err != nil {
-		slog.Error("failed to load config", "error", err)
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	if err := cfg.Validate(); err != nil {
-		slog.Error("invalid configuration", "error", err)
-		return fmt.Errorf("invalid configuration: %w", err)
-	}
-
-	// Connect to Redis (for rate limiting and token blacklist)
-	var redisClient *redis.Client
-	redisOpts, err := redis.ParseURL(cfg.RedisURL)
-	if err != nil {
-		slog.Warn("invalid REDIS_URL, falling back to in-memory stores", "error", err)
-	} else {
-		redisClient = redis.NewClient(redisOpts)
-		if err := redisClient.Ping(context.Background()).Err(); err != nil {
-			slog.Warn("Redis not available, falling back to in-memory stores", "error", err)
-			_ = redisClient.Close()
-			redisClient = nil
-		} else {
-			slog.Info("connected to Redis", "url", cfg.RedisURL)
-		}
-	}
-	defer func() {
-		if redisClient != nil {
-			_ = redisClient.Close()
-		}
-	}()
-
-	// Setup logger
+func setupLogger(cfg *config.Config) {
 	logLevel := slog.LevelInfo
 	if cfg.IsDevelopment() {
 		logLevel = slog.LevelDebug
@@ -108,6 +77,59 @@ func run() error {
 		logHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
 	}
 	slog.SetDefault(slog.New(logHandler))
+}
+
+func connectRedis(ctx context.Context, cfg *config.Config) (*redis.Client, error) {
+	redisOpts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		if cfg.RequiresRedis() {
+			return nil, fmt.Errorf("REDIS_URL is invalid and in-memory state is disabled: %w", err)
+		}
+		slog.Warn("invalid REDIS_URL, using in-memory state stores", "error", err)
+		return nil, nil
+	}
+
+	redisClient := redis.NewClient(redisOpts)
+	pingCtx, cancel := context.WithTimeout(ctx, redisConnectTimeout)
+	defer cancel()
+	if err := redisClient.Ping(pingCtx).Err(); err != nil {
+		_ = redisClient.Close()
+		if cfg.RequiresRedis() {
+			return nil, fmt.Errorf("redis is required but unavailable: %w", err)
+		}
+		slog.Warn("Redis not available, using in-memory state stores", "error", err)
+		return nil, nil
+	}
+
+	slog.Info("connected to Redis", "addr", redisOpts.Addr)
+	return redisClient, nil
+}
+
+func run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("failed to load config", "error", err)
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	setupLogger(cfg)
+
+	if err := cfg.Validate(); err != nil {
+		slog.Error("invalid configuration", "error", err)
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	// Redis backs shared auth/session/rate-limit state and worker locks.
+	redisClient, err := connectRedis(context.Background(), cfg)
+	if err != nil {
+		slog.Error("failed to connect to Redis", "error", err)
+		return fmt.Errorf("failed to connect to Redis: %w", err)
+	}
+	defer func() {
+		if redisClient != nil {
+			_ = redisClient.Close()
+		}
+	}()
 
 	// Initialize Sentry error tracking (optional — disabled when DSN is empty)
 	if cfg.SentryEnabled() {
@@ -389,7 +411,7 @@ func run() error {
 
 	// Initialize token blacklist for server-side token revocation.
 	// Uses a composite store: writes to both Redis and memory, reads from either.
-	// This ensures revoked tokens stay blocked even when Redis is down.
+	// Redis is the shared production store; memory only protects the local process.
 	memBlacklist := middleware.NewMemoryTokenBlacklist()
 	var tokenBlacklist *middleware.TokenBlacklist
 	if redisClient != nil {

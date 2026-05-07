@@ -19,9 +19,10 @@ type Config struct {
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:3000"`
 
-	DatabaseURL       string `env:"DATABASE_URL,required"`
-	WorkerDatabaseURL string `env:"WORKER_DATABASE_URL"` // superuser pool for cross-tenant worker queries; falls back to DATABASE_URL
-	RedisURL          string `env:"REDIS_URL" envDefault:"redis://localhost:6379"`
+	DatabaseURL        string `env:"DATABASE_URL,required"`
+	WorkerDatabaseURL  string `env:"WORKER_DATABASE_URL"` // superuser pool for cross-tenant worker queries; falls back to DATABASE_URL
+	RedisURL           string `env:"REDIS_URL" envDefault:"redis://localhost:6379"`
+	AllowInMemoryState bool   `env:"ALLOW_IN_MEMORY_STATE" envDefault:"false"`
 
 	JWTSecret     string `env:"JWT_SECRET,required"`
 	EncryptionKey string `env:"ENCRYPTION_KEY,required"`
@@ -94,6 +95,17 @@ func (c *Config) IsProduction() bool {
 	return c.Env == "production"
 }
 
+// AllowsInMemoryState reports whether auth/session/rate-limit state may use
+// process-local memory when Redis is not available.
+func (c *Config) AllowsInMemoryState() bool {
+	return c.IsDevelopment() || c.AllowInMemoryState
+}
+
+// RequiresRedis reports whether Redis is required for shared runtime state.
+func (c *Config) RequiresRedis() bool {
+	return !c.AllowsInMemoryState()
+}
+
 // Validate checks critical config values and returns an error for fatal
 // misconfigurations. Non-fatal issues are logged as warnings.
 func (c *Config) Validate() error {
@@ -121,6 +133,10 @@ func (c *Config) Validate() error {
 	// Warn if registration is open in non-development environments.
 	if c.RegistrationMode == "open" && !c.IsDevelopment() {
 		slog.Warn("REGISTRATION_MODE is 'open' in non-development environment — consider using 'invite' or 'closed'", "env", c.Env)
+	}
+
+	if c.AllowInMemoryState && !c.IsDevelopment() {
+		slog.Warn("ALLOW_IN_MEMORY_STATE is enabled outside development; auth, session, rate-limit, OAuth, WebSocket, and worker lock state will be process-local", "env", c.Env)
 	}
 
 	return nil
