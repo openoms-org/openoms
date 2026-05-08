@@ -1811,6 +1811,7 @@ EbayImportService.ImportOffers()
 - Interfejs Worker: `Name()`, `Interval()`, `Run(ctx)`
 - Iteracja per-tenant (kazdy worker dziala dla wszystkich aktywnych tenantow)
 - Idempotentny import zamowien marketplace/BaseLinker: atomowy insert-or-skip oparty o czesciowy unikalny indeks `orders(tenant_id, source, external_id)` dla niepustych `external_id`
+- Cross-tenant queries uzywaja jawnego `WORKER_DATABASE_URL` poza developmentem; API `DATABASE_URL` pozostaje least-privilege/RLS-scoped
 
 ---
 
@@ -1901,7 +1902,8 @@ REDIS_URL=redis://redis-master.apps-core.svc.cluster.local:6379
 ALLOW_IN_MEMORY_STATE=false  # true tylko dla jawnego single-node/self-host bez Redis
 
 # -- Baza danych ------------------
-DATABASE_URL=postgres://openoms:pass@localhost:5433/openoms
+DATABASE_URL=postgres://openoms_app:pass@localhost:5433/openoms        # app role, RLS-scoped
+WORKER_DATABASE_URL=postgres://openoms_worker:pass@localhost:5433/openoms  # privileged, cross-tenant worker/webhook queries
 
 # -- Bezpieczenstwo ---------------
 JWT_SECRET=minimum-32-znaki-losowy-string

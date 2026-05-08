@@ -14,10 +14,13 @@ import (
 
 func validConfigForValidation(registrationMode string) *Config {
 	return &Config{
-		Env:              "production",
-		EncryptionKey:    strings.Repeat("a", 64),
-		JWTSecret:        strings.Repeat("b", 32),
-		RegistrationMode: registrationMode,
+		Env:                "production",
+		DatabaseURL:        "postgres://openoms_app@example.com/openoms",
+		WorkerDatabaseURL:  "postgres://openoms_worker@example.com/openoms",
+		EncryptionKey:      strings.Repeat("a", 64),
+		JWTSecret:          strings.Repeat("b", 32),
+		RegistrationMode:   registrationMode,
+		AllowInMemoryState: false,
 	}
 }
 
@@ -35,6 +38,84 @@ func TestConfig_Validate_RegistrationModeRejectsUnknown(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "REGISTRATION_MODE must be one of")
+}
+
+func TestConfig_Validate_AllowsMissingWorkerDatabaseURLInDevelopment(t *testing.T) {
+	cfg := validConfigForValidation("open")
+	cfg.Env = "development"
+	cfg.WorkerDatabaseURL = ""
+
+	err := cfg.Validate()
+
+	require.NoError(t, err)
+}
+
+func TestConfig_Validate_RequiresWorkerDatabaseURLOutsideDevelopment(t *testing.T) {
+	cfg := validConfigForValidation("invite")
+	cfg.WorkerDatabaseURL = ""
+
+	err := cfg.Validate()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "WORKER_DATABASE_URL is required outside development")
+}
+
+func TestConfig_Validate_RejectsWorkerDatabaseURLMatchingAppDatabaseOutsideDevelopment(t *testing.T) {
+	cfg := validConfigForValidation("invite")
+	cfg.WorkerDatabaseURL = cfg.DatabaseURL
+
+	err := cfg.Validate()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "WORKER_DATABASE_URL must not equal DATABASE_URL")
+}
+
+func TestConfig_WorkerDatabaseDSN(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     Config
+		want    string
+		wantErr string
+	}{
+		{
+			name: "development falls back to database url",
+			cfg: Config{
+				Env:         "development",
+				DatabaseURL: "postgres://openoms_app@example.com/openoms",
+			},
+			want: "postgres://openoms_app@example.com/openoms",
+		},
+		{
+			name: "production uses explicit worker url",
+			cfg: Config{
+				Env:               "production",
+				DatabaseURL:       "postgres://openoms_app@example.com/openoms",
+				WorkerDatabaseURL: "postgres://openoms_worker@example.com/openoms",
+			},
+			want: "postgres://openoms_worker@example.com/openoms",
+		},
+		{
+			name: "production requires explicit worker url",
+			cfg: Config{
+				Env:         "production",
+				DatabaseURL: "postgres://openoms_app@example.com/openoms",
+			},
+			wantErr: "WORKER_DATABASE_URL is required outside development",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.cfg.WorkerDatabaseDSN()
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 func TestConfig_InMemoryStatePolicy(t *testing.T) {

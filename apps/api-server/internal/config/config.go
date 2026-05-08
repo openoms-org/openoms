@@ -20,7 +20,7 @@ type Config struct {
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:3000"`
 
 	DatabaseURL        string `env:"DATABASE_URL,required"`
-	WorkerDatabaseURL  string `env:"WORKER_DATABASE_URL"` // superuser pool for cross-tenant worker queries; falls back to DATABASE_URL
+	WorkerDatabaseURL  string `env:"WORKER_DATABASE_URL"` // privileged pool for cross-tenant worker and webhook queries; required outside development
 	RedisURL           string `env:"REDIS_URL" envDefault:"redis://localhost:6379"`
 	AllowInMemoryState bool   `env:"ALLOW_IN_MEMORY_STATE" envDefault:"false"`
 
@@ -106,6 +106,25 @@ func (c *Config) RequiresRedis() bool {
 	return !c.AllowsInMemoryState()
 }
 
+// RequiresWorkerDatabase reports whether cross-tenant worker/webhook queries
+// must use an explicitly configured privileged database URL.
+func (c *Config) RequiresWorkerDatabase() bool {
+	return !c.IsDevelopment()
+}
+
+// WorkerDatabaseDSN returns the database URL for intentionally cross-tenant
+// operations. Development keeps the historical local fallback; non-development
+// environments must configure a separate WORKER_DATABASE_URL explicitly.
+func (c *Config) WorkerDatabaseDSN() (string, error) {
+	if c.WorkerDatabaseURL != "" {
+		return c.WorkerDatabaseURL, nil
+	}
+	if !c.RequiresWorkerDatabase() {
+		return c.DatabaseURL, nil
+	}
+	return "", fmt.Errorf("WORKER_DATABASE_URL is required outside development for cross-tenant worker and webhook queries")
+}
+
 // Validate checks critical config values and returns an error for fatal
 // misconfigurations. Non-fatal issues are logged as warnings.
 func (c *Config) Validate() error {
@@ -137,6 +156,13 @@ func (c *Config) Validate() error {
 
 	if c.AllowInMemoryState && !c.IsDevelopment() {
 		slog.Warn("ALLOW_IN_MEMORY_STATE is enabled outside development; auth, session, rate-limit, OAuth, WebSocket, and worker lock state will be process-local", "env", c.Env)
+	}
+
+	if _, err := c.WorkerDatabaseDSN(); err != nil {
+		return err
+	}
+	if c.RequiresWorkerDatabase() && c.WorkerDatabaseURL == c.DatabaseURL {
+		return fmt.Errorf("WORKER_DATABASE_URL must not equal DATABASE_URL outside development; use a separate privileged role only for cross-tenant worker and webhook queries")
 	}
 
 	return nil

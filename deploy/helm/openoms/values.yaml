@@ -194,6 +194,9 @@ redis:
 
 database:
   host: postgres
+  # Secret key used to populate WORKER_DATABASE_URL. Defaults to the privileged
+  # migration DSN so worker/webhook cross-tenant queries do not use DATABASE_URL.
+  workerSecretKey: MIGRATION_DATABASE_URL
 
 blueGreen:
   enabled: false
