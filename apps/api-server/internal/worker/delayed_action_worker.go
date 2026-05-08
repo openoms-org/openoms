@@ -16,6 +16,17 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+const (
+	delayedActionMaxAttempts = 5
+	delayedActionBaseBackoff = time.Minute
+)
+
+type delayedActionFailurePlan struct {
+	Retry         bool
+	AttemptCount  int
+	NextExecuteAt time.Time
+}
+
 // DelayedActionWorker polls for pending delayed automation actions and executes them.
 type DelayedActionWorker struct {
 	pool        *pgxpool.Pool
@@ -111,23 +122,55 @@ func (w *DelayedActionWorker) executeDelayedAction(ctx context.Context, da model
 	}
 
 	// Execute the action
-	var errMsg *string
 	if err := w.executor.ExecuteAction(ctx, da.TenantID, action, event); err != nil {
-		w.logger.Error("delayed action worker: action execution failed",
+		failurePlan := planDelayedActionFailure(da, time.Now())
+		if failurePlan.Retry {
+			w.logger.Warn("delayed action worker: action execution failed, retry scheduled",
+				"delayed_action_id", da.ID,
+				"action_type", action.Type,
+				"attempt", failurePlan.AttemptCount,
+				"max_attempts", delayedActionMaxAttempts,
+				"next_execute_at", failurePlan.NextExecuteAt,
+				"error", err,
+			)
+			w.requeueForRetry(ctx, da.TenantID, da.ID, failurePlan.NextExecuteAt, err.Error())
+			return
+		}
+
+		w.logger.Error("delayed action worker: action execution failed permanently",
 			"delayed_action_id", da.ID,
 			"action_type", action.Type,
+			"attempt", failurePlan.AttemptCount,
+			"max_attempts", delayedActionMaxAttempts,
 			"error", err,
 		)
 		msg := err.Error()
-		errMsg = &msg
-	} else {
-		w.logger.Info("delayed action worker: action executed successfully",
-			"delayed_action_id", da.ID,
-			"action_type", action.Type,
-		)
+		w.markExecuted(ctx, da.TenantID, da.ID, &msg)
+		return
 	}
 
-	w.markExecuted(ctx, da.TenantID, da.ID, errMsg)
+	w.logger.Info("delayed action worker: action executed successfully",
+		"delayed_action_id", da.ID,
+		"action_type", action.Type,
+	)
+	w.markExecuted(ctx, da.TenantID, da.ID, nil)
+}
+
+func planDelayedActionFailure(da model.DelayedAction, now time.Time) delayedActionFailurePlan {
+	nextAttempt := max(da.AttemptCount+1, 1)
+	if nextAttempt >= delayedActionMaxAttempts {
+		return delayedActionFailurePlan{AttemptCount: nextAttempt}
+	}
+
+	backoff := delayedActionBaseBackoff
+	for i := 1; i < nextAttempt; i++ {
+		backoff *= 2
+	}
+	return delayedActionFailurePlan{
+		Retry:         true,
+		AttemptCount:  nextAttempt,
+		NextExecuteAt: now.Add(backoff),
+	}
 }
 
 func (w *DelayedActionWorker) markExecuted(ctx context.Context, tenantID uuid.UUID, id uuid.UUID, errMsg *string) {
@@ -137,6 +180,19 @@ func (w *DelayedActionWorker) markExecuted(ctx context.Context, tenantID uuid.UU
 	if err != nil {
 		w.logger.Error("delayed action worker: failed to mark action as executed",
 			"delayed_action_id", id,
+			"error", err,
+		)
+	}
+}
+
+func (w *DelayedActionWorker) requeueForRetry(ctx context.Context, tenantID uuid.UUID, id uuid.UUID, nextExecuteAt time.Time, errMsg string) {
+	err := database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
+		return w.delayedRepo.RequeueForRetry(ctx, tx, id, nextExecuteAt, errMsg)
+	})
+	if err != nil {
+		w.logger.Error("delayed action worker: failed to schedule action retry",
+			"delayed_action_id", id,
+			"next_execute_at", nextExecuteAt,
 			"error", err,
 		)
 	}

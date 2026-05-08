@@ -33,6 +33,7 @@ type DelayedActionRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, da *model.DelayedAction) error
 	ListPending(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
 	MarkExecuted(ctx context.Context, tx pgx.Tx, id uuid.UUID, errMsg *string) error
+	RequeueForRetry(ctx context.Context, tx pgx.Tx, id uuid.UUID, nextExecuteAt time.Time, errMsg string) error
 	ListPendingByTenant(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
 }
 
