@@ -1248,7 +1248,7 @@ Standalone maszyna stanow zamowien i przesylek:
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
 | shoper-go-sdk | Shoper | REST | Zamowienia, produkty |
 | prestashop-go-sdk | PrestaShop | REST | Zamowienia, produkty |
-| shopify-go-sdk | Shopify | REST | Zamowienia, produkty |
+| shopify-go-sdk | Shopify | REST | Zamowienia, produkty; pozycje zamowien uzywaja `variant_id` jako `external_id` z fallbackiem do `product_id` |
 | btp-go-sdk | BTP.pro | Basic Auth | Katalog dostawcy, zamowienia dropship |
 
 ### Carrier SDK-i
