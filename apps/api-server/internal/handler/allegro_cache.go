@@ -3,6 +3,8 @@ package handler
 import (
 	"sync"
 	"time"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 )
 
 // allegroCache is a simple thread-safe in-memory TTL cache for Allegro API responses.
@@ -31,7 +33,7 @@ func newAllegroCache(ttl time.Duration) *allegroCache {
 		ttl:     ttl,
 		stop:    make(chan struct{}),
 	}
-	go c.sweepLoop()
+	asyncutil.SafeGo(func() { c.sweepLoop() })
 	return c
 }
 

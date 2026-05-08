@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
@@ -110,7 +111,10 @@ func (s *RateService) GetRates(ctx context.Context, tenantID uuid.UUID, req inte
 
 	for _, intg := range integrations {
 		wg.Add(1)
-		go func(provider string, creds []byte, settings []byte) {
+		provider := intg.provider
+		creds := intg.creds
+		settings := intg.settings
+		asyncutil.SafeGo(func() {
 			defer wg.Done()
 
 			carrier, err := integration.NewCarrierProvider(provider, creds, settings)
@@ -132,7 +136,7 @@ func (s *RateService) GetRates(ctx context.Context, tenantID uuid.UUID, req inte
 				allRates = append(allRates, rates...)
 				mu.Unlock()
 			}
-		}(intg.provider, intg.creds, intg.settings)
+		})
 	}
 
 	wg.Wait()

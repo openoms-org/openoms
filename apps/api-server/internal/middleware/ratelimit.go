@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 )
 
 // RateLimiter defines the interface for rate limiting backends.
@@ -79,7 +81,7 @@ func NewMemoryRateLimiter() *MemoryRateLimiter {
 		entries: make(map[string]*memoryEntry),
 		done:    make(chan struct{}),
 	}
-	go m.cleanup()
+	asyncutil.SafeGo(func() { m.cleanup() })
 	return m
 }
 

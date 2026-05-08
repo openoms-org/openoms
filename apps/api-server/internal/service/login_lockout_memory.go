@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 )
 
 type memEntry struct {
@@ -25,7 +27,7 @@ func NewMemoryLoginLockoutStore() *MemoryLoginLockoutStore {
 		entries: make(map[string]*memEntry),
 		done:    make(chan struct{}),
 	}
-	go m.cleanup()
+	asyncutil.SafeGo(func() { m.cleanup() })
 	return m
 }
 

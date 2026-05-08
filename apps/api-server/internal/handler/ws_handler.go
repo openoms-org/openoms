@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/openoms-org/openoms/apps/api-server/internal/ws"
@@ -111,6 +112,6 @@ func (h *WSHandler) ServeWS(w http.ResponseWriter, r *http.Request) {
 	h.hub.Register(client)
 
 	// Start read/write pumps in goroutines
-	go client.WritePump()
-	go client.ReadPump()
+	asyncutil.SafeGo(func() { client.WritePump() })
+	asyncutil.SafeGo(func() { client.ReadPump() })
 }
