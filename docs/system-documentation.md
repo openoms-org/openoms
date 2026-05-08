@@ -1379,7 +1379,7 @@ Uprawnienia np.:
 | SSRF | noPrivateDialer na wszystkich polaczeniach wychodzacych (webhooks, automation, supplier feeds). IPv4 + IPv6 (w tym ::/128, ff00::/8). |
 | SSRF (WebSocket) | Walidacja Origin header + ticket-only auth (JWT w URL usuniety) |
 | Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). |
-| DoS / webhook poisoning | Max body size (1MB default, 10MB upload). MaxBytesReader na webhook handlerach. Webhooki znanych providerow fail-closed przy braku sekretu HMAC. |
+| DoS / webhook poisoning | Max body size (1MB default, 10MB upload). MaxBytesReader na webhook handlerach. Supplier XML/IOF feeds maja limit 50 MiB i 50 000 produktow na import. Webhooki znanych providerow fail-closed przy braku sekretu HMAC. |
 | Account takeover | 2FA/TOTP, bcrypt, Ed25519 JWT |
 | Info disclosure | Brak wersji w /health, brak X-Powered-By, /metrics chroniony tokenem |
 | MIME sniffing | X-Content-Type-Options: nosniff |

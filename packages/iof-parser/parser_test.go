@@ -1,6 +1,11 @@
 package iof
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -149,6 +154,56 @@ func TestParseInvalidXML(t *testing.T) {
 	_, err := Parse(strings.NewReader("<invalid"))
 	if err == nil {
 		t.Fatal("expected error for invalid XML")
+	}
+}
+
+func TestParseSizeLimitExceeded(t *testing.T) {
+	_, err := ParseWithOptions(strings.NewReader(sampleIOF), ParseOptions{
+		MaxBytes:    64,
+		MaxProducts: 10,
+	})
+	if !errors.Is(err, ErrFeedTooLarge) {
+		t.Fatalf("expected ErrFeedTooLarge, got %v", err)
+	}
+}
+
+func TestParseSizeLimitAllowsExactSize(t *testing.T) {
+	products, err := ParseWithOptions(strings.NewReader(sampleIOF), ParseOptions{
+		MaxBytes:    int64(len(sampleIOF)),
+		MaxProducts: 10,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(products) != 3 {
+		t.Fatalf("expected 3 products, got %d", len(products))
+	}
+}
+
+func TestParseProductLimitExceeded(t *testing.T) {
+	_, err := ParseWithOptions(strings.NewReader(sampleIOF), ParseOptions{
+		MaxBytes:    int64(len(sampleIOF) + 1),
+		MaxProducts: 2,
+	})
+	if !errors.Is(err, ErrProductLimitExceeded) {
+		t.Fatalf("expected ErrProductLimitExceeded, got %v", err)
+	}
+}
+
+func TestParseURLContentLengthLimitExceeded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set("Content-Length", strconv.Itoa(len(sampleIOF)))
+		_, _ = w.Write([]byte(sampleIOF))
+	}))
+	defer srv.Close()
+
+	_, err := ParseURLWithOptions(context.Background(), srv.URL, srv.Client(), ParseOptions{
+		MaxBytes:    64,
+		MaxProducts: 10,
+	})
+	if !errors.Is(err, ErrFeedTooLarge) {
+		t.Fatalf("expected ErrFeedTooLarge, got %v", err)
 	}
 }
 

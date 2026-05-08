@@ -3,12 +3,35 @@ package iof
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 )
+
+const (
+	// DefaultMaxBytes is the maximum IOF XML response size accepted by default.
+	DefaultMaxBytes int64 = 50 * 1024 * 1024
+	// DefaultMaxProducts is the maximum number of products parsed from one IOF XML feed.
+	DefaultMaxProducts = 50_000
+)
+
+var (
+	// ErrFeedTooLarge is returned when an IOF feed exceeds the configured byte limit.
+	ErrFeedTooLarge = errors.New("IOF feed exceeds size limit")
+	// ErrProductLimitExceeded is returned when an IOF feed has too many products.
+	ErrProductLimitExceeded = errors.New("IOF product limit exceeded")
+)
+
+// ParseOptions controls IOF parser limits.
+type ParseOptions struct {
+	// MaxBytes is the maximum number of bytes to read from the XML feed. Values <= 0 use DefaultMaxBytes.
+	MaxBytes int64
+	// MaxProducts is the maximum number of products to parse. Values <= 0 use DefaultMaxProducts.
+	MaxProducts int
+}
 
 // Product represents a parsed product from an IOF XML feed.
 type Product struct {
@@ -26,15 +49,6 @@ type Product struct {
 }
 
 // IOF XML structures
-
-type xmlOffer struct {
-	XMLName  xml.Name    `xml:"offer"`
-	Products xmlProducts `xml:"products"`
-}
-
-type xmlProducts struct {
-	Products []xmlProduct `xml:"product"`
-}
 
 type xmlProduct struct {
 	ID           string         `xml:"id,attr"`
@@ -102,23 +116,53 @@ type xmlCode struct {
 
 // Parse reads an IOF XML feed from an io.Reader and returns products.
 func Parse(r io.Reader) ([]Product, error) {
-	var offer xmlOffer
-	decoder := xml.NewDecoder(r)
-	if err := decoder.Decode(&offer); err != nil {
-		return nil, fmt.Errorf("decode IOF XML: %w", err)
-	}
+	return ParseWithOptions(r, ParseOptions{})
+}
 
-	products := make([]Product, 0, len(offer.Products.Products))
-	for _, xp := range offer.Products.Products {
-		p := convertProduct(xp)
-		products = append(products, p)
+// ParseWithOptions reads an IOF XML feed with explicit safety limits.
+func ParseWithOptions(r io.Reader, opts ParseOptions) ([]Product, error) {
+	opts = normalizeParseOptions(opts)
+	decoder := xml.NewDecoder(&byteLimitReader{
+		r:         r,
+		remaining: opts.MaxBytes + 1,
+		err:       ErrFeedTooLarge,
+	})
+
+	products := make([]Product, 0)
+	for {
+		tok, err := decoder.Token()
+		if err == io.EOF {
+			return products, nil
+		}
+		if err != nil {
+			return nil, wrapDecodeError(err, opts.MaxBytes)
+		}
+
+		start, ok := tok.(xml.StartElement)
+		if !ok || start.Name.Local != "product" {
+			continue
+		}
+		if len(products) >= opts.MaxProducts {
+			return nil, fmt.Errorf("%w: max %d products", ErrProductLimitExceeded, opts.MaxProducts)
+		}
+
+		var xp xmlProduct
+		if err := decoder.DecodeElement(&xp, &start); err != nil {
+			return nil, wrapDecodeError(err, opts.MaxBytes)
+		}
+		products = append(products, convertProduct(xp))
 	}
-	return products, nil
 }
 
 // ParseURL fetches and parses an IOF XML feed from a URL.
 // If client is nil, http.DefaultClient is used (not recommended — pass an SSRF-safe client).
 func ParseURL(ctx context.Context, url string, client *http.Client) ([]Product, error) {
+	return ParseURLWithOptions(ctx, url, client, ParseOptions{})
+}
+
+// ParseURLWithOptions fetches and parses an IOF XML feed with explicit safety limits.
+func ParseURLWithOptions(ctx context.Context, url string, client *http.Client, opts ParseOptions) ([]Product, error) {
+	opts = normalizeParseOptions(opts)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -136,8 +180,49 @@ func ParseURL(ctx context.Context, url string, client *http.Client) ([]Product, 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("IOF feed returned status %d", resp.StatusCode)
 	}
+	if resp.ContentLength > opts.MaxBytes {
+		return nil, fmt.Errorf("%w: content length %d exceeds max %d bytes", ErrFeedTooLarge, resp.ContentLength, opts.MaxBytes)
+	}
 
-	return Parse(resp.Body)
+	return ParseWithOptions(resp.Body, opts)
+}
+
+func normalizeParseOptions(opts ParseOptions) ParseOptions {
+	if opts.MaxBytes <= 0 {
+		opts.MaxBytes = DefaultMaxBytes
+	}
+	if opts.MaxProducts <= 0 {
+		opts.MaxProducts = DefaultMaxProducts
+	}
+	return opts
+}
+
+func wrapDecodeError(err error, maxBytes int64) error {
+	if errors.Is(err, ErrFeedTooLarge) {
+		return fmt.Errorf("%w: max %d bytes", ErrFeedTooLarge, maxBytes)
+	}
+	return fmt.Errorf("decode IOF XML: %w", err)
+}
+
+type byteLimitReader struct {
+	r         io.Reader
+	remaining int64
+	err       error
+}
+
+func (r *byteLimitReader) Read(p []byte) (int, error) {
+	if r.remaining <= 0 {
+		return 0, r.err
+	}
+	if int64(len(p)) > r.remaining {
+		p = p[:r.remaining]
+	}
+	n, err := r.r.Read(p)
+	r.remaining -= int64(n)
+	if r.remaining <= 0 && n > 0 {
+		return n, r.err
+	}
+	return n, err
 }
 
 func convertProduct(xp xmlProduct) Product {

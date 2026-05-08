@@ -2,8 +2,10 @@ package btp
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -171,6 +173,39 @@ func TestParseCatalogueXML_InvalidXML(t *testing.T) {
 	}
 }
 
+func TestParseCatalogueXML_SizeLimitExceeded(t *testing.T) {
+	_, err := ParseCatalogueXMLWithOptions(strings.NewReader(sampleCatalogueXML), CatalogueParseOptions{
+		MaxBytes:    64,
+		MaxProducts: 10,
+	})
+	if !errors.Is(err, ErrCatalogueTooLarge) {
+		t.Fatalf("expected ErrCatalogueTooLarge, got %v", err)
+	}
+}
+
+func TestParseCatalogueXML_SizeLimitAllowsExactSize(t *testing.T) {
+	products, err := ParseCatalogueXMLWithOptions(strings.NewReader(sampleCatalogueXML), CatalogueParseOptions{
+		MaxBytes:    int64(len(sampleCatalogueXML)),
+		MaxProducts: 10,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(products) != 2 {
+		t.Fatalf("expected 2 products, got %d", len(products))
+	}
+}
+
+func TestParseCatalogueXML_ProductLimitExceeded(t *testing.T) {
+	_, err := ParseCatalogueXMLWithOptions(strings.NewReader(sampleCatalogueXML), CatalogueParseOptions{
+		MaxBytes:    int64(len(sampleCatalogueXML) + 1),
+		MaxProducts: 1,
+	})
+	if !errors.Is(err, ErrCatalogueProductLimitExceeded) {
+		t.Fatalf("expected ErrCatalogueProductLimitExceeded, got %v", err)
+	}
+}
+
 func TestParseCatalogueXML_EmptyPictureURL(t *testing.T) {
 	xml := `<?xml version="1.0" encoding="UTF-8"?>
 <Document-ProductCatalogue>
@@ -233,6 +268,28 @@ func TestParseCatalogueURL_HTTPError(t *testing.T) {
 	_, err := ParseCatalogueURL(context.Background(), srv.URL, srv.Client())
 	if err == nil {
 		t.Fatal("expected error for HTTP 500")
+	}
+}
+
+func TestParseCatalogueURL_ContentLengthLimitExceeded(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		w.Header().Set("Content-Length", strconv.Itoa(len(sampleCatalogueXML)))
+		_, _ = w.Write([]byte(sampleCatalogueXML))
+	}))
+	defer srv.Close()
+
+	// Bypass SSRF validation for httptest (localhost)
+	orig := urlHostValidator
+	urlHostValidator = func(_ context.Context, _ string) error { return nil }
+	defer func() { urlHostValidator = orig }()
+
+	_, err := ParseCatalogueURLWithOptions(context.Background(), srv.URL, srv.Client(), CatalogueParseOptions{
+		MaxBytes:    64,
+		MaxProducts: 10,
+	})
+	if !errors.Is(err, ErrCatalogueTooLarge) {
+		t.Fatalf("expected ErrCatalogueTooLarge, got %v", err)
 	}
 }
 
