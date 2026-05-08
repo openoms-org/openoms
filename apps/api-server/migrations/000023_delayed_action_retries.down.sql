@@ -1,0 +1,3 @@
+-- No-op rollback.
+-- The retry metadata columns are additive/backward-compatible and safe for older code to ignore.
+-- Dropping them during a blue-green rollback would be destructive for retry state.

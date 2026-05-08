@@ -35,7 +35,8 @@ func (r *DelayedActionRepository) Create(ctx context.Context, tx pgx.Tx, da *mod
 func (r *DelayedActionRepository) ListPendingByTenant(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, rule_id, action_index, order_id, execute_at,
-		        executed, executed_at, error, created_at, action_data, event_data
+		        executed, executed_at, error, attempt_count, last_attempt_at,
+		        created_at, action_data, event_data
 		 FROM automation_delayed_actions
 		 WHERE NOT executed
 		 ORDER BY execute_at ASC`,
@@ -53,7 +54,8 @@ func (r *DelayedActionRepository) ListPendingByTenant(ctx context.Context, tx pg
 func (r *DelayedActionRepository) ListPending(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, rule_id, action_index, order_id, execute_at,
-		        executed, executed_at, error, created_at, action_data, event_data
+		        executed, executed_at, error, attempt_count, last_attempt_at,
+		        created_at, action_data, event_data
 		 FROM automation_delayed_actions
 		 WHERE execute_at <= NOW() AND NOT executed
 		 ORDER BY execute_at ASC
@@ -69,14 +71,39 @@ func (r *DelayedActionRepository) ListPending(ctx context.Context, tx pgx.Tx) ([
 
 // MarkExecuted marks a delayed action as executed, recording any error message.
 func (r *DelayedActionRepository) MarkExecuted(ctx context.Context, tx pgx.Tx, id uuid.UUID, errMsg *string) error {
+	now := time.Now()
 	_, err := tx.Exec(ctx,
 		`UPDATE automation_delayed_actions
-		 SET executed = true, executed_at = $2, error = $3
+		 SET executed = true,
+		     executed_at = $2,
+		     last_attempt_at = $2,
+		     attempt_count = attempt_count + 1,
+		     error = $3
 		 WHERE id = $1`,
-		id, time.Now(), errMsg,
+		id, now, errMsg,
 	)
 	if err != nil {
 		return fmt.Errorf("mark delayed action executed: %w", err)
+	}
+	return nil
+}
+
+// RequeueForRetry records a failed attempt and schedules the delayed action for another try.
+func (r *DelayedActionRepository) RequeueForRetry(ctx context.Context, tx pgx.Tx, id uuid.UUID, nextExecuteAt time.Time, errMsg string) error {
+	now := time.Now()
+	_, err := tx.Exec(ctx,
+		`UPDATE automation_delayed_actions
+		 SET execute_at = $2,
+		     executed = false,
+		     executed_at = NULL,
+		     last_attempt_at = $3,
+		     attempt_count = attempt_count + 1,
+		     error = $4
+		 WHERE id = $1`,
+		id, nextExecuteAt, now, errMsg,
+	)
+	if err != nil {
+		return fmt.Errorf("requeue delayed action for retry: %w", err)
 	}
 	return nil
 }
@@ -88,7 +115,8 @@ func scanDelayedActions(rows pgx.Rows) ([]model.DelayedAction, error) {
 		if err := rows.Scan(
 			&da.ID, &da.TenantID, &da.RuleID, &da.ActionIndex, &da.OrderID,
 			&da.ExecuteAt, &da.Executed, &da.ExecutedAt, &da.Error,
-			&da.CreatedAt, &da.ActionData, &da.EventData,
+			&da.AttemptCount, &da.LastAttemptAt, &da.CreatedAt, &da.ActionData,
+			&da.EventData,
 		); err != nil {
 			return nil, fmt.Errorf("scan delayed action: %w", err)
 		}

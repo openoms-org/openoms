@@ -57,18 +57,20 @@ type AutomationAction struct {
 
 // DelayedAction represents a pending delayed automation action.
 type DelayedAction struct {
-	ID          uuid.UUID       `json:"id"`
-	TenantID    uuid.UUID       `json:"tenant_id"`
-	RuleID      uuid.UUID       `json:"rule_id"`
-	ActionIndex int             `json:"action_index"`
-	OrderID     *uuid.UUID      `json:"order_id,omitempty"`
-	ExecuteAt   time.Time       `json:"execute_at"`
-	Executed    bool            `json:"executed"`
-	ExecutedAt  *time.Time      `json:"executed_at,omitempty"`
-	Error       *string         `json:"error,omitempty"`
-	CreatedAt   time.Time       `json:"created_at"`
-	ActionData  json.RawMessage `json:"action_data"`
-	EventData   json.RawMessage `json:"event_data"`
+	ID            uuid.UUID       `json:"id"`
+	TenantID      uuid.UUID       `json:"tenant_id"`
+	RuleID        uuid.UUID       `json:"rule_id"`
+	ActionIndex   int             `json:"action_index"`
+	OrderID       *uuid.UUID      `json:"order_id,omitempty"`
+	ExecuteAt     time.Time       `json:"execute_at"`
+	Executed      bool            `json:"executed"`
+	ExecutedAt    *time.Time      `json:"executed_at,omitempty"`
+	Error         *string         `json:"error,omitempty"`
+	AttemptCount  int             `json:"attempt_count"`
+	LastAttemptAt *time.Time      `json:"last_attempt_at,omitempty"`
+	CreatedAt     time.Time       `json:"created_at"`
+	ActionData    json.RawMessage `json:"action_data"`
+	EventData     json.RawMessage `json:"event_data"`
 }
 
 // CreateAutomationRuleRequest is the payload for creating an automation rule.

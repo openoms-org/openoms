@@ -338,7 +338,7 @@ OpenOMS/
 | `supplier_products` | Katalog dostawcy | external_id, price, stock_quantity, ean, weight, images JSONB, metadata JSONB, product_id (link do OMS) |
 | `automation_rules` | Reguly automatyzacji | trigger_event, conditions JSONB, actions JSONB, priority |
 | `automation_rule_logs` | Logi regul | conditions_met, actions_executed, error |
-| `automation_delayed_actions` | Opoznione akcje | rule_id, order_id, execute_at, executed, action_data JSONB |
+| `automation_delayed_actions` | Opoznione akcje | rule_id, order_id, execute_at, executed, attempt_count, last_attempt_at, action_data JSONB |
 | `price_lists` | Cenniki B2B | discount_type, valid_from, valid_to, currency |
 | `price_list_items` | Pozycje cennika | product_id, price, min_quantity, discount |
 | `exchange_rates` | Kursy walut | base_currency, target_currency, rate, source |
@@ -1519,6 +1519,7 @@ AutomationEngine.ProcessEvent() [async]
     |     |         |
     |     |         v
     |     |    DelayedActionWorker (co 30s) -> execute_at <= NOW() -> wykonaj akcje
+    |     |      +- blad wykonania -> retry z exponential backoff (max 5 prob)
     |     |
     |     +- Zapisz log w automation_rule_logs
     |
@@ -1864,7 +1865,7 @@ Operatory: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `i
 
 ### Opoznione akcje (delayed actions)
 
-Akcja `delay` w regule automatyzacji tworzy wpis w tabeli `automation_delayed_actions` z polem `execute_at`. Worker `DelayedActionWorker` co 30 sekund sprawdza, czy sa akcje do wykonania i je realizuje. Pozwala to na scenariusze typu:
+Akcja `delay` w regule automatyzacji tworzy wpis w tabeli `automation_delayed_actions` z polem `execute_at`. Worker `DelayedActionWorker` co 30 sekund sprawdza, czy sa akcje do wykonania i je realizuje. Bledy wykonania akcji sa zapisywane w polu `error`, zwiekszaja `attempt_count` i requeue'uja akcje z exponential backoff (1m, 2m, 4m, 8m) do maksymalnie 5 prob; dopiero po wyczerpaniu prob wpis jest oznaczany jako wykonany z bledem. Pozwala to na scenariusze typu:
 
 - "Jesli zamowienie nie zostalo wyslane w ciagu 24h, wyslij przypomnienie"
 - "Po potwierdzeniu zamowienia, po 30 minutach automatycznie utworz przesylke"
