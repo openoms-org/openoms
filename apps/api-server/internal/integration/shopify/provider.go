@@ -245,7 +245,9 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) integration.MarketplaceO
 		totalPrice := unitPrice*float64(li.Quantity) - totalDiscount
 
 		externalID := ""
-		if li.ProductID != nil {
+		if li.VariantID != nil {
+			externalID = strconv.FormatInt(*li.VariantID, 10)
+		} else if li.ProductID != nil {
 			externalID = strconv.FormatInt(*li.ProductID, 10)
 		}
 
