@@ -557,7 +557,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | PATCH | `/v1/integrations/{id}` | Aktualizacja |
 | DELETE | `/v1/integrations/{id}` | Usuniecie |
 | GET | `/v1/integrations/allegro/auth-url` | URL OAuth Allegro; state jest powiazany z tenantem, userem i providerem |
-| POST | `/v1/integrations/allegro/callback` | Callback OAuth Allegro; odrzuca state z innego tenanta/usera/providera |
+| POST | `/v1/integrations/allegro/callback` | Callback OAuth Allegro; odrzuca state z innego tenanta/usera/providera; odswiezone tokeny SDK sa zapisywane przez bounded context odseparowany od anulowania requestu |
 | POST | `/v1/integrations/amazon/setup` | Setup Amazon SP-API |
 | GET | `/v1/integrations/amazon/auth-url` | URL OAuth Amazon; state jest powiazany z tenantem, userem i providerem |
 | POST | `/v1/integrations/amazon/callback` | Callback OAuth Amazon; odrzuca state z innego tenanta/usera/providera |
