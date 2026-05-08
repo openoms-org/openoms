@@ -224,7 +224,7 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) (integration.Marketplace
 	}
 
 	// Total amount
-	totalAmount, err := parseShopifyMoney("total_price", o.TotalPrice)
+	totalAmount, err := integration.ParseMoneyString("total_price", o.TotalPrice)
 	if err != nil {
 		return integration.MarketplaceOrder{}, err
 	}
@@ -249,11 +249,11 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) (integration.Marketplace
 
 	// Line items
 	for i, li := range o.LineItems {
-		unitPrice, err := parseShopifyMoney(fmt.Sprintf("line_items[%d].price", i), li.Price)
+		unitPrice, err := integration.ParseMoneyString(fmt.Sprintf("line_items[%d].price", i), li.Price)
 		if err != nil {
 			return integration.MarketplaceOrder{}, err
 		}
-		totalDiscount, err := parseShopifyMoney(fmt.Sprintf("line_items[%d].total_discount", i), li.TotalDiscount)
+		totalDiscount, err := integration.ParseMoneyString(fmt.Sprintf("line_items[%d].total_discount", i), li.TotalDiscount)
 		if err != nil {
 			return integration.MarketplaceOrder{}, err
 		}
@@ -288,12 +288,4 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) (integration.Marketplace
 	}
 
 	return mo, nil
-}
-
-func parseShopifyMoney(field, value string) (float64, error) {
-	amount, err := strconv.ParseFloat(value, 64)
-	if err != nil {
-		return 0, fmt.Errorf("%s: parse money value %q: %w", field, value, err)
-	}
-	return amount, nil
 }

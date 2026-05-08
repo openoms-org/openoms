@@ -200,7 +200,7 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) (integration.Marketpl
 	}
 
 	// Parse total amount
-	totalAmount, err := parseWooMoney("total", o.Total)
+	totalAmount, err := integration.ParseMoneyString("total", o.Total)
 	if err != nil {
 		return integration.MarketplaceOrder{}, err
 	}
@@ -223,7 +223,7 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) (integration.Marketpl
 	// Line items
 	for i, li := range o.LineItems {
 		unitPrice := li.Price
-		totalPrice, err := parseWooMoney(fmt.Sprintf("line_items[%d].total", i), li.Total)
+		totalPrice, err := integration.ParseMoneyString(fmt.Sprintf("line_items[%d].total", i), li.Total)
 		if err != nil {
 			return integration.MarketplaceOrder{}, err
 		}
@@ -248,12 +248,4 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) (integration.Marketpl
 	}
 
 	return mo, nil
-}
-
-func parseWooMoney(field, value string) (float64, error) {
-	amount, err := strconv.ParseFloat(value, 64)
-	if err != nil {
-		return 0, fmt.Errorf("%s: parse money value %q: %w", field, value, err)
-	}
-	return amount, nil
 }
