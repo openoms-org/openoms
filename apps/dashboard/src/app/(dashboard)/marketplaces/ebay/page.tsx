@@ -28,6 +28,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { apiClient } from "@/lib/api-client";
+import { useOAuthPopupMonitor } from "@/hooks/use-oauth-popup-monitor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -162,6 +163,7 @@ function EbayMainPage() {
     () => integrations?.find((i) => i.provider === "ebay") ?? null,
     [integrations]
   );
+  const { start: startOAuthPopupMonitor } = useOAuthPopupMonitor();
 
   if (isLoading) {
     return (
@@ -192,16 +194,31 @@ function EbayMainPage() {
         <EbayTabNav />
 
         {ebay ? (
-          <ConnectedState integration={ebay} onRefetch={refetch} />
+          <ConnectedState
+            integration={ebay}
+            onRefetch={refetch}
+            startOAuthPopupMonitor={startOAuthPopupMonitor}
+          />
         ) : (
-          <SetupState onCreated={refetch} />
+          <SetupState
+            onCreated={refetch}
+            startOAuthPopupMonitor={startOAuthPopupMonitor}
+          />
         )}
       </div>
     </AdminGuard>
   );
 }
 
-function SetupState({ onCreated }: { onCreated: () => void }) {
+type StartOAuthPopupMonitor = ReturnType<typeof useOAuthPopupMonitor>["start"];
+
+function SetupState({
+  onCreated,
+  startOAuthPopupMonitor,
+}: {
+  onCreated: () => void;
+  startOAuthPopupMonitor: StartOAuthPopupMonitor;
+}) {
   const t = useTranslations("marketplaces");
   const createIntegration = useCreateIntegration();
   const [appId, setAppId] = useState("");
@@ -244,19 +261,16 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         return;
       }
 
-      const poll = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(poll);
-          setIsAuthorizing(false);
-          onDone();
-        }
-      }, 500);
+      startOAuthPopupMonitor(popup, () => {
+        setIsAuthorizing(false);
+        onDone();
+      });
     } catch {
       toast.error(t("ebayAuthUrlFetchError"));
       setIsAuthorizing(false);
       onDone();
     }
-  }, [t]);
+  }, [startOAuthPopupMonitor, t]);
 
   const handleSave = () => {
     if (!appId.trim() || !certId.trim() || !devId.trim()) {
@@ -512,9 +526,11 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 function ConnectedState({
   integration,
   onRefetch,
+  startOAuthPopupMonitor,
 }: {
   integration: Integration;
   onRefetch: () => void;
+  startOAuthPopupMonitor: StartOAuthPopupMonitor;
 }) {
   const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
@@ -595,20 +611,17 @@ function ConnectedState({
           return;
         }
 
-        const poll = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(poll);
-            setIsReauthorizing(false);
-            onRefetch();
-          }
-        }, 500);
+        startOAuthPopupMonitor(popup, () => {
+          setIsReauthorizing(false);
+          onRefetch();
+        });
       } catch {
         toast.error(t("authUrlFetchError"));
         setIsReauthorizing(false);
       }
     };
     doAuth();
-  }, [onRefetch, t]);
+  }, [onRefetch, startOAuthPopupMonitor, t]);
 
   const handleSaveSettings = () => {
     updateIntegration.mutate(
