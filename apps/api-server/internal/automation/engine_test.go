@@ -1,8 +1,33 @@
 package automation
 
 import (
+	"context"
 	"testing"
 )
+
+func TestDetachedEventContextPreservesValuesWithoutCancellation(t *testing.T) {
+	type ctxKey struct{}
+	key := ctxKey{}
+	parent, cancel := context.WithCancel(context.WithValue(context.Background(), key, "trace-id"))
+	cancel()
+
+	detached := detachedEventContext(parent)
+
+	if parent.Err() == nil {
+		t.Fatal("expected parent context to be canceled")
+	}
+	if err := detached.Err(); err != nil {
+		t.Fatalf("expected detached context to ignore cancellation, got %v", err)
+	}
+	select {
+	case <-detached.Done():
+		t.Fatal("expected detached context done channel to stay open")
+	default:
+	}
+	if got := detached.Value(key); got != "trace-id" {
+		t.Fatalf("expected detached context to preserve values, got %v", got)
+	}
+}
 
 func TestEvaluateConditions_EmptyConditions(t *testing.T) {
 	result := EvaluateConditions(nil, map[string]any{"status": "new"})

@@ -12,6 +12,8 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 )
 
 // Worker is the interface for background workers.
@@ -56,7 +58,8 @@ func (m *Manager) Start(ctx context.Context) {
 	m.logger.Info("worker manager starting", "workers", len(m.workers))
 	for _, w := range m.workers {
 		m.wg.Add(1)
-		go m.runWorker(ctx, w)
+		worker := w
+		asyncutil.SafeGo(func() { m.runWorker(ctx, worker) })
 	}
 	m.logger.Info("worker manager started")
 }

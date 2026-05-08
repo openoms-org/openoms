@@ -1810,7 +1810,7 @@ EbayImportService.ImportOffers()
 
 ### Cechy
 
-- Panic recovery (safeRun wrapper)
+- Panic recovery: wykonania workerow są chronione przez `safeRun`, a pozostałe asynchroniczne goroutines w API (`webhooks`, WebSocket pumps, memory cleanups, rate shopping, automation dispatch) są uruchamiane przez `asyncutil.SafeGo` z recover + Sentry
 - Graceful shutdown: workery sprawdzaja context cancellation miedzy iteracjami tenantow/integracji/listingow i przy rate-limit sleep, zeby shutdown nie startowal kolejnych tenant tasks
 - Logowanie bledow per worker (slog)
 - Interfejs Worker: `Name()`, `Interval()`, `Run(ctx)`

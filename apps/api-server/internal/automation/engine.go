@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
@@ -70,7 +71,12 @@ func (e *Engine) SetDelayedActionRepo(repo DelayedActionRepo) {
 // evaluating conditions, and executing actions.
 // This runs asynchronously and should not block the caller.
 func (e *Engine) ProcessEvent(ctx context.Context, event Event) {
-	go e.processEventAsync(ctx, event)
+	asyncCtx := detachedEventContext(ctx)
+	asyncutil.SafeGo(func() { e.processEventAsync(asyncCtx, event) })
+}
+
+func detachedEventContext(ctx context.Context) context.Context {
+	return context.WithoutCancel(ctx)
 }
 
 func (e *Engine) processEventAsync(ctx context.Context, event Event) {

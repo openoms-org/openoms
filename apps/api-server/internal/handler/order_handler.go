@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -369,7 +370,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 
 	// Dispatch webhook for the duplicated order (async, best-effort)
 	if wd := h.orderService.WebhookDispatch(); wd != nil {
-		go wd.Dispatch(context.Background(), tenantID, "order.created", newOrder) // #nosec G118
+		asyncutil.SafeGo(func() { wd.Dispatch(context.Background(), tenantID, "order.created", newOrder) })
 	}
 
 	writeJSON(w, http.StatusCreated, newOrder)

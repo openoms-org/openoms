@@ -3,6 +3,8 @@ package middleware
 import (
 	"sync"
 	"time"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 )
 
 // TokenBlacklistStore defines the interface for token revocation backends.
@@ -48,7 +50,7 @@ type MemoryTokenBlacklist struct {
 // NewMemoryTokenBlacklist creates a new in-memory token blacklist with background cleanup.
 func NewMemoryTokenBlacklist() *MemoryTokenBlacklist {
 	bl := &MemoryTokenBlacklist{tokens: make(map[string]time.Time)}
-	go bl.cleanup()
+	asyncutil.SafeGo(func() { bl.cleanup() })
 	return bl
 }
 
