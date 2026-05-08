@@ -166,7 +166,7 @@ func run() error {
 		slog.Error("invalid worker database configuration", "error", err)
 		return fmt.Errorf("invalid worker database configuration: %w", err)
 	}
-	workerPool, err := database.Connect(context.Background(), workerDBURL)
+	workerPool, err := database.ConnectWithOptions(context.Background(), workerDBURL, database.WorkerPoolOptions())
 	if err != nil {
 		slog.Error("failed to connect worker database", "error", err)
 		return fmt.Errorf("failed to connect worker database: %w", err)

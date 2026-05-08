@@ -1811,7 +1811,7 @@ EbayImportService.ImportOffers()
 - Interfejs Worker: `Name()`, `Interval()`, `Run(ctx)`
 - Iteracja per-tenant (kazdy worker dziala dla wszystkich aktywnych tenantow)
 - Idempotentny import zamowien marketplace/BaseLinker: atomowy insert-or-skip oparty o czesciowy unikalny indeks `orders(tenant_id, source, external_id)` dla niepustych `external_id`
-- Cross-tenant queries uzywaja jawnego `WORKER_DATABASE_URL` poza developmentem; API `DATABASE_URL` pozostaje least-privilege/RLS-scoped
+- Cross-tenant queries uzywaja jawnego `WORKER_DATABASE_URL` poza developmentem; API `DATABASE_URL` pozostaje least-privilege/RLS-scoped; privileged worker pool ma konserwatywny limit polaczen, zeby nie wyczerpywac session poolera podczas blue-green deployow
 
 ---
 

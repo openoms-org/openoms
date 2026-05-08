@@ -12,18 +12,56 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// PoolOptions controls pgxpool sizing for different database roles.
+type PoolOptions struct {
+	MaxConns          int32
+	MinConns          int32
+	MaxConnLifetime   time.Duration
+	MaxConnIdleTime   time.Duration
+	HealthCheckPeriod time.Duration
+}
+
+// DefaultPoolOptions returns the pool sizing used for the RLS-scoped app pool.
+func DefaultPoolOptions() PoolOptions {
+	return PoolOptions{
+		MaxConns:          20,
+		MinConns:          2,
+		MaxConnLifetime:   30 * time.Minute,
+		MaxConnIdleTime:   5 * time.Minute,
+		HealthCheckPeriod: 1 * time.Minute,
+	}
+}
+
+// WorkerPoolOptions returns conservative pool sizing for the privileged worker pool.
+// Supabase session poolers often have low per-role caps; keeping this pool small
+// prevents blue-green deploys from exhausting session slots while old and new API pods overlap.
+func WorkerPoolOptions() PoolOptions {
+	return PoolOptions{
+		MaxConns:          3,
+		MinConns:          0,
+		MaxConnLifetime:   30 * time.Minute,
+		MaxConnIdleTime:   5 * time.Minute,
+		HealthCheckPeriod: 1 * time.Minute,
+	}
+}
+
 // Connect opens a pgx connection pool for the given PostgreSQL URL.
 func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	return ConnectWithOptions(ctx, databaseURL, DefaultPoolOptions())
+}
+
+// ConnectWithOptions opens a pgx connection pool with explicit sizing options.
+func ConnectWithOptions(ctx context.Context, databaseURL string, opts PoolOptions) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parsing database URL: %w", err)
 	}
 
-	config.MaxConns = 20
-	config.MinConns = 2
-	config.MaxConnLifetime = 30 * time.Minute
-	config.MaxConnIdleTime = 5 * time.Minute
-	config.HealthCheckPeriod = 1 * time.Minute
+	config.MaxConns = opts.MaxConns
+	config.MinConns = opts.MinConns
+	config.MaxConnLifetime = opts.MaxConnLifetime
+	config.MaxConnIdleTime = opts.MaxConnIdleTime
+	config.HealthCheckPeriod = opts.HealthCheckPeriod
 
 	// Register json.RawMessage as JSONB so pgx sends it as text (valid JSON)
 	// instead of bytea hex encoding. Required for simple_protocol mode (Supabase pooler).
