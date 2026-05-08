@@ -47,7 +47,12 @@ var (
 	ErrRefreshTokenReuse = errors.New("refresh token reuse detected")
 )
 
-const refreshTokenTTL = 30 * 24 * time.Hour
+const (
+	refreshTokenTTL = 30 * 24 * time.Hour
+	// invalidLoginDummyPasswordHash is a bcrypt cost-12 hash of a non-secret dummy password.
+	// It burns comparable CPU for invalid tenant/user login attempts so timing does not reveal which identifier was wrong.
+	invalidLoginDummyPasswordHash = "$2a$12$4m5hsgfs5sO1UWI/e.Zv3O2J0j60yzVDrjdWyAElkHj/OJTulR7F6" // #nosec G101 -- bcrypt hash of a non-secret dummy password
+)
 
 // AuthService handles authentication, token issuance, and 2FA.
 type AuthService struct {
@@ -138,6 +143,13 @@ func (s *AuthService) applyEffectivePermissions(ctx context.Context, user *model
 	}
 	user.Permissions = slices.Clone(role.Permissions)
 	return nil
+}
+
+func (s *AuthService) burnInvalidLoginPassword(password string) {
+	if s.passwordSvc == nil {
+		return
+	}
+	_ = s.passwordSvc.Compare(invalidLoginDummyPasswordHash, password)
 }
 
 func (s *AuthService) storeRefreshTokenFamily(ctx context.Context, refreshToken, userID, tenantID string) {
@@ -397,6 +409,7 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		return nil, fmt.Errorf("find tenant: %w", err)
 	}
 	if tenant == nil {
+		s.burnInvalidLoginPassword(req.Password)
 		return nil, ErrInvalidCredentials
 	}
 
@@ -406,6 +419,7 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		return nil, fmt.Errorf("find user: %w", err)
 	}
 	if userWithPwd == nil {
+		s.burnInvalidLoginPassword(req.Password)
 		return nil, ErrInvalidCredentials
 	}
 

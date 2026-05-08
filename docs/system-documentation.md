@@ -1378,7 +1378,7 @@ Uprawnienia np.:
 | Token revocation | Redis-backed composite blacklist; poza developmentem Redis jest wymagany, a in-memory fallback jest tylko lokalny/explicit single-node |
 | SSRF | noPrivateDialer na wszystkich polaczeniach wychodzacych (webhooks, automation, supplier feeds). IPv4 + IPv6 (w tym ::/128, ff00::/8). |
 | SSRF (WebSocket) | Walidacja Origin header + ticket-only auth (JWT w URL usuniety) |
-| Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). |
+| Brute force | Rate limiting (10/min login, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). Invalid login paths wykonuja dummy bcrypt compare, zeby ograniczyc timing oracle dla tenant/email/password. |
 | DoS / webhook poisoning | Max body size (1MB default, 10MB upload). MaxBytesReader na webhook handlerach. Supplier XML/IOF feeds maja limit 50 MiB i 50 000 produktow na import. Tenant-configured shop SDK JSON responses (WooCommerce/PrestaShop/Shoper/Shopify) maja limit 10 MiB. Webhooki znanych providerow fail-closed przy braku sekretu HMAC. |
 | Account takeover | 2FA/TOTP, bcrypt, Ed25519 JWT |
 | Info disclosure | Brak wersji w /health, brak X-Powered-By, /metrics chroniony tokenem |
