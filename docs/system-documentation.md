@@ -1240,7 +1240,7 @@ Standalone maszyna stanow zamowien i przesylek:
 |-----|----------|------|----------------|
 | allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog; proaktywne i 401-triggered bledy odswiezania tokenu sa zwracane wywolujacemu |
 | amazon-sp-sdk | Amazon | AWS Signing | Zamowienia, inventory, pricing |
-| woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks |
+| woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`) |
 | ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService) |
 | kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML |
 | olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService) |
