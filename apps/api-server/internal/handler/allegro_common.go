@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -23,6 +24,8 @@ type allegroCredentials struct {
 	Sandbox      bool   `json:"sandbox"`
 }
 
+const allegroTokenRefreshPersistTimeout = 10 * time.Second
+
 // buildAllegroClient creates an authenticated Allegro SDK client from the request context.
 // It includes a token refresh callback that persists refreshed tokens to the database.
 func buildAllegroClient(r *http.Request, integrationService *service.IntegrationService, _ []byte) (*allegrosdk.Client, error) {
@@ -43,11 +46,15 @@ func buildAllegroClient(r *http.Request, integrationService *service.Integration
 	}
 
 	expiry, _ := time.Parse(time.RFC3339, creds.TokenExpiry)
+	tokenRefreshBaseCtx := context.WithoutCancel(r.Context())
 
 	opts := []allegrosdk.Option{
 		allegrosdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry),
 		allegrosdk.WithOnTokenRefresh(func(accessToken, refreshToken string, exp time.Time) {
-			// Persist refreshed tokens to the database
+			// Persist refreshed tokens to the database even if the request context was canceled.
+			persistCtx, cancel := allegroTokenRefreshContext(tokenRefreshBaseCtx)
+			defer cancel()
+
 			newCreds := allegroCredentials{
 				ClientID:     creds.ClientID,
 				ClientSecret: creds.ClientSecret,
@@ -61,7 +68,7 @@ func buildAllegroClient(r *http.Request, integrationService *service.Integration
 				slog.Error("allegro: failed to marshal refreshed credentials", "error", err)
 				return
 			}
-			if err := integrationService.UpdateCredentialsByProvider(r.Context(), tenantID, "allegro", newJSON); err != nil {
+			if err := integrationService.UpdateCredentialsByProvider(persistCtx, tenantID, "allegro", newJSON); err != nil {
 				slog.Error("allegro: failed to persist refreshed tokens", "error", err, "tenant_id", tenantID)
 			} else {
 				slog.Info("allegro: refreshed tokens persisted", "tenant_id", tenantID)
@@ -74,6 +81,10 @@ func buildAllegroClient(r *http.Request, integrationService *service.Integration
 
 	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
 	return client, nil
+}
+
+func allegroTokenRefreshContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), allegroTokenRefreshPersistTimeout)
 }
 
 // isAllegroSandbox checks if the Allegro integration uses the sandbox environment.
