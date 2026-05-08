@@ -197,9 +197,10 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) integration.Marketpla
 	totalAmount, _ := strconv.ParseFloat(o.Total, 64)
 	mo.TotalAmount = totalAmount
 
-	// Payment status: WooCommerce order statuses that imply payment
+	// Payment status: WooCommerce order statuses that imply completed payment.
+	// "on-hold" is commonly used for bank transfer / awaiting-payment flows.
 	switch o.Status {
-	case "processing", "completed", "on-hold":
+	case "processing", "completed":
 		mo.PaymentStatus = "paid"
 	default:
 		mo.PaymentStatus = "pending"
