@@ -208,7 +208,9 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any, accep
 		return nil, err
 	}
 
-	c.ensureValidToken(ctx)
+	if err := c.ensureValidToken(ctx); err != nil {
+		return nil, err
+	}
 
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -224,11 +226,11 @@ func (c *Client) doRaw(ctx context.Context, method, path string, body any, accep
 
 		// On 401, try to refresh the token and retry once (only on first attempt)
 		if apiErr.StatusCode == 401 && attempt == 0 && c.getRefreshToken() != "" {
-			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
-				lastErr = err
-				continue
+			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr != nil {
+				return nil, fmt.Errorf("allegro: refresh access token after unauthorized: %w", refreshErr)
 			}
-			return nil, err
+			lastErr = err
+			continue
 		}
 
 		// On retryable status codes (429, 502, 503, 504), backoff and retry
@@ -295,13 +297,17 @@ func (c *Client) doRawOnce(ctx context.Context, method, path string, body any, a
 }
 
 // ensureValidToken proactively refreshes the access token if it is expired or about to expire.
-func (c *Client) ensureValidToken(ctx context.Context) {
+func (c *Client) ensureValidToken(ctx context.Context) error {
 	c.mu.Lock()
 	needsRefresh := c.refreshToken != "" && !c.tokenExpiry.IsZero() && time.Until(c.tokenExpiry) < 60*time.Second
 	c.mu.Unlock()
-	if needsRefresh {
-		_, _ = c.RefreshAccessToken(ctx)
+	if !needsRefresh {
+		return nil
 	}
+	if _, err := c.RefreshAccessToken(ctx); err != nil {
+		return fmt.Errorf("allegro: proactive token refresh failed: %w", err)
+	}
+	return nil
 }
 
 // do executes an authenticated API request with automatic token refresh on 401
@@ -311,7 +317,9 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 		return err
 	}
 
-	c.ensureValidToken(ctx)
+	if err := c.ensureValidToken(ctx); err != nil {
+		return err
+	}
 
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -327,11 +335,11 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 		// On 401, try to refresh the token and retry once (only on first attempt)
 		if apiErr.StatusCode == 401 && attempt == 0 && c.getRefreshToken() != "" {
-			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr == nil {
-				lastErr = err
-				continue
+			if _, refreshErr := c.RefreshAccessToken(ctx); refreshErr != nil {
+				return fmt.Errorf("allegro: refresh access token after unauthorized: %w", refreshErr)
 			}
-			return err
+			lastErr = err
+			continue
 		}
 
 		// On retryable status codes (429, 502, 503, 504), backoff and retry
@@ -357,7 +365,9 @@ func (c *Client) doUpload(ctx context.Context, path string, body any, result any
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return err
 	}
-	c.ensureValidToken(ctx)
+	if err := c.ensureValidToken(ctx); err != nil {
+		return err
+	}
 
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -403,7 +413,9 @@ func (c *Client) doUploadBinary(ctx context.Context, path string, data []byte, c
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return "", err
 	}
-	c.ensureValidToken(ctx)
+	if err := c.ensureValidToken(ctx); err != nil {
+		return "", err
+	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", c.uploadURL+path, bytes.NewReader(data))
 	if err != nil {
