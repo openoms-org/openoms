@@ -91,7 +91,10 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 	newCursor := cursor
 
 	for _, wco := range wcOrders {
-		mo := p.mapWooOrder(&wco)
+		mo, err := p.mapWooOrder(&wco)
+		if err != nil {
+			return nil, cursor, fmt.Errorf("woocommerce: map order %d: %w", wco.ID, err)
+		}
 		orders = append(orders, mo)
 
 		// Track the latest date_modified as the new cursor
@@ -115,7 +118,10 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 		return nil, fmt.Errorf("woocommerce: get order %s: %w", externalID, err)
 	}
 
-	mo := p.mapWooOrder(order)
+	mo, err := p.mapWooOrder(order)
+	if err != nil {
+		return nil, fmt.Errorf("woocommerce: map order %s: %w", externalID, err)
+	}
 	return &mo, nil
 }
 
@@ -157,7 +163,7 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, pric
 }
 
 // mapWooOrder converts a WooCommerce SDK WooOrder to the normalized MarketplaceOrder.
-func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) integration.MarketplaceOrder {
+func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) (integration.MarketplaceOrder, error) {
 	customerName := fmt.Sprintf("%s %s", o.Shipping.FirstName, o.Shipping.LastName)
 	if customerName == " " {
 		customerName = fmt.Sprintf("%s %s", o.Billing.FirstName, o.Billing.LastName)
@@ -194,7 +200,10 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) integration.Marketpla
 	}
 
 	// Parse total amount
-	totalAmount, _ := strconv.ParseFloat(o.Total, 64)
+	totalAmount, err := parseWooMoney("total", o.Total)
+	if err != nil {
+		return integration.MarketplaceOrder{}, err
+	}
 	mo.TotalAmount = totalAmount
 
 	// Payment status: WooCommerce order statuses that imply completed payment.
@@ -212,9 +221,12 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) integration.Marketpla
 	}
 
 	// Line items
-	for _, li := range o.LineItems {
+	for i, li := range o.LineItems {
 		unitPrice := li.Price
-		totalPrice, _ := strconv.ParseFloat(li.Total, 64)
+		totalPrice, err := parseWooMoney(fmt.Sprintf("line_items[%d].total", i), li.Total)
+		if err != nil {
+			return integration.MarketplaceOrder{}, err
+		}
 
 		mo.Items = append(mo.Items, integration.MarketplaceOrderItem{
 			ExternalID: strconv.Itoa(li.ProductID),
@@ -235,5 +247,13 @@ func (p *Provider) mapWooOrder(o *woocommercesdk.WooOrder) integration.Marketpla
 		mo.RawData["customer_note"] = o.CustomerNote
 	}
 
-	return mo
+	return mo, nil
+}
+
+func parseWooMoney(field, value string) (float64, error) {
+	amount, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s: parse money value %q: %w", field, value, err)
+	}
+	return amount, nil
 }

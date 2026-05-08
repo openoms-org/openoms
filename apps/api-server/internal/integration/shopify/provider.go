@@ -92,7 +92,10 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 	newCursor := cursor
 
 	for _, so := range shopifyOrders {
-		mo := p.mapShopifyOrder(&so)
+		mo, err := p.mapShopifyOrder(&so)
+		if err != nil {
+			return nil, cursor, fmt.Errorf("shopify: map order %d: %w", so.ID, err)
+		}
 		orders = append(orders, mo)
 
 		if so.UpdatedAt > newCursor {
@@ -115,7 +118,10 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 		return nil, fmt.Errorf("shopify: get order %s: %w", externalID, err)
 	}
 
-	mo := p.mapShopifyOrder(order)
+	mo, err := p.mapShopifyOrder(order)
+	if err != nil {
+		return nil, fmt.Errorf("shopify: map order %s: %w", externalID, err)
+	}
 	return &mo, nil
 }
 
@@ -165,7 +171,7 @@ func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, pric
 }
 
 // mapShopifyOrder converts a Shopify order to the normalized MarketplaceOrder.
-func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) integration.MarketplaceOrder {
+func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) (integration.MarketplaceOrder, error) {
 	customerName := ""
 	customerEmail := o.Email
 	customerPhone := o.Phone
@@ -218,7 +224,10 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) integration.MarketplaceO
 	}
 
 	// Total amount
-	totalAmount, _ := strconv.ParseFloat(o.TotalPrice, 64)
+	totalAmount, err := parseShopifyMoney("total_price", o.TotalPrice)
+	if err != nil {
+		return integration.MarketplaceOrder{}, err
+	}
 	mo.TotalAmount = totalAmount
 
 	// Payment status
@@ -239,9 +248,15 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) integration.MarketplaceO
 	}
 
 	// Line items
-	for _, li := range o.LineItems {
-		unitPrice, _ := strconv.ParseFloat(li.Price, 64)
-		totalDiscount, _ := strconv.ParseFloat(li.TotalDiscount, 64)
+	for i, li := range o.LineItems {
+		unitPrice, err := parseShopifyMoney(fmt.Sprintf("line_items[%d].price", i), li.Price)
+		if err != nil {
+			return integration.MarketplaceOrder{}, err
+		}
+		totalDiscount, err := parseShopifyMoney(fmt.Sprintf("line_items[%d].total_discount", i), li.TotalDiscount)
+		if err != nil {
+			return integration.MarketplaceOrder{}, err
+		}
 		totalPrice := unitPrice*float64(li.Quantity) - totalDiscount
 
 		externalID := ""
@@ -272,5 +287,13 @@ func (p *Provider) mapShopifyOrder(o *shopifysdk.Order) integration.MarketplaceO
 		mo.RawData["customer_note"] = o.Note
 	}
 
-	return mo
+	return mo, nil
+}
+
+func parseShopifyMoney(field, value string) (float64, error) {
+	amount, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s: parse money value %q: %w", field, value, err)
+	}
+	return amount, nil
 }

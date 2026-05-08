@@ -1240,15 +1240,15 @@ Standalone maszyna stanow zamowien i przesylek:
 |-----|----------|------|----------------|
 | allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog; proaktywne i 401-triggered bledy odswiezania tokenu sa zwracane wywolujacemu |
 | amazon-sp-sdk | Amazon | AWS Signing | Zamowienia, inventory, pricing |
-| woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`) |
-| ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService) |
+| woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`); malformed monetary fields reject order import |
+| ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService); malformed monetary fields reject order import |
 | kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML |
 | olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService) |
 | mirakl-go-sdk | Mirakl/Empik | REST | Seller network |
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
 | shoper-go-sdk | Shoper | REST | Zamowienia, produkty |
 | prestashop-go-sdk | PrestaShop | REST | Zamowienia, produkty |
-| shopify-go-sdk | Shopify | REST | Zamowienia, produkty; pozycje zamowien uzywaja `variant_id` jako `external_id` z fallbackiem do `product_id` |
+| shopify-go-sdk | Shopify | REST | Zamowienia, produkty; pozycje zamowien uzywaja `variant_id` jako `external_id` z fallbackiem do `product_id`; malformed monetary fields reject order import |
 | btp-go-sdk | BTP.pro | Basic Auth | Katalog dostawcy, zamowienia dropship |
 
 ### Carrier SDK-i
