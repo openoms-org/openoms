@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth";
-import { API_URL } from "@/lib/api-client";
+import { API_URL, apiFetch } from "@/lib/api-client";
 import type { WSEvent } from "@/types/api";
 
 // Convert http(s) to ws(s) with ticket-based auth
@@ -85,19 +85,7 @@ export function useWebSocket(): UseWebSocketReturn {
       // Ticket-based auth (keeps JWT out of URLs/logs)
       let wsUrl: string;
       try {
-        const resp = await fetch(`${API_URL}/v1/auth/ws-ticket`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${freshToken}` },
-          credentials: "include",
-        });
-        if (!resp.ok) {
-          // Schedule reconnect instead of leaking JWT in URL
-          const attempt = reconnectAttemptRef.current;
-          const delay = Math.min(1000 * Math.pow(2, attempt), 30000);
-          reconnectAttemptRef.current = attempt + 1;
-          reconnectTimeoutRef.current = setTimeout(() => { connectRef.current(); }, delay);
-          return;
-        }
+        const resp = await apiFetch("/v1/auth/ws-ticket", { method: "POST" });
         const { ticket } = await resp.json();
         wsUrl = getWSUrl(ticket);
       } catch {
@@ -112,11 +100,13 @@ export function useWebSocket(): UseWebSocketReturn {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (wsRef.current !== ws) return;
         setIsConnected(true);
         reconnectAttemptRef.current = 0;
       };
 
       ws.onmessage = (event) => {
+        if (wsRef.current !== ws) return;
         try {
           const data: WSEvent = JSON.parse(event.data);
           setLastEvent(data);
@@ -134,6 +124,7 @@ export function useWebSocket(): UseWebSocketReturn {
       };
 
       ws.onclose = () => {
+        if (wsRef.current !== ws) return;
         setIsConnected(false);
         wsRef.current = null;
 
@@ -150,6 +141,7 @@ export function useWebSocket(): UseWebSocketReturn {
       };
 
       ws.onerror = () => {
+        if (wsRef.current !== ws) return;
         // onclose will fire after onerror
       };
     } catch {
