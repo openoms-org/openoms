@@ -40,9 +40,12 @@ Thumbs.db
 # Git worktrees
 .worktrees/
 
-# Internal AI context files (not for public repo)
-.claude/context/
-.claude/agent-memory/
+# Local AI assistant artifacts (not for public repo)
+.claude/
+.Codex/
+.pi/
+.cursor/
+.windsurf*
 .pipeline.lock
 
 # Test coverage & results
