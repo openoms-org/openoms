@@ -54,8 +54,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "openoms.secretName" . }}
-                  key: WORKER_DATABASE_URL
-                  optional: true
+                  key: {{ .Values.database.workerSecretKey | default "MIGRATION_DATABASE_URL" | quote }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

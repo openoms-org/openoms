@@ -76,6 +76,8 @@ services:
     environment:
       # NOTE: sslmode=disable is safe within Docker bridge network only.
       DATABASE_URL: postgres://openoms_app:${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env}@postgres:5432/openoms?sslmode=disable
+      # Privileged DSN for cross-tenant worker/webhook queries; keep DATABASE_URL least-privileged.
+      WORKER_DATABASE_URL: postgres://openoms:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/openoms?sslmode=disable
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}

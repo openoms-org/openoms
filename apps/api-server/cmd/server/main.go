@@ -158,11 +158,13 @@ func run() error {
 	defer pool.Close()
 	slog.Info("connected to PostgreSQL")
 
-	// Worker pool — superuser connection for cross-tenant queries (bypasses RLS).
-	// Falls back to main DATABASE_URL if WORKER_DATABASE_URL is not set.
-	workerDBURL := cfg.WorkerDatabaseURL
-	if workerDBURL == "" {
-		workerDBURL = cfg.DatabaseURL
+	// Worker pool — privileged connection for intentionally cross-tenant queries.
+	// Non-development environments must configure this explicitly so app DATABASE_URL
+	// can stay RLS-scoped and least-privileged.
+	workerDBURL, err := cfg.WorkerDatabaseDSN()
+	if err != nil {
+		slog.Error("invalid worker database configuration", "error", err)
+		return fmt.Errorf("invalid worker database configuration: %w", err)
 	}
 	workerPool, err := database.Connect(context.Background(), workerDBURL)
 	if err != nil {
