@@ -17,18 +17,6 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
-// OAuthState holds the state + credentials needed to complete an OAuth flow.
-// Shared by all OAuth providers (Allegro, OLX, Amazon, eBay, etc.).
-type OAuthState struct {
-	ExpiresAt     time.Time
-	ClientID      string
-	ClientSecret  string
-	Sandbox       bool
-	ApplicationID string // Amazon SP-API: application_id (separate from LWA client_id)
-	MarketplaceID string // Amazon SP-API: marketplace_id for Seller Central URL
-	DevID         string // eBay: developer ID (optional)
-}
-
 // AllegroAuthHandler handles the Allegro OAuth2 authorization flow.
 type AllegroAuthHandler struct {
 	cfg                *config.Config
@@ -56,6 +44,7 @@ func (h *AllegroAuthHandler) redirectURI() string {
 // Credentials (client_id, client_secret, sandbox) are read from the existing integration.
 func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
 
 	// Read credentials from existing integration
 	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
@@ -86,6 +75,9 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	// Store state + credentials for the callback
 	stateData := &OAuthState{
 		ExpiresAt:    time.Now().Add(10 * time.Minute),
+		TenantID:     tenantID,
+		UserID:       actorID,
+		Provider:     "allegro",
 		ClientID:     creds.ClientID,
 		ClientSecret: creds.ClientSecret,
 		Sandbox:      creds.Sandbox,
@@ -145,6 +137,9 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	}
 	if oauthState == nil {
 		writeError(w, http.StatusBadRequest, "invalid or expired state parameter")
+		return
+	}
+	if !validateOAuthStateBinding(w, r, oauthState, "allegro") {
 		return
 	}
 

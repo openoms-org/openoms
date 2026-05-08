@@ -41,6 +41,7 @@ func (h *OlxAuthHandler) redirectURI() string {
 // Credentials (client_id, client_secret) are read from the existing integration.
 func (h *OlxAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
 
 	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "olx")
 	if err != nil {
@@ -68,6 +69,9 @@ func (h *OlxAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 
 	stateData := &OAuthState{
 		ExpiresAt:    time.Now().Add(10 * time.Minute),
+		TenantID:     tenantID,
+		UserID:       actorID,
+		Provider:     "olx",
 		ClientID:     creds.ClientID,
 		ClientSecret: creds.ClientSecret,
 	}
@@ -119,6 +123,9 @@ func (h *OlxAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request) 
 	}
 	if oauthState == nil {
 		writeError(w, http.StatusBadRequest, "invalid or expired state parameter")
+		return
+	}
+	if !validateOAuthStateBinding(w, r, oauthState, "olx") {
 		return
 	}
 

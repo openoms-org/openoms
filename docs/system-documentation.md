@@ -556,13 +556,16 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | GET | `/v1/integrations/{id}` | Szczegoly |
 | PATCH | `/v1/integrations/{id}` | Aktualizacja |
 | DELETE | `/v1/integrations/{id}` | Usuniecie |
-| GET | `/v1/integrations/allegro/auth-url` | URL OAuth Allegro |
-| POST | `/v1/integrations/allegro/callback` | Callback OAuth |
-| GET | `/v1/integrations/ebay/auth-url` | URL OAuth eBay |
-| POST | `/v1/integrations/ebay/callback` | Callback OAuth eBay |
-| GET | `/v1/integrations/olx/auth-url` | URL OAuth OLX |
-| POST | `/v1/integrations/olx/callback` | Callback OAuth OLX |
+| GET | `/v1/integrations/allegro/auth-url` | URL OAuth Allegro; state jest powiazany z tenantem, userem i providerem |
+| POST | `/v1/integrations/allegro/callback` | Callback OAuth Allegro; odrzuca state z innego tenanta/usera/providera |
 | POST | `/v1/integrations/amazon/setup` | Setup Amazon SP-API |
+| GET | `/v1/integrations/amazon/auth-url` | URL OAuth Amazon; state jest powiazany z tenantem, userem i providerem |
+| POST | `/v1/integrations/amazon/callback` | Callback OAuth Amazon; odrzuca state z innego tenanta/usera/providera |
+| GET | `/v1/integrations/ebay/auth-url` | URL OAuth eBay; state jest powiazany z tenantem, userem i providerem |
+| POST | `/v1/integrations/ebay/callback` | Callback OAuth eBay; odrzuca state z innego tenanta/usera/providera |
+| GET | `/v1/integrations/olx/auth-url` | URL OAuth OLX; state jest powiazany z tenantem, userem i providerem |
+| POST | `/v1/integrations/olx/callback` | Callback OAuth OLX; odrzuca state z innego tenanta/usera/providera |
+| PUT | `/v1/integrations/amazon/credentials` | Aktualizacja danych aplikacji Amazon (wymaga ponownego OAuth) |
 
 #### Allegro -- Fulfillment i sledzenie (admin)
 

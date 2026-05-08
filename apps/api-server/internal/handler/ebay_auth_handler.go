@@ -41,6 +41,7 @@ func (h *EbayAuthHandler) redirectURI() string {
 // Credentials (app_id, cert_id, dev_id, sandbox) are read from the existing integration.
 func (h *EbayAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
 
 	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "ebay")
 	if err != nil {
@@ -71,6 +72,9 @@ func (h *EbayAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	// Store state + credentials for the callback
 	stateData := &OAuthState{
 		ExpiresAt:    time.Now().Add(10 * time.Minute),
+		TenantID:     tenantID,
+		UserID:       actorID,
+		Provider:     "ebay",
 		ClientID:     creds.AppID,
 		ClientSecret: creds.CertID,
 		DevID:        creds.DevID,
@@ -129,6 +133,9 @@ func (h *EbayAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Request)
 	}
 	if oauthState == nil {
 		writeError(w, http.StatusBadRequest, "invalid or expired state parameter")
+		return
+	}
+	if !validateOAuthStateBinding(w, r, oauthState, "ebay") {
 		return
 	}
 
