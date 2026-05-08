@@ -139,6 +139,7 @@ func (h *AmazonAuthHandler) Setup(w http.ResponseWriter, r *http.Request) {
 // Credentials (client_id, client_secret, application_id, marketplace_id) are read from the existing integration.
 func (h *AmazonAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
+	actorID := middleware.UserIDFromContext(r.Context())
 
 	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "amazon")
 	if err != nil {
@@ -177,6 +178,9 @@ func (h *AmazonAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) {
 
 	stateData := &OAuthState{
 		ExpiresAt:     time.Now().Add(10 * time.Minute),
+		TenantID:      tenantID,
+		UserID:        actorID,
+		Provider:      "amazon",
 		ClientID:      creds.ClientID,
 		ClientSecret:  creds.ClientSecret,
 		Sandbox:       creds.Sandbox,
@@ -307,6 +311,9 @@ func (h *AmazonAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reques
 	}
 	if oauthState == nil {
 		writeError(w, http.StatusBadRequest, "invalid or expired state parameter")
+		return
+	}
+	if !validateOAuthStateBinding(w, r, oauthState, "amazon") {
 		return
 	}
 
