@@ -48,6 +48,9 @@ func (w *ExchangeRateWorker) Run(ctx context.Context) error {
 
 	var tenantIDs []uuid.UUID
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
 			w.logger.Error("exchange rate worker: scan tenant", "error", err)
@@ -61,6 +64,9 @@ func (w *ExchangeRateWorker) Run(ctx context.Context) error {
 
 	totalFetched := 0
 	for _, tenantID := range tenantIDs {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		count, err := w.exchangeRateService.FetchNBPRates(ctx, tenantID, uuid.Nil, "0.0.0.0")
 		if err != nil {
 			w.logger.Error("exchange rate worker: fetch NBP rates", "tenant_id", tenantID, "error", err)

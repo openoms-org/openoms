@@ -55,6 +55,9 @@ func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 	totalChecked, totalResolved := 0, 0
 
 	for _, ti := range tis {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		// Gather pending listings with amazon_feed_id
 		var pending []pendingFeedListing
 		gatherErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
@@ -70,6 +73,9 @@ func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 			}
 			defer rows.Close()
 			for rows.Next() {
+				if err := checkWorkerContext(ctx); err != nil {
+					return err
+				}
 				var p pendingFeedListing
 				if err := rows.Scan(&p.ListingID, &p.FeedID, &p.FeedType); err != nil {
 					w.logger.Error("amazon feed status: scan", "error", err)
@@ -90,6 +96,9 @@ func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 		// Group by feedID
 		feedGroups := make(map[string][]pendingFeedListing)
 		for _, p := range pending {
+			if err := checkWorkerContext(ctx); err != nil {
+				return err
+			}
 			feedGroups[p.FeedID] = append(feedGroups[p.FeedID], p)
 		}
 
@@ -112,6 +121,10 @@ func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 		}
 
 		for feedID, listings := range feedGroups {
+			if err := checkWorkerContext(ctx); err != nil {
+				closeProvider(provider)
+				return err
+			}
 			totalChecked++
 			feed, err := amazonProvider.GetFeedStatus(ctx, feedID)
 			if err != nil {
@@ -130,7 +143,12 @@ func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 			default:
 				// IN_QUEUE, IN_PROGRESS — still processing, leave as pending
 			}
-			time.Sleep(500 * time.Millisecond) // rate limit between feed status checks
+			select {
+			case <-ctx.Done():
+				closeProvider(provider)
+				return ctx.Err()
+			case <-time.After(500 * time.Millisecond): // rate limit between feed status checks
+			}
 		}
 		closeProvider(provider)
 	}
@@ -144,6 +162,9 @@ func (w *AmazonFeedStatusWorker) Run(ctx context.Context) error {
 func (w *AmazonFeedStatusWorker) resolveListings(ctx context.Context, tenantID uuid.UUID, listings []pendingFeedListing, status string, errMsg *string) {
 	if err := database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
 		for _, l := range listings {
+			if err := checkWorkerContext(ctx); err != nil {
+				return err
+			}
 			var execErr error
 			switch status {
 			case "synced":

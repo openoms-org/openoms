@@ -60,6 +60,9 @@ func (w *PriceSyncWorker) Run(ctx context.Context) error {
 	totalSynced := 0
 
 	for _, ti := range tis {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		credJSON, err := crypto.Decrypt(ti.Credentials, w.encryptionKey)
 		if err != nil {
 			w.logger.Error("price sync: failed to decrypt credentials", "integration_id", ti.IntegrationID, "error", err)
@@ -91,6 +94,9 @@ func (w *PriceSyncWorker) Run(ctx context.Context) error {
 			// Collect all listings into a slice
 			var listings []listingPrice
 			for rows.Next() {
+				if err := checkWorkerContext(ctx); err != nil {
+					return err
+				}
 				var listingID, externalID string
 				var price float64
 				if err := rows.Scan(&listingID, &externalID, &price); err != nil {
@@ -160,6 +166,9 @@ func (w *PriceSyncWorker) syncBulk(
 	// Process each chunk; the listing slice is indexed in parallel with the update slice
 	offset := 0
 	for _, chunk := range chunks {
+		if err := checkWorkerContext(ctx); err != nil {
+			return synced
+		}
 		batchListings := listings[offset : offset+len(chunk)]
 		offset += len(chunk)
 
@@ -172,6 +181,9 @@ func (w *PriceSyncWorker) syncBulk(
 			)
 			errMsg := truncateErrorMessage(err.Error())
 			for _, l := range batchListings {
+				if err := checkWorkerContext(ctx); err != nil {
+					return synced
+				}
 				if _, execErr := tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
 					l.ListingID, errMsg,
@@ -188,6 +200,9 @@ func (w *PriceSyncWorker) syncBulk(
 		}
 		feedMeta := buildFeedMeta(provider)
 		for _, l := range batchListings {
+			if err := checkWorkerContext(ctx); err != nil {
+				return synced
+			}
 			var execErr error
 			switch {
 			case syncStatus == "pending" && feedMeta != nil:
@@ -233,6 +248,9 @@ func (w *PriceSyncWorker) syncOneByOne(
 	synced := 0
 
 	for _, l := range listings {
+		if err := checkWorkerContext(ctx); err != nil {
+			return synced
+		}
 		if err := provider.UpdatePrice(ctx, l.ExternalID, l.Price); err != nil {
 			w.logger.Error("price sync: update price failed",
 				"operation", "listing.price_update",

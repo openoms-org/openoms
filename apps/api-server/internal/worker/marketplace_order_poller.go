@@ -94,6 +94,9 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 	totalOrders := 0
 
 	for _, ti := range tis {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		seenOrders := make(map[string]struct{}) // per-tenant dedup within a single poll page
 
 		credJSON, err := crypto.Decrypt(ti.Credentials, p.encryptionKey)
@@ -130,10 +133,15 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 				"tenant_id", ti.TenantID,
 				"error", err,
 			)
+			closeProvider(provider)
 			continue
 		}
 
 		for _, mo := range orders {
+			if err := checkWorkerContext(ctx); err != nil {
+				closeProvider(provider)
+				return err
+			}
 			// In-memory dedup: skip if already processed in this run
 			if _, seen := seenOrders[mo.ExternalID]; seen {
 				continue

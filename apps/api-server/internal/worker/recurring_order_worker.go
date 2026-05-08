@@ -52,6 +52,9 @@ func (w *RecurringOrderWorker) Run(ctx context.Context) error {
 
 	var tenantIDs []uuid.UUID
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
 			w.logger.Error("recurring order worker: scan tenant", "error", err)
@@ -65,6 +68,9 @@ func (w *RecurringOrderWorker) Run(ctx context.Context) error {
 
 	totalCreated := 0
 	for _, tenantID := range tenantIDs {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		count, err := w.recurringOrderService.ProcessDueOrders(ctx, tenantID)
 		if err != nil {
 			w.logger.Error("recurring order worker: process due orders",

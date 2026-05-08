@@ -1,13 +1,42 @@
 package worker
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// ---------------------------------------------------------------------------
+// checkWorkerContext
+// ---------------------------------------------------------------------------
+
+func TestCheckWorkerContext_NotCancelled(t *testing.T) {
+	assert.NoError(t, checkWorkerContext(context.Background()))
+}
+
+func TestCheckWorkerContext_Cancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := checkWorkerContext(ctx)
+
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestCheckWorkerContext_DeadlineExceeded(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+	defer cancel()
+	<-ctx.Done()
+
+	err := checkWorkerContext(ctx)
+
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+}
 
 // ---------------------------------------------------------------------------
 // truncateErrorMessage

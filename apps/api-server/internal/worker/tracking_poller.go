@@ -81,6 +81,9 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 
 	var shipments []trackableShipment
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		var ts trackableShipment
 		if err := rows.Scan(
 			&ts.ID, &ts.TenantID, &ts.Provider, &ts.TrackingNumber,
@@ -106,6 +109,9 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 	}
 	groups := make(map[carrierKey][]trackableShipment)
 	for _, ts := range shipments {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		key := carrierKey{provider: ts.Provider}
 		if ts.Credentials != nil {
 			key.credentials = *ts.Credentials
@@ -117,6 +123,9 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 	errCount := 0
 
 	for key, group := range groups {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		if key.credentials == "" {
 			w.logger.Warn("tracking poller: skipping shipments with no integration credentials",
 				"provider", key.provider, "count", len(group))
@@ -144,6 +153,10 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 		}
 
 		for _, ts := range group {
+			if err := checkWorkerContext(ctx); err != nil {
+				closeProvider(carrier)
+				return err
+			}
 			events, err := carrier.GetTracking(ctx, ts.TrackingNumber)
 			if err != nil {
 				w.logger.Error("tracking poller: get tracking failed",
@@ -184,6 +197,7 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 				"tracking_number", ts.TrackingNumber)
 			updated++
 		}
+		closeProvider(carrier)
 	}
 
 	w.logger.Info("tracking poller: completed",

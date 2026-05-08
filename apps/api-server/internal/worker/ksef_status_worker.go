@@ -48,6 +48,9 @@ func (w *KSeFStatusWorker) Run(ctx context.Context) error {
 
 	var tenantIDs []uuid.UUID
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
 			w.logger.Error("ksef worker: scan tenant", "error", err)
@@ -62,6 +65,9 @@ func (w *KSeFStatusWorker) Run(ctx context.Context) error {
 	totalSynced := 0
 	totalRetried := 0
 	for _, tenantID := range tenantIDs {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		synced, err := w.ksefService.SyncPendingStatuses(ctx, tenantID)
 		if err != nil {
 			w.logger.Error("ksef worker: sync statuses", "tenant_id", tenantID, "error", err)

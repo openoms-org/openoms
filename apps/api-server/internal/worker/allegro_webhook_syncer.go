@@ -68,6 +68,9 @@ func (s *AllegroWebhookSyncer) ImportOrder(ctx context.Context, allegroOrderID s
 	}
 
 	for _, ti := range tis {
+		if err := checkWorkerContext(ctx); err != nil {
+			return
+		}
 		imported := s.tryImportOrder(ctx, ti, allegroOrderID)
 		if imported {
 			return
@@ -99,6 +102,9 @@ func (s *AllegroWebhookSyncer) UpdateOrderStatus(ctx context.Context, allegroOrd
 	}
 
 	for _, ti := range tis {
+		if err := checkWorkerContext(ctx); err != nil {
+			return
+		}
 		updated := s.tryUpdateOrderStatus(ctx, ti, allegroOrderID)
 		if updated {
 			return

@@ -77,6 +77,9 @@ func (w *DelayedActionWorker) Run(ctx context.Context) error {
 	w.logger.Info("delayed action worker: processing pending actions", "count", len(pending))
 
 	for _, da := range pending {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		w.executeDelayedAction(ctx, da)
 	}
 

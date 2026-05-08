@@ -67,6 +67,9 @@ func (w *ListingSyncWorker) Run(ctx context.Context) error {
 	syncedCount := 0
 
 	for _, cfg := range configs {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		// Check if enough time has passed since last sync
 		if cfg.LastSyncAt != nil {
 			elapsed := now.Sub(*cfg.LastSyncAt)
