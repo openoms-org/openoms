@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
@@ -38,6 +39,14 @@ func NewTokenService(jwtSecret string) (*TokenService, error) {
 // GenerateAccessToken creates a 1-hour JWT with full user claims.
 func (s *TokenService) GenerateAccessToken(user model.User) (string, error) {
 	now := time.Now()
+	roleID := uuid.Nil
+	if user.RoleID != nil {
+		roleID = *user.RoleID
+	}
+	permissions := user.Permissions
+	if permissions == nil {
+		permissions = model.SystemPermissionsForRole(user.Role)
+	}
 	claims := model.AuthClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID.String(),
@@ -45,10 +54,12 @@ func (s *TokenService) GenerateAccessToken(user model.User) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(now.Add(accessTokenDuration)),
 			Issuer:    "openoms",
 		},
-		TenantID: user.TenantID,
-		Email:    user.Email,
-		Role:     user.Role,
-		Type:     "access",
+		TenantID:    user.TenantID,
+		Email:       user.Email,
+		Role:        user.Role,
+		RoleID:      roleID,
+		Permissions: permissions,
+		Type:        "access",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
 	return token.SignedString(s.privateKey)

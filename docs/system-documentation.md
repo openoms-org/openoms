@@ -400,7 +400,7 @@ OpenOMS/
 
 ## 5. Backend API
 
-### Middleware Stack (15 middleware)
+### Middleware Stack
 
 ```
 Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS -> Logger -> Recoverer -> CORS
@@ -1353,14 +1353,16 @@ password -> bcrypt(cost=12) -> $2a$12$... -> DB
 ### RBAC
 
 ```
-Stare role:  owner > admin > member
-Nowe role:   Custom roles z permissions[]
+Stare role:  owner > admin > member (fallback dla tokenow bez permissions)
+Nowe role:   Custom roles z permissions[] egzekwowane przez backendowe RequirePermission
+
+Access token zawiera role_id oraz efektywne permissions. Dla systemowych rol permissions sa wyliczane z domyslnych zestawow; Administrator nie ma users.manage, Owner ma pelny dostep. Dla custom role permissions sa ladowane z roles.permissions przy login/refresh/2FA.
 
 Uprawnienia np.:
-  orders:read, orders:write, orders:delete
-  products:read, products:write
-  settings:manage
-  users:manage
+  orders.view, orders.create, orders.edit, orders.delete, orders.export
+  products.view, products.create, products.edit, products.delete
+  settings.manage
+  users.manage
 ```
 
 ### Zabezpieczenia

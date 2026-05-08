@@ -15,6 +15,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -121,6 +122,7 @@ type RouterDeps struct { //nolint:revive
 // New constructs the chi router with all routes registered.
 func New(deps RouterDeps) *chi.Mux {
 	r := chi.NewRouter()
+	requirePermission := middleware.RequirePermission
 
 	// Global middleware
 	r.Use(chimw.RequestID)
@@ -323,15 +325,15 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Route("/onboarding", func(r chi.Router) {
 				r.Get("/status", deps.Settings.GetOnboardingStatus)
 				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
+					r.Use(requirePermission(model.PermSettingsManage))
 					r.Put("/step/{step}", deps.Settings.UpdateOnboardingStep)
 					r.Post("/complete", deps.Settings.CompleteOnboarding)
 				})
 			})
 
-			// Settings — admin only
+			// Settings — requires settings.manage
 			r.Route("/settings", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermSettingsManage))
 				r.Get("/export", deps.Settings.ExportSettings)
 				r.Post("/import", deps.Settings.ImportSettings)
 				r.Get("/email", deps.Settings.GetEmailSettings)
@@ -373,20 +375,23 @@ func New(deps RouterDeps) *chi.Mux {
 				}
 			})
 
-			// Admin-only audit log and webhook deliveries
+			// Audit and webhook delivery visibility
 			r.Group(func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermAuditView))
 				r.Get("/audit", deps.Audit.List)
 				r.Get("/webhook-deliveries", deps.WebhookDelivery.List)
+			})
+			r.Group(func(r chi.Router) {
+				r.Use(requirePermission(model.PermSettingsManage))
 
 				// Webhook configuration — mirrors /v1/settings/webhooks
 				r.Get("/webhooks", deps.Settings.GetWebhooks)
 				r.Put("/webhooks", deps.Settings.UpdateWebhooks)
 			})
 
-			// Sync jobs — admin only
+			// Sync jobs — requires integrations.manage
 			r.Route("/sync-jobs", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Get("/", deps.SyncJob.List)
 				r.Get("/{id}", deps.SyncJob.Get)
 			})
@@ -395,172 +400,145 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Get("/users/me", deps.User.Me)
 			r.Patch("/users/me", deps.User.UpdateMe)
 
-			// Admin/owner only user management
+			// User management — requires users.manage
 			r.Route("/users", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermUsersManage))
 				r.Get("/", deps.User.List)
 				r.Post("/", deps.User.Create)
 				r.Patch("/{id}", deps.User.Update)
 				r.Delete("/{id}", deps.User.Delete)
 			})
 
-			// Admin/owner only invitation management
+			// Invitation management — requires users.manage
 			if deps.Invitation != nil {
 				r.Route("/invitations", func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
+					r.Use(requirePermission(model.PermUsersManage))
 					r.Get("/", deps.Invitation.List)
 					r.Post("/", deps.Invitation.Create)
 					r.Delete("/{id}", deps.Invitation.Delete)
 				})
 			}
 
-			// Orders — any authenticated user (destructive ops admin-only)
+			// Orders
 			r.Route("/orders", func(r chi.Router) {
-				r.Get("/", deps.Order.List)
-				r.Post("/", deps.Order.Create)
-				r.Get("/export", deps.Order.ExportCSV)
-				r.Get("/{id}", deps.Order.Get)
-				r.Patch("/{id}", deps.Order.Update)
-				r.Post("/{id}/status", deps.Order.TransitionStatus)
-				r.Get("/{id}/groups", deps.OrderGroup.ListByOrder)
-				r.Get("/{id}/audit", deps.Order.GetAudit)
-				r.Get("/{id}/invoices", deps.Invoice.ListByOrder)
-				r.Get("/{id}/packing-slip", deps.Print.GetPackingSlip)
-				r.Get("/{id}/print", deps.Print.GetOrderSummary)
-				r.Post("/{id}/pack", deps.Barcode.PackOrder)
-				r.Get("/{id}/tickets", deps.Helpdesk.ListOrderTickets)
-				r.Post("/{id}/tickets", deps.Helpdesk.CreateOrderTicket)
-				r.Get("/{id}/shipments", deps.Shipment.ListByOrder)
-				r.Post("/{id}/shipments", deps.Shipment.CreateForOrder)
+				r.With(requirePermission(model.PermOrdersView)).Get("/", deps.Order.List)
+				r.With(requirePermission(model.PermOrdersCreate)).Post("/", deps.Order.Create)
+				r.With(requirePermission(model.PermOrdersExport)).Get("/export", deps.Order.ExportCSV)
+				r.With(requirePermission(model.PermOrdersView)).Get("/{id}", deps.Order.Get)
+				r.With(requirePermission(model.PermOrdersEdit)).Patch("/{id}", deps.Order.Update)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/status", deps.Order.TransitionStatus)
+				r.With(requirePermission(model.PermOrdersView)).Get("/{id}/groups", deps.OrderGroup.ListByOrder)
+				r.With(requirePermission(model.PermAuditView, model.PermOrdersView)).Get("/{id}/audit", deps.Order.GetAudit)
+				r.With(requirePermission(model.PermInvoicesView)).Get("/{id}/invoices", deps.Invoice.ListByOrder)
+				r.With(requirePermission(model.PermOrdersView)).Get("/{id}/packing-slip", deps.Print.GetPackingSlip)
+				r.With(requirePermission(model.PermOrdersView)).Get("/{id}/print", deps.Print.GetOrderSummary)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/pack", deps.Barcode.PackOrder)
+				r.With(requirePermission(model.PermOrdersView)).Get("/{id}/tickets", deps.Helpdesk.ListOrderTickets)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/tickets", deps.Helpdesk.CreateOrderTicket)
+				r.With(requirePermission(model.PermShipmentsView)).Get("/{id}/shipments", deps.Shipment.ListByOrder)
+				r.With(requirePermission(model.PermShipmentsCreate)).Post("/{id}/shipments", deps.Shipment.CreateForOrder)
 
-				// Admin-only: delete, bulk ops, import, merge, split, duplicate
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Delete("/{id}", deps.Order.Delete)
-					r.Post("/bulk-status", deps.Order.BulkTransitionStatus)
-					r.Post("/merge", deps.OrderGroup.MergeOrders)
-					r.Post("/import/preview", deps.Import.Preview)
-					r.Post("/import", deps.Import.Import)
-					r.Post("/{id}/duplicate", deps.Order.DuplicateOrder)
-					r.Post("/{id}/split", deps.OrderGroup.SplitOrder)
-				})
+				r.With(requirePermission(model.PermOrdersDelete)).Delete("/{id}", deps.Order.Delete)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/bulk-status", deps.Order.BulkTransitionStatus)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/merge", deps.OrderGroup.MergeOrders)
+				r.With(requirePermission(model.PermOrdersCreate)).Post("/import/preview", deps.Import.Preview)
+				r.With(requirePermission(model.PermOrdersCreate)).Post("/import", deps.Import.Import)
+				r.With(requirePermission(model.PermOrdersCreate)).Post("/{id}/duplicate", deps.Order.DuplicateOrder)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/split", deps.OrderGroup.SplitOrder)
 			})
 
 			// BaseLinker import
 			r.Route("/import/baselinker", func(r chi.Router) {
+				r.Use(requirePermission(model.PermOrdersCreate))
 				r.Post("/orders/preview", deps.Import.BaseLinkerPreview)
 				r.Post("/orders", deps.Import.BaseLinkerImport)
 			})
 
-			// Invoices — any authenticated user (cancel + KSeF send admin-only)
+			// Invoices
 			r.Route("/invoices", func(r chi.Router) {
-				r.Get("/", deps.Invoice.List)
-				r.Post("/", deps.Invoice.Create)
+				r.With(requirePermission(model.PermInvoicesView)).Get("/", deps.Invoice.List)
+				r.With(requirePermission(model.PermInvoicesCreate)).Post("/", deps.Invoice.Create)
 				r.Route("/{id}", func(r chi.Router) {
-					r.Get("/", deps.Invoice.Get)
-					r.Get("/pdf", deps.Invoice.GetPDF)
-					r.Get("/ksef/status", deps.KSeF.CheckKSeFStatus)
-					r.Get("/ksef/upo", deps.KSeF.GetUPO)
-
-					// Admin-only: cancel invoice, send to KSeF (tax/legal implications)
-					r.Group(func(r chi.Router) {
-						r.Use(middleware.RequireRole("admin"))
-						r.Delete("/", deps.Invoice.Cancel)
-						r.Post("/ksef/send", deps.KSeF.SendToKSeF)
-					})
+					r.With(requirePermission(model.PermInvoicesView)).Get("/", deps.Invoice.Get)
+					r.With(requirePermission(model.PermInvoicesView)).Get("/pdf", deps.Invoice.GetPDF)
+					r.With(requirePermission(model.PermInvoicesView)).Get("/ksef/status", deps.KSeF.CheckKSeFStatus)
+					r.With(requirePermission(model.PermInvoicesView)).Get("/ksef/upo", deps.KSeF.GetUPO)
+					r.With(requirePermission(model.PermInvoicesDelete)).Delete("/", deps.Invoice.Cancel)
+					r.With(requirePermission(model.PermInvoicesCreate)).Post("/ksef/send", deps.KSeF.SendToKSeF)
 				})
 
-				// Admin-only: bulk KSeF send
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Post("/ksef/bulk-send", deps.KSeF.BulkSendToKSeF)
-				})
+				r.With(requirePermission(model.PermInvoicesCreate)).Post("/ksef/bulk-send", deps.KSeF.BulkSendToKSeF)
 			})
 
-			// Shipments — any authenticated user (delete admin-only)
+			// Shipments
 			r.Route("/shipments", func(r chi.Router) {
-				r.Get("/", deps.Shipment.List)
-				r.Post("/", deps.Shipment.Create)
-				r.Post("/batch-labels", deps.Shipment.BatchLabels)
-				r.Post("/dispatch-order", deps.Shipment.CreateDispatchOrder)
-				r.Get("/{id}", deps.Shipment.Get)
-				r.Patch("/{id}", deps.Shipment.Update)
-				r.Post("/{id}/status", deps.Shipment.TransitionStatus)
-				r.Post("/{id}/label", deps.Shipment.GenerateLabel)
-				r.Get("/{id}/tracking", deps.Shipment.GetTracking)
-
-				// Admin-only: delete shipment
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Delete("/{id}", deps.Shipment.Delete)
-				})
+				r.With(requirePermission(model.PermShipmentsView)).Get("/", deps.Shipment.List)
+				r.With(requirePermission(model.PermShipmentsCreate)).Post("/", deps.Shipment.Create)
+				r.With(requirePermission(model.PermShipmentsCreate)).Post("/batch-labels", deps.Shipment.BatchLabels)
+				r.With(requirePermission(model.PermShipmentsCreate)).Post("/dispatch-order", deps.Shipment.CreateDispatchOrder)
+				r.With(requirePermission(model.PermShipmentsView)).Get("/{id}", deps.Shipment.Get)
+				r.With(requirePermission(model.PermShipmentsEdit)).Patch("/{id}", deps.Shipment.Update)
+				r.With(requirePermission(model.PermShipmentsEdit)).Post("/{id}/status", deps.Shipment.TransitionStatus)
+				r.With(requirePermission(model.PermShipmentsCreate)).Post("/{id}/label", deps.Shipment.GenerateLabel)
+				r.With(requirePermission(model.PermShipmentsView)).Get("/{id}/tracking", deps.Shipment.GetTracking)
+				r.With(requirePermission(model.PermShipmentsDelete)).Delete("/{id}", deps.Shipment.Delete)
 			})
 
-			// Returns — any authenticated user (delete admin-only)
+			// Returns
 			r.Route("/returns", func(r chi.Router) {
-				r.Get("/", deps.Return.List)
-				r.Post("/", deps.Return.Create)
+				r.With(requirePermission(model.PermReturnsView)).Get("/", deps.Return.List)
+				r.With(requirePermission(model.PermReturnsCreate)).Post("/", deps.Return.Create)
 				r.Route("/{id}", func(r chi.Router) {
-					r.Get("/", deps.Return.Get)
-					r.Patch("/", deps.Return.Update)
-					r.Post("/status", deps.Return.TransitionStatus)
-					r.Get("/print", deps.Print.GetReturnSlip)
-
-					// Admin-only: delete return
-					r.Group(func(r chi.Router) {
-						r.Use(middleware.RequireRole("admin"))
-						r.Delete("/", deps.Return.Delete)
-					})
+					r.With(requirePermission(model.PermReturnsView)).Get("/", deps.Return.Get)
+					r.With(requirePermission(model.PermReturnsEdit)).Patch("/", deps.Return.Update)
+					r.With(requirePermission(model.PermReturnsEdit)).Post("/status", deps.Return.TransitionStatus)
+					r.With(requirePermission(model.PermReturnsView)).Get("/print", deps.Print.GetReturnSlip)
+					r.With(requirePermission(model.PermReturnsDelete)).Delete("/", deps.Return.Delete)
 				})
 			})
 
-			// Products — any authenticated user (delete + import admin-only)
+			// Products
 			r.Route("/products", func(r chi.Router) {
-				r.Get("/", deps.Product.List)
-				r.Post("/", deps.Product.Create)
-				r.Get("/export", deps.Product.ExportCSV)
-				r.Get("/{id}", deps.Product.Get)
-				r.Patch("/{id}", deps.Product.Update)
-				r.Get("/{id}/stock", deps.Warehouse.ListProductStock)
-				r.Get("/{id}/supplier-link", deps.Supplier.SupplierLink)
-
-				// Admin-only: delete, import, redownload
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Delete("/{id}", deps.Product.Delete)
-					r.Post("/import/preview", deps.Product.ImportPreview)
-					r.Post("/import", deps.Product.ImportCSV)
-					r.Post("/import/baselinker/preview", deps.Product.BLImportPreview)
-					r.Post("/import/baselinker", deps.Product.BLImportCSV)
-					r.Post("/redownload-images", deps.Product.RedownloadImages)
-				})
+				r.With(requirePermission(model.PermProductsView)).Get("/", deps.Product.List)
+				r.With(requirePermission(model.PermProductsCreate)).Post("/", deps.Product.Create)
+				r.With(requirePermission(model.PermProductsView)).Get("/export", deps.Product.ExportCSV)
+				r.With(requirePermission(model.PermProductsView)).Get("/{id}", deps.Product.Get)
+				r.With(requirePermission(model.PermProductsEdit)).Patch("/{id}", deps.Product.Update)
+				r.With(requirePermission(model.PermProductsView)).Get("/{id}/stock", deps.Warehouse.ListProductStock)
+				r.With(requirePermission(model.PermProductsView)).Get("/{id}/supplier-link", deps.Supplier.SupplierLink)
+				r.With(requirePermission(model.PermProductsDelete)).Delete("/{id}", deps.Product.Delete)
+				r.With(requirePermission(model.PermProductsCreate)).Post("/import/preview", deps.Product.ImportPreview)
+				r.With(requirePermission(model.PermProductsCreate)).Post("/import", deps.Product.ImportCSV)
+				r.With(requirePermission(model.PermProductsCreate)).Post("/import/baselinker/preview", deps.Product.BLImportPreview)
+				r.With(requirePermission(model.PermProductsCreate)).Post("/import/baselinker", deps.Product.BLImportCSV)
+				r.With(requirePermission(model.PermProductsEdit)).Post("/redownload-images", deps.Product.RedownloadImages)
 
 				// Background removal for product images
 				if deps.BGRemoval != nil {
-					r.Post("/{id}/images/{index}/remove-background", deps.BGRemoval.RemoveProductImageBackground)
+					r.With(requirePermission(model.PermProductsEdit)).Post("/{id}/images/{index}/remove-background", deps.BGRemoval.RemoveProductImageBackground)
 				}
 
 				// Bundles
 				r.Route("/{id}/bundle", func(r chi.Router) {
-					r.Get("/", deps.Bundle.ListComponents)
-					r.Post("/", deps.Bundle.AddComponent)
-					r.Get("/stock", deps.Bundle.GetBundleStock)
-					r.Put("/{componentId}", deps.Bundle.UpdateComponent)
-					r.Delete("/{componentId}", deps.Bundle.RemoveComponent)
+					r.With(requirePermission(model.PermProductsView)).Get("/", deps.Bundle.ListComponents)
+					r.With(requirePermission(model.PermProductsEdit)).Post("/", deps.Bundle.AddComponent)
+					r.With(requirePermission(model.PermProductsView)).Get("/stock", deps.Bundle.GetBundleStock)
+					r.With(requirePermission(model.PermProductsEdit)).Put("/{componentId}", deps.Bundle.UpdateComponent)
+					r.With(requirePermission(model.PermProductsEdit)).Delete("/{componentId}", deps.Bundle.RemoveComponent)
 				})
 
 				// Variants
 				r.Route("/{productId}/variants", func(r chi.Router) {
-					r.Get("/", deps.Variant.List)
-					r.Post("/", deps.Variant.Create)
-					r.Get("/{id}", deps.Variant.Get)
-					r.Patch("/{id}", deps.Variant.Update)
-					r.Delete("/{id}", deps.Variant.Delete)
+					r.With(requirePermission(model.PermProductsView)).Get("/", deps.Variant.List)
+					r.With(requirePermission(model.PermProductsCreate)).Post("/", deps.Variant.Create)
+					r.With(requirePermission(model.PermProductsView)).Get("/{id}", deps.Variant.Get)
+					r.With(requirePermission(model.PermProductsEdit)).Patch("/{id}", deps.Variant.Update)
+					r.With(requirePermission(model.PermProductsDelete)).Delete("/{id}", deps.Variant.Delete)
 				})
 
 				// Marketplace listings
 				r.Route("/{productId}/listings", func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
+					r.Use(requirePermission(model.PermIntegrationsManage))
 					if deps.AllegroListings != nil {
 						r.Get("/", deps.AllegroListings.ListByProduct)
 						r.Post("/allegro", deps.AllegroListings.CreateListing)
@@ -584,9 +562,9 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 			})
 
-			// Integrations — admin only
+			// Integrations — requires integrations.manage
 			r.Route("/integrations", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermIntegrationsManage))
 
 				// Allegro OAuth2 + fulfillment + shipment management + comms
 				r.Route("/allegro", func(r chi.Router) {
@@ -773,9 +751,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}", deps.Integration.Delete)
 			})
 
-			// Suppliers — admin only
+			// Suppliers — requires integrations.manage
 			r.Route("/suppliers", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Get("/", deps.Supplier.List)
 				r.Post("/", deps.Supplier.Create)
 				r.Get("/{id}", deps.Supplier.Get)
@@ -813,13 +791,13 @@ func New(deps RouterDeps) *chi.Mux {
 				}
 			})
 
-			// Cross-supplier product listing — admin only
-			r.With(middleware.RequireRole("admin")).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
+			// Cross-supplier product listing
+			r.With(requirePermission(model.PermIntegrationsManage)).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
 
-			// Product Categories — admin only
+			// Product Categories — requires settings.manage
 			if deps.Category != nil {
 				r.Route("/categories", func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
+					r.Use(requirePermission(model.PermSettingsManage))
 					r.Get("/", deps.Category.List)
 					r.Post("/", deps.Category.Create)
 					r.Get("/{id}", deps.Category.Get)
@@ -829,46 +807,36 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 			}
 
-			// Purchase Orders — any authenticated user can view, admin/manager can create/edit
+			// Purchase Orders
 			r.Route("/purchase-orders", func(r chi.Router) {
-				r.Get("/", deps.PurchaseOrder.List)
-				r.Get("/{id}", deps.PurchaseOrder.Get)
-
-				// Write operations — admin only
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Post("/", deps.PurchaseOrder.Create)
-					r.Put("/{id}", deps.PurchaseOrder.Update)
-					r.Delete("/{id}", deps.PurchaseOrder.Delete)
-					r.Post("/{id}/send", deps.PurchaseOrder.Send)
-					r.Post("/{id}/receive", deps.PurchaseOrder.Receive)
-					r.Post("/{id}/cancel", deps.PurchaseOrder.Cancel)
-				})
+				r.With(requirePermission(model.PermProductsView)).Get("/", deps.PurchaseOrder.List)
+				r.With(requirePermission(model.PermProductsView)).Get("/{id}", deps.PurchaseOrder.Get)
+				r.With(requirePermission(model.PermProductsCreate)).Post("/", deps.PurchaseOrder.Create)
+				r.With(requirePermission(model.PermProductsEdit)).Put("/{id}", deps.PurchaseOrder.Update)
+				r.With(requirePermission(model.PermProductsDelete)).Delete("/{id}", deps.PurchaseOrder.Delete)
+				r.With(requirePermission(model.PermProductsEdit)).Post("/{id}/send", deps.PurchaseOrder.Send)
+				r.With(requirePermission(model.PermProductsEdit)).Post("/{id}/receive", deps.PurchaseOrder.Receive)
+				r.With(requirePermission(model.PermProductsEdit)).Post("/{id}/cancel", deps.PurchaseOrder.Cancel)
 			})
 
-			// Dropship Orders — any authenticated user can view, admin can create/edit
+			// Dropship Orders
 			r.Route("/dropship-orders", func(r chi.Router) {
-				r.Get("/", deps.Dropship.List)
-				r.Get("/{id}", deps.Dropship.Get)
-
-				// Write operations — admin only
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Post("/", deps.Dropship.Create)
-					r.Put("/{id}/status", deps.Dropship.UpdateStatus)
-					r.Post("/{id}/cancel", deps.Dropship.Cancel)
-				})
+				r.With(requirePermission(model.PermOrdersView)).Get("/", deps.Dropship.List)
+				r.With(requirePermission(model.PermOrdersView)).Get("/{id}", deps.Dropship.Get)
+				r.With(requirePermission(model.PermOrdersCreate)).Post("/", deps.Dropship.Create)
+				r.With(requirePermission(model.PermOrdersEdit)).Put("/{id}/status", deps.Dropship.UpdateStatus)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/cancel", deps.Dropship.Cancel)
 			})
 
-			// Order dropship auto-route — admin only
-			r.With(middleware.RequireRole("admin")).
+			// Order dropship auto-route
+			r.With(requirePermission(model.PermOrdersEdit)).
 				Post("/orders/{order_id}/dropship", deps.Dropship.AutoRoute)
-			r.With(middleware.RequireRole("admin")).
+			r.With(requirePermission(model.PermOrdersView)).
 				Get("/orders/{order_id}/dropship-orders", deps.Dropship.GetByOrderID)
 
-			// Warehouses — admin only
+			// Warehouses — requires warehouses.manage
 			r.Route("/warehouses", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Get("/", deps.Warehouse.List)
 				r.Post("/", deps.Warehouse.Create)
 				r.Get("/{id}", deps.Warehouse.Get)
@@ -878,86 +846,66 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Put("/{id}/stock", deps.Warehouse.UpsertStock)
 			})
 
-			// Customers — any authenticated user (delete + import admin-only)
+			// Customers
 			r.Route("/customers", func(r chi.Router) {
-				r.Get("/", deps.Customer.List)
-				r.Post("/", deps.Customer.Create)
-				r.Get("/{id}", deps.Customer.Get)
-				r.Patch("/{id}", deps.Customer.Update)
-				r.Get("/{id}/orders", deps.Customer.ListOrders)
-
-				// Admin-only: delete (GDPR), import
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Delete("/{id}", deps.Customer.Delete)
-					r.Post("/import/preview", deps.Customer.ImportPreview)
-					r.Post("/import", deps.Customer.ImportCSV)
-				})
+				r.With(requirePermission(model.PermCustomersView)).Get("/", deps.Customer.List)
+				r.With(requirePermission(model.PermCustomersCreate)).Post("/", deps.Customer.Create)
+				r.With(requirePermission(model.PermCustomersView)).Get("/{id}", deps.Customer.Get)
+				r.With(requirePermission(model.PermCustomersEdit)).Patch("/{id}", deps.Customer.Update)
+				r.With(requirePermission(model.PermCustomersView)).Get("/{id}/orders", deps.Customer.ListOrders)
+				r.With(requirePermission(model.PermCustomersDelete)).Delete("/{id}", deps.Customer.Delete)
+				r.With(requirePermission(model.PermCustomersCreate)).Post("/import/preview", deps.Customer.ImportPreview)
+				r.With(requirePermission(model.PermCustomersCreate)).Post("/import", deps.Customer.ImportCSV)
 			})
 
-			// Customer segments — read any user, write admin-only
+			// Customer segments
 			if deps.Segment != nil {
 				r.Route("/segments", func(r chi.Router) {
-					r.Get("/", deps.Segment.List)
-					r.Get("/customer/{customer_id}", deps.Segment.GetCustomerSegments)
-					r.Get("/{id}", deps.Segment.Get)
-					r.Get("/{id}/members", deps.Segment.ListMembers)
-
-					// Admin-only: create, update, delete, RFM analysis, member management
-					r.Group(func(r chi.Router) {
-						r.Use(middleware.RequireRole("admin"))
-						r.Post("/", deps.Segment.Create)
-						r.Post("/rfm-analysis", deps.Segment.RunRFMAnalysis)
-						r.Put("/{id}", deps.Segment.Update)
-						r.Delete("/{id}", deps.Segment.Delete)
-						r.Post("/{id}/members", deps.Segment.AddMember)
-						r.Delete("/{id}/members/{customer_id}", deps.Segment.RemoveMember)
-					})
+					r.With(requirePermission(model.PermCustomersView)).Get("/", deps.Segment.List)
+					r.With(requirePermission(model.PermCustomersView)).Get("/customer/{customer_id}", deps.Segment.GetCustomerSegments)
+					r.With(requirePermission(model.PermCustomersView)).Get("/{id}", deps.Segment.Get)
+					r.With(requirePermission(model.PermCustomersView)).Get("/{id}/members", deps.Segment.ListMembers)
+					r.With(requirePermission(model.PermCustomersCreate)).Post("/", deps.Segment.Create)
+					r.With(requirePermission(model.PermReportsView)).Post("/rfm-analysis", deps.Segment.RunRFMAnalysis)
+					r.With(requirePermission(model.PermCustomersEdit)).Put("/{id}", deps.Segment.Update)
+					r.With(requirePermission(model.PermCustomersDelete)).Delete("/{id}", deps.Segment.Delete)
+					r.With(requirePermission(model.PermCustomersEdit)).Post("/{id}/members", deps.Segment.AddMember)
+					r.With(requirePermission(model.PermCustomersEdit)).Delete("/{id}/members/{customer_id}", deps.Segment.RemoveMember)
 				})
 			}
 
-			// Loyalty programs — read any user, write admin-only
+			// Loyalty programs
 			if deps.Loyalty != nil {
 				r.Route("/loyalty", func(r chi.Router) {
 					r.Route("/programs", func(r chi.Router) {
-						r.Get("/", deps.Loyalty.ListPrograms)
-						r.Get("/{id}", deps.Loyalty.GetProgram)
-						r.Get("/{id}/leaderboard", deps.Loyalty.GetLeaderboard)
-
-						// Admin-only: create, update, delete programs, award/redeem points
-						r.Group(func(r chi.Router) {
-							r.Use(middleware.RequireRole("admin"))
-							r.Post("/", deps.Loyalty.CreateProgram)
-							r.Put("/{id}", deps.Loyalty.UpdateProgram)
-							r.Delete("/{id}", deps.Loyalty.DeleteProgram)
-							r.Post("/{id}/award", deps.Loyalty.AwardPoints)
-							r.Post("/{id}/redeem", deps.Loyalty.RedeemPoints)
-						})
+						r.With(requirePermission(model.PermCustomersView)).Get("/", deps.Loyalty.ListPrograms)
+						r.With(requirePermission(model.PermCustomersView)).Get("/{id}", deps.Loyalty.GetProgram)
+						r.With(requirePermission(model.PermCustomersView)).Get("/{id}/leaderboard", deps.Loyalty.GetLeaderboard)
+						r.With(requirePermission(model.PermCustomersCreate)).Post("/", deps.Loyalty.CreateProgram)
+						r.With(requirePermission(model.PermCustomersEdit)).Put("/{id}", deps.Loyalty.UpdateProgram)
+						r.With(requirePermission(model.PermCustomersDelete)).Delete("/{id}", deps.Loyalty.DeleteProgram)
+						r.With(requirePermission(model.PermCustomersEdit)).Post("/{id}/award", deps.Loyalty.AwardPoints)
+						r.With(requirePermission(model.PermCustomersEdit)).Post("/{id}/redeem", deps.Loyalty.RedeemPoints)
 					})
-					r.Get("/customers/{customer_id}", deps.Loyalty.GetCustomerLoyaltyStatus)
+					r.With(requirePermission(model.PermCustomersView)).Get("/customers/{customer_id}", deps.Loyalty.GetCustomerLoyaltyStatus)
 				})
 			}
 
-			// Recurring orders (subscriptions) — read any user, write admin-only
+			// Recurring orders (subscriptions)
 			r.Route("/recurring-orders", func(r chi.Router) {
-				r.Get("/", deps.RecurringOrder.List)
-				r.Get("/{id}", deps.RecurringOrder.Get)
-
-				// Admin-only: create, update, delete, pause, resume, cancel
-				r.Group(func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
-					r.Post("/", deps.RecurringOrder.Create)
-					r.Put("/{id}", deps.RecurringOrder.Update)
-					r.Delete("/{id}", deps.RecurringOrder.Delete)
-					r.Post("/{id}/pause", deps.RecurringOrder.Pause)
-					r.Post("/{id}/resume", deps.RecurringOrder.Resume)
-					r.Post("/{id}/cancel", deps.RecurringOrder.Cancel)
-				})
+				r.With(requirePermission(model.PermOrdersView)).Get("/", deps.RecurringOrder.List)
+				r.With(requirePermission(model.PermOrdersView)).Get("/{id}", deps.RecurringOrder.Get)
+				r.With(requirePermission(model.PermOrdersCreate)).Post("/", deps.RecurringOrder.Create)
+				r.With(requirePermission(model.PermOrdersEdit)).Put("/{id}", deps.RecurringOrder.Update)
+				r.With(requirePermission(model.PermOrdersDelete)).Delete("/{id}", deps.RecurringOrder.Delete)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/pause", deps.RecurringOrder.Pause)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/resume", deps.RecurringOrder.Resume)
+				r.With(requirePermission(model.PermOrdersEdit)).Post("/{id}/cancel", deps.RecurringOrder.Cancel)
 			})
 
-			// Automation rules — admin only
+			// Automation rules — requires automation.manage
 			r.Route("/automation", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermAutomationManage))
 				r.Get("/delayed", deps.Automation.ListDelayed)
 				r.Route("/rules", func(r chi.Router) {
 					r.Get("/", deps.Automation.List)
@@ -970,17 +918,18 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 			})
 
-			// Workflow builder — admin only
+			// Workflow builder — requires automation.manage
 			r.Route("/workflows", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermAutomationManage))
 				r.Get("/templates", deps.Workflow.ListTemplates)
 				r.Post("/validate", deps.Workflow.Validate)
 				r.Post("/convert", deps.Workflow.Convert)
 				r.Get("/rules/{id}/workflow", deps.Workflow.GetWorkflowForRule)
 			})
 
-			// Stats — any authenticated user
+			// Stats — requires reports.view
 			r.Route("/stats", func(r chi.Router) {
+				r.Use(requirePermission(model.PermReportsView))
 				r.Get("/dashboard", deps.Stats.GetDashboard)
 				r.Get("/products/top", deps.Stats.GetTopProducts)
 				r.Get("/revenue/by-source", deps.Stats.GetRevenueBySource)
@@ -988,30 +937,31 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/payment-methods", deps.Stats.GetPaymentMethodStats)
 			})
 
-			// Demand forecast — any authenticated user (config update admin only)
+			// Demand forecast — requires reports.view; config update requires settings.manage
 			if deps.Forecast != nil {
 				r.Route("/forecast", func(r chi.Router) {
-					r.Get("/products", deps.Forecast.ListForecasts)
-					r.Get("/products/{id}", deps.Forecast.GetForecast)
-					r.Get("/reorder", deps.Forecast.GetReorderRecommendations)
-					r.Get("/seasonality/{product_id}", deps.Forecast.GetSeasonality)
-					r.Get("/velocity", deps.Forecast.GetVelocity)
-					r.Get("/config", deps.Forecast.GetConfig)
-					r.With(middleware.RequireRole("admin")).Put("/config", deps.Forecast.UpdateConfig)
+					r.With(requirePermission(model.PermReportsView)).Get("/products", deps.Forecast.ListForecasts)
+					r.With(requirePermission(model.PermReportsView)).Get("/products/{id}", deps.Forecast.GetForecast)
+					r.With(requirePermission(model.PermReportsView)).Get("/reorder", deps.Forecast.GetReorderRecommendations)
+					r.With(requirePermission(model.PermReportsView)).Get("/seasonality/{product_id}", deps.Forecast.GetSeasonality)
+					r.With(requirePermission(model.PermReportsView)).Get("/velocity", deps.Forecast.GetVelocity)
+					r.With(requirePermission(model.PermSettingsManage)).Get("/config", deps.Forecast.GetConfig)
+					r.With(requirePermission(model.PermSettingsManage)).Put("/config", deps.Forecast.UpdateConfig)
 				})
 			}
 
-			// Carbon footprint — any authenticated user
+			// Carbon footprint — requires reports.view
 			if deps.Carbon != nil {
 				r.Route("/carbon", func(r chi.Router) {
+					r.Use(requirePermission(model.PermReportsView))
 					r.Get("/stats", deps.Carbon.GetStats)
 					r.Get("/report", deps.Carbon.GetReport)
 				})
 			}
 
-			// VAT OSS — admin only
+			// VAT OSS — requires reports.view
 			r.Route("/vat-oss", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermReportsView))
 				r.Get("/rates", deps.VATOSS.GetAllRates)
 				r.Get("/rates/{country}", deps.VATOSS.GetCountryRates)
 				r.Post("/calculate", deps.VATOSS.Calculate)
@@ -1026,9 +976,9 @@ func New(deps RouterDeps) *chi.Mux {
 			r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
 				Get("/barcode/{code}", deps.Barcode.Lookup)
 
-			// Price lists — admin only
+			// Price lists — requires settings.manage
 			r.Route("/price-lists", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermSettingsManage))
 				r.Get("/", deps.PriceList.List)
 				r.Post("/", deps.PriceList.Create)
 				r.Get("/{id}", deps.PriceList.Get)
@@ -1039,25 +989,20 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}/items/{itemId}", deps.PriceList.DeleteItem)
 			})
 
-			// Message templates — read: any authenticated user; write: admin only
+			// Message templates
 			if deps.MessageTemplate != nil {
 				r.Route("/message-templates", func(r chi.Router) {
-					r.Get("/", deps.MessageTemplate.List)
-					r.Get("/{id}", deps.MessageTemplate.Get)
-
-					// Write operations — admin only
-					r.Group(func(r chi.Router) {
-						r.Use(middleware.RequireRole("admin"))
-						r.Post("/", deps.MessageTemplate.Create)
-						r.Put("/{id}", deps.MessageTemplate.Update)
-						r.Delete("/{id}", deps.MessageTemplate.Delete)
-					})
+					r.With(requirePermission(model.PermSettingsManage)).Get("/", deps.MessageTemplate.List)
+					r.With(requirePermission(model.PermSettingsManage)).Get("/{id}", deps.MessageTemplate.Get)
+					r.With(requirePermission(model.PermSettingsManage)).Post("/", deps.MessageTemplate.Create)
+					r.With(requirePermission(model.PermSettingsManage)).Put("/{id}", deps.MessageTemplate.Update)
+					r.With(requirePermission(model.PermSettingsManage)).Delete("/{id}", deps.MessageTemplate.Delete)
 				})
 			}
 
-			// Warehouse documents — admin only
+			// Warehouse documents — requires warehouses.manage
 			r.Route("/warehouse-documents", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Get("/", deps.WarehouseDocument.List)
 				r.Post("/", deps.WarehouseDocument.Create)
 				r.Get("/{id}", deps.WarehouseDocument.Get)
@@ -1067,9 +1012,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/{id}/cancel", deps.WarehouseDocument.Cancel)
 			})
 
-			// Stocktakes (inventory counting) — admin only
+			// Stocktakes (inventory counting) — requires warehouses.manage
 			r.Route("/stocktakes", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Get("/", deps.Stocktake.List)
 				r.Post("/", deps.Stocktake.Create)
 				r.Get("/{id}", deps.Stocktake.Get)
@@ -1081,9 +1026,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/{id}/items", deps.Stocktake.ListItems)
 			})
 
-			// AI auto-categorization — admin-only, rate limited (calls external APIs)
+			// AI auto-categorization — requires settings.manage, rate limited (calls external APIs)
 			r.Route("/ai", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermSettingsManage))
 				r.Use(middleware.RateLimitWith(deps.RateLimiter, 20, 1*time.Minute))
 				r.Post("/categorize", deps.AI.Categorize)
 				r.Post("/describe", deps.AI.Describe)
@@ -1092,9 +1037,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/translate", deps.AI.Translate)
 			})
 
-			// Marketing (Mailchimp) — admin only
+			// Marketing (Mailchimp) — requires integrations.manage
 			r.Route("/marketing", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Post("/sync", deps.Marketing.Sync)
 				r.Get("/status", deps.Marketing.Status)
 				r.Post("/campaigns", deps.Marketing.CreateCampaign)
@@ -1103,9 +1048,9 @@ func New(deps RouterDeps) *chi.Mux {
 			// Helpdesk (Freshdesk) — any authenticated user
 			r.Get("/helpdesk/tickets", deps.Helpdesk.ListAllTickets)
 
-			// Exchange rates — admin only
+			// Exchange rates — requires settings.manage
 			r.Route("/exchange-rates", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermSettingsManage))
 				r.Get("/", deps.ExchangeRate.List)
 				r.Post("/", deps.ExchangeRate.Create)
 				r.Post("/fetch", deps.ExchangeRate.FetchNBP)
@@ -1115,9 +1060,9 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Delete("/{id}", deps.ExchangeRate.Delete)
 			})
 
-			// Roles (RBAC) — admin only
+			// Roles (RBAC) — requires users.manage
 			r.Route("/roles", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermUsersManage))
 				r.Get("/", deps.Role.List)
 				r.Get("/permissions", deps.Role.ListPermissions)
 				r.Post("/", deps.Role.Create)
@@ -1145,9 +1090,9 @@ func New(deps RouterDeps) *chi.Mux {
 			// Shipping rate comparison — any authenticated user
 			r.Post("/shipping/rates", deps.Rate.GetRates)
 
-			// Repricing engine — admin only
+			// Repricing engine — requires integrations.manage
 			r.Route("/repricing", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Get("/rules", deps.Repricing.ListRules)
 				r.Post("/rules", deps.Repricing.CreateRule)
 				r.Get("/rules/{id}", deps.Repricing.GetRule)
@@ -1159,10 +1104,10 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/summary", deps.Repricing.GetSummary)
 			})
 
-			// Stock sync — admin only
+			// Stock sync — requires integrations.manage
 			if deps.StockSync != nil {
 				r.Route("/stock-sync", func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
+					r.Use(requirePermission(model.PermIntegrationsManage))
 					r.Get("/channels", deps.StockSync.ListChannels)
 					r.Post("/channels", deps.StockSync.CreateChannel)
 					r.Get("/channels/{id}", deps.StockSync.GetChannel)
@@ -1179,10 +1124,10 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 			}
 
-			// Listing sync — admin only
+			// Listing sync — requires integrations.manage
 			if deps.ListingSync != nil {
 				r.Route("/listing-sync/configs", func(r chi.Router) {
-					r.Use(middleware.RequireRole("admin"))
+					r.Use(requirePermission(model.PermIntegrationsManage))
 					r.Get("/", deps.ListingSync.ListConfigs)
 					r.Post("/", deps.ListingSync.CreateConfig)
 					r.Get("/{id}", deps.ListingSync.GetConfig)
@@ -1195,9 +1140,9 @@ func New(deps RouterDeps) *chi.Mux {
 				})
 			}
 
-			// Payment reconciliation — admin only
+			// Payment reconciliation — requires reports.view
 			r.Route("/reconciliation", func(r chi.Router) {
-				r.Use(middleware.RequireRole("admin"))
+				r.Use(requirePermission(model.PermReportsView))
 				r.Post("/settlements", deps.Reconciliation.CreateSettlement)
 				r.Get("/settlements", deps.Reconciliation.ListSettlements)
 				r.Get("/settlements/{id}", deps.Reconciliation.GetSettlement)
@@ -1211,7 +1156,7 @@ func New(deps RouterDeps) *chi.Mux {
 		})
 
 		// CSV import for reconciliation — outside MaxBodySize group (uses its own 10MB limit)
-		r.With(middleware.RequireRole("admin")).Post("/reconciliation/import-csv", deps.Reconciliation.ImportCSV)
+		r.With(requirePermission(model.PermReportsView)).Post("/reconciliation/import-csv", deps.Reconciliation.ImportCSV)
 	})
 
 	return r
