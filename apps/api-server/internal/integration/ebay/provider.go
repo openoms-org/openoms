@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
@@ -121,7 +120,10 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 	newCursor := cursor
 
 	for _, o := range resp.Orders {
-		mo := p.mapEbayOrder(&o)
+		mo, err := p.mapEbayOrder(&o)
+		if err != nil {
+			return nil, cursor, fmt.Errorf("ebay: map order %s: %w", o.OrderID, err)
+		}
 		orders = append(orders, mo)
 
 		if o.CreationDate > newCursor {
@@ -138,7 +140,10 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 	if err != nil {
 		return nil, fmt.Errorf("ebay: get order %s: %w", externalID, err)
 	}
-	mo := p.mapEbayOrder(order)
+	mo, err := p.mapEbayOrder(order)
+	if err != nil {
+		return nil, fmt.Errorf("ebay: map order %s: %w", externalID, err)
+	}
 	return &mo, nil
 }
 
@@ -286,9 +291,12 @@ func (p *Provider) ActivateOffer(ctx context.Context, externalOfferID string) er
 }
 
 // mapEbayOrder converts an eBay SDK Order to the normalized MarketplaceOrder.
-func (p *Provider) mapEbayOrder(o *ebaysdk.Order) integration.MarketplaceOrder {
+func (p *Provider) mapEbayOrder(o *ebaysdk.Order) (integration.MarketplaceOrder, error) {
 	// Parse total amount
-	totalAmount, _ := strconv.ParseFloat(o.PricingSummary.Total.Value, 64)
+	totalAmount, err := integration.ParseMoneyString("pricingSummary.total.value", o.PricingSummary.Total.Value)
+	if err != nil {
+		return integration.MarketplaceOrder{}, err
+	}
 
 	mo := integration.MarketplaceOrder{
 		ExternalID:     o.OrderID,
@@ -345,9 +353,15 @@ func (p *Provider) mapEbayOrder(o *ebaysdk.Order) integration.MarketplaceOrder {
 	}
 
 	// Line items
-	for _, li := range o.LineItems {
-		unitPrice, _ := strconv.ParseFloat(li.LineItemCost.Value, 64)
-		totalPrice, _ := strconv.ParseFloat(li.Total.Value, 64)
+	for i, li := range o.LineItems {
+		unitPrice, err := integration.ParseMoneyString(fmt.Sprintf("lineItems[%d].lineItemCost.value", i), li.LineItemCost.Value)
+		if err != nil {
+			return integration.MarketplaceOrder{}, err
+		}
+		totalPrice, err := integration.ParseMoneyString(fmt.Sprintf("lineItems[%d].total.value", i), li.Total.Value)
+		if err != nil {
+			return integration.MarketplaceOrder{}, err
+		}
 
 		mo.Items = append(mo.Items, integration.MarketplaceOrderItem{
 			ExternalID: li.LineItemID,
@@ -367,7 +381,7 @@ func (p *Provider) mapEbayOrder(o *ebaysdk.Order) integration.MarketplaceOrder {
 		"ebay_payment_status":     o.OrderPaymentStat,
 	}
 
-	return mo
+	return mo, nil
 }
 
 func getStringOr(data map[string]any, key, fallback string) string {
