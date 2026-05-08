@@ -152,6 +152,48 @@ func TestDoWithRequestBody(t *testing.T) {
 	}
 }
 
+func TestDoRejectsOversizedSuccessResponse(t *testing.T) {
+	largeJSON := `{"value":"` + strings.Repeat("x", 64) + `"}`
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(largeJSON))
+	})
+	defer srv.Close()
+
+	c := NewClient("myshop", "shpat_test-token",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithMaxResponseBytes(16),
+	)
+
+	var result map[string]string
+	err := c.do(context.Background(), "GET", "/large.json", nil, &result)
+	if !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
+	}
+}
+
+func TestDoRejectsOversizedErrorResponse(t *testing.T) {
+	largeJSON := `{"errors":"` + strings.Repeat("x", 64) + `"}`
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(largeJSON))
+	})
+	defer srv.Close()
+
+	c := NewClient("myshop", "shpat_test-token",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithMaxResponseBytes(16),
+	)
+
+	err := c.do(context.Background(), "GET", "/large-error.json", nil, nil)
+	if !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
+	}
+}
+
 func TestOrdersList(t *testing.T) {
 	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

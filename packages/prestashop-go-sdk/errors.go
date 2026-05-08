@@ -8,11 +8,12 @@ import (
 
 // Sentinel errors for API responses.
 var (
-	ErrUnauthorized = errors.New("prestashop: unauthorized")
-	ErrForbidden    = errors.New("prestashop: forbidden")
-	ErrNotFound     = errors.New("prestashop: not found")
-	ErrRateLimited  = errors.New("prestashop: rate limited")
-	ErrServerError  = errors.New("prestashop: server error")
+	ErrUnauthorized     = errors.New("prestashop: unauthorized")
+	ErrForbidden        = errors.New("prestashop: forbidden")
+	ErrNotFound         = errors.New("prestashop: not found")
+	ErrRateLimited      = errors.New("prestashop: rate limited")
+	ErrServerError      = errors.New("prestashop: server error")
+	ErrResponseTooLarge = errors.New("prestashop: response too large")
 )
 
 // APIError represents an error response from the PrestaShop API.

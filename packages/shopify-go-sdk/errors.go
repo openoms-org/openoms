@@ -8,11 +8,12 @@ import (
 
 // Sentinel errors for API responses.
 var (
-	ErrUnauthorized = errors.New("shopify: unauthorized")
-	ErrForbidden    = errors.New("shopify: forbidden")
-	ErrNotFound     = errors.New("shopify: not found")
-	ErrRateLimited  = errors.New("shopify: rate limited")
-	ErrServerError  = errors.New("shopify: server error")
+	ErrUnauthorized     = errors.New("shopify: unauthorized")
+	ErrForbidden        = errors.New("shopify: forbidden")
+	ErrNotFound         = errors.New("shopify: not found")
+	ErrRateLimited      = errors.New("shopify: rate limited")
+	ErrServerError      = errors.New("shopify: server error")
+	ErrResponseTooLarge = errors.New("shopify: response too large")
 )
 
 // APIError represents an error response from the Shopify API.

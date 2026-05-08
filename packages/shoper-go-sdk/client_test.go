@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -131,6 +132,50 @@ func TestDoWithRequestBody(t *testing.T) {
 	}
 }
 
+func TestDoRejectsOversizedSuccessResponse(t *testing.T) {
+	largeJSON := `{"value":"` + strings.Repeat("x", 64) + `"}`
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(largeJSON))
+	})
+	defer srv.Close()
+
+	c := NewClient("https://shop.shoper.pl", "client-id", "client-secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithAccessToken("test-token"),
+		WithMaxResponseBytes(16),
+	)
+
+	var result map[string]string
+	err := c.do(context.Background(), "GET", "/large", nil, &result)
+	if !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
+	}
+}
+
+func TestDoRejectsOversizedErrorResponse(t *testing.T) {
+	largeJSON := `{"error_description":"` + strings.Repeat("x", 64) + `"}`
+	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(largeJSON))
+	})
+	defer srv.Close()
+
+	c := NewClient("https://shop.shoper.pl", "client-id", "client-secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithAccessToken("test-token"),
+		WithMaxResponseBytes(16),
+	)
+
+	err := c.do(context.Background(), "GET", "/large-error", nil, nil)
+	if !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
+	}
+}
+
 func TestAuthenticate(t *testing.T) {
 	var authCalled atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -208,6 +253,29 @@ func TestAuthenticateError(t *testing.T) {
 	}
 	if apiErr.StatusCode != 401 {
 		t.Errorf("StatusCode = %d, want 401", apiErr.StatusCode)
+	}
+}
+
+func TestAuthenticateRejectsOversizedResponse(t *testing.T) {
+	largeJSON := `{"access_token":"` + strings.Repeat("x", 64) + `","expires_in":3600}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/webapi/rest/auth" {
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(largeJSON))
+	}))
+	defer srv.Close()
+
+	c := NewClient("https://shop.shoper.pl", "cid", "csecret",
+		WithBaseURL(srv.URL+"/webapi/rest"),
+		WithHTTPClient(srv.Client()),
+		WithMaxResponseBytes(16),
+	)
+
+	err := c.do(context.Background(), "GET", "/orders/1", nil, nil)
+	if !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
 	}
 }
 
