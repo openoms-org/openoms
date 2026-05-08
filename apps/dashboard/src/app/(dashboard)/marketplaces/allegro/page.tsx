@@ -36,6 +36,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { apiClient } from "@/lib/api-client";
+import { useOAuthPopupMonitor } from "@/hooks/use-oauth-popup-monitor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -148,6 +149,7 @@ function AllegroMainPage() {
     () => integrations?.find((i) => i.provider === "allegro") ?? null,
     [integrations]
   );
+  const { start: startOAuthPopupMonitor } = useOAuthPopupMonitor();
 
   if (isLoading) {
     return (
@@ -176,9 +178,16 @@ function AllegroMainPage() {
         </div>
 
         {allegro ? (
-          <ConnectedState integration={allegro} onRefetch={refetch} />
+          <ConnectedState
+            integration={allegro}
+            onRefetch={refetch}
+            startOAuthPopupMonitor={startOAuthPopupMonitor}
+          />
         ) : (
-          <SetupState onCreated={refetch} />
+          <SetupState
+            onCreated={refetch}
+            startOAuthPopupMonitor={startOAuthPopupMonitor}
+          />
         )}
       </div>
     </AdminGuard>
@@ -219,7 +228,15 @@ function CopyableField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SetupState({ onCreated }: { onCreated: () => void }) {
+type StartOAuthPopupMonitor = ReturnType<typeof useOAuthPopupMonitor>["start"];
+
+function SetupState({
+  onCreated,
+  startOAuthPopupMonitor,
+}: {
+  onCreated: () => void;
+  startOAuthPopupMonitor: StartOAuthPopupMonitor;
+}) {
   const t = useTranslations("marketplaces");
   const createIntegration = useCreateIntegration();
   const [clientId, setClientId] = useState("");
@@ -257,19 +274,16 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
         return;
       }
 
-      const poll = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(poll);
-          setIsAuthorizing(false);
-          onDone();
-        }
-      }, 500);
+      startOAuthPopupMonitor(popup, () => {
+        setIsAuthorizing(false);
+        onDone();
+      });
     } catch {
       toast.error(t("allegroAuthUrlFetchError"));
       setIsAuthorizing(false);
       onDone();
     }
-  }, [t]);
+  }, [startOAuthPopupMonitor, t]);
 
   const handleSave = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
@@ -439,9 +453,11 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 function ConnectedState({
   integration,
   onRefetch,
+  startOAuthPopupMonitor,
 }: {
   integration: Integration;
   onRefetch: () => void;
+  startOAuthPopupMonitor: StartOAuthPopupMonitor;
 }) {
   const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
@@ -525,20 +541,17 @@ function ConnectedState({
           return;
         }
 
-        const poll = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(poll);
-            setIsReauthorizing(false);
-            onRefetch();
-          }
-        }, 500);
+        startOAuthPopupMonitor(popup, () => {
+          setIsReauthorizing(false);
+          onRefetch();
+        });
       } catch {
         toast.error(t("authUrlFetchError"));
         setIsReauthorizing(false);
       }
     };
     doAuth();
-  }, [onRefetch, t]);
+  }, [onRefetch, startOAuthPopupMonitor, t]);
 
   // Show OAuth prompt if status is not active OR if there's no last_sync_at (never authorized successfully)
   const needsOAuth = integration.status !== "active" || !integration.last_sync_at;

@@ -32,6 +32,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { apiClient } from "@/lib/api-client";
+import { useOAuthPopupMonitor } from "@/hooks/use-oauth-popup-monitor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -190,6 +191,7 @@ function AmazonMainPage() {
     () => integrations?.find((i) => i.provider === "amazon") ?? null,
     [integrations]
   );
+  const { start: startOAuthPopupMonitor } = useOAuthPopupMonitor();
 
   if (isLoading) {
     return (
@@ -218,9 +220,16 @@ function AmazonMainPage() {
         </div>
 
         {amazon ? (
-          <ConnectedState integration={amazon} onRefetch={refetch} />
+          <ConnectedState
+            integration={amazon}
+            onRefetch={refetch}
+            startOAuthPopupMonitor={startOAuthPopupMonitor}
+          />
         ) : (
-          <SetupState onCreated={refetch} />
+          <SetupState
+            onCreated={refetch}
+            startOAuthPopupMonitor={startOAuthPopupMonitor}
+          />
         )}
       </div>
     </AdminGuard>
@@ -261,7 +270,15 @@ function CopyableField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SetupState({ onCreated }: { onCreated: () => void }) {
+type StartOAuthPopupMonitor = ReturnType<typeof useOAuthPopupMonitor>["start"];
+
+function SetupState({
+  onCreated,
+  startOAuthPopupMonitor,
+}: {
+  onCreated: () => void;
+  startOAuthPopupMonitor: StartOAuthPopupMonitor;
+}) {
   const t = useTranslations("marketplaces");
   const createIntegration = useCreateIntegration();
   const [applicationId, setApplicationId] = useState("");
@@ -299,20 +316,17 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
           return;
         }
 
-        const poll = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(poll);
-            setIsAuthorizing(false);
-            onDone();
-          }
-        }, 500);
+        startOAuthPopupMonitor(popup, () => {
+          setIsAuthorizing(false);
+          onDone();
+        });
       } catch {
         toast.error(t("amazon.authUrlError"));
         setIsAuthorizing(false);
         onDone();
       }
     },
-    [t]
+    [startOAuthPopupMonitor, t]
   );
 
   const handleSaveAndAuthorize = () => {
@@ -596,9 +610,11 @@ function SetupState({ onCreated }: { onCreated: () => void }) {
 function ConnectedState({
   integration,
   onRefetch,
+  startOAuthPopupMonitor,
 }: {
   integration: Integration;
   onRefetch: () => void;
+  startOAuthPopupMonitor: StartOAuthPopupMonitor;
 }) {
   const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
@@ -665,20 +681,17 @@ function ConnectedState({
           return;
         }
 
-        const poll = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(poll);
-            setIsReauthorizing(false);
-            onRefetch();
-          }
-        }, 500);
+        startOAuthPopupMonitor(popup, () => {
+          setIsReauthorizing(false);
+          onRefetch();
+        });
       } catch {
         toast.error(t("amazon.authUrlError"));
         setIsReauthorizing(false);
       }
     };
     doAuth();
-  }, [onRefetch, t]);
+  }, [onRefetch, startOAuthPopupMonitor, t]);
 
   const needsOAuth = integration.status !== "active";
 
