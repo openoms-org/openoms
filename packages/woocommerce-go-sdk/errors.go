@@ -8,11 +8,12 @@ import (
 
 // Sentinel errors for API responses.
 var (
-	ErrUnauthorized = errors.New("woocommerce: unauthorized")
-	ErrForbidden    = errors.New("woocommerce: forbidden")
-	ErrNotFound     = errors.New("woocommerce: not found")
-	ErrRateLimited  = errors.New("woocommerce: rate limited")
-	ErrServerError  = errors.New("woocommerce: server error")
+	ErrUnauthorized     = errors.New("woocommerce: unauthorized")
+	ErrForbidden        = errors.New("woocommerce: forbidden")
+	ErrNotFound         = errors.New("woocommerce: not found")
+	ErrRateLimited      = errors.New("woocommerce: rate limited")
+	ErrServerError      = errors.New("woocommerce: server error")
+	ErrResponseTooLarge = errors.New("woocommerce: response too large")
 )
 
 // APIError represents an error response from the WooCommerce API.

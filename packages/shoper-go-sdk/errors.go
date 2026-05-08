@@ -8,11 +8,12 @@ import (
 
 // Sentinel errors for API responses.
 var (
-	ErrUnauthorized = errors.New("shoper: unauthorized")
-	ErrForbidden    = errors.New("shoper: forbidden")
-	ErrNotFound     = errors.New("shoper: not found")
-	ErrRateLimited  = errors.New("shoper: rate limited")
-	ErrServerError  = errors.New("shoper: server error")
+	ErrUnauthorized     = errors.New("shoper: unauthorized")
+	ErrForbidden        = errors.New("shoper: forbidden")
+	ErrNotFound         = errors.New("shoper: not found")
+	ErrRateLimited      = errors.New("shoper: rate limited")
+	ErrServerError      = errors.New("shoper: server error")
+	ErrResponseTooLarge = errors.New("shoper: response too large")
 )
 
 // APIError represents an error response from the Shoper API.

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -135,6 +136,48 @@ func TestDoWithRequestBody(t *testing.T) {
 	}
 	if len(gotBody) == 0 {
 		t.Error("expected request body, got empty")
+	}
+}
+
+func TestDoRejectsOversizedSuccessResponse(t *testing.T) {
+	largeJSON := `{"value":"` + strings.Repeat("x", 64) + `"}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(largeJSON))
+	}))
+	defer srv.Close()
+
+	c := NewClient("https://shop.com", "key",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithMaxResponseBytes(16),
+	)
+
+	var result map[string]string
+	err := c.do(context.Background(), "GET", "/large", nil, &result)
+	if !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
+	}
+}
+
+func TestDoRejectsOversizedErrorResponse(t *testing.T) {
+	largeJSON := `{"message":"` + strings.Repeat("x", 64) + `"}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(largeJSON))
+	}))
+	defer srv.Close()
+
+	c := NewClient("https://shop.com", "key",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithMaxResponseBytes(16),
+	)
+
+	err := c.do(context.Background(), "GET", "/large-error", nil, nil)
+	if !errors.Is(err, ErrResponseTooLarge) {
+		t.Fatalf("expected ErrResponseTooLarge, got %v", err)
 	}
 }
 

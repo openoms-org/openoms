@@ -4,20 +4,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 )
 
-const defaultAPIVersion = "2025-01"
+const (
+	defaultAPIVersion = "2025-01"
+	// DefaultMaxResponseBytes is the maximum JSON response size accepted by default.
+	DefaultMaxResponseBytes int64 = 10 * 1024 * 1024
+)
 
 // Client is the Shopify Admin REST API client.
 // Authentication uses a private app access token via X-Shopify-Access-Token header.
 type Client struct {
-	httpClient  *http.Client
-	baseURL     string
-	accessToken string
+	httpClient       *http.Client
+	baseURL          string
+	accessToken      string
+	maxResponseBytes int64
 
 	Orders    *OrderService
 	Products  *ProductService
@@ -40,9 +46,10 @@ func NewClient(shopDomain, accessToken string, opts ...Option) *Client {
 	}
 
 	c := &Client{
-		httpClient:  http.DefaultClient,
-		baseURL:     shopDomain + "/admin/api/" + defaultAPIVersion,
-		accessToken: accessToken,
+		httpClient:       http.DefaultClient,
+		baseURL:          shopDomain + "/admin/api/" + defaultAPIVersion,
+		accessToken:      accessToken,
+		maxResponseBytes: DefaultMaxResponseBytes,
 	}
 
 	for _, opt := range opts {
@@ -81,6 +88,15 @@ func WithBaseURL(url string) Option {
 	}
 }
 
+// WithMaxResponseBytes sets the maximum JSON response size accepted by the client.
+func WithMaxResponseBytes(maxBytes int64) Option {
+	return func(c *Client) {
+		if maxBytes > 0 {
+			c.maxResponseBytes = maxBytes
+		}
+	}
+}
+
 // do executes an authenticated API request.
 func (c *Client) do(ctx context.Context, method, path string, body any, result any) error {
 	var bodyReader io.Reader
@@ -111,7 +127,10 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 
 	if resp.StatusCode >= 400 {
 		apiErr := &APIError{StatusCode: resp.StatusCode}
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+		respBody, err := c.readResponseBody(resp)
+		if err != nil {
+			return err
+		}
 		if len(respBody) > 0 {
 			_ = json.Unmarshal(respBody, apiErr)
 			if apiErr.Message == "" {
@@ -131,10 +150,65 @@ func (c *Client) do(ctx context.Context, method, path string, body any, result a
 	}
 
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		if err := c.decodeResponseJSON(resp, result); err != nil {
 			return fmt.Errorf("shopify: decode response: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func (c *Client) decodeResponseJSON(resp *http.Response, result any) error {
+	if resp.ContentLength > c.maxResponseBytes {
+		return fmt.Errorf("%w: content length %d exceeds max %d bytes", ErrResponseTooLarge, resp.ContentLength, c.maxResponseBytes)
+	}
+	reader := &responseLimitReader{
+		r:         resp.Body,
+		remaining: c.maxResponseBytes + 1,
+	}
+	if err := json.NewDecoder(reader).Decode(result); err != nil {
+		if errors.Is(err, ErrResponseTooLarge) {
+			return fmt.Errorf("%w: max %d bytes", ErrResponseTooLarge, c.maxResponseBytes)
+		}
+		return err
+	}
+	return nil
+}
+
+func (c *Client) readResponseBody(resp *http.Response) ([]byte, error) {
+	if resp.ContentLength > c.maxResponseBytes {
+		return nil, fmt.Errorf("%w: content length %d exceeds max %d bytes", ErrResponseTooLarge, resp.ContentLength, c.maxResponseBytes)
+	}
+	reader := &responseLimitReader{
+		r:         resp.Body,
+		remaining: c.maxResponseBytes + 1,
+	}
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		if errors.Is(err, ErrResponseTooLarge) {
+			return nil, fmt.Errorf("%w: max %d bytes", ErrResponseTooLarge, c.maxResponseBytes)
+		}
+		return nil, err
+	}
+	return data, nil
+}
+
+type responseLimitReader struct {
+	r         io.Reader
+	remaining int64
+}
+
+func (r *responseLimitReader) Read(p []byte) (int, error) {
+	if r.remaining <= 0 {
+		return 0, ErrResponseTooLarge
+	}
+	if int64(len(p)) > r.remaining {
+		p = p[:r.remaining]
+	}
+	n, err := r.r.Read(p)
+	r.remaining -= int64(n)
+	if r.remaining <= 0 && n > 0 {
+		return n, ErrResponseTooLarge
+	}
+	return n, err
 }
