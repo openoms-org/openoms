@@ -276,6 +276,7 @@ func run() error {
 	messageTemplateRepo := repository.NewMessageTemplateRepository()
 
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
+	authService.SetRoleRepo(roleRepo)
 
 	// Login lockout (per-account brute-force protection)
 	if redisClient != nil {

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -69,6 +70,12 @@ func (s *RoleService) EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID)
 				return err
 			}
 			if existing != nil {
+				if existing.IsSystem && !slices.Equal(existing.Permissions, sr.Permissions) {
+					perms := slices.Clone(sr.Permissions)
+					if err := s.roleRepo.Update(ctx, tx, existing.ID, model.UpdateRoleRequest{Permissions: perms}); err != nil {
+						return err
+					}
+				}
 				continue
 			}
 

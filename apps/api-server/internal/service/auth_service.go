@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -53,12 +54,18 @@ type AuthService struct {
 	userRepo      repository.UserRepo
 	tenantRepo    repository.TenantRepo
 	auditRepo     repository.AuditRepo
+	roleRepo      repository.RoleRepo
 	tokenService  *TokenService
 	passwordSvc   *PasswordService
 	pool          *pgxpool.Pool
 	encryptionKey []byte
 	lockout       *LoginLockout
 	refreshStore  RefreshTokenStore
+}
+
+// SetRoleRepo configures role permission resolution for access-token claims.
+func (s *AuthService) SetRoleRepo(roleRepo repository.RoleRepo) {
+	s.roleRepo = roleRepo
 }
 
 // SetLoginLockout configures per-account login lockout tracking.
@@ -103,6 +110,36 @@ func hashRefreshToken(token string) string {
 
 // storeRefreshTokenFamily creates a new token family and stores the first token entry.
 // Called after generating a refresh token during Login, Register, and Verify2FALogin.
+func (s *AuthService) applyEffectivePermissions(ctx context.Context, user *model.User) error {
+	if user == nil {
+		return nil
+	}
+	if user.RoleID == nil {
+		user.Permissions = model.SystemPermissionsForRole(user.Role)
+		return nil
+	}
+	if s.roleRepo == nil || s.pool == nil {
+		user.Permissions = []string{}
+		return nil
+	}
+
+	var role *model.Role
+	err := database.WithTenant(ctx, s.pool, user.TenantID, func(tx pgx.Tx) error {
+		var findErr error
+		role, findErr = s.roleRepo.FindByID(ctx, tx, *user.RoleID)
+		return findErr
+	})
+	if err != nil {
+		return fmt.Errorf("resolve user role permissions: %w", err)
+	}
+	if role == nil || role.Permissions == nil {
+		user.Permissions = []string{}
+		return nil
+	}
+	user.Permissions = slices.Clone(role.Permissions)
+	return nil
+}
+
 func (s *AuthService) storeRefreshTokenFamily(ctx context.Context, refreshToken, userID, tenantID string) {
 	if s.refreshStore == nil {
 		return
@@ -305,6 +342,9 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 	if err != nil {
 		return nil, "", err
 	}
+	if err := s.applyEffectivePermissions(ctx, user); err != nil {
+		return nil, "", err
+	}
 
 	accessToken, err := s.tokenService.GenerateAccessToken(*user)
 	if err != nil {
@@ -425,6 +465,10 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		}, nil
 	}
 
+	if err := s.applyEffectivePermissions(ctx, &user); err != nil {
+		return nil, err
+	}
+
 	accessToken, err := s.tokenService.GenerateAccessToken(user)
 	if err != nil {
 		return nil, fmt.Errorf("generate access token: %w", err)
@@ -496,6 +540,9 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 	// Validate the TOTP code
 	if !totp.Validate(code, string(secretBytes)) {
 		return nil, "", ErrInvalid2FACode
+	}
+	if err := s.applyEffectivePermissions(ctx, user); err != nil {
+		return nil, "", err
 	}
 
 	accessToken, err := s.tokenService.GenerateAccessToken(*user)
@@ -779,6 +826,9 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 
 	if user.LastLogoutAt != nil && claims.IssuedAt != nil && claims.IssuedAt.Before(*user.LastLogoutAt) {
 		return nil, "", fmt.Errorf("refresh token revoked by logout")
+	}
+	if err := s.applyEffectivePermissions(ctx, user); err != nil {
+		return nil, "", err
 	}
 
 	accessToken, err := s.tokenService.GenerateAccessToken(*user)

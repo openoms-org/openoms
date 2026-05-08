@@ -78,8 +78,13 @@ var SystemRoleOwnerPermissions = AllPermissions
 
 // SystemRoleAdminPermissions — full access except users.manage.
 var SystemRoleAdminPermissions = func() []string {
-	perms := make([]string, 0, len(AllPermissions))
-	perms = append(perms, AllPermissions...)
+	perms := make([]string, 0, len(AllPermissions)-1)
+	for _, p := range AllPermissions {
+		if p == PermUsersManage {
+			continue
+		}
+		perms = append(perms, p)
+	}
 	return perms
 }()
 
@@ -92,6 +97,22 @@ var SystemRoleMemberPermissions = []string{
 	PermCustomersView, PermCustomersCreate, PermCustomersEdit,
 	PermInvoicesView, PermInvoicesCreate,
 	PermReportsView,
+}
+
+// SystemPermissionsForRole returns default permissions for a legacy system role.
+func SystemPermissionsForRole(role string) []string {
+	var permissions []string
+	switch role {
+	case "owner":
+		permissions = SystemRoleOwnerPermissions
+	case "admin":
+		permissions = SystemRoleAdminPermissions
+	case "member":
+		permissions = SystemRoleMemberPermissions
+	default:
+		return []string{}
+	}
+	return slices.Clone(permissions)
 }
 
 // validPermissionSet is a lookup set for fast validation.

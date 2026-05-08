@@ -12,11 +12,12 @@ import (
 // to avoid circular dependencies between service and middleware.
 type AuthClaims struct {
 	jwt.RegisteredClaims
-	TenantID uuid.UUID `json:"tid"`
-	Email    string    `json:"email"`
-	Role     string    `json:"role"`
-	RoleID   uuid.UUID `json:"role_id,omitempty"`
-	Type     string    `json:"type,omitempty"`
+	TenantID    uuid.UUID `json:"tid"`
+	Email       string    `json:"email"`
+	Role        string    `json:"role"`
+	RoleID      uuid.UUID `json:"role_id,omitempty"`
+	Permissions []string  `json:"permissions"`
+	Type        string    `json:"type,omitempty"`
 }
 
 // LoginRequest is the body of POST /v1/auth/login.
