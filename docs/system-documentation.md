@@ -905,7 +905,7 @@ Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS 
 | GET | `/v1/product-categories` | Kategorie produktow (read-only) |
 | POST | `/v1/webhooks/{provider}/{tenant_id}` | Webhook przychodzacy; znani providerzy wymagaja skonfigurowanego sekretu HMAC |
 | POST | `/v1/webhooks/allegro` | Webhook Allegro (HMAC) |
-| POST | `/v1/webhooks/inpost` | Webhook InPost (HMAC-SHA256) |
+| POST | `/v1/webhooks/inpost` | Webhook InPost (HMAC-SHA256); status przesylki jest lookupowany przez jawny privileged `WORKER_DATABASE_URL`, a aktualizacja wykonywana w tenant context |
 | POST | `/v1/webhooks/stripe` | Webhook Stripe (Stripe-Signature) |
 | GET | `/health` | Health check (no version disclosed) |
 | GET | `/metrics` | Prometheus metrics (requires Bearer token) |

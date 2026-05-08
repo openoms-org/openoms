@@ -28,6 +28,10 @@ var (
 	ErrOrderNotFoundForShipment = errors.New("order not found for shipment")
 )
 
+type shipmentLookupQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 // ShipmentService handles business logic for shipment management.
 type ShipmentService struct {
 	shipmentRepo      repository.ShipmentRepo
@@ -36,10 +40,16 @@ type ShipmentService struct {
 	auditRepo         repository.AuditRepo
 	tenantRepo        repository.TenantRepo
 	pool              *pgxpool.Pool
+	workerQuerier     shipmentLookupQuerier
 	webhookDispatch   *WebhookDispatchService
 	smsService        *SMSService
 	automationService *AutomationService
 	allegroSync       *AllegroSyncService
+}
+
+// SetWorkerPool sets the privileged database pool used for cross-tenant webhook lookups.
+func (s *ShipmentService) SetWorkerPool(workerPool *pgxpool.Pool) {
+	s.workerQuerier = workerPool
 }
 
 // SetSMSService sets the SMS service for sending SMS notifications on shipment status change.
@@ -634,12 +644,17 @@ func (s *ShipmentService) estimateCarbon(ctx context.Context, tx pgx.Tx, tenantI
 // UpdateStatusByTrackingNumber finds a shipment by tracking number and provider
 // (cross-tenant) and updates its status. Used by webhook handlers.
 func (s *ShipmentService) UpdateStatusByTrackingNumber(ctx context.Context, trackingNumber, provider, newStatus string) error {
-	// Cross-tenant lookup — uses pool directly (no WithTenant).
+	if s.workerQuerier == nil {
+		return errors.New("worker database pool is not configured")
+	}
+
+	// Cross-tenant lookup uses the explicit privileged worker pool. The normal
+	// app pool is RLS-scoped and must not be used for public webhook lookups.
 	// Scoped by both tracking_number AND provider to avoid ambiguity when
 	// different carriers reuse the same tracking number format.
 	var shipmentID, tenantID uuid.UUID
 	var oldStatus string
-	err := s.pool.QueryRow(ctx,
+	err := s.workerQuerier.QueryRow(ctx,
 		"SELECT id, tenant_id, status FROM shipments WHERE tracking_number = $1 AND provider = $2 LIMIT 1",
 		trackingNumber, provider,
 	).Scan(&shipmentID, &tenantID, &oldStatus)

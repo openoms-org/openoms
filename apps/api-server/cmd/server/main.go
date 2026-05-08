@@ -307,6 +307,7 @@ func run() error {
 	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
 	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, productRepo, auditRepo, tenantRepo, pool, webhookDispatchService)
+	shipmentService.SetWorkerPool(workerPool)
 	productService := service.NewProductService(productRepo, auditRepo, pool, webhookDispatchService)
 	integrationService := service.NewIntegrationService(integrationRepo, auditRepo, pool, encryptionKey)
 	labelService := service.NewLabelService(

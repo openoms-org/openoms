@@ -50,6 +50,64 @@ func (s *stubProductRepo) Update(_ context.Context, _ pgx.Tx, _ uuid.UUID, _ mod
 }
 func (s *stubProductRepo) Delete(_ context.Context, _ pgx.Tx, _ uuid.UUID) error { return nil }
 
+type fakeShipmentLookupQuerier struct {
+	query string
+	args  []any
+	row   pgx.Row
+}
+
+func (f *fakeShipmentLookupQuerier) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
+	f.query = sql
+	f.args = args
+	return f.row
+}
+
+type fakeShipmentLookupRow struct {
+	shipmentID uuid.UUID
+	tenantID   uuid.UUID
+	status     string
+	err        error
+}
+
+func (r fakeShipmentLookupRow) Scan(dest ...any) error {
+	if r.err != nil {
+		return r.err
+	}
+	if len(dest) != 3 {
+		return errors.New("unexpected destination count")
+	}
+	*(dest[0].(*uuid.UUID)) = r.shipmentID
+	*(dest[1].(*uuid.UUID)) = r.tenantID
+	*(dest[2].(*string)) = r.status
+	return nil
+}
+
+func TestShipmentService_UpdateStatusByTrackingNumber_RequiresWorkerPool(t *testing.T) {
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+
+	err := svc.UpdateStatusByTrackingNumber(context.Background(), "123", "inpost", "delivered")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "worker database pool is not configured")
+}
+
+func TestShipmentService_UpdateStatusByTrackingNumber_UsesWorkerPoolForCrossTenantLookup(t *testing.T) {
+	shipmentID := uuid.New()
+	tenantID := uuid.New()
+	lookup := &fakeShipmentLookupQuerier{row: fakeShipmentLookupRow{
+		shipmentID: shipmentID,
+		tenantID:   tenantID,
+		status:     "delivered",
+	}}
+	svc := &ShipmentService{workerQuerier: lookup}
+
+	err := svc.UpdateStatusByTrackingNumber(context.Background(), "TRK123", "inpost", "delivered")
+
+	require.NoError(t, err)
+	assert.Contains(t, lookup.query, "FROM shipments")
+	assert.Equal(t, []any{"TRK123", "inpost"}, lookup.args)
+}
+
 func TestShipmentService_Create_ValidationError_MissingOrderID(t *testing.T) {
 	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
 
