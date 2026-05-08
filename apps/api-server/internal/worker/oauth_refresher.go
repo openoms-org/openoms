@@ -69,6 +69,9 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 
 	var integrations []integrationRow
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		var ir integrationRow
 		if err := rows.Scan(&ir.id, &ir.tenantID, &ir.credentials, &ir.provider); err != nil {
 			return err
@@ -81,6 +84,9 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 
 	refreshed := 0
 	for _, ir := range integrations {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		credJSON, err := crypto.Decrypt(ir.credentials, w.encryptionKey)
 		if err != nil {
 			w.logger.Error("oauth refresh: decrypt failed", "integration_id", ir.id, "error", err)

@@ -12,6 +12,11 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 )
 
+// checkWorkerContext returns the context cancellation error when a worker should stop.
+func checkWorkerContext(ctx context.Context) error {
+	return ctx.Err()
+}
+
 // TenantIntegration holds data needed for cross-tenant worker operations.
 type TenantIntegration struct {
 	TenantID      uuid.UUID
@@ -38,6 +43,9 @@ func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider st
 
 	var result []TenantIntegration
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return nil, err
+		}
 		var ti TenantIntegration
 		var credsJSON json.RawMessage
 		if err := rows.Scan(
@@ -114,6 +122,9 @@ func ListAllActiveMarketplaceIntegrations(ctx context.Context, pool *pgxpool.Poo
 
 	var result []TenantIntegration
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return nil, err
+		}
 		var ti TenantIntegration
 		var credsJSON json.RawMessage
 		if err := rows.Scan(

@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"runtime/debug"
 	"sync"
@@ -132,6 +133,10 @@ func (m *Manager) safeRun(ctx context.Context, w Worker) {
 		}
 	}()
 	if err := w.Run(ctx); err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			m.logger.Info("worker run stopped", "name", w.Name(), "error", err)
+			return
+		}
 		m.logger.Error("worker run failed", "name", w.Name(), "error", err)
 		sentry.WithScope(func(scope *sentry.Scope) {
 			scope.SetTag("worker", w.Name())

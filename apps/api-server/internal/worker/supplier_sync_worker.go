@@ -62,6 +62,9 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 	}
 	var refs []supplierRef
 	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		var ref supplierRef
 		if err := rows.Scan(&ref.ID, &ref.TenantID); err != nil {
 			return err
@@ -74,6 +77,9 @@ func (w *SupplierSyncWorker) Run(ctx context.Context) error {
 
 	synced := 0
 	for _, ref := range refs {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		supplierID := ref.ID
 		tenantID := ref.TenantID
 

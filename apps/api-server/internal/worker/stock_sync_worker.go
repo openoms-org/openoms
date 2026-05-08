@@ -61,6 +61,9 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 	totalSynced := 0
 
 	for _, ti := range tis {
+		if err := checkWorkerContext(ctx); err != nil {
+			return err
+		}
 		credJSON, err := crypto.Decrypt(ti.Credentials, w.encryptionKey)
 		if err != nil {
 			w.logger.Error("stock sync: failed to decrypt credentials", "integration_id", ti.IntegrationID, "error", err)
@@ -93,6 +96,9 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			defer rows.Close()
 
 			for rows.Next() {
+				if err := checkWorkerContext(ctx); err != nil {
+					return err
+				}
 				var listingID, externalID string
 				var stockOverride *int
 				var availableQty int
@@ -126,6 +132,10 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 		var nonZeroStock []listingStock
 		if hasDeactivator {
 			for _, l := range listings {
+				if err := checkWorkerContext(ctx); err != nil {
+					closeProvider(provider)
+					return err
+				}
 				if l.StockQty == 0 {
 					totalSynced += w.deactivateListing(ctx, ti, deactivator, l)
 				} else {
@@ -179,6 +189,9 @@ func (w *StockSyncWorker) syncBulk(
 	// Process each chunk; the listing slice is indexed in parallel with the update slice
 	offset := 0
 	for _, chunk := range chunks {
+		if err := checkWorkerContext(ctx); err != nil {
+			return synced
+		}
 		batchListings := listings[offset : offset+len(chunk)]
 		offset += len(chunk)
 
@@ -232,6 +245,9 @@ func (w *StockSyncWorker) syncOneByOne(
 	synced := 0
 
 	for _, l := range listings {
+		if err := checkWorkerContext(ctx); err != nil {
+			return synced
+		}
 		if err := provider.UpdateStock(ctx, l.ExternalID, l.StockQty); err != nil {
 			w.logger.Error("stock sync: update stock failed",
 				"operation", "listing.stock_update",
@@ -317,6 +333,9 @@ func (w *StockSyncWorker) deactivateListing(
 func (w *StockSyncWorker) updateListingsStatus(ctx context.Context, tenantID uuid.UUID, listings []listingStock, status string, errMsg *string, feedMeta []byte) {
 	_ = database.WithTenant(ctx, w.pool, tenantID, func(tx pgx.Tx) error {
 		for _, l := range listings {
+			if err := checkWorkerContext(ctx); err != nil {
+				return err
+			}
 			var execErr error
 			switch status {
 			case "synced":

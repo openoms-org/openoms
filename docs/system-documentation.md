@@ -1811,7 +1811,7 @@ EbayImportService.ImportOffers()
 ### Cechy
 
 - Panic recovery (safeRun wrapper)
-- Graceful shutdown (context cancellation)
+- Graceful shutdown: workery sprawdzaja context cancellation miedzy iteracjami tenantow/integracji/listingow i przy rate-limit sleep, zeby shutdown nie startowal kolejnych tenant tasks
 - Logowanie bledow per worker (slog)
 - Interfejs Worker: `Name()`, `Interval()`, `Run(ctx)`
 - Iteracja per-tenant (kazdy worker dziala dla wszystkich aktywnych tenantow)
