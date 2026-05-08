@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient, API_URL } from "@/lib/api-client";
-import { useAuthStore } from "@/lib/auth";
+import { apiClient, apiFetch } from "@/lib/api-client";
 import type { BGRemovalResult, BGRemovalStatus } from "@/types/api";
 
 /** Check if background removal is configured on the server. */
@@ -17,20 +16,12 @@ export function useBGRemovalStatus() {
 export function useRemoveBackground() {
   return useMutation({
     mutationFn: async (file: File): Promise<BGRemovalResult> => {
-      const token = useAuthStore.getState().token;
       const formData = new FormData();
       formData.append("file", file);
 
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(`${API_URL}/v1/images/remove-background`, {
+      const res = await apiFetch("/v1/images/remove-background", {
         method: "POST",
-        headers,
         body: formData,
-        credentials: "include",
       });
 
       if (!res.ok) {
