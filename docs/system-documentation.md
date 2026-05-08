@@ -1238,7 +1238,7 @@ Standalone maszyna stanow zamowien i przesylek:
 
 | SDK | Provider | Auth | Glowne operacje |
 |-----|----------|------|----------------|
-| allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog |
+| allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog; proaktywne i 401-triggered bledy odswiezania tokenu sa zwracane wywolujacemu |
 | amazon-sp-sdk | Amazon | AWS Signing | Zamowienia, inventory, pricing |
 | woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks |
 | ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService) |

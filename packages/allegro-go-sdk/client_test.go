@@ -109,6 +109,88 @@ func TestDoSetsAuthorizationHeader(t *testing.T) {
 	}
 }
 
+func TestDoReturnsProactiveRefreshError(t *testing.T) {
+	var apiCalls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/token":
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"message":"invalid_grant"}`))
+		case "/orders":
+			apiCalls.Add(1)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithTokens("stale-at", "expired-rt", time.Now().Add(-time.Minute)),
+	)
+	c.authBaseURL = srv.URL
+	defer c.Close()
+
+	err := c.do(context.Background(), "GET", "/orders", nil, nil)
+	if err == nil {
+		t.Fatal("expected refresh error, got nil")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected APIError refresh failure, got %T: %v", err, err)
+	}
+	if apiErr.StatusCode != http.StatusBadRequest {
+		t.Errorf("StatusCode = %d, want 400", apiErr.StatusCode)
+	}
+	if got := apiCalls.Load(); got != 0 {
+		t.Errorf("API calls after failed proactive refresh = %d, want 0", got)
+	}
+}
+
+func TestDoReturnsRefreshErrorAfterUnauthorized(t *testing.T) {
+	var tokenCalls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/token":
+			tokenCalls.Add(1)
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"message":"invalid_grant"}`))
+		case "/orders":
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"message":"unauthorized"}`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithTokens("invalid-at", "expired-rt", time.Now().Add(time.Hour)),
+	)
+	c.authBaseURL = srv.URL
+	defer c.Close()
+
+	err := c.do(context.Background(), "GET", "/orders", nil, nil)
+	if err == nil {
+		t.Fatal("expected refresh error, got nil")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected APIError refresh failure, got %T: %v", err, err)
+	}
+	if apiErr.StatusCode != http.StatusBadRequest {
+		t.Errorf("StatusCode = %d, want refresh 400", apiErr.StatusCode)
+	}
+	if got := tokenCalls.Load(); got != 1 {
+		t.Errorf("token refresh calls = %d, want 1", got)
+	}
+}
+
 func TestDoHandlesErrorResponse(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
