@@ -1931,7 +1931,9 @@ S3_PUBLIC_URL=https://cdn.firma.pl
 
 # -- Frontend ---------------------
 FRONTEND_URL=https://app.firma.pl
-NEXT_PUBLIC_API_URL=http://localhost:8080
+# Dashboard domyslnie wywoluje API po tym samym originie (/v1).
+# NEXT_PUBLIC_API_URL ustawiaj tylko dla niestandardowych wdrozen z osobnym originem API.
+NEXT_PUBLIC_API_URL=
 
 # -- Workers ----------------------
 WORKERS_ENABLED=true

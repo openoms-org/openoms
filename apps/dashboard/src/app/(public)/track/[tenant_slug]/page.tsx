@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { API_URL } from "@/lib/api-client";
 import { formatCurrency, formatDate } from "@/lib/utils";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // --- Types ---
 

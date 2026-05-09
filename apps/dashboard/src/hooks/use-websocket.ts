@@ -6,10 +6,21 @@ import { useAuthStore } from "@/lib/auth";
 import { API_URL, apiFetch } from "@/lib/api-client";
 import type { WSEvent } from "@/types/api";
 
-// Convert http(s) to ws(s) with ticket-based auth
+// Build a ticket-authenticated WebSocket URL without exposing JWTs in URLs/logs.
 function getWSUrl(ticket: string): string {
-  const base = API_URL.replace(/^http/, "ws");
-  return `${base}/v1/ws?ticket=${encodeURIComponent(ticket)}`;
+  const encodedTicket = encodeURIComponent(ticket);
+
+  if (API_URL) {
+    const base = API_URL.replace(/^http/i, "ws");
+    return `${base}/v1/ws?ticket=${encodedTicket}`;
+  }
+
+  if (typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}/v1/ws?ticket=${encodedTicket}`;
+  }
+
+  return `/v1/ws?ticket=${encodedTicket}`;
 }
 
 // Map event types to React Query cache keys to invalidate

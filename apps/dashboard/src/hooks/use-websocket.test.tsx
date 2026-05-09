@@ -8,7 +8,7 @@ import { useWebSocket } from "./use-websocket";
 import type { Tenant, User } from "@/types/api";
 
 vi.mock("@/lib/api-client", () => ({
-  API_URL: "https://api.test",
+  API_URL: "",
   apiFetch: vi.fn(),
 }));
 
@@ -74,6 +74,7 @@ function mockTicketResponses(...tickets: string[]) {
 
 beforeEach(() => {
   vi.useRealTimers();
+  window.history.pushState(null, "", "/dashboard");
   FakeWebSocket.instances = [];
   vi.stubGlobal("WebSocket", FakeWebSocket);
   vi.mocked(apiFetch).mockReset();
@@ -100,7 +101,7 @@ describe("useWebSocket", () => {
     });
 
     expect(apiFetch).toHaveBeenCalledWith("/v1/auth/ws-ticket", { method: "POST" });
-    expect(FakeWebSocket.instances[0].url).toBe("wss://api.test/v1/ws?ticket=ticket-1");
+    expect(FakeWebSocket.instances[0].url).toBe("ws://localhost:3000/v1/ws?ticket=ticket-1");
   });
 
   it("ignores stale close events from an old socket after a reconnect creates a newer socket", async () => {

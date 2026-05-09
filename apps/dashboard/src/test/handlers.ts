@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 
-const API_URL = "http://localhost:8080";
+const API_BASE = "*/v1";
 
 export const mockOrders = [
   {
@@ -171,7 +171,7 @@ export const mockInventorySettings = {
 
 export const handlers = [
   // Orders
-  http.get(`${API_URL}/v1/orders`, () => {
+  http.get(`${API_BASE}/orders`, () => {
     return HttpResponse.json({
       items: mockOrders,
       total: mockOrders.length,
@@ -181,7 +181,7 @@ export const handlers = [
   }),
 
   // Products
-  http.get(`${API_URL}/v1/products`, () => {
+  http.get(`${API_BASE}/products`, () => {
     return HttpResponse.json({
       items: mockProducts,
       total: mockProducts.length,
@@ -191,7 +191,7 @@ export const handlers = [
   }),
 
   // Shipments
-  http.get(`${API_URL}/v1/shipments`, () => {
+  http.get(`${API_BASE}/shipments`, () => {
     return HttpResponse.json({
       items: mockShipments,
       total: mockShipments.length,
@@ -201,12 +201,12 @@ export const handlers = [
   }),
 
   // Dashboard stats
-  http.get(`${API_URL}/v1/stats/dashboard`, () => {
+  http.get(`${API_BASE}/stats/dashboard`, () => {
     return HttpResponse.json(mockDashboardStats);
   }),
 
   // Auth login
-  http.post(`${API_URL}/v1/auth/login`, () => {
+  http.post(`${API_BASE}/auth/login`, () => {
     return HttpResponse.json({
       access_token: "mock-access-token",
       expires_in: 3600,
@@ -216,7 +216,7 @@ export const handlers = [
   }),
 
   // Auth refresh
-  http.post(`${API_URL}/v1/auth/refresh`, () => {
+  http.post(`${API_BASE}/auth/refresh`, () => {
     return HttpResponse.json({
       access_token: "mock-refreshed-token",
       expires_in: 3600,
@@ -226,32 +226,32 @@ export const handlers = [
   }),
 
   // Settings: onboarding
-  http.get(`${API_URL}/v1/settings/onboarding`, () => {
+  http.get(`${API_BASE}/settings/onboarding`, () => {
     return HttpResponse.json({ dismissed: false, completed_at: "" });
   }),
 
   // Settings: company (used by onboarding hook)
-  http.get(`${API_URL}/v1/settings/company`, () => {
+  http.get(`${API_BASE}/settings/company`, () => {
     return HttpResponse.json(mockCompanySettings);
   }),
 
   // Settings: email
-  http.get(`${API_URL}/v1/settings/email`, () => {
+  http.get(`${API_BASE}/settings/email`, () => {
     return HttpResponse.json(mockEmailSettings);
   }),
 
   // Settings: inventory
-  http.get(`${API_URL}/v1/settings/inventory`, () => {
+  http.get(`${API_BASE}/settings/inventory`, () => {
     return HttpResponse.json(mockInventorySettings);
   }),
 
   // Settings: onboarding dismiss
-  http.put(`${API_URL}/v1/settings/onboarding`, () => {
+  http.put(`${API_BASE}/settings/onboarding`, () => {
     return HttpResponse.json({ dismissed: true });
   }),
 
   // Integrations
-  http.get(`${API_URL}/v1/integrations`, () => {
+  http.get(`${API_BASE}/integrations`, () => {
     return HttpResponse.json([]);
   }),
 ];

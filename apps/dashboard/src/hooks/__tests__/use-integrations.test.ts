@@ -6,7 +6,7 @@ import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
 import { useIntegrations } from "@/hooks/use-integrations";
 
-const API_URL = "http://localhost:8080";
+const API_BASE = "*/v1";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -57,7 +57,7 @@ describe("useIntegrations", () => {
 
   it("returns integrations when they exist", async () => {
     server.use(
-      http.get(`${API_URL}/v1/integrations`, () => {
+      http.get(`${API_BASE}/integrations`, () => {
         return HttpResponse.json([
           {
             id: "int-001",

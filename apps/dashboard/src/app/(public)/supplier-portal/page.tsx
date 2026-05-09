@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { API_URL } from "@/lib/api-client";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   getSupplierPortalTokenHandoff,
   SUPPLIER_PORTAL_TOKEN_STORAGE_KEY,
 } from "@/lib/supplier-portal-token";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // --- Types ---
 

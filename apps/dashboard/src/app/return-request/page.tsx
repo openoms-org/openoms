@@ -14,10 +14,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { API_URL } from "@/lib/api-client";
 import type { PublicReturnRequest, PublicReturnResponse } from "@/types/api";
 import { useTranslations } from "next-intl";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 function PublicReturnForm() {
   const t = useTranslations("returnRequest");

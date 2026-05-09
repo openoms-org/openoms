@@ -27,7 +27,7 @@ import {
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
-import { apiClient } from "@/lib/api-client";
+import { API_URL, apiClient } from "@/lib/api-client";
 import { useOAuthPopupMonitor } from "@/hooks/use-oauth-popup-monitor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,8 +53,6 @@ import type { Integration } from "@/types/api";
 import { EbayTabNav } from "./_components/ebay-tab-nav";
 import { useTranslations } from "next-intl";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-
 const MARKETPLACE_OPTIONS = [
   { value: "EBAY_PL", labelKey: "ebayMarketplacePl" },
   { value: "EBAY_DE", labelKey: "ebayMarketplaceDe" },
@@ -73,7 +71,7 @@ function getRedirectURI() {
   if (typeof window !== "undefined") {
     return `${window.location.origin}/marketplaces/ebay`;
   }
-  return `${API_URL.replace(/:\d+$/, ":3000")}/marketplaces/ebay`;
+  return API_URL ? `${API_URL.replace(/:\d+$/, ":3000")}/marketplaces/ebay` : "/marketplaces/ebay";
 }
 
 export default function EbayIntegrationPage() {

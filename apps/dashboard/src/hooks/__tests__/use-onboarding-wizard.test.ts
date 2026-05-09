@@ -6,7 +6,7 @@ import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
 import { useAuthStore } from "@/lib/auth";
 
-const API_URL = "http://localhost:8080";
+const API_BASE = "*/v1";
 
 // ---------------------------------------------------------------------------
 // Hook imports — these will fail until implementation exists
@@ -47,7 +47,7 @@ afterAll(() => server.close());
 describe("useOnboardingStatus", () => {
   it("fetches onboarding status from /v1/onboarding/status", async () => {
     server.use(
-      http.get(`${API_URL}/v1/onboarding/status`, () => {
+      http.get(`${API_BASE}/onboarding/status`, () => {
         return HttpResponse.json({
           completed: false,
           current_step: 1,
@@ -73,7 +73,7 @@ describe("useOnboardingStatus", () => {
 
   it("returns completed=true for finished onboarding", async () => {
     server.use(
-      http.get(`${API_URL}/v1/onboarding/status`, () => {
+      http.get(`${API_BASE}/onboarding/status`, () => {
         return HttpResponse.json({
           completed: true,
           current_step: 4,
@@ -96,7 +96,7 @@ describe("useOnboardingStatus", () => {
 
   it("returns dismissed=true for existing tenants", async () => {
     server.use(
-      http.get(`${API_URL}/v1/onboarding/status`, () => {
+      http.get(`${API_BASE}/onboarding/status`, () => {
         return HttpResponse.json({
           completed: false,
           current_step: 1,
@@ -117,7 +117,7 @@ describe("useOnboardingStatus", () => {
 
   it("handles partially completed onboarding", async () => {
     server.use(
-      http.get(`${API_URL}/v1/onboarding/status`, () => {
+      http.get(`${API_BASE}/onboarding/status`, () => {
         return HttpResponse.json({
           completed: false,
           current_step: 3,
@@ -149,7 +149,7 @@ describe("useUpdateOnboardingStep", () => {
     let capturedBody: Record<string, unknown> = {};
 
     server.use(
-      http.put(`${API_URL}/v1/onboarding/step/:step`, async ({ request, params }) => {
+      http.put(`${API_BASE}/onboarding/step/:step`, async ({ request, params }) => {
         capturedUrl = `/v1/onboarding/step/${params.step}`;
         capturedBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({ message: "step updated" });
@@ -173,7 +173,7 @@ describe("useUpdateOnboardingStep", () => {
     let capturedBody: Record<string, unknown> = {};
 
     server.use(
-      http.put(`${API_URL}/v1/onboarding/step/:step`, async ({ request }) => {
+      http.put(`${API_BASE}/onboarding/step/:step`, async ({ request }) => {
         capturedBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json({ message: "step updated" });
       })
@@ -193,7 +193,7 @@ describe("useUpdateOnboardingStep", () => {
 
   it("handles server error gracefully", async () => {
     server.use(
-      http.put(`${API_URL}/v1/onboarding/step/:step`, () => {
+      http.put(`${API_BASE}/onboarding/step/:step`, () => {
         return HttpResponse.json(
           { error: "step 1 cannot be skipped" },
           { status: 400 }
@@ -221,7 +221,7 @@ describe("useCompleteOnboarding", () => {
     let wasCalled = false;
 
     server.use(
-      http.post(`${API_URL}/v1/onboarding/complete`, () => {
+      http.post(`${API_BASE}/onboarding/complete`, () => {
         wasCalled = true;
         return HttpResponse.json({ message: "onboarding completed" });
       })
@@ -241,7 +241,7 @@ describe("useCompleteOnboarding", () => {
 
   it("handles error when step 1 not completed", async () => {
     server.use(
-      http.post(`${API_URL}/v1/onboarding/complete`, () => {
+      http.post(`${API_BASE}/onboarding/complete`, () => {
         return HttpResponse.json(
           { error: "step 1 must be completed" },
           { status: 400 }

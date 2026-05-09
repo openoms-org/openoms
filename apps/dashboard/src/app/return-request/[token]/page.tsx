@@ -13,10 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { API_URL } from "@/lib/api-client";
 import type { PublicReturnStatus } from "@/types/api";
 import { useTranslations } from "next-intl";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 const STATUS_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   requested: Clock,

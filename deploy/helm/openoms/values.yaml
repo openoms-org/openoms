@@ -131,7 +131,7 @@ dashboard:
     fsGroup: 1001
   securityContext:
     allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: true  # initContainer copies .next to emptyDir at runtime
+    readOnlyRootFilesystem: true  # .next/cache and /tmp are writable emptyDir mounts
     capabilities:
       drop: ['ALL']
     seccompProfile:

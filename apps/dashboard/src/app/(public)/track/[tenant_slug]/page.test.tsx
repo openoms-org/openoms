@@ -40,7 +40,7 @@ describe("TrackingPage", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
 
-    expect(url).toBe("http://localhost:8080/v1/tracking/mercpart/order-123");
+    expect(url).toBe("/v1/tracking/mercpart/order-123");
     expect(url).not.toContain("email=");
     expect(init).toMatchObject({
       method: "POST",

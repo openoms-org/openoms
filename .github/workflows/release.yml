@@ -106,9 +106,9 @@ jobs:
           load: true
           tags: |
             ${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}
+          # NEXT_PUBLIC_* values are baked into the client bundle at build time.
           build-args: |
-            NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL_PLACEHOLDER
-            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN || 'SENTRY_DSN_PLACEHOLDER' }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN || '' }}
             NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN || '' }}
             SENTRY_ORG=${{ vars.SENTRY_ORG || '' }}
