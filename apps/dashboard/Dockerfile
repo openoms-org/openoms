@@ -1,5 +1,5 @@
 # ── Dependencies stage ───────────────────────────────────────────
-FROM node:22-alpine AS deps
+FROM node:22-bookworm-slim AS deps
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
 # ── Build stage ──────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -38,29 +38,22 @@ ARG SENTRY_PROJECT
 RUN npx next build
 
 # ── Runtime stage ────────────────────────────────────────────────
-FROM node:22-alpine AS runner
+FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Patch OS-level CVEs and set up non-root user; strip npm (unused at runtime)
-RUN apk upgrade --no-cache && \
-    addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs && \
-    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+# Copy only the standalone build output. UID/GID 65532 is the distroless nonroot user.
+COPY --from=builder --chown=65532:65532 /app/public ./public
+COPY --from=builder --chown=65532:65532 /app/.next/standalone ./
+COPY --from=builder --chown=65532:65532 /app/.next/static ./.next/static
 
-# Copy only the standalone build output
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
+USER 65532:65532
 
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-ENTRYPOINT []
-CMD ["node", "server.js"]
+CMD ["server.js"]

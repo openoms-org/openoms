@@ -41,7 +41,6 @@ spec:
         - name: dashboard
           image: {{ include "openoms.dashboard.image" . }}
           imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
-          command: ["node", "server.js"]
           ports:
             - name: http
               containerPort: {{ .Values.dashboard.port }}
