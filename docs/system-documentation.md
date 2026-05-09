@@ -162,7 +162,7 @@ CREATE POLICY tenant_isolation ON orders
 | Obraz | Dockerfile | Zawartosc |
 |-------|-----------|-----------|
 | `openoms-api` | `apps/api-server/Dockerfile` | Go binary (distroless) |
-| `openoms-dashboard` | `apps/dashboard/Dockerfile` | Next.js standalone (distroless Node 22 runtime, non-root, bez shella) |
+| `openoms-dashboard` | `apps/dashboard/Dockerfile` | Next.js standalone (distroless Node 22 Debian 13 runtime, non-root, bez shella) |
 | `openoms-migrate` | `deploy/Dockerfile.migrate` | golang-migrate + SQL |
 
 Obrazy sa publiczne na GHCR -- nie wymagaja `imagePullSecrets`.

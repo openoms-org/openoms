@@ -38,7 +38,7 @@ ARG SENTRY_PROJECT
 RUN npx next build
 
 # ── Runtime stage ────────────────────────────────────────────────
-FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runner
+FROM gcr.io/distroless/nodejs22-debian13:nonroot AS runner
 
 WORKDIR /app
 
