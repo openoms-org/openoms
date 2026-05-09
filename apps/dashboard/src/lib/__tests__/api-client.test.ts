@@ -34,7 +34,7 @@ describe("apiClient", () => {
     window.history.pushState(null, "", "/settings/feeds");
 
     expect(absoluteAPIURL("/v1/feeds/ceneo/t1/token")).toBe(
-      "http://localhost:3000/v1/feeds/ceneo/t1/token"
+      `${window.location.origin}/v1/feeds/ceneo/t1/token`
     );
   });
 

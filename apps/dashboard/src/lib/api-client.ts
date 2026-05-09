@@ -16,13 +16,21 @@ export function absoluteAPIURL(path: string): string {
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
-  if (API_URL) {
-    return `${API_URL}${path}`;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const configuredBase = API_URL || "/";
+  const base = /^https?:\/\//i.test(configuredBase)
+    ? configuredBase
+    : typeof window !== "undefined"
+      ? new URL(configuredBase, window.location.origin).toString()
+      : configuredBase;
+
+  try {
+    const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
+    return new URL(normalizedPath.replace(/^\//, ""), baseWithSlash).toString();
+  } catch {
+    return `${base.replace(/\/$/, "")}${normalizedPath}`;
   }
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}${path}`;
-  }
-  return path;
 }
 
 function getCSRFToken(): string | null {

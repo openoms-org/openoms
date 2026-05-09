@@ -11,12 +11,12 @@ const isDev = process.env.NODE_ENV === "development";
 const apiProxyUrl = process.env.DASHBOARD_API_PROXY_URL || (isDev ? apiUrl || "http://localhost:8080" : "");
 const apiConnectSrc = apiUrl ? ` ${apiUrl}` : "";
 const wsConnectSrc = (() => {
-  if (!apiUrl) return "";
+  if (!apiUrl) return " wss: ws:";
   try {
     const url = new URL(apiUrl);
     return ` ${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}`;
   } catch {
-    return "";
+    return " wss: ws:";
   }
 })();
 
