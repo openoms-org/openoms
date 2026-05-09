@@ -116,6 +116,9 @@ jobs:
           cache-from: type=gha,scope=dashboard
           cache-to: type=gha,mode=max,scope=dashboard
 
+      - name: Check Dashboard image hardening
+        run: ./scripts/check-dashboard-image.sh "${DASHBOARD_IMAGE}:${GITHUB_SHA}"
+
       - name: Scan Dashboard image with Trivy (SARIF for Security tab)
         uses: aquasecurity/trivy-action@v0.36.0
         env:

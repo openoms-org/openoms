@@ -544,6 +544,9 @@ jobs:
       - name: Build Dashboard image
         run: docker build -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard
 
+      - name: Check Dashboard image hardening
+        run: ./scripts/check-dashboard-image.sh openoms-dashboard:ci
+
   auto-merge-gate:
     name: Auto-Merge Gate
     runs-on: ubuntu-latest

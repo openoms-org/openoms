@@ -162,10 +162,11 @@ CREATE POLICY tenant_isolation ON orders
 | Obraz | Dockerfile | Zawartosc |
 |-------|-----------|-----------|
 | `openoms-api` | `apps/api-server/Dockerfile` | Go binary (distroless) |
-| `openoms-dashboard` | `apps/dashboard/Dockerfile` | Next.js standalone |
+| `openoms-dashboard` | `apps/dashboard/Dockerfile` | Next.js standalone (distroless Node 22 runtime, non-root, bez shella) |
 | `openoms-migrate` | `deploy/Dockerfile.migrate` | golang-migrate + SQL |
 
 Obrazy sa publiczne na GHCR -- nie wymagaja `imagePullSecrets`.
+Dashboard image jest walidowany w CI/release przez `scripts/check-dashboard-image.sh`: runtime musi startowac jako non-root Node/distroless, nie moze zawierac `/bin/sh`, placeholderow runtime (`NEXT_PUBLIC_API_URL_PLACEHOLDER`, `WS_CSP_HOST_PLACEHOLDER`, `SENTRY_DSN_PLACEHOLDER`) ani `http://localhost:8080` w bundle, i musi przejsc read-only smoke test `/login`.
 
 #### Konfiguracja produkcyjna
 
