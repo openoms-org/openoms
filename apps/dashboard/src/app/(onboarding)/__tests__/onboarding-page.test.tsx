@@ -9,7 +9,7 @@ import {
 } from "@/test/test-utils";
 import { useAuthStore } from "@/lib/auth";
 
-const API_URL = "http://localhost:8080";
+const API_BASE = "*/v1";
 
 // ---------------------------------------------------------------------------
 // Mocks for Next.js navigation
@@ -75,7 +75,7 @@ function setupOnboardingHandlers(overrides: {
   };
 
   server.use(
-    http.get(`${API_URL}/v1/onboarding/status`, () => {
+    http.get(`${API_BASE}/onboarding/status`, () => {
       return HttpResponse.json(overrides.status ?? defaultStatus);
     })
   );

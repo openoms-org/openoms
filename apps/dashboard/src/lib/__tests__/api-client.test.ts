@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
-import { apiClient, ApiClientError, getErrorMessage, isAuthError } from "@/lib/api-client";
+import { API_URL, absoluteAPIURL, apiClient, ApiClientError, getErrorMessage, isAuthError } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
 
-const API_URL = process.env.TEST_API_URL ?? "http://localhost:8080";
+const API_BASE = "*/v1";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 afterEach(() => {
@@ -14,22 +14,35 @@ afterEach(() => {
 afterAll(() => server.close());
 
 describe("apiClient", () => {
-  it("makes requests to the correct base URL", async () => {
+  it("uses same-origin API paths by default", async () => {
+    expect(API_URL).toBe("");
+
+    let capturedPath = "";
     server.use(
-      http.get(`${API_URL}/v1/orders`, () => {
+      http.get(`${API_BASE}/orders`, ({ request }) => {
+        capturedPath = new URL(request.url).pathname;
         return HttpResponse.json({ items: [], total: 0, limit: 20, offset: 0 });
       })
     );
 
     const data = await apiClient<{ items: unknown[]; total: number }>("/v1/orders");
     expect(data).toEqual({ items: [], total: 0, limit: 20, offset: 0 });
+    expect(capturedPath).toBe("/v1/orders");
+  });
+
+  it("builds absolute public URLs from the current origin", () => {
+    window.history.pushState(null, "", "/settings/feeds");
+
+    expect(absoluteAPIURL("/v1/feeds/ceneo/t1/token")).toBe(
+      "http://localhost:3000/v1/feeds/ceneo/t1/token"
+    );
   });
 
   it("adds Authorization header when token is present", async () => {
     let capturedAuth: string | null = null;
 
     server.use(
-      http.get(`${API_URL}/v1/orders`, ({ request }) => {
+      http.get(`${API_BASE}/orders`, ({ request }) => {
         capturedAuth = request.headers.get("Authorization");
         return HttpResponse.json({ items: [] });
       })
@@ -60,7 +73,7 @@ describe("apiClient", () => {
     let capturedAuth: string | null = null;
 
     server.use(
-      http.get(`${API_URL}/v1/orders`, ({ request }) => {
+      http.get(`${API_BASE}/orders`, ({ request }) => {
         capturedAuth = request.headers.get("Authorization");
         return HttpResponse.json({ items: [] });
       })
@@ -74,7 +87,7 @@ describe("apiClient", () => {
     let capturedContentType: string | null = null;
 
     server.use(
-      http.get(`${API_URL}/v1/orders`, ({ request }) => {
+      http.get(`${API_BASE}/orders`, ({ request }) => {
         capturedContentType = request.headers.get("Content-Type");
         return HttpResponse.json({ items: [] });
       })
@@ -86,7 +99,7 @@ describe("apiClient", () => {
 
   it("throws ApiClientError on non-ok response", async () => {
     server.use(
-      http.get(`${API_URL}/v1/orders`, () => {
+      http.get(`${API_BASE}/orders`, () => {
         return HttpResponse.json({ error: "Not found" }, { status: 404 });
       })
     );
@@ -99,14 +112,14 @@ describe("apiClient", () => {
     let requestCount = 0;
 
     server.use(
-      http.get(`${API_URL}/v1/orders`, () => {
+      http.get(`${API_BASE}/orders`, () => {
         requestCount++;
         if (requestCount === 1) {
           return HttpResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         return HttpResponse.json({ items: [], total: 0 });
       }),
-      http.post(`${API_URL}/v1/auth/refresh`, () => {
+      http.post(`${API_BASE}/auth/refresh`, () => {
         return HttpResponse.json({
           access_token: "new-token",
           expires_in: 3600,
@@ -156,7 +169,7 @@ describe("apiClient", () => {
 
   it("handles 204 No Content by returning undefined", async () => {
     server.use(
-      http.delete(`${API_URL}/v1/orders/123`, () => {
+      http.delete(`${API_BASE}/orders/123`, () => {
         return new HttpResponse(null, { status: 204 });
       })
     );

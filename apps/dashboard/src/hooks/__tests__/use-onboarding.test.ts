@@ -7,7 +7,7 @@ import { http, HttpResponse } from "msw";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { useAuthStore } from "@/lib/auth";
 
-const API_URL = "http://localhost:8080";
+const API_BASE = "*/v1";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -62,7 +62,7 @@ describe("useOnboarding", () => {
 
   it("marks company step as incomplete when name is missing", async () => {
     server.use(
-      http.get(`${API_URL}/v1/settings/company`, () => {
+      http.get(`${API_BASE}/settings/company`, () => {
         return HttpResponse.json({ nip: "1234567890" });
       })
     );
@@ -94,7 +94,7 @@ describe("useOnboarding", () => {
 
   it("marks integration step as completed when active Allegro exists", async () => {
     server.use(
-      http.get(`${API_URL}/v1/integrations`, () => {
+      http.get(`${API_BASE}/integrations`, () => {
         return HttpResponse.json([
           { provider: "allegro", status: "active" },
         ]);
@@ -115,7 +115,7 @@ describe("useOnboarding", () => {
 
   it("is not visible when dismissed", async () => {
     server.use(
-      http.get(`${API_URL}/v1/settings/onboarding`, () => {
+      http.get(`${API_BASE}/settings/onboarding`, () => {
         return HttpResponse.json({ dismissed: true });
       })
     );
@@ -153,7 +153,7 @@ describe("useOnboarding", () => {
 
   it("is not visible when all steps are completed", async () => {
     server.use(
-      http.get(`${API_URL}/v1/integrations`, () => {
+      http.get(`${API_BASE}/integrations`, () => {
         return HttpResponse.json([
           { provider: "allegro", status: "active" },
         ]);

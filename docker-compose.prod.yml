@@ -130,7 +130,8 @@ services:
       context: ./apps/dashboard
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        DASHBOARD_API_PROXY_URL: ${DASHBOARD_API_PROXY_URL:-http://api-server:8080}
         NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN: ${NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN:-}
     restart: unless-stopped
     depends_on:

@@ -21,12 +21,11 @@ import {
   useRegenerateFeedToken,
 } from "@/hooks/use-feed-settings";
 import { useProductCategories } from "@/hooks/use-product-categories";
+import { absoluteAPIURL } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
 import { Loader2, Save, Copy, RefreshCw, ExternalLink } from "lucide-react";
 import type { ProductFeedConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 const DEFAULT_FEED_CONFIG: ProductFeedConfig = {
   ceneo_enabled: false,
@@ -44,7 +43,7 @@ function buildFeedURL(
   tenantId: string,
   token: string
 ): string {
-  return `${API_URL}/v1/feeds/${feedType}/${tenantId}/${token}`;
+  return absoluteAPIURL(`/v1/feeds/${feedType}/${tenantId}/${token}`);
 }
 
 export default function FeedSettingsPage() {

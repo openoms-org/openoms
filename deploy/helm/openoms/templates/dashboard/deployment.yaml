@@ -37,59 +37,6 @@ spec:
                   matchLabels:
                     {{- include "openoms.dashboard.selectorLabels" . | nindent 20 }}
                 topologyKey: kubernetes.io/hostname
-      initContainers:
-        - name: env-replace
-          image: {{ include "openoms.dashboard.image" . }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              cp -a /app/.next/. /next-out/
-              cp /app/server.js /server-out/server.js
-              if [ -n "$NEXT_PUBLIC_API_URL" ] && [ "$NEXT_PUBLIC_API_URL" != "NEXT_PUBLIC_API_URL_PLACEHOLDER" ]; then
-                WS_HOST=$(echo "$NEXT_PUBLIC_API_URL" | sed 's|https\?://||' | sed 's|/.*||')
-                find /next-out /server-out -type f \( -name '*.js' -o -name '*.json' \) | while read -r file; do
-                  if grep -q 'NEXT_PUBLIC_API_URL_PLACEHOLDER\|WS_CSP_HOST_PLACEHOLDER' "$file" 2>/dev/null; then
-                    sed -i "s|NEXT_PUBLIC_API_URL_PLACEHOLDER|${NEXT_PUBLIC_API_URL}|g; s|WS_CSP_HOST_PLACEHOLDER|${WS_HOST}|g" "$file"
-                  fi
-                done
-              fi
-              if [ -n "$NEXT_PUBLIC_SENTRY_DSN" ] && [ "$NEXT_PUBLIC_SENTRY_DSN" != "SENTRY_DSN_PLACEHOLDER" ]; then
-                find /next-out /server-out -type f \( -name '*.js' -o -name '*.json' \) | while read -r file; do
-                  if grep -q 'SENTRY_DSN_PLACEHOLDER' "$file" 2>/dev/null; then
-                    sed -i "s|SENTRY_DSN_PLACEHOLDER|${NEXT_PUBLIC_SENTRY_DSN}|g" "$file"
-                  fi
-                done
-              fi
-          env:
-            - name: NEXT_PUBLIC_API_URL
-              value: {{ .Values.apiServer.baseUrl | quote }}
-            - name: NEXT_PUBLIC_SENTRY_DSN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "openoms.secretName" . }}
-                  key: DASHBOARD_SENTRY_DSN
-                  optional: true
-          volumeMounts:
-            - name: next-build
-              mountPath: /next-out
-            - name: server-js
-              mountPath: /server-out
-            - name: tmp
-              mountPath: /tmp
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1001
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ['ALL']
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              cpu: 100m
-              memory: 64Mi
       containers:
         - name: dashboard
           image: {{ include "openoms.dashboard.image" . }}
@@ -104,10 +51,16 @@ spec:
               value: production
             - name: HOSTNAME
               value: "0.0.0.0"
+            - name: NEXT_PUBLIC_SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openoms.secretName" . }}
+                  key: DASHBOARD_SENTRY_DSN
+                  optional: true
           lifecycle:
             preStop:
               exec:
-                command: ["sh", "-c", "sleep 5"]
+                command: ["node", "-e", "setTimeout(() => process.exit(0), 5000)"]
           livenessProbe:
             {{- toYaml .Values.dashboard.livenessProbe | nindent 12 }}
           readinessProbe:
@@ -121,20 +74,14 @@ spec:
           securityContext:
             {{- toYaml .Values.dashboard.securityContext | nindent 12 }}
           volumeMounts:
-            - name: next-build
-              mountPath: /app/.next
-            - name: server-js
-              mountPath: /app/server.js
-              subPath: server.js
+            - name: next-cache
+              mountPath: /app/.next/cache
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: next-build
+        - name: next-cache
           emptyDir:
-            sizeLimit: 300Mi
-        - name: server-js
-          emptyDir:
-            sizeLimit: 10Mi
+            sizeLimit: 100Mi
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi

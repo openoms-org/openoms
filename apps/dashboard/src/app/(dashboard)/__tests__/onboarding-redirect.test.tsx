@@ -4,7 +4,7 @@ import { http, HttpResponse } from "msw";
 import { renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import { useAuthStore } from "@/lib/auth";
 
-const API_URL = "http://localhost:8080";
+const API_BASE = "*/v1";
 
 // Ensure localStorage is available (happy-dom may lag behind)
 if (typeof globalThis.localStorage === "undefined" || typeof globalThis.localStorage.getItem !== "function") {
@@ -75,7 +75,7 @@ describe("dashboard layout — onboarding redirect", () => {
     );
 
     server.use(
-      http.get(`${API_URL}/v1/onboarding/status`, () => {
+      http.get(`${API_BASE}/onboarding/status`, () => {
         return HttpResponse.json({
           completed: false,
           current_step: 1,
@@ -106,7 +106,7 @@ describe("dashboard layout — onboarding redirect", () => {
     );
 
     server.use(
-      http.get(`${API_URL}/v1/onboarding/status`, () => {
+      http.get(`${API_BASE}/onboarding/status`, () => {
         return HttpResponse.json({
           completed: true,
           current_step: 4,
@@ -143,7 +143,7 @@ describe("dashboard layout — onboarding redirect", () => {
     );
 
     server.use(
-      http.get(`${API_URL}/v1/onboarding/status`, () => {
+      http.get(`${API_BASE}/onboarding/status`, () => {
         return HttpResponse.json({
           completed: false,
           current_step: 1,

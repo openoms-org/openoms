@@ -18,6 +18,9 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+ARG DASHBOARD_API_PROXY_URL
+ENV DASHBOARD_API_PROXY_URL=${DASHBOARD_API_PROXY_URL}
+
 ARG NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN
 ENV NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN=${NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN}
 
@@ -52,9 +55,6 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Entrypoint replaces NEXT_PUBLIC_API_URL_PLACEHOLDER at runtime
-COPY --chown=nextjs:nodejs docker-entrypoint.sh /app/docker-entrypoint.sh
-
 USER nextjs
 
 EXPOSE 3000
@@ -62,5 +62,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+ENTRYPOINT []
 CMD ["node", "server.js"]

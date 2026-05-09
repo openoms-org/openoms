@@ -1,7 +1,29 @@
 import { useAuthStore } from "./auth";
 import type { TokenResponse, ApiError } from "@/types/api";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const configuredAPIURL = process.env.NEXT_PUBLIC_API_URL?.trim();
+
+export const API_URL = configuredAPIURL ? configuredAPIURL.replace(/\/$/, "") : "";
+
+function apiURL(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  return API_URL ? `${API_URL}${path}` : path;
+}
+
+export function absoluteAPIURL(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  if (API_URL) {
+    return `${API_URL}${path}`;
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}${path}`;
+  }
+  return path;
+}
 
 function getCSRFToken(): string | null {
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/);
@@ -12,7 +34,7 @@ let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshToken(): Promise<string | null> {
   try {
-    const res = await fetch(`${API_URL}/v1/auth/refresh`, {
+    const res = await fetch(apiURL("/v1/auth/refresh"), {
       method: "POST",
       credentials: "include",
     });
@@ -91,7 +113,7 @@ async function handlePaymentRequired(res: Response): Promise<never> {
   const authState = useAuthStore.getState();
   if (authState.isAuthenticated && authState.token) {
     try {
-      const meResp = await fetch(`${API_URL}/v1/users/me`, {
+      const meResp = await fetch(apiURL("/v1/users/me"), {
         headers: { Authorization: `Bearer ${authState.token}` },
       });
       if (meResp.ok) {
@@ -157,7 +179,7 @@ export async function apiClient<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const res = await fetchWithAuth(
-    `${API_URL}${path}`,
+    apiURL(path),
     options,
     { "Content-Type": "application/json" },
   );
@@ -175,7 +197,7 @@ export async function apiFetch(
   path: string,
   init?: RequestInit
 ): Promise<Response> {
-  const res = await fetchWithAuth(`${API_URL}${path}`, init ?? {});
+  const res = await fetchWithAuth(apiURL(path), init ?? {});
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: "Request failed" }));
@@ -189,7 +211,7 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
   const fd = new FormData();
   fd.append("file", file);
 
-  const res = await fetchWithAuth(`${API_URL}/v1/uploads`, {
+  const res = await fetchWithAuth(apiURL("/v1/uploads"), {
     method: "POST",
     body: fd,
   });
