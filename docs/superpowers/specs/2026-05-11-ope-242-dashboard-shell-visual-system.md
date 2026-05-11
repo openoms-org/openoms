@@ -197,3 +197,7 @@ Zmiana jest gotowa, gdy:
 - klikniecie w etap albo wyjatek prowadzi do konkretnego miejsca pracy,
 - UI jest zgodne z referencja wizualna,
 - desktop i mobile przechodza manualny browser pass.
+
+## Status implementacji
+
+2026-05-11: OPE-242 pierwszy pass implementacyjny przeniosl home dashboardu z raportowania sprzedazowego na operations control tower. Widok uzywa istniejacych danych: etapow przeplywu zamowien, ograniczonej kolejki wyjatkow, zdrowia widocznych gotowych integracji i ostatniej aktywnosci zamowien. Nie dodaje przyciskow naprawy/ponowienia ani linkow do ukrytych providerow.
