@@ -17,10 +17,10 @@ export function OnboardingWizard() {
         <div>
           <CardTitle className="text-lg">Pierwsze kroki</CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            {completedCount} z {steps.length} uko\u0144czone
+            {completedCount} z {steps.length} ukończone
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => dismiss()} title="Pomi\u0144">
+        <Button variant="ghost" size="icon" onClick={() => dismiss()} title="Pomiń">
           <X className="h-4 w-4" />
         </Button>
       </CardHeader>

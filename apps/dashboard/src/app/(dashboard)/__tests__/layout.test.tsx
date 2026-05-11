@@ -80,6 +80,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 
 beforeEach(() => {
   useAuthStore.getState().clearAuth();
+  localStorage.clear();
 });
 
 const ownerUser: User = {
@@ -140,6 +141,22 @@ describe("DashboardLayout", () => {
     );
 
     expect(screen.getByText("OpenOMS")).toBeInTheDocument();
+  });
+
+  it("gives the collapsed home link an accessible name", () => {
+    useAuthStore.getState().setAuth("token", ownerUser, tenant);
+    localStorage.setItem("sidebar-collapsed", "true");
+
+    render(
+      <DashboardLayout>
+        <div>Content</div>
+      </DashboardLayout>,
+      { wrapper: Wrapper },
+    );
+
+    expect(
+      screen.getAllByRole("link", { name: "operationsDashboard" }).length,
+    ).toBeGreaterThan(0);
   });
 
   it("renders main content area", () => {

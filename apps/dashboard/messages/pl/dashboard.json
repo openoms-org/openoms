@@ -4,6 +4,79 @@
     "ordersBySource": "Zamówienia według źródła",
     "ordersByStatus": "Zamówienia według statusu",
     "recentOrders": "Ostatnie zamówienia",
+    "operations": {
+      "activity": {
+        "order": {
+          "description": "{source} · {status}",
+          "title": "Zamówienie {customerName}"
+        }
+      },
+      "activityColumns": {
+        "event": "Zdarzenie",
+        "source": "Źródło",
+        "time": "Czas"
+      },
+      "activitySubtitle": "Ostatnie realne zdarzenia z zamówień, bez skrótów do niegotowych modułów.",
+      "activityTitle": "Ostatnia aktywność",
+      "connectionReady": "Połączenie gotowe do obsługi.",
+      "exceptionCount": "{count} wyj.",
+      "exceptions": {
+        "integration": {
+          "description": "Sprawdź konfigurację połączenia {label}.",
+          "title": "{provider} wymaga uwagi"
+        },
+        "orderOnHold": {
+          "description": "Zamówienie wymaga decyzji operatora.",
+          "title": "Zamówienie wstrzymane: {customerName}"
+        },
+        "shipment": {
+          "description": "Sprawdź przesyłkę dla zamówienia {orderId}.",
+          "title": "Przesyłka {provider} nie przeszła"
+        }
+      },
+      "exceptionsSubtitle": "Tylko sprawy, które można obsłużyć w istniejących widokach.",
+      "exceptionsTitle": "Do obsłużenia teraz",
+      "flowSubtitle": "Najkrótsza mapa drogi zamówienia przez kanał, realizację, logistykę i zamknięcie.",
+      "flowTitle": "Przepływ operacyjny",
+      "health": {
+        "ok": "OK",
+        "problem": "Problem",
+        "warning": "Uwaga"
+      },
+      "integrationHealthTitle": "Stan połączeń",
+      "integrationSubtitle": "Widoczne są tylko integracje oznaczone jako gotowe dla klienta.",
+      "lastSync": "Sync {time}",
+      "noActivity": "Brak ostatniej aktywności.",
+      "noExceptions": "Bez wyjątków",
+      "noIntegrationHealth": "Brak widocznych połączeń do sprawdzenia.",
+      "noLastSync": "Brak danych o ostatnim syncu",
+      "noWorkDescription": "Najważniejsze przepływy wyglądają zdrowo.",
+      "noWorkTitle": "Brak pilnych spraw",
+      "operator": "Operator: {name}",
+      "stageHint": "Kolejka etapu",
+      "statusLoading": "Wczytywanie stanu",
+      "stages": {
+        "completed": "Zakończone",
+        "fulfillment": "Realizacja",
+        "intake": "Przyjęcie",
+        "shipping": "Wysyłka"
+      },
+      "subtitle": "Stan przepływu zamówień przez kanały, realizację i wysyłkę.",
+      "summary": {
+        "connections": "Aktywne połączenia",
+        "connectionsHint": "Tylko gotowe moduły",
+        "exceptions": "Wyjątki",
+        "exceptionsHint": "Wymagają pracy operatora",
+        "flow": "Zdrowie przepływu",
+        "flowNeedsAttention": "Sprawdź wyjątki",
+        "flowOk": "Bez blokad",
+        "queue": "Zamówienia w kolejce",
+        "queueHint": "Przed zamknięciem"
+      },
+      "syncNeedsAttention": "Wymaga uwagi",
+      "syncOk": "Synchronizacja OK",
+      "title": "Centrum orkiestracji"
+    },
     "stats": {
       "delivered": "Dostarczone",
       "inTransit": "W transporcie",

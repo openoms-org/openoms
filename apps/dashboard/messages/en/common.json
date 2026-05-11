@@ -37,6 +37,7 @@
     "edit": "Edit",
     "empty": {
       "addOrder": "Add Order",
+      "addProduct": "Add product",
       "connectAllegro": "Connect Allegro"
     },
     "enabled": "Enabled",
@@ -69,6 +70,10 @@
     "price": "Price",
     "printing": "Printing...",
     "processing": "Processing...",
+    "quickStart": {
+      "nextSteps": "Here is what you can do next",
+      "readyTitle": "Your account is ready!"
+    },
     "quantity": "Quantity",
     "refresh": "Refresh",
     "required": "Required",
@@ -146,6 +151,7 @@
     "marketing": "Marketing",
     "marketplace": "Marketplace",
     "notifications": "Notifications",
+    "operationsDashboard": "Operations dashboard",
     "orderImport": "Order import",
     "orderStatuses": "Order statuses",
     "orders": "Orders",
@@ -162,6 +168,7 @@
     "repricing": "Repricing",
     "returns": "Returns",
     "roles": "Roles",
+    "salesChannelConnections": "Connections",
     "security": "Security",
     "shipments": "Shipments",
     "sms": "SMS",

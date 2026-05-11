@@ -39,6 +39,33 @@ afterEach(() => {
 afterAll(() => server.close());
 
 describe("useOnboarding", () => {
+  it("does not fetch admin-only setup resources for non-admin users", async () => {
+    let integrationsRequested = false;
+    server.use(
+      http.get(`${API_BASE}/integrations`, () => {
+        integrationsRequested = true;
+        return HttpResponse.json([]);
+      }),
+    );
+    useAuthStore.setState({
+      user: {
+        id: "member",
+        email: "member@test.com",
+        role: "member",
+        role_id: "member",
+        name: "Member User",
+      },
+    });
+
+    const { result } = renderHook(() => useOnboarding(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.steps).toHaveLength(0));
+    expect(result.current.isVisible).toBe(false);
+    expect(integrationsRequested).toBe(false);
+  });
+
   it("returns 4 steps", async () => {
     const { result } = renderHook(() => useOnboarding(), {
       wrapper: createWrapper(),
