@@ -77,8 +77,8 @@ export default function CarriersPage() {
       {!carriers || carriers.length === 0 ? (
         <EmptyState
           icon={Truck}
-          title="Brak kurierow"
-          description="Dodaj pierwszego kuriera, aby zaczac generowac etykiety i sledzic przesylki."
+          title="Brak kurierów"
+          description="Dodaj pierwszego kuriera, aby zacząć generować etykiety i śledzić przesyłki."
           action={{ label: "Dodaj kuriera", href: "/carriers/new" }}
         />
       ) : (
@@ -154,9 +154,9 @@ export default function CarriersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Usun kuriera"
-        description="Czy na pewno chcesz usunac tego kuriera? Ta operacja jest nieodwracalna."
-        confirmLabel="Usun"
+        title="Usuń kuriera"
+        description="Czy na pewno chcesz usunąć tego kuriera? Ta operacja jest nieodwracalna."
+        confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
         isLoading={deleteIntegration.isPending}

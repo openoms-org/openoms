@@ -256,7 +256,7 @@ export default function NotificationsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>{t("dhl.password")}</Label>
+                      <Label>{tn("smtpPassword")}</Label>
                       <Input
                         type="password"
                         value={emailForm.smtp_pass}

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth";
 import { navItems, navGroups, type NavItem } from "@/lib/nav-items";
 import { isNavItemActive } from "@/lib/nav-utils";
+import { getVisibleNavItems } from "@/lib/readiness";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { useGroupExpansion } from "@/hooks/use-group-expansion";
 import {
@@ -40,9 +41,7 @@ export function Sidebar() {
     });
   }, []);
 
-  const filteredItems = navItems.filter(
-    (item) => !item.hidden && (!item.adminOnly || isAdmin)
-  );
+  const filteredItems = getVisibleNavItems(navItems, { isAdmin });
 
   const ungroupedItems = filteredItems.filter((item) => !item.group);
   const groupedItems = filteredItems.filter((item) => item.group);

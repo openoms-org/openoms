@@ -1,6 +1,7 @@
 "use client";
 
-import { getProvidersByCategory, type ProviderInfo } from "@/lib/provider-info";
+import type { ProviderInfo } from "@/lib/provider-info";
+import { getVisibleProvidersByCategory } from "@/lib/readiness";
 import { ProviderCard } from "@/components/shared/provider-card";
 
 interface ProviderPickerProps {
@@ -10,7 +11,7 @@ interface ProviderPickerProps {
 }
 
 export function ProviderPicker({ category, selected, onSelect }: ProviderPickerProps) {
-  const providers = getProvidersByCategory(category);
+  const providers = getVisibleProvidersByCategory(category);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

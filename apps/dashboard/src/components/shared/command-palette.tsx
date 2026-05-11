@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { navItems, flattenNavItems } from "@/lib/nav-items";
 import { useAuthStore } from "@/lib/auth";
+import { getVisibleNavItems, isRouteAccessible } from "@/lib/readiness";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -40,8 +41,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const t = useTranslations("commandPalette");
   const tNav = useTranslations("navigation");
 
-  const allNavItems = flattenNavItems(navItems).filter(
-    (item) => !item.hidden && (!item.adminOnly || isAdmin)
+  const allNavItems = flattenNavItems(getVisibleNavItems(navItems, { isAdmin }));
+  const visibleQuickActions = quickActions.filter((action) =>
+    isRouteAccessible(action.href),
   );
 
   const handleSelect = useCallback(
@@ -84,7 +86,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         <CommandSeparator />
 
         <CommandGroup heading={t("quickActions")}>
-          {quickActions.map((action) => (
+          {visibleQuickActions.map((action) => (
             <CommandItem
               key={action.href}
               value={t(action.labelKey)}
