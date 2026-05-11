@@ -33,6 +33,9 @@ function PricingContent() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   useEffect(() => {
+    if (config.isLoading) {
+      return;
+    }
     if (!config.billing_enabled) {
       setIsLoading(false);
       return;
@@ -47,17 +50,13 @@ function PricingContent() {
         toast.error("Nie udalo sie zaladowac planow");
       })
       .finally(() => setIsLoading(false));
-  }, [config.billing_enabled]);
+  }, [config.billing_enabled, config.isLoading]);
 
   useEffect(() => {
-    if (!config.billing_enabled) {
+    if (!config.isLoading && !config.billing_enabled) {
       router.replace("/register/invite");
     }
-  }, [config.billing_enabled, router]);
-
-  if (!config.billing_enabled) {
-    return null;
-  }
+  }, [config.billing_enabled, config.isLoading, router]);
 
   const handleSelectPlan = async (planId: string) => {
     setLoadingPlan(planId);
@@ -77,7 +76,7 @@ function PricingContent() {
     }
   };
 
-  if (isLoading) {
+  if (config.isLoading || isLoading) {
     return (
       <div className="max-w-5xl mx-auto space-y-10 py-12">
         <div className="text-center space-y-3">
@@ -92,6 +91,10 @@ function PricingContent() {
         </div>
       </div>
     );
+  }
+
+  if (!config.billing_enabled) {
+    return null;
   }
 
   if (plans.length === 0) {
