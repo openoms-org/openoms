@@ -127,6 +127,10 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 
 		orders, newCursor, err := provider.PollOrders(ctx, cursor)
 		if err != nil {
+			if isTerminalOAuthCredentialError(p.providerName, err) {
+				markIntegrationRequiresReauth(ctx, p.pool, p.providerName,
+					ti.TenantID.String(), ti.IntegrationID.String(), p.logger)
+			}
 			p.logger.Error("failed to poll orders",
 				"integration_id", ti.IntegrationID,
 				"provider", p.providerName,

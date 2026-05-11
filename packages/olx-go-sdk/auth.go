@@ -96,6 +96,57 @@ func (c *Client) SetTokens(accessToken, refreshToken string, expiry time.Time) {
 	c.tokenExpiresAt = expiry
 }
 
+// TokenError represents an OAuth token endpoint error.
+type TokenError struct {
+	StatusCode       int    `json:"-"`
+	ErrorCode        string `json:"error"`
+	ErrorDescription string `json:"error_description,omitempty"`
+	ErrorHumanTitle  string `json:"error_human_title,omitempty"`
+	Message          string `json:"message,omitempty"`
+	operation        string
+	rawBody          string
+}
+
+func (e *TokenError) Error() string {
+	detail := e.ErrorDescription
+	if detail == "" {
+		detail = e.Message
+	}
+	if detail == "" {
+		detail = e.rawBody
+	}
+	if e.ErrorCode != "" && detail != "" {
+		return fmt.Sprintf("olx: %s (HTTP %d) [%s]: %s", e.operation, e.StatusCode, e.ErrorCode, detail)
+	}
+	if e.ErrorCode != "" {
+		return fmt.Sprintf("olx: %s (HTTP %d) [%s]", e.operation, e.StatusCode, e.ErrorCode)
+	}
+	if detail != "" {
+		return fmt.Sprintf("olx: %s (HTTP %d): %s", e.operation, e.StatusCode, detail)
+	}
+	return fmt.Sprintf("olx: %s (HTTP %d)", e.operation, e.StatusCode)
+}
+
+// Unwrap returns a sentinel error for terminal OAuth failures.
+func (e *TokenError) Unwrap() error {
+	if e.ErrorCode == "invalid_grant" {
+		return ErrInvalidGrant
+	}
+	return nil
+}
+
+func newTokenError(operation string, statusCode int, rawBody []byte) error {
+	tokenErr := &TokenError{
+		StatusCode: statusCode,
+		operation:  operation,
+		rawBody:    string(rawBody),
+	}
+	if err := json.Unmarshal(rawBody, tokenErr); err != nil {
+		return tokenErr
+	}
+	return tokenErr
+}
+
 func (c *Client) postToken(ctx context.Context, data url.Values) (*TokenResponse, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.authURL, strings.NewReader(data.Encode()))
 	if err != nil {
@@ -111,7 +162,7 @@ func (c *Client) postToken(ctx context.Context, data url.Values) (*TokenResponse
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
-		return nil, fmt.Errorf("olx: token request failed (HTTP %d): %s", resp.StatusCode, string(body))
+		return nil, newTokenError("token request failed", resp.StatusCode, body)
 	}
 
 	var tok TokenResponse

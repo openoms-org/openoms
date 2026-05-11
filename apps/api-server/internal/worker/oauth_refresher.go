@@ -169,6 +169,10 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 			newCredJSON, err = w.refreshEbay(ctx, credJSON)
 		}
 		if err != nil {
+			if isTerminalOAuthCredentialError(ir.provider, err) {
+				markIntegrationRequiresReauth(ctx, w.pool, ir.provider,
+					ir.tenantID, ir.id, w.logger)
+			}
 			w.logger.Error("oauth refresh: refresh failed", "integration_id", ir.id, "error", err)
 			continue
 		}

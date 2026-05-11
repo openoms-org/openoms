@@ -3,6 +3,8 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -15,6 +17,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
 )
 
 // ---------------------------------------------------------------------------
@@ -55,6 +58,15 @@ func TestMarketplaceOrderPoller_ImplementsWorkerInterface(_ *testing.T) {
 		Logger:       slog.Default(),
 	})
 	var _ Worker = p
+}
+
+func TestIsTerminalOAuthCredentialError(t *testing.T) {
+	assert.True(t, isTerminalOAuthCredentialError("olx",
+		fmt.Errorf("poll: %w", olxsdk.ErrInvalidGrant)))
+	assert.False(t, isTerminalOAuthCredentialError("olx",
+		errors.New("temporary network timeout")))
+	assert.False(t, isTerminalOAuthCredentialError("allegro",
+		fmt.Errorf("poll: %w", olxsdk.ErrInvalidGrant)))
 }
 
 // ---------------------------------------------------------------------------
