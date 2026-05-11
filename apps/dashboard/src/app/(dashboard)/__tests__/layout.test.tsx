@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/auth";
+import type { Tenant, User } from "@/types/api";
 
 // Mock next/navigation which is used by the sidebar
 vi.mock("next/navigation", () => ({
@@ -29,6 +30,24 @@ vi.mock("next-themes", () => ({
 // Mock next-intl
 vi.mock("next-intl", () => ({
   useTranslations: vi.fn(() => (key: string) => key),
+}));
+
+vi.mock("@/hooks/use-onboarding-wizard", () => ({
+  useOnboardingStatus: vi.fn(() => ({
+    data: { completed: true, dismissed: false },
+  })),
+}));
+
+vi.mock("@/components/subscription-banner", () => ({
+  SubscriptionBanner: () => null,
+}));
+
+vi.mock("@/hooks/use-websocket", () => ({
+  useWebSocket: vi.fn(() => ({ isConnected: false, lastEvent: null })),
+}));
+
+vi.mock("@/hooks/use-service-worker", () => ({
+  useServiceWorker: vi.fn(),
 }));
 
 // Ensure localStorage is available (happy-dom may lag behind)
@@ -62,6 +81,25 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 beforeEach(() => {
   useAuthStore.getState().clearAuth();
 });
+
+const ownerUser: User = {
+  id: "user-1",
+  tenant_id: "tenant-1",
+  email: "owner@example.com",
+  name: "Owner",
+  role: "owner",
+  created_at: "2026-05-11T00:00:00Z",
+  updated_at: "2026-05-11T00:00:00Z",
+};
+
+const tenant: Tenant = {
+  id: "tenant-1",
+  name: "OpenOMS",
+  slug: "openoms",
+  plan: "enterprise",
+  created_at: "2026-05-11T00:00:00Z",
+  updated_at: "2026-05-11T00:00:00Z",
+};
 
 describe("DashboardLayout", () => {
   it("shows loading skeleton when isLoading is true", () => {
@@ -117,5 +155,23 @@ describe("DashboardLayout", () => {
     const main = container.querySelector("main");
     expect(main).toBeInTheDocument();
     expect(screen.getByText("Main area test")).toBeInTheDocument();
+  });
+
+  it("hides non-ready items from the expanded client-ready sales navigation", () => {
+    useAuthStore.getState().setAuth("token", ownerUser, tenant);
+
+    render(
+      <DashboardLayout>
+        <div>Content</div>
+      </DashboardLayout>,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByText("orders")).toBeInTheDocument();
+    expect(screen.getByText("customers")).toBeInTheDocument();
+    expect(screen.getByText("returns")).toBeInTheDocument();
+
+    expect(screen.queryByText("invoices")).not.toBeInTheDocument();
+    expect(screen.queryByText("invoicing")).not.toBeInTheDocument();
   });
 });

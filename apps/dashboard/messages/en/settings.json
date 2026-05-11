@@ -416,6 +416,7 @@
       "smsapiConfig": "SMSAPI.pl configuration",
       "smtpConfig": "SMTP configuration",
       "smtpHost": "SMTP Host",
+      "smtpPassword": "SMTP password",
       "testEmail": "Test email",
       "testSMS": "Test SMS",
       "title": "Notifications",

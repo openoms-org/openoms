@@ -29,6 +29,7 @@ import {
 } from "@/lib/constants";
 import type { CredentialField } from "@/lib/constants";
 import { isInDevelopment } from "@/lib/integration-status";
+import { getVisibleProviderKeys } from "@/lib/readiness";
 import { useTranslations } from "next-intl";
 
 const integrationSchema = z.object({
@@ -203,9 +204,12 @@ export function IntegrationForm({
     key,
     {
       ...cat,
-      providers: isEditMode
-        ? cat.providers
-        : cat.providers.filter((p) => !(p in PROVIDERS_WITH_DEDICATED_PAGES)),
+      providers: getVisibleProviderKeys(
+        isEditMode
+          ? cat.providers
+          : cat.providers.filter((p) => !(p in PROVIDERS_WITH_DEDICATED_PAGES)),
+        { mode: isEditMode ? "full" : undefined },
+      ),
     },
   ] as [string, { labelKey: string; providers: string[] }]).filter(([, cat]) => cat.providers.length > 0);
 
