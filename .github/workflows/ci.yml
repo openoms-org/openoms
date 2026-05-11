@@ -477,14 +477,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
             chart:
               - 'deploy/helm/openoms/**'
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
         if: steps.filter.outputs.chart == 'true'
 
       - name: Lint chart
