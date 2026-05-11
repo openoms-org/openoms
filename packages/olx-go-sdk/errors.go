@@ -9,4 +9,5 @@ var (
 	ErrNotFound     = errors.New("olx: not found")
 	ErrRateLimited  = errors.New("olx: rate limited")
 	ErrServerError  = errors.New("olx: server error")
+	ErrInvalidGrant = errors.New("olx: invalid grant")
 )

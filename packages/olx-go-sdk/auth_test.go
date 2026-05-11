@@ -2,6 +2,7 @@ package olx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -76,6 +77,25 @@ func TestExchangeCodeError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "400")
+	assert.True(t, errors.Is(err, ErrInvalidGrant))
+}
+
+func TestRefreshAccessTokenInvalidGrant(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"error":"invalid_grant","error_description":"Refresh token has expired"}`)
+	}))
+	defer srv.Close()
+
+	client := NewClient("test_id", "test_secret", "old-at", //nolint:gosec // test credentials
+		WithBaseURL(srv.URL),
+		WithTokens("old-at", "expired-rt", time.Now().Add(-time.Hour)),
+	)
+	_, err := client.RefreshAccessToken(context.Background())
+
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, ErrInvalidGrant))
+	assert.Contains(t, err.Error(), "invalid_grant")
 }
 
 func TestRefreshAccessToken(t *testing.T) {

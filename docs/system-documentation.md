@@ -1244,7 +1244,7 @@ Standalone maszyna stanow zamowien i przesylek:
 | woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`); malformed monetary fields reject order import |
 | ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService); malformed monetary fields reject order import |
 | kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML |
-| olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService) |
+| olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService); `invalid_grant` z endpointu tokenow jest zwracany jako terminalny blad OAuth, a workery oznaczaja integracje jako wymagajaca ponownej autoryzacji |
 | mirakl-go-sdk | Mirakl/Empik | REST | Seller network |
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
 | shoper-go-sdk | Shoper | REST | Zamowienia, produkty |

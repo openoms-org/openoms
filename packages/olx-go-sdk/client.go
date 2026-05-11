@@ -159,7 +159,7 @@ func (c *Client) ensureAccessToken(ctx context.Context) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
-		return fmt.Errorf("olx: token refresh failed (HTTP %d): %s", resp.StatusCode, string(body))
+		return newTokenError("token refresh failed", resp.StatusCode, body)
 	}
 
 	var tok TokenResponse

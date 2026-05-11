@@ -3,9 +3,11 @@ package olx
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestNewClientDefaults(t *testing.T) {
@@ -72,6 +74,29 @@ func TestDoSetsAuthHeader(t *testing.T) {
 	err := c.do(context.Background(), "GET", "/test", nil, &result)
 	if err != nil {
 		t.Fatalf("do() returned error: %v", err)
+	}
+}
+
+func TestDoReturnsInvalidGrantFromTokenRefresh(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/oauth/token" {
+			t.Fatalf("unexpected path %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"invalid_grant","error_description":"Refresh token has expired"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret", "old-at",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+		WithTokens("old-at", "expired-rt", time.Now().Add(-time.Hour)),
+	)
+
+	var result map[string]any
+	err := c.do(context.Background(), "GET", "/transactions", nil, &result)
+	if !errors.Is(err, ErrInvalidGrant) {
+		t.Fatalf("err = %v, want ErrInvalidGrant", err)
 	}
 }
 
