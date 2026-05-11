@@ -107,7 +107,7 @@ export function flattenNavItems(items: NavItem[]): NavItem[] {
 }
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "dashboard", icon: LayoutDashboard },
+  { href: "/", label: "operationsDashboard", icon: LayoutDashboard },
 
   // ── Sales ──
   { href: "/orders", label: "orders", icon: ShoppingCart, group: "sales" },
@@ -132,7 +132,7 @@ export const navItems: NavItem[] = [
   { href: "/stock-sync", label: "stockSync", icon: RefreshCw, adminOnly: true, group: "logistics" },
 
   // ── Sales channels ──
-  { href: "/marketplaces", label: "marketplace", icon: Store, adminOnly: true, group: "salesChannels" },
+  { href: "/marketplaces", label: "salesChannelConnections", icon: Store, adminOnly: true, group: "salesChannels" },
   { href: "/settings/feeds", label: "productFeeds", icon: Rss, adminOnly: true, group: "salesChannels" },
   { href: "/listing-sync", label: "listingSync", icon: ArrowUpDown, adminOnly: true, group: "salesChannels" },
 
