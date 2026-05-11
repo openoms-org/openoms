@@ -92,6 +92,19 @@ describe("useOnboarding", () => {
     });
   });
 
+  it("links the Allegro onboarding step to the client-ready marketplace setup", async () => {
+    const { result } = renderHook(() => useOnboarding(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      const integrationStep = result.current.steps.find(
+        (s) => s.key === "integration"
+      );
+      expect(integrationStep?.href).toBe("/marketplaces/new");
+    });
+  });
+
   it("marks integration step as completed when active Allegro exists", async () => {
     server.use(
       http.get(`${API_BASE}/integrations`, () => {

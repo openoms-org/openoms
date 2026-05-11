@@ -26,6 +26,7 @@ describe("dashboard feature readiness", () => {
     expect(visible).toContain("/settings/roles");
     expect(visible).toContain("/settings/security");
     expect(visible).toContain("/marketplaces");
+    expect(visible).toContain("/carriers");
 
     expect(visible).not.toContain("/reports/forecast");
     expect(visible).not.toContain("/reports/carbon");
@@ -66,6 +67,8 @@ describe("dashboard feature readiness", () => {
     expect(getRouteReadiness("/products/product-1/listings")).toBe("controlled");
     expect(getRouteReadiness("/products/product-1/variants")).toBe("verify");
     expect(getRouteReadiness("/customers/import")).toBe("verify");
+    expect(getRouteReadiness("/carriers")).toBe("ready");
+    expect(getRouteReadiness("/carriers/new")).toBe("ready");
     expect(getRouteReadiness("/settings/sms")).toBe("blocked");
     expect(getRouteReadiness("/reports/forecast")).toBe("beta");
   });
@@ -73,6 +76,7 @@ describe("dashboard feature readiness", () => {
   it("blocks direct access to beta and blocked routes in client-ready mode", () => {
     expect(isRouteAccessible("/orders/new", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/marketplaces/allegro", { mode: "client-ready" })).toBe(true);
+    expect(isRouteAccessible("/carriers/new", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/marketplaces/allegro/offers", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/products/product-1/listings", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/customers/import", { mode: "client-ready" })).toBe(false);
@@ -104,6 +108,14 @@ describe("provider readiness", () => {
     }).map((provider) => provider.key);
 
     expect(providers).toEqual(["allegro"]);
+  });
+
+  it("only exposes certified carrier providers in client-ready mode", () => {
+    const providers = getVisibleProvidersByCategory("carrier", {
+      mode: "client-ready",
+    }).map((provider) => provider.key);
+
+    expect(providers).toEqual(["inpost"]);
   });
 
   it("keeps blocked providers out of full mode while allowing beta review", () => {

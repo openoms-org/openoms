@@ -76,7 +76,7 @@ export function useOnboarding() {
       key: "integration",
       title: "Po\u0142\u0105cz z Allegro",
       description: "Zaimportuj zam\u00f3wienia i produkty z Allegro.",
-      href: "/integrations",
+      href: "/marketplaces/new",
       completed: Array.isArray(integrations) && integrations.some((i) => i.provider === "allegro" && i.status === "active"),
     },
     {

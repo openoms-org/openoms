@@ -396,7 +396,7 @@ export default function OrdersPage() {
                   icon={ShoppingCart}
                   title={t("empty.title")}
                   description={t("empty.description")}
-                  action={{ label: t("empty.connectAllegro"), href: "/integrations" }}
+                  action={{ label: t("empty.connectAllegro"), href: "/marketplaces/new" }}
                   secondaryAction={{ label: t("empty.addOrder"), href: "/orders/new" }}
                 />
               }

@@ -57,7 +57,7 @@ export default function CarrierDetailPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Nie znaleziono kuriera</h1>
         <Button asChild variant="outline">
-          <Link href="/carriers">Wroc do listy</Link>
+          <Link href="/carriers">Wróć do listy</Link>
         </Button>
       </div>
     );
@@ -70,7 +70,7 @@ export default function CarrierDetailPage() {
       { status: newStatus as "active" | "inactive" | "error" },
       {
         onSuccess: () => {
-          toast.success("Status kuriera zostal zmieniony");
+          toast.success("Status kuriera został zmieniony");
         },
         onError: (error) => {
           toast.error(getErrorMessage(error));
@@ -93,13 +93,13 @@ export default function CarrierDetailPage() {
     }
 
     if (Object.keys(payload).length === 0) {
-      toast.info("Nie wprowadzono zadnych zmian");
+      toast.info("Nie wprowadzono żadnych zmian");
       return;
     }
 
     updateIntegration.mutate(payload, {
       onSuccess: () => {
-        toast.success("Dane kuriera zostaly zaktualizowane");
+        toast.success("Dane kuriera zostały zaktualizowane");
       },
       onError: (error) => {
         toast.error(getErrorMessage(error));
@@ -110,7 +110,7 @@ export default function CarrierDetailPage() {
   const handleDelete = () => {
     deleteIntegration.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Kurier zostal usuniety");
+        toast.success("Kurier został usunięty");
         router.push("/carriers");
       },
       onError: (error) => {
@@ -150,7 +150,7 @@ export default function CarrierDetailPage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Szczegoly</CardTitle>
+              <CardTitle>Szczegóły</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -175,7 +175,7 @@ export default function CarrierDetailPage() {
                 )}
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Dane uwierzytelniajace
+                    Dane uwierzytelniające
                   </p>
                   <p className="mt-1 font-medium">
                     {integration.has_credentials ? "Skonfigurowane" : "Brak"}
@@ -207,7 +207,7 @@ export default function CarrierDetailPage() {
 
               {integration.status === "error" && integration.error_message && (
                 <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-                  <p className="text-sm font-medium text-destructive">Blad integracji</p>
+                  <p className="text-sm font-medium text-destructive">Błąd integracji</p>
                   <p className="mt-1 text-sm text-destructive/80">
                     {integration.error_message}
                   </p>
@@ -219,7 +219,7 @@ export default function CarrierDetailPage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Zmien status</CardTitle>
+                <CardTitle>Zmień status</CardTitle>
               </CardHeader>
               <CardContent>
                 <Select
@@ -257,9 +257,9 @@ export default function CarrierDetailPage() {
         <ConfirmDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          title="Usun kuriera"
-          description="Czy na pewno chcesz usunac tego kuriera? Ta operacja jest nieodwracalna."
-          confirmLabel="Usun"
+          title="Usuń kuriera"
+          description="Czy na pewno chcesz usunąć tego kuriera? Ta operacja jest nieodwracalna."
+          confirmLabel="Usuń"
           variant="destructive"
           onConfirm={handleDelete}
           isLoading={deleteIntegration.isPending}

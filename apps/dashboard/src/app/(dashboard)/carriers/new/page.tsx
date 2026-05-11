@@ -84,7 +84,7 @@ export default function NewCarrierPage() {
           try {
             new URL(urlVal);
           } catch {
-            newErrors[field.key] = "Podaj prawidlowy adres URL";
+            newErrors[field.key] = "Podaj prawidłowy adres URL";
           }
         }
       }
@@ -125,7 +125,7 @@ export default function NewCarrierPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Kurier zostal dodany");
+          toast.success("Kurier został dodany");
           router.push("/carriers");
         },
         onError: (error) => {
@@ -214,7 +214,7 @@ export default function NewCarrierPage() {
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
               <span className="sr-only">
-                {isVisible ? "Ukryj" : "Pokaz"} {field.labelKey.toLowerCase()}
+                {isVisible ? "Ukryj" : "Pokaż"} {field.labelKey.toLowerCase()}
               </span>
             </Button>
           )}
@@ -248,8 +248,8 @@ export default function NewCarrierPage() {
             </h1>
             <p className="text-muted-foreground">
               {step === "select"
-                ? "Wybierz firme kurierska, z ktora chcesz sie polaczyc"
-                : "Wprowadz dane uwierzytelniajace"}
+                ? "Wybierz firmę kurierską, z którą chcesz się połączyć"
+                : "Wprowadź dane uwierzytelniające"}
             </p>
           </div>
         </div>
@@ -267,7 +267,7 @@ export default function NewCarrierPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-sm font-medium text-foreground">
-                  Dane uwierzytelniajace &mdash; {getProviderDisplayName(selectedProvider)}
+                  Dane uwierzytelniające &mdash; {getProviderDisplayName(selectedProvider)}
                 </h3>
 
                 {regularFields.map(renderField)}

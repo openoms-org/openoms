@@ -174,4 +174,23 @@ describe("DashboardLayout", () => {
     expect(screen.queryByText("invoices")).not.toBeInTheDocument();
     expect(screen.queryByText("invoicing")).not.toBeInTheDocument();
   });
+
+  it("shows the client-ready courier module in logistics navigation", async () => {
+    useAuthStore.getState().setAuth("token", ownerUser, tenant);
+    localStorage.setItem("sidebar-expanded-groups", JSON.stringify(["sales", "logistics"]));
+
+    render(
+      <DashboardLayout>
+        <div>Content</div>
+      </DashboardLayout>,
+      { wrapper: Wrapper },
+    );
+
+    expect(await screen.findByText("shipments")).toBeInTheDocument();
+    expect(await screen.findByText("carriers")).toBeInTheDocument();
+
+    expect(screen.queryByText("packing")).not.toBeInTheDocument();
+    expect(screen.queryByText("pickPack")).not.toBeInTheDocument();
+    expect(screen.queryByText("stocktakes")).not.toBeInTheDocument();
+  });
 });

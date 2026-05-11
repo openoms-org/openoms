@@ -15,6 +15,7 @@ import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import { getProviderDisplayName } from "@/lib/provider-info";
+import { getVisibleProviderKeys } from "@/lib/readiness";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,12 @@ export default function CarriersPage() {
   const deleteIntegration = useDeleteIntegration();
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const visibleProviderKeys = new Set(
+    getVisibleProviderKeys((carriers ?? []).map((integration) => integration.provider)),
+  );
+  const visibleCarriers = carriers?.filter((integration) =>
+    visibleProviderKeys.has(integration.provider),
+  );
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -41,7 +48,7 @@ export default function CarriersPage() {
     if (!deleteId) return;
     deleteIntegration.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Kurier zostal usuniety");
+        toast.success("Kurier został usunięty");
         setDeleteId(null);
       },
       onError: (error) => {
@@ -54,14 +61,14 @@ export default function CarriersPage() {
     <AdminGuard>
       <PageHeader
         title="Kurierzy"
-        description="Zarzadzaj polaczeniami z firmami kurierskimi"
+        description="Zarządzaj połączeniami z firmami kurierskimi"
         action={{ label: "Dodaj kuriera", href: "/carriers/new" }}
       />
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            Wystapil blad podczas ladowania danych. Sprobuj odswiezyc strone.
+            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
           </p>
           <Button
             variant="outline"
@@ -69,12 +76,12 @@ export default function CarriersPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            Sprobuj ponownie
+            Spróbuj ponownie
           </Button>
         </div>
       )}
 
-      {!carriers || carriers.length === 0 ? (
+      {!visibleCarriers || visibleCarriers.length === 0 ? (
         <EmptyState
           icon={Truck}
           title="Brak kurierów"
@@ -89,14 +96,14 @@ export default function CarriersPage() {
                 <TableHead>Kurier</TableHead>
                 <TableHead>Etykieta</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Dane uwierzytelniajace</TableHead>
+                <TableHead>Dane uwierzytelniające</TableHead>
                 <TableHead>Ostatnia synchronizacja</TableHead>
                 <TableHead>Utworzono</TableHead>
                 <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {carriers.map((integration) => (
+              {visibleCarriers.map((integration) => (
                 <TableRow
                   key={integration.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
