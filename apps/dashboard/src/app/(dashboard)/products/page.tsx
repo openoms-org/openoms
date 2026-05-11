@@ -566,7 +566,7 @@ function MyProductsTab() {
             icon={Package}
             title={t("noProducts")}
             description={t("noProductsHint")}
-            action={{ label: t("importFromAllegro"), href: "/integrations" }}
+            action={{ label: t("importFromAllegro"), href: "/marketplaces/new" }}
             secondaryAction={{ label: t("addProduct"), href: "/products/new" }}
           />
         }

@@ -68,7 +68,7 @@ function QuickStartCard() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link href="/integrations">
+            <Link href="/marketplaces/new">
               <Settings className="mr-2 h-4 w-4" />
               {t("empty.connectAllegro")}
             </Link>

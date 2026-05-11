@@ -15,6 +15,7 @@ import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import { getProviderDisplayName } from "@/lib/provider-info";
+import { getVisibleProviderKeys } from "@/lib/readiness";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,12 @@ export default function MarketplacesPage() {
   const deleteIntegration = useDeleteIntegration();
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const visibleProviderKeys = new Set(
+    getVisibleProviderKeys((marketplaces ?? []).map((integration) => integration.provider)),
+  );
+  const visibleMarketplaces = marketplaces?.filter((integration) =>
+    visibleProviderKeys.has(integration.provider),
+  );
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -86,7 +93,7 @@ export default function MarketplacesPage() {
         </div>
       )}
 
-      {!marketplaces || marketplaces.length === 0 ? (
+      {!visibleMarketplaces || visibleMarketplaces.length === 0 ? (
         <EmptyState
           icon={Store}
           title={t("noMarketplaces")}
@@ -108,7 +115,7 @@ export default function MarketplacesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {marketplaces.map((integration) => (
+              {visibleMarketplaces.map((integration) => (
                 <TableRow
                   key={integration.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
