@@ -297,7 +297,8 @@ func TestDPD_MapStatus_DelegatesToSDK(t *testing.T) {
 		oms    string
 		wantOK bool
 	}{
-		{"NEW", "pending", true},
+		{"NEW", "label_ready", true},
+		{"CANCELLED", "failed", true},
 		{"DELIVERED", "delivered", true},
 		{"NONEXISTENT", "", false},
 	}

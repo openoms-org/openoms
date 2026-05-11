@@ -305,13 +305,18 @@ func TestSpec_StatusMapping_DPDStatuses(t *testing.T) {
 		omsStatus string
 		wantOK    bool
 	}{
-		{"NEW", "pending", true},
-		{"SENT", "in_transit", true},
+		{"NEW", "label_ready", true},
+		{"SENT", "picked_up", true},
 		{"IN_TRANSIT", "in_transit", true},
 		{"OUT_FOR_DELIVERY", "out_for_delivery", true},
 		{"DELIVERED", "delivered", true},
 		{"RETURNED", "returned", true},
-		{"PICKUP_AT_POINT", "ready_for_pickup", true},
+		{"PICKUP_AT_POINT", "out_for_delivery", true},
+		{"CANCELLED", "failed", true},
+		{"FAILED", "failed", true},
+		{"REFUSED", "failed", true},
+		{"LOST", "failed", true},
+		{"DESTROYED", "failed", true},
 		{"UNKNOWN_STATUS", "", false},
 	}
 
