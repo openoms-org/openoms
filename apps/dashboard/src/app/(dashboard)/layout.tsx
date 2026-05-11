@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Sidebar />
           <div className="flex flex-1 flex-col overflow-hidden">
             <SubscriptionBanner />
-            <Header />
+            <Header onOpenCommandPalette={handleToggleCommandPalette} />
             <main className="flex-1 overflow-y-auto p-6">
               <ErrorBoundary>
                 <ReadinessRouteGuard>{children}</ReadinessRouteGuard>

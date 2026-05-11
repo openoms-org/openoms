@@ -3,6 +3,7 @@ import { render, screen } from "@/test/test-utils";
 import { IntegrationHealthPanel } from "@/components/dashboard/integration-health-panel";
 import { OperationalExceptions } from "@/components/dashboard/operational-exceptions";
 import { OperationsActivity } from "@/components/dashboard/operations-activity";
+import { OperationsSummaryStrip } from "@/components/dashboard/operations-summary-strip";
 import { OrchestrationMap } from "@/components/dashboard/orchestration-map";
 import type {
   IntegrationHealthItem,
@@ -47,6 +48,30 @@ const stages: OrchestrationStage[] = [
 ];
 
 describe("operations dashboard components", () => {
+  it("renders summary metrics without adding workflow actions", () => {
+    render(
+      <OperationsSummaryStrip
+        stages={stages}
+        exceptions={[]}
+        integrationHealth={[
+          {
+            id: "carrier-inpost",
+            provider: "inpost",
+            label: "InPost",
+            health: "ok",
+            status: "active",
+            href: "/carriers",
+          },
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("operations.summary.queue")).toBeInTheDocument();
+    expect(screen.getByText("operations.summary.connections")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
   it("renders orchestration stages as links to existing workflow pages", () => {
     render(<OrchestrationMap stages={stages} isLoading={false} />);
 
@@ -153,7 +178,11 @@ describe("operations dashboard components", () => {
     render(<OperationsActivity items={items} isLoading={false} />);
 
     expect(screen.getByText("operations.activity.order.title")).toBeInTheDocument();
-    expect(screen.getByText("operations.activity.order.description")).toBeInTheDocument();
+    expect(
+      screen.getByText((content) =>
+        content.includes("operations.activity.order.description"),
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
         name: /operations\.activity\.order\.title/i,

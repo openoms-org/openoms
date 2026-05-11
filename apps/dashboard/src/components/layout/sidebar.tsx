@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronRight, Package, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Boxes, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth";
 import { navItems, navGroups, type NavItem } from "@/lib/nav-items";
@@ -61,8 +61,8 @@ export function Sidebar() {
             className={cn(
               "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                ? "bg-info/10 text-info"
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             )}
           >
             <item.icon className="h-4 w-4" />
@@ -88,8 +88,8 @@ export function Sidebar() {
             "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
             isChild && "pl-9 py-1.5 text-[13px]",
             isActive
-              ? "border-l-2 border-sidebar-primary bg-sidebar-accent text-sidebar-accent-foreground"
-              : "border-l-2 border-transparent text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+              ? "border-l-2 border-info bg-info/10 text-info shadow-sm"
+              : "border-l-2 border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground"
           )}
         >
           <item.icon className={cn("h-4 w-4 shrink-0", isChild && "h-3.5 w-3.5")} />
@@ -110,8 +110,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center justify-center rounded-md p-2 transition-colors",
               isActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                ? "bg-info/10 text-info"
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             )}
           >
             <item.icon className="h-4 w-4" />
@@ -134,20 +134,24 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden md:flex flex-col border-r bg-sidebar transition-[width] duration-200",
-        collapsed ? "w-14" : "w-64"
+        "hidden flex-col border-r bg-background transition-[width] duration-200 md:flex",
+        collapsed ? "w-16" : "w-52"
       )}
     >
       {/* Header / Logo */}
-      <div className="flex h-14 items-center border-b px-4">
+      <div className="flex h-16 items-center border-b px-4">
         {collapsed ? (
           <Link href="/" className="flex w-full items-center justify-center">
-            <Package className="h-6 w-6" />
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
+              <Boxes className="h-5 w-5" aria-hidden="true" />
+            </span>
           </Link>
         ) : (
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <Package className="h-6 w-6" />
-            <span>OpenOMS</span>
+          <Link href="/" className="flex items-center gap-3 font-semibold">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
+              <Boxes className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="text-lg tracking-normal text-foreground">OpenOMS</span>
           </Link>
         )}
       </div>
@@ -197,7 +201,7 @@ export function Sidebar() {
                   <button
                     onClick={() => toggleGroup(group.key)}
                     aria-expanded={expanded}
-                    className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-sidebar-accent/30 hover:text-sidebar-accent-foreground transition-colors"
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
                   >
                     <ChevronRight
                       className={cn(
@@ -228,7 +232,7 @@ export function Sidebar() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleSidebar}
-                  className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground transition-colors"
+                  className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
                 >
                   <PanelLeftOpen className="h-4 w-4" />
                 </button>
@@ -241,7 +245,7 @@ export function Sidebar() {
         ) : (
           <button
             onClick={toggleSidebar}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground transition-colors"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
           >
             <PanelLeftClose className="h-4 w-4" />
             <span>{tShared("collapseMenu")}</span>

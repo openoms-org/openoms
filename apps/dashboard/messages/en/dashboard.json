@@ -11,7 +11,14 @@
           "title": "Order {customerName}"
         }
       },
+      "activityColumns": {
+        "event": "Event",
+        "source": "Source",
+        "time": "Time"
+      },
+      "activitySubtitle": "Recent real order events, without shortcuts to unfinished modules.",
       "activityTitle": "Recent activity",
+      "connectionReady": "Connection ready for operations.",
       "exceptionCount": "{count} exc.",
       "exceptions": {
         "integration": {
@@ -27,7 +34,9 @@
           "title": "{provider} shipment failed"
         }
       },
+      "exceptionsSubtitle": "Only issues that can be handled in existing views.",
       "exceptionsTitle": "Needs attention now",
+      "flowSubtitle": "The shortest map of an order moving through channel intake, fulfillment, logistics, and closeout.",
       "flowTitle": "Operational flow",
       "health": {
         "ok": "OK",
@@ -35,11 +44,17 @@
         "warning": "Warning"
       },
       "integrationHealthTitle": "Connection health",
+      "integrationSubtitle": "Only client-ready integrations are visible here.",
+      "lastSync": "Synced {time}",
       "noActivity": "No recent activity.",
       "noExceptions": "No exceptions",
       "noIntegrationHealth": "No visible connections to check.",
+      "noLastSync": "No last sync data",
       "noWorkDescription": "The most important flows look healthy.",
       "noWorkTitle": "No urgent work",
+      "operator": "Operator: {name}",
+      "stageHint": "Stage queue",
+      "statusLoading": "Loading status",
       "stages": {
         "completed": "Completed",
         "fulfillment": "Fulfillment",
@@ -47,6 +62,19 @@
         "shipping": "Shipping"
       },
       "subtitle": "Order flow health across channels, fulfillment, and shipping.",
+      "summary": {
+        "connections": "Active connections",
+        "connectionsHint": "Client-ready modules only",
+        "exceptions": "Exceptions",
+        "exceptionsHint": "Need operator work",
+        "flow": "Flow health",
+        "flowNeedsAttention": "Check exceptions",
+        "flowOk": "No blockers",
+        "queue": "Orders in queue",
+        "queueHint": "Before closeout"
+      },
+      "syncNeedsAttention": "Needs attention",
+      "syncOk": "Sync OK",
       "title": "Orchestration center"
     },
     "stats": {

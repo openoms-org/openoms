@@ -30,29 +30,31 @@ interface DashboardStats {
 export function useOnboarding() {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+  const canManageSetup = user?.role === "owner" || user?.role === "admin";
 
   const { data: settings } = useQuery({
     queryKey: ["settings", "onboarding"],
     queryFn: () => apiClient<OnboardingSettings>("/v1/settings/onboarding"),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && canManageSetup,
   });
 
   const { data: company } = useQuery({
     queryKey: ["settings", "company"],
     queryFn: () => apiClient<{ name?: string; nip?: string }>("/v1/settings/company"),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && canManageSetup,
   });
 
   const { data: integrations } = useQuery({
     queryKey: ["integrations"],
     queryFn: () => apiClient<Integration[]>("/v1/integrations"),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && canManageSetup,
   });
 
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: () => apiClient<DashboardStats>("/v1/stats/dashboard"),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && canManageSetup,
   });
 
   const dismiss = useMutation({
@@ -95,9 +97,15 @@ export function useOnboarding() {
     },
   ];
 
-  const completedCount = steps.filter((s) => s.completed).length;
-  const allCompleted = completedCount === steps.length;
-  const isVisible = settings !== undefined && !settings.dismissed && !allCompleted;
+  const completedCount = canManageSetup ? steps.filter((s) => s.completed).length : 0;
+  const allCompleted = canManageSetup && completedCount === steps.length;
+  const isVisible = canManageSetup && settings !== undefined && !settings.dismissed && !allCompleted;
 
-  return { steps, completedCount, allCompleted, isVisible, dismiss: dismiss.mutate };
+  return {
+    steps: canManageSetup ? steps : [],
+    completedCount,
+    allCompleted,
+    isVisible,
+    dismiss: canManageSetup ? dismiss.mutate : () => undefined,
+  };
 }

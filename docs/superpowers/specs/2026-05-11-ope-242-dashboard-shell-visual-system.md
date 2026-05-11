@@ -201,3 +201,5 @@ Zmiana jest gotowa, gdy:
 ## Status implementacji
 
 2026-05-11: OPE-242 pierwszy pass implementacyjny przeniosl home dashboardu z raportowania sprzedazowego na operations control tower. Widok uzywa istniejacych danych: etapow przeplywu zamowien, ograniczonej kolejki wyjatkow, zdrowia widocznych gotowych integracji i ostatniej aktywnosci zamowien. Nie dodaje przyciskow naprawy/ponowienia ani linkow do ukrytych providerow.
+
+2026-05-11: Drugi pass wizualny zblizyl implementacje do zaakceptowanej referencji: shell ma jasniejszy sidebar, topbar z realnym triggerem Command Palette, home ma pasek metryk, prawa kolumne wyjatkow, bardziej kompaktowa mape etapow i gestsza tabele ostatniej aktywnosci. Dodatkowo onboardingowe requesty admin-only sa bramkowane rola, zeby zwykly operator nie dostawal ukrytych bledow autoryzacji na pulpicie.

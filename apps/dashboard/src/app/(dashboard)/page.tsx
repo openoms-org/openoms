@@ -7,12 +7,21 @@ import { useOperationsDashboard } from "@/hooks/use-operations-dashboard";
 import { IntegrationHealthPanel } from "@/components/dashboard/integration-health-panel";
 import { OperationalExceptions } from "@/components/dashboard/operational-exceptions";
 import { OperationsActivity } from "@/components/dashboard/operations-activity";
+import { OperationsSummaryStrip } from "@/components/dashboard/operations-summary-strip";
 import { OrchestrationMap } from "@/components/dashboard/orchestration-map";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import Link from "next/link";
-import { ShoppingCart, Package, Settings, X } from "lucide-react";
+import {
+  AlertTriangle,
+  CircleCheck,
+  Package,
+  RefreshCw,
+  Settings,
+  ShoppingCart,
+  X,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const QUICKSTART_DISMISSED_KEY = "openoms_quickstart_dismissed";
@@ -91,46 +100,91 @@ export default function DashboardPage() {
     refetch,
   } = useOperationsDashboard();
   const user = useAuthStore((s) => s.user);
+  const hasOperationalIssues =
+    exceptions.length > 0 ||
+    stages.some((stage) => stage.health !== "ok") ||
+    integrationHealth.some((item) => item.health !== "ok");
+  let HeaderStatusIcon = CircleCheck;
+  let headerStatusClass =
+    "inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 font-medium text-success";
+  let headerStatusKey = "operations.syncOk";
+
+  if (isLoading) {
+    HeaderStatusIcon = RefreshCw;
+    headerStatusClass =
+      "inline-flex items-center gap-2 rounded-md border border-info/30 bg-info/10 px-3 py-2 font-medium text-info";
+    headerStatusKey = "operations.statusLoading";
+  } else if (hasOperationalIssues) {
+    HeaderStatusIcon = AlertTriangle;
+    headerStatusClass =
+      "inline-flex items-center gap-2 rounded-md border border-warning/40 bg-warning/15 px-3 py-2 font-medium text-warning";
+    headerStatusKey = "operations.syncNeedsAttention";
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t("operations.title")}</h1>
-          <p className="text-muted-foreground mt-1">{t("operations.subtitle")}</p>
+    <div className="-m-6 min-h-full bg-muted/30 p-4 sm:p-6 lg:p-7">
+      <div className="mx-auto max-w-[1600px] space-y-5">
+        <div className="flex flex-col gap-4 px-1 py-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-normal md:text-3xl">
+              {t("operations.title")}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground md:text-base">
+              {t("operations.subtitle")}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className={headerStatusClass}>
+              <HeaderStatusIcon
+                className={isLoading ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+                aria-hidden="true"
+              />
+              {t(headerStatusKey)}
+            </span>
+            {user?.name && (
+              <span className="rounded-md border bg-background px-3 py-2 text-muted-foreground">
+                {t("operations.operator", { name: user.name })}
+              </span>
+            )}
+          </div>
         </div>
-        {user?.name && (
-          <p className="text-sm text-muted-foreground">Operator: {user.name}</p>
+
+        {isError && (
+          <div className="rounded-md border border-destructive bg-destructive/10 p-4">
+            <p className="text-sm text-destructive">{tc("loadError")}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => refetch()}
+            >
+              {tc("retry")}
+            </Button>
+          </div>
         )}
-      </div>
 
-      {isError && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            {tc("loadError")}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => refetch()}
-          >
-            {tc("retry")}
-          </Button>
+        <OperationsSummaryStrip
+          stages={stages}
+          exceptions={exceptions}
+          integrationHealth={integrationHealth}
+          isLoading={isLoading}
+        />
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
+          <div className="space-y-5">
+            <OrchestrationMap stages={stages} isLoading={isLoading} />
+            <OperationsActivity items={activity} isLoading={isLoading} />
+          </div>
+          <OperationalExceptions exceptions={exceptions} isLoading={isLoading} />
         </div>
-      )}
 
-      <OnboardingWizard />
-      <QuickStartCard />
-
-      <OrchestrationMap stages={stages} isLoading={isLoading} />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <OperationalExceptions exceptions={exceptions} isLoading={isLoading} />
         <IntegrationHealthPanel items={integrationHealth} isLoading={isLoading} />
-      </div>
 
-      <OperationsActivity items={activity} isLoading={isLoading} />
+        <div className="space-y-4">
+          <OnboardingWizard />
+          <QuickStartCard />
+        </div>
+      </div>
     </div>
   );
 }
