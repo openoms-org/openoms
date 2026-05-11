@@ -204,6 +204,26 @@ export function getVisibleProviderKeys(
   );
 }
 
+export function isShipmentProviderSelectable(
+  provider: string,
+  options: VisibilityOptions = {},
+): boolean {
+  if (provider === "manual") {
+    return true;
+  }
+
+  return isReadinessVisible(getProviderReadiness(provider), options);
+}
+
+export function getSelectableShipmentProviders<T extends string>(
+  providers: readonly T[],
+  options: VisibilityOptions = {},
+): T[] {
+  return providers.filter((provider) =>
+    isShipmentProviderSelectable(provider, options),
+  );
+}
+
 export function getVisibleProvidersByCategory(
   category: ProviderInfo["category"],
   options: VisibilityOptions = {},

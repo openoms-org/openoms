@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
+import { getSelectableShipmentProviders } from "@/lib/readiness";
 import { useTranslations } from "next-intl";
 
 interface CarrierMappingEditorProps {
@@ -21,6 +22,9 @@ interface CarrierMappingEditorProps {
 export function CarrierMappingEditor({ value, onChange }: CarrierMappingEditorProps) {
   const t = useTranslations("integrations");
   const entries = Object.entries(value);
+  const selectableShipmentProviders = getSelectableShipmentProviders(
+    SHIPMENT_PROVIDERS,
+  ).filter((provider) => provider !== "manual");
 
   const handleKeyChange = (oldKey: string, newKey: string) => {
     const updated: Record<string, string> = {};
@@ -63,7 +67,7 @@ export function CarrierMappingEditor({ value, onChange }: CarrierMappingEditorPr
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {SHIPMENT_PROVIDERS.filter(p => p !== "manual").map((p) => (
+              {selectableShipmentProviders.map((p) => (
                 <SelectItem key={p} value={p}>
                   {SHIPMENT_PROVIDER_LABELS[p] ?? p}
                 </SelectItem>
