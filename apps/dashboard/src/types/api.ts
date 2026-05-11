@@ -339,6 +339,7 @@ export interface ShipmentListParams extends PaginationParams {
   status?: string;
   provider?: string;
   order_id?: string;
+  order_ids?: string;
 }
 
 export interface TrackingEvent {
