@@ -1,4 +1,4 @@
-package crypto
+package crypto //nolint:revive // package name conflicts with stdlib but renaming would break imports
 
 import (
 	"encoding/json"
