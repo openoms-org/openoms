@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
+import { getSelectableShipmentProviders } from "@/lib/readiness";
 import { CarrierMappingEditor } from "./carrier-mapping-editor";
 import { useTranslations } from "next-intl";
 
@@ -32,6 +33,36 @@ const DEFAULT_ALLEGRO_MAPPING: Record<string, string> = {
   "UPS": "ups",
   "Poczta Polska": "poczta_polska",
 };
+
+function getCarrierMapping(
+  provider: string,
+  settings: Record<string, unknown>,
+): Record<string, string> {
+  return (
+    (settings.carrier_mapping as Record<string, string> | undefined) ??
+    (provider === "allegro" ? { ...DEFAULT_ALLEGRO_MAPPING } : {})
+  );
+}
+
+function filterSelectableCarrierMapping(
+  mapping: Record<string, string>,
+  selectableProviders: string[],
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(mapping).filter(([, mappedProvider]) =>
+      selectableProviders.includes(mappedProvider),
+    ),
+  );
+}
+
+function normalizeSelectableProvider(
+  provider: unknown,
+  selectableProviders: string[],
+): string {
+  return typeof provider === "string" && selectableProviders.includes(provider)
+    ? provider
+    : "";
+}
 
 interface MarketplaceShipmentSettingsProps {
   provider: string;
@@ -47,6 +78,13 @@ export function MarketplaceShipmentSettings({
   isLoading,
 }: MarketplaceShipmentSettingsProps) {
   const t = useTranslations("integrations");
+  const selectableShipmentProviders = useMemo(
+    () =>
+      getSelectableShipmentProviders(SHIPMENT_PROVIDERS).filter(
+        (shipmentProvider) => shipmentProvider !== "manual",
+      ),
+    [],
+  );
   const [autoCreate, setAutoCreate] = useState(
     (settings.auto_create_shipment as boolean) ?? false
   );
@@ -54,11 +92,13 @@ export function MarketplaceShipmentSettings({
     (settings.auto_generate_label as boolean) ?? false
   );
   const [defaultCarrier, setDefaultCarrier] = useState(
-    (settings.default_carrier as string) ?? ""
+    normalizeSelectableProvider(settings.default_carrier, selectableShipmentProviders)
   );
   const [carrierMapping, setCarrierMapping] = useState<Record<string, string>>(
-    (settings.carrier_mapping as Record<string, string>) ??
-      (provider === "allegro" ? { ...DEFAULT_ALLEGRO_MAPPING } : {})
+    filterSelectableCarrierMapping(
+      getCarrierMapping(provider, settings),
+      selectableShipmentProviders,
+    )
   );
 
   // Sync state when external settings change
@@ -66,12 +106,16 @@ export function MarketplaceShipmentSettings({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAutoCreate((settings.auto_create_shipment as boolean) ?? false);
     setAutoLabel((settings.auto_generate_label as boolean) ?? false);
-    setDefaultCarrier((settings.default_carrier as string) ?? "");
-    setCarrierMapping(
-      (settings.carrier_mapping as Record<string, string>) ??
-        (provider === "allegro" ? { ...DEFAULT_ALLEGRO_MAPPING } : {})
+    setDefaultCarrier(
+      normalizeSelectableProvider(settings.default_carrier, selectableShipmentProviders),
     );
-  }, [settings, provider]);
+    setCarrierMapping(
+      filterSelectableCarrierMapping(
+        getCarrierMapping(provider, settings),
+        selectableShipmentProviders,
+      )
+    );
+  }, [settings, provider, selectableShipmentProviders]);
 
   const handleSave = () => {
     onSave({
@@ -79,7 +123,10 @@ export function MarketplaceShipmentSettings({
       auto_create_shipment: autoCreate,
       auto_generate_label: autoLabel,
       default_carrier: defaultCarrier || undefined,
-      carrier_mapping: carrierMapping,
+      carrier_mapping: filterSelectableCarrierMapping(
+        carrierMapping,
+        selectableShipmentProviders,
+      ),
     });
   };
 
@@ -135,7 +182,7 @@ export function MarketplaceShipmentSettings({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">{t("noneOption")}</SelectItem>
-              {SHIPMENT_PROVIDERS.filter(p => p !== "manual").map((p) => (
+              {selectableShipmentProviders.map((p) => (
                 <SelectItem key={p} value={p}>
                   {SHIPMENT_PROVIDER_LABELS[p] ?? p}
                 </SelectItem>

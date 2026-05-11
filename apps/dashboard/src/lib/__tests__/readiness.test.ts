@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { navItems } from "@/lib/nav-items";
+import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import {
+  getSelectableShipmentProviders,
   getRouteReadiness,
   getVisibleNavItems,
   getVisibleProviderKeys,
@@ -88,6 +90,34 @@ describe("dashboard feature readiness", () => {
     expect(getRouteReadiness("/future-module")).toBe("verify");
     expect(isRouteAccessible("/future-module", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/future-module", { mode: "full" })).toBe(true);
+  });
+});
+
+describe("shipment provider readiness", () => {
+  it("keeps unverified carriers out of shipment creation in client-ready mode", () => {
+    expect(
+      getSelectableShipmentProviders(SHIPMENT_PROVIDERS, {
+        mode: "client-ready",
+      }),
+    ).toEqual(["inpost", "manual"]);
+  });
+
+  it("keeps internal carrier validation available in full mode", () => {
+    expect(
+      getSelectableShipmentProviders(SHIPMENT_PROVIDERS, {
+        mode: "full",
+      }),
+    ).toEqual([
+      "inpost",
+      "dhl",
+      "dpd",
+      "gls",
+      "ups",
+      "poczta_polska",
+      "orlen_paczka",
+      "fedex",
+      "manual",
+    ]);
   });
 });
 

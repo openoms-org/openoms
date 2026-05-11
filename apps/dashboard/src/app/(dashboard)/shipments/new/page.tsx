@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShipmentForm } from "@/components/shipments/shipment-form";
 import { RateShopping } from "@/components/shipping/rate-shopping";
 import { useCreateShipment } from "@/hooks/use-shipments";
+import { isShipmentProviderSelectable } from "@/lib/readiness";
 import type { ShippingRate } from "@/types/api";
 import { useTranslations } from "next-intl";
 
@@ -19,6 +20,14 @@ const VALID_PROVIDERS: ProviderValue[] = [
   "inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual",
 ];
 
+function isSelectableProvider(provider: string | undefined): provider is ProviderValue {
+  return (
+    !!provider &&
+    VALID_PROVIDERS.includes(provider as ProviderValue) &&
+    isShipmentProviderSelectable(provider)
+  );
+}
+
 export default function NewShipmentPage() {
   const t = useTranslations("shipments");
   const router = useRouter();
@@ -27,15 +36,12 @@ export default function NewShipmentPage() {
   const carrierParam = searchParams.get("carrier") ?? undefined;
   const createShipment = useCreateShipment();
 
-  const initialCarrier =
-    carrierParam && VALID_PROVIDERS.includes(carrierParam as ProviderValue)
-      ? (carrierParam as ProviderValue)
-      : undefined;
+  const initialCarrier = isSelectableProvider(carrierParam) ? carrierParam : undefined;
 
   const [selectedCarrier, setSelectedCarrier] = useState<ProviderValue | undefined>(initialCarrier);
 
   const handleRateSelect = useCallback((rate: ShippingRate) => {
-    if (VALID_PROVIDERS.includes(rate.carrier_code as ProviderValue)) {
+    if (isSelectableProvider(rate.carrier_code)) {
       setSelectedCarrier(rate.carrier_code as ProviderValue);
     }
     toast.success(

@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
+import { getSelectableShipmentProviders } from "@/lib/readiness";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
 import type { Shipment } from "@/types/api";
@@ -70,6 +71,12 @@ export function ShipmentForm({
   });
 
   const providerValue = watch("provider");
+  const selectableProviders = getSelectableShipmentProviders(SHIPMENT_PROVIDERS);
+  const currentProvider = shipment?.provider as ShipmentFormValues["provider"] | undefined;
+  const providerOptions =
+    currentProvider && !selectableProviders.includes(currentProvider)
+      ? [...selectableProviders, currentProvider]
+      : selectableProviders;
 
   const handlePointSelect = useCallback(
     (pointName: string) => {
@@ -111,7 +118,7 @@ export function ShipmentForm({
             <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            {SHIPMENT_PROVIDERS.map((provider) => (
+            {providerOptions.map((provider) => (
               <SelectItem key={provider} value={provider}>
                 {provider.toUpperCase()}
               </SelectItem>

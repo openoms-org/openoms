@@ -51,7 +51,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, ORDER_PRIORITIES } from "@/lib/constants";
+import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, ORDER_PRIORITIES, SHIPMENT_PROVIDERS } from "@/lib/constants";
+import { getSelectableShipmentProviders } from "@/lib/readiness";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId, cn, sanitizeUrl } from "@/lib/utils";
@@ -1403,6 +1404,7 @@ function AddPackageDialog({
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
   const [notes, setNotes] = useState("");
+  const selectableProviders = getSelectableShipmentProviders(SHIPMENT_PROVIDERS);
 
   useEffect(() => {
     if (!open) {
@@ -1445,13 +1447,11 @@ function AddPackageDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {["inpost", "dhl", "dpd", "gls", "ups", "poczta_polska", "orlen_paczka", "fedex", "manual"].map(
-                  (p) => (
-                    <SelectItem key={p} value={p}>
-                      {p.toUpperCase()}
-                    </SelectItem>
-                  )
-                )}
+                {selectableProviders.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p.toUpperCase()}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

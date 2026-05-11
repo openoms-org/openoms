@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
+import { isShipmentProviderSelectable } from "@/lib/readiness";
 import { useShippingRates } from "@/hooks/use-shipping-rates";
 import type { ShippingRate } from "@/types/api";
 import { useTranslations } from "next-intl";
@@ -117,10 +118,13 @@ export function RateShopping({
   };
 
   // Find cheapest and fastest
+  const visibleRates = rates.filter((rate) =>
+    isShipmentProviderSelectable(rate.carrier_code),
+  );
   const cheapestPrice =
-    rates.length > 0 ? Math.min(...rates.map((r) => r.price)) : null;
+    visibleRates.length > 0 ? Math.min(...visibleRates.map((r) => r.price)) : null;
   const fastestDays =
-    rates.length > 0 ? Math.min(...rates.map((r) => r.estimated_days)) : null;
+    visibleRates.length > 0 ? Math.min(...visibleRates.map((r) => r.estimated_days)) : null;
 
   return (
     <Card>
@@ -278,20 +282,20 @@ export function RateShopping({
             </div>
           )}
 
-          {hasSearched && !error && rates.length === 0 && (
+          {hasSearched && !error && visibleRates.length === 0 && (
             <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
               {t("rateShopping.noRatesFound")}
             </div>
           )}
 
-          {rates.length > 0 && rates.some((r) => r.is_estimate) && (
+          {visibleRates.length > 0 && visibleRates.some((r) => r.is_estimate) && (
             <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
               <Info className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{t("rateShopping.estimateDisclaimer")}</span>
             </div>
           )}
 
-          {rates.length > 0 && (
+          {visibleRates.length > 0 && (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -307,7 +311,7 @@ export function RateShopping({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rates.map((rate, index) => {
+                  {visibleRates.map((rate, index) => {
                     const isCheapest = rate.price === cheapestPrice;
                     const isFastest = rate.estimated_days === fastestDays;
 

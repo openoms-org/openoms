@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDERS } from "@/lib/constants";
+import { getSelectableShipmentProviders } from "@/lib/readiness";
 
 interface ShipmentFilters {
   status?: string;
@@ -23,6 +24,8 @@ export function ShipmentFilters({
   filters,
   onFilterChange,
 }: ShipmentFiltersProps) {
+  const selectableProviders = getSelectableShipmentProviders(SHIPMENT_PROVIDERS);
+
   return (
     <div className="flex flex-wrap gap-3">
       <Select
@@ -61,7 +64,7 @@ export function ShipmentFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Wszyscy dostawcy</SelectItem>
-          {SHIPMENT_PROVIDERS.map((provider) => (
+          {selectableProviders.map((provider) => (
             <SelectItem key={provider} value={provider}>
               {provider.toUpperCase()}
             </SelectItem>
