@@ -224,6 +224,15 @@ export function getSelectableShipmentProviders<T extends string>(
   );
 }
 
+export function getSelectableCarrierShipmentProviders<T extends string>(
+  providers: readonly T[],
+  options: VisibilityOptions = {},
+): T[] {
+  return getSelectableShipmentProviders(providers, options).filter(
+    (provider) => provider !== "manual",
+  );
+}
+
 export function getVisibleProvidersByCategory(
   category: ProviderInfo["category"],
   options: VisibilityOptions = {},

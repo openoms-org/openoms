@@ -24,7 +24,7 @@ import { useCustomFields } from "@/hooks/use-custom-fields";
 import { TagInput } from "@/components/shared/tag-input";
 import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
 import { PAYMENT_METHODS, ORDER_PRIORITIES, SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
-import { getSelectableShipmentProviders } from "@/lib/readiness";
+import { getSelectableCarrierShipmentProviders } from "@/lib/readiness";
 import { formatCurrency } from "@/lib/utils";
 import type { Order, CreateOrderRequest, CustomFieldDef, Address } from "@/types/api";
 
@@ -123,9 +123,9 @@ export function OrderForm({ order, onSubmit, isSubmitting = false, onCancel }: O
   const [inpostServiceType, setInpostServiceType] = useState<string>("locker");
   const [autoCreateShipment, setAutoCreateShipment] = useState(false);
   const [pickupPointId, setPickupPointId] = useState(order?.pickup_point_id || "");
-  const selectableShipmentProviders = getSelectableShipmentProviders(
+  const selectableShipmentProviders = getSelectableCarrierShipmentProviders(
     SHIPMENT_PROVIDERS,
-  ).filter((provider) => provider !== "manual");
+  );
 
   useEffect(() => {
     if (order?.metadata && typeof order.metadata === "object") {
