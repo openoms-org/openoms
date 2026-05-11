@@ -1,15 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ActionDialog } from "@/components/shared/action-dialog";
 import type { ReactNode } from "react";
 
 interface StatusTransitionDialogProps {
@@ -38,27 +30,16 @@ export function StatusTransitionDialog({
   const t = useTranslations("common");
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && (
-            <DialogDescription>{description}</DialogDescription>
-          )}
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {cancelLabel ?? t("cancel")}
-          </Button>
-          <Button
-            variant={isDestructive ? "destructive" : "default"}
-            onClick={onConfirm}
-            disabled={isPending}
-          >
-            {confirmLabel ?? t("confirm")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ActionDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={description}
+      confirmLabel={confirmLabel ?? t("confirm")}
+      cancelLabel={cancelLabel ?? t("cancel")}
+      variant={isDestructive ? "destructive" : "default"}
+      isLoading={isPending}
+      onConfirm={onConfirm}
+    />
   );
 }

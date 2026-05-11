@@ -12,6 +12,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Deprecated for new dashboard code: prefer `components/shared/action-dialog.tsx`
+// for confirmation/action flows. This AlertDialog wrapper remains for existing
+// destructive confirmations that need AlertDialog semantics.
 interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

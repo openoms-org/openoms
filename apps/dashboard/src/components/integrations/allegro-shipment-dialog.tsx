@@ -3,14 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2, Download, Package, CheckCircle2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ActionDialog } from "@/components/shared/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -147,183 +140,176 @@ export function AllegroShipmentDialog({
     }
   };
 
+  const title = (
+    <span className="flex items-center gap-2">
+      <Package className="h-5 w-5" />
+      {t("allegroSendTitle")}
+    </span>
+  );
+
+  const confirmLabel = (() => {
+    if (step === "select-service") return t("next");
+    if (step === "result") return t("close");
+    if (createShipment.isPending) {
+      return (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          {t("creating")}
+        </>
+      );
+    }
+    return t("createShipment");
+  })();
+
+  const handleDialogConfirm = () => {
+    if (step === "select-service") {
+      setStep("package-details");
+      return;
+    }
+    if (step === "result") {
+      onOpenChange(false);
+      return;
+    }
+    void handleCreateShipment();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            {t("allegroSendTitle")}
-          </DialogTitle>
-          <DialogDescription>
-            {t("allegroCreateShipmentDesc")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {step === "select-service" && (
-          <div className="space-y-4">
-            <div>
-              <Label>{t("deliveryService")}</Label>
-              {isLoadingServices ? (
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("loadingDeliveryServices")}
-                </div>
-              ) : deliveryServices.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {t("noDeliveryServices")}
-                </p>
-              ) : (
-                <Select
-                  value={selectedServiceId}
-                  onValueChange={setSelectedServiceId}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={t("selectDeliveryServicePlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {deliveryServices.map((svc) => (
-                      <SelectItem key={svc.id} value={svc.id}>
-                        {svc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+    <ActionDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description={t("allegroCreateShipmentDesc")}
+      confirmLabel={confirmLabel}
+      cancelLabel={step === "package-details" ? t("back") : t("cancel")}
+      confirmDisabled={
+        (step === "select-service" && !selectedServiceId) ||
+        (step === "package-details" && createShipment.isPending)
+      }
+      hideCancel={step === "result"}
+      onCancel={step === "package-details" ? () => setStep("select-service") : undefined}
+      onConfirm={handleDialogConfirm}
+      contentClassName="max-w-lg"
+    >
+      {step === "select-service" && (
+        <div>
+          <Label>{t("deliveryService")}</Label>
+          {isLoadingServices ? (
+            <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("loadingDeliveryServices")}
             </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                {t("cancel")}
-              </Button>
-              <Button
-                onClick={() => setStep("package-details")}
-                disabled={!selectedServiceId}
-              >
-                {t("next")}
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
-
-        {step === "package-details" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>{t("weightKg")}</Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>{t("addPackage.length")}</Label>
-                <Input
-                  type="number"
-                  step="1"
-                  min="1"
-                  value={length}
-                  onChange={(e) => setLength(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>{t("addPackage.width")}</Label>
-                <Input
-                  type="number"
-                  step="1"
-                  min="1"
-                  value={width}
-                  onChange={(e) => setWidth(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>{t("addPackage.height")}</Label>
-                <Input
-                  type="number"
-                  step="1"
-                  min="1"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div className="rounded-md border bg-muted/50 p-3 text-sm">
-              <p className="font-medium">{t("receiverData")}</p>
-              <p className="text-muted-foreground">
-                {order.shipping_address?.name || order.customer_name}
-              </p>
-              <p className="text-muted-foreground">
-                {order.shipping_address?.street}
-              </p>
-              <p className="text-muted-foreground">
-                {order.shipping_address?.postal_code}{" "}
-                {order.shipping_address?.city}
-              </p>
-            </div>
-
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setStep("select-service")}
-              >
-                {t("back")}
-              </Button>
-              <Button
-                onClick={handleCreateShipment}
-                disabled={createShipment.isPending}
-              >
-                {createShipment.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("creating")}
-                  </>
-                ) : (
-                  t("createShipment")
-                )}
-              </Button>
-            </DialogFooter>
-          </div>
-        )}
-
-        {step === "result" && createdShipmentId && (
-          <div className="space-y-4">
-            <div className="flex flex-col items-center gap-3 py-4">
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
-              <p className="text-lg font-medium">{t("triggers.shipment.created")}</p>
-              <p className="text-sm text-muted-foreground text-center">
-                {t("shipmentIdLabel", { id: createdShipmentId })}
-              </p>
-            </div>
-
-            <Button
-              className="w-full"
-              onClick={handleDownloadLabel}
-              disabled={isDownloading}
+          ) : deliveryServices.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("noDeliveryServices")}
+            </p>
+          ) : (
+            <Select
+              value={selectedServiceId}
+              onValueChange={setSelectedServiceId}
             >
-              {isDownloading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              {t("downloadLabel")}
-            </Button>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder={t("selectDeliveryServicePlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {deliveryServices.map((svc) => (
+                  <SelectItem key={svc.id} value={svc.id}>
+                    {svc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                {t("close")}
-              </Button>
-            </DialogFooter>
+      {step === "package-details" && (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>{t("weightKg")}</Label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>{t("addPackage.length")}</Label>
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>{t("addPackage.width")}</Label>
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                value={width}
+                onChange={(e) => setWidth(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>{t("addPackage.height")}</Label>
+              <Input
+                type="number"
+                step="1"
+                min="1"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                className="mt-1"
+              />
+            </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+
+          <div className="rounded-md border bg-muted/50 p-3 text-sm">
+            <p className="font-medium">{t("receiverData")}</p>
+            <p className="text-muted-foreground">
+              {order.shipping_address?.name || order.customer_name}
+            </p>
+            <p className="text-muted-foreground">
+              {order.shipping_address?.street}
+            </p>
+            <p className="text-muted-foreground">
+              {order.shipping_address?.postal_code} {order.shipping_address?.city}
+            </p>
+          </div>
+        </>
+      )}
+
+      {step === "result" && createdShipmentId && (
+        <>
+          <div className="flex flex-col items-center gap-3 py-4">
+            <CheckCircle2 className="h-12 w-12 text-green-500" />
+            <p className="text-lg font-medium">{t("triggers.shipment.created")}</p>
+            <p className="text-center text-sm text-muted-foreground">
+              {t("shipmentIdLabel", { id: createdShipmentId })}
+            </p>
+          </div>
+
+          <Button
+            className="w-full"
+            onClick={handleDownloadLabel}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {t("downloadLabel")}
+          </Button>
+        </>
+      )}
+    </ActionDialog>
   );
 }
