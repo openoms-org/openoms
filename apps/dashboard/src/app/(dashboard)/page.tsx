@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { useAuthStore } from "@/lib/auth";
 import { useOnboarding } from "@/hooks/use-onboarding";
-import { StatCards } from "@/components/dashboard/stat-cards";
-import { RevenueChart } from "@/components/dashboard/revenue-chart";
-import { OrderStatusChart } from "@/components/dashboard/order-status-chart";
-import { OrderSourceChart } from "@/components/dashboard/order-source-chart";
-import { RecentOrdersTable } from "@/components/dashboard/recent-orders-table";
+import { useOperationsDashboard } from "@/hooks/use-operations-dashboard";
+import { IntegrationHealthPanel } from "@/components/dashboard/integration-health-panel";
+import { OperationalExceptions } from "@/components/dashboard/operational-exceptions";
+import { OperationsActivity } from "@/components/dashboard/operations-activity";
+import { OrchestrationMap } from "@/components/dashboard/orchestration-map";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
@@ -80,23 +79,35 @@ function QuickStartCard() {
 }
 
 export default function DashboardPage() {
-  const t = useTranslations("common");
-  const { data: stats, isLoading, isError, refetch } = useDashboardStats();
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
+  const {
+    stages,
+    exceptions,
+    integrationHealth,
+    activity,
+    isLoading,
+    isError,
+    refetch,
+  } = useOperationsDashboard();
   const user = useAuthStore((s) => s.user);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{t("mainPanel")}</h1>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t("operations.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("operations.subtitle")}</p>
+        </div>
         {user?.name && (
-          <p className="text-muted-foreground mt-1">Witaj, {user.name}!</p>
+          <p className="text-sm text-muted-foreground">Operator: {user.name}</p>
         )}
       </div>
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">
-            {t("loadError")}
+            {tc("loadError")}
           </p>
           <Button
             variant="outline"
@@ -104,7 +115,7 @@ export default function DashboardPage() {
             className="mt-2"
             onClick={() => refetch()}
           >
-            {t("retry")}
+            {tc("retry")}
           </Button>
         </div>
       )}
@@ -112,20 +123,14 @@ export default function DashboardPage() {
       <OnboardingWizard />
       <QuickStartCard />
 
-      <StatCards orderCounts={stats?.order_counts} isLoading={isLoading} />
-
-      <RevenueChart
-        data={stats?.revenue.daily}
-        currency={stats?.revenue.currency}
-        isLoading={isLoading}
-      />
+      <OrchestrationMap stages={stages} isLoading={isLoading} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <OrderStatusChart data={stats?.order_counts.by_status} isLoading={isLoading} />
-        <OrderSourceChart data={stats?.order_counts.by_source} isLoading={isLoading} />
+        <OperationalExceptions exceptions={exceptions} isLoading={isLoading} />
+        <IntegrationHealthPanel items={integrationHealth} isLoading={isLoading} />
       </div>
 
-      <RecentOrdersTable orders={stats?.recent_orders} isLoading={isLoading} />
+      <OperationsActivity items={activity} isLoading={isLoading} />
     </div>
   );
 }

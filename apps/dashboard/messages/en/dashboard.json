@@ -4,6 +4,51 @@
     "ordersBySource": "Orders by source",
     "ordersByStatus": "Orders by status",
     "recentOrders": "Recent orders",
+    "operations": {
+      "activity": {
+        "order": {
+          "description": "{source} · {status}",
+          "title": "Order {customerName}"
+        }
+      },
+      "activityTitle": "Recent activity",
+      "exceptionCount": "{count} exc.",
+      "exceptions": {
+        "integration": {
+          "description": "Check the connection settings for {label}.",
+          "title": "{provider} needs attention"
+        },
+        "orderOnHold": {
+          "description": "This order needs an operator decision.",
+          "title": "Order on hold: {customerName}"
+        },
+        "shipment": {
+          "description": "Check the shipment for order {orderId}.",
+          "title": "{provider} shipment failed"
+        }
+      },
+      "exceptionsTitle": "Needs attention now",
+      "flowTitle": "Operational flow",
+      "health": {
+        "ok": "OK",
+        "problem": "Problem",
+        "warning": "Warning"
+      },
+      "integrationHealthTitle": "Connection health",
+      "noActivity": "No recent activity.",
+      "noExceptions": "No exceptions",
+      "noIntegrationHealth": "No visible connections to check.",
+      "noWorkDescription": "The most important flows look healthy.",
+      "noWorkTitle": "No urgent work",
+      "stages": {
+        "completed": "Completed",
+        "fulfillment": "Fulfillment",
+        "intake": "Intake",
+        "shipping": "Shipping"
+      },
+      "subtitle": "Order flow health across channels, fulfillment, and shipping.",
+      "title": "Orchestration center"
+    },
     "stats": {
       "delivered": "Delivered",
       "inTransit": "In transit",

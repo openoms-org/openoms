@@ -4,6 +4,51 @@
     "ordersBySource": "Zamówienia według źródła",
     "ordersByStatus": "Zamówienia według statusu",
     "recentOrders": "Ostatnie zamówienia",
+    "operations": {
+      "activity": {
+        "order": {
+          "description": "{source} · {status}",
+          "title": "Zamówienie {customerName}"
+        }
+      },
+      "activityTitle": "Ostatnia aktywność",
+      "exceptionCount": "{count} wyj.",
+      "exceptions": {
+        "integration": {
+          "description": "Sprawdź konfigurację połączenia {label}.",
+          "title": "{provider} wymaga uwagi"
+        },
+        "orderOnHold": {
+          "description": "Zamówienie wymaga decyzji operatora.",
+          "title": "Zamówienie wstrzymane: {customerName}"
+        },
+        "shipment": {
+          "description": "Sprawdź przesyłkę dla zamówienia {orderId}.",
+          "title": "Przesyłka {provider} nie przeszła"
+        }
+      },
+      "exceptionsTitle": "Do obsłużenia teraz",
+      "flowTitle": "Przepływ operacyjny",
+      "health": {
+        "ok": "OK",
+        "problem": "Problem",
+        "warning": "Uwaga"
+      },
+      "integrationHealthTitle": "Stan połączeń",
+      "noActivity": "Brak ostatniej aktywności.",
+      "noExceptions": "Bez wyjątków",
+      "noIntegrationHealth": "Brak widocznych połączeń do sprawdzenia.",
+      "noWorkDescription": "Najważniejsze przepływy wyglądają zdrowo.",
+      "noWorkTitle": "Brak pilnych spraw",
+      "stages": {
+        "completed": "Zakończone",
+        "fulfillment": "Realizacja",
+        "intake": "Przyjęcie",
+        "shipping": "Wysyłka"
+      },
+      "subtitle": "Stan przepływu zamówień przez kanały, realizację i wysyłkę.",
+      "title": "Centrum orkiestracji"
+    },
     "stats": {
       "delivered": "Dostarczone",
       "inTransit": "W transporcie",
