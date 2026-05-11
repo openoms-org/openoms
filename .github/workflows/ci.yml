@@ -484,7 +484,7 @@ jobs:
             chart:
               - 'deploy/helm/openoms/**'
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
         if: steps.filter.outputs.chart == 'true'
 
       - name: Lint chart
