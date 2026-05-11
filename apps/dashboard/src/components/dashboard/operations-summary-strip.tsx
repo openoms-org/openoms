@@ -67,6 +67,7 @@ export function OperationsSummaryStrip({
     .filter((stage) => stage.key !== "completed")
     .reduce((sum, stage) => sum + stage.count, 0);
   const activeConnections = integrationHealth.filter((item) => item.health === "ok").length;
+  const connectionTone = getConnectionTone(integrationHealth);
   const flowHealth = getFlowHealth(stages, exceptions);
 
   const metrics: SummaryMetric[] = [
@@ -91,7 +92,7 @@ export function OperationsSummaryStrip({
       label: t("operations.summary.connections"),
       value: `${activeConnections}/${integrationHealth.length}`,
       hint: t("operations.summary.connectionsHint"),
-      tone: integrationHealth.some((item) => item.health === "problem") ? "problem" : "ok",
+      tone: connectionTone,
       icon: RefreshCw,
     },
     {
@@ -164,11 +165,26 @@ function getFlowHealth(
   stages: OrchestrationStage[],
   exceptions: OperationalException[],
 ): OperationsHealth {
-  if (exceptions.some((item) => item.severity === "problem")) {
+  if (
+    exceptions.some((item) => item.severity === "problem") ||
+    stages.some((stage) => stage.health === "problem")
+  ) {
     return "problem";
   }
 
   if (exceptions.length > 0 || stages.some((stage) => stage.health === "warning")) {
+    return "warning";
+  }
+
+  return "ok";
+}
+
+function getConnectionTone(integrationHealth: IntegrationHealthItem[]): OperationsHealth {
+  if (integrationHealth.some((item) => item.health === "problem")) {
+    return "problem";
+  }
+
+  if (integrationHealth.some((item) => item.health === "warning")) {
     return "warning";
   }
 

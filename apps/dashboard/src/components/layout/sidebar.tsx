@@ -107,6 +107,7 @@ export function Sidebar() {
         <TooltipTrigger asChild>
           <Link
             href={item.href}
+            aria-label={tNav(item.label)}
             className={cn(
               "flex items-center justify-center rounded-md p-2 transition-colors",
               isActive
@@ -141,7 +142,11 @@ export function Sidebar() {
       {/* Header / Logo */}
       <div className="flex h-16 items-center border-b px-4">
         {collapsed ? (
-          <Link href="/" className="flex w-full items-center justify-center">
+          <Link
+            href="/"
+            aria-label={tNav("operationsDashboard")}
+            className="flex w-full items-center justify-center"
+          >
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-info/10 text-info">
               <Boxes className="h-5 w-5" aria-hidden="true" />
             </span>
@@ -232,6 +237,7 @@ export function Sidebar() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleSidebar}
+                  aria-label={tShared("expandMenu")}
                   className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
                 >
                   <PanelLeftOpen className="h-4 w-4" />
@@ -245,6 +251,7 @@ export function Sidebar() {
         ) : (
           <button
             onClick={toggleSidebar}
+            aria-label={tShared("collapseMenu")}
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
           >
             <PanelLeftClose className="h-4 w-4" />

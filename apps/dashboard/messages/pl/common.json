@@ -37,6 +37,7 @@
     "edit": "Edytuj",
     "empty": {
       "addOrder": "Dodaj zamówienie",
+      "addProduct": "Dodaj produkt",
       "connectAllegro": "Połącz Allegro"
     },
     "enabled": "Włączone",
@@ -69,6 +70,10 @@
     "price": "Cena",
     "printing": "Drukowanie...",
     "processing": "Przetwarzanie...",
+    "quickStart": {
+      "nextSteps": "Oto co możesz zrobić dalej",
+      "readyTitle": "Twoje konto jest gotowe!"
+    },
     "quantity": "Ilość",
     "refresh": "Odśwież",
     "required": "Wymagane",

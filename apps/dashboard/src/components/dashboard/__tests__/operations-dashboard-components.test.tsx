@@ -72,6 +72,43 @@ describe("operations dashboard components", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("marks connection summary as warning when a visible integration is degraded", () => {
+    render(
+      <OperationsSummaryStrip
+        stages={stages}
+        exceptions={[]}
+        integrationHealth={[
+          {
+            id: "carrier-inpost",
+            provider: "inpost",
+            label: "InPost",
+            health: "warning",
+            status: "active",
+            href: "/carriers",
+          },
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("0/1")).toHaveClass("text-warning");
+  });
+
+  it("escalates flow summary to problem when any stage is blocked", () => {
+    render(
+      <OperationsSummaryStrip
+        stages={stages.map((stage) =>
+          stage.key === "shipping" ? { ...stage, health: "problem" } : stage,
+        )}
+        exceptions={[]}
+        integrationHealth={[]}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("operations.health.problem")).toBeInTheDocument();
+  });
+
   it("renders orchestration stages as links to existing workflow pages", () => {
     render(<OrchestrationMap stages={stages} isLoading={false} />);
 

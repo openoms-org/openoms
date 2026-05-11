@@ -80,14 +80,18 @@ export function useOperationsDashboard() {
       onHoldOrdersQuery.isError ||
       failedShipmentsQuery.isError ||
       (isAdmin && integrationsQuery.isError),
-    refetch: () => {
-      void statsQuery.refetch();
-      void onHoldOrdersQuery.refetch();
-      void failedShipmentsQuery.refetch();
+    refetch: async () => {
+      const refetches: Promise<unknown>[] = [
+        statsQuery.refetch(),
+        onHoldOrdersQuery.refetch(),
+        failedShipmentsQuery.refetch(),
+      ];
 
       if (isAdmin) {
-        void integrationsQuery.refetch();
+        refetches.push(integrationsQuery.refetch());
       }
+
+      await Promise.all(refetches);
     },
   };
 }

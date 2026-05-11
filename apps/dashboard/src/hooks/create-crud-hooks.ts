@@ -32,9 +32,7 @@ export function createCrudHooks<
   const { resourceKey, basePath, updateMethod = "PATCH" } = options;
 
   function useList(params: TParams = {} as TParams) {
-    const sp = buildSearchParams(
-      params as unknown as Record<string, string | number | boolean | null | undefined>
-    );
+    const sp = buildSearchParams(params);
     const qs = sp.toString();
 
     return useQuery({

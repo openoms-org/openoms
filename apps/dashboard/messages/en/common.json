@@ -37,6 +37,7 @@
     "edit": "Edit",
     "empty": {
       "addOrder": "Add Order",
+      "addProduct": "Add product",
       "connectAllegro": "Connect Allegro"
     },
     "enabled": "Enabled",
@@ -69,6 +70,10 @@
     "price": "Price",
     "printing": "Printing...",
     "processing": "Processing...",
+    "quickStart": {
+      "nextSteps": "Here is what you can do next",
+      "readyTitle": "Your account is ready!"
+    },
     "quantity": "Quantity",
     "refresh": "Refresh",
     "required": "Required",

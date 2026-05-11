@@ -48,9 +48,9 @@ function QuickStartCard() {
       <CardContent className="py-5">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-semibold">Twoje konto jest gotowe!</h3>
+            <h3 className="font-semibold">{t("quickStart.readyTitle")}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {t("otoCoMozeszZrobicDalej")}
+              {t("quickStart.nextSteps")}
             </p>
           </div>
           <Button
@@ -72,7 +72,7 @@ function QuickStartCard() {
           <Button variant="outline" size="sm" asChild>
             <Link href="/products/new">
               <Package className="mr-2 h-4 w-4" />
-              Dodaj produkt
+              {t("empty.addProduct")}
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
