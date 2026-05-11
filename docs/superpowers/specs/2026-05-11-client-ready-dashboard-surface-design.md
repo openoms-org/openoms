@@ -86,6 +86,31 @@ Moduły ukryte nie powinny znikać z kodu. Powinny dostać jawny status gotowoś
 
 Pierwszy PR może użyć prostszego wariantu technicznego, jeśli będzie pasował do obecnej architektury, ale decyzja musi zostać zapisana w kodzie czytelnie i bez magicznych list rozproszonych po komponentach.
 
+## Gotowość providerów i akcji
+
+Client-ready surface nie może kończyć się na poziomie ekranu. Jeśli klient widzi moduł, to akcje i providery dostępne w tym module też muszą być gotowe do użycia. Dotyczy to szczególnie:
+
+- kurierów,
+- marketplace,
+- hurtowni i dostawców,
+- integracji księgowych,
+- płatności i billing,
+- automatyzacji,
+- importów i eksportów.
+
+Zasada produktu: klient nie powinien móc wybrać providera albo uruchomić akcji, której nie zweryfikowaliśmy jako działającej end-to-end. Provider niegotowy ma być ukryty albo niedostępny w client-ready mode. Samo oznaczenie `beta` nie wystarcza dla pierwszego klienta, jeśli funkcja może popsuć jego workflow.
+
+Pierwszy PR powinien co najmniej uniknąć eksponowania niezweryfikowanych providerów w widocznych ścieżkach klienta. Pełna macierz certyfikacji providerów jest osobnym follow-upem, bo wymaga testów sandbox/produkcyjnych i decyzji biznesowych dla każdej integracji.
+
+Docelowy model powinien mieć jedno źródło prawdy dla gotowości capability/providerów, np. status:
+
+- `ready`: widoczne i używalne dla klienta,
+- `internal`: dostępne tylko operacyjnie/dev,
+- `beta`: możliwe do włączenia później flagą, ale niewidoczne domyślnie,
+- `disabled`: niedostępne w UI.
+
+W UI status `ready` powinien być jedynym statusem, który pozwala klientowi użyć providera w normalnym flow.
+
 ## Copy i zaufanie
 
 Widoczne placeholdery muszą zniknąć przed rolloutem:
@@ -125,6 +150,7 @@ Zasady:
 Minimum dla PR:
 
 - test jednostkowy lub component test dla filtrowania nawigacji i command palette,
+- test albo manual pass, że widoczne selektory providerów nie pokazują pozycji niegotowych w client-ready mode,
 - `npm run lint` w dashboardzie,
 - testy zmienionych komponentów,
 - Playwright/manual browser pass po produkcyjnych ścieżkach UI: `/`, `/orders`, `/products`, `/customers`, `/returns`, `/settings/company`, `/settings/security`, `/help`,
@@ -137,6 +163,7 @@ PR jest gotowy, gdy:
 
 - klient nie widzi niedokończonych lub technicznych modułów w domyślnej nawigacji,
 - command palette nie odkrywa ukrytych modułów,
+- klient nie może wybrać niezweryfikowanego providera w widocznych flow,
 - najgorsze placeholdery i surowe klucze tłumaczeń są usunięte albo ukryte razem z modułem,
 - podstawowe ekrany mają zrozumiałe puste stany,
 - dashboard nadal działa w aktualnym trybie owner/admin,
