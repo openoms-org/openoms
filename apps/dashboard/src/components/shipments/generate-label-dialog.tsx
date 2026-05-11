@@ -1,17 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ActionDialog } from "@/components/shared/action-dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -115,80 +106,67 @@ export function GenerateLabelDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={isLocker ? "max-w-3xl" : ""}
-      >
-        <DialogHeader>
-          <DialogTitle>{getDialogTitle(provider, t)}</DialogTitle>
-          <DialogDescription>
-            {t("fillShipmentDataToGenerateLabel")}
-          </DialogDescription>
-        </DialogHeader>
+    <ActionDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={getDialogTitle(provider, t)}
+      description={t("fillShipmentDataToGenerateLabel")}
+      confirmLabel={t("generujEtykiete")}
+      isLoading={generateLabel.isPending}
+      confirmDisabled={isSubmitDisabled}
+      onConfirm={handleSubmit}
+      contentClassName={isLocker ? "max-w-3xl" : ""}
+    >
+      <div className="space-y-4">
+        {/* Carrier-specific fields */}
+        <CarrierFields
+          provider={provider}
+          values={carrierValues}
+          onChange={handleFieldChange}
+        />
 
-        <div className="space-y-4 py-2">
-          {/* Carrier-specific fields */}
-          <CarrierFields
-            provider={provider}
-            values={carrierValues}
-            onChange={handleFieldChange}
-          />
-
-          {/* Label format — shared across all carriers */}
-          <div className="space-y-2">
-            <Label>{t("labelFormat")}</Label>
-            <Select
-              value={labelFormat}
-              onValueChange={setLabelFormat}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="zpl">{t("zplThermalPrinter")}</SelectItem>
-                <SelectItem value="epl">{t("eplThermalPrinter")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Receiver preview */}
-          {order && (
-            <div className="space-y-2 rounded-md border p-3">
-              <Label>{t("receiver")}</Label>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">{t("imieINazwisko")} </span>
-                  {order.customer_name}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">{t("phone")}: </span>
-                  {order.customer_phone ?? "-"}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Email: </span>
-                  {order.customer_email ?? "-"}
-                </p>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {t("daneOdbiorcyPobraneZZamowienia")}
-              </p>
-            </div>
-          )}
+        {/* Label format — shared across all carriers */}
+        <div className="space-y-2">
+          <Label>{t("labelFormat")}</Label>
+          <Select
+            value={labelFormat}
+            onValueChange={setLabelFormat}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pdf">PDF</SelectItem>
+              <SelectItem value="zpl">{t("zplThermalPrinter")}</SelectItem>
+              <SelectItem value="epl">{t("eplThermalPrinter")}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <DialogFooter>
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitDisabled}
-          >
-            {generateLabel.isPending && (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            )}
-            {t("generujEtykiete")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* Receiver preview */}
+        {order && (
+          <div className="space-y-2 rounded-md border p-3">
+            <Label>{t("receiver")}</Label>
+            <div className="space-y-1 text-sm">
+              <p>
+                <span className="text-muted-foreground">{t("imieINazwisko")} </span>
+                {order.customer_name}
+              </p>
+              <p>
+                <span className="text-muted-foreground">{t("phone")}: </span>
+                {order.customer_phone ?? "-"}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Email: </span>
+                {order.customer_email ?? "-"}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t("daneOdbiorcyPobraneZZamowienia")}
+            </p>
+          </div>
+        )}
+      </div>
+    </ActionDialog>
   );
 }
