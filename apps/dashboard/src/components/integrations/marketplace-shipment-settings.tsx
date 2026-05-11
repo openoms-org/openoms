@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
-import { getSelectableShipmentProviders } from "@/lib/readiness";
+import { getSelectableCarrierShipmentProviders } from "@/lib/readiness";
 import { CarrierMappingEditor } from "./carrier-mapping-editor";
 import { useTranslations } from "next-intl";
 
@@ -79,10 +79,7 @@ export function MarketplaceShipmentSettings({
 }: MarketplaceShipmentSettingsProps) {
   const t = useTranslations("integrations");
   const selectableShipmentProviders = useMemo(
-    () =>
-      getSelectableShipmentProviders(SHIPMENT_PROVIDERS).filter(
-        (shipmentProvider) => shipmentProvider !== "manual",
-      ),
+    () => getSelectableCarrierShipmentProviders(SHIPMENT_PROVIDERS),
     [],
   );
   const [autoCreate, setAutoCreate] = useState(

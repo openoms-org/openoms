@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { navItems } from "@/lib/nav-items";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import {
+  getSelectableCarrierShipmentProviders,
   getSelectableShipmentProviders,
   getRouteReadiness,
   getVisibleNavItems,
@@ -117,6 +118,29 @@ describe("shipment provider readiness", () => {
       "orlen_paczka",
       "fedex",
       "manual",
+    ]);
+  });
+
+  it("builds carrier-only provider lists without manual fallback entries", () => {
+    expect(
+      getSelectableCarrierShipmentProviders(SHIPMENT_PROVIDERS, {
+        mode: "client-ready",
+      }),
+    ).toEqual(["inpost"]);
+
+    expect(
+      getSelectableCarrierShipmentProviders(SHIPMENT_PROVIDERS, {
+        mode: "full",
+      }),
+    ).toEqual([
+      "inpost",
+      "dhl",
+      "dpd",
+      "gls",
+      "ups",
+      "poczta_polska",
+      "orlen_paczka",
+      "fedex",
     ]);
   });
 });

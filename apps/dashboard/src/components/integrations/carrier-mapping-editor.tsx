@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
-import { getSelectableShipmentProviders } from "@/lib/readiness";
+import { getSelectableCarrierShipmentProviders } from "@/lib/readiness";
 import { useTranslations } from "next-intl";
 
 interface CarrierMappingEditorProps {
@@ -22,9 +22,9 @@ interface CarrierMappingEditorProps {
 export function CarrierMappingEditor({ value, onChange }: CarrierMappingEditorProps) {
   const t = useTranslations("integrations");
   const entries = Object.entries(value);
-  const selectableShipmentProviders = getSelectableShipmentProviders(
+  const selectableShipmentProviders = getSelectableCarrierShipmentProviders(
     SHIPMENT_PROVIDERS,
-  ).filter((provider) => provider !== "manual");
+  );
 
   const handleKeyChange = (oldKey: string, newKey: string) => {
     const updated: Record<string, string> = {};
