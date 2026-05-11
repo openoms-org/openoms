@@ -14,6 +14,13 @@
 
 This plan covers the first implementation PR for `OPE-242`.
 
+Implementation amendment after code-quality review:
+
+- Dashboard must not surface an integration exception unless the provider also has a reachable client-ready fix surface.
+- Ready provider errors such as Allegro/InPost may be visible.
+- Controlled, beta, or blocked provider errors such as OLX/Shopify stay hidden until their destination screen is available in client-ready mode.
+- Operations view-model items expose translation keys and interpolation values, not baked English/Polish user-facing copy.
+
 Included:
 
 - Replace `/` dashboard content with an operations cockpit.
@@ -47,10 +54,10 @@ Create:
   Compact flow summary. Links only to existing routes.
 
 - `apps/dashboard/src/components/dashboard/operational-exceptions.tsx`
-  Shows up to 7 actionable or informative exceptions. No fake buttons.
+  Shows up to 7 actionable or informative exceptions. No fake buttons and no hidden-provider repair links.
 
 - `apps/dashboard/src/components/dashboard/integration-health-panel.tsx`
-  Shows health of ready/visible integrations and links to existing integration areas.
+  Shows health of ready/visible integrations and links only to existing reachable integration areas.
 
 - `apps/dashboard/src/components/dashboard/operations-activity.tsx`
   Shows recent order activity based on existing recent order summaries.
@@ -617,6 +624,13 @@ git commit -m "OPE-242: compose operations dashboard data"
 - Create: `apps/dashboard/src/components/dashboard/integration-health-panel.tsx`
 - Create: `apps/dashboard/src/components/dashboard/operations-activity.tsx`
 - Create: `apps/dashboard/src/components/dashboard/__tests__/operations-dashboard-components.test.tsx`
+
+Implementation amendment from Task 1 review:
+
+- `OperationalException` items expose `titleKey`, `descriptionKey`, and `values`.
+- `OperationsActivityItem` items expose `titleKey`, `descriptionKey`, and `values`.
+- Components must render translated copy with `t(item.titleKey, item.values)` and `t(item.descriptionKey, item.values)`.
+- Do not read stale `item.title` or `item.description` fields.
 
 - [ ] **Step 1: Create `OrchestrationMap`**
 
@@ -1259,7 +1273,7 @@ Check:
 Append a factual note to `public/.claude/context/PROJECT_STATE.md`:
 
 ```md
-- 2026-05-11: OPE-242 — dashboard home shifted from sales-style reporting to an operations control tower. The new surface uses existing data only: compact order-flow stages, a limited exception queue, ready/error integration health, and recent order activity. It intentionally avoids unavailable action buttons.
+- 2026-05-11: OPE-242 — dashboard home shifted from sales-style reporting to an operations control tower. The new surface uses existing data only: compact order-flow stages, a limited exception queue, reachable ready-provider integration health, and recent order activity. It intentionally avoids unavailable action buttons and hidden-provider repair links.
 ```
 
 - [ ] **Step 5: Commit**
