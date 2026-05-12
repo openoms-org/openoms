@@ -15,14 +15,6 @@ export function useOrderTickets(orderId: string) {
   });
 }
 
-export function useAllTickets() {
-  return useQuery({
-    queryKey: ["helpdesk", "tickets"],
-    queryFn: () =>
-      apiClient<TicketListResponse>("/v1/helpdesk/tickets"),
-  });
-}
-
 export function useCreateOrderTicket(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -33,7 +25,6 @@ export function useCreateOrderTicket(orderId: string) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["helpdesk", "tickets", orderId] });
-      queryClient.invalidateQueries({ queryKey: ["helpdesk", "tickets"] });
     },
   });
 }

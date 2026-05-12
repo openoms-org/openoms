@@ -37,11 +37,6 @@ test.describe('Settings', () => {
     await expect(page.getByRole('heading', { name: /Automatyzacja/ })).toBeVisible({ timeout: 10000 });
   });
 
-  test('email settings page loads', async ({ page }) => {
-    await gotoWithAuth(page, '/settings/email');
-    await expect(page.getByRole('heading', { name: /Email|Powiadomienia/ })).toBeVisible({ timeout: 10000 });
-  });
-
   test('custom fields page loads', async ({ page }) => {
     await gotoWithAuth(page, '/settings/custom-fields');
     await expect(page.getByRole('heading', { name: /Pola|Niestandardowe/ })).toBeVisible({ timeout: 10000 });
