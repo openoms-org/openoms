@@ -10,11 +10,11 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ProviderLogo } from "@/components/shared/provider-logo";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
-import { getProviderDisplayName } from "@/lib/provider-info";
 import { getVisibleProviderKeys } from "@/lib/readiness";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -122,7 +122,11 @@ export default function MarketplacesPage() {
                   onClick={() => handleRowClick(integration.provider, integration.id)}
                 >
                   <TableCell className="font-medium">
-                    {getProviderDisplayName(integration.provider)}
+                    <ProviderLogo
+                      providerKey={integration.provider}
+                      category="marketplace"
+                      size="sm"
+                    />
                   </TableCell>
                   <TableCell>
                     {integration.label || "---"}
