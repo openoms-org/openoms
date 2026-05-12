@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSection } from "@/components/shared/form-layout";
 import { ShipmentForm } from "@/components/shipments/shipment-form";
 import { RateShopping } from "@/components/shipping/rate-shopping";
 import { useCreateShipment } from "@/hooks/use-shipments";
@@ -67,15 +67,15 @@ export default function NewShipmentPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/shipments">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{t("newShipment")}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-normal">{t("newShipment")}</h1>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
             {t("createNewShipmentForOrder")}
           </p>
         </div>
@@ -83,23 +83,18 @@ export default function NewShipmentPage() {
 
       <RateShopping onSelectRate={handleRateSelect} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("shipmentData")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ShipmentForm
-            defaultValues={
-              Object.keys(formDefaults).length > 0
-                ? (formDefaults as Parameters<typeof ShipmentForm>[0]["defaultValues"])
-                : undefined
-            }
-            key={selectedCarrier ?? "default"}
-            onSubmit={handleSubmit}
-            isLoading={createShipment.isPending}
-          />
-        </CardContent>
-      </Card>
+      <FormSection title={t("shipmentData")} description={t("shipmentDataDescription")}>
+        <ShipmentForm
+          defaultValues={
+            Object.keys(formDefaults).length > 0
+              ? (formDefaults as Parameters<typeof ShipmentForm>[0]["defaultValues"])
+              : undefined
+          }
+          key={selectedCarrier ?? "default"}
+          onSubmit={handleSubmit}
+          isLoading={createShipment.isPending}
+        />
+      </FormSection>
     </div>
   );
 }

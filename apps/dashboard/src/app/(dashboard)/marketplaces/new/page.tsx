@@ -16,6 +16,7 @@ import {
 } from "@/lib/constants";
 import type { CredentialField } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { FormActions, FormSection } from "@/components/shared/form-layout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -270,13 +271,13 @@ export default function NewMarketplacePage() {
         )}
 
         {step === "configure" && (
-          <div className="max-w-2xl">
+          <FormSection
+            title={`Dane uwierzytelniające — ${getProviderDisplayName(selectedProvider)}`}
+            description="Wpisz tylko dane wymagane do aktywnego połączenia z kanałem sprzedaży."
+            className="max-w-2xl"
+          >
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
-                <h3 className="text-sm font-medium text-foreground">
-                  Dane uwierzytelniające &mdash; {getProviderDisplayName(selectedProvider)}
-                </h3>
-
                 {regularFields.map(renderField)}
                 {selectFields.map(renderField)}
 
@@ -287,16 +288,20 @@ export default function NewMarketplacePage() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={handleBack}>
-                  Wstecz
-                </Button>
-                <Button type="submit" disabled={createIntegration.isPending}>
-                  {createIntegration.isPending ? "Tworzenie..." : "Dodaj marketplace"}
-                </Button>
-              </div>
+              <FormActions
+                secondary={
+                  <Button type="button" variant="outline" onClick={handleBack}>
+                    Wstecz
+                  </Button>
+                }
+                primary={
+                  <Button type="submit" disabled={createIntegration.isPending}>
+                    {createIntegration.isPending ? "Tworzenie..." : "Dodaj marketplace"}
+                  </Button>
+                }
+              />
             </form>
-          </div>
+          </FormSection>
         )}
       </div>
     </AdminGuard>
