@@ -196,6 +196,9 @@
     "results": "Results {start}-{end} of {total}"
   },
   "shared": {
+    "dataTableSelectAll": "Select all rows",
+    "dataTableSelectRow": "Select row",
+    "dataTableSortBy": "Sort by",
     "pastDue": "Past Due",
     "subscriptionCancelled": "Subscription Cancelled",
     "suspended": "Suspended",
