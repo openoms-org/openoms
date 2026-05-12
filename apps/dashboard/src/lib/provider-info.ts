@@ -10,6 +10,11 @@ export interface ProviderBrand {
   wordmark: string;
   shortMark: string;
   className: string;
+  officialAsset?: {
+    src: string;
+    source: string;
+    reviewedAt: string;
+  };
 }
 
 export interface ProviderInfo {
@@ -27,10 +32,12 @@ const brand = (
   wordmark: string,
   shortMark: string,
   className: string,
+  officialAsset?: ProviderBrand["officialAsset"],
 ): ProviderBrand => ({
   wordmark,
   shortMark,
   className,
+  officialAsset,
 });
 
 export const PROVIDERS: ProviderInfo[] = [
@@ -48,7 +55,7 @@ export const PROVIDERS: ProviderInfo[] = [
   { key: "empik", name: "Empik (Mirakl)", description: "Integracja Mirakl/Empik wymaga potwierdzenia nazewnictwa providera.", icon: Store, category: "marketplace", brand: brand("Empik", "Em", "border-red-200 bg-red-50 text-red-700"), beta: true },
 
   // ── Carrier ──
-  { key: "inpost", name: "InPost", description: "Etykiety, śledzenie i punkty odbioru InPost.", icon: Truck, category: "carrier", brand: brand("InPost", "IP", "border-yellow-300 bg-yellow-100 text-neutral-950") },
+  { key: "inpost", name: "InPost", description: "Etykiety, śledzenie i punkty odbioru InPost.", icon: Truck, category: "carrier", brand: brand("InPost", "IP", "border-yellow-300 bg-yellow-100 text-neutral-950", { src: "/logos/official/inpost.svg", source: "https://inpost.pl/do-pobrania", reviewedAt: "2026-05-12" }) },
   { key: "dhl", name: "DHL", description: "Etykiety DHL po weryfikacji konta i numeru płatnika.", icon: Truck, category: "carrier", brand: brand("DHL", "DHL", "border-red-200 bg-yellow-100 text-red-700") },
   { key: "dpd", name: "DPD", description: "Etykiety DPD; automatyczny tracking wymaga osobnej ścieżki.", icon: Truck, category: "carrier", brand: brand("DPD", "DPD", "border-red-200 bg-red-50 text-red-700") },
   { key: "gls", name: "GLS", description: "Etykiety i tracking GLS po weryfikacji API key.", icon: Truck, category: "carrier", brand: brand("GLS", "GLS", "border-blue-200 bg-yellow-50 text-blue-700") },

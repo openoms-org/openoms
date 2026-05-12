@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const publicPaths = ["/login", "/register", "/return-request", "/track", "/supplier-portal"];
+const publicAssetPrefixes = ["/logos/"];
 
 function isPublicPath(pathname: string): boolean {
-  return publicPaths.some((p) => pathname.startsWith(p));
+  return (
+    publicPaths.some((p) => pathname.startsWith(p)) ||
+    publicAssetPrefixes.some((p) => pathname.startsWith(p))
+  );
 }
 
 export function middleware(request: NextRequest) {
@@ -30,5 +34,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!v1|api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!v1|api|_next/static|_next/image|favicon.ico|logos).*)"],
 };

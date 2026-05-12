@@ -76,6 +76,7 @@ export function ProviderLogo({
     (providerKey ? getProviderDisplayName(providerKey) : "Provider");
   const resolvedCategory = resolvedProvider?.category ?? category;
   const brand = resolvedProvider?.brand;
+  const officialAsset = brand?.officialAsset;
   const Icon =
     resolvedProvider?.icon ??
     (resolvedCategory ? categoryIcons[resolvedCategory] : Package);
@@ -86,7 +87,24 @@ export function ProviderLogo({
     : initialsForName(name);
   const classes = sizeClasses[size];
 
-  const mark = (
+  const mark = officialAsset ? (
+    <span
+      title={name}
+      data-provider-key={key}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center border bg-white shadow-xs",
+        classes.mark,
+        !showName && className,
+      )}
+    >
+      <img
+        src={officialAsset.src}
+        alt={`${name} logo`}
+        data-provider-key={key}
+        className="h-full max-h-6 w-auto object-contain"
+      />
+    </span>
+  ) : (
     <span
       role="img"
       aria-label={`${name} logo`}
