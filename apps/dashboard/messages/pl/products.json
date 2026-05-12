@@ -143,10 +143,16 @@
       "imageUrl": "URL zdjęcia",
       "improve": "Popraw",
       "improvedByAi": "Opis poprawiony przez AI",
+      "languages": {
+        "english": "Angielski",
+        "german": "Niemiecki",
+        "polish": "Polski"
+      },
       "longDescription": "Opis",
       "longDescriptionPlaceholder": "Pełny opis produktu...",
       "mainImage": "Zdjęcie główne (URL)",
       "mainImagePreview": "Podgląd zdjęcia głównego",
+      "maxImagesReached": "Osiągnięto limit 16 zdjęć",
       "price": "Cena",
       "productName": "Nazwa produktu",
       "productNamePlaceholder": "Nazwa produktu",
@@ -155,7 +161,11 @@
       "sku": "SKU",
       "skuPlaceholder": "Opcjonalny kod SKU",
       "source": "Źródło",
-      "sourceManual": "Ręczne",
+      "sourceOptions": {
+        "allegro": "Allegro",
+        "manual": "Ręczne",
+        "woocommerce": "WooCommerce"
+      },
       "sourcePlaceholder": "Wybierz źródło",
       "stockQuantity": "Stan magazynowy",
       "submitCreate": "Utwórz produkt",

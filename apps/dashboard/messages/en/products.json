@@ -143,10 +143,16 @@
       "imageUrl": "Image URL",
       "improve": "Improve",
       "improvedByAi": "Description improved by AI",
+      "languages": {
+        "english": "English",
+        "german": "German",
+        "polish": "Polish"
+      },
       "longDescription": "Description",
       "longDescriptionPlaceholder": "Full product description...",
       "mainImage": "Main image (URL)",
       "mainImagePreview": "Main image preview",
+      "maxImagesReached": "Maximum of 16 images reached",
       "price": "Price",
       "productName": "Product name",
       "productNamePlaceholder": "Product name",
@@ -155,7 +161,11 @@
       "sku": "SKU",
       "skuPlaceholder": "Optional SKU code",
       "source": "Source",
-      "sourceManual": "Manual",
+      "sourceOptions": {
+        "allegro": "Allegro",
+        "manual": "Manual",
+        "woocommerce": "WooCommerce"
+      },
       "sourcePlaceholder": "Select source",
       "stockQuantity": "Stock quantity",
       "submitCreate": "Create product",
