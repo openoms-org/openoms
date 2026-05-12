@@ -53,4 +53,18 @@ describe("StatusBadge", () => {
       unmount();
     }
   });
+
+  it("renders semantic warning tone without a legacy status map", () => {
+    render(<StatusBadge status="warning" label="Needs review" tone="warning" />);
+    const badge = screen.getByText("Needs review");
+    expect(badge).toHaveClass("bg-amber-50");
+    expect(badge).toHaveClass("text-amber-800");
+  });
+
+  it("keeps legacy statusMap classes when tone is not provided", () => {
+    const { container } = render(<StatusBadge status="new" statusMap={ORDER_STATUSES} />);
+    const badge = container.querySelector("span");
+    expect(badge).toHaveClass("bg-blue-100");
+    expect(badge).toHaveClass("text-blue-800");
+  });
 });

@@ -196,6 +196,9 @@
     "results": "Wyniki {start}-{end} z {total}"
   },
   "shared": {
+    "dataTableSelectAll": "Zaznacz wszystkie wiersze",
+    "dataTableSelectRow": "Zaznacz wiersz",
+    "dataTableSortBy": "Sortuj po",
     "pastDue": "Zaległe",
     "subscriptionCancelled": "Subskrypcja anulowana",
     "suspended": "Zawieszony",

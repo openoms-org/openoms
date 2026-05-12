@@ -37,6 +37,7 @@ interface DataTableProps<T> {
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
   rowId?: (row: T) => string;
+  getRowLabel?: (row: T) => string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   onSort?: (column: string) => void;
@@ -54,6 +55,47 @@ function getNestedValue(obj: any, path: string): unknown {
   }, obj);
 }
 
+function getStringValue(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function getDefaultRowLabel<T>(row: T, id: string, columns: ColumnDef<T>[]): string {
+  const candidateKeys = [
+    "name",
+    "customer_name",
+    "tracking_number",
+    "order_number",
+    "number",
+    "sku",
+    "email",
+    "title",
+  ];
+
+  for (const key of candidateKeys) {
+    const value = getStringValue(getNestedValue(row, key));
+    if (value) return value;
+  }
+
+  for (const column of columns) {
+    const key = String(column.accessorKey);
+    if (key === "id") continue;
+
+    const value = getStringValue(getNestedValue(row, key));
+    if (value) return value;
+  }
+
+  return id;
+}
+
 export function DataTable<T>({
   columns,
   data,
@@ -65,6 +107,7 @@ export function DataTable<T>({
   selectedIds,
   onSelectionChange,
   rowId,
+  getRowLabel,
   sortBy,
   sortOrder,
   onSort,
@@ -191,6 +234,8 @@ export function DataTable<T>({
               <TableHead key={String(column.accessorKey)} className={cn(cellPx, column.className)}>
                 {column.sortable && onSort ? (
                   <button
+                    type="button"
+                    aria-label={`${t("dataTableSortBy")} ${column.header}`}
                     className="flex items-center gap-1 hover:text-foreground"
                     onClick={() => onSort(String(column.accessorKey))}
                   >
@@ -256,6 +301,7 @@ export function DataTable<T>({
             <TableHead className={cn("w-10", cellPx)} style={hasWidths ? { width: 40 } : undefined}>
               <input
                 type="checkbox"
+                aria-label={t("dataTableSelectAll")}
                 className="cursor-pointer"
                 checked={allSelected}
                 ref={(el) => {
@@ -276,6 +322,8 @@ export function DataTable<T>({
               >
                 {column.sortable && onSort ? (
                   <button
+                    type="button"
+                    aria-label={`${t("dataTableSortBy")} ${column.header}`}
                     className="flex items-center gap-1 hover:text-foreground"
                     onClick={() => onSort(key)}
                   >
@@ -307,6 +355,7 @@ export function DataTable<T>({
       <TableBody>
         {data.map((row, rowIndex) => {
           const id = getRowId(row);
+          const label = getStringValue(getRowLabel?.(row)) ?? getDefaultRowLabel(row, id, columns);
           return (
             <TableRow
               key={id}
@@ -317,6 +366,7 @@ export function DataTable<T>({
                 <TableCell className={cn("w-10", cellPx)}>
                   <input
                     type="checkbox"
+                    aria-label={`${t("dataTableSelectRow")} ${label}`}
                     className="cursor-pointer"
                     checked={selectedIds?.has(id) || false}
                     onChange={() => toggleRow(id)}

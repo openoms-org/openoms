@@ -107,4 +107,90 @@ describe("DataTable", () => {
     render(<DataTable columns={nestedColumns} data={nestedData} />);
     expect(screen.getByText("Nested User")).toBeInTheDocument();
   });
+
+  it("labels the select-all checkbox and row checkboxes", () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={testData}
+        selectable
+        selectedIds={new Set()}
+        onSelectionChange={() => {}}
+      />
+    );
+
+    expect(screen.getByRole("checkbox", { name: "dataTableSelectAll" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "dataTableSelectRow Jan Kowalski" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "dataTableSelectRow Anna Nowak" })).toBeInTheDocument();
+  });
+
+  it("uses table data for row checkbox labels when rows do not have names", () => {
+    interface ShipmentRow {
+      id: string;
+      tracking_number: string;
+      provider: string;
+    }
+
+    const shipmentColumns: ColumnDef<ShipmentRow>[] = [
+      { header: "ID", accessorKey: "id" },
+      { header: "Tracking", accessorKey: "tracking_number" },
+      { header: "Provider", accessorKey: "provider" },
+    ];
+
+    render(
+      <DataTable
+        columns={shipmentColumns}
+        data={[{ id: "shipment-1", tracking_number: "INP123", provider: "inpost" }]}
+        selectable
+        selectedIds={new Set()}
+        onSelectionChange={() => {}}
+      />
+    );
+
+    expect(screen.getByRole("checkbox", { name: "dataTableSelectRow INP123" })).toBeInTheDocument();
+  });
+
+  it("uses custom row labels when provided", () => {
+    interface OrderRow {
+      id: string;
+      order_number: string;
+    }
+
+    const orderColumns: ColumnDef<OrderRow>[] = [
+      { header: "ID", accessorKey: "id" },
+      { header: "Order", accessorKey: "order_number" },
+    ];
+
+    render(
+      <DataTable
+        columns={orderColumns}
+        data={[{ id: "order-1", order_number: "ORD-100" }]}
+        getRowLabel={(row) => `Order ${row.order_number}`}
+        selectable
+        selectedIds={new Set()}
+        onSelectionChange={() => {}}
+      />
+    );
+
+    expect(screen.getByRole("checkbox", { name: "dataTableSelectRow Order ORD-100" })).toBeInTheDocument();
+  });
+
+  it("labels sortable header buttons", () => {
+    const sortableColumns: ColumnDef<TestRow>[] = [
+      { header: "Name", accessorKey: "name", sortable: true },
+      { header: "Email", accessorKey: "email" },
+    ];
+
+    render(
+      <DataTable
+        columns={sortableColumns}
+        data={testData}
+        sortBy="name"
+        sortOrder="asc"
+        onSort={() => {}}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "dataTableSortBy Name" })).toBeInTheDocument();
+  });
 });
