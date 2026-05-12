@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Factory, Package, Receipt, Store, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -86,8 +87,13 @@ export function ProviderLogo({
       : brand.wordmark
     : initialsForName(name);
   const classes = sizeClasses[size];
+  const [failedAssetSrc, setFailedAssetSrc] = useState<string | null>(null);
+  const activeOfficialAsset =
+    officialAsset && failedAssetSrc !== officialAsset.src
+      ? officialAsset
+      : undefined;
 
-  const mark = officialAsset ? (
+  const mark = activeOfficialAsset ? (
     <span
       title={name}
       data-provider-key={key}
@@ -98,10 +104,11 @@ export function ProviderLogo({
       )}
     >
       <img
-        src={officialAsset.src}
+        src={activeOfficialAsset.src}
         alt={`${name} logo`}
         data-provider-key={key}
         className="h-full max-h-6 w-auto object-contain"
+        onError={() => setFailedAssetSrc(activeOfficialAsset.src)}
       />
     </span>
   ) : (
