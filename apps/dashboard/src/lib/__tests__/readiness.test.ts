@@ -37,6 +37,10 @@ describe("dashboard feature readiness", () => {
     expect(visible).not.toContain("/suppliers");
     expect(visible).not.toContain("/listing-sync");
     expect(visible).not.toContain("/settings/sms");
+    expect(visible).not.toContain("/settings/ksef");
+    expect(visible).not.toContain("/settings/marketing");
+    expect(visible).not.toContain("/settings/helpdesk");
+    expect(visible).not.toContain("/settings/notifications");
     expect(visible).not.toContain("/workflows");
   });
 
@@ -62,6 +66,11 @@ describe("dashboard feature readiness", () => {
     expect(visible).toContain("/suppliers");
     expect(visible).toContain("/repricing");
     expect(visible).not.toContain("/settings/sms");
+    expect(visible).not.toContain("/settings/email");
+    expect(visible).not.toContain("/settings/ksef");
+    expect(visible).not.toContain("/settings/marketing");
+    expect(visible).not.toContain("/settings/helpdesk");
+    expect(visible).not.toContain("/settings/notifications");
   });
 
   it("classifies direct routes by the longest matching readiness rule", () => {
@@ -72,7 +81,12 @@ describe("dashboard feature readiness", () => {
     expect(getRouteReadiness("/customers/import")).toBe("verify");
     expect(getRouteReadiness("/carriers")).toBe("ready");
     expect(getRouteReadiness("/carriers/new")).toBe("ready");
+    expect(getRouteReadiness("/settings/email")).toBe("blocked");
     expect(getRouteReadiness("/settings/sms")).toBe("blocked");
+    expect(getRouteReadiness("/settings/ksef")).toBe("blocked");
+    expect(getRouteReadiness("/settings/marketing")).toBe("blocked");
+    expect(getRouteReadiness("/settings/helpdesk")).toBe("blocked");
+    expect(getRouteReadiness("/settings/notifications")).toBe("blocked");
     expect(getRouteReadiness("/reports/forecast")).toBe("beta");
   });
 
@@ -85,6 +99,19 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/customers/import", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/reports/forecast", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/sms", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/settings/ksef", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/settings/marketing", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/settings/helpdesk", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/settings/notifications", { mode: "client-ready" })).toBe(false);
+  });
+
+  it("keeps removed settings routes blocked even in full mode", () => {
+    expect(isRouteAccessible("/settings/email", { mode: "full" })).toBe(false);
+    expect(isRouteAccessible("/settings/sms", { mode: "full" })).toBe(false);
+    expect(isRouteAccessible("/settings/ksef", { mode: "full" })).toBe(false);
+    expect(isRouteAccessible("/settings/marketing", { mode: "full" })).toBe(false);
+    expect(isRouteAccessible("/settings/helpdesk", { mode: "full" })).toBe(false);
+    expect(isRouteAccessible("/settings/notifications", { mode: "full" })).toBe(false);
   });
 
   it("treats unreviewed direct routes as verify-only instead of client-ready", () => {

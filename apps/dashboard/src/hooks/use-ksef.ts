@@ -1,40 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type {
-  KSeFSettings,
-  KSeFTestResult,
-  KSeFBulkSendResult,
-} from "@/types/api";
-
-export function useKSeFSettings() {
-  return useQuery({
-    queryKey: ["settings", "ksef"],
-    queryFn: () => apiClient<KSeFSettings>("/v1/settings/ksef"),
-  });
-}
-
-export function useUpdateKSeFSettings() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: KSeFSettings) =>
-      apiClient<KSeFSettings>("/v1/settings/ksef", {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "ksef"] });
-    },
-  });
-}
-
-export function useTestKSeFConnection() {
-  return useMutation({
-    mutationFn: () =>
-      apiClient<KSeFTestResult>("/v1/settings/ksef/test", {
-        method: "POST",
-      }),
-  });
-}
+import type { KSeFBulkSendResult } from "@/types/api";
 
 export function useSendToKSeF() {
   const queryClient = useQueryClient();
