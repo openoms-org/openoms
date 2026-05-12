@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Factory, Package, Receipt, Store, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -76,6 +77,7 @@ export function ProviderLogo({
     (providerKey ? getProviderDisplayName(providerKey) : "Provider");
   const resolvedCategory = resolvedProvider?.category ?? category;
   const brand = resolvedProvider?.brand;
+  const officialAsset = brand?.officialAsset;
   const Icon =
     resolvedProvider?.icon ??
     (resolvedCategory ? categoryIcons[resolvedCategory] : Package);
@@ -85,8 +87,31 @@ export function ProviderLogo({
       : brand.wordmark
     : initialsForName(name);
   const classes = sizeClasses[size];
+  const [failedAssetSrc, setFailedAssetSrc] = useState<string | null>(null);
+  const activeOfficialAsset =
+    officialAsset && failedAssetSrc !== officialAsset.src
+      ? officialAsset
+      : undefined;
 
-  const mark = (
+  const mark = activeOfficialAsset ? (
+    <span
+      title={name}
+      data-provider-key={key}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center border bg-white shadow-xs",
+        classes.mark,
+        !showName && className,
+      )}
+    >
+      <img
+        src={activeOfficialAsset.src}
+        alt={`${name} logo`}
+        data-provider-key={key}
+        className="h-full max-h-6 w-auto object-contain"
+        onError={() => setFailedAssetSrc(activeOfficialAsset.src)}
+      />
+    </span>
+  ) : (
     <span
       role="img"
       aria-label={`${name} logo`}

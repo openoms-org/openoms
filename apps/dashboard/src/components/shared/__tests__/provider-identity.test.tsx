@@ -1,19 +1,49 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ProviderCard } from "@/components/shared/provider-card";
 import { ProviderLogo } from "@/components/shared/provider-logo";
 import { getProviderInfo } from "@/lib/provider-info";
 
 describe("provider identity", () => {
-  it("renders a recognizable accessible logo for a known carrier", () => {
+  it("renders the approved official asset for InPost", () => {
     const provider = getProviderInfo("inpost");
     expect(provider).toBeDefined();
 
     render(<ProviderLogo provider={provider!} />);
 
-    const logo = screen.getByLabelText("InPost logo");
+    const logo = screen.getByRole("img", { name: "InPost logo" });
+    expect(logo).toHaveAttribute("src", "/logos/official/inpost.svg");
+    expect(logo).toHaveAttribute("alt", "InPost logo");
     expect(logo).toHaveAttribute("data-provider-key", "inpost");
-    expect(logo).toHaveTextContent("InPost");
+  });
+
+  it("falls back to the wordmark when an approved official asset fails to load", () => {
+    const provider = getProviderInfo("inpost");
+    expect(provider).toBeDefined();
+
+    const { container } = render(<ProviderLogo provider={provider!} />);
+
+    fireEvent.error(screen.getByRole("img", { name: "InPost logo" }));
+
+    expect(
+      container.querySelector('img[src="/logos/official/inpost.svg"]'),
+    ).not.toBeInTheDocument();
+
+    const fallback = screen.getByLabelText("InPost logo");
+    expect(fallback.tagName).toBe("SPAN");
+    expect(fallback).toHaveTextContent("InPost");
+    expect(fallback).toHaveAttribute("data-provider-key", "inpost");
+  });
+
+  it("keeps non-approved providers on the safe wordmark fallback", () => {
+    const provider = getProviderInfo("allegro");
+    expect(provider).toBeDefined();
+
+    render(<ProviderLogo provider={provider!} />);
+
+    const logo = screen.getByLabelText("Allegro logo");
+    expect(logo).toHaveAttribute("data-provider-key", "allegro");
+    expect(logo).toHaveTextContent("Allegro");
   });
 
   it("falls back to initials for unknown providers", () => {
