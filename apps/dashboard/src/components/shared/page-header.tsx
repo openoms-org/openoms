@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 interface PageHeaderAction {
   label: string;
   href: string;
+  variant?: React.ComponentProps<typeof Button>["variant"];
 }
 
 interface PageHeaderProps {
@@ -48,7 +49,7 @@ export function PageHeader({
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
             {actions}
             {action && (
-              <Button asChild>
+              <Button asChild variant={action.variant} className="w-full sm:w-auto">
                 <Link href={action.href}>{action.label}</Link>
               </Button>
             )}

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import { getSelectableShipmentProviders } from "@/lib/readiness";
+import { FormActions } from "@/components/shared/form-layout";
 import { OrderSearchCombobox } from "@/components/shared/order-search-combobox";
 import { PaczkomatSelector } from "@/components/shared/paczkomat-selector";
 import type { Shipment } from "@/types/api";
@@ -89,85 +90,91 @@ export function ShipmentForm({
   );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label>{t("columns.order")}</Label>
-        <OrderSearchCombobox
-          value={watch("order_id")}
-          onValueChange={(id) =>
-            setValue("order_id", id, { shouldValidate: true })
-          }
-          disabled={!!shipment}
-        />
-        {errors.order_id && (
-          <p className="text-sm text-destructive">{errors.order_id.message}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="provider">{t("provider")}</Label>
-        <Select
-          value={providerValue}
-          onValueChange={(value) =>
-            setValue("provider", value as ShipmentFormValues["provider"], {
-              shouldValidate: true,
-            })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            {providerOptions.map((provider) => (
-              <SelectItem key={provider} value={provider}>
-                {provider.toUpperCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.provider && (
-          <p className="text-sm text-destructive">{errors.provider.message}</p>
-        )}
-      </div>
-
-      {providerValue === "inpost" && (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <div className="grid gap-4">
         <div className="space-y-2">
-          <Label>{t("targetLocker")}</Label>
-          {targetPoint && (
-            <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">{targetPoint}</span>
-            </div>
+          <Label>{t("columns.order")}</Label>
+          <OrderSearchCombobox
+            value={watch("order_id")}
+            onValueChange={(id) =>
+              setValue("order_id", id, { shouldValidate: true })
+            }
+            disabled={!!shipment}
+          />
+          {errors.order_id && (
+            <p className="text-sm text-destructive">{errors.order_id.message}</p>
           )}
-          <PaczkomatSelector
-            mode="dialog"
-            onPointSelect={handlePointSelect}
-            value={targetPoint}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="provider">{t("provider")}</Label>
+          <Select
+            value={providerValue}
+            onValueChange={(value) =>
+              setValue("provider", value as ShipmentFormValues["provider"], {
+                shouldValidate: true,
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("form.shipmentProviderPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {providerOptions.map((provider) => (
+                <SelectItem key={provider} value={provider}>
+                  {provider.toUpperCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.provider && (
+            <p className="text-sm text-destructive">{errors.provider.message}</p>
+          )}
+        </div>
+
+        {providerValue === "inpost" && (
+          <div className="space-y-2">
+            <Label>{t("targetLocker")}</Label>
+            {targetPoint && (
+              <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">{targetPoint}</span>
+              </div>
+            )}
+            <PaczkomatSelector
+              mode="dialog"
+              onPointSelect={handlePointSelect}
+              value={targetPoint}
+            />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="tracking_number">{t("columns.trackingNumber")}</Label>
+          <Input
+            id="tracking_number"
+            placeholder={t("opcjonalnyNumerSledzenia")}
+            {...register("tracking_number")}
           />
         </div>
-      )}
 
-      <div className="space-y-2">
-        <Label htmlFor="tracking_number">{t("columns.trackingNumber")}</Label>
-        <Input
-          id="tracking_number"
-          placeholder={t("opcjonalnyNumerSledzenia")}
-          {...register("tracking_number")}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="label_url">{t("labelUrl")}</Label>
+          <Input
+            id="label_url"
+            placeholder={t("optionalLabelUrl")}
+            {...register("label_url")}
+          />
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="label_url">{t("labelUrl")}</Label>
-        <Input
-          id="label_url"
-          placeholder={t("optionalLabelUrl")}
-          {...register("label_url")}
-        />
-      </div>
-
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? t("saving") : shipment ? t("saveChanges") : t("createShipment")}
-      </Button>
+      <FormActions
+        primary={
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? t("saving") : shipment ? t("saveChanges") : t("createShipment")}
+          </Button>
+        }
+      />
     </form>
   );
 }

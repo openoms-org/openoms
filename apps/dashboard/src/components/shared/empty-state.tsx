@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type * as React from "react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -6,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface EmptyStateAction {
   label: string;
   href: string;
+  variant?: React.ComponentProps<typeof Button>["variant"];
 }
 
 interface EmptyStateProps {
@@ -54,14 +56,14 @@ export function EmptyState({
         {description}
       </p>
       {(action || secondaryAction) && (
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-5 flex w-full max-w-sm flex-col gap-2 sm:w-auto sm:max-w-none sm:flex-row sm:justify-center">
           {action && (
-            <Button asChild>
+            <Button asChild variant={action.variant} className="w-full sm:w-auto">
               <Link href={action.href}>{action.label}</Link>
             </Button>
           )}
           {secondaryAction && (
-            <Button asChild variant="outline">
+            <Button asChild variant={secondaryAction.variant ?? "outline"} className="w-full sm:w-auto">
               <Link href={secondaryAction.href}>{secondaryAction.label}</Link>
             </Button>
           )}

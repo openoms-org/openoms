@@ -453,3 +453,5 @@ Hardening work such as Docker secret handling remains important, but it is inten
 ## Status
 
 2026-05-12: OPE-244 began the first implementation slice for the UI system. The slice adds shared layout primitives and backward-compatible upgrades to PageHeader, EmptyState, StatusBadge and DataTable, so future route migrations can use one visual system instead of per-page styling.
+
+2026-05-12: OPE-261/OPE-262 continue the first polish wave after production visual QA. The slice refreshes the default dashboard CTA treatment, lets PageHeader and EmptyState actions use explicit button variants, moves visible shipment/provider setup forms toward FormSection/FormActions, and fixes the missing marketplace breadcrumb translation seen on production.

@@ -8,4 +8,9 @@ describe("breadcrumb messages", () => {
     expect(plLayoutMessages.breadcrumbs.carriers).toBe("Kurierzy");
     expect(enLayoutMessages.breadcrumbs.carriers).toBe("Carriers");
   });
+
+  it("localizes the client-ready marketplace routes", () => {
+    expect(plLayoutMessages.breadcrumbs.marketplaces).toBe("Marketplace");
+    expect(enLayoutMessages.breadcrumbs.marketplaces).toBe("Marketplaces");
+  });
 });

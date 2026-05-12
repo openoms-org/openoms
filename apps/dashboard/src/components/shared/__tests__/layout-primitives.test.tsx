@@ -73,6 +73,12 @@ describe("layout primitives", () => {
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
   });
 
+  it("uses the dashboard primary treatment for default buttons", () => {
+    render(<Button>Primary action</Button>);
+
+    expect(screen.getByRole("button", { name: "Primary action" })).toHaveClass("bg-info");
+  });
+
   it("renders PageHeader with legacy action and additional action slots", () => {
     render(
       <PageHeader
@@ -102,7 +108,7 @@ describe("layout primitives", () => {
         icon={PackagePlus}
         title="No products"
         description="Create the first catalog item."
-        action={{ label: "Add product", href: "/products/new" }}
+        action={{ label: "Add product", href: "/products/new", variant: "soft" }}
         variant="compact"
       />
     );
@@ -110,6 +116,7 @@ describe("layout primitives", () => {
     expect(screen.getByRole("heading", { name: "No products" })).toBeInTheDocument();
     expect(screen.getByText("Create the first catalog item.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add product" })).toHaveAttribute("href", "/products/new");
+    expect(screen.getByRole("link", { name: "Add product" })).toHaveClass("bg-sidebar-accent");
     expect(screen.getByTestId("empty-state-icon")).toHaveAttribute("aria-hidden", "true");
   });
 
