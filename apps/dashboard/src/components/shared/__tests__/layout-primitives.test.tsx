@@ -4,6 +4,9 @@ import { Surface } from "@/components/shared/surface";
 import { PageSection } from "@/components/shared/page-section";
 import { ActionBar } from "@/components/shared/action-bar";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PackagePlus } from "lucide-react";
 
 describe("layout primitives", () => {
   it("renders Surface as a named region when aria-label is provided", () => {
@@ -54,5 +57,45 @@ describe("layout primitives", () => {
 
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+  });
+
+  it("renders PageHeader with legacy action and additional action slots", () => {
+    render(
+      <PageHeader
+        title="Products"
+        description="Catalog orchestration"
+        action={{ label: "Add product", href: "/products/new" }}
+        actions={<Button variant="outline">Import</Button>}
+        meta={<span>12 active</span>}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Products" })).toBeInTheDocument();
+    expect(screen.getByText("Catalog orchestration")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add product" })).toHaveAttribute("href", "/products/new");
+    expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
+    expect(screen.getByText("12 active")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Import" }).compareDocumentPosition(
+        screen.getByRole("link", { name: "Add product" })
+      )
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("renders EmptyState compact variant with accessible icon wrapper", () => {
+    render(
+      <EmptyState
+        icon={PackagePlus}
+        title="No products"
+        description="Create the first catalog item."
+        action={{ label: "Add product", href: "/products/new" }}
+        variant="compact"
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "No products" })).toBeInTheDocument();
+    expect(screen.getByText("Create the first catalog item.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add product" })).toHaveAttribute("href", "/products/new");
+    expect(screen.getByTestId("empty-state-icon")).toHaveAttribute("aria-hidden", "true");
   });
 });
