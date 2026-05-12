@@ -450,3 +450,6 @@ This spec does not certify new providers, rewrite backend flows, add missing end
 
 Hardening work such as Docker secret handling remains important, but it is intentionally a separate track after the UI system direction is captured.
 
+## Status
+
+2026-05-12: OPE-244 began the first implementation slice for the UI system. The slice adds shared layout primitives and backward-compatible upgrades to PageHeader, EmptyState, StatusBadge and DataTable, so future route migrations can use one visual system instead of per-page styling.
