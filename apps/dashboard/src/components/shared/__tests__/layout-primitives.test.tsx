@@ -7,6 +7,20 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PackagePlus } from "lucide-react";
+import {
+  FormActions,
+  FormSection,
+} from "@/components/shared/form-layout";
+import {
+  DetailLayout,
+  DetailMain,
+  DetailSidebar,
+} from "@/components/shared/detail-layout";
+import {
+  SettingsLayout,
+  SettingsNav,
+  SettingsPanel,
+} from "@/components/shared/settings-layout";
 
 describe("layout primitives", () => {
   it("renders Surface as a named region when aria-label is provided", () => {
@@ -97,5 +111,49 @@ describe("layout primitives", () => {
     expect(screen.getByText("Create the first catalog item.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add product" })).toHaveAttribute("href", "/products/new");
     expect(screen.getByTestId("empty-state-icon")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("renders FormSection and FormActions", () => {
+    render(
+      <FormSection title="Carrier credentials" description="Production API settings">
+        <label htmlFor="token">Token</label>
+        <input id="token" />
+        <FormActions primary={<Button>Save</Button>} secondary={<Button variant="outline">Cancel</Button>} />
+      </FormSection>
+    );
+
+    expect(screen.getByRole("heading", { name: "Carrier credentials" })).toBeInTheDocument();
+    expect(screen.getByText("Production API settings")).toBeInTheDocument();
+    expect(screen.getByLabelText("Token")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+  });
+
+  it("renders DetailLayout with main and sidebar regions", () => {
+    render(
+      <DetailLayout>
+        <DetailMain aria-label="Order activity">Activity</DetailMain>
+        <DetailSidebar aria-label="Order metadata">Metadata</DetailSidebar>
+      </DetailLayout>
+    );
+
+    expect(screen.getByRole("region", { name: "Order activity" })).toHaveTextContent("Activity");
+    expect(screen.getByRole("complementary", { name: "Order metadata" })).toHaveTextContent("Metadata");
+  });
+
+  it("renders SettingsLayout with navigation and panel", () => {
+    render(
+      <SettingsLayout>
+        <SettingsNav aria-label="Settings sections">
+          <a href="/settings/company">Company</a>
+        </SettingsNav>
+        <SettingsPanel title="Company" description="Company profile">
+          Settings content
+        </SettingsPanel>
+      </SettingsLayout>
+    );
+
+    expect(screen.getByRole("navigation", { name: "Settings sections" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Company" })).toBeInTheDocument();
+    expect(screen.getByText("Settings content")).toBeInTheDocument();
   });
 });
