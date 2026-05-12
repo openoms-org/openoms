@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { enUS, pl } from "date-fns/locale";
-import { AlertTriangle, CheckCircle2, CircleAlert } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { ProviderLogo } from "@/components/shared/provider-logo";
 import {
   Card,
   CardContent,
@@ -70,16 +70,7 @@ export function IntegrationHealthPanel({
               >
                 <span className="flex items-start justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-md",
-                        item.health === "ok" && "bg-success/10 text-success",
-                        item.health === "warning" && "bg-warning/15 text-warning",
-                        item.health === "problem" && "bg-destructive/10 text-destructive",
-                      )}
-                    >
-                      <HealthIcon health={item.health} />
-                    </span>
+                    <ProviderLogo providerKey={item.provider} size="md" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold">{item.label}</span>
                       <span className="mt-1 block text-xs text-muted-foreground">
@@ -114,16 +105,4 @@ export function IntegrationHealthPanel({
       </CardContent>
     </Card>
   );
-}
-
-function HealthIcon({ health }: { health: OperationsHealth }) {
-  if (health === "problem") {
-    return <CircleAlert className="h-5 w-5" aria-hidden="true" />;
-  }
-
-  if (health === "warning") {
-    return <AlertTriangle className="h-5 w-5" aria-hidden="true" />;
-  }
-
-  return <CheckCircle2 className="h-5 w-5" aria-hidden="true" />;
 }

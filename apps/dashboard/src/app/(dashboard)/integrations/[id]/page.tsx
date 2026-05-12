@@ -18,6 +18,7 @@ import {
 } from "@/hooks/use-marketplace-category-mappings";
 import { IntegrationForm } from "@/components/integrations/integration-form";
 import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
+import { ProviderLogo } from "@/components/shared/provider-logo";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { getErrorMessage } from "@/lib/api-client";
@@ -188,6 +189,11 @@ export default function IntegrationDetailPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
+          <ProviderLogo
+            providerKey={integration.provider}
+            fallbackName={providerLabel}
+            size="lg"
+          />
           <div>
             <h1 className="text-2xl font-bold">{providerLabel}</h1>
             <p className="text-muted-foreground">
@@ -215,7 +221,13 @@ export default function IntegrationDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">{t("provider")}</p>
-                <p className="mt-1 font-medium">{providerLabel}</p>
+                <div className="mt-1">
+                  <ProviderLogo
+                    providerKey={integration.provider}
+                    fallbackName={providerLabel}
+                    size="sm"
+                  />
+                </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>

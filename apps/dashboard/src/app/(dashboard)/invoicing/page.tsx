@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ProviderLogo } from "@/components/shared/provider-logo";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,6 @@ import {
 } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
-import { getProviderDisplayName } from "@/lib/provider-info";
 import type { InvoicingSettings } from "@/types/api";
 
 const DEFAULT_SETTINGS: InvoicingSettings = {
@@ -439,7 +439,11 @@ export default function InvoicingPage() {
                     }
                   >
                     <TableCell className="font-medium">
-                      {getProviderDisplayName(integration.provider)}
+                      <ProviderLogo
+                        providerKey={integration.provider}
+                        category="invoicing"
+                        size="sm"
+                      />
                     </TableCell>
                     <TableCell>
                       <StatusBadge

@@ -239,6 +239,8 @@ Dotyczy: marketplaces, integrations, carriers, suppliers.
 Wzorzec:
 
 - provider picker pokazuje tylko providerow dopuszczonych przez readiness,
+- zewnetrzne uslugi maja jeden wspolny provider identity: logo/wordmark, nazwe, kategorie i fallback dla nieznanych providerow,
+- logo/wordmark stosujemy dla kurierow, marketplace'ow, fakturowania i dostawcow; moduly systemowe nadal uzywaja spojnych ikon funkcjonalnych,
 - niegotowi providerzy sa ukryci w client-ready mode,
 - formularz providera pokazuje tylko pola wymagane przez ten provider,
 - test connection jest widoczny tylko jesli flow istnieje,
@@ -455,3 +457,5 @@ Hardening work such as Docker secret handling remains important, but it is inten
 2026-05-12: OPE-244 began the first implementation slice for the UI system. The slice adds shared layout primitives and backward-compatible upgrades to PageHeader, EmptyState, StatusBadge and DataTable, so future route migrations can use one visual system instead of per-page styling.
 
 2026-05-12: OPE-261/OPE-262 continue the first polish wave after production visual QA. The slice refreshes the default dashboard CTA treatment, lets PageHeader and EmptyState actions use explicit button variants, moves visible shipment/provider setup forms toward FormSection/FormActions, and fixes the missing marketplace breadcrumb translation seen on production.
+
+2026-05-12: OPE-264 adds the provider identity layer for the UI system. Carrier, marketplace, invoicing and generic integration surfaces should use one shared ProviderLogo/ProviderInfo source of truth, with brand-colored wordmarks now and a clean path for official logo assets later.

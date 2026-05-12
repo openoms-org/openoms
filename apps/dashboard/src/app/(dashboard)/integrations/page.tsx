@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ProviderLogo } from "@/components/shared/provider-logo";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -132,9 +133,12 @@ export default function IntegrationsPage() {
                   onClick={() => router.push(href)}
                 >
                   <TableCell className="font-medium">
-                    <span className="inline-flex items-center">
-                      {integration.provider.charAt(0).toUpperCase() +
-                        integration.provider.slice(1)}
+                    <span className="inline-flex items-center gap-2">
+                      <ProviderLogo
+                        providerKey={integration.provider}
+                        showName
+                        size="sm"
+                      />
                       {isInDevelopment(integration.provider) && <DevelopmentBadge />}
                     </span>
                   </TableCell>

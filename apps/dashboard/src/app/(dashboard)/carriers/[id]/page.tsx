@@ -12,6 +12,7 @@ import {
   useDeleteIntegration,
 } from "@/hooks/use-integrations";
 import { IntegrationForm } from "@/components/integrations/integration-form";
+import { ProviderLogo } from "@/components/shared/provider-logo";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
@@ -129,6 +130,11 @@ export default function CarrierDetailPage() {
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
+            <ProviderLogo
+              providerKey={integration.provider}
+              category="carrier"
+              size="lg"
+            />
             <div>
               <h1 className="text-2xl font-bold">{providerLabel}</h1>
               <p className="text-muted-foreground">
@@ -156,7 +162,13 @@ export default function CarrierDetailPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Kurier</p>
-                  <p className="mt-1 font-medium">{providerLabel}</p>
+                  <div className="mt-1">
+                    <ProviderLogo
+                      providerKey={integration.provider}
+                      category="carrier"
+                      size="sm"
+                    />
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>

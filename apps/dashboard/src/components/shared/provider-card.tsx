@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { ProviderInfo } from "@/lib/provider-info";
 import { Badge } from "@/components/ui/badge";
+import { ProviderLogo } from "@/components/shared/provider-logo";
 
 interface ProviderCardProps {
   provider: ProviderInfo;
@@ -11,18 +12,17 @@ interface ProviderCardProps {
 }
 
 export function ProviderCard({ provider, selected, onClick }: ProviderCardProps) {
-  const Icon = provider.icon;
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50",
+        "flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50",
         selected && "border-primary bg-primary/5",
       )}
     >
       <div className="flex w-full items-center justify-between">
-        <Icon className="h-6 w-6 text-muted-foreground" />
+        <ProviderLogo provider={provider} size="lg" />
         {provider.beta && (
           <Badge variant="secondary" className="text-xs">
             Beta
