@@ -1,54 +1,21 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
+import { FormWrapper } from "@/components/shared/form-wrapper";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  INTEGRATION_PROVIDER_LABELS,
-  PROVIDER_CATEGORIES,
   PROVIDER_CREDENTIAL_FIELDS,
   PROVIDER_SETTINGS_FIELDS,
-  PROVIDERS_WITH_DEDICATED_PAGES,
 } from "@/lib/constants";
-import type { CredentialField } from "@/lib/constants";
-import { isInDevelopment } from "@/lib/integration-status";
-import { getVisibleProviderKeys } from "@/lib/readiness";
-import { useTranslations } from "next-intl";
-
-const integrationSchema = z.object({
-  provider: z.string().min(1),
-  settings: z.string().optional().refine(
-    (val) => {
-      if (!val || val.trim() === "") return true;
-      try {
-        JSON.parse(val);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    { message: "Invalid JSON format" }
-  ),
-});
-
-type IntegrationFormValues = z.infer<typeof integrationSchema>;
+import {
+  AdvancedSettings,
+  CredentialFields,
+} from "./integration-form-fields";
+import { ProviderSelect } from "./integration-provider-select";
+import {
+  integrationSchema,
+  type IntegrationFormValues,
+} from "./integration-form.schema";
 
 interface IntegrationFormProps {
   onSubmit: (data: {
@@ -64,6 +31,23 @@ interface IntegrationFormProps {
 }
 
 export function IntegrationForm({
+  editProvider,
+  existingSettings,
+  ...props
+}: IntegrationFormProps) {
+  const formKey = `${editProvider ?? "new"}:${JSON.stringify(existingSettings ?? {})}`;
+
+  return (
+    <IntegrationFormContent
+      key={formKey}
+      editProvider={editProvider}
+      existingSettings={existingSettings}
+      {...props}
+    />
+  );
+}
+
+function IntegrationFormContent({
   onSubmit,
   isLoading = false,
   editProvider,
@@ -71,49 +55,12 @@ export function IntegrationForm({
 }: IntegrationFormProps) {
   const t = useTranslations("integrations");
   const isEditMode = !!editProvider;
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<IntegrationFormValues>({
-    resolver: zodResolver(integrationSchema),
-    defaultValues: {
-      provider: editProvider ?? "",
-      settings: "",
-    },
-  });
-
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const selectedProvider = editProvider ?? watch("provider");
-  const fields = selectedProvider ? (PROVIDER_CREDENTIAL_FIELDS[selectedProvider] ?? []) : [];
-
-  // In edit mode, pre-fill settings-mapped fields from existingSettings
-  const buildInitialValues = (): Record<string, string | boolean> => {
-    if (!isEditMode || !existingSettings) return {};
-    const settingsFields = PROVIDER_SETTINGS_FIELDS[selectedProvider] ?? [];
-    const initial: Record<string, string | boolean> = {};
-    for (const key of settingsFields) {
-      const val = existingSettings[key];
-      if (typeof val === "string") initial[key] = val;
-      if (typeof val === "boolean") initial[key] = val;
-    }
-    return initial;
-  };
-
-  const [credentialValues, setCredentialValues] = useState<Record<string, string | boolean>>(buildInitialValues);
+  const [credentialValues, setCredentialValues] = useState<Record<string, string | boolean>>(() =>
+    buildInitialValues(editProvider, existingSettings)
+  );
   const [credentialErrors, setCredentialErrors] = useState<Record<string, string>>({});
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  const handleProviderChange = useCallback((value: string) => {
-    setValue("provider", value, { shouldValidate: true });
-    setCredentialValues({});
-    setCredentialErrors({});
-    setVisiblePasswords({});
-  }, [setValue]);
 
   const handleCredentialChange = useCallback((key: string, value: string | boolean) => {
     setCredentialValues((prev) => ({ ...prev, [key]: value }));
@@ -128,7 +75,8 @@ export function IntegrationForm({
     setVisiblePasswords((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  const validateCredentials = (): boolean => {
+  const validateCredentials = (provider: string): boolean => {
+    const fields = PROVIDER_CREDENTIAL_FIELDS[provider] ?? [];
     const newErrors: Record<string, string> = {};
     for (const field of fields) {
       // In edit mode, required fields are optional (user may only update some)
@@ -154,9 +102,10 @@ export function IntegrationForm({
   };
 
   const handleFormSubmit = (data: IntegrationFormValues) => {
-    if (!validateCredentials()) return;
-
     const provider = editProvider ?? data.provider;
+    if (!validateCredentials(provider)) return;
+
+    const fields = PROVIDER_CREDENTIAL_FIELDS[provider] ?? [];
     const credentials: Record<string, unknown> = {};
     for (const field of fields) {
       const val = credentialValues[field.key];
@@ -167,7 +116,6 @@ export function IntegrationForm({
       }
     }
 
-    // Extract fields that should go to settings instead of credentials
     const settingsFields = PROVIDER_SETTINGS_FIELDS[provider] ?? [];
     const autoSettings: Record<string, unknown> = {};
     for (const key of settingsFields) {
@@ -177,7 +125,6 @@ export function IntegrationForm({
       }
     }
 
-    // Merge with manual JSON settings if provided
     let finalSettings: Record<string, unknown> | undefined;
     if (data.settings && data.settings.trim() !== "") {
       finalSettings = { ...JSON.parse(data.settings), ...autoSettings };
@@ -185,231 +132,80 @@ export function IntegrationForm({
       finalSettings = autoSettings;
     }
 
-    // In edit mode, merge with existing settings to preserve unmodified keys
     if (isEditMode && existingSettings) {
       finalSettings = { ...existingSettings, ...(finalSettings ?? {}) };
     }
 
-    onSubmit({
-      provider,
-      credentials,
-      settings: finalSettings,
-    });
-  };
-
-  const regularFields = fields.filter((f) => f.type !== "checkbox" && f.type !== "select");
-  const selectFields = fields.filter((f) => f.type === "select");
-  const checkboxFields = fields.filter((f) => f.type === "checkbox");
-  const categoryEntries = Object.entries(PROVIDER_CATEGORIES).map(([key, cat]) => [
-    key,
-    {
-      ...cat,
-      providers: getVisibleProviderKeys(
-        isEditMode
-          ? cat.providers
-          : cat.providers.filter((p) => !(p in PROVIDERS_WITH_DEDICATED_PAGES)),
-        { mode: isEditMode ? "full" : undefined },
-      ),
-    },
-  ] as [string, { labelKey: string; providers: string[] }]).filter(([, cat]) => cat.providers.length > 0);
-
-  const renderField = (field: CredentialField) => {
-    if (field.type === "checkbox") {
-      return (
-        <div key={field.key} className="flex items-center space-x-2">
-          <Checkbox
-            id={`cred-${field.key}`}
-            checked={credentialValues[field.key] === true}
-            onCheckedChange={(checked) =>
-              handleCredentialChange(field.key, checked === true)
-            }
-          />
-          <Label htmlFor={`cred-${field.key}`} className="font-normal cursor-pointer">
-            {field.labelKey}
-          </Label>
-        </div>
-      );
-    }
-
-    if (field.type === "select" && field.options) {
-      return (
-        <div key={field.key} className="space-y-2">
-          <Label htmlFor={`cred-${field.key}`}>{field.labelKey}</Label>
-          <Select
-            value={(credentialValues[field.key] as string) ?? ""}
-            onValueChange={(v) => handleCredentialChange(field.key, v)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t("notSet")} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.labelKey}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {field.helpTextKey && (
-            <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
-          )}
-        </div>
-      );
-    }
-
-    const isPassword = field.type === "password";
-    const isVisible = visiblePasswords[field.key];
-    const inputType = isPassword ? (isVisible ? "text" : "password") : field.type;
-
-    return (
-      <div key={field.key} className="space-y-2">
-        <Label htmlFor={`cred-${field.key}`}>
-          {field.labelKey}
-          {!isEditMode && field.required && <span className="text-destructive ml-1">*</span>}
-        </Label>
-        <div className="relative">
-          <Input
-            id={`cred-${field.key}`}
-            type={inputType}
-            placeholder={isEditMode ? t("leaveEmptyToKeep") : field.placeholderKey}
-            value={(credentialValues[field.key] as string) ?? ""}
-            onChange={(e) => handleCredentialChange(field.key, e.target.value)}
-            className={isPassword ? "pr-10" : ""}
-            aria-invalid={!!credentialErrors[field.key]}
-          />
-          {isPassword && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-              onClick={() => togglePasswordVisibility(field.key)}
-              tabIndex={-1}
-            >
-              {isVisible ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              )}
-              <span className="sr-only">
-                {isVisible ? t("hide") : t("show")} {field.labelKey.toLowerCase()}
-              </span>
-            </Button>
-          )}
-        </div>
-        {field.helpTextKey && (
-          <p className="text-sm text-muted-foreground">{field.helpTextKey}</p>
-        )}
-        {credentialErrors[field.key] && (
-          <p className="text-sm text-destructive">{credentialErrors[field.key]}</p>
-        )}
-      </div>
-    );
+    onSubmit({ provider, credentials, settings: finalSettings });
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      {/* Provider selection — only shown in create mode */}
-      {!isEditMode && (
-        <div className="space-y-2">
-          <Label htmlFor="provider">{t("provider")}</Label>
-          <Select
-            value={selectedProvider}
-            onValueChange={handleProviderChange}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t("selectProviderPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {categoryEntries.map(([catKey, category], catIndex) => (
-                <SelectGroup key={catKey}>
-                  {catIndex > 0 && <SelectSeparator />}
-                  <SelectLabel>{category.labelKey}</SelectLabel>
-                  {category.providers.map((provider) => (
-                    <SelectItem key={provider} value={provider}>
-                      {INTEGRATION_PROVIDER_LABELS[provider] ??
-                        provider.charAt(0).toUpperCase() + provider.slice(1)}
-                      {isInDevelopment(provider) ? ` (${t("inDevelopment")})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.provider && (
-            <p className="text-sm text-destructive">{errors.provider.message}</p>
-          )}
-        </div>
-      )}
+    <FormWrapper<IntegrationFormValues>
+      schema={integrationSchema}
+      defaultValues={{ provider: editProvider ?? "", settings: "" }}
+      onSubmit={handleFormSubmit}
+      className="space-y-6"
+      actionsClassName="justify-end"
+      submitLabel={isEditMode ? t("saveChanges") : t("create")}
+      submittingLabel={isEditMode ? t("updating") : t("creating")}
+      isSubmitting={isLoading}
+      showErrorSummary={false}
+    >
+      {({ register, setValue, watch, formState: { errors } }) => {
+        const selectedProvider = editProvider ?? watch("provider");
+        const fields = selectedProvider ? (PROVIDER_CREDENTIAL_FIELDS[selectedProvider] ?? []) : [];
 
-      {/* Dynamic credential fields */}
-      {selectedProvider && fields.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-foreground">
-            {isEditMode ? t("updateData") : t("credentialFields")} &mdash;{" "}
-            {INTEGRATION_PROVIDER_LABELS[selectedProvider] ?? selectedProvider}
-          </h3>
-          {isEditMode && (
-            <p className="text-sm text-muted-foreground">
-              {t("editModeHint")}
-            </p>
-          )}
-
-          {/* Regular (text/password/url) fields */}
-          {regularFields.map(renderField)}
-
-          {/* Select fields */}
-          {selectFields.map(renderField)}
-
-          {/* Checkbox fields separated visually */}
-          {checkboxFields.length > 0 && (
-            <>
-              <div className="border-t pt-4">
-                {checkboxFields.map(renderField)}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Collapsible advanced settings */}
-      <div className="space-y-2">
-        <button
-          type="button"
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-        >
-          {showAdvanced ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-          {t("showAdvanced")}
-        </button>
-        {showAdvanced && (
-          <div className="space-y-2 pt-2">
-            <Label htmlFor="settings">{t("additionalSettingsJson")}</Label>
-            <Textarea
-              id="settings"
-              placeholder='{"webhook_url": "...", "sync_interval": 3600}'
-              className="min-h-24 font-mono text-sm"
-              {...register("settings")}
-            />
-            {errors.settings && (
-              <p className="text-sm text-destructive">{errors.settings.message}</p>
+        return (
+          <>
+            {!isEditMode && (
+              <ProviderSelect
+                value={selectedProvider}
+                error={errors.provider}
+                onChange={(value) => {
+                  setValue("provider", value, { shouldValidate: true });
+                  setCredentialValues({});
+                  setCredentialErrors({});
+                  setVisiblePasswords({});
+                }}
+              />
             )}
-          </div>
-        )}
-      </div>
 
-      <div className="flex justify-end gap-3">
-        <Button type="submit" disabled={isLoading}>
-          {isLoading
-            ? isEditMode ? t("updating") : t("creating")
-            : isEditMode ? t("saveChanges") : t("create")
-          }
-        </Button>
-      </div>
-    </form>
+            <CredentialFields
+              selectedProvider={selectedProvider}
+              fields={fields}
+              isEditMode={isEditMode}
+              values={credentialValues}
+              errors={credentialErrors}
+              visiblePasswords={visiblePasswords}
+              onCredentialChange={handleCredentialChange}
+              onTogglePassword={togglePasswordVisibility}
+            />
+
+            <AdvancedSettings
+              showAdvanced={showAdvanced}
+              onToggle={() => setShowAdvanced((current) => !current)}
+              register={register}
+              error={errors.settings}
+            />
+          </>
+        );
+      }}
+    </FormWrapper>
   );
+}
+
+function buildInitialValues(
+  editProvider: string | undefined,
+  existingSettings: Record<string, unknown> | undefined
+): Record<string, string | boolean> {
+  if (!editProvider || !existingSettings) return {};
+
+  const settingsFields = PROVIDER_SETTINGS_FIELDS[editProvider] ?? [];
+  const initial: Record<string, string | boolean> = {};
+  for (const key of settingsFields) {
+    const val = existingSettings[key];
+    if (typeof val === "string") initial[key] = val;
+    if (typeof val === "boolean") initial[key] = val;
+  }
+  return initial;
 }
