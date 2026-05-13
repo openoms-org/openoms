@@ -167,6 +167,7 @@ CREATE POLICY tenant_isolation ON orders
 
 Obrazy sa publiczne na GHCR -- nie wymagaja `imagePullSecrets`.
 Dashboard image jest walidowany w CI/release przez `scripts/check-dashboard-image.sh`: runtime musi startowac jako non-root Node/distroless, nie moze zawierac `/bin/sh`, placeholderow runtime (`NEXT_PUBLIC_API_URL_PLACEHOLDER`, `WS_CSP_HOST_PLACEHOLDER`, `SENTRY_DSN_PLACEHOLDER`) ani `http://localhost:8080` w bundle, i musi przejsc read-only smoke test `/login`.
+Sentry source map upload dla dashboardu uzywa BuildKit secret mount (`sentry_auth_token`) tylko podczas `next build`; `SENTRY_AUTH_TOKEN` nie moze wracac jako Docker `ARG`, `ENV` ani release `build-args`.
 
 #### Konfiguracja produkcyjna
 

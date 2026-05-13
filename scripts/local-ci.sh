@@ -164,7 +164,12 @@ run_check "eslint" bash -c '
     cd "'"$REPO_ROOT"'/apps/dashboard" && npx eslint --quiet src/ 2>&1
 '
 
-# ── 5. next build (skip in quick mode) ──
+# ── 5. dashboard build secret guard ──
+run_check "dashboard-secrets" bash -c '
+    cd "'"$REPO_ROOT"'" && ./scripts/check-dashboard-build-secrets.sh
+'
+
+# ── 6. next build (skip in quick mode) ──
 if ! $QUICK; then
     run_check "next-build" bash -c '
         cd "'"$REPO_ROOT"'/apps/dashboard"
@@ -180,7 +185,7 @@ if ! $QUICK; then
     '
 fi
 
-# ── 6. go test — packages without DB (skip in quick mode) ──
+# ── 7. go test — packages without DB (skip in quick mode) ──
 if ! $QUICK; then
     run_check "go-test" bash -c '
         errors=""
