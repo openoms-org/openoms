@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # ── Dependencies stage ───────────────────────────────────────────
 FROM node:22-bookworm-slim AS deps
 
@@ -30,12 +32,13 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 ARG NEXT_PUBLIC_SENTRY_ENVIRONMENT
 ENV NEXT_PUBLIC_SENTRY_ENVIRONMENT=${NEXT_PUBLIC_SENTRY_ENVIRONMENT}
 
-ARG SENTRY_AUTH_TOKEN
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
 
 # next.config.ts already has output: "standalone"
-RUN npx next build
+RUN --mount=type=secret,id=sentry_auth_token \
+    export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" && \
+    npx next build
 
 # ── Runtime stage ────────────────────────────────────────────────
 FROM gcr.io/distroless/nodejs22-debian13:nonroot AS runner

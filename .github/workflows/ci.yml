@@ -541,8 +541,13 @@ jobs:
       - name: Build API server image
         run: docker build -f apps/api-server/Dockerfile -t openoms-api:ci .
 
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Check Dashboard build secrets
+        run: ./scripts/check-dashboard-build-secrets.sh
+
       - name: Build Dashboard image
-        run: docker build -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard
+        run: docker buildx build --load -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard
 
       - name: Check Dashboard image hardening
         run: ./scripts/check-dashboard-image.sh openoms-dashboard:ci
