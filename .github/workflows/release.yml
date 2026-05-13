@@ -118,6 +118,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN || '' }}
             NEXT_PUBLIC_SENTRY_ENVIRONMENT=production
+            SENTRY_RELEASE=${{ github.sha }}
             SENTRY_ORG=${{ vars.SENTRY_ORG || '' }}
             SENTRY_PROJECT=${{ vars.SENTRY_PROJECT || '' }}
           secrets: |

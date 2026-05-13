@@ -16,6 +16,9 @@ spec:
     {{- toYaml .Values.dashboard.strategy | nindent 4 }}
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
       labels:
         {{- include "openoms.labels" . | nindent 8 }}
         {{- include "openoms.dashboard.selectorLabels" . | nindent 8 }}
@@ -50,6 +53,12 @@ spec:
               value: production
             - name: HOSTNAME
               value: "0.0.0.0"
+            - name: SENTRY_RELEASE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openoms.fullname" . }}-config
+                  key: SENTRY_RELEASE
+                  optional: true
             # Runtime Sentry env is server-side only; client DSN is baked at image build by the release workflow.
             - name: NEXT_PUBLIC_SENTRY_ENVIRONMENT
               value: production
