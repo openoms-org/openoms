@@ -35,4 +35,8 @@ if ! grep -q -E 'sentry_auth_token=.*secrets\.SENTRY_AUTH_TOKEN|SENTRY_AUTH_TOKE
   fail "release workflow must expose SENTRY_AUTH_TOKEN as a BuildKit secret"
 fi
 
+if ! grep -q './scripts/check-dashboard-release-config.sh' "$release_workflow"; then
+  fail "release workflow must run dashboard Sentry release config preflight"
+fi
+
 echo "dashboard_build_secret_check=pass"
