@@ -57,6 +57,12 @@ spec:
               value: production
             - name: HOSTNAME
               value: "0.0.0.0"
+            - name: SENTRY_RELEASE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openoms.fullname" . }}-config
+                  key: SENTRY_RELEASE
+                  optional: true
             # Runtime Sentry env is server-side only; client DSN is baked at image build by the release workflow.
             - name: NEXT_PUBLIC_SENTRY_ENVIRONMENT
               value: production

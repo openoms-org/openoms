@@ -24,6 +24,7 @@ data:
   REGISTRATION_MODE: {{ .Values.apiServer.registrationMode | default "open" | quote }}
   REDIS_URL: {{ .Values.redis.url | quote }}
   ALLOW_IN_MEMORY_STATE: {{ .Values.apiServer.allowInMemoryState | default false | quote }}
+  SENTRY_RELEASE: {{ .Values.sentry.release | default "" | quote }}
   {{- if .Values.apiServer.billing }}
   STRIPE_PUBLIC_KEY: {{ .Values.apiServer.billing.stripePublicKey | default "" | quote }}
   BILLING_PLANS: {{ .Values.apiServer.billing.plans | default "" | quote }}
