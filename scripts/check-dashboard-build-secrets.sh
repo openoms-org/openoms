@@ -10,7 +10,7 @@ fail() {
   exit 1
 }
 
-if grep -n -E '^[[:space:]]*(ARG|ENV)[[:space:]]+SENTRY_AUTH_TOKEN([[:space:]=]|$)' "$dockerfile"; then
+if grep -n -i -E '^[[:space:]]*(ARG|ENV)[[:space:]]+SENTRY_AUTH_TOKEN([[:space:]=]|$)' "$dockerfile"; then
   fail "SENTRY_AUTH_TOKEN must not be declared as Docker ARG or ENV"
 fi
 
