@@ -57,6 +57,13 @@ assert_fails "release_config_rejects_placeholder" env -i PATH="$PATH" \
   SENTRY_AUTH_TOKEN="token" \
   "$repo_root/scripts/check-dashboard-release-config.sh"
 
+assert_fails "release_config_rejects_mixed_case_placeholder" env -i PATH="$PATH" \
+  NEXT_PUBLIC_SENTRY_DSN="https://Sentry_Dsn_PlaceHolder.ingest.sentry.io/123" \
+  SENTRY_ORG="openoms" \
+  SENTRY_PROJECT="dashboard" \
+  SENTRY_AUTH_TOKEN="token" \
+  "$repo_root/scripts/check-dashboard-release-config.sh"
+
 assert_fails "release_config_requires_token" env -i PATH="$PATH" \
   NEXT_PUBLIC_SENTRY_DSN="https://example.ingest.sentry.io/123" \
   SENTRY_ORG="openoms" \
@@ -70,5 +77,34 @@ assert_passes "release_config_accepts_valid_values" env -i PATH="$PATH" \
   SENTRY_PROJECT="dashboard" \
   SENTRY_AUTH_TOKEN="token" \
   "$repo_root/scripts/check-dashboard-release-config.sh"
+
+guard_repo="$tmp_dir/build-secret-guard"
+mkdir -p "$guard_repo/scripts" "$guard_repo/apps/dashboard" "$guard_repo/.github/workflows"
+cp "$repo_root/scripts/check-dashboard-build-secrets.sh" "$guard_repo/scripts/check-dashboard-build-secrets.sh"
+chmod +x "$guard_repo/scripts/check-dashboard-build-secrets.sh"
+
+cat > "$guard_repo/apps/dashboard/Dockerfile" <<'DOCKERFILE'
+FROM scratch
+RUN --mount=type=secret,id=sentry_auth_token true
+DOCKERFILE
+
+cat > "$guard_repo/.github/workflows/release.yml" <<'YAML'
+name: Release
+jobs:
+  release-api:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ./scripts/check-dashboard-release-config.sh
+  release-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/build-push-action@v5
+        with:
+          secrets: |
+            sentry_auth_token=${{ secrets.SENTRY_AUTH_TOKEN }}
+YAML
+
+assert_fails "build_secret_rejects_preflight_outside_dashboard_job" \
+  "$guard_repo/scripts/check-dashboard-build-secrets.sh"
 
 echo "dashboard_sentry_guard_tests=pass"

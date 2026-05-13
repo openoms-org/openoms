@@ -24,8 +24,8 @@ case "$NEXT_PUBLIC_SENTRY_DSN" in
   *) fail "NEXT_PUBLIC_SENTRY_DSN must start with https://" ;;
 esac
 
-case "$NEXT_PUBLIC_SENTRY_DSN" in
-  *PLACEHOLDER*|*placeholder*) fail "NEXT_PUBLIC_SENTRY_DSN must not be a placeholder" ;;
-esac
+if printf '%s' "$NEXT_PUBLIC_SENTRY_DSN" | grep -qi 'placeholder'; then
+  fail "NEXT_PUBLIC_SENTRY_DSN must not be a placeholder"
+fi
 
 echo "dashboard_release_config_check=pass"
