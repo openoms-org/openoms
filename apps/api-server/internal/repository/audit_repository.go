@@ -29,7 +29,7 @@ func (r *AuditRepository) Log(ctx context.Context, tx pgx.Tx, entry model.AuditE
 	_, err = tx.Exec(ctx,
 		`INSERT INTO audit_log (tenant_id, user_id, action, entity_type, entity_id, changes, ip_address)
 		 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::inet)`,
-		entry.TenantID, entry.UserID, entry.Action, entry.EntityType, entry.EntityID,
+		entry.TenantID, nilIfUUIDEmpty(entry.UserID), entry.Action, entry.EntityType, entry.EntityID,
 		string(changesJSON), nilIfEmpty(entry.IPAddress),
 	)
 	if err != nil {
@@ -145,4 +145,11 @@ func nilIfEmpty(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func nilIfUUIDEmpty(id uuid.UUID) any {
+	if id == uuid.Nil {
+		return nil
+	}
+	return id
 }
