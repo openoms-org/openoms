@@ -169,7 +169,12 @@ run_check "dashboard-secrets" bash -c '
     cd "'"$REPO_ROOT"'" && ./scripts/check-dashboard-build-secrets.sh
 '
 
-# ── 6. next build (skip in quick mode) ──
+# ── 6. dashboard Sentry release guard tests ──
+run_check "dashboard-sentry-guards" bash -c '
+    cd "'"$REPO_ROOT"'" && ./scripts/test-dashboard-sentry-guards.sh
+'
+
+# ── 7. next build (skip in quick mode) ──
 if ! $QUICK; then
     run_check "next-build" bash -c '
         cd "'"$REPO_ROOT"'/apps/dashboard"
@@ -185,7 +190,7 @@ if ! $QUICK; then
     '
 fi
 
-# ── 7. go test — packages without DB (skip in quick mode) ──
+# ── 8. go test — packages without DB (skip in quick mode) ──
 if ! $QUICK; then
     run_check "go-test" bash -c '
         errors=""

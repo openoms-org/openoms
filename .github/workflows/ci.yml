@@ -546,6 +546,9 @@ jobs:
       - name: Check Dashboard build secrets
         run: ./scripts/check-dashboard-build-secrets.sh
 
+      - name: Test Dashboard Sentry guards
+        run: ./scripts/test-dashboard-sentry-guards.sh
+
       - name: Build Dashboard image
         run: docker buildx build --load -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard
 

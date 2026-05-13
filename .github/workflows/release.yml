@@ -96,6 +96,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Check Dashboard release Sentry config
+        env:
+          NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN || '' }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG || '' }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT || '' }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || '' }}
+        run: ./scripts/check-dashboard-release-config.sh
+
       - uses: docker/setup-buildx-action@v4
 
       - name: Build Dashboard image for scan

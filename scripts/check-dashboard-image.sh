@@ -50,10 +50,7 @@ docker cp "$container_id:/app/server.js" "$tmp_dir/server.js"
 docker rm "$container_id" >/dev/null
 container_id=""
 
-if grep -R -n -E 'NEXT_PUBLIC_API_URL_PLACEHOLDER|WS_CSP_HOST_PLACEHOLDER|SENTRY_DSN_PLACEHOLDER|http://localhost:8080' "$tmp_dir"; then
-  fail "runtime bundle contains forbidden API placeholder or localhost string"
-fi
-echo "bundle_placeholder_check=pass"
+"$(dirname "${BASH_SOURCE[0]}")/check-dashboard-bundle-placeholders.sh" "$tmp_dir"
 
 smoke_id="$(docker run -d --rm --read-only \
   --tmpfs /tmp:rw,size=100m \
