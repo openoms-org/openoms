@@ -36,6 +36,7 @@ import { getErrorMessage } from "@/lib/api-client";
 import { useCategoryTree } from "@/hooks/use-categories";
 import { useRedownloadImages } from "@/hooks/use-image-redownload";
 import { CategoryTreePicker } from "@/components/shared/category-tree-picker";
+import { ProductListToolbar } from "@/components/products/product-list-toolbar";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { apiClient } from "@/lib/api-client";
@@ -365,181 +366,187 @@ function MyProductsTab() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-[280px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("searchPlaceholder")}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPagination((prev) => ({ ...prev, offset: 0 }));
-            }}
-            className="pl-9"
-          />
-        </div>
-        <Input
-          placeholder={t("filterByTag")}
-          value={localTagFilter}
-          onChange={(e) => handleTagFilterChange(e.target.value)}
-          className="w-[160px]"
-        />
-        <CategoryTreePicker
-          value={categoryIdFilter}
-          onChange={(value) => {
-            setCategoryIdFilter(value);
-            setPagination((prev) => ({ ...prev, offset: 0 }));
-          }}
-          placeholder={t("categoryPlaceholder")}
-          className="w-[200px]"
-        />
-        <Select
-          value={supplierFilter}
-          onValueChange={(value) => {
-            setSupplierFilter(value === "__all__" ? "" : value);
-            setPagination((prev) => ({ ...prev, offset: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t("supplierPlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">{t("allSuppliers")}</SelectItem>
-            {suppliersData?.items?.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={sourceFilter}
-          onValueChange={(value) => {
-            setSourceFilter(value === "__all__" ? "" : value);
-            setPagination((prev) => ({ ...prev, offset: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder={t("sourcePlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">{t("allSources")}</SelectItem>
-            {Object.entries(ORDER_SOURCE_LABELS).map(([key, label]) => (
-              <SelectItem key={key} value={key}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={marketplaceFilter}
-          onValueChange={(value) => {
-            setMarketplaceFilter(value === "__all__" ? "" : value);
-            setPagination((prev) => ({ ...prev, offset: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-[170px]">
-            <SelectValue placeholder="Marketplace..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">{t("allMarketplaces")}</SelectItem>
-            <SelectItem value="none">{t("notListed")}</SelectItem>
-            {Object.entries(MARKETPLACE_LABELS).map(([key, label]) => (
-              <SelectItem key={key} value={key}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="ml-auto flex items-center gap-2">
-          {selectedProducts.size > 0 && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  bulkCategorize.mutate(Array.from(selectedProducts), {
-                    onSuccess: (data) => {
-                      const succeeded = data.results.filter((r) => !r.error).length;
-                      const failed = data.results.filter((r) => r.error).length;
-                      toast.success(t("autoCategorizeResult", { succeeded, failed }));
-                      setSelectedProducts(new Set());
-                    },
-                    onError: (error) => {
-                      toast.error(error instanceof Error ? error.message : t("autoCategorizeError"));
-                    },
-                  });
+      <ProductListToolbar
+        filters={
+          <>
+            <div className="relative w-full min-w-0 sm:w-[280px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={t("searchPlaceholder")}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPagination((prev) => ({ ...prev, offset: 0 }));
                 }}
-                disabled={bulkCategorize.isPending}
-              >
-                {bulkCategorize.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                {t("autoCategorize")} ({selectedProducts.size})
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setShowBulkDelete(true)}
-              >
-                <Trash2 className="h-4 w-4" />
-                {t("deleteCount", { count: selectedProducts.size })}
-              </Button>
-            </>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => {
-              redownloadImages.mutate(undefined, {
-                onSuccess: (data) => {
-                  toast.success(
-                    t("photosDownloaded", { downloaded: data.downloaded, skipped: data.skipped, failed: data.failed })
-                  );
-                },
-                onError: (error) => {
-                  toast.error(getErrorMessage(error));
-                },
-              });
-            }}
-            disabled={redownloadImages.isPending}
-          >
-            {redownloadImages.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ImageIcon className="h-4 w-4" />
+                className="pl-9"
+              />
+            </div>
+            <Input
+              placeholder={t("filterByTag")}
+              value={localTagFilter}
+              onChange={(e) => handleTagFilterChange(e.target.value)}
+              className="w-full sm:w-[160px]"
+            />
+            <CategoryTreePicker
+              value={categoryIdFilter}
+              onChange={(value) => {
+                setCategoryIdFilter(value);
+                setPagination((prev) => ({ ...prev, offset: 0 }));
+              }}
+              placeholder={t("categoryPlaceholder")}
+              className="w-full sm:w-[200px]"
+            />
+            <Select
+              value={supplierFilter}
+              onValueChange={(value) => {
+                setSupplierFilter(value === "__all__" ? "" : value);
+                setPagination((prev) => ({ ...prev, offset: 0 }));
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder={t("supplierPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{t("allSuppliers")}</SelectItem>
+                {suppliersData?.items?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={sourceFilter}
+              onValueChange={(value) => {
+                setSourceFilter(value === "__all__" ? "" : value);
+                setPagination((prev) => ({ ...prev, offset: 0 }));
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder={t("sourcePlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{t("allSources")}</SelectItem>
+                {Object.entries(ORDER_SOURCE_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={marketplaceFilter}
+              onValueChange={(value) => {
+                setMarketplaceFilter(value === "__all__" ? "" : value);
+                setPagination((prev) => ({ ...prev, offset: 0 }));
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[170px]">
+                <SelectValue placeholder="Marketplace..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{t("allMarketplaces")}</SelectItem>
+                <SelectItem value="none">{t("notListed")}</SelectItem>
+                {Object.entries(MARKETPLACE_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+        actions={
+          <>
+            {selectedProducts.size > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    bulkCategorize.mutate(Array.from(selectedProducts), {
+                      onSuccess: (data) => {
+                        const succeeded = data.results.filter((r) => !r.error).length;
+                        const failed = data.results.filter((r) => r.error).length;
+                        toast.success(t("autoCategorizeResult", { succeeded, failed }));
+                        setSelectedProducts(new Set());
+                      },
+                      onError: (error) => {
+                        toast.error(error instanceof Error ? error.message : t("autoCategorizeError"));
+                      },
+                    });
+                  }}
+                  disabled={bulkCategorize.isPending}
+                >
+                  {bulkCategorize.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {t("autoCategorize")} ({selectedProducts.size})
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowBulkDelete(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {t("deleteCount", { count: selectedProducts.size })}
+                </Button>
+              </>
             )}
-            {t("downloadPhotos")}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              try {
-                const res = await apiFetch("/v1/products/export");
-                const blob = await res.blob();
-                downloadBlob(blob, `products_${new Date().toISOString().slice(0, 10)}.csv`);
-                toast.success(t("csvExportStarted"));
-              } catch {
-                toast.error(t("csvExportError"));
-              }
-            }}
-          >
-            <Download className="h-4 w-4" />
-            {t("exportCsv")}
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/products/import">
-              <Upload className="h-4 w-4" />
-              {t("importCsv")}
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/products/new">
-              <Plus className="h-4 w-4" />
-              {t("addProduct")}
-            </Link>
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                redownloadImages.mutate(undefined, {
+                  onSuccess: (data) => {
+                    toast.success(
+                      t("photosDownloaded", { downloaded: data.downloaded, skipped: data.skipped, failed: data.failed })
+                    );
+                  },
+                  onError: (error) => {
+                    toast.error(getErrorMessage(error));
+                  },
+                });
+              }}
+              disabled={redownloadImages.isPending}
+            >
+              {redownloadImages.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+              {t("downloadPhotos")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const res = await apiFetch("/v1/products/export");
+                  const blob = await res.blob();
+                  downloadBlob(blob, `products_${new Date().toISOString().slice(0, 10)}.csv`);
+                  toast.success(t("csvExportStarted"));
+                } catch {
+                  toast.error(t("csvExportError"));
+                }
+              }}
+            >
+              <Download className="h-4 w-4" />
+              {t("exportCsv")}
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/products/import">
+                <Upload className="h-4 w-4" />
+                {t("importCsv")}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/products/new">
+                <Plus className="h-4 w-4" />
+                {t("addProduct")}
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4">
@@ -930,37 +937,41 @@ function SupplierCatalogTab() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-[280px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder={t("searchPlaceholder")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select
-          value={supplierFilter}
-          onValueChange={(value) => {
-            setSupplierFilter(value === "__all__" ? "" : value);
-            setPagination((prev) => ({ ...prev, offset: 0 }));
-          }}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t("supplierPlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">{t("allSuppliers")}</SelectItem>
-            {suppliersData?.items?.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
+      <ProductListToolbar
+        filters={
+          <>
+            <div className="relative w-full min-w-0 sm:w-[280px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={t("searchPlaceholder")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select
+              value={supplierFilter}
+              onValueChange={(value) => {
+                setSupplierFilter(value === "__all__" ? "" : value);
+                setPagination((prev) => ({ ...prev, offset: 0 }));
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder={t("supplierPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">{t("allSuppliers")}</SelectItem>
+                {suppliersData?.items?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        }
+        actions={
+          selectedIds.size > 0 ? (
             <Button
               onClick={handleBulkImport}
               disabled={bulkImporting || selectedUnimported === 0}
@@ -974,9 +985,9 @@ function SupplierCatalogTab() {
                 ? t("importing")
                 : t("importCount", { count: selectedUnimported })}
             </Button>
-          </div>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
       <DataTable
         columns={columns}
