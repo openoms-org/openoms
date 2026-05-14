@@ -109,6 +109,13 @@
     "user": "Użytkownik"
   },
   "settings": {
+    "index": {
+      "description": "Wybierz obszar konfiguracji OpenOMS. Widoczne są tylko sekcje dostępne w aktualnym trybie produkcyjnym.",
+      "emptyState": "Brak dostępnych sekcji ustawień dla tego konta.",
+      "openSection": "Otwórz",
+      "sectionCount": "{count, plural, one {# sekcja} few {# sekcje} many {# sekcji} other {# sekcji}}",
+      "title": "Ustawienia"
+    },
     "accounting": {
       "fakturownia": {
         "apiToken": "Token API",
