@@ -23,9 +23,26 @@ var sensitiveLogFields = map[string]struct{}{
 	"credentials":   {},
 	"email":         {},
 	"nip":           {},
+	"password":      {},
 	"phone":         {},
 	"secret":        {},
 	"token":         {},
+}
+
+func TestIsSensitiveLogFieldDetectsCompoundKeys(t *testing.T) {
+	fset := token.NewFileSet()
+	value := &ast.BasicLit{Kind: token.STRING, Value: `"redacted"`}
+	for _, key := range []string{
+		"customer_email",
+		"buyer-phone",
+		"billing.address",
+		"api.credentials",
+		"refresh_token",
+	} {
+		if !isSensitiveLogField(key, value, fset) {
+			t.Fatalf("expected compound log field %q to be sensitive", key)
+		}
+	}
 }
 
 func TestStructuredLogsDoNotUsePIIFieldKeys(t *testing.T) {
@@ -100,6 +117,14 @@ func isSensitiveLogField(key string, value ast.Expr, fset *token.FileSet) bool {
 	normalizedKey := strings.ToLower(key)
 	if _, sensitive := sensitiveLogFields[normalizedKey]; sensitive {
 		return true
+	}
+	parts := strings.FieldsFunc(normalizedKey, func(r rune) bool {
+		return r == '_' || r == '-' || r == '.'
+	})
+	for _, part := range parts {
+		if _, sensitive := sensitiveLogFields[part]; sensitive {
+			return true
+		}
 	}
 	if normalizedKey == "to" {
 		return looksLikePIIValue(value, fset)
