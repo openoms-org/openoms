@@ -23,6 +23,8 @@ import {
   AUTOMATION_ACTION_TYPES,
   AUTOMATION_ACTION_LABELS,
 } from "@/lib/constants";
+import enStatusMessages from "../../../messages/en/statuses.json";
+import plStatusMessages from "../../../messages/pl/statuses.json";
 
 describe("ORDER_STATUSES", () => {
   it("has all expected status keys", () => {
@@ -124,6 +126,13 @@ describe("ROLES", () => {
     expect(ROLES).toHaveProperty("owner");
     expect(ROLES).toHaveProperty("admin");
     expect(ROLES).toHaveProperty("member");
+  });
+
+  it("has localized labels for every system role", () => {
+    for (const role of Object.values(ROLES)) {
+      expect(enStatusMessages.roles).toHaveProperty(role);
+      expect(plStatusMessages.roles).toHaveProperty(role);
+    }
   });
 });
 
