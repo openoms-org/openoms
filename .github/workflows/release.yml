@@ -8,6 +8,10 @@ on:
       - "apps/**"
       - "packages/**"
       - "deploy/**"
+      - ".github/workflows/release.yml"
+      - "scripts/check-dashboard-bundle-placeholders.sh"
+      - "scripts/check-dashboard-image.sh"
+      - "scripts/check-dashboard-release-config.sh"
       - "go.work"
       - "go.work.sum"
   workflow_dispatch:

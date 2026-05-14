@@ -107,4 +107,23 @@ YAML
 assert_fails "build_secret_rejects_preflight_outside_dashboard_job" \
   "$guard_repo/scripts/check-dashboard-build-secrets.sh"
 
+assert_release_path_filter() {
+  local path="$1"
+  if ! ruby -ryaml -e '
+    workflow = YAML.load_file(ARGV[0])
+    triggers = workflow["on"] || workflow[true] || {}
+    push = triggers["push"] || {}
+    paths = push["paths"] || []
+    exit(paths.include?(ARGV[1]) ? 0 : 1)
+  ' "$repo_root/.github/workflows/release.yml" "$path"; then
+    fail "release workflow path filter must include $path"
+  fi
+  echo "release_path_filter_${path//[^[:alnum:]]/_}=pass"
+}
+
+assert_release_path_filter ".github/workflows/release.yml"
+assert_release_path_filter "scripts/check-dashboard-release-config.sh"
+assert_release_path_filter "scripts/check-dashboard-image.sh"
+assert_release_path_filter "scripts/check-dashboard-bundle-placeholders.sh"
+
 echo "dashboard_sentry_guard_tests=pass"
