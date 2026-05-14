@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"unicode"
 )
 
 var sensitiveLogFields = map[string]struct{}{
@@ -41,6 +42,24 @@ func TestIsSensitiveLogFieldDetectsCompoundKeys(t *testing.T) {
 	} {
 		if !isSensitiveLogField(key, value, fset) {
 			t.Fatalf("expected compound log field %q to be sensitive", key)
+		}
+	}
+}
+
+func TestIsSensitiveLogFieldDetectsCamelCaseKeys(t *testing.T) {
+	fset := token.NewFileSet()
+	value := &ast.BasicLit{Kind: token.STRING, Value: `"redacted"`}
+	for _, key := range []string{
+		"customerEmail",
+		"emailAddress",
+		"phoneNumber",
+		"billingAddress",
+		"refreshToken",
+		"apiCredential",
+		"nipNumber",
+	} {
+		if !isSensitiveLogField(key, value, fset) {
+			t.Fatalf("expected camelCase log field %q to be sensitive", key)
 		}
 	}
 }
@@ -88,6 +107,27 @@ func TestSlogAttrFieldRequiresValue(t *testing.T) {
 	}
 	if key, _, ok := slogAttrField(parsed); ok {
 		t.Fatalf("expected malformed slog attr to be ignored, got key %q", key)
+	}
+}
+
+func TestStructuredLogScanDetectsSlogAttrCompositeFields(t *testing.T) {
+	source := `package service
+
+import (
+	"context"
+	"log/slog"
+)
+
+func logCustomerAttr(ctx context.Context, logger *slog.Logger, email string) {
+	logger.LogAttrs(ctx, slog.LevelWarn, "customer import failed", slog.Attr{Key: "customerEmail", Value: slog.StringValue(email)})
+}`
+
+	findings, err := collectSensitiveLogFindingsFromSource("service/customer_attr.go", source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 1 || !strings.Contains(findings[0], `field "customerEmail"`) {
+		t.Fatalf("expected exactly one slog.Attr customerEmail finding, got %v", findings)
 	}
 }
 
@@ -199,6 +239,12 @@ func collectSensitiveLogFindingsInFile(file *ast.File, fset *token.FileSet, root
 
 func inspectLogFields(args []ast.Expr, fset *token.FileSet, addFinding func(ast.Node, string)) {
 	for i := 0; i < len(args); i++ {
+		if key, value, ok := slogAttrCompositeField(args[i]); ok {
+			if isSensitiveLogField(key, value, fset) {
+				addFinding(args[i], key)
+			}
+			continue
+		}
 		if key, groupArgs, ok := slogGroupField(args[i]); ok {
 			if isSensitiveLogField(key, args[i], fset) {
 				addFinding(args[i], key)
@@ -246,13 +292,52 @@ func isSensitiveLogField(key string, value ast.Expr, fset *token.FileSet) bool {
 			return true
 		}
 	}
+	for _, token := range sensitiveLogFieldTokens(key) {
+		if _, sensitive := sensitiveLogFields[token]; sensitive {
+			return true
+		}
+	}
+	for sensitive := range sensitiveLogFields {
+		if len(sensitive) >= 4 && strings.Contains(normalizedKey, sensitive) {
+			return true
+		}
+	}
 	if normalizedKey == "to" {
 		return looksLikePIIValue(value, fset)
 	}
 	return false
 }
 
+func sensitiveLogFieldTokens(key string) []string {
+	var tokens []string
+	var current []rune
+	flush := func() {
+		if len(current) == 0 {
+			return
+		}
+		tokens = append(tokens, strings.ToLower(string(current)))
+		current = current[:0]
+	}
+
+	runes := []rune(key)
+	for i, r := range runes {
+		if r == '_' || r == '-' || r == '.' || unicode.IsSpace(r) {
+			flush()
+			continue
+		}
+		if i > 0 && unicode.IsUpper(r) && (unicode.IsLower(runes[i-1]) || unicode.IsDigit(runes[i-1])) {
+			flush()
+		}
+		current = append(current, r)
+	}
+	flush()
+	return tokens
+}
+
 func looksLikePIIValue(value ast.Expr, fset *token.FileSet) bool {
+	if value == nil {
+		return false
+	}
 	var buf bytes.Buffer
 	if err := printer.Fprint(&buf, fset, value); err != nil {
 		return false
@@ -318,6 +403,46 @@ func slogAttrField(expr ast.Expr) (string, ast.Expr, bool) {
 		return "", nil, false
 	}
 	return key, call.Args[1], true
+}
+
+func slogAttrCompositeField(expr ast.Expr) (string, ast.Expr, bool) {
+	composite, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return "", nil, false
+	}
+	selector, ok := composite.Type.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != "Attr" {
+		return "", nil, false
+	}
+	ident, ok := selector.X.(*ast.Ident)
+	if !ok || ident.Name != "slog" {
+		return "", nil, false
+	}
+
+	var key string
+	var value ast.Expr
+	for _, element := range composite.Elts {
+		keyValue, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		field, ok := keyValue.Key.(*ast.Ident)
+		if !ok {
+			continue
+		}
+		switch field.Name {
+		case "Key":
+			if literal, ok := stringLiteral(keyValue.Value); ok {
+				key = literal
+			}
+		case "Value":
+			value = keyValue.Value
+		}
+	}
+	if key == "" {
+		return "", nil, false
+	}
+	return key, value, true
 }
 
 func slogGroupField(expr ast.Expr) (string, []ast.Expr, bool) {
