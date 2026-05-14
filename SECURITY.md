@@ -35,3 +35,10 @@ Instead, please email: **security@openoms.org**
 - Use the provided Docker images with non-root users
 - Rotate secrets periodically
 - Keep dependencies updated (`task lint` includes security scanning)
+
+## Operational Logging and Error Reporting
+
+- Do not log raw customer PII, authorization headers, cookies, integration credentials, tokens, or secrets
+- Use request IDs, tenant IDs, order IDs, and provider IDs for correlation instead of email addresses, phone numbers, or addresses
+- Treat authentication, permission, and rate-limit errors as expected operational states unless they indicate abuse or a system fault
+- Report unexpected server-side and dashboard runtime errors to the configured observability backend so production incidents can be triaged without exposing customer data in logs

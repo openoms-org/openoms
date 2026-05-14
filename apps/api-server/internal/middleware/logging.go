@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	chimw "github.com/go-chi/chi/v5/middleware"
 )
 
 type wrappedWriter struct {
@@ -43,6 +45,7 @@ func Logging(next http.Handler) http.Handler {
 		next.ServeHTTP(wrapped, r)
 
 		slog.Info("http request", // #nosec G706 -- r.URL.Path is logged as a structured field, not interpolated
+			"request_id", requestIDFromContext(r),
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", wrapped.statusCode,
@@ -50,4 +53,11 @@ func Logging(next http.Handler) http.Handler {
 			"remote_addr", r.RemoteAddr,
 		)
 	})
+}
+
+func requestIDFromContext(r *http.Request) string {
+	if requestID, ok := r.Context().Value(chimw.RequestIDKey).(string); ok {
+		return requestID
+	}
+	return ""
 }

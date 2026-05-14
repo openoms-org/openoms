@@ -76,7 +76,7 @@ func (s *StripeWebhookService) handleCheckoutCompleted(ctx context.Context, even
 	if !completed {
 		slog.Warn("checkout session already completed or not found", "stripe_session_id", sess.ID)
 	} else {
-		slog.Info("checkout session completed via webhook", "stripe_session_id", sess.ID, "email", email)
+		slog.Info("checkout session completed via webhook", "stripe_session_id", sess.ID)
 	}
 	return nil
 }

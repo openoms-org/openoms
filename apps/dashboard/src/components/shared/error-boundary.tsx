@@ -1,10 +1,12 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { Component, type ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ApiClientError } from "@/lib/api-client";
+import { isExpectedClientError } from "@/lib/expected-client-error";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -81,6 +83,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    if (!isExpectedClientError(error)) {
+      Sentry.captureException(error, {
+        extra: {
+          componentStack: info.componentStack,
+        },
+      });
+    }
+
     if (process.env.NODE_ENV === "development") {
       console.error("ErrorBoundary caught:", error, info.componentStack);
     }

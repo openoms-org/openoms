@@ -1,6 +1,8 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { isExpectedClientError } from "@/lib/expected-client-error";
 
 export default function PublicError({
   error,
@@ -10,7 +12,9 @@ export default function PublicError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    if (!isExpectedClientError(error)) {
+      Sentry.captureException(error);
+    }
   }, [error]);
 
   return (

@@ -103,9 +103,9 @@ func (s *EmailService) SendOrderStatusEmail(ctx context.Context, tenantID uuid.U
 	statusCfg := s.loadStatusConfig(ctx, tenantID)
 	subject, body := renderEmailTemplate(order, newStatus, emailCfg.FromName, statusCfg)
 	if err := sendMail(emailCfg, *order.CustomerEmail, subject, body); err != nil {
-		slog.Error("email: failed to send", "error", err, "to", *order.CustomerEmail, "status", newStatus, "order_id", order.ID)
+		slog.Error("email: failed to send", "error", err, "status", newStatus, "order_id", order.ID, "tenant_id", tenantID)
 	} else {
-		slog.Info("email: sent successfully", "to", *order.CustomerEmail, "status", newStatus, "order_id", order.ID)
+		slog.Info("email: sent successfully", "status", newStatus, "order_id", order.ID, "tenant_id", tenantID)
 	}
 }
 

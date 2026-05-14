@@ -3,6 +3,7 @@ package middleware_test
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
@@ -10,6 +11,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -131,6 +133,20 @@ func TestLogging_LogsRemoteAddr(t *testing.T) {
 
 	logOutput := buf.String()
 	assert.Contains(t, logOutput, `"remote_addr":"192.168.1.100:54321"`)
+}
+
+func TestLogging_LogsRequestID(t *testing.T) {
+	handler := middleware.Logging(okHandler())
+	req := httptest.NewRequest("GET", "/", nil)
+	req = req.WithContext(context.WithValue(req.Context(), chimw.RequestIDKey, "req-test-123"))
+	rr := httptest.NewRecorder()
+
+	buf := captureLogs(func() {
+		handler.ServeHTTP(rr, req)
+	})
+
+	logOutput := buf.String()
+	assert.Contains(t, logOutput, `"request_id":"req-test-123"`)
 }
 
 func TestLogging_LogsMessage(t *testing.T) {
