@@ -16,15 +16,60 @@ import {
 import { ROLES } from "@/lib/constants";
 import { useTranslations } from "next-intl";
 
-function createUserSchema(t: (key: string) => string) {
+export interface UserFormValues {
+  email: string;
+  name: string;
+  role: "owner" | "admin" | "member";
+  password?: string;
+  confirm_password?: string;
+}
+
+function validatePassword(password: string, t: (key: string) => string): string | null {
+  if (password.length < 8) return t("passwordTooShort");
+  if (password.length > 72) return t("passwordTooLong");
+  if (!/[A-Z]/.test(password)) return t("passwordNeedsUppercase");
+  if (!/[a-z]/.test(password)) return t("passwordNeedsLowercase");
+  if (!/[0-9]/.test(password)) return t("passwordNeedsDigit");
+  return null;
+}
+
+function createUserSchema(t: (key: string) => string, isEdit: boolean) {
   return z.object({
     email: z.string().email(t("invalidEmail")),
     name: z.string().min(1, t("nameRequired")),
     role: z.enum(["owner", "admin", "member"], { message: t("roleRequired") }),
+    password: z.string().optional(),
+    confirm_password: z.string().optional(),
+  }).superRefine((data, ctx) => {
+    if (isEdit) return;
+
+    if (!data.password) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: t("passwordRequired"),
+      });
+      return;
+    }
+
+    const passwordError = validatePassword(data.password, t);
+    if (passwordError) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: passwordError,
+      });
+    }
+
+    if (data.password !== data.confirm_password) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["confirm_password"],
+        message: t("passwordMismatch"),
+      });
+    }
   });
 }
-
-type CreateUserFormValues = z.infer<ReturnType<typeof createUserSchema>>;
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -33,7 +78,7 @@ interface UserFormProps {
     name?: string;
     role?: "owner" | "admin" | "member";
   };
-  onSubmit: (data: CreateUserFormValues) => void;
+  onSubmit: (data: UserFormValues) => void;
   isLoading?: boolean;
   onCancel?: () => void;
 }
@@ -54,12 +99,14 @@ export function UserForm({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<CreateUserFormValues>({
-    resolver: zodResolver(createUserSchema(t)),
+  } = useForm<UserFormValues>({
+    resolver: zodResolver(createUserSchema(t, isEdit)),
     defaultValues: {
       email: defaultValues?.email || "",
       name: defaultValues?.name || "",
       role: defaultValues?.role || undefined,
+      password: "",
+      confirm_password: "",
     },
   });
 
@@ -119,6 +166,38 @@ export function UserForm({
           <p className="text-sm text-destructive">{errors.role.message}</p>
         )}
       </div>
+
+      {!isEdit && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="password">{t("initialPassword")}</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              {...register("password")}
+            />
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirm_password">{t("confirmPassword")}</Label>
+            <Input
+              id="confirm_password"
+              type="password"
+              autoComplete="new-password"
+              {...register("confirm_password")}
+            />
+            {errors.confirm_password && (
+              <p className="text-sm text-destructive">
+                {errors.confirm_password.message}
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="flex justify-end gap-3 pt-2">
         {onCancel && (

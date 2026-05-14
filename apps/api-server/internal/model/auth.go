@@ -164,9 +164,10 @@ type TwoFAStatusResponse struct {
 
 // CreateUserRequest is the body of POST /v1/users.
 type CreateUserRequest struct {
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Role  string `json:"role"`
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Role     string `json:"role"`
+	Password string `json:"password"`
 
 	// Transient: plan limit injected by handler, not from JSON
 	MaxUsers int `json:"-"`
@@ -180,6 +181,12 @@ func (r *CreateUserRequest) Validate() error {
 	if strings.TrimSpace(r.Name) == "" {
 		return errors.New("name is required")
 	}
+	if strings.TrimSpace(r.Password) == "" {
+		return errors.New("password is required")
+	}
+	if err := validatePassword(r.Password); err != nil {
+		return err
+	}
 	switch r.Role {
 	case "owner", "admin", "member":
 		// valid
@@ -187,6 +194,23 @@ func (r *CreateUserRequest) Validate() error {
 		return errors.New("role must be one of: owner, admin, member")
 	}
 	return nil
+}
+
+// ChangePasswordRequest is the body of PATCH /v1/users/me/password.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// Validate validates the password change request.
+func (r *ChangePasswordRequest) Validate() error {
+	if strings.TrimSpace(r.CurrentPassword) == "" {
+		return errors.New("current_password is required")
+	}
+	if strings.TrimSpace(r.NewPassword) == "" {
+		return errors.New("new_password is required")
+	}
+	return validatePassword(r.NewPassword)
 }
 
 // UpdateUserRequest is the body of PATCH /v1/users/{id}.

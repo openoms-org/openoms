@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type {
   User,
+  ChangePasswordRequest,
   CreateUserRequest,
   UpdateUserRequest,
 } from "@/types/api";
@@ -51,5 +52,15 @@ export function useDeleteUser() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (data: ChangePasswordRequest) =>
+      apiClient<void>("/v1/users/me/password", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
   });
 }

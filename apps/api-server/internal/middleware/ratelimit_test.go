@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/stretchr/testify/assert"
 )
@@ -335,6 +336,43 @@ func TestRateLimitWith_LimiterErrorFailsOpen(t *testing.T) {
 
 	// When the limiter returns an error, the middleware should fail open (allow request)
 	assert.Equal(t, http.StatusOK, rr.Code, "should fail open when limiter errors")
+}
+
+func TestRateLimitByAuthenticatedUserWith_UsesUserIdentityAcrossIPs(t *testing.T) {
+	limiter := middleware.NewMemoryRateLimiter()
+	handler := middleware.RateLimitByAuthenticatedUserWith(limiter, 1, time.Minute)(testOKHandler())
+	userID := uuid.New()
+
+	req := httptest.NewRequest("PATCH", "/v1/users/me/password", nil)
+	req.RemoteAddr = "198.51.100.10:1000"
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserIDKey, userID))
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	req = httptest.NewRequest("PATCH", "/v1/users/me/password", nil)
+	req.RemoteAddr = "198.51.100.11:1001"
+	req = req.WithContext(context.WithValue(req.Context(), middleware.UserIDKey, userID))
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
+}
+
+func TestRateLimitByAuthenticatedUserWith_FallsBackToIPWithoutUser(t *testing.T) {
+	limiter := middleware.NewMemoryRateLimiter()
+	handler := middleware.RateLimitByAuthenticatedUserWith(limiter, 1, time.Minute)(testOKHandler())
+
+	req := httptest.NewRequest("PATCH", "/v1/users/me/password", nil)
+	req.RemoteAddr = "203.0.113.20:1000"
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	req = httptest.NewRequest("PATCH", "/v1/users/me/password", nil)
+	req.RemoteAddr = "203.0.113.20:1001"
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
 }
 
 // --- RateLimit (legacy constructor) ---

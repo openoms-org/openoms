@@ -66,6 +66,21 @@ func TestUserHandler_Update_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestUserHandler_ChangePassword_InvalidJSON(t *testing.T) {
+	h := NewUserHandler(nil)
+
+	req := httptest.NewRequest(http.MethodPatch, "/v1/users/me/password", strings.NewReader("bad"))
+	rr := httptest.NewRecorder()
+
+	h.ChangePassword(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "invalid request body", resp["error"])
+}
+
 func TestUserHandler_Delete_InvalidID(t *testing.T) {
 	h := NewUserHandler(nil)
 

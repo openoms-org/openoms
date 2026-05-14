@@ -87,17 +87,31 @@ func TestRegisterRequest_Validate(t *testing.T) {
 
 func TestCreateUserRequest_Validate(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: "admin"}
+		req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: "admin", Password: "Password123"}
 		require.NoError(t, req.Validate())
 	})
 
 	t.Run("missing email", func(t *testing.T) {
-		req := CreateUserRequest{Name: "Jan", Role: "admin"}
+		req := CreateUserRequest{Name: "Jan", Role: "admin", Password: "Password123"}
 		require.Error(t, req.Validate())
 	})
 
+	t.Run("missing password", func(t *testing.T) {
+		req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: "admin"}
+		err := req.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "password is required")
+	})
+
+	t.Run("weak password", func(t *testing.T) {
+		req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: "admin", Password: "password"}
+		err := req.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "password must contain uppercase, lowercase, and digit")
+	})
+
 	t.Run("invalid role", func(t *testing.T) {
-		req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: "superuser"}
+		req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: "superuser", Password: "Password123"}
 		err := req.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "role must be one of")
@@ -105,9 +119,37 @@ func TestCreateUserRequest_Validate(t *testing.T) {
 
 	t.Run("all valid roles", func(t *testing.T) {
 		for _, role := range []string{"owner", "admin", "member"} {
-			req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: role}
+			req := CreateUserRequest{Email: "a@b.com", Name: "Jan", Role: role, Password: "Password123"}
 			require.NoError(t, req.Validate(), "role %s should be valid", role)
 		}
+	})
+}
+
+func TestChangePasswordRequest_Validate(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		req := ChangePasswordRequest{CurrentPassword: "OldPassword123", NewPassword: "NewPassword123"}
+		require.NoError(t, req.Validate())
+	})
+
+	t.Run("missing current password", func(t *testing.T) {
+		req := ChangePasswordRequest{NewPassword: "NewPassword123"}
+		err := req.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "current_password is required")
+	})
+
+	t.Run("missing new password", func(t *testing.T) {
+		req := ChangePasswordRequest{CurrentPassword: "OldPassword123"}
+		err := req.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "new_password is required")
+	})
+
+	t.Run("weak new password", func(t *testing.T) {
+		req := ChangePasswordRequest{CurrentPassword: "OldPassword123", NewPassword: "password"}
+		err := req.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "password must contain uppercase, lowercase, and digit")
 	})
 }
 

@@ -58,6 +58,8 @@ type UserRepo interface {
 	List(ctx context.Context, tx pgx.Tx) ([]model.User, error)
 	Count(ctx context.Context, tx pgx.Tx) (int, error)
 	Create(ctx context.Context, tx pgx.Tx, user *model.User, passwordHash string) error
+	FindPasswordHashByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*string, error)
+	UpdatePassword(ctx context.Context, tx pgx.Tx, id uuid.UUID, passwordHash string) error
 	UpdateRole(ctx context.Context, tx pgx.Tx, id uuid.UUID, role string) error
 	UpdateRoleID(ctx context.Context, tx pgx.Tx, id uuid.UUID, roleID *uuid.UUID) error
 	UpdateName(ctx context.Context, tx pgx.Tx, id uuid.UUID, name string) error

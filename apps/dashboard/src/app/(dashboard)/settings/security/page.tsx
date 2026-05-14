@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { toast } from "sonner";
-import { ShieldCheck, ShieldOff, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, ShieldOff, Loader2, Copy, CheckCircle2, KeyRound } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ import QRCode from "qrcode";
 import type { TwoFASetupResponse, TwoFAStatusResponse } from "@/types/api";
 import { useTranslations } from "next-intl";
 import { LanguageSelector } from "@/components/language-selector";
+import { useChangePassword } from "@/hooks/use-users";
+import { useAuthStore } from "@/lib/auth";
 
 function QRCodeCanvas({ data, size }: { data: string; size: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -46,17 +48,33 @@ function QRCodeCanvas({ data, size }: { data: string; size: number }) {
   return <canvas ref={canvasRef} />;
 }
 
+function getPasswordValidationError(
+  password: string,
+  t: (key: string) => string,
+): string | null {
+  if (password.length < 8) return t("passwordTooShort");
+  if (password.length > 72) return t("passwordTooLong");
+  if (!/[A-Z]/.test(password)) return t("passwordNeedsUppercase");
+  if (!/[a-z]/.test(password)) return t("passwordNeedsLowercase");
+  if (!/[0-9]/.test(password)) return t("passwordNeedsDigit");
+  return null;
+}
+
 export default function SecuritySettingsPage() {
   const t = useTranslations("settings");
   const ts = useTranslations("settings.security");
   const tc = useTranslations("common");
   const queryClient = useQueryClient();
+  const username = useAuthStore((state) => state.user?.email ?? "");
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [setupData, setSetupData] = useState<TwoFASetupResponse | null>(null);
   const [verifyCode, setVerifyCode] = useState("");
   const [disablePassword, setDisablePassword] = useState("");
   const [disableCode, setDisableCode] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [secretCopied, setSecretCopied] = useState(false);
 
   const { data: status, isLoading } = useQuery({
@@ -113,6 +131,58 @@ export default function SecuritySettingsPage() {
     },
   });
 
+  const changePasswordMutation = useChangePassword();
+  const newPasswordError = newPassword
+    ? getPasswordValidationError(newPassword, ts)
+    : null;
+  const confirmPasswordError =
+    confirmNewPassword && newPassword !== confirmNewPassword
+      ? ts("passwordMismatch")
+      : null;
+  const canChangePassword =
+    currentPassword.length > 0 &&
+    newPassword.length > 0 &&
+    confirmNewPassword.length > 0 &&
+    !newPasswordError &&
+    !confirmPasswordError &&
+    !changePasswordMutation.isPending;
+
+  const handleChangePassword = (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
+    const validationError = getPasswordValidationError(newPassword, ts);
+    if (!currentPassword) {
+      toast.error(ts("currentPasswordRequired"));
+      return;
+    }
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error(ts("passwordMismatch"));
+      return;
+    }
+
+    changePasswordMutation.mutate(
+      {
+        current_password: currentPassword,
+        new_password: newPassword,
+      },
+      {
+        onSuccess: () => {
+          toast.success(ts("passwordChanged"));
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmNewPassword("");
+        },
+        onError: (error) => {
+          toast.error(getErrorMessage(error));
+        },
+      },
+    );
+  };
+
   const copySecret = async () => {
     if (setupData?.secret) {
       await navigator.clipboard.writeText(setupData.secret);
@@ -140,6 +210,79 @@ export default function SecuritySettingsPage() {
           {t("zarzadzajUstawieniamiBezpieczenstwaKonta")}
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5" />
+            {ts("passwordTitle")}
+          </CardTitle>
+          <CardDescription>
+            {ts("passwordDescription")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleChangePassword}>
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={username}
+              hidden
+              readOnly
+            />
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="current-password">{ts("currentPassword")}</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-password">{ts("newPassword")}</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                {newPasswordError && (
+                  <p className="text-sm text-destructive">{newPasswordError}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-new-password">{ts("confirmNewPassword")}</Label>
+                <Input
+                  id="confirm-new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                />
+                {confirmPasswordError && (
+                  <p className="text-sm text-destructive">{confirmPasswordError}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={!canChangePassword}>
+                {changePasswordMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {ts("changePassword")}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

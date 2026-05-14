@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 )
@@ -23,17 +24,8 @@ type RateLimiter interface {
 func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-			if ip == "" {
-				ip = r.RemoteAddr
-			}
-
-			// Include route pattern in the key so endpoints with the same limit
-			// get separate counters (e.g., login and register both at 10/min).
-			route := r.URL.Path
-			if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.RoutePattern() != "" {
-				route = rctx.RoutePattern()
-			}
+			ip := clientIPForRateLimit(r)
+			route := routePatternForRateLimit(r)
 			key := fmt.Sprintf("rl:%s:%s:%d", ip, route, maxRequests)
 			allowed, err := limiter.Allow(r.Context(), key, maxRequests, window)
 			if err != nil {
@@ -43,10 +35,39 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 			}
 
 			if !allowed {
-				w.Header().Set("Content-Type", "application/json")
-				w.Header().Set("Retry-After", "60")
-				w.WriteHeader(http.StatusTooManyRequests)
-				_, _ = w.Write([]byte(`{"error":"too many requests"}`))
+				writeRateLimitExceeded(w)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RateLimitByAuthenticatedUserWith rate limits by authenticated user ID,
+// falling back to client IP when auth context has not been populated.
+func RateLimitByAuthenticatedUserWith(limiter RateLimiter, maxRequests int, window time.Duration) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			route := routePatternForRateLimit(r)
+			userID := UserIDFromContext(r.Context())
+			identity := clientIPForRateLimit(r)
+			identityType := "ip"
+			if userID != uuid.Nil {
+				identity = userID.String()
+				identityType = "user"
+			}
+
+			key := fmt.Sprintf("rl:%s:%s:%s:%d", identityType, identity, route, maxRequests)
+			allowed, err := limiter.Allow(r.Context(), key, maxRequests, window)
+			if err != nil {
+				slog.Error("rate limiter error, failing open", "error", err, "identity_type", identityType)
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			if !allowed {
+				writeRateLimitExceeded(w)
 				return
 			}
 
@@ -59,6 +80,31 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 // Kept for backward compatibility with existing router.go calls.
 func RateLimit(maxRequests int, window time.Duration) func(http.Handler) http.Handler {
 	return RateLimitWith(NewMemoryRateLimiter(), maxRequests, window)
+}
+
+func clientIPForRateLimit(r *http.Request) string {
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	return ip
+}
+
+func routePatternForRateLimit(r *http.Request) string {
+	// Include route pattern in the key so endpoints with the same limit
+	// get separate counters (e.g., login and register both at 10/min).
+	route := r.URL.Path
+	if rctx := chi.RouteContext(r.Context()); rctx != nil && rctx.RoutePattern() != "" {
+		route = rctx.RoutePattern()
+	}
+	return route
+}
+
+func writeRateLimitExceeded(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Retry-After", "60")
+	w.WriteHeader(http.StatusTooManyRequests)
+	_, _ = w.Write([]byte(`{"error":"too many requests"}`))
 }
 
 // --- Memory implementation ---

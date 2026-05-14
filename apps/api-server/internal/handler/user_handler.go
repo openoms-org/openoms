@@ -62,6 +62,37 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, user)
 }
 
+// ChangePassword allows the current user to update their password.
+func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	userID := middleware.UserIDFromContext(r.Context())
+
+	var req model.ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	err := h.userService.ChangePassword(r.Context(), tenantID, userID, req, userID, clientIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidCurrentPassword):
+			writeError(w, http.StatusUnauthorized, "current password is incorrect")
+		case errors.Is(err, service.ErrUserNotFound):
+			writeError(w, http.StatusNotFound, "user not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeServerError(w, "failed to change password", err)
+			}
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // List returns all users for the authenticated tenant.
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
