@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { toast } from "sonner";
 import { ShieldCheck, ShieldOff, Loader2, Copy, CheckCircle2, KeyRound } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,7 @@ import type { TwoFASetupResponse, TwoFAStatusResponse } from "@/types/api";
 import { useTranslations } from "next-intl";
 import { LanguageSelector } from "@/components/language-selector";
 import { useChangePassword } from "@/hooks/use-users";
+import { useAuthStore } from "@/lib/auth";
 
 function QRCodeCanvas({ data, size }: { data: string; size: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -64,6 +65,7 @@ export default function SecuritySettingsPage() {
   const ts = useTranslations("settings.security");
   const tc = useTranslations("common");
   const queryClient = useQueryClient();
+  const username = useAuthStore((state) => state.user?.email ?? "");
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [setupData, setSetupData] = useState<TwoFASetupResponse | null>(null);
@@ -145,7 +147,9 @@ export default function SecuritySettingsPage() {
     !confirmPasswordError &&
     !changePasswordMutation.isPending;
 
-  const handleChangePassword = () => {
+  const handleChangePassword = (event?: FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
+
     const validationError = getPasswordValidationError(newPassword, ts);
     if (!currentPassword) {
       toast.error(ts("currentPasswordRequired"));
@@ -217,59 +221,66 @@ export default function SecuritySettingsPage() {
             {ts("passwordDescription")}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">{ts("currentPassword")}</Label>
-              <Input
-                id="current-password"
-                type="password"
-                autoComplete="current-password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleChangePassword}>
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={username}
+              hidden
+              readOnly
+            />
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="current-password">{ts("currentPassword")}</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-password">{ts("newPassword")}</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                {newPasswordError && (
+                  <p className="text-sm text-destructive">{newPasswordError}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-new-password">{ts("confirmNewPassword")}</Label>
+                <Input
+                  id="confirm-new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                />
+                {confirmPasswordError && (
+                  <p className="text-sm text-destructive">{confirmPasswordError}</p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="new-password">{ts("newPassword")}</Label>
-              <Input
-                id="new-password"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              {newPasswordError && (
-                <p className="text-sm text-destructive">{newPasswordError}</p>
-              )}
+            <div className="flex justify-end">
+              <Button type="submit" disabled={!canChangePassword}>
+                {changePasswordMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                {ts("changePassword")}
+              </Button>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm-new-password">{ts("confirmNewPassword")}</Label>
-              <Input
-                id="confirm-new-password"
-                type="password"
-                autoComplete="new-password"
-                value={confirmNewPassword}
-                onChange={(e) => setConfirmNewPassword(e.target.value)}
-              />
-              {confirmPasswordError && (
-                <p className="text-sm text-destructive">{confirmPasswordError}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              onClick={handleChangePassword}
-              disabled={!canChangePassword}
-            >
-              {changePasswordMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {ts("changePassword")}
-            </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
 
