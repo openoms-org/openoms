@@ -81,6 +81,7 @@ describe("dashboard feature readiness", () => {
     expect(getRouteReadiness("/customers/import")).toBe("verify");
     expect(getRouteReadiness("/carriers")).toBe("ready");
     expect(getRouteReadiness("/carriers/new")).toBe("ready");
+    expect(getRouteReadiness("/settings")).toBe("ready");
     expect(getRouteReadiness("/settings/email")).toBe("blocked");
     expect(getRouteReadiness("/settings/sms")).toBe("blocked");
     expect(getRouteReadiness("/settings/ksef")).toBe("blocked");
@@ -94,6 +95,7 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/orders/new", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/marketplaces/allegro", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/carriers/new", { mode: "client-ready" })).toBe(true);
+    expect(isRouteAccessible("/settings", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/marketplaces/allegro/offers", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/products/product-1/listings", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/customers/import", { mode: "client-ready" })).toBe(false);

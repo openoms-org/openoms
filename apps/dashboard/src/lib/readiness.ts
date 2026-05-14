@@ -89,6 +89,7 @@ const NAV_ROUTE_READINESS: Record<string, FeatureReadiness> = {
   "/recurring-orders": "beta",
   "/loyalty": "beta",
   "/settings/billing": "controlled",
+  "/settings": "ready",
   "/settings/company": "ready",
   "/settings/users": "ready",
   "/settings/roles": "ready",
