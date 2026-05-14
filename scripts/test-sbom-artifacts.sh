@@ -61,12 +61,14 @@ write_valid_fixture() {
 
 expect_failure() {
   local label="$1"
+  local output_file="${tmp_dir}/openoms-sbom-test.out"
+  local error_file="${tmp_dir}/openoms-sbom-test.err"
   shift
 
-  if "$@" >/tmp/openoms-sbom-test.out 2>/tmp/openoms-sbom-test.err; then
+  if "$@" >"${output_file}" 2>"${error_file}"; then
     echo "expected failure: ${label}" >&2
-    cat /tmp/openoms-sbom-test.out >&2
-    cat /tmp/openoms-sbom-test.err >&2
+    cat "${output_file}" >&2
+    cat "${error_file}" >&2
     exit 1
   fi
 }
