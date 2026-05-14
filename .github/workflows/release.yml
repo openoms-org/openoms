@@ -12,6 +12,8 @@ on:
       - "scripts/check-dashboard-bundle-placeholders.sh"
       - "scripts/check-dashboard-image.sh"
       - "scripts/check-dashboard-release-config.sh"
+      - "scripts/check-sbom-artifacts.sh"
+      - "scripts/install-syft.sh"
       - "go.work"
       - "go.work.sum"
   workflow_dispatch:
@@ -25,6 +27,7 @@ env:
   API_IMAGE: ghcr.io/openoms-org/openoms-api
   DASHBOARD_IMAGE: ghcr.io/openoms-org/openoms-dashboard
   MIGRATE_IMAGE: ghcr.io/openoms-org/openoms-migrate
+  SYFT_VERSION: v1.44.0
 
 jobs:
   release-api:
@@ -79,6 +82,17 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
+      - name: Install Syft
+        run: ./scripts/install-syft.sh "${SYFT_VERSION}"
+
+      - name: Generate API SBOM
+        run: |
+          mkdir -p sbom
+          syft "docker:${API_IMAGE}:${GITHUB_SHA}" \
+            --source-name openoms-api \
+            --source-version "${GITHUB_SHA}" \
+            -o "cyclonedx-json=sbom/openoms-api-${GITHUB_SHA}.cdx.json"
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -89,6 +103,22 @@ jobs:
       - name: Push API SHA image
         run: |
           docker push "${API_IMAGE}:${GITHUB_SHA}"
+          digest="$(docker inspect --format='{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "${API_IMAGE}:${GITHUB_SHA}")"
+          if [ -z "${digest}" ]; then
+            echo "Unable to resolve pushed API image digest" >&2
+            exit 1
+          fi
+          printf '%s\n' "${digest}" > "sbom/openoms-api-${GITHUB_SHA}.digest.txt"
+
+      - name: Upload API SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: openoms-api-sbom-${{ github.sha }}
+          path: |
+            sbom/openoms-api-${{ github.sha }}.cdx.json
+            sbom/openoms-api-${{ github.sha }}.digest.txt
+          if-no-files-found: error
+          retention-days: 30
 
   release-dashboard:
     name: Release Dashboard Image
@@ -162,6 +192,17 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
+      - name: Install Syft
+        run: ./scripts/install-syft.sh "${SYFT_VERSION}"
+
+      - name: Generate Dashboard SBOM
+        run: |
+          mkdir -p sbom
+          syft "docker:${DASHBOARD_IMAGE}:${GITHUB_SHA}" \
+            --source-name openoms-dashboard \
+            --source-version "${GITHUB_SHA}" \
+            -o "cyclonedx-json=sbom/openoms-dashboard-${GITHUB_SHA}.cdx.json"
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -172,6 +213,22 @@ jobs:
       - name: Push Dashboard SHA image
         run: |
           docker push "${DASHBOARD_IMAGE}:${GITHUB_SHA}"
+          digest="$(docker inspect --format='{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "${DASHBOARD_IMAGE}:${GITHUB_SHA}")"
+          if [ -z "${digest}" ]; then
+            echo "Unable to resolve pushed Dashboard image digest" >&2
+            exit 1
+          fi
+          printf '%s\n' "${digest}" > "sbom/openoms-dashboard-${GITHUB_SHA}.digest.txt"
+
+      - name: Upload Dashboard SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: openoms-dashboard-sbom-${{ github.sha }}
+          path: |
+            sbom/openoms-dashboard-${{ github.sha }}.cdx.json
+            sbom/openoms-dashboard-${{ github.sha }}.digest.txt
+          if-no-files-found: error
+          retention-days: 30
 
   release-migrate:
     name: Release Migrate Image
@@ -225,6 +282,17 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
+      - name: Install Syft
+        run: ./scripts/install-syft.sh "${SYFT_VERSION}"
+
+      - name: Generate Migrate SBOM
+        run: |
+          mkdir -p sbom
+          syft "docker:${MIGRATE_IMAGE}:${GITHUB_SHA}" \
+            --source-name openoms-migrate \
+            --source-version "${GITHUB_SHA}" \
+            -o "cyclonedx-json=sbom/openoms-migrate-${GITHUB_SHA}.cdx.json"
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -235,6 +303,49 @@ jobs:
       - name: Push Migrate SHA image
         run: |
           docker push "${MIGRATE_IMAGE}:${GITHUB_SHA}"
+          digest="$(docker inspect --format='{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "${MIGRATE_IMAGE}:${GITHUB_SHA}")"
+          if [ -z "${digest}" ]; then
+            echo "Unable to resolve pushed Migrate image digest" >&2
+            exit 1
+          fi
+          printf '%s\n' "${digest}" > "sbom/openoms-migrate-${GITHUB_SHA}.digest.txt"
+
+      - name: Upload Migrate SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: openoms-migrate-sbom-${{ github.sha }}
+          path: |
+            sbom/openoms-migrate-${{ github.sha }}.cdx.json
+            sbom/openoms-migrate-${{ github.sha }}.digest.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-sbom:
+    name: Publish Release SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: [release-api, release-dashboard, release-migrate]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download image SBOM artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: openoms-*-sbom-${{ github.sha }}
+          path: sbom
+          merge-multiple: true
+
+      - name: Validate release SBOM artifacts
+        run: ./scripts/check-sbom-artifacts.sh "${GITHUB_SHA}"
+
+      - name: Upload release SBOM bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: openoms-sbom-${{ github.sha }}
+          path: sbom/
+          if-no-files-found: error
+          retention-days: 90
 
   promote-latest:
     name: Promote Latest Tags
@@ -242,7 +353,7 @@ jobs:
     permissions:
       packages: write
       contents: read
-    needs: [release-api, release-dashboard, release-migrate]
+    needs: [release-api, release-dashboard, release-migrate, publish-sbom]
     steps:
       - uses: docker/setup-buildx-action@v4
 
@@ -276,7 +387,8 @@ jobs:
           token: ${{ secrets.ENTERPRISE_DEPLOY_TOKEN }}
           repository: ${{ secrets.DEPLOY_REPO }}
           event-type: openoms-release
-          client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "images": {"api": "${{ env.API_IMAGE }}:${{ github.sha }}", "dashboard": "${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}", "migrate": "${{ env.MIGRATE_IMAGE }}:${{ github.sha }}"}}'
+          client-payload: >-
+            {"ref": "${{ github.ref }}", "sha": "${{ github.sha }}", "images": {"api": "${{ env.API_IMAGE }}:${{ github.sha }}", "dashboard": "${{ env.DASHBOARD_IMAGE }}:${{ github.sha }}", "migrate": "${{ env.MIGRATE_IMAGE }}:${{ github.sha }}"}, "sbom_artifact": "openoms-sbom-${{ github.sha }}"}
 
   notify-discord:
     name: Discord Notification

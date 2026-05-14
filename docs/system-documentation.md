@@ -139,6 +139,7 @@ CREATE POLICY tenant_isolation ON orders
    - `ghcr.io/openoms-org/openoms-dashboard`
    - `ghcr.io/openoms-org/openoms-migrate`
    - Skanuje obrazy (Trivy, CRITICAL+HIGH)
+   - Generuje i waliduje CycloneDX SBOM dla kazdego obrazu, zapisujac zbiorczy artefakt `openoms-sbom-<sha>`
    - Opcjonalnie: wysyla `repository_dispatch` do prywatnego repo deploymentu (patrz komentarz w `release.yml`)
 
 2. Deployment (blue-green z Argo Rollouts):
@@ -169,6 +170,7 @@ Obrazy sa publiczne na GHCR -- nie wymagaja `imagePullSecrets`.
 Dashboard image jest walidowany w CI/release przez `scripts/check-dashboard-image.sh`: runtime musi startowac jako non-root Node/distroless, nie moze zawierac `/bin/sh`, placeholderow runtime (`NEXT_PUBLIC_API_URL_PLACEHOLDER`, `WS_CSP_HOST_PLACEHOLDER`, `SENTRY_DSN_PLACEHOLDER`) ani `http://localhost:8080` w bundle, i musi przejsc read-only smoke test `/login`.
 Sentry source map upload dla dashboardu uzywa BuildKit secret mount (`sentry_auth_token`) tylko podczas `next build`; `SENTRY_AUTH_TOKEN` nie moze wracac jako Docker `ARG`, `ENV` ani release `build-args`. Production release dashboardu ma dodatkowy preflight `scripts/check-dashboard-release-config.sh`, ktory wymaga prawdziwego `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` i `SENTRY_AUTH_TOKEN`.
 Sentry release identity jest spinane z tagiem obrazu/SHA commita przez Helm `sentry.release` i runtime env `SENTRY_RELEASE` dla API, workerow oraz dashboardu. Worker deployment dostaje `SENTRY_DSN` z tego samego `openoms-secrets` co API, zeby panic recovery i worker-level captures trafialy do projektu `openoms-api`.
+Release pipeline instaluje przypieta wersje Syft z weryfikacja checksumu release, generuje CycloneDX JSON SBOM-y dla obrazow `openoms-api`, `openoms-dashboard` i `openoms-migrate`, zapisuje digest kazdego wypchnietego obrazu oraz publikuje zweryfikowany artefakt `openoms-sbom-<sha>`. Prywatny import do systemu monitorowania podatnosci i alert routing nalezy do warstwy enterprise.
 
 #### Konfiguracja produkcyjna
 
@@ -1404,6 +1406,7 @@ Uprawnienia np.:
 | State DB permissions | chmod 600 (wylacznie root) |
 | TLS | Mutual TLS do API servera k3s, TLS 1.2+ z strong cipher suites |
 | Image scanning | Trivy CRITICAL+HIGH w CI/CD pipeline |
+| SBOM | CycloneDX JSON generowany z obrazow release i publikowany jako `openoms-sbom-<sha>` |
 | Vulnerability scanning | govulncheck (Go) + npm audit (frontend) w CI |
 
 ---
