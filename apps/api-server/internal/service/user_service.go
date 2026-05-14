@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -27,6 +25,8 @@ var (
 	ErrOwnerRoleEscalation = errors.New("only owners can assign the owner role")
 	// ErrUserLimitExceeded is returned when a tenant has reached its maximum number of users.
 	ErrUserLimitExceeded = errors.New("user limit exceeded")
+	// ErrInvalidCurrentPassword is returned when a password change uses the wrong current password.
+	ErrInvalidCurrentPassword = errors.New("invalid current password")
 )
 
 // UserService handles user management within a tenant.
@@ -86,14 +86,11 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, NewValidationError(err)
 	}
 
-	// Generate temp password
-	tempPassBytes := make([]byte, 16)
-	if _, err := rand.Read(tempPassBytes); err != nil {
-		return nil, fmt.Errorf("generate temp password: %w", err)
+	if err := s.passwordSvc.ValidateStrength(req.Password); err != nil {
+		return nil, NewValidationError(err)
 	}
-	tempPass := hex.EncodeToString(tempPassBytes)
 
-	hash, err := s.passwordSvc.Hash(tempPass)
+	hash, err := s.passwordSvc.Hash(req.Password)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
@@ -143,6 +140,54 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 	)
 
 	return user, nil
+}
+
+// ChangePassword updates the current user's password after verifying the current password.
+func (s *UserService) ChangePassword(ctx context.Context, tenantID, userID uuid.UUID, req model.ChangePasswordRequest, actorID uuid.UUID, ip string) error {
+	if err := req.Validate(); err != nil {
+		return NewValidationError(err)
+	}
+
+	if err := s.passwordSvc.ValidateStrength(req.NewPassword); err != nil {
+		return NewValidationError(err)
+	}
+
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.changePasswordInTx(ctx, tx, tenantID, userID, req, actorID, ip)
+	})
+}
+
+func (s *UserService) changePasswordInTx(ctx context.Context, tx pgx.Tx, tenantID, userID uuid.UUID, req model.ChangePasswordRequest, actorID uuid.UUID, ip string) error {
+	passwordHash, err := s.userRepo.FindPasswordHashByID(ctx, tx, userID)
+	if err != nil {
+		return err
+	}
+	if passwordHash == nil {
+		return ErrUserNotFound
+	}
+
+	if err := s.passwordSvc.Compare(*passwordHash, req.CurrentPassword); err != nil {
+		return ErrInvalidCurrentPassword
+	}
+
+	newHash, err := s.passwordSvc.Hash(req.NewPassword)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	if err := s.userRepo.UpdatePassword(ctx, tx, userID, newHash); err != nil {
+		return err
+	}
+
+	return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		TenantID:   tenantID,
+		UserID:     actorID,
+		Action:     "user.password_changed",
+		EntityType: "user",
+		EntityID:   userID,
+		Changes:    map[string]string{"password": "changed"},
+		IPAddress:  ip,
+	})
 }
 
 // UpdateUser modifies an existing user's profile and role.

@@ -115,6 +115,7 @@ export interface CreateUserRequest {
   email: string;
   name: string;
   role: "owner" | "admin" | "member";
+  password: string;
 }
 
 export interface UpdateUserRequest {
@@ -122,6 +123,11 @@ export interface UpdateUserRequest {
   role?: "owner" | "admin" | "member";
   role_id?: string;
   language?: string;
+}
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
 }
 
 // === Core Models ===

@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UserRoleBadge } from "@/components/users/user-role-badge";
-import { UserForm } from "@/components/users/user-form";
+import { UserForm, type UserFormValues } from "@/components/users/user-form";
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -48,8 +48,14 @@ export default function UsersPage() {
 
   const users = data || [];
 
-  const handleCreate = (formData: CreateUserRequest | UpdateUserRequest) => {
-    createUser.mutate(formData as CreateUserRequest, {
+  const handleCreate = (formData: UserFormValues) => {
+    const createData: CreateUserRequest = {
+      email: formData.email,
+      name: formData.name,
+      role: formData.role,
+      password: formData.password || "",
+    };
+    createUser.mutate(createData, {
       onSuccess: () => {
         toast.success(t("created"));
         setCreateOpen(false);
@@ -60,7 +66,7 @@ export default function UsersPage() {
     });
   };
 
-  const handleEdit = (formData: CreateUserRequest | UpdateUserRequest) => {
+  const handleEdit = (formData: UserFormValues) => {
     if (!editUser) return;
     const updateData: UpdateUserRequest = {
       name: formData.name,

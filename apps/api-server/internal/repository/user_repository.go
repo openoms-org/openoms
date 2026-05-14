@@ -102,6 +102,31 @@ func (r *UserRepository) Create(ctx context.Context, tx pgx.Tx, user *model.User
 	).Scan(&user.CreatedAt, &user.UpdatedAt)
 }
 
+// FindPasswordHashByID returns a user's password hash within a WithTenant transaction.
+func (r *UserRepository) FindPasswordHashByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*string, error) {
+	var passwordHash string
+	err := tx.QueryRow(ctx, "SELECT password_hash FROM users WHERE id = $1", id).Scan(&passwordHash)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find user password hash: %w", err)
+	}
+	return &passwordHash, nil
+}
+
+// UpdatePassword updates a user's password hash.
+func (r *UserRepository) UpdatePassword(ctx context.Context, tx pgx.Tx, id uuid.UUID, passwordHash string) error {
+	ct, err := tx.Exec(ctx, "UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2", passwordHash, id)
+	if err != nil {
+		return fmt.Errorf("update user password: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
 // UpdateRole updates a user's role.
 func (r *UserRepository) UpdateRole(ctx context.Context, tx pgx.Tx, id uuid.UUID, role string) error {
 	ct, err := tx.Exec(ctx, "UPDATE users SET role = $1 WHERE id = $2", role, id)

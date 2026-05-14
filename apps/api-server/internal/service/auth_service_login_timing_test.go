@@ -53,9 +53,15 @@ func (r loginTimingUserRepo) FindForAuth(context.Context, string, uuid.UUID) (*r
 func (r loginTimingUserRepo) FindByID(context.Context, pgx.Tx, uuid.UUID) (*model.User, error) {
 	return nil, nil
 }
-func (r loginTimingUserRepo) List(context.Context, pgx.Tx) ([]model.User, error)          { return nil, nil }
-func (r loginTimingUserRepo) Count(context.Context, pgx.Tx) (int, error)                  { return 0, nil }
-func (r loginTimingUserRepo) Create(context.Context, pgx.Tx, *model.User, string) error   { return nil }
+func (r loginTimingUserRepo) List(context.Context, pgx.Tx) ([]model.User, error)        { return nil, nil }
+func (r loginTimingUserRepo) Count(context.Context, pgx.Tx) (int, error)                { return 0, nil }
+func (r loginTimingUserRepo) Create(context.Context, pgx.Tx, *model.User, string) error { return nil }
+func (r loginTimingUserRepo) FindPasswordHashByID(context.Context, pgx.Tx, uuid.UUID) (*string, error) {
+	return nil, nil
+}
+func (r loginTimingUserRepo) UpdatePassword(context.Context, pgx.Tx, uuid.UUID, string) error {
+	return nil
+}
 func (r loginTimingUserRepo) UpdateRole(context.Context, pgx.Tx, uuid.UUID, string) error { return nil }
 func (r loginTimingUserRepo) UpdateRoleID(context.Context, pgx.Tx, uuid.UUID, *uuid.UUID) error {
 	return nil
