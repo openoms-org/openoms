@@ -36,6 +36,12 @@ Instead, please email: **security@openoms.org**
 - Rotate secrets periodically
 - Keep dependencies updated (`task lint` includes security scanning)
 
+## Release SBOMs
+
+Every public release build generates CycloneDX JSON SBOM artifacts for the API, dashboard, and migration images after the blocking image vulnerability scan passes. The release workflow validates each SBOM and the pushed image digest before publishing the bundled `openoms-sbom-<git-sha>` artifact.
+
+The public artifact contains image dependency inventory and image digests only. Private vulnerability monitoring, alert routing, customer communication, and incident automation are handled outside this repository by the deployment/operations layer.
+
 ## Operational Logging and Error Reporting
 
 - Do not log raw customer PII, authorization headers, cookies, integration credentials, tokens, or secrets
