@@ -204,7 +204,7 @@ func (s *MailchimpService) SyncAllCustomers(ctx context.Context, tenantID uuid.U
 
 	for _, c := range customers {
 		if err := s.SyncCustomer(ctx, tenantID, c.Email, c.Name); err != nil {
-			s.logger.Warn("mailchimp sync failed for customer", "email", c.Email, "error", err)
+			s.logger.Warn("mailchimp sync failed for customer", "tenant_id", tenantID, "error", err)
 			failed++
 		} else {
 			synced++

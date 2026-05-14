@@ -533,7 +533,7 @@ func (s *BaseLinkerImportService) importOrderGroup(
 		existingCustomer, findErr := s.customerRepo.FindByEmail(ctx, tx, customerEmail)
 		switch {
 		case findErr != nil:
-			slog.Warn("bl-import: error looking up customer by email", "email", customerEmail, "error", findErr)
+			slog.Warn("bl-import: error looking up customer by email", "error", findErr)
 		case existingCustomer != nil:
 			customerID = &existingCustomer.ID
 		default:
@@ -546,7 +546,7 @@ func (s *BaseLinkerImportService) importOrderGroup(
 				Tags:     []string{},
 			}
 			if createErr := s.customerRepo.Create(ctx, tx, newCustomer); createErr != nil {
-				slog.Warn("bl-import: failed to create customer", "email", customerEmail, "error", createErr)
+				slog.Warn("bl-import: failed to create customer", "error", createErr)
 			} else {
 				customerID = &newCustomer.ID
 				result.CustomersCreated++

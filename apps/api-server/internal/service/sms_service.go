@@ -104,9 +104,9 @@ func (s *SMSService) SendOrderStatusSMS(ctx context.Context, tenantID uuid.UUID,
 		Message: message,
 	})
 	if err != nil {
-		slog.Error("sms: failed to send", "error", err, "to", *order.CustomerPhone, "status", newStatus, "order_id", order.ID)
+		slog.Error("sms: failed to send", "error", err, "status", newStatus, "order_id", order.ID, "tenant_id", tenantID)
 	} else {
-		slog.Info("sms: sent successfully", "to", *order.CustomerPhone, "status", newStatus, "order_id", order.ID)
+		slog.Info("sms: sent successfully", "status", newStatus, "order_id", order.ID, "tenant_id", tenantID)
 	}
 }
 
@@ -182,9 +182,9 @@ func (s *SMSService) SendShipmentStatusSMS(ctx context.Context, tenantID uuid.UU
 		Message: message,
 	})
 	if err != nil {
-		slog.Error("sms: failed to send shipment SMS", "error", err, "to", *order.CustomerPhone, "status", shipment.Status, "shipment_id", shipment.ID)
+		slog.Error("sms: failed to send shipment SMS", "error", err, "status", shipment.Status, "shipment_id", shipment.ID, "tenant_id", tenantID)
 	} else {
-		slog.Info("sms: shipment SMS sent", "to", *order.CustomerPhone, "status", shipment.Status, "shipment_id", shipment.ID)
+		slog.Info("sms: shipment SMS sent", "status", shipment.Status, "shipment_id", shipment.ID, "tenant_id", tenantID)
 	}
 }
 
