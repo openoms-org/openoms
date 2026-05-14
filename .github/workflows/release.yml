@@ -111,7 +111,7 @@ jobs:
           printf '%s\n' "${digest}" > "sbom/openoms-api-${GITHUB_SHA}.digest.txt"
 
       - name: Upload API SBOM artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: openoms-api-sbom-${{ github.sha }}
           path: |
@@ -221,7 +221,7 @@ jobs:
           printf '%s\n' "${digest}" > "sbom/openoms-dashboard-${GITHUB_SHA}.digest.txt"
 
       - name: Upload Dashboard SBOM artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: openoms-dashboard-sbom-${{ github.sha }}
           path: |
@@ -311,7 +311,7 @@ jobs:
           printf '%s\n' "${digest}" > "sbom/openoms-migrate-${GITHUB_SHA}.digest.txt"
 
       - name: Upload Migrate SBOM artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: openoms-migrate-sbom-${{ github.sha }}
           path: |
@@ -330,7 +330,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download image SBOM artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: openoms-*-sbom-${{ github.sha }}
           path: sbom
@@ -340,7 +340,7 @@ jobs:
         run: ./scripts/check-sbom-artifacts.sh "${GITHUB_SHA}"
 
       - name: Upload release SBOM bundle
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: openoms-sbom-${{ github.sha }}
           path: sbom/
