@@ -21,6 +21,7 @@
     "urgent": "Urgent"
   },
   "roles": {
+    "admin": "Admin",
     "brakRol": "No roles",
     "cancelButton": "Cancel",
     "columns": {

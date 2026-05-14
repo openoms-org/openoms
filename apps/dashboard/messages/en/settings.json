@@ -109,6 +109,13 @@
     "user": "User"
   },
   "settings": {
+    "index": {
+      "description": "Choose an OpenOMS configuration area. Only sections available in the current production surface are shown.",
+      "emptyState": "No settings sections are available for this account.",
+      "openSection": "Open",
+      "sectionCount": "{count, plural, one {# section} other {# sections}}",
+      "title": "Settings"
+    },
     "accounting": {
       "fakturownia": {
         "apiToken": "API Token",

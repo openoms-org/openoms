@@ -21,6 +21,7 @@
     "urgent": "Pilne"
   },
   "roles": {
+    "admin": "Administrator",
     "brakRol": "Brak ról",
     "cancelButton": "Anuluj",
     "columns": {
