@@ -133,7 +133,7 @@ data["components"].append(
     {
         "type": "library",
         "name": "jsonwebtoken",
-        "version": "UNKNOWN",
+        "version": "unknown",
         "purl": "pkg:npm/jsonwebtoken",
         "properties": [
             {

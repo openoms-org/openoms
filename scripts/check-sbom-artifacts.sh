@@ -61,7 +61,7 @@ if expected_component == "openoms-dashboard":
     for item in components:
         purl = str(item.get("purl") or "")
         version = str(item.get("version") or "").strip()
-        if purl.startswith("pkg:npm/") and (not version or version == "UNKNOWN"):
+        if purl.startswith("pkg:npm/") and (not version or version.upper() == "UNKNOWN"):
             locations = [
                 str(prop.get("value") or "")
                 for prop in item.get("properties", [])
