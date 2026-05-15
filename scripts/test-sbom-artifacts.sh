@@ -73,6 +73,28 @@ expect_failure() {
   fi
 }
 
+expect_failure_matching() {
+  local label="$1"
+  local expected_message="$2"
+  local output_file="${tmp_dir}/openoms-sbom-test.out"
+  local error_file="${tmp_dir}/openoms-sbom-test.err"
+  shift 2
+
+  if "$@" >"${output_file}" 2>"${error_file}"; then
+    echo "expected failure: ${label}" >&2
+    cat "${output_file}" >&2
+    cat "${error_file}" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "${expected_message}" "${error_file}"; then
+    echo "expected failure message for ${label}: ${expected_message}" >&2
+    cat "${output_file}" >&2
+    cat "${error_file}" >&2
+    exit 1
+  fi
+}
+
 valid_dir="${tmp_dir}/valid"
 write_valid_fixture "${valid_dir}"
 SBOM_DIR="${valid_dir}" "${checker}" "${sha}"
@@ -96,6 +118,39 @@ with open(path, "w", encoding="utf-8") as handle:
     json.dump(data, handle)
 PY
 expect_failure "invalid CycloneDX format" env SBOM_DIR="${invalid_bom_dir}" "${checker}" "${sha}"
+
+unknown_dashboard_npm_dir="${tmp_dir}/unknown-dashboard-npm"
+write_valid_fixture "${unknown_dashboard_npm_dir}"
+python3 - "${unknown_dashboard_npm_dir}/openoms-dashboard-${sha}.cdx.json" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, encoding="utf-8") as handle:
+    data = json.load(handle)
+
+data["components"].append(
+    {
+        "type": "library",
+        "name": "jsonwebtoken",
+        "version": "UNKNOWN",
+        "purl": "pkg:npm/jsonwebtoken",
+        "properties": [
+            {
+                "name": "syft:location:0:path",
+                "value": "/app/node_modules/next/dist/compiled/jsonwebtoken/package.json",
+            }
+        ],
+    }
+)
+
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(data, handle)
+PY
+expect_failure_matching \
+  "dashboard SBOM npm component with unknown version" \
+  "dashboard SBOM contains npm components with unknown versions" \
+  env SBOM_DIR="${unknown_dashboard_npm_dir}" "${checker}" "${sha}"
 
 invalid_digest_dir="${tmp_dir}/invalid-digest"
 write_valid_fixture "${invalid_digest_dir}"

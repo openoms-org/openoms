@@ -55,6 +55,28 @@ if version not in (expected_sha, f"sha256:{expected_sha}"):
 components = data.get("components")
 if not isinstance(components, list) or not components:
     raise SystemExit(f"{path}: expected non-empty components list")
+
+if expected_component == "openoms-dashboard":
+    unknown_npm = []
+    for item in components:
+        purl = str(item.get("purl") or "")
+        version = str(item.get("version") or "").strip()
+        if purl.startswith("pkg:npm/") and (not version or version == "UNKNOWN"):
+            locations = [
+                str(prop.get("value") or "")
+                for prop in item.get("properties", [])
+                if str(prop.get("name") or "").startswith("syft:location")
+            ]
+            unknown_npm.append((item.get("name"), purl, locations))
+
+    if unknown_npm:
+        details = "; ".join(
+            f"{name} ({purl}) at {', '.join(locations) or 'unknown location'}"
+            for name, purl, locations in unknown_npm[:10]
+        )
+        raise SystemExit(
+            f"{path}: dashboard SBOM contains npm components with unknown versions: {details}"
+        )
 PY
 }
 
