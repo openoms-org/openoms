@@ -174,7 +174,12 @@ run_check "dashboard-sentry-guards" bash -c '
     cd "'"$REPO_ROOT"'" && ./scripts/test-dashboard-sentry-guards.sh
 '
 
-# ── 7. next build (skip in quick mode) ──
+# ── 7. GitHub Actions pinning guard ──
+run_check "actions-pinning" bash -c '
+    cd "'"$REPO_ROOT"'" && ./scripts/validate-github-actions-pinning.sh
+'
+
+# ── 8. next build (skip in quick mode) ──
 if ! $QUICK; then
     run_check "next-build" bash -c '
         cd "'"$REPO_ROOT"'/apps/dashboard"
@@ -190,7 +195,7 @@ if ! $QUICK; then
     '
 fi
 
-# ── 8. go test — packages without DB (skip in quick mode) ──
+# ── 9. go test — packages without DB (skip in quick mode) ──
 if ! $QUICK; then
     run_check "go-test" bash -c '
         errors=""

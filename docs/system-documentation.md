@@ -171,6 +171,7 @@ Dashboard image jest walidowany w CI/release przez `scripts/check-dashboard-imag
 Sentry source map upload dla dashboardu uzywa BuildKit secret mount (`sentry_auth_token`) tylko podczas `next build`; `SENTRY_AUTH_TOKEN` nie moze wracac jako Docker `ARG`, `ENV` ani release `build-args`. Production release dashboardu ma dodatkowy preflight `scripts/check-dashboard-release-config.sh`, ktory wymaga prawdziwego `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` i `SENTRY_AUTH_TOKEN`.
 Sentry release identity jest spinane z tagiem obrazu/SHA commita przez Helm `sentry.release` i runtime env `SENTRY_RELEASE` dla API, workerow oraz dashboardu. Worker deployment dostaje `SENTRY_DSN` z tego samego `openoms-secrets` co API, zeby panic recovery i worker-level captures trafialy do projektu `openoms-api`.
 Release pipeline instaluje przypieta wersje Syft z weryfikacja checksumu release, generuje CycloneDX JSON SBOM-y dla obrazow `openoms-api`, `openoms-dashboard` i `openoms-migrate`, zapisuje digest kazdego wypchnietego obrazu oraz publikuje zweryfikowany artefakt `openoms-sbom-<sha>`. Prywatny import do systemu monitorowania podatnosci i alert routing nalezy do warstwy enterprise.
+Publiczne workflowy GitHub Actions pinują zewnetrzne akcje do pelnych commit SHA zamiast mutowalnych tagow semver. `scripts/validate-github-actions-pinning.sh` jest uruchamiany lokalnie przez `scripts/local-ci.sh` oraz w publicznym CI, zeby blokowac regresje do tagow typu `@v4`/`@v7`.
 
 #### Konfiguracja produkcyjna
 

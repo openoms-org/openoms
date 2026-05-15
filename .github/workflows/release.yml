@@ -38,12 +38,12 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Build API image for scan
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: apps/api-server/Dockerfile
@@ -54,7 +54,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
       - name: Scan API image with Trivy (SARIF for Security tab)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_IMAGE_SRC: docker
         with:
@@ -65,14 +65,14 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload API Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         if: always()
         with:
           sarif_file: trivy-openoms-api.sarif
           category: trivy-openoms-api
 
       - name: Scan API image with Trivy (blocking on CRITICAL/HIGH)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_IMAGE_SRC: docker
         with:
@@ -94,7 +94,7 @@ jobs:
             -o "cyclonedx-json=sbom/openoms-api-${GITHUB_SHA}.cdx.json"
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -128,7 +128,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Check Dashboard release Sentry config
         env:
@@ -138,10 +138,10 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || '' }}
         run: ./scripts/check-dashboard-release-config.sh
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Build Dashboard image for scan
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: apps/dashboard
           file: apps/dashboard/Dockerfile
@@ -164,7 +164,7 @@ jobs:
         run: ./scripts/check-dashboard-image.sh "${DASHBOARD_IMAGE}:${GITHUB_SHA}"
 
       - name: Scan Dashboard image with Trivy (SARIF for Security tab)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_IMAGE_SRC: docker
         with:
@@ -175,14 +175,14 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Dashboard Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         if: always()
         with:
           sarif_file: trivy-openoms-dashboard.sarif
           category: trivy-openoms-dashboard
 
       - name: Scan Dashboard image with Trivy (blocking on CRITICAL/HIGH)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_IMAGE_SRC: docker
         with:
@@ -204,7 +204,7 @@ jobs:
             -o "cyclonedx-json=sbom/openoms-dashboard-${GITHUB_SHA}.cdx.json"
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -238,12 +238,12 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Build Migrate image for scan
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           file: deploy/Dockerfile.migrate
@@ -254,7 +254,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=migrate
 
       - name: Scan Migrate image with Trivy (SARIF for Security tab)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_IMAGE_SRC: docker
         with:
@@ -265,14 +265,14 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Migrate Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         if: always()
         with:
           sarif_file: trivy-openoms-migrate.sarif
           category: trivy-openoms-migrate
 
       - name: Scan Migrate image with Trivy (blocking on CRITICAL/HIGH)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_IMAGE_SRC: docker
         with:
@@ -294,7 +294,7 @@ jobs:
             -o "cyclonedx-json=sbom/openoms-migrate-${GITHUB_SHA}.cdx.json"
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -327,7 +327,7 @@ jobs:
       contents: read
     needs: [release-api, release-dashboard, release-migrate]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Download image SBOM artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
@@ -355,10 +355,10 @@ jobs:
       contents: read
     needs: [release-api, release-dashboard, release-migrate, publish-sbom]
     steps:
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -382,7 +382,7 @@ jobs:
           DEPLOY_TOKEN: ${{ secrets.ENTERPRISE_DEPLOY_TOKEN }}
           DEPLOY_REPO: ${{ secrets.DEPLOY_REPO }}
         if: ${{ env.DEPLOY_TOKEN != '' && env.DEPLOY_REPO != '' }}
-        uses: peter-evans/repository-dispatch@v4
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4
         with:
           token: ${{ secrets.ENTERPRISE_DEPLOY_TOKEN }}
           repository: ${{ secrets.DEPLOY_REPO }}
@@ -397,7 +397,7 @@ jobs:
       contents: read
     needs: [promote-latest]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 5
 

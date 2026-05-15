@@ -16,7 +16,7 @@ jobs:
         image: [openoms-api, openoms-dashboard, openoms-migrate]
     steps:
       - name: Scan ${{ matrix.image }}
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/openoms-org/${{ matrix.image }}:latest
           format: sarif
@@ -25,7 +25,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         if: always()
         with:
           sarif_file: ${{ matrix.image }}-results.sarif
