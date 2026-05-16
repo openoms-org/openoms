@@ -31,6 +31,35 @@ func (w *stubWorker) Run(ctx context.Context) error {
 	return nil
 }
 
+type fakeWorkerLock struct {
+	acquireToken string
+	acquireErr   error
+	extendOK     atomic.Bool
+	extendErr    atomic.Value
+	released     atomic.Bool
+}
+
+func newFakeWorkerLock(token string) *fakeWorkerLock {
+	f := &fakeWorkerLock{acquireToken: token}
+	f.extendOK.Store(true)
+	return f
+}
+
+func (f *fakeWorkerLock) Acquire(_ context.Context, _ string, _ time.Duration) (string, error) {
+	return f.acquireToken, f.acquireErr
+}
+
+func (f *fakeWorkerLock) Extend(_ context.Context, _ string, _ string, _ time.Duration) (bool, error) {
+	if err, ok := f.extendErr.Load().(error); ok && err != nil {
+		return false, err
+	}
+	return f.extendOK.Load(), nil
+}
+
+func (f *fakeWorkerLock) Release(_ string, _ string) {
+	f.released.Store(true)
+}
+
 // ---------------------------------------------------------------------------
 // NewManager
 // ---------------------------------------------------------------------------
@@ -200,6 +229,17 @@ func TestStartStop_ContextCancellation(t *testing.T) {
 // guardedRun — overlap prevention
 // ---------------------------------------------------------------------------
 
+func TestWorkerLockTTL_UsesIntervalBuffer(t *testing.T) {
+	assert.Equal(t, 75*time.Second, workerLockTTL(45*time.Second))
+	assert.Equal(t, 150*time.Second, workerLockTTL(2*time.Minute))
+}
+
+func TestWorkerLockRenewInterval_IsBounded(t *testing.T) {
+	assert.Equal(t, 25*time.Second, workerLockRenewInterval(75*time.Second))
+	assert.Equal(t, 30*time.Second, workerLockRenewInterval(24*time.Hour))
+	assert.Equal(t, 10*time.Millisecond, workerLockRenewInterval(15*time.Millisecond))
+}
+
 func TestGuardedRun_SkipsOverlappingExecution(t *testing.T) {
 	var running atomic.Bool
 	var started atomic.Bool
@@ -238,6 +278,119 @@ func TestGuardedRun_SkipsOverlappingExecution(t *testing.T) {
 
 	// Wait for the running flag to clear
 	require.Eventually(t, func() bool { return !running.Load() }, time.Second, 5*time.Millisecond)
+}
+
+func TestGuardedRun_SkipsExecutionWhenDistributedLockErrors(t *testing.T) {
+	var running atomic.Bool
+	var ran atomic.Bool
+
+	w := &stubWorker{
+		name:     "lock-error-worker",
+		interval: 50 * time.Millisecond,
+		runFn: func(_ context.Context) error {
+			ran.Store(true)
+			return nil
+		},
+	}
+
+	lock := newFakeWorkerLock("")
+	lock.acquireErr = errors.New("redis unavailable")
+
+	m := NewManager(nil, slog.Default())
+	m.lock = lock
+
+	m.guardedRun(context.Background(), w, &running)
+
+	assert.False(t, ran.Load(), "worker must not run when distributed lock acquisition fails")
+}
+
+func TestGuardedRun_CancelsWorkerWhenDistributedLockRenewalIsLost(t *testing.T) {
+	var running atomic.Bool
+	workerStarted := make(chan struct{})
+	workerStopped := make(chan struct{})
+
+	w := &stubWorker{
+		name:     "renewal-loss-worker",
+		interval: 15 * time.Millisecond,
+		runFn: func(ctx context.Context) error {
+			close(workerStarted)
+			<-ctx.Done()
+			close(workerStopped)
+			return ctx.Err()
+		},
+	}
+
+	lock := newFakeWorkerLock("lease-token")
+	m := NewManager(nil, slog.Default())
+	m.lock = lock
+	m.lockRenewIntervalFn = func(time.Duration) time.Duration { return 10 * time.Millisecond }
+
+	go m.guardedRun(context.Background(), w, &running)
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-workerStarted:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 5*time.Millisecond)
+
+	lock.extendOK.Store(false)
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-workerStopped:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 5*time.Millisecond)
+
+	require.Eventually(t, func() bool { return lock.released.Load() }, time.Second, 5*time.Millisecond)
+}
+
+func TestGuardedRun_CancelsWorkerWhenDistributedLockRenewalErrors(t *testing.T) {
+	var running atomic.Bool
+	workerStarted := make(chan struct{})
+	workerStopped := make(chan struct{})
+
+	w := &stubWorker{
+		name:     "renewal-error-worker",
+		interval: 15 * time.Millisecond,
+		runFn: func(ctx context.Context) error {
+			close(workerStarted)
+			<-ctx.Done()
+			close(workerStopped)
+			return ctx.Err()
+		},
+	}
+
+	lock := newFakeWorkerLock("lease-token")
+	lock.extendErr.Store(errors.New("redis timeout"))
+	m := NewManager(nil, slog.Default())
+	m.lock = lock
+	m.lockRenewIntervalFn = func(time.Duration) time.Duration { return 10 * time.Millisecond }
+
+	go m.guardedRun(context.Background(), w, &running)
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-workerStarted:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 5*time.Millisecond)
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-workerStopped:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 5*time.Millisecond)
 }
 
 // ---------------------------------------------------------------------------

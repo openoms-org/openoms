@@ -23,28 +23,58 @@ type Worker interface {
 	Run(ctx context.Context) error
 }
 
+type workerLock interface {
+	Acquire(ctx context.Context, workerName string, ttl time.Duration) (string, error)
+	Extend(ctx context.Context, workerName string, token string, ttl time.Duration) (bool, error)
+	Release(workerName string, token string)
+}
+
 // Manager manages background workers.
 type Manager struct {
-	pool    *pgxpool.Pool
-	workers []Worker
-	wg      sync.WaitGroup
-	cancel  context.CancelFunc
-	logger  *slog.Logger
-	lock    *DistributedLock
+	pool                *pgxpool.Pool
+	workers             []Worker
+	wg                  sync.WaitGroup
+	cancel              context.CancelFunc
+	logger              *slog.Logger
+	lock                workerLock
+	lockRenewIntervalFn func(time.Duration) time.Duration
 }
 
 // NewManager creates a new worker Manager.
 // If redisClient is nil, the manager operates in single-pod mode (no distributed locking).
 func NewManager(pool *pgxpool.Pool, logger *slog.Logger, redisClient ...*redis.Client) *Manager {
 	m := &Manager{
-		pool:   pool,
-		logger: logger,
+		pool:                pool,
+		logger:              logger,
+		lockRenewIntervalFn: workerLockRenewInterval,
 	}
 	if len(redisClient) > 0 && redisClient[0] != nil {
 		m.lock = NewDistributedLock(redisClient[0], "openoms")
 		logger.Info("worker manager using distributed locking (Redis)")
 	}
 	return m
+}
+
+func workerLockTTL(interval time.Duration) time.Duration {
+	return interval + 30*time.Second
+}
+
+func workerLockRenewInterval(ttl time.Duration) time.Duration {
+	interval := ttl / 3
+	if interval < 10*time.Millisecond {
+		return 10 * time.Millisecond
+	}
+	if interval > 30*time.Second {
+		return 30 * time.Second
+	}
+	return interval
+}
+
+func (m *Manager) lockRenewInterval(ttl time.Duration) time.Duration {
+	if m.lockRenewIntervalFn == nil {
+		return workerLockRenewInterval(ttl)
+	}
+	return m.lockRenewIntervalFn(ttl)
 }
 
 // Register adds a worker to the manager's run list.
@@ -99,20 +129,32 @@ func (m *Manager) runWorker(ctx context.Context, w Worker) {
 }
 
 // guardedRun ensures only one execution of a worker at a time, both in-process
-// (via atomic.Bool) and across pods (via Redis SETNX distributed lock).
+// (via atomic.Bool) and across pods (via a renewable Redis lease).
 func (m *Manager) guardedRun(ctx context.Context, w Worker, running *atomic.Bool) {
 	// Distributed lock: prevent multiple pods from running the same worker.
-	// TTL = worker interval + 30s buffer so the lock outlives a single execution
-	// but auto-expires if the pod crashes.
+	// The lock is acquired as a renewable lease and extended while the worker
+	// run is active. If Redis errors or ownership is lost, the run context is
+	// cancelled so cooperative workers stop before another pod proceeds.
+	runCtx := ctx
+	var runCancel context.CancelFunc
+	var renewDone <-chan struct{}
 	if m.lock != nil {
-		token, err := m.lock.Acquire(ctx, w.Name(), w.Interval()+30*time.Second)
+		lockTTL := workerLockTTL(w.Interval())
+		token, err := m.lock.Acquire(ctx, w.Name(), lockTTL)
 		switch {
 		case err != nil:
-			m.logger.Warn("distributed lock error, proceeding anyway", "worker", w.Name(), "error", err)
+			m.logger.Error("distributed lock error, skipping worker run", "worker", w.Name(), "error", err)
+			return
 		case token == "":
 			return // Another pod holds the lock
 		default:
-			defer m.lock.Release(w.Name(), token)
+			runCtx, runCancel = context.WithCancel(ctx)
+			renewDone = m.renewDistributedLock(runCtx, w.Name(), token, lockTTL, m.lockRenewInterval(lockTTL), runCancel)
+			defer func() {
+				runCancel()
+				<-renewDone
+				m.lock.Release(w.Name(), token)
+			}()
 		}
 	}
 
@@ -122,7 +164,53 @@ func (m *Manager) guardedRun(ctx context.Context, w Worker, running *atomic.Bool
 		return
 	}
 	defer running.Store(false)
-	m.safeRun(ctx, w)
+	m.safeRun(runCtx, w)
+}
+
+func (m *Manager) renewDistributedLock(
+	ctx context.Context,
+	workerName string,
+	token string,
+	ttl time.Duration,
+	interval time.Duration,
+	cancel context.CancelFunc,
+) <-chan struct{} {
+	done := make(chan struct{})
+	asyncutil.SafeGo(func() {
+		defer close(done)
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				ok, err := m.lock.Extend(ctx, workerName, token, ttl)
+				if err != nil {
+					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+						cancel()
+						return
+					}
+					m.logger.Error("distributed lock renewal failed, cancelling worker run",
+						"worker", workerName,
+						"error", err,
+					)
+					cancel()
+					return
+				}
+				if !ok {
+					m.logger.Error("distributed lock lost, cancelling worker run",
+						"worker", workerName,
+					)
+					cancel()
+					return
+				}
+			}
+		}
+	})
+	return done
 }
 
 func (m *Manager) safeRun(ctx context.Context, w Worker) {

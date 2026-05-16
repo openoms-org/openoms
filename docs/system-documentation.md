@@ -1817,7 +1817,7 @@ EbayImportService.ImportOffers()
 | `manager.go` | Menedzer workerow (rejestracja, start, stop, graceful shutdown) |
 | `marketplace_order_poller.go` | Bazowy poller zamowien (wspolna logika dla Allegro/Amazon/WooCommerce/eBay/Shoper/PrestaShop/Shopify) |
 | `tenant_iterator.go` | Iterator tenantow -- wykonuje logike per-tenant |
-| `distributed_lock.go` | Blokada rozproszona (SETNX) dla multi-instance |
+| `distributed_lock.go` | Odnawialne lease Redis (`SET NX`) dla multi-instance: UUID ownership, Lua renewal podczas aktywnego runu i Lua release |
 
 ### Cechy
 

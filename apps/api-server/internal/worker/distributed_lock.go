@@ -31,6 +31,13 @@ end
 return 0
 `)
 
+var extendScript = redis.NewScript(`
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+	return redis.call("PEXPIRE", KEYS[1], ARGV[2])
+end
+return 0
+`)
+
 // NewDistributedLock creates a new distributed lock manager.
 // If client is nil (Redis unavailable), locks always succeed (single-pod mode).
 func NewDistributedLock(client *redis.Client, prefix string) *DistributedLock {
@@ -63,6 +70,25 @@ func (d *DistributedLock) Acquire(ctx context.Context, workerName string, ttl ti
 		return "", nil
 	}
 	return token, nil
+}
+
+// Extend renews a lock only if the token still owns it.
+func (d *DistributedLock) Extend(ctx context.Context, workerName string, token string, ttl time.Duration) (bool, error) {
+	if d == nil || d.client == nil || token == "no-redis" {
+		return true, nil
+	}
+	if token == "" {
+		return false, nil
+	}
+	if ttl <= 0 {
+		return false, fmt.Errorf("distributed lock: TTL must be positive, got %v", ttl)
+	}
+	key := fmt.Sprintf("%s:worker-lock:%s", d.prefix, workerName)
+	result, err := extendScript.Run(ctx, d.client, []string{key}, token, ttl.Milliseconds()).Int()
+	if err != nil {
+		return false, err
+	}
+	return result == 1, nil
 }
 
 // Release releases the lock only if the token matches (ownership verification).
