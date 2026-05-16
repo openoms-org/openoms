@@ -10,6 +10,7 @@ data:
   ENV: {{ .Values.apiServer.env | quote }}
   BASE_URL: {{ .Values.apiServer.baseUrl | quote }}
   FRONTEND_URL: {{ .Values.apiServer.frontendUrl | quote }}
+  TRUSTED_PROXY_CIDRS: {{ join "," .Values.apiServer.trustedProxyCIDRs | quote }}
   UPLOAD_DIR: {{ .Values.apiServer.uploadDir | quote }}
   MAX_UPLOAD_SIZE: {{ .Values.apiServer.maxUploadSize | quote }}
   S3_ENABLED: {{ .Values.apiServer.s3.enabled | quote }}

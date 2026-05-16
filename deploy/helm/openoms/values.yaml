@@ -19,6 +19,9 @@ apiServer:
   registrationMode: open  # override to "invite" in production values
   baseUrl: https://api.openoms.example.com
   frontendUrl: https://app.openoms.example.com
+  # Comma-rendered to TRUSTED_PROXY_CIDRS. Empty means forwarded headers are ignored.
+  # Set only to CIDRs of immediate trusted proxies, such as ingress/cloudflared pod CIDRs.
+  trustedProxyCIDRs: []
   uploadDir: /tmp/uploads
   maxUploadSize: "10485760"
   features:

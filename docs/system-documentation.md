@@ -413,10 +413,12 @@ OpenOMS/
 ### Middleware Stack
 
 ```
-Request -> RequestID -> RealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS -> Logger -> Recoverer -> CORS
+Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS -> Logger -> Recoverer -> CORS
     -> JWTAuth -> TokenBlacklist -> RequireRole -> RequirePermission
     -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
+
+`TrustedRealIP` honoruje `X-Forwarded-For` / `X-Real-IP` tylko wtedy, gdy bezposredni peer IP jest w `TRUSTED_PROXY_CIDRS`. Przy pustej liscie naglowki forwarded sa ignorowane, a rate limity i logi uzywaja TCP peer address. Produkcyjne values powinny zawierac tylko CIDR-y ingress/cloudflared podow, ktore kontroluja lub sanitizuja forwarded headers.
 
 ### Wszystkie endpointy (500)
 

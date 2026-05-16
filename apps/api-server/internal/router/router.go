@@ -3,6 +3,7 @@ package router
 
 import (
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -23,6 +24,7 @@ import (
 type RouterDeps struct { //nolint:revive
 	Pool                       *pgxpool.Pool
 	Config                     *config.Config
+	TrustedProxyCIDRs          []netip.Prefix
 	TokenSvc                   *service.TokenService
 	TokenBlacklist             *middleware.TokenBlacklist
 	RateLimiter                middleware.RateLimiter
@@ -126,7 +128,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 	// Global middleware
 	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
+	r.Use(middleware.TrustedRealIP(deps.TrustedProxyCIDRs))
 	if sentry.CurrentHub().Client() != nil {
 		r.Use(middleware.SentryMiddleware)
 	}
