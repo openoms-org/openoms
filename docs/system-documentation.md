@@ -161,6 +161,7 @@ Tabele tenant-scoped maja wlaczone `FORCE ROW LEVEL SECURITY`, a CI sprawdza baz
 - Produkcyjne wartosci: utworz wlasny `values-production.yaml` z domenami i sekretami
 - Migration job: pre-upgrade hook, `activeDeadlineSeconds: 600`
 - Worker deployment uzywa osobnych `worker.podSecurityContext` i `worker.securityContext`, zeby produkcyjny overlay mogl twardo konfigurowac hardening workerow niezaleznie od API.
+- Daily backup CronJob zapisuje dump SQL do pliku, kompresuje go osobno, waliduje `gzip -t` i minimalny rozmiar, a dopiero potem wysyla plik do S3-compatible storage przez MinIO client (`mcli`).
 
 #### Obrazy Docker
 

@@ -35,46 +35,52 @@ spec:
                 - /bin/sh
                 - -c
                 - |
-                  set -euo pipefail
+                  set -eu
                   TIMESTAMP=$(date +%Y%m%d-%H%M%S)
                   FILENAME="openoms-${TIMESTAMP}.sql.gz"
+                  MIN_BACKUP_BYTES="${MIN_BACKUP_BYTES:-1000}"
 
                   echo "Starting backup: ${FILENAME}"
                   pg_dump "${DATABASE_URL}" \
                     --no-owner \
                     --no-privileges \
                     --format=plain \
-                    | gzip > "/tmp/${FILENAME}"
+                    --file=/tmp/backup.sql
+
+                  gzip -c /tmp/backup.sql > "/tmp/${FILENAME}"
+                  gzip -t "/tmp/${FILENAME}"
+                  rm -f /tmp/backup.sql
 
                   SIZE=$(stat -c%s "/tmp/${FILENAME}" 2>/dev/null || stat -f%z "/tmp/${FILENAME}")
                   echo "Backup size: ${SIZE} bytes"
 
-                  if [ "${SIZE}" -lt 1000 ]; then
+                  if [ "${SIZE}" -lt "${MIN_BACKUP_BYTES}" ]; then
                     echo "ERROR: Backup too small (${SIZE} bytes), likely empty"
                     exit 1
                   fi
 
                   echo "Uploading to S3: s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
-                  apk add --no-cache aws-cli >/dev/null 2>&1
-                  S3_ARGS="--endpoint-url ${S3_ENDPOINT}"
-                  if [ -n "${AWS_DEFAULT_REGION}" ]; then
-                    S3_ARGS="${S3_ARGS} --region ${AWS_DEFAULT_REGION}"
-                  fi
-                  aws s3 cp "/tmp/${FILENAME}" "s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}" ${S3_ARGS}
+                  apk add --no-cache minio-client >/dev/null 2>&1
+                  export MC_CONFIG_DIR=/tmp/.mc
+                  mcli alias set openoms-backups "${S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}" --api S3v4 --path {{ if .Values.backup.s3.forcePathStyle }}on{{ else }}off{{ end }}
+                  mcli cp "/tmp/${FILENAME}" "openoms-backups/${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
 
                   echo "Backup completed: ${FILENAME} (${SIZE} bytes)"
 
                   {{- if .Values.backup.retentionDays }}
                   echo "Cleaning backups older than {{ .Values.backup.retentionDays }} days..."
                   CUTOFF=$(date -d "-{{ .Values.backup.retentionDays }} days" +%Y%m%d 2>/dev/null || date -v-{{ .Values.backup.retentionDays }}d +%Y%m%d)
-                  aws s3 ls "s3://${S3_BUCKET}/${S3_PREFIX}" ${S3_ARGS} \
-                    | awk '{print $4}' \
-                    | grep '^openoms-' \
+                  mcli ls "openoms-backups/${S3_BUCKET}/${S3_PREFIX}" \
+                    | awk '{print $NF}' \
                     | while read -r file; do
+                        case "${file}" in
+                          openoms-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*.sql.gz) ;;
+                          *) continue ;;
+                        esac
                         FILE_DATE=$(echo "$file" | sed 's/openoms-\([0-9]*\)-.*/\1/')
                         if [ "${FILE_DATE}" \< "${CUTOFF}" ]; then
                           echo "Deleting old backup: ${file}"
-                          aws s3 rm "s3://${S3_BUCKET}/${S3_PREFIX}${file}" ${S3_ARGS}
+                          mcli rm "openoms-backups/${S3_BUCKET}/${S3_PREFIX}${file}"
                         fi
                       done
                   echo "Cleanup done"
@@ -93,6 +99,8 @@ spec:
                   value: {{ .Values.backup.s3.prefix | default "backups/" | quote }}
                 - name: S3_ENDPOINT
                   value: {{ .Values.backup.s3.endpoint | quote }}
+                - name: MIN_BACKUP_BYTES
+                  value: {{ .Values.backup.minBackupBytes | default 1000 | quote }}
                 {{- if .Values.backup.s3.region }}
                 - name: AWS_DEFAULT_REGION
                   value: {{ .Values.backup.s3.region | quote }}
