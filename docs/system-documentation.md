@@ -160,6 +160,7 @@ Tabele tenant-scoped maja wlaczone `FORCE ROW LEVEL SECURITY`, a CI sprawdza baz
 - Domyslne wartosci: `values.yaml` (generyczne, example.com)
 - Produkcyjne wartosci: utworz wlasny `values-production.yaml` z domenami i sekretami
 - Migration job: pre-upgrade hook, `activeDeadlineSeconds: 600`
+- Worker deployment uzywa osobnych `worker.podSecurityContext` i `worker.securityContext`, zeby produkcyjny overlay mogl twardo konfigurowac hardening workerow niezaleznie od API.
 
 #### Obrazy Docker
 

@@ -29,7 +29,7 @@ spec:
       {{- end }}
       automountServiceAccountToken: false
       securityContext:
-        {{- toYaml .Values.apiServer.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.worker.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: 30
       containers:
         - name: worker
@@ -138,7 +138,7 @@ spec:
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
           securityContext:
-            {{- toYaml .Values.apiServer.securityContext | nindent 12 }}
+            {{- toYaml .Values.worker.securityContext | nindent 12 }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
