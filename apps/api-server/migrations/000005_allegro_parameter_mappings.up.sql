@@ -17,9 +17,11 @@ CREATE INDEX idx_allegro_param_mappings_lookup
     ON allegro_parameter_mappings (tenant_id, supplier_id, allegro_category_id);
 
 ALTER TABLE allegro_parameter_mappings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE allegro_parameter_mappings FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON allegro_parameter_mappings
-    USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
+    WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms') THEN

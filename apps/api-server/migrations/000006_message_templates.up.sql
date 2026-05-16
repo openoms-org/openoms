@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS message_templates (
 ALTER TABLE message_templates ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY message_templates_tenant ON message_templates
-    USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
+    WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 
 ALTER TABLE message_templates FORCE ROW LEVEL SECURITY;
 
