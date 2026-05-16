@@ -31,6 +31,22 @@ func TestDistributedLock_NilClient(t *testing.T) {
 	dl.Release("test-worker", token)
 }
 
+func TestDistributedLock_ExtendNilStruct(t *testing.T) {
+	var dl *DistributedLock
+
+	ok, err := dl.Extend(context.Background(), "test-worker", "no-redis", time.Second)
+	require.NoError(t, err)
+	assert.True(t, ok, "nil lock extension should succeed in single-pod mode")
+}
+
+func TestDistributedLock_ExtendNilClient(t *testing.T) {
+	dl := NewDistributedLock(nil, "openoms")
+
+	ok, err := dl.Extend(context.Background(), "test-worker", "no-redis", time.Second)
+	require.NoError(t, err)
+	assert.True(t, ok, "nil Redis client extension should succeed in single-pod mode")
+}
+
 func TestDistributedLock_InvalidTTL(t *testing.T) {
 	dl := NewDistributedLock(nil, "openoms")
 	// nil client returns no-redis regardless of TTL, so this tests the real path
