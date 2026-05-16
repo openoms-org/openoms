@@ -189,6 +189,10 @@ func (m *Manager) renewDistributedLock(
 			case <-ticker.C:
 				ok, err := m.lock.Extend(ctx, workerName, token, ttl)
 				if err != nil {
+					if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+						cancel()
+						return
+					}
 					m.logger.Error("distributed lock renewal failed, cancelling worker run",
 						"worker", workerName,
 						"error", err,
