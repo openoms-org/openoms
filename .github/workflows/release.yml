@@ -201,6 +201,7 @@ jobs:
           syft "docker:${DASHBOARD_IMAGE}:${GITHUB_SHA}" \
             --source-name openoms-dashboard \
             --source-version "${GITHUB_SHA}" \
+            --exclude '/app/node_modules/next/dist/compiled/**/package.json' \
             -o "cyclonedx-json=sbom/openoms-dashboard-${GITHUB_SHA}.cdx.json"
 
       - name: Log in to GHCR
