@@ -114,7 +114,7 @@ Carrier rate shopping across all providers.
 | Auth | Ed25519 JWT, bcrypt, TOTP |
 | API Spec | OpenAPI 3.1, Swagger UI |
 | E2E Tests | Playwright (22 specs, 124 tests) |
-| CI/CD | GitHub Actions (lint, test, security scan, auto-format, Trivy) |
+| CI/CD | GitHub Actions (lint, test, security scan, format verification, Trivy) |
 | Deployment | Docker Compose (dev + prod), Helm chart (k3s/k8s) |
 | Monitoring | Prometheus metrics (token-protected) |
 
@@ -203,7 +203,7 @@ openoms/
 ├── docker-compose.prod.yml
 ├── Taskfile.yml
 ├── .github/workflows/
-│   ├── ci.yml                 # Lint, test, security scan, auto-format
+│   ├── ci.yml                 # Lint, test, security scan, format checks
 │   └── release.yml            # CI/CD workflow that builds Docker images
 └── .env.example
 ```
