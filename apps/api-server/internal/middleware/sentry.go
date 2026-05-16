@@ -11,7 +11,7 @@ import (
 const sentryFilteredValue = "[Filtered]"
 
 // SentryMiddleware captures panics and reports them to Sentry with request context.
-// Should be placed early in the middleware chain (after RealIP, before Recoverer).
+// Should be placed early in the middleware chain (after TrustedRealIP, before Recoverer).
 //
 // Intentionally does NOT call sentry.Flush on recovery — during a panic storm,
 // a per-panic 2s flush serializes goroutines and causes a latency cascade.

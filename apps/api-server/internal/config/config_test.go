@@ -70,6 +70,71 @@ func TestConfig_Validate_RejectsWorkerDatabaseURLMatchingAppDatabaseOutsideDevel
 	assert.Contains(t, err.Error(), "WORKER_DATABASE_URL must not equal DATABASE_URL")
 }
 
+func TestConfig_TrustedProxyPrefixes(t *testing.T) {
+	tests := []struct {
+		name    string
+		raw     string
+		want    []string
+		wantErr string
+	}{
+		{
+			name: "empty disables trusted proxies",
+			raw:  "",
+			want: nil,
+		},
+		{
+			name: "parses comma separated cidrs",
+			raw:  "10.42.0.0/16, 127.0.0.1/32, fd00::/8",
+			want: []string{"10.42.0.0/16", "127.0.0.1/32", "fd00::/8"},
+		},
+		{
+			name: "trims whitespace and ignores empty segments",
+			raw:  " 10.42.0.0/16, , 10.43.0.0/16 ",
+			want: []string{"10.42.0.0/16", "10.43.0.0/16"},
+		},
+		{
+			name:    "rejects plain ip without cidr",
+			raw:     "10.42.0.10",
+			wantErr: "TRUSTED_PROXY_CIDRS contains invalid CIDR",
+		},
+		{
+			name:    "rejects invalid cidr",
+			raw:     "not-a-cidr",
+			wantErr: "TRUSTED_PROXY_CIDRS contains invalid CIDR",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := Config{TrustedProxyCIDRs: tt.raw}
+
+			got, err := cfg.TrustedProxyPrefixes()
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+			var gotStrings []string
+			for _, prefix := range got {
+				gotStrings = append(gotStrings, prefix.String())
+			}
+			assert.Equal(t, tt.want, gotStrings)
+		})
+	}
+}
+
+func TestConfig_Validate_RejectsInvalidTrustedProxyCIDRs(t *testing.T) {
+	cfg := validConfigForValidation("invite")
+	cfg.TrustedProxyCIDRs = "10.42.0.0/16,not-a-cidr"
+
+	err := cfg.Validate()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TRUSTED_PROXY_CIDRS contains invalid CIDR")
+}
+
 func TestConfig_WorkerDatabaseDSN(t *testing.T) {
 	tests := []struct {
 		name    string

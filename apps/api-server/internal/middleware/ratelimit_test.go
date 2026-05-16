@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -283,6 +284,30 @@ func TestRateLimitWith_ExceededReturns429(t *testing.T) {
 	assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
 	assert.Equal(t, "60", rr.Header().Get("Retry-After"))
 	assert.JSONEq(t, `{"error":"too many requests"}`, rr.Body.String())
+}
+
+func TestRateLimitWith_ChangingSpoofedXForwardedForDoesNotBypassUntrustedPeer(t *testing.T) {
+	trusted := []netip.Prefix{netip.MustParsePrefix("10.42.0.0/16")}
+	limiter := middleware.NewMemoryRateLimiter()
+	handler := middleware.TrustedRealIP(trusted)(
+		middleware.RateLimitWith(limiter, 2, time.Minute)(testOKHandler()),
+	)
+
+	spoofedIPs := []string{"198.51.100.10", "198.51.100.11", "198.51.100.12"}
+	for i, spoofedIP := range spoofedIPs {
+		req := httptest.NewRequest("POST", "/v1/auth/login", nil)
+		req.RemoteAddr = "203.0.113.50:12345"
+		req.Header.Set("X-Forwarded-For", spoofedIP)
+		rr := httptest.NewRecorder()
+
+		handler.ServeHTTP(rr, req)
+
+		if i < 2 {
+			assert.Equal(t, http.StatusOK, rr.Code, "request %d should be allowed", i+1)
+			continue
+		}
+		assert.Equal(t, http.StatusTooManyRequests, rr.Code, "spoofed X-Forwarded-For must not reset the limiter key")
+	}
 }
 
 func TestRateLimitWith_DifferentIPsAreIndependent(t *testing.T) {

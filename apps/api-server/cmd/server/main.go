@@ -119,6 +119,12 @@ func run() error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
+	trustedProxyCIDRs, err := cfg.TrustedProxyPrefixes()
+	if err != nil {
+		slog.Error("failed to parse TRUSTED_PROXY_CIDRS", "error", err)
+		return fmt.Errorf("failed to parse TRUSTED_PROXY_CIDRS: %w", err)
+	}
+
 	// Redis backs shared auth/session/rate-limit state and worker locks.
 	redisClient, err := connectRedis(context.Background(), cfg)
 	if err != nil {
@@ -793,6 +799,7 @@ func run() error {
 	r := router.New(router.RouterDeps{
 		Pool:                       pool,
 		Config:                     cfg,
+		TrustedProxyCIDRs:          trustedProxyCIDRs,
 		TokenSvc:                   tokenSvc,
 		TokenBlacklist:             tokenBlacklist,
 		RateLimiter:                rateLimiter,

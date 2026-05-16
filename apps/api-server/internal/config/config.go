@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/netip"
+	"strings"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -18,6 +20,10 @@ type Config struct {
 	Env         string `env:"ENV" envDefault:"development"`
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:3000"`
+
+	// TrustedProxyCIDRs is a comma-separated list of immediate proxy CIDRs
+	// whose X-Forwarded-For / X-Real-IP headers may update r.RemoteAddr.
+	TrustedProxyCIDRs string `env:"TRUSTED_PROXY_CIDRS" envDefault:""`
 
 	DatabaseURL        string `env:"DATABASE_URL,required"`
 	WorkerDatabaseURL  string `env:"WORKER_DATABASE_URL"` // privileged pool for cross-tenant worker and webhook queries; required outside development
@@ -106,6 +112,29 @@ func (c *Config) RequiresRedis() bool {
 	return !c.AllowsInMemoryState()
 }
 
+// TrustedProxyPrefixes parses TRUSTED_PROXY_CIDRS into normalized prefixes.
+func (c *Config) TrustedProxyPrefixes() ([]netip.Prefix, error) {
+	raw := strings.TrimSpace(c.TrustedProxyCIDRs)
+	if raw == "" {
+		return nil, nil
+	}
+
+	parts := strings.Split(raw, ",")
+	prefixes := make([]netip.Prefix, 0, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value == "" {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(value)
+		if err != nil {
+			return nil, fmt.Errorf("TRUSTED_PROXY_CIDRS contains invalid CIDR %q: %w", value, err)
+		}
+		prefixes = append(prefixes, prefix.Masked())
+	}
+	return prefixes, nil
+}
+
 // RequiresWorkerDatabase reports whether cross-tenant worker/webhook queries
 // must use an explicitly configured privileged database URL.
 func (c *Config) RequiresWorkerDatabase() bool {
@@ -156,6 +185,10 @@ func (c *Config) Validate() error {
 
 	if c.AllowInMemoryState && !c.IsDevelopment() {
 		slog.Warn("ALLOW_IN_MEMORY_STATE is enabled outside development; auth, session, rate-limit, OAuth, WebSocket, and worker lock state will be process-local", "env", c.Env)
+	}
+
+	if _, err := c.TrustedProxyPrefixes(); err != nil {
+		return err
 	}
 
 	if _, err := c.WorkerDatabaseDSN(); err != nil {
