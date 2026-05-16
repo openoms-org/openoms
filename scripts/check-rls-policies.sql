@@ -9,8 +9,8 @@ BEGIN
     WHERE schemaname = 'public'
       AND tablename IN ('allegro_parameter_mappings', 'message_templates')
       AND (
-          qual NOT LIKE '%current_setting(%true%'
-          OR with_check NOT LIKE '%current_setting(%true%'
+          COALESCE(qual, '') NOT LIKE '%current_setting(%true%'
+          OR COALESCE(with_check, '') NOT LIKE '%current_setting(%true%'
       );
 
     IF bad_policy IS NOT NULL THEN
