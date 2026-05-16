@@ -16,27 +16,22 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install golangci-lint
+      - name: Check Go formatting
         run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.9.0
-
-      - name: Auto-fix Go code
-        run: |
-          for dir in apps/api-server packages/allegro-go-sdk packages/inpost-go-sdk packages/order-engine packages/erli-go-sdk packages/ebay-go-sdk; do
-            echo "Fixing $dir..."
-            golangci-lint run --fix --timeout=5m "./$dir/..." || true
-          done
+          UNFORMATTED=$(gofmt -l apps/api-server packages)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "::error::Go files need formatting. Run: gofmt -w -s apps/ packages/"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -44,16 +39,11 @@ jobs:
           cache: "npm"
           cache-dependency-path: apps/dashboard/package-lock.json
 
-      - name: Auto-fix frontend code
+      - name: Check frontend lint
         working-directory: apps/dashboard
         run: |
           npm ci
-          npx eslint --fix src/ || true
-
-      - uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7
-        with:
-          commit_message: "style: auto-format code"
-          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          npx eslint src/
 
   lint:
     name: Lint
