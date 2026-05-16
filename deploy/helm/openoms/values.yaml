@@ -201,6 +201,7 @@ backup:
   enabled: false
   schedule: "0 3 * * *"  # daily at 3 AM
   retentionDays: 30
+  minBackupBytes: 1000
   s3:
     bucket: openoms-backups
     prefix: "backups/"
