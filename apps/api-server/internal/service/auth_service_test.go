@@ -355,3 +355,22 @@ func TestAuthService_ConsumeStoredRefreshTokenInvalidatesNonCurrentSibling(t *te
 	require.NoError(t, err)
 	assert.Nil(t, family, "non-current sibling use should revoke the entire family")
 }
+
+func TestAuthService_LoginFailedAuditOmitsPlaintextEmail(t *testing.T) {
+	req := model.LoginRequest{
+		TenantSlug: "tenant",
+		Email:      "customer@example.com",
+		Password:   "wrong-password",
+	}
+
+	entry := failedLoginAuditEntry(uuid.New(), uuid.New(), req, "127.0.0.1")
+	changes, ok := entry.Changes.(map[string]string)
+	require.True(t, ok)
+
+	assert.Equal(t, "user.login_failed", entry.Action)
+	assert.Equal(t, "invalid_password", changes["reason"])
+	assert.NotContains(t, changes, "email")
+	for _, value := range changes {
+		assert.NotContains(t, value, req.Email)
+	}
+}

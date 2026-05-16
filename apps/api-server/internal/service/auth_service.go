@@ -429,15 +429,7 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		}
 		// Log failed login to audit trail for forensic analysis
 		_ = database.WithTenant(ctx, s.pool, tenant.ID, func(tx pgx.Tx) error {
-			return s.auditRepo.Log(ctx, tx, model.AuditEntry{
-				TenantID:   tenant.ID,
-				UserID:     userWithPwd.ID,
-				Action:     "user.login_failed",
-				EntityType: "user",
-				EntityID:   userWithPwd.ID,
-				Changes:    map[string]string{"email": req.Email},
-				IPAddress:  ipAddress,
-			})
+			return s.auditRepo.Log(ctx, tx, failedLoginAuditEntry(tenant.ID, userWithPwd.ID, req, ipAddress))
 		})
 		return nil, ErrInvalidCredentials
 	}
@@ -504,6 +496,18 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest, ipAddre
 		},
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+func failedLoginAuditEntry(tenantID, userID uuid.UUID, _ model.LoginRequest, ipAddress string) model.AuditEntry {
+	return model.AuditEntry{
+		TenantID:   tenantID,
+		UserID:     userID,
+		Action:     "user.login_failed",
+		EntityType: "user",
+		EntityID:   userID,
+		Changes:    map[string]string{"reason": "invalid_password"},
+		IPAddress:  ipAddress,
+	}
 }
 
 // Verify2FALogin validates the TOTP code from a 2FA pending token and returns full tokens.

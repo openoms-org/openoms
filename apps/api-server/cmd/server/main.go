@@ -138,6 +138,8 @@ func run() error {
 			Environment:      cfg.SentryEnv(),
 			TracesSampleRate: cfg.SentryTracesSampleRate,
 			EnableTracing:    cfg.SentryTracesSampleRate > 0,
+			SendDefaultPII:   false,
+			BeforeSend:       middleware.ScrubSentryEvent,
 		})
 		if err != nil {
 			slog.Error("failed to initialize Sentry", "error", err)
