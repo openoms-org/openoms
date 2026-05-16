@@ -3,9 +3,10 @@ set -euo pipefail
 
 root="${1:-apps/api-server/migrations}"
 missing=0
-orders_write_regex='(UPDATE|DELETE[[:space:]]+FROM|ALTER[[:space:]]+TABLE)[[:space:]]+(public\.)?orders'
-orders_index_regex='CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX[^;]+ON[[:space:]]+(public\.)?orders'
-orders_drop_index_regex='DROP[[:space:]]+INDEX[^;]+idx_orders'
+orders_relation='(only[[:space:]]+)?(public\.)?orders'
+orders_write_regex='(insert[[:space:]]+into|update|delete[[:space:]]+from|alter[[:space:]]+table)[[:space:]]+'"${orders_relation}"
+orders_index_regex='create[[:space:]]+(unique[[:space:]]+)?index[^;]+on[[:space:]]+'"${orders_relation}"
+orders_drop_index_regex='drop[[:space:]]+index[^;]+(public\.)?idx_orders[^[:space:];]*'
 
 while IFS= read -r -d '' file; do
   base="$(basename "$file")"
@@ -15,7 +16,7 @@ while IFS= read -r -d '' file; do
     continue
   fi
 
-  normalized="$(tr '\n' ' ' < "$file" | tr '\t' ' ')"
+  normalized="$(tr '\n' ' ' < "$file" | tr '\t' ' ' | tr '[:upper:]' '[:lower:]')"
   if [[ "$normalized" =~ $orders_write_regex ]] ||
      [[ "$normalized" =~ $orders_index_regex ]] ||
      [[ "$normalized" =~ $orders_drop_index_regex ]]; then

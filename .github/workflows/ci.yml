@@ -446,7 +446,7 @@ jobs:
 
       - name: Check migration backward-compatibility
         run: |
-          DANGEROUS_OPS="DROP COLUMN|DROP TABLE|DROP SCHEMA|DROP FUNCTION|DROP INDEX|RENAME COLUMN|ALTER[[:space:]].*TYPE|ALTER[[:space:]].*SET[[:space:]]+NOT[[:space:]]+NULL|TRUNCATE"
+          DANGEROUS_OPS="DROP[[:space:]]+COLUMN|DROP[[:space:]]+TABLE|DROP[[:space:]]+SCHEMA|DROP[[:space:]]+FUNCTION|DROP[[:space:]]+INDEX|RENAME[[:space:]]+COLUMN|ALTER[[:space:]][^;]*TYPE|ALTER[[:space:]][^;]*SET[[:space:]]+NOT[[:space:]]+NULL|TRUNCATE"
           ADDED_MIGRATIONS=$(git diff --diff-filter=A --name-only origin/main... -- 'apps/api-server/migrations/*.up.sql' 2>/dev/null || true)
           MODIFIED_MIGRATIONS=$(git diff --diff-filter=M --name-only origin/main... -- 'apps/api-server/migrations/*.up.sql' 2>/dev/null || true)
           if [ -z "$ADDED_MIGRATIONS$MODIFIED_MIGRATIONS" ]; then
@@ -456,8 +456,9 @@ jobs:
           BLOCKED=0
           for f in $ADDED_MIGRATIONS; do
             if [ ! -f "$f" ]; then continue; fi
-            DANGEROUS_MATCHES=$(grep -inEi "$DANGEROUS_OPS" "$f" || true)
-            ADD_NOT_NULL_MATCHES=$(grep -inEi 'ADD[[:space:]].*NOT[[:space:]]+NULL' "$f" | grep -viE 'DEFAULT' || true)
+            SQL_TEXT=$(tr '\n' ' ' < "$f" | tr '\t' ' ')
+            DANGEROUS_MATCHES=$(printf "%s\n" "$SQL_TEXT" | grep -inEi "$DANGEROUS_OPS" || true)
+            ADD_NOT_NULL_MATCHES=$(printf "%s\n" "$SQL_TEXT" | grep -Eio 'ADD[^;]*NOT[[:space:]]+NULL[^;]*' | grep -viE 'DEFAULT' || true)
             if [ -n "$DANGEROUS_MATCHES" ] || [ -n "$ADD_NOT_NULL_MATCHES" ]; then
               echo "BLOCKED: $f contains destructive operation"
               printf "%s\n%s\n" "$DANGEROUS_MATCHES" "$ADD_NOT_NULL_MATCHES" | sed '/^$/d'
@@ -468,9 +469,9 @@ jobs:
           # For modified files, block newly added destructive lines instead of re-scanning the full file.
           for f in $MODIFIED_MIGRATIONS; do
             if [ ! -f "$f" ]; then continue; fi
-            ADDED_LINES=$(git diff --unified=0 origin/main... -- "$f" | sed -n 's/^+\([^+].*\)$/\1/p' || true)
-            DANGEROUS_MATCHES=$(printf "%s\n" "$ADDED_LINES" | grep -inEi "$DANGEROUS_OPS" || true)
-            ADD_NOT_NULL_MATCHES=$(printf "%s\n" "$ADDED_LINES" | grep -inEi 'ADD[[:space:]].*NOT[[:space:]]+NULL' | grep -viE 'DEFAULT' || true)
+            ADDED_SQL=$(git diff --unified=0 origin/main... -- "$f" | sed -n 's/^+\([^+].*\)$/\1/p' | tr '\n' ' ' | tr '\t' ' ' || true)
+            DANGEROUS_MATCHES=$(printf "%s\n" "$ADDED_SQL" | grep -inEi "$DANGEROUS_OPS" || true)
+            ADD_NOT_NULL_MATCHES=$(printf "%s\n" "$ADDED_SQL" | grep -Eio 'ADD[^;]*NOT[[:space:]]+NULL[^;]*' | grep -viE 'DEFAULT' || true)
             if [ -n "$DANGEROUS_MATCHES" ] || [ -n "$ADD_NOT_NULL_MATCHES" ]; then
               echo "BLOCKED: $f adds destructive operation"
               printf "%s\n%s\n" "$DANGEROUS_MATCHES" "$ADD_NOT_NULL_MATCHES" | sed '/^$/d'
