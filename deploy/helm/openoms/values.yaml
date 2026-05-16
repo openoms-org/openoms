@@ -86,6 +86,17 @@ workerStrategy: separate  # "separate" or "embedded"
 
 worker:
   replicaCount: 1
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    fsGroup: 65534
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ['ALL']
+    seccompProfile:
+      type: RuntimeDefault
   resources:
     requests:
       cpu: 50m
