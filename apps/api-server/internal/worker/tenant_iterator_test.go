@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -202,6 +203,23 @@ func TestTenantIntegration_SyncCursorNilable(t *testing.T) {
 	cursor := "2024-01-01T00:00:00Z"
 	ti.SyncCursor = &cursor
 	assert.Equal(t, "2024-01-01T00:00:00Z", *ti.SyncCursor)
+}
+
+func TestDecodeIntegrationCredentialsJSONB_StripsJSONBStringQuotes(t *testing.T) {
+	raw, err := json.Marshal("encrypted-ciphertext")
+	require.NoError(t, err)
+
+	got, err := decodeIntegrationCredentialsJSONB(raw)
+
+	require.NoError(t, err)
+	assert.Equal(t, "encrypted-ciphertext", got)
+}
+
+func TestDecodeIntegrationCredentialsJSONB_RejectsNonStringJSON(t *testing.T) {
+	_, err := decodeIntegrationCredentialsJSONB(json.RawMessage(`{"not":"a string"}`))
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decode integration credentials")
 }
 
 // ---------------------------------------------------------------------------

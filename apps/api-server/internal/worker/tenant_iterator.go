@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"unicode/utf8"
 
@@ -58,15 +59,13 @@ func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider st
 		); err != nil {
 			return nil, err
 		}
-		// credentials column is JSONB storing a JSON string value (e.g. "base64...").
-		// Unmarshal to strip the JSON quotes and get the raw base64 string.
-		if len(credsJSON) > 0 {
-			if err := json.Unmarshal(credsJSON, &ti.Credentials); err != nil {
-				slog.Warn("failed to unmarshal integration credentials",
-					"integration_id", ti.IntegrationID, "error", err)
-				continue
-			}
+		credentials, err := decodeIntegrationCredentialsJSONB(credsJSON)
+		if err != nil {
+			slog.Warn("failed to decode integration credentials",
+				"integration_id", ti.IntegrationID, "error", err)
+			continue
 		}
+		ti.Credentials = credentials
 		result = append(result, ti)
 	}
 	return result, rows.Err()
@@ -137,14 +136,26 @@ func ListAllActiveMarketplaceIntegrations(ctx context.Context, pool *pgxpool.Poo
 		); err != nil {
 			return nil, err
 		}
-		if len(credsJSON) > 0 {
-			if err := json.Unmarshal(credsJSON, &ti.Credentials); err != nil {
-				slog.Warn("failed to unmarshal integration credentials",
-					"integration_id", ti.IntegrationID, "error", err)
-				continue
-			}
+		credentials, err := decodeIntegrationCredentialsJSONB(credsJSON)
+		if err != nil {
+			slog.Warn("failed to decode integration credentials",
+				"integration_id", ti.IntegrationID, "error", err)
+			continue
 		}
+		ti.Credentials = credentials
 		result = append(result, ti)
 	}
 	return result, rows.Err()
+}
+
+func decodeIntegrationCredentialsJSONB(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return "", nil
+	}
+
+	var credentials string
+	if err := json.Unmarshal(raw, &credentials); err != nil {
+		return "", fmt.Errorf("decode integration credentials: %w", err)
+	}
+	return credentials, nil
 }

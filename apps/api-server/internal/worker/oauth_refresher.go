@@ -63,7 +63,7 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 	type integrationRow struct {
 		id          string
 		tenantID    string
-		credentials string
+		credentials json.RawMessage
 		provider    string
 	}
 
@@ -87,7 +87,13 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 		if err := checkWorkerContext(ctx); err != nil {
 			return err
 		}
-		credJSON, err := crypto.Decrypt(ir.credentials, w.encryptionKey)
+		credentials, err := decodeIntegrationCredentialsJSONB(ir.credentials)
+		if err != nil {
+			w.logger.Error("oauth refresh: decode credentials", "integration_id", ir.id, "error", err)
+			continue
+		}
+
+		credJSON, err := crypto.Decrypt(credentials, w.encryptionKey)
 		if err != nil {
 			w.logger.Error("oauth refresh: decrypt failed", "integration_id", ir.id, "error", err)
 			continue
