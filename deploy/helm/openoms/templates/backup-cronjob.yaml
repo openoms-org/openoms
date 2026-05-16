@@ -62,7 +62,7 @@ spec:
                   echo "Uploading to S3: s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
                   apk add --no-cache minio-client >/dev/null 2>&1
                   export MC_CONFIG_DIR=/tmp/.mc
-                  mcli alias set openoms-backups "${S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}" --api S3v4 --path off
+                  mcli alias set openoms-backups "${S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}" --api S3v4 --path {{ if .Values.backup.s3.forcePathStyle }}on{{ else }}off{{ end }}
                   mcli cp "/tmp/${FILENAME}" "openoms-backups/${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
 
                   echo "Backup completed: ${FILENAME} (${SIZE} bytes)"
