@@ -27,6 +27,17 @@ Every migration MUST be backward-compatible with the previous code version. Duri
 | Change type `text` → `int` | Add `col_v2 int`, code reads both | Drop `col` |
 | Add NOT NULL column | `ADD COLUMN x DEFAULT 'val'` | — (single deploy OK with DEFAULT) |
 
+## Large-table migration timeouts
+
+Any non-baseline migration that writes to `orders` or changes `orders` indexes must set transaction-local limits before the DDL/DML:
+
+```sql
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '2min';
+```
+
+The goal is to fail deploy safely instead of blocking live writes during a blue-green rollout. CI enforces this with `scripts/check-migration-timeouts.sh`.
+
 ## CI enforcement
 
 New migrations in PRs are scanned for destructive SQL operations. The check blocks merge if found.
