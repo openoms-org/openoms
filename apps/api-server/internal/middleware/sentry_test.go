@@ -3,6 +3,7 @@ package middleware_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -72,7 +73,7 @@ func TestSentryMiddleware_ScrubsSensitiveRequestData(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"https://app.example.test/v1/orders?email=customer@example.com&token=secret-token&q=orders",
+		"https://app.example.test/v1/orders?customer_email=customer@example.com&userEmail=buyer@example.com&email=owner@example.com&token=secret-token&q=orders",
 		nil,
 	)
 	req.Header.Set("Authorization", "Bearer access-token")
@@ -89,7 +90,12 @@ func TestSentryMiddleware_ScrubsSensitiveRequestData(t *testing.T) {
 	assert.Equal(t, "GET", capturedRequest.Method)
 	assert.Equal(t, "https://app.example.test/v1/orders", capturedRequest.URL)
 	assert.Contains(t, capturedRequest.QueryString, "q=orders")
+	assert.Equal(t, "[Filtered]", sentryQueryValue(t, capturedRequest.QueryString, "customer_email"))
+	assert.Equal(t, "[Filtered]", sentryQueryValue(t, capturedRequest.QueryString, "userEmail"))
+	assert.Equal(t, "[Filtered]", sentryQueryValue(t, capturedRequest.QueryString, "email"))
 	assert.NotContains(t, capturedRequest.QueryString, "customer@example.com")
+	assert.NotContains(t, capturedRequest.QueryString, "buyer@example.com")
+	assert.NotContains(t, capturedRequest.QueryString, "owner@example.com")
 	assert.NotContains(t, capturedRequest.QueryString, "secret-token")
 	assert.Empty(t, capturedRequest.Cookies)
 	assertNoSentryHeader(t, capturedRequest.Headers, "Authorization")
@@ -101,7 +107,7 @@ func TestSentryMiddleware_ScrubsSensitiveRequestData(t *testing.T) {
 func TestScrubSentryEvent_RemovesSensitiveRequestData(t *testing.T) {
 	event := &sentry.Event{
 		Request: &sentry.Request{
-			QueryString: "email=customer@example.com&token=secret-token&q=orders",
+			QueryString: "customer_email=customer@example.com&userEmail=buyer@example.com&email=owner@example.com&token=secret-token&q=orders",
 			Cookies:     "refresh_token=secret-refresh-token",
 			Data:        `{"password":"secret"}`,
 			Headers: map[string]string{
@@ -121,7 +127,12 @@ func TestScrubSentryEvent_RemovesSensitiveRequestData(t *testing.T) {
 	require.NotNil(t, scrubbed)
 	require.NotNil(t, scrubbed.Request)
 	assert.Contains(t, scrubbed.Request.QueryString, "q=orders")
+	assert.Equal(t, "[Filtered]", sentryQueryValue(t, scrubbed.Request.QueryString, "customer_email"))
+	assert.Equal(t, "[Filtered]", sentryQueryValue(t, scrubbed.Request.QueryString, "userEmail"))
+	assert.Equal(t, "[Filtered]", sentryQueryValue(t, scrubbed.Request.QueryString, "email"))
 	assert.NotContains(t, scrubbed.Request.QueryString, "customer@example.com")
+	assert.NotContains(t, scrubbed.Request.QueryString, "buyer@example.com")
+	assert.NotContains(t, scrubbed.Request.QueryString, "owner@example.com")
 	assert.NotContains(t, scrubbed.Request.QueryString, "secret-token")
 	assert.Empty(t, scrubbed.Request.Cookies)
 	assert.Empty(t, scrubbed.Request.Data)
@@ -137,4 +148,12 @@ func assertNoSentryHeader(t *testing.T, headers map[string]string, name string) 
 	for key := range headers {
 		assert.Falsef(t, strings.EqualFold(key, name), "header %q should have been scrubbed", key)
 	}
+}
+
+func sentryQueryValue(t *testing.T, rawQuery, key string) string {
+	t.Helper()
+
+	values, err := url.ParseQuery(rawQuery)
+	require.NoError(t, err)
+	return values.Get(key)
 }

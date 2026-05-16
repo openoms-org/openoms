@@ -132,6 +132,7 @@ func isSentrySensitiveQueryKey(key string) bool {
 	default:
 		return strings.Contains(normalized, "token") ||
 			strings.Contains(normalized, "secret") ||
-			strings.Contains(normalized, "password")
+			strings.Contains(normalized, "password") ||
+			strings.Contains(normalized, "email")
 	}
 }
