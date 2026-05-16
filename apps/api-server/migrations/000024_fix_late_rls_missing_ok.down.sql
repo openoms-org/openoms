@@ -1,0 +1,3 @@
+-- Down migration intentionally keeps the stricter OPE-292 RLS policies.
+-- Reintroducing current_setting(...) without missing_ok=true would break
+-- Supabase transaction-mode pooler compatibility and weaken tenant isolation.

@@ -126,8 +126,11 @@ database.WithTenant(ctx, pool, tenantID, func(tx) {
 Kazda tabela ma polityke RLS:
 ```sql
 CREATE POLICY tenant_isolation ON orders
-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
+    WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
 ```
+
+Tabele tenant-scoped maja wlaczone `FORCE ROW LEVEL SECURITY`, a CI sprawdza baze po migracjach pod katem regresji w politykach RLS.
 
 ### CI/CD i Deployment
 
