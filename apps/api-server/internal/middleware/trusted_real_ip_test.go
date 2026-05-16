@@ -66,6 +66,16 @@ func TestTrustedRealIP_UsesXForwardedForFromTrustedPeer(t *testing.T) {
 	assert.Equal(t, "198.51.100.20", got)
 }
 
+func TestTrustedRealIP_UsesRightmostUntrustedXForwardedForHop(t *testing.T) {
+	trusted := []netip.Prefix{mustPrefix(t, "10.42.0.0/16")}
+
+	got := captureRemoteAddr(t, trusted, "10.42.0.25:5678", map[string]string{
+		"X-Forwarded-For": "203.0.113.200, 198.51.100.20, 10.42.0.25",
+	})
+
+	assert.Equal(t, "198.51.100.20", got)
+}
+
 func TestTrustedRealIP_UsesXRealIPFallbackFromTrustedPeer(t *testing.T) {
 	trusted := []netip.Prefix{mustPrefix(t, "10.42.0.0/16")}
 

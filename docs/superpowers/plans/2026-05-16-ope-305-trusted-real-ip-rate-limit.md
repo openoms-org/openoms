@@ -977,3 +977,11 @@ Rollback:
 - [ ] PR body includes docs updated section.
 - [ ] CodeRabbit comments/review threads are read and resolved or consciously deferred.
 - [ ] Production deploy validates `/health`, dashboard login page, and no fresh API restart delta.
+
+## CodeRabbit Follow-Up
+
+2026-05-16 review found one valid issue: left-to-right `X-Forwarded-For` parsing can select a client-supplied spoofed leftmost value after a trusted proxy appends the real peer IP. Fix with TDD:
+
+- Add regression for trusted peer with `X-Forwarded-For: 203.0.113.200, 198.51.100.20, 10.42.0.25`; expected resolved client is `198.51.100.20`.
+- Update `forwardedClientIP` to parse valid candidates and scan right-to-left, returning the first address outside `TRUSTED_PROXY_CIDRS`.
+- Keep `X-Real-IP` as fallback when no safe XFF candidate exists.

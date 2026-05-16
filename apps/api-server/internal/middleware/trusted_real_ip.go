@@ -24,7 +24,7 @@ func TrustedRealIP(trustedProxies []netip.Prefix) func(http.Handler) http.Handle
 				return
 			}
 
-			if clientIP, ok := forwardedClientIP(r.Header.Get("X-Forwarded-For")); ok {
+			if clientIP, ok := forwardedClientIP(r.Header.Get("X-Forwarded-For"), trustedProxies); ok {
 				r.RemoteAddr = clientIP.String()
 				next.ServeHTTP(w, r)
 				return
@@ -47,10 +47,16 @@ func remoteAddrIP(remoteAddr string) (netip.Addr, bool) {
 	return headerIP(host)
 }
 
-func forwardedClientIP(value string) (netip.Addr, bool) {
+func forwardedClientIP(value string, trustedProxies []netip.Prefix) (netip.Addr, bool) {
+	chain := make([]netip.Addr, 0, 4)
 	for part := range strings.SplitSeq(value, ",") {
 		if ip, ok := headerIP(part); ok {
-			return ip, true
+			chain = append(chain, ip)
+		}
+	}
+	for i := len(chain) - 1; i >= 0; i-- {
+		if !isTrustedProxy(chain[i], trustedProxies) {
+			return chain[i], true
 		}
 	}
 	return netip.Addr{}, false
