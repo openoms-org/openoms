@@ -1,17 +1,30 @@
 -- OPE-203: enforce idempotency for imported marketplace orders.
 -- Keep the earliest order for each tenant/source/external_id and clear the duplicate
 -- external_id values before adding the partial unique index.
-WITH duplicate_orders AS (
-    SELECT
-        id,
-        external_id,
-        ROW_NUMBER() OVER (
-            PARTITION BY tenant_id, source, external_id
-            ORDER BY created_at ASC, id ASC
-        ) AS row_num
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '2min';
+
+WITH duplicate_keys AS (
+    SELECT tenant_id, source, external_id
     FROM public.orders
     WHERE external_id IS NOT NULL
       AND external_id <> ''
+    GROUP BY tenant_id, source, external_id
+    HAVING COUNT(*) > 1
+),
+duplicate_orders AS (
+    SELECT
+        o.id,
+        o.external_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY o.tenant_id, o.source, o.external_id
+            ORDER BY o.created_at ASC, o.id ASC
+        ) AS row_num
+    FROM public.orders AS o
+    JOIN duplicate_keys AS d
+      ON d.tenant_id = o.tenant_id
+     AND d.source = o.source
+     AND d.external_id = o.external_id
 )
 UPDATE public.orders AS o
 SET
