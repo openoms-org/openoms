@@ -7,6 +7,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
+	amazonsdk "github.com/openoms-org/openoms/packages/amazon-sp-sdk"
+	ebaysdk "github.com/openoms-org/openoms/packages/ebay-go-sdk"
 	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
 )
 
@@ -17,11 +20,32 @@ func isTerminalOAuthCredentialError(provider string, err error) bool {
 		return false
 	}
 	switch strings.ToLower(provider) {
+	case "allegro":
+		return errors.Is(err, allegrosdk.ErrUnauthorized) ||
+			errors.Is(err, allegrosdk.ErrForbidden) ||
+			hasTerminalOAuthErrorText(err)
+	case "amazon":
+		var apiErr *amazonsdk.APIError
+		if errors.As(err, &apiErr) && (apiErr.StatusCode == 401 || apiErr.StatusCode == 403) {
+			return true
+		}
+		return hasTerminalOAuthErrorText(err)
+	case "ebay":
+		return errors.Is(err, ebaysdk.ErrUnauthorized) ||
+			errors.Is(err, ebaysdk.ErrForbidden) ||
+			hasTerminalOAuthErrorText(err)
 	case "olx":
 		return errors.Is(err, olxsdk.ErrInvalidGrant)
 	default:
 		return false
 	}
+}
+
+func hasTerminalOAuthErrorText(err error) bool {
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "invalid_grant") ||
+		strings.Contains(message, "http 401") ||
+		strings.Contains(message, "http 403")
 }
 
 func terminalOAuthCredentialMessage(provider string) string {

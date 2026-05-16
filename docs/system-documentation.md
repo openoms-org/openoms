@@ -1249,10 +1249,10 @@ Standalone maszyna stanow zamowien i przesylek:
 
 | SDK | Provider | Auth | Glowne operacje |
 |-----|----------|------|----------------|
-| allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog; proaktywne i 401-triggered bledy odswiezania tokenu sa zwracane wywolujacemu |
-| amazon-sp-sdk | Amazon | AWS Signing | Zamowienia, inventory, pricing |
+| allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog; proaktywne i 401-triggered bledy odswiezania tokenu sa zwracane wywolujacemu, a terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
+| amazon-sp-sdk | Amazon | LWA OAuth + AWS Signing | Zamowienia, inventory, pricing; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
 | woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`); malformed monetary fields reject order import |
-| ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService); malformed monetary fields reject order import |
+| ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService); malformed monetary fields reject order import; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
 | kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML |
 | olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService); `invalid_grant` z endpointu tokenow jest zwracany jako terminalny blad OAuth, a workery oznaczaja integracje jako wymagajaca ponownej autoryzacji |
 | mirakl-go-sdk | Mirakl/Empik | REST | Seller network |
@@ -1808,7 +1808,7 @@ EbayImportService.ImportOffers()
 | StockSyncWorker | konfigurowalny | Sync stanow magazynowych do marketplace'ow (BulkStockUpdater: batch 100, AsyncStockUpdater: feeds) |
 | SupplierSyncWorker | konfigurowalny | Sync katalogow dostawcow (XML/IOF/CSV/API) |
 | ExchangeRateWorker | 1/dzien | Pobranie kursow z NBP |
-| OAuthRefresher | 1/dzien | Odswiezenie tokenow OAuth (Allegro, Amazon, eBay) |
+| OAuthRefresher | 30min | Odswiezenie tokenow OAuth (Allegro, OLX, Amazon, eBay); credentials sa czytane z JSONB jako zaszyfrowany string i odszyfrowywane AES-256-GCM |
 | KSeFStatusWorker | 5min | Sprawdzanie statusu faktur wyslanych do KSeF |
 | DelayedActionWorker | 30s | Wykonywanie opoznionych akcji automatyzacji |
 | RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |

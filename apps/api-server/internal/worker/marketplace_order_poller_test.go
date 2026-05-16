@@ -17,6 +17,9 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
+	amazonsdk "github.com/openoms-org/openoms/packages/amazon-sp-sdk"
+	ebaysdk "github.com/openoms-org/openoms/packages/ebay-go-sdk"
 	olxsdk "github.com/openoms-org/openoms/packages/olx-go-sdk"
 )
 
@@ -67,6 +70,23 @@ func TestIsTerminalOAuthCredentialError(t *testing.T) {
 		errors.New("temporary network timeout")))
 	assert.False(t, isTerminalOAuthCredentialError("allegro",
 		fmt.Errorf("poll: %w", olxsdk.ErrInvalidGrant)))
+
+	assert.True(t, isTerminalOAuthCredentialError("allegro", allegrosdk.ErrUnauthorized))
+	assert.True(t, isTerminalOAuthCredentialError("allegro", allegrosdk.ErrForbidden))
+	assert.True(t, isTerminalOAuthCredentialError("amazon",
+		errors.New(`amazon: token request failed (HTTP 400): {"error":"invalid_grant"}`)))
+	assert.True(t, isTerminalOAuthCredentialError("amazon",
+		&amazonsdk.APIError{StatusCode: 403}))
+	assert.True(t, isTerminalOAuthCredentialError("ebay", ebaysdk.ErrUnauthorized))
+	assert.True(t, isTerminalOAuthCredentialError("ebay",
+		errors.New(`ebay: token refresh failed (HTTP 400): {"error":"invalid_grant"}`)))
+
+	assert.False(t, isTerminalOAuthCredentialError("allegro",
+		errors.New("temporary network timeout")))
+	assert.False(t, isTerminalOAuthCredentialError("amazon",
+		errors.New("temporary network timeout")))
+	assert.False(t, isTerminalOAuthCredentialError("ebay",
+		errors.New("temporary network timeout")))
 }
 
 // ---------------------------------------------------------------------------
