@@ -416,7 +416,7 @@ OpenOMS/
 
 ```
 Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS -> Logger -> Recoverer -> CORS
-    -> JWTAuth -> TokenBlacklist -> RequireRole -> RequirePermission
+    -> JWTAuth (validate JWT, then access-token blacklist) -> RequireRole -> RequirePermission
     -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
 

@@ -47,15 +47,6 @@ func JWTAuth(validator TokenValidator, blacklists ...*TokenBlacklist) func(http.
 				return
 			}
 
-			// Check if the token has been revoked
-			if blacklist != nil {
-				tokenHash := hashToken(tokenStr)
-				if blacklist.IsRevoked(tokenHash) {
-					writeAuthError(w, "token has been revoked")
-					return
-				}
-			}
-
 			claims, err := validator.ValidateToken(tokenStr)
 			if err != nil {
 				writeAuthError(w, "invalid or expired token")
@@ -73,6 +64,16 @@ func JWTAuth(validator TokenValidator, blacklists ...*TokenBlacklist) func(http.
 			if err != nil {
 				writeAuthError(w, "invalid user ID in token")
 				return
+			}
+
+			// Check revocation only after token validation to avoid blacklist
+			// lookups for malformed or expired tokens.
+			if blacklist != nil {
+				tokenHash := hashToken(tokenStr)
+				if blacklist.IsRevoked(tokenHash) {
+					writeAuthError(w, "token has been revoked")
+					return
+				}
 			}
 
 			// Set all values in context
