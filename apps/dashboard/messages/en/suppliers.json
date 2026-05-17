@@ -1,4 +1,94 @@
 {
+  "supplierPortal": {
+    "detail": {
+      "actions": {
+        "confirmOrder": "Confirm order",
+        "markShipped": "Mark as shipped"
+      },
+      "back": "Back",
+      "backToList": "Back to list",
+      "confirmDialog": {
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "confirming": "Confirming...",
+        "referenceLabel": "Reference number (optional)",
+        "referencePlaceholder": "e.g. supplier confirmation number",
+        "title": "Confirm order"
+      },
+      "errors": {
+        "confirm": "Failed to confirm",
+        "generic": "An error occurred",
+        "message": "Failed to send message",
+        "ship": "Failed to mark shipment"
+      },
+      "items": {
+        "columns": {
+          "ordered": "Ordered",
+          "product": "Product",
+          "received": "Received",
+          "sku": "SKU",
+          "total": "Total",
+          "unitPrice": "Unit price"
+        },
+        "title": "Items"
+      },
+      "loading": "Loading...",
+      "messages": {
+        "empty": "No messages yet. Write the first message.",
+        "fromBuyer": "Buyer",
+        "fromSupplier": "Supplier",
+        "placeholder": "Write a message...",
+        "send": "Send",
+        "title": "Messages"
+      },
+      "shipDialog": {
+        "cancel": "Cancel",
+        "carrierLabel": "Carrier *",
+        "carrierPlaceholder": "e.g. DHL, InPost, DPD",
+        "confirm": "Mark shipped",
+        "saving": "Saving...",
+        "title": "Mark as shipped",
+        "trackingLabel": "Tracking number *",
+        "trackingPlaceholder": "e.g. 1Z999AA10123456784"
+      },
+      "summary": {
+        "amount": "Amount",
+        "createdAt": "Created",
+        "expectedDate": "Expected date",
+        "notes": "Notes",
+        "updatedAt": "Updated"
+      }
+    },
+    "errors": {
+      "expiredToken": "Access token expired. Ask for a new link.",
+      "generic": "An error occurred. Please try again later.",
+      "invalidToken": "Invalid token or access has been disabled.",
+      "missingToken": "Missing access token. Check the link."
+    },
+    "loading": "Loading...",
+    "orders": {
+      "columns": {
+        "amount": "Amount",
+        "createdAt": "Created at",
+        "expectedDate": "Expected date",
+        "poNumber": "PO No.",
+        "status": "Status"
+      },
+      "details": "Details",
+      "empty": "No purchase orders.",
+      "title": "Purchase orders ({count})"
+    },
+    "statuses": {
+      "cancelled": "Cancelled",
+      "confirmed": "Confirmed",
+      "partiallyReceived": "Partially received",
+      "received": "Received",
+      "sent": "Sent",
+      "shipped": "Shipped (supplier)"
+    },
+    "title": "Supplier Portal",
+    "welcome": "Welcome,"
+  },
   "suppliers": {
     "0Partspushpominieto": "0 parts push skipped",
     "accessRevoked": "Access Revoked",

@@ -10,7 +10,10 @@
       "createSuccess": "Workflow has been created",
       "defaultName": "New workflow",
       "nameRequired": "Workflow name is required",
+      "notFound": "Workflow was not found.",
       "testHint": "Test function - save the workflow and use the test in the text editor",
+      "updateError": "Failed to save workflow",
+      "updateSuccess": "Workflow has been updated",
       "validationError": "Workflow contains errors",
       "validationFailed": "Workflow validation failed"
     },
@@ -29,10 +32,46 @@
       "title": "New workflow"
     },
     "newWorkflow": "New workflow",
+    "nodeConfig": {
+      "action": "Action",
+      "actionType": "Action type",
+      "condition": "Condition",
+      "delayMinutes": "Delay (minutes)",
+      "deleteNode": "Delete node",
+      "emailAddress": "Email address",
+      "field": "Field",
+      "fieldPlaceholder": "e.g. status, total_amount, tags",
+      "immediateHint": "0 = immediately",
+      "invoiceType": "Invoice type",
+      "newStatus": "New status",
+      "operator": "Operator",
+      "selectActionType": "Choose action type...",
+      "selectEvent": "Choose event...",
+      "tag": "Tag",
+      "trigger": "Trigger",
+      "triggerEvent": "Trigger event",
+      "value": "Value",
+      "valuePlaceholder": "value to compare",
+      "webhookUrl": "Webhook URL"
+    },
     "retry": "Try again",
     "statusActive": "Active",
     "statusDraft": "Draft",
     "textEditor": "Text editor",
-    "title": "Workflow Builder"
+    "title": "Workflow Builder",
+    "toolbar": {
+      "activate": "Activate",
+      "active": "Active",
+      "deactivate": "Deactivate",
+      "draft": "Draft",
+      "fitToScreen": "Fit to screen",
+      "namePlaceholder": "Workflow name...",
+      "redo": "Redo",
+      "save": "Save",
+      "test": "Test",
+      "undo": "Undo",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
+    }
   }
 }

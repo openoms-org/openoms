@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Loader2,
@@ -113,6 +114,7 @@ function benefitTypeLabel(type?: string) {
 }
 
 export default function AllegroPromotionsPage() {
+  const t = useTranslations("marketplaces.allegro.promotions");
   const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -144,12 +146,12 @@ export default function AllegroPromotionsPage() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                Nowa promocja
+                {t("new")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nowa promocja</DialogTitle>
+                <DialogTitle>{t("new")}</DialogTitle>
               </DialogHeader>
               <CreatePromotionForm
                 onSuccess={() => setCreateOpen(false)}
@@ -267,7 +269,7 @@ export default function AllegroPromotionsPage() {
               </div>
             ) : !badgesData?.packages?.length ? (
               <p className="py-4 text-center text-muted-foreground">
-                Brak dostepnych pakietow promocyjnych
+                {t("badgesEmpty")}
               </p>
             ) : (
               <Table>
@@ -303,6 +305,7 @@ export default function AllegroPromotionsPage() {
 }
 
 function PromotionRow({ promotion }: { promotion: AllegroPromotion }) {
+  const t = useTranslations("marketplaces.allegro.promotions");
   const deletePromotion = useDeleteAllegroPromotion();
 
   const benefitType =
@@ -310,8 +313,8 @@ function PromotionRow({ promotion }: { promotion: AllegroPromotion }) {
 
   const handleDelete = () => {
     deletePromotion.mutate(promotion.id, {
-      onSuccess: () => toast.success("Promocja usunieta"),
-      onError: () => toast.error("Nie udalo sie usunac promocji"),
+      onSuccess: () => toast.success(t("deleteSuccess")),
+      onError: () => toast.error(t("deleteError")),
     });
   };
 
@@ -375,6 +378,7 @@ function CreatePromotionForm({
 }: {
   onSuccess: () => void;
 }) {
+  const t = useTranslations("marketplaces.allegro.promotions.form");
   const [name, setName] = useState("");
   const [benefitType, setBenefitType] = useState("ORDER_FIXED_DISCOUNT");
   const [discountAmount, setDiscountAmount] = useState("");
@@ -386,7 +390,7 @@ function CreatePromotionForm({
     e.preventDefault();
 
     if (!name.trim()) {
-      toast.error("Nazwa promocji jest wymagana");
+      toast.error(t("nameRequired"));
       return;
     }
 
@@ -411,12 +415,12 @@ function CreatePromotionForm({
 
     createPromotion.mutate(data, {
       onSuccess: () => {
-        toast.success("Promocja utworzona");
+        toast.success(t("created"));
         setName("");
         setDiscountAmount("");
         onSuccess();
       },
-      onError: () => toast.error("Nie udalo sie utworzyc promocji"),
+      onError: () => toast.error(t("createError")),
     });
   };
 
@@ -496,7 +500,7 @@ function CreatePromotionForm({
         {createPromotion.isPending && (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         )}
-        Utworz promocje
+        {t("create")}
       </Button>
     </form>
   );

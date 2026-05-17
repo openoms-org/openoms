@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Calculator,
@@ -221,6 +222,7 @@ function BillingSection() {
 }
 
 function FeeCalculatorSection() {
+  const t = useTranslations("marketplaces.allegro.finance.calculator");
   const [offerIdInput, setOfferIdInput] = useState("");
   const [activeOfferId, setActiveOfferId] = useState<string | null>(null);
 
@@ -269,8 +271,7 @@ function FeeCalculatorSection() {
         {isError && activeOfferId && (
           <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
             <p className="text-sm text-destructive">
-              Nie udalo sie obliczyc prowizji dla oferty {activeOfferId}.
-              Sprawdz, czy ID jest poprawne.
+              {t("calculateError", { offerId: activeOfferId })}
             </p>
           </div>
         )}

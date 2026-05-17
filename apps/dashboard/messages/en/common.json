@@ -6,6 +6,26 @@
     "invoice": {
       "error": "Error"
     },
+    "pricing": {
+      "alreadyHaveAccount": "Already have an account?",
+      "haveInviteToken": "Have an invite token?",
+      "loadPlansError": "Failed to load plans",
+      "login": "Log in",
+      "monthly": "Monthly",
+      "noPlansDescription": "Pricing plans are not configured yet.",
+      "noPlansTitle": "No plans available",
+      "perMonth": "/mo",
+      "popular": "Most popular",
+      "redirecting": "Redirecting...",
+      "registerWithInvite": "Register with invite",
+      "startFree": "Start free",
+      "title": "Choose a plan for your business",
+      "trialDaysFree": "{count} days free",
+      "trialDescription": "All plans include full access for {count} days. No card required to start. Cancel anytime.",
+      "trialStart": "{count} days free to start",
+      "yearly": "Yearly",
+      "yearlyTotal": "{amount} yearly"
+    },
     "retry": "Retry"
   },
   "common": {

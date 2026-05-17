@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
@@ -25,6 +26,7 @@ import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 const MAX_HISTORY = 50;
 
 export default function WorkflowEditorPage() {
+  const t = useTranslations("workflows.editor");
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
@@ -111,7 +113,7 @@ export default function WorkflowEditorPage() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Nazwa workflow jest wymagana");
+      toast.error(t("nameRequired"));
       return;
     }
 
@@ -119,11 +121,11 @@ export default function WorkflowEditorPage() {
     try {
       const validation = await validateWorkflow.mutateAsync(definition);
       if (!validation.valid) {
-        toast.error(validation.errors[0] || "Workflow zawiera bledy");
+        toast.error(validation.errors[0] || t("validationError"));
         return;
       }
     } catch {
-      toast.error("Blad walidacji workflow");
+      toast.error(t("validationFailed"));
       return;
     }
 
@@ -144,9 +146,9 @@ export default function WorkflowEditorPage() {
         actions: result.actions,
       });
 
-      toast.success("Workflow zostal zaktualizowany");
+      toast.success(t("updateSuccess"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nie udalo sie zapisac workflow";
+      const message = err instanceof Error ? err.message : t("updateError");
       toast.error(message);
     }
   };
@@ -200,7 +202,7 @@ export default function WorkflowEditorPage() {
   if (!rule) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-        <p className="text-muted-foreground">Workflow nie zostal znaleziony.</p>
+        <p className="text-muted-foreground">{t("notFound")}</p>
       </div>
     );
   }

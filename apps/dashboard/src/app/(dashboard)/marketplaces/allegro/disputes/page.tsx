@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Loader2,
@@ -242,6 +243,7 @@ function DisputeCard({
 }
 
 function DisputeMessages({ disputeId }: { disputeId: string }) {
+  const t = useTranslations("marketplaces.allegro.disputes.messages");
   const { data, isLoading, isError, refetch } =
     useAllegroDisputeMessages(disputeId);
   const sendMessage = useSendAllegroDisputeMessage(disputeId);
@@ -263,13 +265,13 @@ function DisputeMessages({ disputeId }: { disputeId: string }) {
       {
         onSuccess: () => {
           setMessageText("");
-          toast.success("Wiadomosc wyslana");
+          toast.success(t("sent"));
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie wyslac wiadomosci"
+              : t("sendError")
           );
         },
       }
@@ -295,10 +297,10 @@ function DisputeMessages({ disputeId }: { disputeId: string }) {
     return (
       <div className="text-center py-4 space-y-2">
         <p className="text-sm text-destructive">
-          Blad ladowania wiadomosci sporu
+          {t("loadError")}
         </p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Sprobuj ponownie
+          {t("retry")}
         </Button>
       </div>
     );

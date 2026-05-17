@@ -1,4 +1,44 @@
 {
+  "pickPack": {
+    "allStatuses": "Wszystkie statusy",
+    "columns": {
+      "orders": "Zamówienia",
+      "packingProgress": "Postęp pakowania",
+      "pickingProgress": "Postęp kompletacji",
+      "startedAt": "Rozpoczęto",
+      "status": "Status",
+      "type": "Typ"
+    },
+    "description": "Kompletowanie i pakowanie zamówień",
+    "dialog": {
+      "cancel": "Anuluj",
+      "create": "Utwórz sesję ({count})",
+      "creating": "Tworzenie...",
+      "description": "Wybierz zamówienia do kompletacji (status: przetwarzanie)",
+      "items": "{count} pozycji",
+      "noProcessingOrders": "Brak zamówień w statusie \"przetwarzanie\"",
+      "title": "Nowa sesja Pick & Pack"
+    },
+    "emptyDescription": "Utwórz nową sesję, aby rozpocząć kompletowanie zamówień.",
+    "emptyTitle": "Brak sesji Pick & Pack",
+    "loadError": "Błąd podczas ładowania danych.",
+    "newSession": "Nowa sesja",
+    "noOrdersToPick": "Brak zamówień do kompletacji",
+    "pickNext": "Kompletuj następne",
+    "retry": "Spróbuj ponownie",
+    "sessionCreated": "Sesja Pick & Pack utworzona",
+    "sessionTypes": {
+      "batch": "Wsadowa",
+      "single": "Pojedyncza"
+    },
+    "statuses": {
+      "cancelled": "Anulowane",
+      "completed": "Zakończone",
+      "packing": "Pakowanie",
+      "picking": "Kompletowanie"
+    },
+    "title": "Pick & Pack"
+  },
   "stocktakes": {
     "all": "Wszystkie",
     "allStatuses": "Wszystkie statusy",

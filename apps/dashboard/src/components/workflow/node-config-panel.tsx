@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { WorkflowNode } from "@/types/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +35,13 @@ function TriggerConfig({
   node: WorkflowNode;
   onUpdate: (data: Record<string, unknown>) => void;
 }) {
+  const t = useTranslations("workflows.nodeConfig");
   const event = (node.data.event as string) || "";
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Zdarzenie wyzwalajace</Label>
+        <Label>{t("triggerEvent")}</Label>
         <Select
           value={event || "none"}
           onValueChange={(v) => {
@@ -52,10 +54,10 @@ function TriggerConfig({
           }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Wybierz zdarzenie..." />
+            <SelectValue placeholder={t("selectEvent")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">Wybierz zdarzenie...</SelectItem>
+            <SelectItem value="none">{t("selectEvent")}</SelectItem>
             {TRIGGER_OPTIONS.map((t) => (
               <SelectItem key={t.value} value={t.value}>
                 {t.label}
@@ -75,6 +77,7 @@ function ConditionConfig({
   node: WorkflowNode;
   onUpdate: (data: Record<string, unknown>) => void;
 }) {
+  const t = useTranslations("workflows.nodeConfig");
   const field = (node.data.field as string) || "";
   const operator = (node.data.operator as string) || "eq";
   const value = node.data.value ?? "";
@@ -88,15 +91,15 @@ function ConditionConfig({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Pole</Label>
+        <Label>{t("field")}</Label>
         <Input
           value={field}
           onChange={(e) => updateField("field", e.target.value)}
-          placeholder="np. status, total_amount, tags"
+          placeholder={t("fieldPlaceholder")}
         />
       </div>
       <div className="space-y-2">
-        <Label>Operator</Label>
+        <Label>{t("operator")}</Label>
         <Select value={operator} onValueChange={(v) => updateField("operator", v)}>
           <SelectTrigger>
             <SelectValue />
@@ -111,11 +114,11 @@ function ConditionConfig({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label>Wartosc</Label>
+        <Label>{t("value")}</Label>
         <Input
           value={String(value)}
           onChange={(e) => updateField("value", e.target.value)}
-          placeholder="wartosc do porownania"
+          placeholder={t("valuePlaceholder")}
         />
       </div>
     </div>
@@ -129,6 +132,7 @@ function ActionConfig({
   node: WorkflowNode;
   onUpdate: (data: Record<string, unknown>) => void;
 }) {
+  const t = useTranslations("workflows.nodeConfig");
   const actionType = (node.data.actionType as string) || "";
   const delaySeconds = (node.data.delay_seconds as number) || 0;
 
@@ -149,13 +153,13 @@ function ActionConfig({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Typ akcji</Label>
+        <Label>{t("actionType")}</Label>
         <Select value={actionType || "none"} onValueChange={(v) => setActionType(v === "none" ? "" : v)}>
           <SelectTrigger>
-            <SelectValue placeholder="Wybierz typ akcji..." />
+            <SelectValue placeholder={t("selectActionType")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">Wybierz typ akcji...</SelectItem>
+            <SelectItem value="none">{t("selectActionType")}</SelectItem>
             {ACTION_TYPE_OPTIONS.map((a) => (
               <SelectItem key={a.value} value={a.value}>
                 {a.label}
@@ -168,7 +172,7 @@ function ActionConfig({
       {/* Action-specific fields */}
       {actionType === "set_status" && (
         <div className="space-y-2">
-          <Label>Nowy status</Label>
+          <Label>{t("newStatus")}</Label>
           <Input
             value={String(node.data.status ?? "")}
             onChange={(e) => updateData("status", e.target.value)}
@@ -179,7 +183,7 @@ function ActionConfig({
 
       {actionType === "add_tag" && (
         <div className="space-y-2">
-          <Label>Tag</Label>
+          <Label>{t("tag")}</Label>
           <Input
             value={String(node.data.tag ?? "")}
             onChange={(e) => updateData("tag", e.target.value)}
@@ -190,7 +194,7 @@ function ActionConfig({
 
       {actionType === "send_email" && (
         <div className="space-y-2">
-          <Label>Adres e-mail</Label>
+          <Label>{t("emailAddress")}</Label>
           <Input
             value={String(node.data.to ?? "")}
             onChange={(e) => updateData("to", e.target.value)}
@@ -201,7 +205,7 @@ function ActionConfig({
 
       {actionType === "create_invoice" && (
         <div className="space-y-2">
-          <Label>Typ faktury</Label>
+          <Label>{t("invoiceType")}</Label>
           <Input
             value={String(node.data.invoice_type ?? "vat")}
             onChange={(e) => updateData("invoice_type", e.target.value)}
@@ -212,7 +216,7 @@ function ActionConfig({
 
       {actionType === "webhook" && (
         <div className="space-y-2">
-          <Label>URL webhooka</Label>
+          <Label>{t("webhookUrl")}</Label>
           <Input
             value={String(node.data.url ?? "")}
             onChange={(e) => updateData("url", e.target.value)}
@@ -222,7 +226,7 @@ function ActionConfig({
       )}
 
       <div className="space-y-2">
-        <Label>Opoznienie (minuty)</Label>
+        <Label>{t("delayMinutes")}</Label>
         <Input
           type="number"
           min={0}
@@ -231,20 +235,27 @@ function ActionConfig({
             const minutes = parseInt(e.target.value) || 0;
             updateData("delay_seconds", minutes * 60);
           }}
-          placeholder="0 = natychmiast"
+          placeholder={t("immediateHint")}
         />
-        <p className="text-xs text-muted-foreground">0 = natychmiast</p>
+        <p className="text-xs text-muted-foreground">{t("immediateHint")}</p>
       </div>
     </div>
   );
 }
 
 export function NodeConfigPanel({ node, onUpdate, onDelete, onClose }: NodeConfigPanelProps) {
+  const t = useTranslations("workflows.nodeConfig");
+
   if (!node) return null;
 
   const colors = NODE_COLORS[node.type];
   const TypeIcon = node.type === "trigger" ? Zap : node.type === "condition" ? GitBranch : Play;
-  const typeLabel = node.type === "trigger" ? "Wyzwalacz" : node.type === "condition" ? "Warunek" : "Akcja";
+  const typeLabel =
+    node.type === "trigger"
+      ? t("trigger")
+      : node.type === "condition"
+        ? t("condition")
+        : t("action");
 
   const handleUpdate = (data: Record<string, unknown>) => {
     onUpdate(node.id, data);
@@ -281,7 +292,7 @@ export function NodeConfigPanel({ node, onUpdate, onDelete, onClose }: NodeConfi
           onClick={() => onDelete(node.id)}
         >
           <Trash2 className="h-4 w-4" />
-          Usun wezel
+          {t("deleteNode")}
         </Button>
       </div>
     </div>

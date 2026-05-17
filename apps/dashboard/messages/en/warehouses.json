@@ -1,4 +1,44 @@
 {
+  "pickPack": {
+    "allStatuses": "All statuses",
+    "columns": {
+      "orders": "Orders",
+      "packingProgress": "Packing progress",
+      "pickingProgress": "Picking progress",
+      "startedAt": "Started at",
+      "status": "Status",
+      "type": "Type"
+    },
+    "description": "Picking and packing orders",
+    "dialog": {
+      "cancel": "Cancel",
+      "create": "Create session ({count})",
+      "creating": "Creating...",
+      "description": "Choose orders to pick (status: processing)",
+      "items": "{count} items",
+      "noProcessingOrders": "No orders in \"processing\" status",
+      "title": "New Pick & Pack session"
+    },
+    "emptyDescription": "Create a new session to start picking orders.",
+    "emptyTitle": "No Pick & Pack sessions",
+    "loadError": "Error loading data.",
+    "newSession": "New session",
+    "noOrdersToPick": "No orders to pick",
+    "pickNext": "Pick next",
+    "retry": "Try again",
+    "sessionCreated": "Pick & Pack session created",
+    "sessionTypes": {
+      "batch": "Batch",
+      "single": "Single"
+    },
+    "statuses": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "packing": "Packing",
+      "picking": "Picking"
+    },
+    "title": "Pick & Pack"
+  },
   "stocktakes": {
     "all": "All",
     "allStatuses": "All Statuses",

@@ -6,6 +6,26 @@
     "invoice": {
       "error": "Błąd"
     },
+    "pricing": {
+      "alreadyHaveAccount": "Masz już konto?",
+      "haveInviteToken": "Masz token zaproszenia?",
+      "loadPlansError": "Nie udało się załadować planów",
+      "login": "Zaloguj się",
+      "monthly": "Miesięcznie",
+      "noPlansDescription": "Plany cenowe nie są jeszcze skonfigurowane.",
+      "noPlansTitle": "Brak dostępnych planów",
+      "perMonth": "/mies.",
+      "popular": "Najpopularniejszy",
+      "redirecting": "Przekierowanie...",
+      "registerWithInvite": "Zarejestruj się z zaproszeniem",
+      "startFree": "Zacznij za darmo",
+      "title": "Wybierz plan dla swojego biznesu",
+      "trialDaysFree": "{count} dni za darmo",
+      "trialDescription": "Wszystkie plany z pełnym dostępem przez {count} dni. Bez karty na start. Zrezygnuj kiedy chcesz.",
+      "trialStart": "{count} dni za darmo na start",
+      "yearly": "Rocznie",
+      "yearlyTotal": "{amount} rocznie"
+    },
     "retry": "Spróbuj ponownie"
   },
   "common": {

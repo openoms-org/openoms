@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Loader2,
@@ -427,12 +428,13 @@ function AnswerDialog({
   rating: AllegroUserRating;
   onClose: () => void;
 }) {
+  const t = useTranslations("marketplaces.allegro.ratings.answer");
   const [text, setText] = useState("");
   const createAnswer = useCreateAllegroRatingAnswer();
 
   const handleSubmit = () => {
     if (!text.trim()) {
-      toast.error("Podaj tresc odpowiedzi");
+      toast.error(t("textRequired"));
       return;
     }
 
@@ -440,14 +442,14 @@ function AnswerDialog({
       { ratingId: rating.id, text: text.trim() },
       {
         onSuccess: () => {
-          toast.success("Odpowiedz zostala zapisana");
+          toast.success(t("saved"));
           onClose();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie zapisac odpowiedzi"
+              : t("saveError")
           );
         },
       }
@@ -512,19 +514,20 @@ function DeleteAnswerDialog({
   ratingId: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("marketplaces.allegro.ratings.deleteAnswer");
   const deleteAnswer = useDeleteAllegroRatingAnswer();
 
   const handleDelete = () => {
     deleteAnswer.mutate(ratingId, {
       onSuccess: () => {
-        toast.success("Odpowiedz zostala usunieta");
+        toast.success(t("deleted"));
         onClose();
       },
       onError: (error) => {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nie udalo sie usunac odpowiedzi"
+            : t("deleteError")
         );
       },
     });
@@ -568,12 +571,13 @@ function RemovalDialog({
   ratingId: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("marketplaces.allegro.ratings.removal");
   const [reason, setReason] = useState("");
   const requestRemoval = useRequestAllegroRatingRemoval();
 
   const handleSubmit = () => {
     if (!reason.trim()) {
-      toast.error("Podaj powod zgloszenia");
+      toast.error(t("reasonRequired"));
       return;
     }
 
@@ -581,14 +585,14 @@ function RemovalDialog({
       { ratingId, reason: reason.trim() },
       {
         onSuccess: () => {
-          toast.success("Zgloszenie zostalo wyslane");
+          toast.success(t("sent"));
           onClose();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie wyslac zgloszenia"
+              : t("sendError")
           );
         },
       }

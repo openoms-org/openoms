@@ -1,5 +1,104 @@
 {
   "marketplaces": {
+    "allegro": {
+      "delivery": {
+        "rateForm": {
+          "create": "Utwórz cennik",
+          "createError": "Nie udało się utworzyć cennika wysyłki",
+          "created": "Cennik utworzony",
+          "deliveryMethodRequired": "ID metody dostawy jest wymagane",
+          "nameRequired": "Nazwa cennika jest wymagana"
+        },
+        "rates": {
+          "empty": "Brak cenników wysyłki",
+          "new": "Nowy cennik",
+          "newDialogTitle": "Nowy cennik wysyłki",
+          "title": "Cenniki wysyłki"
+        },
+        "settings": {
+          "save": "Zapisz ustawienia",
+          "updateError": "Nie udało się zaktualizować ustawień dostawy",
+          "updated": "Ustawienia dostawy zaktualizowane"
+        }
+      },
+      "disputes": {
+        "messages": {
+          "loadError": "Błąd ładowania wiadomości sporu",
+          "retry": "Spróbuj ponownie",
+          "sendError": "Nie udało się wysłać wiadomości",
+          "sent": "Wiadomość wysłana"
+        }
+      },
+      "finance": {
+        "calculator": {
+          "calculateError": "Nie udało się obliczyć prowizji dla oferty {offerId}. Sprawdź, czy ID jest poprawne."
+        }
+      },
+      "promotions": {
+        "badgesEmpty": "Brak dostępnych pakietów promocyjnych",
+        "deleteError": "Nie udało się usunąć promocji",
+        "deleteSuccess": "Promocja usunięta",
+        "form": {
+          "create": "Utwórz promocję",
+          "createError": "Nie udało się utworzyć promocji",
+          "created": "Promocja utworzona",
+          "nameRequired": "Nazwa promocji jest wymagana"
+        },
+        "new": "Nowa promocja"
+      },
+      "policies": {
+        "help": {
+          "assignToOffers": "Utworzone polityki i tabele przypisujesz do ofert na stronie \"Oferty\"."
+        },
+        "returnPolicyDialog": {
+          "createError": "Nie udało się utworzyć polityki",
+          "created": "Polityka zwrotów utworzona",
+          "editTitle": "Edytuj politykę zwrotów",
+          "nameRequired": "Nazwa jest wymagana",
+          "newTitle": "Nowa polityka zwrotów",
+          "updateError": "Nie udało się zaktualizować polityki",
+          "updated": "Polityka zwrotów zaktualizowana"
+        },
+        "sizeTableDialog": {
+          "createError": "Nie udało się utworzyć tabeli",
+          "created": "Tabela rozmiarów utworzona",
+          "editTitle": "Edytuj tabelę rozmiarów",
+          "headersRequired": "Wszystkie nagłówki muszą być wypełnione",
+          "nameRequired": "Nazwa jest wymagana",
+          "newTitle": "Nowa tabela rozmiarów",
+          "updateError": "Nie udało się zaktualizować tabeli",
+          "updated": "Tabela rozmiarów zaktualizowana"
+        },
+        "sizeTables": {
+          "deleteError": "Nie udało się usunąć tabeli"
+        },
+        "warrantyDialog": {
+          "createError": "Nie udało się utworzyć rękojmi",
+          "created": "Rękojmia utworzona",
+          "editTitle": "Edytuj rękojmię",
+          "nameRequired": "Nazwa jest wymagana",
+          "newTitle": "Nowa rękojmia",
+          "updateError": "Nie udało się zaktualizować rękojmi",
+          "updated": "Rękojmia zaktualizowana"
+        }
+      },
+      "ratings": {
+        "answer": {
+          "saveError": "Nie udało się zapisać odpowiedzi",
+          "saved": "Odpowiedź została zapisana",
+          "textRequired": "Podaj treść odpowiedzi"
+        },
+        "deleteAnswer": {
+          "deleteError": "Nie udało się usunąć odpowiedzi",
+          "deleted": "Odpowiedź została usunięta"
+        },
+        "removal": {
+          "reasonRequired": "Podaj powód zgłoszenia",
+          "sendError": "Nie udało się wysłać zgłoszenia",
+          "sent": "Zgłoszenie zostało wysłane"
+        }
+      }
+    },
     "amazon": {
       "actions": {
         "title": "Akcje"

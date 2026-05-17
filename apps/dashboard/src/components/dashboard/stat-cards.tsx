@@ -49,19 +49,19 @@ export function StatCards({ orderCounts, isLoading }: StatCardsProps) {
         isLoading={isLoading}
       />
       <StatCard
-        title="Nowe"
+        title={t("stats.new")}
         value={orderCounts?.by_status.new}
         icon={<PackagePlus className="h-4 w-4 text-muted-foreground" />}
         isLoading={isLoading}
       />
       <StatCard
-        title="W transporcie"
+        title={t("stats.inTransit")}
         value={orderCounts?.by_status.in_transit}
         icon={<Truck className="h-4 w-4 text-muted-foreground" />}
         isLoading={isLoading}
       />
       <StatCard
-        title="Dostarczone"
+        title={t("stats.delivered")}
         value={orderCounts?.by_status.delivered}
         icon={<PackageCheck className="h-4 w-4 text-muted-foreground" />}
         isLoading={isLoading}

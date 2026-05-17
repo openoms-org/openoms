@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Loader2,
@@ -74,6 +75,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 export default function AllegroPoliciesPage() {
+  const t = useTranslations("marketplaces.allegro.policies");
+
   return (
     <AdminGuard>
       <div className="space-y-6">
@@ -100,7 +103,7 @@ export default function AllegroPoliciesPage() {
               <li><strong>Polityki zwrotow</strong> — okresl czas na zwrot (np. 14 lub 30 dni), kto pokrywa koszty zwrotu (sprzedawca/kupujacy) i podaj adres do zwrotow. Kazda oferta musi miec przypisana polityke.</li>
               <li><strong>Rekojmia</strong> — ustaw okres ochrony rekojmi dla osob fizycznych i firm. Standardowo: 2 lata dla konsumentow, 1 rok dla firm.</li>
               <li><strong>Tabele rozmiarow</strong> — stworz tabele z rozmiarami (np. obuwie, odziez) i przypisz je do ofert. Pomagaja kupujacym wybrac odpowiedni rozmiar i zmniejszaja ilosc zwrotow.</li>
-              <li>Utworzone polityki i tabele przypisujesz do ofert na stronie &quot;Oferty&quot;.</li>
+              <li>{t("help.assignToOffers")}</li>
             </ul>
           </div>
         </div>
@@ -250,6 +253,8 @@ function ReturnPolicyDialog({
   onOpenChange: (open: boolean) => void;
   policy: AllegroReturnPolicy | null;
 }) {
+  const t = useTranslations("marketplaces.allegro.policies.returnPolicyDialog");
+  const tc = useTranslations("common");
   const createMutation = useCreateAllegroReturnPolicy();
   const updateMutation = useUpdateAllegroReturnPolicy();
   const isEditing = !!policy;
@@ -298,7 +303,7 @@ function ReturnPolicyDialog({
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      toast.error("Nazwa jest wymagana");
+      toast.error(t("nameRequired"));
       return;
     }
 
@@ -332,19 +337,19 @@ function ReturnPolicyDialog({
         { policyId: policy.id, data },
         {
           onSuccess: () => {
-            toast.success("Polityka zwrotow zaktualizowana");
+            toast.success(t("updated"));
             onOpenChange(false);
           },
-          onError: () => toast.error("Nie udalo sie zaktualizowac polityki"),
+          onError: () => toast.error(t("updateError")),
         }
       );
     } else {
       createMutation.mutate(data, {
         onSuccess: () => {
-          toast.success("Polityka zwrotow utworzona");
+          toast.success(t("created"));
           onOpenChange(false);
         },
-        onError: () => toast.error("Nie udalo sie utworzyc polityki"),
+        onError: () => toast.error(t("createError")),
       });
     }
   };
@@ -356,7 +361,7 @@ function ReturnPolicyDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edytuj polityke zwrotow" : "Nowa polityka zwrotow"}
+            {isEditing ? t("editTitle") : t("newTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -435,11 +440,11 @@ function ReturnPolicyDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={isPending}>
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? "Zapisz" : "Utworz"}
+            {isEditing ? tc("save") : tc("create")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -558,6 +563,8 @@ function WarrantyDialog({
   onOpenChange: (open: boolean) => void;
   warranty: AllegroImpliedWarranty | null;
 }) {
+  const t = useTranslations("marketplaces.allegro.policies.warrantyDialog");
+  const tc = useTranslations("common");
   const createMutation = useCreateAllegroWarranty();
   const updateMutation = useUpdateAllegroWarranty();
   const isEditing = !!warranty;
@@ -587,7 +594,7 @@ function WarrantyDialog({
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      toast.error("Nazwa jest wymagana");
+      toast.error(t("nameRequired"));
       return;
     }
 
@@ -602,19 +609,19 @@ function WarrantyDialog({
         { warrantyId: warranty.id, data },
         {
           onSuccess: () => {
-            toast.success("Rekojmia zaktualizowana");
+            toast.success(t("updated"));
             onOpenChange(false);
           },
-          onError: () => toast.error("Nie udalo sie zaktualizowac rekojmi"),
+          onError: () => toast.error(t("updateError")),
         }
       );
     } else {
       createMutation.mutate(data, {
         onSuccess: () => {
-          toast.success("Rekojmia utworzona");
+          toast.success(t("created"));
           onOpenChange(false);
         },
-        onError: () => toast.error("Nie udalo sie utworzyc rekojmi"),
+        onError: () => toast.error(t("createError")),
       });
     }
   };
@@ -626,7 +633,7 @@ function WarrantyDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edytuj rekojmie" : "Nowa rekojmia"}
+            {isEditing ? t("editTitle") : t("newTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -677,11 +684,11 @@ function WarrantyDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={isPending}>
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? "Zapisz" : "Utworz"}
+            {isEditing ? tc("save") : tc("create")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -704,6 +711,7 @@ function sizeTypeLabel(type: string): string {
 }
 
 function SizeTablesTab() {
+  const t = useTranslations("marketplaces.allegro.policies.sizeTables");
   const { data, isLoading } = useAllegroSizeTables();
   const deleteMutation = useDeleteAllegroSizeTable();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -726,7 +734,7 @@ function SizeTablesTab() {
     if (!confirm(`Czy na pewno chcesz usunac tabele "${table.name}"?`)) return;
     deleteMutation.mutate(table.id, {
       onSuccess: () => toast.success("Tabela rozmiarow usunieta"),
-      onError: () => toast.error("Nie udalo sie usunac tabeli"),
+      onError: () => toast.error(t("deleteError")),
     });
   };
 
@@ -892,6 +900,8 @@ function SizeTableDialog({
   onOpenChange: (open: boolean) => void;
   table: AllegroSizeTable | null;
 }) {
+  const t = useTranslations("marketplaces.allegro.policies.sizeTableDialog");
+  const tc = useTranslations("common");
   const createMutation = useCreateAllegroSizeTable();
   const updateMutation = useUpdateAllegroSizeTable();
   const isEditing = !!table;
@@ -954,11 +964,11 @@ function SizeTableDialog({
 
   const handleSubmit = () => {
     if (!name.trim()) {
-      toast.error("Nazwa jest wymagana");
+      toast.error(t("nameRequired"));
       return;
     }
     if (headers.some((h) => !h.trim())) {
-      toast.error("Wszystkie naglowki musza byc wypelnione");
+      toast.error(t("headersRequired"));
       return;
     }
 
@@ -974,19 +984,19 @@ function SizeTableDialog({
         { tableId: table.id, data },
         {
           onSuccess: () => {
-            toast.success("Tabela rozmiarow zaktualizowana");
+            toast.success(t("updated"));
             onOpenChange(false);
           },
-          onError: () => toast.error("Nie udalo sie zaktualizowac tabeli"),
+          onError: () => toast.error(t("updateError")),
         }
       );
     } else {
       createMutation.mutate(data, {
         onSuccess: () => {
-          toast.success("Tabela rozmiarow utworzona");
+          toast.success(t("created"));
           onOpenChange(false);
         },
-        onError: () => toast.error("Nie udalo sie utworzyc tabeli"),
+        onError: () => toast.error(t("createError")),
       });
     }
   };
@@ -998,7 +1008,7 @@ function SizeTableDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? "Edytuj tabele rozmiarow" : "Nowa tabela rozmiarow"}
+            {isEditing ? t("editTitle") : t("newTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -1120,11 +1130,11 @@ function SizeTableDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={isPending}>
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditing ? "Zapisz" : "Utworz"}
+            {isEditing ? tc("save") : tc("create")}
           </Button>
         </DialogFooter>
       </DialogContent>
