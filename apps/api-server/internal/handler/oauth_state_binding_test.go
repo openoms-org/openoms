@@ -84,6 +84,7 @@ func TestValidateOAuthStateBinding(t *testing.T) {
 
 func TestAllegroAuthHandler_HandleCallback_RejectsStateFromDifferentTenant(t *testing.T) {
 	store := NewMemoryOAuthStateStore()
+	defer store.Close()
 	state := "state-from-tenant-a"
 	tenantA := uuid.New()
 	tenantB := uuid.New()

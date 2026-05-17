@@ -509,7 +509,9 @@ func run() error {
 		oauthStateStore = handler.NewRedisOAuthStateStore(redisClient)
 		slog.Info("using Redis OAuth state store")
 	} else {
-		oauthStateStore = handler.NewMemoryOAuthStateStore()
+		memoryOAuthStateStore := handler.NewMemoryOAuthStateStore()
+		defer memoryOAuthStateStore.Close()
+		oauthStateStore = memoryOAuthStateStore
 		slog.Info("using in-memory OAuth state store")
 	}
 	allegroAuthHandler := handler.NewAllegroAuthHandler(cfg, integrationService, encryptionKey, oauthStateStore)
