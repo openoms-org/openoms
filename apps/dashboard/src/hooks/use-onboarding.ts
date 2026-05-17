@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
+import { integrationQueryKeys } from "./integration-query-keys";
 
 interface OnboardingSettings {
   dismissed: boolean;
@@ -46,7 +47,7 @@ export function useOnboarding() {
   });
 
   const { data: integrations } = useQuery({
-    queryKey: ["integrations"],
+    queryKey: integrationQueryKeys.all,
     queryFn: () => apiClient<Integration[]>("/v1/integrations"),
     enabled: isAuthenticated && canManageSetup,
   });

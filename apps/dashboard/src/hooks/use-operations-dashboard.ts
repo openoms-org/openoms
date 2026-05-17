@@ -11,6 +11,7 @@ import {
   buildOrchestrationStages,
 } from "@/lib/operations-dashboard";
 import type { Integration, OrderListParams, ShipmentListParams } from "@/types/api";
+import { integrationQueryKeys } from "./integration-query-keys";
 import { useDashboardStats } from "./use-dashboard-stats";
 import { useOrders } from "./use-orders";
 import { useShipments } from "./use-shipments";
@@ -41,7 +42,7 @@ export function useOperationsDashboard() {
   const onHoldOrdersQuery = useOrders(ON_HOLD_ORDER_PARAMS);
   const failedShipmentsQuery = useShipments(FAILED_SHIPMENT_PARAMS);
   const integrationsQuery = useQuery<Integration[]>({
-    queryKey: ["integrations", "operations-dashboard"],
+    queryKey: integrationQueryKeys.all,
     queryFn: () => apiClient<Integration[]>("/v1/integrations"),
     enabled: isAdmin,
   });
