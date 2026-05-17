@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
 	"time"
 
 	glssdk "github.com/openoms-org/openoms/packages/gls-go-sdk"
@@ -32,9 +33,11 @@ type GLSCredentials struct {
 
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
 type GLSProvider struct {
-	client  *glssdk.Client
-	logger  *slog.Logger
-	storage storage.ObjectStorage
+	client     *glssdk.Client
+	logger     *slog.Logger
+	storage    storage.ObjectStorage
+	labelMu    sync.RWMutex
+	labelCache map[string][]byte
 }
 
 // NewGLSProvider creates a GLS CarrierProvider from encrypted credentials.
@@ -53,9 +56,10 @@ func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage, storage stor
 	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{
-		client:  client,
-		logger:  slog.Default().With("provider", "gls"),
-		storage: storage,
+		client:     client,
+		logger:     slog.Default().With("provider", "gls"),
+		storage:    storage,
+		labelCache: make(map[string][]byte),
 	}, nil
 }
 
@@ -158,16 +162,21 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}
 
 	// GLS returns labels inline in the create response (no separate label API).
-	// Decode and upload the label to object storage.
+	// Cache the bytes for the immediate GetLabel call; object storage is an
+	// optional persistence side effect when a caller injects it.
 	if externalID != "" && len(resp.PrintData) > 0 {
 		decoded, err := base64.StdEncoding.DecodeString(resp.PrintData[0])
 		if err != nil {
 			p.logger.Error("failed to decode label from create response", "externalID", externalID, "error", err)
 		} else if len(decoded) > 0 {
-			key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
-			_, err := p.storage.Upload(ctx, key, bytes.NewReader(decoded), "application/pdf")
-			if err != nil {
-				p.logger.Error("failed to upload label to storage", "externalID", externalID, "key", key, "error", err)
+			p.cacheLabel(externalID, decoded)
+
+			if p.storage != nil {
+				key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
+				_, err := p.storage.Upload(ctx, key, bytes.NewReader(decoded), "application/pdf")
+				if err != nil {
+					p.logger.Error("failed to upload label to storage", "externalID", externalID, "key", key, "error", err)
+				}
 			}
 		}
 	}
@@ -179,8 +188,17 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}, nil
 }
 
-// GetLabel retrieves the label from object storage.
+// GetLabel retrieves a label cached from the GLS create response, falling back
+// to object storage when a caller injected it.
 func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
+	if label := p.cachedLabel(externalID); label != nil {
+		return label, nil
+	}
+
+	if p.storage == nil {
+		return nil, fmt.Errorf("gls: label not available for external id %q", externalID)
+	}
+
 	key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
 	reader, err := p.storage.Get(ctx, key)
 	if err != nil {
@@ -189,6 +207,25 @@ func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string)
 	defer func() { _ = reader.Close() }()
 
 	return io.ReadAll(io.LimitReader(reader, 10<<20))
+}
+
+func (p *GLSProvider) cacheLabel(externalID string, label []byte) {
+	p.labelMu.Lock()
+	defer p.labelMu.Unlock()
+	if p.labelCache == nil {
+		p.labelCache = make(map[string][]byte)
+	}
+	p.labelCache[externalID] = bytes.Clone(label)
+}
+
+func (p *GLSProvider) cachedLabel(externalID string) []byte {
+	p.labelMu.RLock()
+	defer p.labelMu.RUnlock()
+	label, ok := p.labelCache[externalID]
+	if !ok {
+		return nil
+	}
+	return bytes.Clone(label)
 }
 
 // GetTracking returns tracking events for the given GLS shipment.

@@ -284,14 +284,60 @@ func TestGLS_CreateShipment_DefaultsServiceType(t *testing.T) {
 
 // --- GetLabel ---
 
-func TestGLS_GetLabel_ReturnsErrorNotSupported(t *testing.T) {
+func TestGLS_GetLabel_ReturnsErrorWhenLabelMissing(t *testing.T) {
 	// GLS ShipIT API returns labels inline during shipment creation
-	// (CreatedShipment.PrintData[].Data). Separate label retrieval is not supported.
+	// (CreatedShipment.PrintData[].Data). A provider with no cached label must
+	// fail clearly instead of pretending to fetch one from the carrier API.
 	provider := newTestGLSProvider(t, "http://unused")
 
 	_, err := provider.GetLabel(context.Background(), "EXT-001", "pdf")
 	if err == nil {
 		t.Error("GetLabel() should return error — GLS labels are embedded in create response")
+	}
+}
+
+func TestGLS_CreateShipmentWithoutStorageCachesInlineLabel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"CreatedShipment":{"ShipmentReference":"REF1","ParcelData":[{"TrackID":"GLS0001234567"}],"PrintData":[{"Data":"JVBERi0xLjQK"}]}}`))
+	}))
+	defer srv.Close()
+
+	creds, _ := json.Marshal(map[string]any{
+		"username": "test-username",
+		"password": "test-password",
+	})
+	provider, err := NewGLSProvider(creds, nil, nil)
+	if err != nil {
+		t.Fatalf("NewGLSProvider() error: %v", err)
+	}
+	provider.client = glssdk.NewClient(
+		"test-username",
+		"test-password",
+		glssdk.WithBaseURL(srv.URL),
+	)
+
+	resp, err := provider.CreateShipment(context.Background(), integration.CarrierShipmentRequest{
+		Receiver: integration.CarrierReceiver{
+			Name:       "Test Receiver",
+			Phone:      "500100200",
+			Street:     "Testowa 1",
+			City:       "Warszawa",
+			PostalCode: "00-001",
+			Country:    "PL",
+		},
+		Parcel: integration.CarrierParcel{WeightKg: 1.0},
+	})
+	if err != nil {
+		t.Fatalf("CreateShipment() error: %v", err)
+	}
+
+	label, err := provider.GetLabel(context.Background(), resp.ExternalID, "pdf")
+	if err != nil {
+		t.Fatalf("GetLabel() error: %v", err)
+	}
+	if string(label) != "%PDF-1.4\n" {
+		t.Fatalf("GetLabel() = %q, want %q", string(label), "%PDF-1.4\n")
 	}
 }
 
