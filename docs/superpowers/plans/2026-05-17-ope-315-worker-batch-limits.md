@@ -69,7 +69,7 @@ func TestTrackableShipmentsQueryUsesStableBatchLimit(t *testing.T) {
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/worker -run TestTrackableShipmentsQueryUsesStableBatchLimit -count=1
 ```
 
@@ -122,7 +122,7 @@ rows, err := w.pool.Query(ctx, trackableShipmentsQuery(), trackingPollerBatchLim
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/worker -run TestTrackableShipmentsQueryUsesStableBatchLimit -count=1
 ```
 
@@ -170,7 +170,7 @@ The helper types should implement only the pgx methods needed by this test, foll
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/repository -run 'TestDelayedActionRepositoryListPending' -count=1
 ```
 
@@ -249,7 +249,7 @@ if len(pending) == delayedActionBatchLimit {
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/repository -run 'TestDelayedActionRepositoryListPending' -count=1
 go test ./internal/worker -run 'TestTrackableShipmentsQueryUsesStableBatchLimit|TestPlanDelayedActionFailure' -count=1
 ```
@@ -266,7 +266,7 @@ Expected: pass.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd .
 gofmt -w -s apps/api-server/internal/worker/tracking_poller.go \
   apps/api-server/internal/worker/tracking_poller_test.go \
   apps/api-server/internal/worker/delayed_action_worker.go \
@@ -282,7 +282,7 @@ gofmt -w -s apps/api-server/internal/worker/tracking_poller.go \
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd .
 git diff --check
 git diff --stat
 git diff
@@ -295,7 +295,7 @@ Expected: whitespace clean; diff limited to OPE-315 scope and this plan.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/worker ./internal/repository ./internal/automation -count=1
 ```
 
@@ -306,7 +306,7 @@ Expected: pass.
 After committing the implementation, run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd .
 ./scripts/local-ci.sh
 ```
 
