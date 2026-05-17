@@ -127,7 +127,7 @@ func TestMemoryLoginLockout_IndependentKeys(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_StoreAndGetFamily(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	family := &RefreshTokenFamily{
@@ -152,7 +152,7 @@ func TestMemoryRefreshTokenStore_StoreAndGetFamily(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_GetFamily_NotFound(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	got, err := store.GetFamily(ctx, "nonexistent")
@@ -162,7 +162,7 @@ func TestMemoryRefreshTokenStore_GetFamily_NotFound(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_DeleteFamily(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	family := &RefreshTokenFamily{
@@ -185,7 +185,7 @@ func TestMemoryRefreshTokenStore_DeleteFamily(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_FamilyExpiry(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	family := &RefreshTokenFamily{
@@ -208,7 +208,7 @@ func TestMemoryRefreshTokenStore_FamilyExpiry(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_StoreAndGetToken(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	entry := &RefreshTokenEntry{
@@ -227,7 +227,7 @@ func TestMemoryRefreshTokenStore_StoreAndGetToken(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_DeleteToken(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	entry := &RefreshTokenEntry{FamilyID: "fam-1", Used: false}
@@ -244,7 +244,7 @@ func TestMemoryRefreshTokenStore_DeleteToken(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_TokenExpiry(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	entry := &RefreshTokenEntry{FamilyID: "fam-1", Used: false}
@@ -260,7 +260,7 @@ func TestMemoryRefreshTokenStore_TokenExpiry(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_MarkTokenUsed(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	entry := &RefreshTokenEntry{FamilyID: "fam-1", Used: false}
@@ -278,7 +278,7 @@ func TestMemoryRefreshTokenStore_MarkTokenUsed(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_MarkTokenUsed_NonExistent(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	// Should not error even if the token doesn't exist
@@ -288,7 +288,7 @@ func TestMemoryRefreshTokenStore_MarkTokenUsed_NonExistent(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_UpdateFamily(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	family := &RefreshTokenFamily{
@@ -320,7 +320,7 @@ func TestMemoryRefreshTokenStore_UpdateFamily(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_ReturnsCopy(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	family := &RefreshTokenFamily{
