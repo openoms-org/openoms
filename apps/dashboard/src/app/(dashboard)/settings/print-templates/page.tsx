@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { Loader2, Save } from "lucide-react";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import type { PrintTemplatesConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 const DEFAULT_CONFIG: PrintTemplatesConfig = {
   packing_slip_html: "",
@@ -60,17 +61,17 @@ export default function PrintTemplatesPage() {
   const { data: templates, isLoading } = usePrintTemplates();
   const updateTemplates = useUpdatePrintTemplates();
 
-  const [form, setForm] = useState<PrintTemplatesConfig>(DEFAULT_CONFIG);
-
-  useEffect(() => {
-    if (templates) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        ...DEFAULT_CONFIG,
-        ...templates,
-      });
-    }
-  }, [templates]);
+  const templateForm = useMemo(
+    () => ({
+      ...DEFAULT_CONFIG,
+      ...templates,
+    }),
+    [templates],
+  );
+  const [form, setForm] = useEffectSyncedState(
+    templateForm,
+    JSON.stringify(templateForm),
+  );
 
   const handleSave = async () => {
     try {

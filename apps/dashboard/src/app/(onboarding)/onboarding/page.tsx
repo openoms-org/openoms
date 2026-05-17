@@ -16,6 +16,7 @@ import {
 } from "@/hooks/use-onboarding-wizard";
 import { apiClient } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 // ---------------------------------------------------------------------------
 // Step labels for the stepper
@@ -533,7 +534,10 @@ export default function OnboardingPage() {
   const { data: status, isLoading, isError } = useOnboardingStatus();
   const updateStep = useUpdateOnboardingStep();
   const dismissOnboarding = useDismissOnboarding();
-  const [localStep, setLocalStep] = useState<number | null>(null);
+  const [localStep, setLocalStep] = useEffectSyncedState<number | null>(
+    status?.current_step ?? null,
+    status?.current_step ?? null,
+  );
   const [showCompletion, setShowCompletion] = useState(false);
 
   useEffect(() => {
@@ -542,11 +546,7 @@ export default function OnboardingPage() {
       router.replace("/");
       return;
     }
-    if (localStep === null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalStep(status.current_step);
-    }
-  }, [status, router, localStep]);
+  }, [status, router]);
 
   if (isError) {
     return (

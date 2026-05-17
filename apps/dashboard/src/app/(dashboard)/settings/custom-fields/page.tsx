@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCustomFields } from "@/hooks/use-custom-fields";
@@ -19,6 +19,7 @@ import {
 import { Trash2, Plus } from "lucide-react";
 import type { CustomFieldDef, CustomFieldsConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 export default function CustomFieldsPage() {
   const t = useTranslations("settings");
@@ -34,14 +35,14 @@ export default function CustomFieldsPage() {
     { value: "checkbox", label: t("customFields.typeCheckbox") },
   ];
 
-  const [fields, setFields] = useState<CustomFieldDef[]>([]);
-
-  useEffect(() => {
-    if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFields([...config.fields]);
-    }
-  }, [config]);
+  const configFields = useMemo(
+    () => config?.fields.map((field) => ({ ...field })) ?? [],
+    [config],
+  );
+  const [fields, setFields] = useEffectSyncedState(
+    configFields,
+    JSON.stringify(configFields),
+  );
 
   const handleAddField = () => {
     const newPosition = fields.length + 1;

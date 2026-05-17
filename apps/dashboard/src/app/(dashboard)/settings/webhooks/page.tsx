@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2, Plus, ExternalLink } from "lucide-react";
 import type { WebhookEndpoint, WebhookConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 // WEBHOOK_EVENTS moved inside component to use translations
 
@@ -45,14 +46,14 @@ export default function WebhooksPage() {
   const { data: config, isLoading } = useWebhookConfig();
   const updateConfig = useUpdateWebhookConfig();
 
-  const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
-
-  useEffect(() => {
-    if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setEndpoints(config.endpoints.map((e) => ({ ...e })));
-    }
-  }, [config]);
+  const configEndpoints = useMemo(
+    () => config?.endpoints.map((endpoint) => ({ ...endpoint })) ?? [],
+    [config],
+  );
+  const [endpoints, setEndpoints] = useEffectSyncedState(
+    configEndpoints,
+    JSON.stringify(configEndpoints),
+  );
 
   const handleAddEndpoint = () => {
     setEndpoints([...endpoints, createEmptyEndpoint()]);

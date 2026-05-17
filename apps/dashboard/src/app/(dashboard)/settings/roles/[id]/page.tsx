@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 export default function RoleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations("roles");
@@ -58,19 +59,17 @@ export default function RoleDetailPage({ params }: { params: Promise<{ id: strin
     "warehouses.manage": td("permManageWarehouses"),
   };
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const roleKey = role?.id ?? null;
+  const [name, setName] = useEffectSyncedState(role?.name ?? "", roleKey);
+  const [description, setDescription] = useEffectSyncedState(
+    role?.description || "",
+    roleKey,
+  );
+  const [permissions, setPermissions] = useEffectSyncedState(
+    role?.permissions || [],
+    roleKey,
+  );
   const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (role) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setName(role.name);
-      setDescription(role.description || "");
-      setPermissions(role.permissions || []);
-    }
-  }, [role]);
 
   if (isLoading) {
     return <LoadingSkeleton />;

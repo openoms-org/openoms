@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ import { SHIPMENT_PROVIDERS, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
 import { getSelectableCarrierShipmentProviders } from "@/lib/readiness";
 import { CarrierMappingEditor } from "./carrier-mapping-editor";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 const DEFAULT_ALLEGRO_MAPPING: Record<string, string> = {
   "Paczkomaty": "inpost",
@@ -82,37 +83,33 @@ export function MarketplaceShipmentSettings({
     () => getSelectableCarrierShipmentProviders(SHIPMENT_PROVIDERS),
     [],
   );
-  const [autoCreate, setAutoCreate] = useState(
-    (settings.auto_create_shipment as boolean) ?? false
+  const settingsKey = JSON.stringify({ provider, settings });
+  const [autoCreate, setAutoCreate] = useEffectSyncedState(
+    (settings.auto_create_shipment as boolean) ?? false,
+    settingsKey,
   );
-  const [autoLabel, setAutoLabel] = useState(
-    (settings.auto_generate_label as boolean) ?? false
+  const [autoLabel, setAutoLabel] = useEffectSyncedState(
+    (settings.auto_generate_label as boolean) ?? false,
+    settingsKey,
   );
-  const [defaultCarrier, setDefaultCarrier] = useState(
-    normalizeSelectableProvider(settings.default_carrier, selectableShipmentProviders)
+  const [defaultCarrier, setDefaultCarrier] = useEffectSyncedState(
+    normalizeSelectableProvider(settings.default_carrier, selectableShipmentProviders),
+    settingsKey,
   );
-  const [carrierMapping, setCarrierMapping] = useState<Record<string, string>>(
-    filterSelectableCarrierMapping(
-      getCarrierMapping(provider, settings),
-      selectableShipmentProviders,
-    )
-  );
-
-  // Sync state when external settings change
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAutoCreate((settings.auto_create_shipment as boolean) ?? false);
-    setAutoLabel((settings.auto_generate_label as boolean) ?? false);
-    setDefaultCarrier(
-      normalizeSelectableProvider(settings.default_carrier, selectableShipmentProviders),
-    );
-    setCarrierMapping(
+  const sourceCarrierMapping = useMemo(
+    () =>
       filterSelectableCarrierMapping(
         getCarrierMapping(provider, settings),
         selectableShipmentProviders,
-      )
-    );
-  }, [settings, provider, selectableShipmentProviders]);
+      ),
+    [provider, selectableShipmentProviders, settings],
+  );
+  const [carrierMapping, setCarrierMapping] = useEffectSyncedState<
+    Record<string, string>
+  >(
+    sourceCarrierMapping,
+    JSON.stringify(sourceCarrierMapping),
+  );
 
   const handleSave = () => {
     onSave({

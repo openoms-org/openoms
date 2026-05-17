@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useAuthStore } from "@/lib/auth";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { useOperationsDashboard } from "@/hooks/use-operations-dashboard";
@@ -23,20 +23,23 @@ import {
   X,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useHydratedState } from "@/hooks/use-effect-synced-state";
 
 const QUICKSTART_DISMISSED_KEY = "openoms_quickstart_dismissed";
 
 function QuickStartCard() {
   const t = useTranslations("common");
   const { allCompleted } = useOnboarding();
-  const [dismissed, setDismissed] = useState<boolean | null>(null);
+  const readDismissed = useCallback(
+    () => localStorage.getItem(QUICKSTART_DISMISSED_KEY) === "true",
+    [],
+  );
+  const [dismissed, setDismissed, hydrated] = useHydratedState(
+    false,
+    readDismissed,
+  );
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration guard: read localStorage after mount to avoid mismatch
-    setDismissed(localStorage.getItem(QUICKSTART_DISMISSED_KEY) === "true");
-  }, []);
-
-  if (dismissed === null || !allCompleted || dismissed) return null;
+  if (!hydrated || !allCompleted || dismissed) return null;
 
   const handleDismiss = () => {
     localStorage.setItem(QUICKSTART_DISMISSED_KEY, "true");

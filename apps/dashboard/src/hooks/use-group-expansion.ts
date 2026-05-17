@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { navItems, navGroups } from "@/lib/nav-items";
+import { useHydratedState } from "@/hooks/use-effect-synced-state";
 
 const STORAGE_KEY = "sidebar-expanded-groups";
 
@@ -29,66 +30,56 @@ function findActiveGroup(pathname: string): string | null {
   return null;
 }
 
+function defaultExpandedGroups(): Set<string> {
+  return new Set(navGroups.filter((g) => g.defaultExpanded).map((g) => g.key));
+}
+
 export function useGroupExpansion() {
   const pathname = usePathname();
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
-    return new Set(
-      navGroups.filter((g) => g.defaultExpanded).map((g) => g.key)
-    );
-  });
-  const [loaded, setLoaded] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
+  const activeGroup = findActiveGroup(pathname);
+  const readSavedGroups = useCallback(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as string[];
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setExpandedGroups(new Set(parsed));
+        return new Set(parsed);
       }
     } catch {
       // ignore
     }
-    setLoaded(true);
-  }, []);
 
-  // Auto-expand the group containing the active route
-  useEffect(() => {
-    const activeGroup = findActiveGroup(pathname);
-    if (activeGroup) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setExpandedGroups((prev) => {
-        if (prev.has(activeGroup)) return prev;
-        const next = new Set(prev);
-        next.add(activeGroup);
-        return next;
-      });
-    }
-  }, [pathname]);
+    return defaultExpandedGroups();
+  }, []);
+  const [expandedGroups, setExpandedGroups, hydrated] = useHydratedState(
+    defaultExpandedGroups(),
+    readSavedGroups,
+  );
 
   // Persist to localStorage
   useEffect(() => {
-    if (loaded) {
+    if (hydrated) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify([...expandedGroups]));
     }
-  }, [expandedGroups, loaded]);
+  }, [expandedGroups, hydrated]);
 
-  const toggleGroup = useCallback((groupKey: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupKey)) {
-        next.delete(groupKey);
-      } else {
-        next.add(groupKey);
-      }
-      return next;
-    });
-  }, []);
+  const toggleGroup = useCallback(
+    (groupKey: string) => {
+      setExpandedGroups((prev) => {
+        const next = new Set(prev);
+        if (next.has(groupKey)) {
+          next.delete(groupKey);
+        } else {
+          next.add(groupKey);
+        }
+        return next;
+      });
+    },
+    [setExpandedGroups]
+  );
 
   const isGroupExpanded = useCallback(
-    (groupKey: string) => expandedGroups.has(groupKey),
-    [expandedGroups]
+    (groupKey: string) => expandedGroups.has(groupKey) || activeGroup === groupKey,
+    [activeGroup, expandedGroups]
   );
 
   return { toggleGroup, isGroupExpanded };

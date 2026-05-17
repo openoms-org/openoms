@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { useAuthStore } from "@/lib/auth";
 import { Loader2, Save, Copy, RefreshCw, ExternalLink } from "lucide-react";
 import type { ProductFeedConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 const DEFAULT_FEED_CONFIG: ProductFeedConfig = {
   ceneo_enabled: false,
@@ -54,18 +55,18 @@ export default function FeedSettingsPage() {
   const { data: categoriesConfig } = useProductCategories();
   const tenant = useAuthStore((s) => s.tenant);
 
-  const [form, setForm] = useState<ProductFeedConfig>(DEFAULT_FEED_CONFIG);
-
-  useEffect(() => {
-    if (feedSettings) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        ...DEFAULT_FEED_CONFIG,
-        ...feedSettings,
-        excluded_categories: feedSettings.excluded_categories || [],
-      });
-    }
-  }, [feedSettings]);
+  const feedForm = useMemo(
+    () => ({
+      ...DEFAULT_FEED_CONFIG,
+      ...feedSettings,
+      excluded_categories: feedSettings?.excluded_categories || [],
+    }),
+    [feedSettings],
+  );
+  const [form, setForm] = useEffectSyncedState(
+    feedForm,
+    JSON.stringify(feedForm),
+  );
 
   const tf = useTranslations("settings.feeds");
 

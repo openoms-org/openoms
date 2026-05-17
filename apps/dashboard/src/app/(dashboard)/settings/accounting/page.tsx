@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { INVOICING_PROVIDER_LABELS } from "@/lib/constants";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 interface ProviderInfo {
   name: string;
@@ -102,20 +103,24 @@ export default function AccountingSettingsPage() {
   const updateSettings = useUpdateAccountingSettings();
   const testConnection = useTestAccountingConnection();
 
-  const [provider, setProvider] = useState("");
-  const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
-
-  useEffect(() => {
-    if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProvider(config.provider || "");
-      setCredentials(config.credentials || {});
-    }
-  }, [config]);
+  const settingsKey = JSON.stringify(config ?? {});
+  const settingsProvider = config?.provider || "";
+  const settingsCredentials = useMemo(
+    () => ({ ...(config?.credentials ?? {}) }),
+    [config],
+  );
+  const [provider, setProvider] = useEffectSyncedState(
+    settingsProvider,
+    settingsKey,
+  );
+  const [credentials, setCredentials] = useEffectSyncedState(
+    settingsCredentials,
+    settingsKey,
+  );
 
   const handleProviderChange = (value: string) => {
     const newProvider = value === "none" ? "" : value;

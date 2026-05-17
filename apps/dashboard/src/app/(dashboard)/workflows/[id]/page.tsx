@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -20,6 +20,7 @@ import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
 import { createEmptyWorkflow, type PaletteItem } from "@/lib/workflow-types";
 import type { WorkflowDefinition } from "@/types/api";
 import { Loader2 } from "lucide-react";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 const MAX_HISTORY = 50;
 
@@ -34,30 +35,34 @@ export default function WorkflowEditorPage() {
   const convertWorkflow = useConvertWorkflow();
   const validateWorkflow = useValidateWorkflow();
 
-  const [name, setName] = useState("");
-  const [isActive, setIsActive] = useState(false);
-  const [definition, setDefinition] = useState<WorkflowDefinition>(createEmptyWorkflow());
+  const workflowReady = Boolean(rule && workflowDef);
+  const workflowResetKey = `${id}:${workflowReady ? "loaded" : "pending"}`;
+  const sourceDefinition = useMemo(
+    () => workflowDef ?? createEmptyWorkflow(),
+    [workflowDef],
+  );
+  const [name, setName] = useEffectSyncedState(rule?.name ?? "", workflowResetKey);
+  const [isActive, setIsActive] = useEffectSyncedState(
+    rule?.enabled ?? false,
+    workflowResetKey,
+  );
+  const [definition, setDefinition] = useEffectSyncedState<WorkflowDefinition>(
+    sourceDefinition,
+    workflowResetKey,
+  );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [connectionSource, setConnectionSource] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
 
   // Undo/redo history
-  const [history, setHistory] = useState<WorkflowDefinition[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [history, setHistory] = useEffectSyncedState<WorkflowDefinition[]>(
+    workflowReady ? [sourceDefinition] : [],
+    workflowResetKey,
+  );
+  const [historyIndex, setHistoryIndex] = useEffectSyncedState(
+    workflowReady ? 0 : -1,
+    workflowResetKey,
+  );
   const skipHistoryRef = useRef(false);
-
-  // Load rule and workflow
-  useEffect(() => {
-    if (rule && workflowDef && !initialized) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setName(rule.name);
-      setIsActive(rule.enabled);
-      setDefinition(workflowDef);
-      setHistory([workflowDef]);
-      setHistoryIndex(0);
-      setInitialized(true);
-    }
-  }, [rule, workflowDef, initialized]);
 
   const handleDefinitionChange = useCallback(
     (newDef: WorkflowDefinition) => {
@@ -85,7 +90,7 @@ export default function WorkflowEditorPage() {
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
     },
-    [history, historyIndex]
+    [history, historyIndex, setDefinition, setHistory, setHistoryIndex]
   );
 
   const handleUndo = useCallback(() => {
@@ -94,7 +99,7 @@ export default function WorkflowEditorPage() {
       setHistoryIndex(historyIndex - 1);
       setDefinition(history[historyIndex - 1]);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, setDefinition, setHistoryIndex]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
@@ -102,7 +107,7 @@ export default function WorkflowEditorPage() {
       setHistoryIndex(historyIndex + 1);
       setDefinition(history[historyIndex + 1]);
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, setDefinition, setHistoryIndex]);
 
   const handleSave = async () => {
     if (!name.trim()) {

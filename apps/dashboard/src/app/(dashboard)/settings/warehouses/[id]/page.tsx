@@ -52,6 +52,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 export default function WarehouseDetailPage() {
   const t = useTranslations("warehouses");
@@ -67,10 +68,17 @@ export default function WarehouseDetailPage() {
   const upsertStock = useUpsertWarehouseStock(id);
   const { data: productsData } = useProducts({ limit: 100 });
 
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [isDefault, setIsDefault] = useState(false);
-  const [active, setActive] = useState(true);
+  const warehouseKey = warehouse?.id ?? null;
+  const [name, setName] = useEffectSyncedState(warehouse?.name ?? "", warehouseKey);
+  const [code, setCode] = useEffectSyncedState(warehouse?.code || "", warehouseKey);
+  const [isDefault, setIsDefault] = useEffectSyncedState(
+    warehouse?.is_default ?? false,
+    warehouseKey,
+  );
+  const [active, setActive] = useEffectSyncedState(
+    warehouse?.active ?? true,
+    warehouseKey,
+  );
 
   const [showAddStock, setShowAddStock] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -83,16 +91,6 @@ export default function WarehouseDetailPage() {
       router.push("/");
     }
   }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
-    if (warehouse) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setName(warehouse.name);
-      setCode(warehouse.code || "");
-      setIsDefault(warehouse.is_default);
-      setActive(warehouse.active);
-    }
-  }, [warehouse]);
 
   if (authLoading || !isAdmin || isLoading) {
     return <LoadingSkeleton />;

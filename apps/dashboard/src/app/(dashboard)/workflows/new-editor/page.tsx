@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  type SetStateAction,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -11,10 +17,26 @@ import { WorkflowCanvas, zoomIn, zoomOut } from "@/components/workflow/workflow-
 import { WorkflowSidebar } from "@/components/workflow/workflow-sidebar";
 import { WorkflowToolbar } from "@/components/workflow/workflow-toolbar";
 import { NodeConfigPanel } from "@/components/workflow/node-config-panel";
-import { createEmptyWorkflow, type PaletteItem } from "@/lib/workflow-types";
+import {
+  createEmptyWorkflow,
+  isWorkflowDefinition,
+  type PaletteItem,
+} from "@/lib/workflow-types";
 import type { WorkflowDefinition, WorkflowNode } from "@/types/api";
+import { useHydratedState } from "@/hooks/use-effect-synced-state";
 
 const MAX_HISTORY = 50;
+
+interface NewWorkflowEditorState {
+  name: string;
+  definition: WorkflowDefinition;
+  history: WorkflowDefinition[];
+  historyIndex: number;
+}
+
+function resolveStateAction<T>(next: SetStateAction<T>, current: T): T {
+  return typeof next === "function" ? (next as (value: T) => T)(current) : next;
+}
 
 export default function NewWorkflowEditorPage() {
   const t = useTranslations("workflows");
@@ -23,38 +45,86 @@ export default function NewWorkflowEditorPage() {
   const convertWorkflow = useConvertWorkflow();
   const validateWorkflow = useValidateWorkflow();
 
-  const [name, setName] = useState(t("editor.defaultName"));
+  const defaultEditorState = useMemo<NewWorkflowEditorState>(() => {
+    const definition = createEmptyWorkflow();
+
+    return {
+      name: t("editor.defaultName"),
+      definition,
+      history: [definition],
+      historyIndex: 0,
+    };
+  }, [t]);
+  const readStoredEditorState = useCallback(() => {
+    const stored = sessionStorage.getItem("workflow-new");
+    if (!stored) return defaultEditorState;
+
+    try {
+      const parsed = JSON.parse(stored) as {
+        name?: string;
+        definition?: unknown;
+      };
+      const definition = isWorkflowDefinition(parsed.definition)
+        ? parsed.definition
+        : createEmptyWorkflow();
+
+      return {
+        name: parsed.name || t("editor.defaultName"),
+        definition,
+        history: [definition],
+        historyIndex: 0,
+      };
+    } catch {
+      return defaultEditorState;
+    } finally {
+      sessionStorage.removeItem("workflow-new");
+    }
+  }, [defaultEditorState, t]);
+  const [editorState, setEditorState] = useHydratedState(
+    defaultEditorState,
+    readStoredEditorState,
+  );
+  const { name, definition, history, historyIndex } = editorState;
+  const setName = useCallback(
+    (next: SetStateAction<string>) => {
+      setEditorState((current) => ({
+        ...current,
+        name: resolveStateAction(next, current.name),
+      }));
+    },
+    [setEditorState],
+  );
+  const setDefinition = useCallback(
+    (next: SetStateAction<WorkflowDefinition>) => {
+      setEditorState((current) => ({
+        ...current,
+        definition: resolveStateAction(next, current.definition),
+      }));
+    },
+    [setEditorState],
+  );
+  const setHistory = useCallback(
+    (next: SetStateAction<WorkflowDefinition[]>) => {
+      setEditorState((current) => ({
+        ...current,
+        history: resolveStateAction(next, current.history),
+      }));
+    },
+    [setEditorState],
+  );
+  const setHistoryIndex = useCallback(
+    (next: SetStateAction<number>) => {
+      setEditorState((current) => ({
+        ...current,
+        historyIndex: resolveStateAction(next, current.historyIndex),
+      }));
+    },
+    [setEditorState],
+  );
   const [isActive, setIsActive] = useState(false);
-  const [definition, setDefinition] = useState<WorkflowDefinition>(createEmptyWorkflow());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [connectionSource, setConnectionSource] = useState<string | null>(null);
-
-  // Undo/redo history
-  const [history, setHistory] = useState<WorkflowDefinition[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
   const skipHistoryRef = useRef(false);
-
-  // Load from sessionStorage (template or blank)
-  useEffect(() => {
-    const stored = sessionStorage.getItem("workflow-new");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setName(parsed.name || t("editor.defaultName"));
-        setDefinition(parsed.definition || createEmptyWorkflow());
-        setHistory([parsed.definition || createEmptyWorkflow()]);
-        setHistoryIndex(0);
-      } catch {
-        // ignore
-      }
-      sessionStorage.removeItem("workflow-new");
-    } else {
-      const empty = createEmptyWorkflow();
-      setHistory([empty]);
-      setHistoryIndex(0);
-    }
-  }, []);
 
   // Record changes to history
   const handleDefinitionChange = useCallback(

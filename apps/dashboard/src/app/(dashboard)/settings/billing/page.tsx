@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useSubscription } from "@/hooks/use-billing";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +32,6 @@ function computeDaysLeft(trialEnd: string): number {
 export default function BillingSettingsPage() {
   const t = useTranslations("subscription");
   const { data: subscription, isLoading } = useSubscription();
-  const [daysLeft, setDaysLeft] = useState<number | null>(null);
 
   const STATUS_LABELS: Record<string, string> = {
     trialing: t("statusTrialing"),
@@ -48,12 +46,10 @@ export default function BillingSettingsPage() {
     year: t("intervalYear"),
   };
 
-  useEffect(() => {
-    if (subscription?.status === "trialing" && subscription.trial_end) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDaysLeft(computeDaysLeft(subscription.trial_end));
-    }
-  }, [subscription?.status, subscription?.trial_end]);
+  const daysLeft =
+    subscription?.status === "trialing" && subscription.trial_end
+      ? computeDaysLeft(subscription.trial_end)
+      : null;
 
   if (isLoading) {
     return (

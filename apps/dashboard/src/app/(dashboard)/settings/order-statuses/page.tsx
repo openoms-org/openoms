@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useOrderStatuses, COLOR_PRESETS } from "@/hooks/use-order-statuses";
@@ -18,6 +18,7 @@ import {
 import { Trash2, Plus } from "lucide-react";
 import type { StatusDef, OrderStatusConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 const COLOR_OPTIONS = Object.entries(COLOR_PRESETS).map(([key, classes]) => ({
   key,
@@ -30,16 +31,26 @@ export default function OrderStatusesPage() {
   const { data: config, isLoading } = useOrderStatuses();
   const updateStatuses = useUpdateOrderStatuses();
 
-  const [statuses, setStatuses] = useState<StatusDef[]>([]);
-  const [transitions, setTransitions] = useState<Record<string, string[]>>({});
-
-  useEffect(() => {
-    if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStatuses([...config.statuses]);
-      setTransitions({ ...config.transitions });
-    }
-  }, [config]);
+  const configStatuses = useMemo(
+    () => config?.statuses.map((status) => ({ ...status })) ?? [],
+    [config],
+  );
+  const configTransitions = useMemo(
+    () => ({ ...(config?.transitions ?? {}) }),
+    [config],
+  );
+  const configKey = JSON.stringify({
+    statuses: configStatuses,
+    transitions: configTransitions,
+  });
+  const [statuses, setStatuses] = useEffectSyncedState(
+    configStatuses,
+    configKey,
+  );
+  const [transitions, setTransitions] = useEffectSyncedState(
+    configTransitions,
+    configKey,
+  );
 
   const handleAddStatus = () => {
     const newPosition = statuses.length + 1;
