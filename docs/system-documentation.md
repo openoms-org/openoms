@@ -149,7 +149,7 @@ Tabele tenant-scoped maja wlaczone `FORCE ROW LEVEL SECURITY`, a CI sprawdza baz
    - Uzyj Helm chart z `deploy/helm/openoms/` + wlasny `values-production.yaml`
    - `helm upgrade --install openoms ./deploy/helm/openoms -f values-production.yaml`
    - API i Dashboard deploya sa jako Argo Rollouts z blue-green strategia
-   - Pre-promotion: `AnalysisTemplate` uruchamia smoke tests (health check + 5 kluczowych endpointow)
+   - Pre-promotion: `AnalysisTemplate` uruchamia smoke tests (health check + 5 kluczowych endpointow); job smoke-test jest zgodny z PSS `restricted` (`runAsNonRoot`, drop ALL capabilities, read-only root filesystem, seccomp RuntimeDefault)
    - Preview service (`openoms-api-preview`, `openoms-dashboard-preview`) do weryfikacji przed przelaczeniem
    - Automatyczny rollback jesli smoke tests nie przejda
    - Albo uzyj `docker-compose.prod.yml` dla prostszych setupow (bez Argo)

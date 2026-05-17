@@ -22,6 +22,8 @@ spec:
                 securityContext:
                   runAsNonRoot: true
                   runAsUser: 65534
+                  seccompProfile:
+                    type: RuntimeDefault
                 containers:
                   - name: smoke
                     image: curlimages/curl:8.11.1
@@ -49,6 +51,8 @@ spec:
                       readOnlyRootFilesystem: true
                       capabilities:
                         drop: ['ALL']
+                      seccompProfile:
+                        type: RuntimeDefault
                     resources:
                       requests:
                         cpu: 10m
