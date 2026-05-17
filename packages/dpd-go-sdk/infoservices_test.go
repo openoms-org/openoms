@@ -123,7 +123,7 @@ func TestInfoServicesGetTracking_ParsesEventsChronologically(t *testing.T) {
 	if first.Waybill != "0000012345678" {
 		t.Fatalf("first waybill = %q", first.Waybill)
 	}
-	wantTime := time.Date(2026, 5, 17, 9, 0, 0, 0, time.UTC)
+	wantTime := time.Date(2026, 5, 17, 7, 0, 0, 0, time.UTC)
 	if !first.DateTime.Equal(wantTime) {
 		t.Fatalf("first DateTime = %s, want %s", first.DateTime, wantTime)
 	}

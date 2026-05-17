@@ -33,8 +33,8 @@ This PR does not implement DPD customer-channel batch polling or `markEventsAsPr
 - Modify: `apps/api-server/internal/integration/carriers/dpd_test.go`
 - Modify: `apps/api-server/internal/integration/carriers/dpd_production_test.go`
 - Modify: `apps/dashboard/src/lib/constants.ts`
-- Modify: `apps/dashboard/src/i18n/messages/pl.json`
-- Modify: `apps/dashboard/src/i18n/messages/en.json`
+- Modify: `apps/dashboard/messages/pl/integrations.json`
+- Modify: `apps/dashboard/messages/en/integrations.json`
 - Modify: `docs/system-documentation.md`
 
 ## Task 1: SDK SOAP Client
@@ -66,7 +66,7 @@ Test cases:
 - [ ] Run RED:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/packages/dpd-go-sdk
+cd packages/dpd-go-sdk
 go test ./... -run 'TestInfoServicesGetTracking' -count=1
 ```
 
@@ -83,7 +83,7 @@ Implementation requirements:
 - Build SOAP 1.1 envelope with namespace `http://events.dpdinfoservices.dpd.com.pl/`.
 - Use `http.NewRequestWithContext`, `Content-Type: text/xml; charset=utf-8`, `SOAPAction: ""`, and bounded body read with `io.LimitReader`.
 - Parse SOAP fault before parsing successful response.
-- Parse `eventTime` layouts `2006-01-02T15:04:05.999`, `2006-01-02T15:04:05`, and `time.RFC3339Nano`, using UTC for zone-less DPD times.
+- Parse `eventTime` layouts `2006-01-02T15:04:05.999`, `2006-01-02T15:04:05`, and `time.RFC3339Nano`, using `Europe/Warsaw` for DPD timestamps without an explicit offset and normalizing returned values to UTC.
 - Reverse returned DPD events so OpenOMS receives chronological order.
 
 - [ ] Update `packages/dpd-go-sdk/shipments.go`.
@@ -93,7 +93,7 @@ Implementation requirements:
 - [ ] Run GREEN:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/packages/dpd-go-sdk
+cd packages/dpd-go-sdk
 go test ./... -run 'TestInfoServicesGetTracking' -count=1
 ```
 
@@ -121,7 +121,7 @@ Update `packages/dpd-go-sdk/client_test.go` and `packages/dpd-go-sdk/spec_test.g
 - [ ] Run RED:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/packages/dpd-go-sdk
+cd packages/dpd-go-sdk
 go test ./... -run 'Test.*Status' -count=1
 ```
 
@@ -134,7 +134,7 @@ Keep existing symbolic statuses for REST/webhook compatibility and add numeric I
 - [ ] Run GREEN:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/packages/dpd-go-sdk
+cd packages/dpd-go-sdk
 go test ./... -run 'Test.*Status' -count=1
 ```
 
@@ -158,7 +158,7 @@ Modify `apps/api-server/internal/integration/carriers/dpd_production_test.go`:
 - [ ] Run RED:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/integration/carriers -run 'TestDPD_GetTracking' -count=1
 ```
 
@@ -183,7 +183,7 @@ Changes:
 - [ ] Run GREEN:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/integration/carriers -run 'TestDPD_GetTracking' -count=1
 ```
 
@@ -201,13 +201,13 @@ Add optional fields after `master_fid`:
 
 - [ ] Add Polish and English translations in:
 
-- `apps/dashboard/src/i18n/messages/pl.json`
-- `apps/dashboard/src/i18n/messages/en.json`
+- `apps/dashboard/messages/pl/integrations.json`
+- `apps/dashboard/messages/en/integrations.json`
 
 - [ ] Run targeted frontend validation:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npm run lint:quiet
 ```
 
@@ -226,7 +226,7 @@ Document DPD support as:
 - [ ] Run targeted package tests:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/packages/dpd-go-sdk
+cd packages/dpd-go-sdk
 go test ./... -count=1
 ```
 
@@ -235,7 +235,7 @@ Expected: PASS.
 - [ ] Run targeted API carrier tests:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/integration/carriers -count=1
 ```
 
@@ -244,7 +244,7 @@ Expected: PASS.
 - [ ] Run self-review:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd .
 git diff --check
 git diff --stat
 ```
@@ -254,7 +254,7 @@ Expected: no whitespace errors; diff limited to DPD SDK/provider/dashboard crede
 - [ ] Run full public validation before push:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd .
 ./scripts/local-ci.sh
 ```
 

@@ -10,9 +10,12 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	_ "time/tzdata"
 )
 
 const infoServicesLanguage = "EN"
+
+var infoServicesTimeLocation = loadInfoServicesTimeLocation()
 
 type infoServicesSOAPEnvelope struct {
 	Body infoServicesSOAPBody `xml:"Body"`
@@ -149,19 +152,26 @@ func writeXMLNode(b *bytes.Buffer, name, value string) {
 
 func parseInfoServicesTime(raw string) (time.Time, error) {
 	raw = strings.TrimSpace(raw)
+	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+		return t.UTC(), nil
+	}
 	for _, layout := range []string{
-		time.RFC3339Nano,
 		"2006-01-02T15:04:05.999",
 		"2006-01-02T15:04:05",
 	} {
-		if t, err := time.Parse(layout, raw); err == nil {
-			if t.Location() == time.Local {
-				return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
-			}
-			return t, nil
+		if t, err := time.ParseInLocation(layout, raw, infoServicesTimeLocation); err == nil {
+			return t.UTC(), nil
 		}
 	}
 	return time.Time{}, fmt.Errorf("unsupported timestamp format")
+}
+
+func loadInfoServicesTimeLocation() *time.Location {
+	loc, err := time.LoadLocation("Europe/Warsaw")
+	if err != nil {
+		return time.UTC
+	}
+	return loc
 }
 
 func formatInfoServicesLocation(depotName, country string) string {
