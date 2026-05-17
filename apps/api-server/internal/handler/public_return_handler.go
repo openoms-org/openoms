@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -172,7 +172,7 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 	}
 
 	// Create the return with tenant context
-	err = h.withTenant(r.Context(), tenantID, func(tx pgx.Tx) error {
+	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
 		return h.returnRepo.Create(r.Context(), tx, ret)
 	})
 	if err != nil {
@@ -186,27 +186,6 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 		"return_token": returnToken,
 		"created_at":   ret.CreatedAt,
 	})
-}
-
-// withTenant runs a function in a transaction with RLS set to the given tenant.
-func (h *PublicReturnHandler) withTenant(ctx context.Context, tenantID uuid.UUID, fn func(tx pgx.Tx) error) error {
-	tx, err := h.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-
-	if _, err := tx.Exec(ctx,
-		"SELECT set_config('app.current_tenant_id', $1, true)",
-		tenantID.String(),
-	); err != nil {
-		return fmt.Errorf("set tenant context: %w", err)
-	}
-
-	if err := fn(tx); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
 }
 
 // findReturnByToken finds a return by token using a SECURITY DEFINER function
