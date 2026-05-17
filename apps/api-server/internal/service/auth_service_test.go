@@ -272,7 +272,7 @@ func TestAuthService_Refresh_InvalidToken(t *testing.T) {
 
 func TestAuthService_ConsumeStoredRefreshTokenRejectsRevokedSibling(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	svc := NewAuthService(nil, nil, nil, nil, nil, nil)
 	svc.SetRefreshTokenStore(store)
 
@@ -320,7 +320,7 @@ func TestAuthService_ConsumeStoredRefreshTokenRejectsRevokedSibling(t *testing.T
 
 func TestAuthService_ConsumeStoredRefreshTokenInvalidatesNonCurrentSibling(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	svc := NewAuthService(nil, nil, nil, nil, nil, nil)
 	svc.SetRefreshTokenStore(store)
 

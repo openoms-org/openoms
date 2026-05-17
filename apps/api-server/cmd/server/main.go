@@ -304,6 +304,7 @@ func run() error {
 		slog.Info("using Redis refresh token rotation")
 	} else {
 		refreshStore := service.NewMemoryRefreshTokenStore()
+		defer refreshStore.Close()
 		authService.SetRefreshTokenStore(refreshStore)
 		slog.Info("using in-memory refresh token rotation")
 	}

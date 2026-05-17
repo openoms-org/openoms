@@ -21,10 +21,11 @@ type memRefreshToken struct {
 // MemoryRefreshTokenStore implements RefreshTokenStore using in-memory maps.
 // Suitable for single-pod deployments and local development.
 type MemoryRefreshTokenStore struct {
-	mu       sync.Mutex
-	families map[string]*memRefreshFamily
-	tokens   map[string]*memRefreshToken
-	done     chan struct{}
+	mu        sync.Mutex
+	families  map[string]*memRefreshFamily
+	tokens    map[string]*memRefreshToken
+	done      chan struct{}
+	closeOnce sync.Once
 }
 
 // NewMemoryRefreshTokenStore creates a new in-memory refresh token store
@@ -37,6 +38,13 @@ func NewMemoryRefreshTokenStore() *MemoryRefreshTokenStore {
 	}
 	asyncutil.SafeGo(func() { s.cleanup() })
 	return s
+}
+
+// Close stops the background cleanup goroutine.
+func (m *MemoryRefreshTokenStore) Close() {
+	m.closeOnce.Do(func() {
+		close(m.done)
+	})
 }
 
 // cleanup removes expired entries every 5 minutes.

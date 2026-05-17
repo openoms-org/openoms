@@ -13,7 +13,7 @@ import (
 
 func TestMemoryRefreshTokenStore_FamilyCRUD(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	userID := uuid.New().String()
@@ -67,9 +67,18 @@ func TestMemoryRefreshTokenStore_FamilyCRUD(t *testing.T) {
 	assert.Nil(t, got, "family should be nil after deletion")
 }
 
+func TestMemoryRefreshTokenStore_CloseIsIdempotent(t *testing.T) {
+	store := NewMemoryRefreshTokenStore()
+
+	assert.NotPanics(t, func() {
+		store.Close()
+		store.Close()
+	})
+}
+
 func TestMemoryRefreshTokenStore_FamilyExpiryShortTTL(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	family := &RefreshTokenFamily{
@@ -93,7 +102,7 @@ func TestMemoryRefreshTokenStore_FamilyExpiryShortTTL(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_TokenCRUD(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	tokenHash := "tok-crud-" + uuid.New().String()
@@ -123,7 +132,7 @@ func TestMemoryRefreshTokenStore_TokenCRUD(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_MarkTokenUsedAndVerify(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	tokenHash := "tok-mark-" + uuid.New().String()
@@ -159,7 +168,7 @@ func TestMemoryRefreshTokenStore_MarkTokenUsedAndVerify(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_ConsumeTokenAtomic(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	tokenHash := "tok-consume-" + uuid.New().String()
@@ -212,7 +221,7 @@ func TestMemoryRefreshTokenStore_ConsumeTokenAtomic(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_ConsumeTokenAlreadyUsed(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	tokenHash := "tok-used-" + uuid.New().String()
@@ -233,7 +242,7 @@ func TestMemoryRefreshTokenStore_ConsumeTokenAlreadyUsed(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_TokenExpiryShortTTL(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	tokenHash := "tok-expiry-" + uuid.New().String()
@@ -255,7 +264,7 @@ func TestMemoryRefreshTokenStore_TokenExpiryShortTTL(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_IsolatedKeys(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	// Store two distinct families
@@ -316,7 +325,7 @@ func TestMemoryRefreshTokenStore_IsolatedKeys(t *testing.T) {
 
 func TestMemoryRefreshTokenStore_GetReturnsDeepCopy(t *testing.T) {
 	store := NewMemoryRefreshTokenStore()
-	defer close(store.done)
+	defer store.Close()
 	ctx := context.Background()
 
 	family := &RefreshTokenFamily{
