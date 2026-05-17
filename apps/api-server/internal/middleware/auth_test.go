@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -18,6 +19,17 @@ type mockValidator struct {
 
 func (m *mockValidator) ValidateToken(_ string) (*model.AuthClaims, error) {
 	return m.claims, m.err
+}
+
+type countingBlacklistStore struct {
+	isRevokedCalls int
+}
+
+func (s *countingBlacklistStore) Revoke(string, time.Time) {}
+
+func (s *countingBlacklistStore) IsRevoked(string) bool {
+	s.isRevokedCalls++
+	return false
 }
 
 func TestJWTAuth_ValidToken(t *testing.T) {
@@ -100,6 +112,31 @@ func TestJWTAuth_InvalidToken(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Errorf("status = %d, want 401", rec.Code)
+	}
+}
+
+func TestJWTAuth_InvalidTokenSkipsBlacklistLookup(t *testing.T) {
+	validator := &mockValidator{
+		err: jwt.ErrTokenExpired,
+	}
+	store := &countingBlacklistStore{}
+	blacklist := NewTokenBlacklistWithStore(store)
+
+	handler := JWTAuth(validator, blacklist)(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Error("handler should not be called")
+	}))
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer invalid-token")
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401", rec.Code)
+	}
+	if store.isRevokedCalls != 0 {
+		t.Errorf("blacklist lookups = %d, want 0", store.isRevokedCalls)
 	}
 }
 
