@@ -388,7 +388,7 @@ OpenOMS/
 | `schema_migrations` | Wersja migracji DB | version, dirty |
 | `billing_customers` | Klienci Stripe | tenant_id (UNIQUE), stripe_customer_id (UNIQUE) |
 | `billing_subscriptions` | Subskrypcje | stripe_subscription_id (UNIQUE), plan, billing_interval, status, trial_end |
-| `billing_checkout_sessions` | Sesje checkout | stripe_session_id (UNIQUE), plan, billing_interval, email, status, tenant_id, stripe_customer_id, stripe_subscription_id |
+| `billing_checkout_sessions` | Sesje checkout | stripe_session_id (UNIQUE), plan, billing_interval, email, status, tenant_id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_end, current_period_start, current_period_end |
 | `used_license_tokens` | Uzyte tokeny licencji | jti (UNIQUE), email, plan, used_at |
 | `listing_description_html` | Opisy HTML listingow | listing_id, html_content |
 

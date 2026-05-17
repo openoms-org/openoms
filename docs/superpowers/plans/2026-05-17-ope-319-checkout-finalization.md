@@ -70,7 +70,7 @@
 - [ ] Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd public/apps/api-server
 go test ./internal/service -run TestCheckoutServiceFinalizeCheckoutClaimUsesStoredStripeRefsWhenStripeFetchFails -count=1
 ```
 
@@ -108,21 +108,21 @@ go test ./internal/service -run TestCheckoutServiceFinalizeCheckoutClaimUsesStor
 - [ ] Run targeted service tests:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd public/apps/api-server
 go test ./internal/service -count=1
 ```
 
 - [ ] Run diff checks:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd public
 git diff --check
 ```
 
 - [ ] Run full local CI on clean HEAD before push:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd public
 ./scripts/local-ci.sh
 ```
 

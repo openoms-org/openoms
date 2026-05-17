@@ -218,7 +218,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Finalize checkout claim: set tenant_id, create billing customer + subscription records
 	if checkoutSessionID != "" && h.checkoutSvc != nil {
 		if err := h.checkoutSvc.FinalizeCheckoutClaim(r.Context(), checkoutSessionID, resp.Tenant.ID, req.Plan, req.CheckoutSessionInterval); err != nil {
-			slog.Error("failed to finalize checkout claim after registration", "tenant_id", resp.Tenant.ID) //nolint:gosec // G706: static message; tenant_id is server-generated UUID, no raw checkout session or request text is logged.
+			slog.Error("failed to finalize checkout claim after registration", "tenant_id", resp.Tenant.ID, "error", err) //nolint:gosec // G706: static message; tenant_id is server-generated UUID, no raw checkout session or request text is logged from the handler.
 		}
 	}
 
