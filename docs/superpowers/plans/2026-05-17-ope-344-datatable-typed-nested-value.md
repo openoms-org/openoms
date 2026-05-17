@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Add Regression Coverage
+## Task 1: Add Regression Coverage
 
 **Files:**
 - Modify: `apps/dashboard/src/components/shared/__tests__/data-table.test.tsx`
@@ -20,12 +20,31 @@
 Add a test that reads `data-table.tsx` and fails while `getNestedValue` still uses `any` or an eslint suppression:
 
 ```ts
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+```
+
+```ts
+function getDataTableSourcePath(): string {
+  try {
+    return resolve(dirname(fileURLToPath(import.meta.url)), "../data-table.tsx");
+  } catch {
+    const candidates = [
+      resolve(process.cwd(), "src/components/shared/data-table.tsx"),
+      resolve(process.cwd(), "apps/dashboard/src/components/shared/data-table.tsx"),
+    ];
+    const sourcePath = candidates.find((candidate) => existsSync(candidate));
+    if (sourcePath) return sourcePath;
+
+    throw new Error("Unable to locate DataTable source file");
+  }
+}
 ```
 
 ```ts
 it("keeps nested accessor lookup typed without any escapes", () => {
-  const source = readFileSync("src/components/shared/data-table.tsx", "utf8");
+  const source = readFileSync(getDataTableSourcePath(), "utf8");
 
   expect(source).not.toContain("eslint-disable-next-line @typescript-eslint/no-explicit-any");
   expect(source).toMatch(
@@ -46,7 +65,7 @@ npx vitest run src/components/shared/__tests__/data-table.test.tsx --reporter=do
 
 Expected: FAIL because `data-table.tsx` currently contains the `no-explicit-any` suppression and `obj: any`.
 
-### Task 2: Type the Nested Accessor Helper
+## Task 2: Type the Nested Accessor Helper
 
 **Files:**
 - Modify: `apps/dashboard/src/components/shared/data-table.tsx`
@@ -80,7 +99,7 @@ getNestedValue(row as Record<string, unknown>, key)
 
 This avoids forcing all `T` row interfaces to declare an index signature.
 
-### Task 3: Verify and Publish
+## Task 3: Verify and Publish
 
 **Files:**
 - No docs update required beyond this plan because no API, DB, architecture, deploy, or user-facing behavior changes.
@@ -96,7 +115,7 @@ npm run lint:quiet -- src/components/shared/data-table.tsx src/components/shared
 - [x] **Step 2: Run repository whitespace validation**
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+# from repository root
 git diff --check
 ```
 

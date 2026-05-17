@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,6 +21,21 @@ const testData: TestRow[] = [
   { id: "1", name: "Jan Kowalski", email: "jan@example.com" },
   { id: "2", name: "Anna Nowak", email: "anna@example.com" },
 ];
+
+function getDataTableSourcePath(): string {
+  try {
+    return resolve(dirname(fileURLToPath(import.meta.url)), "../data-table.tsx");
+  } catch {
+    const candidates = [
+      resolve(process.cwd(), "src/components/shared/data-table.tsx"),
+      resolve(process.cwd(), "apps/dashboard/src/components/shared/data-table.tsx"),
+    ];
+    const sourcePath = candidates.find((candidate) => existsSync(candidate));
+    if (sourcePath) return sourcePath;
+
+    throw new Error("Unable to locate DataTable source file");
+  }
+}
 
 describe("DataTable", () => {
   it("renders column headers", () => {
@@ -110,7 +127,7 @@ describe("DataTable", () => {
   });
 
   it("keeps nested accessor lookup typed without any escapes", () => {
-    const source = readFileSync("src/components/shared/data-table.tsx", "utf8");
+    const source = readFileSync(getDataTableSourcePath(), "utf8");
 
     expect(source).not.toContain("eslint-disable-next-line @typescript-eslint/no-explicit-any");
     expect(source).toMatch(
