@@ -1,4 +1,95 @@
 {
+  "supplierPortal": {
+    "detail": {
+      "actions": {
+        "confirmOrder": "Potwierdź zamówienie",
+        "markShipped": "Oznacz jako wysłane"
+      },
+      "back": "Powrót",
+      "backToList": "Powrót do listy",
+      "confirmDialog": {
+        "cancel": "Anuluj",
+        "confirm": "Potwierdź",
+        "confirming": "Potwierdzanie...",
+        "referenceLabel": "Numer referencyjny (opcjonalnie)",
+        "referencePlaceholder": "np. numer potwierdzenia dostawcy",
+        "title": "Potwierdź zamówienie"
+      },
+      "errors": {
+        "confirm": "Nie udało się potwierdzić",
+        "generic": "Wystąpił błąd",
+        "message": "Nie udało się wysłać wiadomości",
+        "ship": "Nie udało się oznaczyć wysyłki"
+      },
+      "items": {
+        "columns": {
+          "ordered": "Zamówiono",
+          "product": "Produkt",
+          "received": "Odebrano",
+          "sku": "SKU",
+          "total": "Razem",
+          "unitPrice": "Cena jedn."
+        },
+        "title": "Pozycje"
+      },
+      "loading": "Ładowanie...",
+      "messages": {
+        "empty": "Brak wiadomości. Napisz pierwszą wiadomość.",
+        "fromBuyer": "Kupujący",
+        "fromSupplier": "Dostawca",
+        "placeholder": "Napisz wiadomość...",
+        "send": "Wyślij",
+        "sending": "Wysyłanie...",
+        "title": "Wiadomości"
+      },
+      "shipDialog": {
+        "cancel": "Anuluj",
+        "carrierLabel": "Przewoźnik *",
+        "carrierPlaceholder": "np. DHL, InPost, DPD",
+        "confirm": "Oznacz wysłane",
+        "saving": "Zapisywanie...",
+        "title": "Oznacz jako wysłane",
+        "trackingLabel": "Numer śledzenia *",
+        "trackingPlaceholder": "np. 1Z999AA10123456784"
+      },
+      "summary": {
+        "amount": "Kwota",
+        "createdAt": "Utworzono",
+        "expectedDate": "Oczekiwana data",
+        "notes": "Notatki",
+        "updatedAt": "Aktualizacja"
+      }
+    },
+    "errors": {
+      "expiredToken": "Token dostępu wygasł. Poproś o nowy link.",
+      "generic": "Wystąpił błąd. Spróbuj ponownie później.",
+      "invalidToken": "Nieprawidłowy token lub dostęp został wyłączony.",
+      "missingToken": "Brak tokenu dostępu. Sprawdź poprawność linku."
+    },
+    "loading": "Ładowanie...",
+    "orders": {
+      "columns": {
+        "amount": "Kwota",
+        "createdAt": "Data utworzenia",
+        "expectedDate": "Oczekiwana data",
+        "poNumber": "Nr PO",
+        "status": "Status"
+      },
+      "details": "Szczegóły",
+      "empty": "Brak zamówień zakupowych.",
+      "title": "Zamówienia zakupowe ({count})"
+    },
+    "statuses": {
+      "cancelled": "Anulowane",
+      "confirmed": "Potwierdzone",
+      "partiallyReceived": "Częściowo odebrane",
+      "received": "Odebrane",
+      "sent": "Wysłane",
+      "shipped": "Wysłane (dostawca)"
+    },
+    "title": "Portal Dostawcy",
+    "welcome": "Witaj,"
+  },
   "suppliers": {
     "0Partspushpominieto": "0) parts.push(`Pominięto: $",
     "accessRevoked": "Dostęp cofnięty",

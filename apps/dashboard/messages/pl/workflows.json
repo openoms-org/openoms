@@ -10,7 +10,10 @@
       "createSuccess": "Workflow został utworzony",
       "defaultName": "Nowy workflow",
       "nameRequired": "Nazwa workflow jest wymagana",
+      "notFound": "Workflow nie został znaleziony.",
       "testHint": "Funkcja testu - zapisz workflow i użyj testu w edytorze tekstowym",
+      "updateError": "Nie udało się zapisać workflow",
+      "updateSuccess": "Workflow został zaktualizowany",
       "validationError": "Workflow zawiera błędy",
       "validationFailed": "Błąd walidacji workflow"
     },
@@ -29,10 +32,46 @@
       "title": "Nowy workflow"
     },
     "newWorkflow": "Nowy workflow",
+    "nodeConfig": {
+      "action": "Akcja",
+      "actionType": "Typ akcji",
+      "condition": "Warunek",
+      "delayMinutes": "Opóźnienie (minuty)",
+      "deleteNode": "Usuń węzeł",
+      "emailAddress": "Adres e-mail",
+      "field": "Pole",
+      "fieldPlaceholder": "np. status, total_amount, tags",
+      "immediateHint": "0 = natychmiast",
+      "invoiceType": "Typ faktury",
+      "newStatus": "Nowy status",
+      "operator": "Operator",
+      "selectActionType": "Wybierz typ akcji...",
+      "selectEvent": "Wybierz zdarzenie...",
+      "tag": "Tag",
+      "trigger": "Wyzwalacz",
+      "triggerEvent": "Zdarzenie wyzwalające",
+      "value": "Wartość",
+      "valuePlaceholder": "wartość do porównania",
+      "webhookUrl": "URL webhooka"
+    },
     "retry": "Spróbuj ponownie",
     "statusActive": "Aktywny",
     "statusDraft": "Wersja robocza",
     "textEditor": "Edytor tekstowy",
-    "title": "Workflow Builder"
+    "title": "Kreator workflow",
+    "toolbar": {
+      "activate": "Aktywuj",
+      "active": "Aktywny",
+      "deactivate": "Dezaktywuj",
+      "draft": "Wersja robocza",
+      "fitToScreen": "Dopasuj do ekranu",
+      "namePlaceholder": "Nazwa workflow...",
+      "redo": "Ponów",
+      "save": "Zapisz",
+      "test": "Test",
+      "undo": "Cofnij",
+      "zoomIn": "Przybliż",
+      "zoomOut": "Oddal"
+    }
   }
 }

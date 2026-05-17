@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowLeft,
   Loader2,
@@ -134,6 +135,7 @@ export default function AllegroDeliveryPage() {
 }
 
 function DeliverySettingsSection() {
+  const t = useTranslations("marketplaces.allegro.delivery.settings");
   const { data, isLoading } = useAllegroDeliverySettings();
   const updateSettings = useUpdateAllegroDeliverySettings();
 
@@ -169,9 +171,9 @@ function DeliverySettingsSection() {
     }
 
     updateSettings.mutate(settings, {
-      onSuccess: () => toast.success("Ustawienia dostawy zaktualizowane"),
+      onSuccess: () => toast.success(t("updated")),
       onError: () =>
-        toast.error("Nie udalo sie zaktualizowac ustawien dostawy"),
+        toast.error(t("updateError")),
     });
   };
 
@@ -264,7 +266,7 @@ function DeliverySettingsSection() {
           {updateSettings.isPending && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          Zapisz ustawienia
+          {t("save")}
         </Button>
       </CardContent>
     </Card>
@@ -272,6 +274,7 @@ function DeliverySettingsSection() {
 }
 
 function ShippingRatesSection() {
+  const t = useTranslations("marketplaces.allegro.delivery.rates");
   const { data, isLoading, isFetching } = useAllegroShippingRates();
   const [createOpen, setCreateOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -282,7 +285,7 @@ function ShippingRatesSection() {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5" />
-            Cenniki wysylki
+            {t("title")}
             {isFetching && (
               <Loader2 className="ml-2 h-4 w-4 animate-spin" />
             )}
@@ -291,12 +294,12 @@ function ShippingRatesSection() {
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="mr-2 h-4 w-4" />
-                Nowy cennik
+                {t("new")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nowy cennik wysylki</DialogTitle>
+                <DialogTitle>{t("newDialogTitle")}</DialogTitle>
               </DialogHeader>
               <CreateShippingRateForm
                 onSuccess={() => setCreateOpen(false)}
@@ -314,7 +317,7 @@ function ShippingRatesSection() {
           </div>
         ) : !data?.shippingRates?.length ? (
           <p className="py-8 text-center text-muted-foreground">
-            Brak cennikow wysylki
+            {t("empty")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -413,6 +416,7 @@ function CreateShippingRateForm({
 }: {
   onSuccess: () => void;
 }) {
+  const t = useTranslations("marketplaces.allegro.delivery.rateForm");
   const [name, setName] = useState("");
   const [deliveryMethodId, setDeliveryMethodId] = useState("");
   const [firstItemRate, setFirstItemRate] = useState("");
@@ -424,11 +428,11 @@ function CreateShippingRateForm({
     e.preventDefault();
 
     if (!name.trim()) {
-      toast.error("Nazwa cennika jest wymagana");
+      toast.error(t("nameRequired"));
       return;
     }
     if (!deliveryMethodId.trim()) {
-      toast.error("ID metody dostawy jest wymagane");
+      toast.error(t("deliveryMethodRequired"));
       return;
     }
 
@@ -451,7 +455,7 @@ function CreateShippingRateForm({
 
     createRate.mutate(data, {
       onSuccess: () => {
-        toast.success("Cennik utworzony");
+        toast.success(t("created"));
         setName("");
         setDeliveryMethodId("");
         setFirstItemRate("");
@@ -459,7 +463,7 @@ function CreateShippingRateForm({
         onSuccess();
       },
       onError: () =>
-        toast.error("Nie udalo sie utworzyc cennika wysylki"),
+        toast.error(t("createError")),
     });
   };
 
@@ -526,7 +530,7 @@ function CreateShippingRateForm({
         {createRate.isPending && (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         )}
-        Utworz cennik
+        {t("create")}
       </Button>
     </form>
   );

@@ -1,5 +1,104 @@
 {
   "marketplaces": {
+    "allegro": {
+      "delivery": {
+        "rateForm": {
+          "create": "Create rate table",
+          "createError": "Failed to create shipping rate table",
+          "created": "Rate table created",
+          "deliveryMethodRequired": "Delivery method ID is required",
+          "nameRequired": "Rate table name is required"
+        },
+        "rates": {
+          "empty": "No shipping rate tables",
+          "new": "New rate table",
+          "newDialogTitle": "New shipping rate table",
+          "title": "Shipping rate tables"
+        },
+        "settings": {
+          "save": "Save settings",
+          "updateError": "Failed to update delivery settings",
+          "updated": "Delivery settings updated"
+        }
+      },
+      "disputes": {
+        "messages": {
+          "loadError": "Failed to load dispute messages",
+          "retry": "Try again",
+          "sendError": "Failed to send message",
+          "sent": "Message sent"
+        }
+      },
+      "finance": {
+        "calculator": {
+          "calculateError": "Failed to calculate fees for offer {offerId}. Check whether the ID is correct."
+        }
+      },
+      "promotions": {
+        "badgesEmpty": "No promotional packages available",
+        "deleteError": "Failed to delete promotion",
+        "deleteSuccess": "Promotion deleted",
+        "form": {
+          "create": "Create promotion",
+          "createError": "Failed to create promotion",
+          "created": "Promotion created",
+          "nameRequired": "Promotion name is required"
+        },
+        "new": "New promotion"
+      },
+      "policies": {
+        "help": {
+          "assignToOffers": "Assign created policies and tables to offers on the \"Offers\" page."
+        },
+        "returnPolicyDialog": {
+          "createError": "Failed to create policy",
+          "created": "Return policy created",
+          "editTitle": "Edit return policy",
+          "nameRequired": "Name is required",
+          "newTitle": "New return policy",
+          "updateError": "Failed to update policy",
+          "updated": "Return policy updated"
+        },
+        "sizeTableDialog": {
+          "createError": "Failed to create table",
+          "created": "Size table created",
+          "editTitle": "Edit size table",
+          "headersRequired": "All headers must be filled in",
+          "nameRequired": "Name is required",
+          "newTitle": "New size table",
+          "updateError": "Failed to update table",
+          "updated": "Size table updated"
+        },
+        "sizeTables": {
+          "deleteError": "Failed to delete table"
+        },
+        "warrantyDialog": {
+          "createError": "Failed to create warranty",
+          "created": "Warranty created",
+          "editTitle": "Edit warranty",
+          "nameRequired": "Name is required",
+          "newTitle": "New warranty",
+          "updateError": "Failed to update warranty",
+          "updated": "Warranty updated"
+        }
+      },
+      "ratings": {
+        "answer": {
+          "saveError": "Failed to save answer",
+          "saved": "Answer has been saved",
+          "textRequired": "Enter answer text"
+        },
+        "deleteAnswer": {
+          "deleteError": "Failed to delete answer",
+          "deleted": "Answer has been deleted"
+        },
+        "removal": {
+          "reasonRequired": "Enter report reason",
+          "sendError": "Failed to send report",
+          "sent": "Report has been sent"
+        }
+      }
+    },
     "amazon": {
       "actions": {
         "title": "Actions"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api-client";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
@@ -48,15 +49,6 @@ interface PortalData {
 
 // --- Status helpers ---
 
-const poStatusLabels: Record<string, string> = {
-  sent: "Wyslane",
-  confirmed: "Potwierdzone",
-  shipped: "Wyslane (dostawca)",
-  partially_received: "Czesciowo odebrane",
-  received: "Odebrane",
-  cancelled: "Anulowane",
-};
-
 const poStatusColors: Record<string, string> = {
   sent: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
   confirmed: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
@@ -68,10 +60,6 @@ const poStatusColors: Record<string, string> = {
 
 function getStatusColor(status: string): string {
   return poStatusColors[status] || "bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-300";
-}
-
-function getStatusLabel(status: string): string {
-  return poStatusLabels[status] || status;
 }
 
 // --- API helpers ---
@@ -95,9 +83,19 @@ async function portalFetch<T>(path: string, token: string, options?: RequestInit
 // --- Components ---
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations("supplierPortal.statuses");
+  const statusLabels: Record<string, string> = {
+    cancelled: t("cancelled"),
+    confirmed: t("confirmed"),
+    partially_received: t("partiallyReceived"),
+    received: t("received"),
+    sent: t("sent"),
+    shipped: t("shipped"),
+  };
+
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(status)}`}>
-      {getStatusLabel(status)}
+      {statusLabels[status] || status}
     </span>
   );
 }
@@ -109,10 +107,12 @@ function OrderList({
   orders: SupplierPortalPO[];
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("supplierPortal.orders");
+
   if (orders.length === 0) {
     return (
       <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-        Brak zamowien zakupowych.
+        {t("empty")}
       </div>
     );
   }
@@ -122,11 +122,11 @@ function OrderList({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 dark:border-slate-700">
-            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Nr PO</th>
-            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Status</th>
-            <th className="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Kwota</th>
-            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Oczekiwana data</th>
-            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Data utworzenia</th>
+            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{t("columns.poNumber")}</th>
+            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{t("columns.status")}</th>
+            <th className="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{t("columns.amount")}</th>
+            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{t("columns.expectedDate")}</th>
+            <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">{t("columns.createdAt")}</th>
             <th className="py-3 px-4"></th>
           </tr>
         </thead>
@@ -153,7 +153,7 @@ function OrderList({
                 {formatDate(order.created_at)}
               </td>
               <td className="py-3 px-4 text-right">
-                <span className="text-blue-600 dark:text-blue-400 text-xs">Szczegoly &rarr;</span>
+                <span className="text-blue-600 dark:text-blue-400 text-xs">{t("details")} &rarr;</span>
               </td>
             </tr>
           ))}
@@ -172,6 +172,11 @@ function OrderDetail({
   orderId: string;
   onBack: () => void;
 }) {
+  const t = useTranslations("supplierPortal.detail");
+  const genericError = t("errors.generic");
+  const confirmError = t("errors.confirm");
+  const shipError = t("errors.ship");
+  const messageError = t("errors.message");
   const [order, setOrder] = useState<SupplierPortalPO | null>(null);
   const [messages, setMessages] = useState<SupplierMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -199,11 +204,11 @@ function OrderDetail({
       setOrder(po);
       setMessages(msgs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Wystapil blad");
+      setError(err instanceof Error ? err.message : genericError);
     } finally {
       setLoading(false);
     }
-  }, [orderId, token]);
+  }, [genericError, orderId, token]);
 
   useEffect(() => {
     loadOrder();
@@ -220,7 +225,7 @@ function OrderDetail({
       setConfirmRef("");
       await loadOrder();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udalo sie potwierdzic");
+      setError(err instanceof Error ? err.message : confirmError);
     } finally {
       setConfirming(false);
     }
@@ -239,7 +244,7 @@ function OrderDetail({
       setCarrier("");
       await loadOrder();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udalo sie oznaczyc wysylki");
+      setError(err instanceof Error ? err.message : shipError);
     } finally {
       setShipping(false);
     }
@@ -257,14 +262,14 @@ function OrderDetail({
       const msgs = await portalFetch<SupplierMessage[]>(`/v1/supplier-portal/orders/${orderId}/messages`, token);
       setMessages(msgs);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nie udalo sie wyslac wiadomosci");
+      setError(err instanceof Error ? err.message : messageError);
     } finally {
       setSendingMessage(false);
     }
   };
 
   if (loading) {
-    return <div className="text-center py-12 text-slate-500">Ladowanie...</div>;
+    return <div className="text-center py-12 text-slate-500">{t("loading")}</div>;
   }
 
   if (error) {
@@ -274,7 +279,7 @@ function OrderDetail({
           {error}
         </div>
         <button onClick={onBack} className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-          &larr; Powrot do listy
+          &larr; {t("backToList")}
         </button>
       </div>
     );
@@ -293,7 +298,7 @@ function OrderDetail({
           onClick={onBack}
           className="rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
         >
-          &larr; Powrot
+          &larr; {t("back")}
         </button>
         <div className="flex-1">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 font-mono">
@@ -307,25 +312,25 @@ function OrderDetail({
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-6">
           <div>
-            <p className="text-slate-500 dark:text-slate-400">Kwota</p>
+            <p className="text-slate-500 dark:text-slate-400">{t("summary.amount")}</p>
             <p className="font-medium text-slate-900 dark:text-slate-100">
               {formatCurrency(order.total_amount, order.currency)}
             </p>
           </div>
           <div>
-            <p className="text-slate-500 dark:text-slate-400">Oczekiwana data</p>
+            <p className="text-slate-500 dark:text-slate-400">{t("summary.expectedDate")}</p>
             <p className="font-medium text-slate-900 dark:text-slate-100">
               {order.expected_delivery_date ? formatDate(order.expected_delivery_date) : "---"}
             </p>
           </div>
           <div>
-            <p className="text-slate-500 dark:text-slate-400">Utworzono</p>
+            <p className="text-slate-500 dark:text-slate-400">{t("summary.createdAt")}</p>
             <p className="font-medium text-slate-900 dark:text-slate-100">
               {formatDate(order.created_at)}
             </p>
           </div>
           <div>
-            <p className="text-slate-500 dark:text-slate-400">Aktualizacja</p>
+            <p className="text-slate-500 dark:text-slate-400">{t("summary.updatedAt")}</p>
             <p className="font-medium text-slate-900 dark:text-slate-100">
               {formatDate(order.updated_at)}
             </p>
@@ -334,7 +339,7 @@ function OrderDetail({
 
         {order.notes && (
           <div className="rounded-lg bg-slate-50 dark:bg-slate-700/50 p-3 mb-6">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Notatki</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t("summary.notes")}</p>
             <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{order.notes}</p>
           </div>
         )}
@@ -347,7 +352,7 @@ function OrderDetail({
                 onClick={() => setShowConfirm(true)}
                 className="rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors"
               >
-                Potwierdz zamowienie
+                {t("actions.confirmOrder")}
               </button>
             )}
             {canShip && (
@@ -355,7 +360,7 @@ function OrderDetail({
                 onClick={() => setShowShip(true)}
                 className="rounded-lg bg-purple-600 hover:bg-purple-700 px-4 py-2 text-sm font-medium text-white transition-colors"
               >
-                Oznacz jako wyslane
+                {t("actions.markShipped")}
               </button>
             )}
           </div>
@@ -364,17 +369,17 @@ function OrderDetail({
         {/* Items table */}
         {order.items && order.items.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Pozycje</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">{t("items.title")}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
-                    <th className="text-left py-2 px-3 font-medium text-slate-600 dark:text-slate-400">Produkt</th>
-                    <th className="text-left py-2 px-3 font-medium text-slate-600 dark:text-slate-400">SKU</th>
-                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">Zamowiono</th>
-                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">Odebrano</th>
-                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">Cena jedn.</th>
-                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">Razem</th>
+                    <th className="text-left py-2 px-3 font-medium text-slate-600 dark:text-slate-400">{t("items.columns.product")}</th>
+                    <th className="text-left py-2 px-3 font-medium text-slate-600 dark:text-slate-400">{t("items.columns.sku")}</th>
+                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">{t("items.columns.ordered")}</th>
+                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">{t("items.columns.received")}</th>
+                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">{t("items.columns.unitPrice")}</th>
+                    <th className="text-right py-2 px-3 font-medium text-slate-600 dark:text-slate-400">{t("items.columns.total")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -409,11 +414,11 @@ function OrderDetail({
 
       {/* Messages */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Wiadomosci</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">{t("messages.title")}</h3>
         <div className="space-y-3 max-h-64 overflow-y-auto mb-4">
           {messages.length === 0 ? (
             <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-              Brak wiadomosci. Napisz pierwsza wiadomosc.
+              {t("messages.empty")}
             </p>
           ) : (
             messages.map((msg) => (
@@ -427,7 +432,7 @@ function OrderDetail({
               >
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                    {msg.is_from_supplier ? "Dostawca" : "Kupujacy"}
+                    {msg.is_from_supplier ? t("messages.fromSupplier") : t("messages.fromBuyer")}
                   </span>
                   <span className="text-xs text-slate-400 dark:text-slate-500">
                     {formatDate(msg.created_at)}
@@ -449,7 +454,7 @@ function OrderDetail({
                 handleSendMessage();
               }
             }}
-            placeholder="Napisz wiadomosc..."
+            placeholder={t("messages.placeholder")}
             className="flex-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
@@ -457,7 +462,7 @@ function OrderDetail({
             disabled={sendingMessage || !newMessage.trim()}
             className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 px-4 py-2 text-sm font-medium text-white transition-colors"
           >
-            {sendingMessage ? "..." : "Wyslij"}
+            {sendingMessage ? t("messages.sending") : t("messages.send")}
           </button>
         </div>
       </div>
@@ -467,18 +472,18 @@ function OrderDetail({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-              Potwierdz zamowienie
+              {t("confirmDialog.title")}
             </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Numer referencyjny (opcjonalnie)
+                  {t("confirmDialog.referenceLabel")}
                 </label>
                 <input
                   type="text"
                   value={confirmRef}
                   onChange={(e) => setConfirmRef(e.target.value)}
-                  placeholder="np. numer potwierdzenia dostawcy"
+                  placeholder={t("confirmDialog.referencePlaceholder")}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -487,14 +492,14 @@ function OrderDetail({
                   onClick={() => { setShowConfirm(false); setConfirmRef(""); }}
                   className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Anuluj
+                  {t("confirmDialog.cancel")}
                 </button>
                 <button
                   onClick={handleConfirm}
                   disabled={confirming}
                   className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 px-4 py-2 text-sm font-medium text-white transition-colors"
                 >
-                  {confirming ? "Potwierdzanie..." : "Potwierdz"}
+                  {confirming ? t("confirmDialog.confirming") : t("confirmDialog.confirm")}
                 </button>
               </div>
             </div>
@@ -507,30 +512,30 @@ function OrderDetail({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-              Oznacz jako wyslane
+              {t("shipDialog.title")}
             </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Numer sledzenia *
+                  {t("shipDialog.trackingLabel")}
                 </label>
                 <input
                   type="text"
                   value={trackingNumber}
                   onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="np. 1Z999AA10123456784"
+                  placeholder={t("shipDialog.trackingPlaceholder")}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Przewoznik *
+                  {t("shipDialog.carrierLabel")}
                 </label>
                 <input
                   type="text"
                   value={carrier}
                   onChange={(e) => setCarrier(e.target.value)}
-                  placeholder="np. DHL, InPost, DPD"
+                  placeholder={t("shipDialog.carrierPlaceholder")}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -539,14 +544,14 @@ function OrderDetail({
                   onClick={() => { setShowShip(false); setTrackingNumber(""); setCarrier(""); }}
                   className="rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Anuluj
+                  {t("shipDialog.cancel")}
                 </button>
                 <button
                   onClick={handleShip}
                   disabled={shipping || !trackingNumber.trim() || !carrier.trim()}
                   className="rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 px-4 py-2 text-sm font-medium text-white transition-colors"
                 >
-                  {shipping ? "Zapisywanie..." : "Oznacz wyslane"}
+                  {shipping ? t("shipDialog.saving") : t("shipDialog.confirm")}
                 </button>
               </div>
             </div>
@@ -564,6 +569,11 @@ export default function SupplierPortalPage() {
 }
 
 function SupplierPortalContent() {
+  const t = useTranslations("supplierPortal");
+  const missingTokenError = t("errors.missingToken");
+  const expiredTokenError = t("errors.expiredToken");
+  const invalidTokenError = t("errors.invalidToken");
+  const genericError = t("errors.generic");
   const [token, setToken] = useState("");
   const [tokenReady, setTokenReady] = useState(false);
 
@@ -592,7 +602,7 @@ function SupplierPortalContent() {
   useEffect(() => {
     if (!tokenReady) return;
     if (!token) {
-      setError("Brak tokenu dostepu. Sprawdz poprawnosc linku.");
+      setError(missingTokenError);
       setLoading(false);
       return;
     }
@@ -604,14 +614,14 @@ function SupplierPortalContent() {
       } catch (err) {
         if (err instanceof Error) {
           if (err.message.includes("expired")) {
-            setError("Token dostepu wygasl. Poprosi o nowy link.");
+            setError(expiredTokenError);
           } else if (err.message.includes("invalid") || err.message.includes("disabled")) {
-            setError("Nieprawidlowy token lub dostep zostal wylaczony.");
+            setError(invalidTokenError);
           } else {
             setError(err.message);
           }
         } else {
-          setError("Wystapil blad. Sprobuj ponownie pozniej.");
+          setError(genericError);
         }
       } finally {
         setLoading(false);
@@ -619,7 +629,14 @@ function SupplierPortalContent() {
     }
 
     loadOrders();
-  }, [token, tokenReady]);
+  }, [
+    expiredTokenError,
+    genericError,
+    invalidTokenError,
+    missingTokenError,
+    token,
+    tokenReady,
+  ]);
 
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-8 sm:py-16">
@@ -627,11 +644,11 @@ function SupplierPortalContent() {
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
-            Portal Dostawcy
+            {t("title")}
           </h1>
           {portalData && (
             <p className="mt-2 text-slate-600 dark:text-slate-400">
-              Witaj, <span className="font-medium">{portalData.supplier.name}</span>
+              {t("welcome")} <span className="font-medium">{portalData.supplier.name}</span>
             </p>
           )}
         </div>
@@ -639,7 +656,7 @@ function SupplierPortalContent() {
         {/* Loading */}
         {loading && (
           <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-            Ladowanie...
+            {t("loading")}
           </div>
         )}
 
@@ -665,7 +682,7 @@ function SupplierPortalContent() {
               <div>
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700">
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    Zamowienia zakupowe ({portalData.orders.length})
+                    {t("orders.title", { count: portalData.orders.length })}
                   </h2>
                 </div>
                 <OrderList

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, Sparkles, ArrowRight, Loader2, Package } from "lucide-react";
 import { API_URL, apiClient, getErrorMessage } from "@/lib/api-client";
@@ -25,6 +26,8 @@ function formatPrice(amount: number, currency: string): string {
 }
 
 function PricingContent() {
+  const t = useTranslations("auth.pricing");
+  const loadPlansError = t("loadPlansError");
   const config = usePublicConfig();
   const router = useRouter();
   const [plans, setPlans] = useState<PublicPlanInfo[]>([]);
@@ -47,10 +50,10 @@ function PricingContent() {
         setPlans(data);
       })
       .catch(() => {
-        toast.error("Nie udalo sie zaladowac planow");
+        toast.error(loadPlansError);
       })
       .finally(() => setIsLoading(false));
-  }, [config.billing_enabled, config.isLoading]);
+  }, [config.billing_enabled, config.isLoading, loadPlansError]);
 
   useEffect(() => {
     if (!config.isLoading && !config.billing_enabled) {
@@ -101,12 +104,12 @@ function PricingContent() {
     return (
       <div className="max-w-md mx-auto text-center py-20 space-y-4">
         <Package className="size-12 mx-auto text-muted-foreground/50" />
-        <h2 className="text-xl font-semibold">Brak dostepnych planow</h2>
+        <h2 className="text-xl font-semibold">{t("noPlansTitle")}</h2>
         <p className="text-muted-foreground text-sm">
-          Plany cenowe nie sa jeszcze skonfigurowane.
+          {t("noPlansDescription")}
         </p>
         <Link href="/login" className="text-sm text-primary underline-offset-4 hover:underline">
-          Zaloguj sie
+          {t("login")}
         </Link>
       </div>
     );
@@ -126,16 +129,15 @@ function PricingContent() {
         {trialDays > 0 && (
           <div className="inline-flex items-center gap-2 text-xs font-medium tracking-widest uppercase text-muted-foreground mb-2">
             <div className="size-1.5 rounded-full bg-success animate-pulse" />
-            {trialDays} dni za darmo
+            {t("trialDaysFree", { count: trialDays })}
           </div>
         )}
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-          Wybierz plan dla swojego biznesu
+          {t("title")}
         </h1>
         {trialDays > 0 && (
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Wszystkie plany z pelnym dostepem przez {trialDays} dni. Bez karty na start.
-            Zrezygnuj kiedy chcesz.
+            {t("trialDescription", { count: trialDays })}
           </p>
         )}
       </div>
@@ -149,7 +151,7 @@ function PricingContent() {
             !yearly ? "text-foreground font-medium" : "text-muted-foreground"
           )}
         >
-          Miesiecznie
+          {t("monthly")}
         </Label>
         <Switch
           id="billing-interval"
@@ -163,7 +165,7 @@ function PricingContent() {
             yearly ? "text-foreground font-medium" : "text-muted-foreground"
           )}
         >
-          Rocznie
+          {t("yearly")}
         </Label>
         {yearly && yearlySavingsPercent > 0 && (
           <Badge variant="success" className="text-[11px] ml-1">
@@ -197,7 +199,7 @@ function PricingContent() {
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Badge className="bg-primary text-primary-foreground shadow-md text-[11px] px-3 py-0.5">
                     <Sparkles className="size-3 mr-1" />
-                    Najpopularniejszy
+                    {t("popular")}
                   </Badge>
                 </div>
               )}
@@ -211,18 +213,18 @@ function PricingContent() {
                   <span className="text-4xl font-bold tracking-tight tabular-nums">
                     {formatPrice(perMonth, plan.currency)}
                   </span>
-                  <span className="text-muted-foreground text-sm">/mies.</span>
+                  <span className="text-muted-foreground text-sm">{t("perMonth")}</span>
                 </div>
 
                 {yearly && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatPrice(totalYearly, plan.currency)} rocznie
+                    {t("yearlyTotal", { amount: formatPrice(totalYearly, plan.currency) })}
                   </p>
                 )}
 
                 {plan.trial_days > 0 && (
                   <p className="text-xs text-success font-medium mt-2">
-                    {plan.trial_days} dni za darmo na start
+                    {t("trialStart", { count: plan.trial_days })}
                   </p>
                 )}
               </div>
@@ -257,11 +259,11 @@ function PricingContent() {
                   {isCurrentLoading ? (
                     <>
                       <Loader2 className="size-4 mr-2 animate-spin" />
-                      Przekierowanie...
+                      {t("redirecting")}
                     </>
                   ) : (
                     <>
-                      Zacznij za darmo
+                      {t("startFree")}
                       <ArrowRight className="size-4 ml-2" />
                     </>
                   )}
@@ -275,15 +277,15 @@ function PricingContent() {
       {/* Footer links */}
       <div className="mt-10 text-center space-y-2 text-sm text-muted-foreground">
         <p>
-          Masz juz konto?{" "}
+          {t("alreadyHaveAccount")}{" "}
           <Link href="/login" className="text-foreground font-medium underline-offset-4 hover:underline">
-            Zaloguj sie
+            {t("login")}
           </Link>
         </p>
         <p>
-          Masz token zaproszenia?{" "}
+          {t("haveInviteToken")}{" "}
           <Link href="/register/invite" className="text-foreground font-medium underline-offset-4 hover:underline">
-            Zarejestruj sie z zaproszeniem
+            {t("registerWithInvite")}
           </Link>
         </p>
       </div>

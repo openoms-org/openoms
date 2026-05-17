@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { PackageCheck, Plus, Play } from "lucide-react";
 import { toast } from "sonner";
 import { usePickPackSessions, useCreatePickPackSession } from "@/hooks/use-pick-pack";
@@ -38,13 +39,6 @@ import {
 } from "@/components/ui/table";
 import type { PickPackSession, Order } from "@/types/api";
 
-const statusLabels: Record<string, string> = {
-  picking: "Kompletowanie",
-  packing: "Pakowanie",
-  completed: "Zakonczone",
-  cancelled: "Anulowane",
-};
-
 const statusVariants: Record<string, string> = {
   picking: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
   packing: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
@@ -52,15 +46,16 @@ const statusVariants: Record<string, string> = {
   cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
-function SessionStatusBadge({ status }: { status: string }) {
+function SessionStatusBadge({ label, status }: { label: string; status: string }) {
   return (
     <Badge variant="outline" className={statusVariants[status] || ""}>
-      {statusLabels[status] || status}
+      {label}
     </Badge>
   );
 }
 
 export default function PickPackPage() {
+  const t = useTranslations("pickPack");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -82,6 +77,12 @@ export default function PickPackPage() {
 
   const processingOrders: Order[] = ordersData?.items ?? [];
   const sessions = data?.items ?? [];
+  const statusLabels: Record<string, string> = {
+    picking: t("statuses.picking"),
+    packing: t("statuses.packing"),
+    completed: t("statuses.completed"),
+    cancelled: t("statuses.cancelled"),
+  };
 
   const handleToggleOrder = (orderId: string) => {
     setSelectedOrderIds((prev) => {
@@ -101,7 +102,7 @@ export default function PickPackPage() {
       const session = await createSession.mutateAsync({
         order_ids: Array.from(selectedOrderIds),
       });
-      toast.success("Sesja Pick & Pack utworzona");
+      toast.success(t("sessionCreated"));
       setDialogOpen(false);
       setSelectedOrderIds(new Set());
       router.push(`/pick-pack/${session.id}`);
@@ -112,14 +113,14 @@ export default function PickPackPage() {
 
   const handlePickNext = async () => {
     if (processingOrders.length === 0) {
-      toast.info("Brak zamowien do kompletacji");
+      toast.info(t("noOrdersToPick"));
       return;
     }
     try {
       const session = await createSession.mutateAsync({
         order_ids: [processingOrders[0].id],
       });
-      toast.success("Sesja Pick & Pack utworzona");
+      toast.success(t("sessionCreated"));
       router.push(`/pick-pack/${session.id}`);
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -133,14 +134,14 @@ export default function PickPackPage() {
   return (
     <div>
       <PageHeader
-        title="Pick & Pack"
-        description="Kompletowanie i pakowanie zamowien"
+        title={t("title")}
+        description={t("description")}
       />
 
       <div className="flex flex-wrap gap-3 mb-6">
         <Button size="lg" onClick={handlePickNext} disabled={processingOrders.length === 0}>
           <Play className="h-5 w-5 mr-2" />
-          Kompletuj nastepne
+          {t("pickNext")}
           {processingOrders.length > 0 && (
             <Badge variant="secondary" className="ml-2">
               {processingOrders.length}
@@ -149,21 +150,21 @@ export default function PickPackPage() {
         </Button>
         <Button variant="outline" size="lg" onClick={() => setDialogOpen(true)}>
           <Plus className="h-5 w-5 mr-2" />
-          Nowa sesja
+          {t("newSession")}
         </Button>
       </div>
 
       <div className="flex gap-4 mb-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Wszystkie statusy" />
+            <SelectValue placeholder={t("allStatuses")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Wszystkie statusy</SelectItem>
-            <SelectItem value="picking">Kompletowanie</SelectItem>
-            <SelectItem value="packing">Pakowanie</SelectItem>
-            <SelectItem value="completed">Zakonczone</SelectItem>
-            <SelectItem value="cancelled">Anulowane</SelectItem>
+            <SelectItem value="all">{t("allStatuses")}</SelectItem>
+            <SelectItem value="picking">{t("statuses.picking")}</SelectItem>
+            <SelectItem value="packing">{t("statuses.packing")}</SelectItem>
+            <SelectItem value="completed">{t("statuses.completed")}</SelectItem>
+            <SelectItem value="cancelled">{t("statuses.cancelled")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -171,10 +172,10 @@ export default function PickPackPage() {
       {isError && (
         <div className="rounded-md border border-destructive bg-destructive/10 p-4 mb-4">
           <p className="text-sm text-destructive">
-            Blad podczas ladowania danych.
+            {t("loadError")}
           </p>
           <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
-            Sprobuj ponownie
+            {t("retry")}
           </Button>
         </div>
       )}
@@ -182,20 +183,20 @@ export default function PickPackPage() {
       {sessions.length === 0 ? (
         <EmptyState
           icon={PackageCheck}
-          title="Brak sesji Pick & Pack"
-          description="Utworz nowa sesje, aby rozpoczac kompletowanie zamowien."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Typ</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Zamowienia</TableHead>
-                <TableHead>Postep kompletacji</TableHead>
-                <TableHead>Postep pakowania</TableHead>
-                <TableHead>Rozpoczeto</TableHead>
+                <TableHead>{t("columns.type")}</TableHead>
+                <TableHead>{t("columns.status")}</TableHead>
+                <TableHead>{t("columns.orders")}</TableHead>
+                <TableHead>{t("columns.pickingProgress")}</TableHead>
+                <TableHead>{t("columns.packingProgress")}</TableHead>
+                <TableHead>{t("columns.startedAt")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,10 +207,15 @@ export default function PickPackPage() {
                   onClick={() => router.push(`/pick-pack/${session.id}`)}
                 >
                   <TableCell className="font-medium">
-                    {session.session_type === "batch" ? "Wsadowa" : "Pojedyncza"}
+                    {session.session_type === "batch"
+                      ? t("sessionTypes.batch")
+                      : t("sessionTypes.single")}
                   </TableCell>
                   <TableCell>
-                    <SessionStatusBadge status={session.status} />
+                    <SessionStatusBadge
+                      label={statusLabels[session.status] || session.status}
+                      status={session.status}
+                    />
                   </TableCell>
                   <TableCell>{session.stats?.order_count ?? "---"}</TableCell>
                   <TableCell>
@@ -262,10 +268,10 @@ export default function PickPackPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Nowa sesja Pick & Pack</DialogTitle>
+            <DialogTitle>{t("dialog.title")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground mb-4">
-            Wybierz zamowienia do kompletacji (status: przetwarzanie)
+            {t("dialog.description")}
           </p>
           <div className="flex-1 overflow-y-auto border rounded-md">
             {ordersLoading ? (
@@ -274,7 +280,7 @@ export default function PickPackPage() {
               </div>
             ) : processingOrders.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                Brak zamowien w statusie &quot;przetwarzanie&quot;
+                {t("dialog.noProcessingOrders")}
               </div>
             ) : (
               <div className="divide-y">
@@ -293,7 +299,7 @@ export default function PickPackPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         #{order.id.slice(0, 8)} &middot;{" "}
-                        {order.items?.length ?? 0} pozycji &middot;{" "}
+                        {t("dialog.items", { count: order.items?.length ?? 0 })} &middot;{" "}
                         {order.total_amount} {order.currency}
                       </p>
                     </div>
@@ -304,13 +310,15 @@ export default function PickPackPage() {
           </div>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Anuluj
+              {t("dialog.cancel")}
             </Button>
             <Button
               onClick={handleCreateSession}
               disabled={selectedOrderIds.size === 0 || createSession.isPending}
             >
-              {createSession.isPending ? "Tworzenie..." : `Utworz sesje (${selectedOrderIds.size})`}
+              {createSession.isPending
+                ? t("dialog.creating")
+                : t("dialog.create", { count: selectedOrderIds.size })}
             </Button>
           </DialogFooter>
         </DialogContent>
