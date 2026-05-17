@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,8 +15,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+//go:embed public_return_handler.go
+var publicReturnHandlerSource string
+
 func newPublicReturnHandler() *PublicReturnHandler {
 	return NewPublicReturnHandler(nil, nil, nil)
+}
+
+func TestPublicReturnHandler_UsesSharedTenantHelper(t *testing.T) {
+	assert.NotContains(t, publicReturnHandlerSource, "func (h *PublicReturnHandler) withTenant")
+	assert.Contains(t, publicReturnHandlerSource, "database.WithTenant(r.Context(), h.pool, tenantID")
 }
 
 // ---------------------------------------------------------------------------
