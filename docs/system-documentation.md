@@ -1274,7 +1274,7 @@ Standalone maszyna stanow zamowien i przesylek:
 |-----|----------|------|----------------|
 | inpost-go-sdk | InPost | Bearer | Paczki, etykiety, tracking, paczkomaty, webhooks |
 | dhl-go-sdk | DHL | API Key | Przesylki, etykiety, tracking |
-| dpd-go-sdk | DPD | REST | Przesylki (Polska) |
+| dpd-go-sdk | DPD | REST + InfoServices SOAP | Przesylki (Polska), etykiety, tracking |
 | gls-go-sdk | GLS | API | Przesylki (Europa) |
 | ups-go-sdk | UPS | XML/REST | Miedzynarodowe |
 | poczta-polska-go-sdk | Poczta Polska | REST | Paczki pocztowe |
@@ -1766,7 +1766,7 @@ EbayImportService.ImportOffers()
 | | Erli | REST API, listings |
 | **Carrier** | InPost | Paczkomaty, kurier, Geowidget, webhook, dispatch orders |
 | | DHL | Krajowe i miedzynarodowe, adres nadawcy (shipper), DHL24 SOAP WebAPI2 |
-| | DPD | Polska |
+| | DPD | Polska, etykiety przez DPD Services REST, tracking przez DPD InfoServices SOAP `getEventsForWaybillV1` |
 | | GLS | Europa, adres nadawcy (shipper), ShipIT REST API with Basic Auth |
 | | UPS | Miedzynarodowe |
 | | Poczta Polska | Paczki |
@@ -1782,6 +1782,8 @@ EbayImportService.ImportOffers()
 | **Kursy walut** | NBP | Narodowy Bank Polski |
 
 Rate shopping dla DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL jest wylaczony do czasu realnej wyceny kontraktowej/rating API. Providerzy pozostaja dostepni dla obslugiwanych przeplywow, np. etykiet, trackingu lub punktow odbioru, ale nie zwracaja sztucznych stawek.
+
+DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etykiet oraz DPD InfoServices SOAP do sledzenia przesylek. Opcjonalne dane `info_login`, `info_password` i `info_channel` pozwalaja zapisac osobne dane InfoServices; gdy sa puste, OpenOMS uzywa glownego loginu/hasla DPD oraz `master_fid` jako kanalu InfoServices.
 
 ### Macierz interfejsow marketplace
 

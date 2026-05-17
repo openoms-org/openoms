@@ -53,10 +53,9 @@ func (s *ShipmentService) GetLabel(ctx context.Context, waybillRef string) ([]by
 	return data, nil
 }
 
-// GetTracking is not available in the DPD REST API.
-// Use the DPD tracking portal at https://tracktrace.dpd.com.pl/.
-func (s *ShipmentService) GetTracking(_ context.Context, _ string) (*TrackingResponse, error) {
-	return nil, fmt.Errorf("dpd: tracking not available via DPD REST API — use DPD tracking portal at tracktrace.dpd.com.pl")
+// GetTracking retrieves tracking events through DPD InfoServices SOAP API.
+func (s *ShipmentService) GetTracking(ctx context.Context, waybill string) (*TrackingResponse, error) {
+	return s.client.getInfoServicesTracking(ctx, waybill)
 }
 
 // Cancel attempts to cancel a parcel. Returns an error if the carrier does not support it.

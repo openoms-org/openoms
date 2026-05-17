@@ -378,6 +378,9 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
     { key: "login", labelKey: "credentials.dpd.login", placeholderKey: "credentials.dpd.loginPlaceholder", type: "text", required: true },
     { key: "password", labelKey: "credentials.dpd.password", type: "password", required: true },
     { key: "master_fid", labelKey: "credentials.dpd.masterFid", placeholderKey: "credentials.dpd.masterFidPlaceholder", helpTextKey: "credentials.dpd.masterFidHelp", type: "text", required: true },
+    { key: "info_channel", labelKey: "credentials.dpd.infoChannel", placeholderKey: "credentials.dpd.infoChannelPlaceholder", helpTextKey: "credentials.dpd.infoChannelHelp", type: "text", required: false },
+    { key: "info_login", labelKey: "credentials.dpd.infoLogin", placeholderKey: "credentials.dpd.infoLoginPlaceholder", helpTextKey: "credentials.dpd.infoLoginHelp", type: "text", required: false },
+    { key: "info_password", labelKey: "credentials.dpd.infoPassword", helpTextKey: "credentials.dpd.infoPasswordHelp", type: "password", required: false },
     { key: "sandbox", labelKey: "credentials.dpd.sandbox", type: "checkbox", required: false },
   ],
   gls: [

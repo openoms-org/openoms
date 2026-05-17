@@ -21,10 +21,13 @@ func init() {
 
 // DPDCredentials is the JSON structure stored in encrypted integration credentials.
 type DPDCredentials struct {
-	Login     string `json:"login"`
-	Password  string `json:"password"`
-	MasterFid string `json:"master_fid"`
-	Sandbox   bool   `json:"sandbox,omitempty"`
+	Login        string `json:"login"`
+	Password     string `json:"password"`
+	MasterFid    string `json:"master_fid"`
+	InfoLogin    string `json:"info_login,omitempty"`
+	InfoPassword string `json:"info_password,omitempty"`
+	InfoChannel  string `json:"info_channel,omitempty"`
+	Sandbox      bool   `json:"sandbox,omitempty"`
 }
 
 // DPDProvider implements integration.CarrierProvider for DPD Poland.
@@ -45,6 +48,19 @@ func NewDPDProvider(credentials json.RawMessage, _ json.RawMessage) (*DPDProvide
 		opts = append(opts, dpdsdk.WithSandbox())
 	}
 
+	infoLogin := creds.InfoLogin
+	infoPassword := creds.InfoPassword
+	infoChannel := creds.InfoChannel
+	if infoLogin == "" {
+		infoLogin = creds.Login
+	}
+	if infoPassword == "" {
+		infoPassword = creds.Password
+	}
+	if infoChannel == "" {
+		infoChannel = creds.MasterFid
+	}
+	opts = append(opts, dpdsdk.WithInfoServicesCredentials(infoLogin, infoPassword, infoChannel))
 	opts = append(opts, dpdsdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
 	client := dpdsdk.NewClient(creds.Login, creds.Password, creds.MasterFid, opts...)
 
@@ -148,8 +164,22 @@ func (p *DPDProvider) GetLabel(ctx context.Context, externalID string, _ string)
 }
 
 // GetTracking returns tracking events for the given DPD shipment.
-func (p *DPDProvider) GetTracking(_ context.Context, _ string) ([]integration.TrackingEvent, error) {
-	return nil, fmt.Errorf("dpd: tracking not available via DPD REST API")
+func (p *DPDProvider) GetTracking(ctx context.Context, trackingNumber string) ([]integration.TrackingEvent, error) {
+	resp, err := p.client.Shipments.GetTracking(ctx, trackingNumber)
+	if err != nil {
+		return nil, fmt.Errorf("dpd: get tracking: %w", err)
+	}
+
+	events := make([]integration.TrackingEvent, 0, len(resp.Events))
+	for _, ev := range resp.Events {
+		events = append(events, integration.TrackingEvent{
+			Status:    ev.Status,
+			Location:  ev.Location,
+			Timestamp: ev.DateTime,
+			Details:   ev.Description,
+		})
+	}
+	return events, nil
 }
 
 // CancelShipment cancels a DPD shipment by its external ID.

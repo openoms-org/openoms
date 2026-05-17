@@ -34,12 +34,40 @@ func newTestDPDProvider(t *testing.T, serverURL string) *DPDProvider {
 		"test-pass",
 		"FID123",
 		dpdsdk.WithBaseURL(serverURL),
+		dpdsdk.WithInfoServicesBaseURL(serverURL),
 	)
 	return &DPDProvider{
 		client: client,
 		logger: slog.Default().With("provider", "dpd-test"),
 	}
 }
+
+const dpdInfoServicesProviderOKResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+  <S:Body>
+    <ns2:getEventsForWaybillV1Response xmlns:ns2="http://events.dpdinfoservices.dpd.com.pl/">
+      <return>
+        <confirmId>0</confirmId>
+        <eventsList>
+          <businessCode>190101</businessCode>
+          <country>PL</country>
+          <depotName>KATOWICE 2</depotName>
+          <description>Parcel delivered</description>
+          <eventTime>2026-05-17T12:15:30.123</eventTime>
+          <waybill>0000012345678</waybill>
+        </eventsList>
+        <eventsList>
+          <businessCode>040101</businessCode>
+          <country>PL</country>
+          <depotName>Katowice</depotName>
+          <description>Parcel collected by courier</description>
+          <eventTime>2026-05-17T09:00:00</eventTime>
+          <waybill>0000012345678</waybill>
+        </eventsList>
+      </return>
+    </ns2:getEventsForWaybillV1Response>
+  </S:Body>
+</S:Envelope>`
 
 // newMockDPDServer creates a test server that delegates to the given handler.
 // DPD SDK uses Basic Auth + x-dpd-fid headers (no session tokens).
@@ -285,6 +313,39 @@ func TestDPD_GetLabel_ReturnsDecodedBytes(t *testing.T) {
 	}
 	if len(data) == 0 {
 		t.Error("label data should not be empty")
+	}
+}
+
+func TestDPD_GetTracking_MapsInfoServicesEvents(t *testing.T) {
+	srv := newMockDPDServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+		_, _ = w.Write([]byte(dpdInfoServicesProviderOKResponse))
+	})
+	defer srv.Close()
+
+	provider := newTestDPDProvider(t, srv.URL)
+
+	events, err := provider.GetTracking(context.Background(), "0000012345678")
+	if err != nil {
+		t.Fatalf("GetTracking() error: %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("len(events) = %d, want 2", len(events))
+	}
+	if events[0].Status != "040101" {
+		t.Fatalf("events[0].Status = %q, want 040101", events[0].Status)
+	}
+	if events[0].Location != "Katowice, PL" {
+		t.Fatalf("events[0].Location = %q, want Katowice, PL", events[0].Location)
+	}
+	if events[0].Details != "Parcel collected by courier" {
+		t.Fatalf("events[0].Details = %q", events[0].Details)
+	}
+	if events[1].Status != "190101" {
+		t.Fatalf("events[1].Status = %q, want 190101", events[1].Status)
+	}
+	if events[1].Location != "KATOWICE 2, PL" {
+		t.Fatalf("events[1].Location = %q, want KATOWICE 2, PL", events[1].Location)
 	}
 }
 

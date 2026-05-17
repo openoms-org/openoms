@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	productionBaseURL = "https://dpdservices.dpd.com.pl"
-	sandboxBaseURL    = "https://dpdservicesdemo.dpd.com.pl"
+	productionBaseURL             = "https://dpdservices.dpd.com.pl"
+	sandboxBaseURL                = "https://dpdservicesdemo.dpd.com.pl"
+	productionInfoServicesBaseURL = "https://dpdinfoservices.dpd.com.pl/DPDInfoServicesObjEventsService/DPDInfoServicesObjEvents"
 )
 
 // Client is a DPD Poland API client.
@@ -21,6 +22,11 @@ type Client struct {
 	login      string
 	password   string
 	masterFid  string
+
+	infoServicesBaseURL string
+	infoLogin           string
+	infoPassword        string
+	infoChannel         string
 
 	Shipments *ShipmentService
 }
@@ -49,6 +55,22 @@ func WithBaseURL(url string) Option {
 	}
 }
 
+// WithInfoServicesBaseURL sets a custom DPD InfoServices SOAP endpoint.
+func WithInfoServicesBaseURL(url string) Option {
+	return func(cl *Client) {
+		cl.infoServicesBaseURL = url
+	}
+}
+
+// WithInfoServicesCredentials sets credentials for DPD InfoServices tracking.
+func WithInfoServicesCredentials(login, password, channel string) Option {
+	return func(cl *Client) {
+		cl.infoLogin = login
+		cl.infoPassword = password
+		cl.infoChannel = channel
+	}
+}
+
 // NewClient creates a new DPD API client.
 func NewClient(login, password, masterFid string, opts ...Option) *Client {
 	c := &Client{
@@ -57,6 +79,11 @@ func NewClient(login, password, masterFid string, opts ...Option) *Client {
 		login:      login,
 		password:   password,
 		masterFid:  masterFid,
+
+		infoServicesBaseURL: productionInfoServicesBaseURL,
+		infoLogin:           login,
+		infoPassword:        password,
+		infoChannel:         masterFid,
 	}
 
 	for _, opt := range opts {
