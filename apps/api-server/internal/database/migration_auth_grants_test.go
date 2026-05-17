@@ -59,12 +59,29 @@ func TestAuthFunctionMigrationsGrantOpenOMSRole(t *testing.T) {
 	})
 }
 
+func TestRollbackMigrationsGuardOptionalRoleRevokes(t *testing.T) {
+	for _, file := range []string{
+		"000009_used_license_tokens.down.sql",
+		"000010_tenant_plan_guard.down.sql",
+	} {
+		t.Run(file, func(t *testing.T) {
+			sql := readMigrationSQL(t, file)
+			normalized := normalizedSQL(sql)
+
+			require.Contains(t, normalized, "select 1 from pg_roles where rolname =")
+			require.Empty(t, topLevelOptionalRoleRevokes(sql))
+		})
+	}
+}
+
 func readMigrationSQL(t *testing.T, file string) string {
 	t.Helper()
 
 	switch file {
 	case "000015_add_user_language.up.sql",
 		"000015_add_user_language.down.sql",
+		"000009_used_license_tokens.down.sql",
+		"000010_tenant_plan_guard.down.sql",
 		"000025_auth_function_openoms_grants.up.sql",
 		"000025_auth_function_openoms_grants.down.sql":
 	default:
@@ -80,4 +97,19 @@ func readMigrationSQL(t *testing.T, file string) string {
 
 func normalizedSQL(sql string) string {
 	return strings.Join(strings.Fields(strings.ToLower(sql)), " ")
+}
+
+func topLevelOptionalRoleRevokes(sql string) []string {
+	var revokes []string
+	for line := range strings.SplitSeq(sql, "\n") {
+		trimmed := strings.TrimSpace(strings.ToLower(line))
+		if !strings.HasPrefix(trimmed, "revoke execute on function") {
+			continue
+		}
+		if strings.Contains(trimmed, " from openoms") {
+			revokes = append(revokes, strings.TrimSpace(line))
+		}
+	}
+
+	return revokes
 }
