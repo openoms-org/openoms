@@ -506,6 +506,10 @@ jobs:
         if: steps.filter.outputs.chart == 'true'
         run: helm template openoms deploy/helm/openoms > /dev/null
 
+      - name: Check Helm Pod Security Standards
+        if: steps.filter.outputs.chart == 'true'
+        run: python3 scripts/check-helm-pss.py
+
       - name: No chart changes
         if: steps.filter.outputs.chart != 'true'
         run: echo "No Helm chart changes, skipping validation"

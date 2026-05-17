@@ -1,6 +1,6 @@
 {{- if and .Values.monitoring .Values.monitoring.enabled }}
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   name: {{ include "openoms.fullname" . }}-alloy
   namespace: {{ .Values.namespace }}
@@ -8,6 +8,7 @@ metadata:
     {{- include "openoms.labels" . | nindent 4 }}
     app.kubernetes.io/component: monitoring
 spec:
+  replicas: {{ .Values.monitoring.alloy.replicaCount | default 1 }}
   selector:
     matchLabels:
       app.kubernetes.io/component: alloy
@@ -20,20 +21,17 @@ spec:
     spec:
       serviceAccountName: {{ include "openoms.fullname" . }}-alloy
       automountServiceAccountToken: true
-      # Alloy requires root to read /var/log and /var/lib/docker/containers
-      # for log collection. Container-level securityContext compensates:
-      # readOnlyRootFilesystem: true, allowPrivilegeEscalation: false,
-      # capabilities.drop: ALL (only DAC_READ_SEARCH added).
-      # Namespace PSS must allow this pod (baseline, not restricted).
       securityContext:
-        runAsNonRoot: false
-        runAsUser: 0
-        runAsGroup: 0
-      tolerations:
-        - operator: Exists
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: alloy
-          image: grafana/alloy:v1.8.2
+          image: {{ .Values.monitoring.alloy.image.repository | default "grafana/alloy" }}:{{ .Values.monitoring.alloy.image.tag | default "v1.8.2" }}
+          imagePullPolicy: {{ .Values.monitoring.alloy.image.pullPolicy | default "IfNotPresent" }}
           args:
             - run
             - /etc/alloy/config.alloy
@@ -81,30 +79,18 @@ spec:
                   key: LOKI_USER
                   optional: true
           resources:
-            requests:
-              cpu: 50m
-              memory: 256Mi
-            limits:
-              cpu: 200m
-              memory: 384Mi
+            {{- toYaml .Values.monitoring.alloy.resources | nindent 12 }}
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-              add: ["DAC_READ_SEARCH"]
           volumeMounts:
             - name: config
               mountPath: /etc/alloy
               readOnly: true
             - name: tmp
               mountPath: /tmp
-            - name: varlog
-              mountPath: /var/log
-              readOnly: true
-            - name: varlibdockercontainers
-              mountPath: /var/lib/docker/containers
-              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -112,10 +98,4 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 100Mi
-        - name: varlog
-          hostPath:
-            path: /var/log
-        - name: varlibdockercontainers
-          hostPath:
-            path: /var/lib/docker/containers
 {{- end }}

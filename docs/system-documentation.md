@@ -1413,7 +1413,7 @@ Uprawnienia np.:
 |---------|-----------|
 | Secrets encryption at rest | AES-CBC w k3s (EncryptionConfiguration) |
 | K8s audit logging | Audit policy z logowaniem zmian w secrets, RBAC, write ops |
-| Pod Security Standards | PSS enforce: restricted (apps), baseline (system), privileged (storage) |
+| Pod Security Standards | PSS enforce: restricted (OpenOMS app namespace). Alloy monitoring dziala jako restricted Deployment i tailuje logi przez Kubernetes API zamiast hostPath/root DaemonSet. System/storage namespaces moga miec osobne baseline/privileged profile. |
 | NetworkPolicies | Default-deny ingress na wszystkich 15 namespacach |
 | State DB permissions | chmod 600 (wylacznie root) |
 | TLS | Mutual TLS do API servera k3s, TLS 1.2+ z strong cipher suites |

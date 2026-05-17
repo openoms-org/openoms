@@ -6,3 +6,9 @@ metadata:
     helm.sh/resource-policy: keep
   labels:
     {{- include "openoms.labels" . | nindent 4 }}
+    pod-security.kubernetes.io/enforce: {{ .Values.podSecurity.enforce | default "restricted" }}
+    pod-security.kubernetes.io/audit: {{ .Values.podSecurity.audit | default "restricted" }}
+    pod-security.kubernetes.io/warn: {{ .Values.podSecurity.warn | default "restricted" }}
+    pod-security.kubernetes.io/enforce-version: {{ .Values.podSecurity.version | default "latest" }}
+    pod-security.kubernetes.io/audit-version: {{ .Values.podSecurity.version | default "latest" }}
+    pod-security.kubernetes.io/warn-version: {{ .Values.podSecurity.version | default "latest" }}

@@ -119,14 +119,6 @@ data:
     discovery.relabel "pod_logs" {
       targets = discovery.kubernetes.pods.targets
 
-      // Set __path__ to the pod log path on the node
-      rule {
-        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
-        target_label  = "__path__"
-        separator     = "/"
-        replacement   = "/var/log/pods/*$1/$2/*.log"
-      }
-
       // Standard labels
       rule {
         source_labels = ["__meta_kubernetes_namespace"]
@@ -154,12 +146,8 @@ data:
       }
     }
 
-    local.file_match "pod_logs" {
-      path_targets = discovery.relabel.pod_logs.output
-    }
-
-    loki.source.file "pod_logs" {
-      targets    = local.file_match.pod_logs.targets
+    loki.source.kubernetes "pod_logs" {
+      targets    = discovery.relabel.pod_logs.output
       forward_to = [loki.process.pod_logs.receiver]
     }
 
