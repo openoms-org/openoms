@@ -1,5 +1,11 @@
 namespace: openoms
 
+podSecurity:
+  enforce: restricted
+  audit: restricted
+  warn: restricted
+  version: latest
+
 sentry:
   # Optional release identifier sent to Sentry by API, worker, and dashboard.
   # Production deploys set this to the public repo commit SHA/image tag.
@@ -196,6 +202,22 @@ networkPolicy:
   enabled: false  # set true in production for namespace-level isolation
   ingressNamespace: ingress-nginx
   cloudflaredNamespace: cloudflared
+
+monitoring:
+  enabled: false
+  alloy:
+    replicaCount: 1
+    image:
+      repository: grafana/alloy
+      tag: v1.8.2
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        cpu: 200m
+        memory: 384Mi
 
 backup:
   enabled: false
