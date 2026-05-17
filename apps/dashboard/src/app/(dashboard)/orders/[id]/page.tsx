@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { OrderForm } from "@/components/orders/order-form";
+import { mapCreateOrderRequestToUpdateOrderRequest } from "@/components/orders/order-request-mappers";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
@@ -57,7 +58,7 @@ import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId, cn, sanitizeUrl } from "@/lib/utils";
 import { getErrorMessage, apiFetch } from "@/lib/api-client";
-import type { CreateOrderRequest, UpdateOrderRequest } from "@/types/api";
+import type { CreateOrderRequest } from "@/types/api";
 
 function CollapsibleSection({
   title,
@@ -163,7 +164,7 @@ export default function OrderDetailPage() {
 
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
-      await updateOrder.mutateAsync(data as unknown as UpdateOrderRequest);
+      await updateOrder.mutateAsync(mapCreateOrderRequestToUpdateOrderRequest(data));
       toast.success(t("detail.orderUpdated"));
       setIsEditing(false);
     } catch (error) {
