@@ -1,20 +1,28 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 // ===========================================================================
@@ -135,6 +143,94 @@ func TestImportHandler_Import_InvalidMultipartForm(t *testing.T) {
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
 	assert.Equal(t, "file too large or invalid multipart form", resp["error"])
+}
+
+func TestImportHandler_Import_PassesPlanLimitToImportService(t *testing.T) {
+	importService := &recordingCSVImportService{
+		result: &model.ImportResult{TotalRows: 1, Imported: 1, Errors: []model.ImportError{}},
+	}
+	h := NewImportHandler(importService, nil)
+	tenantID := uuid.New()
+	userID := uuid.New()
+
+	body, contentType := newOrderImportMultipartBody(t)
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders/import", body)
+	req.Header.Set("Content-Type", contentType)
+	req = req.WithContext(newContextWithTenantAndUser(req.Context(), tenantID, userID))
+
+	cache := service.NewPlanCache(time.Hour)
+	cache.Set(tenantID, "active", json.RawMessage(`{"limits":{"max_orders_monthly":7}}`))
+
+	rr := httptest.NewRecorder()
+	middleware.TenantPlanGuard(cache, nil)(http.HandlerFunc(h.Import)).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	require.True(t, importService.importCalled)
+	assert.Equal(t, 7, importService.options.MaxOrdersMonthly)
+}
+
+func TestImportHandler_Import_ReturnsForbiddenWhenMonthlyLimitExceeded(t *testing.T) {
+	importService := &recordingCSVImportService{
+		err: service.ErrOrderLimitExceeded,
+	}
+	h := NewImportHandler(importService, nil)
+	tenantID := uuid.New()
+	userID := uuid.New()
+
+	body, contentType := newOrderImportMultipartBody(t)
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders/import", body)
+	req.Header.Set("Content-Type", contentType)
+	req = req.WithContext(newContextWithTenantAndUser(req.Context(), tenantID, userID))
+
+	cache := service.NewPlanCache(time.Hour)
+	cache.Set(tenantID, "active", json.RawMessage(`{"limits":{"max_orders_monthly":7}}`))
+
+	rr := httptest.NewRecorder()
+	middleware.TenantPlanGuard(cache, nil)(http.HandlerFunc(h.Import)).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusForbidden, rr.Code)
+	require.True(t, importService.importCalled)
+	assert.Contains(t, rr.Body.String(), "Monthly order limit reached for current plan (max: 7)")
+}
+
+type recordingCSVImportService struct {
+	result       *model.ImportResult
+	err          error
+	options      service.ImportOrdersOptions
+	importCalled bool
+}
+
+func (s *recordingCSVImportService) ParseCSV(_ io.Reader) (*model.ImportPreviewResponse, error) {
+	return nil, nil
+}
+
+func (s *recordingCSVImportService) ImportOrders(
+	_ context.Context,
+	_ uuid.UUID,
+	_ io.Reader,
+	_ []model.ImportColumnMapping,
+	_ uuid.UUID,
+	_ string,
+	options service.ImportOrdersOptions,
+) (*model.ImportResult, error) {
+	s.importCalled = true
+	s.options = options
+	return s.result, s.err
+}
+
+func newOrderImportMultipartBody(t *testing.T) (*bytes.Buffer, string) {
+	t.Helper()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	file, err := writer.CreateFormFile("file", "orders.csv")
+	require.NoError(t, err)
+	_, err = file.Write([]byte("customer_name,total_amount\nJan Kowalski,100\n"))
+	require.NoError(t, err)
+	require.NoError(t, writer.WriteField("mappings", `[{"csv_column":"customer_name","order_field":"customer_name"},{"csv_column":"total_amount","order_field":"total_amount"}]`))
+	require.NoError(t, writer.Close())
+
+	return &body, writer.FormDataContentType()
 }
 
 // ===========================================================================

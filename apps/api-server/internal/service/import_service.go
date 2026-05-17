@@ -29,6 +29,11 @@ type ImportService struct {
 	pool       *pgxpool.Pool
 }
 
+// ImportOrdersOptions controls CSV order import behavior.
+type ImportOrdersOptions struct {
+	MaxOrdersMonthly int
+}
+
 // NewImportService creates a new ImportService.
 func NewImportService(orderRepo repository.OrderRepo, auditRepo repository.AuditRepo, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *ImportService {
 	return &ImportService{
@@ -202,6 +207,7 @@ func (s *ImportService) ImportOrders(
 	mappings []model.ImportColumnMapping,
 	userID uuid.UUID,
 	ip string,
+	opts ImportOrdersOptions,
 ) (*model.ImportResult, error) {
 	raw, err := io.ReadAll(io.LimitReader(file, 10*1024*1024))
 	if err != nil {
@@ -253,7 +259,10 @@ func (s *ImportService) ImportOrders(
 
 		for rowNum := 1; rowNum < len(records); rowNum++ {
 			row := records[rowNum]
-			rowErrors := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result, statusConfig)
+			rowErrors, err := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result, statusConfig, opts.MaxOrdersMonthly)
+			if err != nil {
+				return err
+			}
 			if len(rowErrors) > 0 {
 				result.Errors = append(result.Errors, rowErrors...)
 				result.Skipped++
@@ -295,7 +304,8 @@ func (s *ImportService) importRow(
 	rowNum int,
 	result *model.ImportResult,
 	statusConfig *model.OrderStatusConfig,
-) []model.ImportError {
+	maxOrdersMonthly int,
+) ([]model.ImportError, error) {
 	var rowErrors []model.ImportError
 
 	getVal := func(field string) string {
@@ -313,7 +323,7 @@ func (s *ImportService) importRow(
 			Field:   "customer_name",
 			Message: "customer_name is required",
 		})
-		return rowErrors
+		return rowErrors, nil
 	}
 
 	// Parse total_amount
@@ -321,14 +331,14 @@ func (s *ImportService) importRow(
 	if v := getVal("total_amount"); v != "" {
 		// Replace comma with dot for European decimal format
 		v = strings.ReplaceAll(v, ",", ".")
-		parsed, err := strconv.ParseFloat(v, 64)
-		if err != nil {
+		parsed, ok := parseImportFloat(v)
+		if !ok {
 			rowErrors = append(rowErrors, model.ImportError{
 				Row:     rowNum,
 				Field:   "total_amount",
 				Message: fmt.Sprintf("invalid number: %s", v),
 			})
-			return rowErrors
+			return rowErrors, nil
 		}
 		if parsed < 0 {
 			rowErrors = append(rowErrors, model.ImportError{
@@ -336,7 +346,7 @@ func (s *ImportService) importRow(
 				Field:   "total_amount",
 				Message: "total_amount must be non-negative",
 			})
-			return rowErrors
+			return rowErrors, nil
 		}
 		totalAmount = parsed
 	}
@@ -364,7 +374,7 @@ func (s *ImportService) importRow(
 			Field:   "status",
 			Message: fmt.Sprintf("unknown status %q, not in tenant config", status),
 		})
-		return rowErrors
+		return rowErrors, nil
 	}
 
 	// Payment status
@@ -384,7 +394,7 @@ func (s *ImportService) importRow(
 				Field:   "external_id",
 				Message: fmt.Sprintf("error checking duplicate: %s", err.Error()),
 			})
-			return rowErrors
+			return rowErrors, nil
 		}
 		if existing {
 			rowErrors = append(rowErrors, model.ImportError{
@@ -392,7 +402,7 @@ func (s *ImportService) importRow(
 				Field:   "external_id",
 				Message: fmt.Sprintf("duplicate external_id: %s", externalID),
 			})
-			return rowErrors
+			return rowErrors, nil
 		}
 	}
 
@@ -405,14 +415,14 @@ func (s *ImportService) importRow(
 	// Parse ordered_at
 	var orderedAt *time.Time
 	if v := getVal("ordered_at"); v != "" {
-		t, err := parseFlexibleTime(v)
-		if err != nil {
+		t, ok := parseFlexibleTimeOK(v)
+		if !ok {
 			rowErrors = append(rowErrors, model.ImportError{
 				Row:     rowNum,
 				Field:   "ordered_at",
 				Message: fmt.Sprintf("invalid date: %s", v),
 			})
-			return rowErrors
+			return rowErrors, nil
 		}
 		orderedAt = &t
 	}
@@ -428,7 +438,7 @@ func (s *ImportService) importRow(
 				Field:   "items",
 				Message: "invalid JSON for items",
 			})
-			return rowErrors
+			return rowErrors, nil
 		}
 	}
 
@@ -482,16 +492,32 @@ func (s *ImportService) importRow(
 		order.PaymentMethod = &paymentMethod
 	}
 
+	// CountThisMonth runs in the same transaction, so it sees orders inserted by
+	// earlier CSV rows. Passing 0 avoids double-counting this import batch.
+	if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, maxOrdersMonthly, 0); err != nil {
+		return nil, err
+	}
+
 	if err := s.orderRepo.Create(ctx, tx, &order); err != nil {
 		rowErrors = append(rowErrors, model.ImportError{
 			Row:     rowNum,
 			Message: fmt.Sprintf("failed to create order: %s", err.Error()),
 		})
-		return rowErrors
+		return rowErrors, nil
 	}
 
 	result.Imported++
-	return nil
+	return nil, nil
+}
+
+func parseImportFloat(s string) (float64, bool) {
+	value, err := strconv.ParseFloat(s, 64)
+	return value, err == nil
+}
+
+func parseFlexibleTimeOK(s string) (time.Time, bool) {
+	value, err := parseFlexibleTime(s)
+	return value, err == nil
 }
 
 // findByExternalIDColumn checks if an order with the given external_id column value

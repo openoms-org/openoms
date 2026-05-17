@@ -286,15 +286,8 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 
 	var newOrder *model.Order
 	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		// Atomic plan limit check inside transaction
-		if maxOrdersMonthly > 0 {
-			count, err := h.orderService.OrderRepo().CountThisMonth(r.Context(), tx)
-			if err != nil {
-				return fmt.Errorf("count orders for limit check: %w", err)
-			}
-			if count >= maxOrdersMonthly {
-				return service.ErrOrderLimitExceeded
-			}
+		if err := service.EnforceMonthlyOrderLimit(r.Context(), tx, h.orderService.OrderRepo(), tenantID, maxOrdersMonthly, 0); err != nil {
+			return err
 		}
 
 		existing, err := h.orderService.OrderRepo().FindByID(r.Context(), tx, orderID)
