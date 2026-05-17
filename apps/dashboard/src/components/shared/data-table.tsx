@@ -46,10 +46,13 @@ interface DataTableProps<T> {
   resizable?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getNestedValue(obj: any, path: string): unknown {
-  return path.split(".").reduce((acc, part) => {
-    if (acc && typeof acc === "object") {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split(".").reduce<unknown>((acc, part) => {
+    if (isRecord(acc)) {
       return acc[part];
     }
     return undefined;
@@ -81,8 +84,10 @@ function getDefaultRowLabel<T>(row: T, id: string, columns: ColumnDef<T>[]): str
     "title",
   ];
 
+  const rowRecord = row as Record<string, unknown>;
+
   for (const key of candidateKeys) {
-    const value = getStringValue(getNestedValue(row, key));
+    const value = getStringValue(getNestedValue(rowRecord, key));
     if (value) return value;
   }
 
@@ -90,7 +95,7 @@ function getDefaultRowLabel<T>(row: T, id: string, columns: ColumnDef<T>[]): str
     const key = String(column.accessorKey);
     if (key === "id") continue;
 
-    const value = getStringValue(getNestedValue(row, key));
+    const value = getStringValue(getNestedValue(rowRecord, key));
     if (value) return value;
   }
 
@@ -370,7 +375,7 @@ export function DataTable<T>({
               {columns.map((column) => {
                 const key = String(column.accessorKey);
                 const editConfig = editableMap?.get(key);
-                const rawValue = getNestedValue(row, key);
+                const rawValue = getNestedValue(row as Record<string, unknown>, key);
                 const displayContent = column.cell
                   ? column.cell(row)
                   : String(rawValue ?? "");
