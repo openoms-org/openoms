@@ -30,19 +30,23 @@ var (
 
 // CheckoutService manages Stripe Checkout sessions for billing.
 type CheckoutService struct {
-	billingRepo repository.BillingRepo
-	pool        *pgxpool.Pool
-	plans       []config.PlanConfig
+	billingRepo        repository.BillingRepo
+	pool               *pgxpool.Pool
+	plans              []config.PlanConfig
+	getCheckoutSession checkoutSessionGetter
 }
 
 // NewCheckoutService creates a new CheckoutService.
 func NewCheckoutService(billingRepo repository.BillingRepo, pool *pgxpool.Pool, plans []config.PlanConfig) *CheckoutService {
 	return &CheckoutService{
-		billingRepo: billingRepo,
-		pool:        pool,
-		plans:       plans,
+		billingRepo:        billingRepo,
+		pool:               pool,
+		plans:              plans,
+		getCheckoutSession: session.Get,
 	}
 }
+
+type checkoutSessionGetter func(string, *stripe.CheckoutSessionParams) (*stripe.CheckoutSession, error)
 
 // ListPlans returns plans safe for frontend consumption (no Stripe Price IDs).
 func (s *CheckoutService) ListPlans() []model.PublicPlanInfo {
@@ -162,7 +166,7 @@ func (s *CheckoutService) GetSessionStatus(ctx context.Context, stripeSessionID 
 	}
 
 	// Session is pending or not in DB — check Stripe API
-	sess, err := session.Get(stripeSessionID, nil)
+	sess, err := s.getCheckoutSession(stripeSessionID, checkoutSessionRetrieveParams())
 	if err != nil {
 		return nil, fmt.Errorf("stripe get session: %w", err)
 	}
@@ -171,9 +175,11 @@ func (s *CheckoutService) GetSessionStatus(ctx context.Context, stripeSessionID 
 	var email string
 	if sess.Status == stripe.CheckoutSessionStatusComplete {
 		status = "completed"
-		email = sess.CustomerDetails.Email
+		if sess.CustomerDetails != nil {
+			email = sess.CustomerDetails.Email
+		}
 		// Update our DB with the completed status
-		if _, err := s.billingRepo.CompleteCheckoutSession(ctx, s.pool, stripeSessionID, email); err != nil {
+		if _, err := s.billingRepo.CompleteCheckoutSession(ctx, s.pool, stripeSessionID, email, checkoutSessionStripeRefs(sess)); err != nil {
 			slog.Error("failed to complete checkout session in DB", "stripe_session_id", stripeSessionID, "error", err)
 		}
 	}
@@ -238,45 +244,171 @@ func (s *CheckoutService) ClaimSession(ctx context.Context, stripeSessionID stri
 }
 
 // FinalizeCheckoutClaim sets tenant_id on a claimed session and creates billing records.
-// Called after registration succeeds. Best-effort — errors are logged but don't fail registration.
-func (s *CheckoutService) FinalizeCheckoutClaim(ctx context.Context, stripeSessionID string, tenantID uuid.UUID, plan string, interval string) {
+// Called after registration succeeds. Errors are returned to the caller for logging/alerting,
+// but registration has already succeeded and should not be rolled back by this method.
+func (s *CheckoutService) FinalizeCheckoutClaim(ctx context.Context, stripeSessionID string, tenantID uuid.UUID, plan string, interval string) error {
+	var finalErr error
+
 	// Set tenant_id on the claimed checkout session
 	if err := s.billingRepo.UpdateClaimedCheckoutTenant(ctx, s.pool, stripeSessionID, tenantID); err != nil {
 		slog.Error("failed to update checkout session tenant", "session_id", stripeSessionID, "error", err)
+		finalErr = errors.Join(finalErr, fmt.Errorf("update checkout session tenant: %w", err))
 	}
 
-	// Get Stripe session to extract customer/subscription IDs
-	sess, err := session.Get(stripeSessionID, nil)
+	refs, err := s.checkoutRefsForFinalization(ctx, stripeSessionID)
 	if err != nil {
-		slog.Error("failed to get Stripe session for finalization", "session_id", stripeSessionID, "error", err)
-		return
+		slog.Error("failed to resolve Stripe refs for checkout finalization", "session_id", stripeSessionID, "error", err)
+		return errors.Join(finalErr, err)
 	}
 
 	// Create billing customer record
-	if sess.Customer != nil && sess.Customer.ID != "" {
-		if err := s.billingRepo.CreateBillingCustomer(ctx, s.pool, tenantID, sess.Customer.ID); err != nil {
-			slog.Error("failed to create billing customer", "tenant_id", tenantID, "error", err)
-		}
+	if refs.StripeCustomerID == "" {
+		return errors.Join(finalErr, errors.New("checkout finalization missing Stripe customer ID"))
+	}
+	if err := s.billingRepo.CreateBillingCustomer(ctx, s.pool, tenantID, refs.StripeCustomerID); err != nil {
+		slog.Error("failed to create billing customer", "tenant_id", tenantID, "error", err)
+		finalErr = errors.Join(finalErr, fmt.Errorf("create billing customer: %w", err))
 	}
 
 	// Create initial subscription record
-	if sess.Subscription != nil && sess.Subscription.ID != "" {
-		sub := &model.BillingSubscription{
-			TenantID:             tenantID,
-			StripeSubscriptionID: sess.Subscription.ID,
-			StripeCustomerID:     sess.Customer.ID,
-			Plan:                 plan,
-			BillingInterval:      interval,
-			Status:               string(sess.Subscription.Status),
+	if refs.StripeSubscriptionID == "" {
+		return errors.Join(finalErr, errors.New("checkout finalization missing Stripe subscription ID"))
+	}
+	sub := &model.BillingSubscription{
+		TenantID:             tenantID,
+		StripeSubscriptionID: refs.StripeSubscriptionID,
+		StripeCustomerID:     refs.StripeCustomerID,
+		Plan:                 plan,
+		BillingInterval:      interval,
+		Status:               s.subscriptionStatusForFinalization(refs, plan),
+		TrialEnd:             refs.TrialEnd,
+		CurrentPeriodStart:   refs.CurrentPeriodStart,
+		CurrentPeriodEnd:     refs.CurrentPeriodEnd,
+	}
+	if err := s.billingRepo.UpsertSubscription(ctx, s.pool, sub); err != nil {
+		slog.Error("failed to create initial subscription", "tenant_id", tenantID, "error", err)
+		finalErr = errors.Join(finalErr, fmt.Errorf("upsert billing subscription: %w", err))
+	}
+
+	return finalErr
+}
+
+func (s *CheckoutService) checkoutRefsForFinalization(ctx context.Context, stripeSessionID string) (model.CheckoutSessionStripeRefs, error) {
+	sess, err := s.getCheckoutSession(stripeSessionID, checkoutSessionRetrieveParams())
+	if err == nil {
+		refs := checkoutSessionStripeRefs(sess)
+		if refs.StripeCustomerID != "" && refs.StripeSubscriptionID != "" {
+			return refs, nil
 		}
-		if sess.Subscription.TrialEnd > 0 {
-			t := time.Unix(sess.Subscription.TrialEnd, 0)
-			sub.TrialEnd = &t
+		slog.Warn("Stripe checkout session missing billing refs; falling back to stored checkout refs", "session_id", stripeSessionID)
+	} else {
+		slog.Warn("Stripe checkout session fetch failed; falling back to stored checkout refs", "session_id", stripeSessionID, "error", err)
+	}
+
+	dbSession, dbErr := s.billingRepo.GetCheckoutSession(ctx, s.pool, stripeSessionID)
+	if dbErr != nil {
+		if err != nil {
+			return model.CheckoutSessionStripeRefs{}, errors.Join(
+				fmt.Errorf("stripe get checkout session: %w", err),
+				fmt.Errorf("get stored checkout session: %w", dbErr),
+			)
 		}
-		if err := s.billingRepo.UpsertSubscription(ctx, s.pool, sub); err != nil {
-			slog.Error("failed to create initial subscription", "tenant_id", tenantID, "error", err)
+		return model.CheckoutSessionStripeRefs{}, fmt.Errorf("get stored checkout session: %w", dbErr)
+	}
+	refs := storedCheckoutSessionStripeRefs(dbSession)
+	if refs.StripeCustomerID == "" || refs.StripeSubscriptionID == "" {
+		if err != nil {
+			return model.CheckoutSessionStripeRefs{}, fmt.Errorf("stripe get checkout session: %w; stored checkout refs are incomplete", err)
+		}
+		return model.CheckoutSessionStripeRefs{}, errors.New("stored checkout refs are incomplete")
+	}
+	return refs, nil
+}
+
+func checkoutSessionRetrieveParams() *stripe.CheckoutSessionParams {
+	params := &stripe.CheckoutSessionParams{}
+	params.AddExpand("customer")
+	params.AddExpand("subscription")
+	params.AddExpand("subscription.items.data")
+	return params
+}
+
+func checkoutSessionStripeRefs(sess *stripe.CheckoutSession) model.CheckoutSessionStripeRefs {
+	if sess == nil {
+		return model.CheckoutSessionStripeRefs{}
+	}
+
+	var refs model.CheckoutSessionStripeRefs
+	if sess.Customer != nil {
+		refs.StripeCustomerID = sess.Customer.ID
+	}
+	if sess.Subscription != nil {
+		refs.StripeSubscriptionID = sess.Subscription.ID
+		refs.SubscriptionStatus = string(sess.Subscription.Status)
+		refs.TrialEnd = unixTimePtr(sess.Subscription.TrialEnd)
+		if sess.Subscription.Items != nil && len(sess.Subscription.Items.Data) > 0 {
+			item := sess.Subscription.Items.Data[0]
+			refs.CurrentPeriodStart = unixTimePtr(item.CurrentPeriodStart)
+			refs.CurrentPeriodEnd = unixTimePtr(item.CurrentPeriodEnd)
 		}
 	}
+	return refs
+}
+
+func storedCheckoutSessionStripeRefs(session *model.BillingCheckoutSession) model.CheckoutSessionStripeRefs {
+	if session == nil {
+		return model.CheckoutSessionStripeRefs{}
+	}
+	return model.CheckoutSessionStripeRefs{
+		StripeCustomerID:     stringPtrValue(session.StripeCustomerID),
+		StripeSubscriptionID: stringPtrValue(session.StripeSubscriptionID),
+		SubscriptionStatus:   stringPtrValue(session.SubscriptionStatus),
+		TrialEnd:             session.TrialEnd,
+		CurrentPeriodStart:   session.CurrentPeriodStart,
+		CurrentPeriodEnd:     session.CurrentPeriodEnd,
+	}
+}
+
+func (s *CheckoutService) subscriptionStatusForFinalization(refs model.CheckoutSessionStripeRefs, planID string) string {
+	if validBillingSubscriptionStatus(refs.SubscriptionStatus) {
+		return refs.SubscriptionStatus
+	}
+	plan := s.FindPlan(planID)
+	if plan != nil && plan.TrialDays > 0 {
+		return string(stripe.SubscriptionStatusTrialing)
+	}
+	return string(stripe.SubscriptionStatusActive)
+}
+
+func validBillingSubscriptionStatus(status string) bool {
+	switch status {
+	case string(stripe.SubscriptionStatusIncomplete),
+		string(stripe.SubscriptionStatusIncompleteExpired),
+		string(stripe.SubscriptionStatusTrialing),
+		string(stripe.SubscriptionStatusActive),
+		string(stripe.SubscriptionStatusPastDue),
+		string(stripe.SubscriptionStatusCanceled),
+		string(stripe.SubscriptionStatusUnpaid),
+		string(stripe.SubscriptionStatusPaused):
+		return true
+	default:
+		return false
+	}
+}
+
+func unixTimePtr(seconds int64) *time.Time {
+	if seconds <= 0 {
+		return nil
+	}
+	t := time.Unix(seconds, 0)
+	return &t
+}
+
+func stringPtrValue(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
 }
 
 // GetSubscription returns the current subscription status for a tenant.

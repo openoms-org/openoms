@@ -69,7 +69,7 @@ func (s *StripeWebhookService) handleCheckoutCompleted(ctx context.Context, even
 		email = sess.CustomerDetails.Email
 	}
 
-	completed, err := s.billingRepo.CompleteCheckoutSession(ctx, s.pool, sess.ID, email)
+	completed, err := s.billingRepo.CompleteCheckoutSession(ctx, s.pool, sess.ID, email, checkoutSessionStripeRefs(&sess))
 	if err != nil {
 		return fmt.Errorf("complete checkout session: %w", err)
 	}

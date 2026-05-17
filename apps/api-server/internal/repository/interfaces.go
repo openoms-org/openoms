@@ -510,7 +510,7 @@ type InvitationRepo interface {
 type BillingRepo interface {
 	// Checkout session lifecycle
 	CreateCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, plan, interval string) error
-	CompleteCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, email string) (bool, error)
+	CompleteCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, email string, refs model.CheckoutSessionStripeRefs) (bool, error)
 	GetCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (*model.BillingCheckoutSession, error)
 	ClaimCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (bool, error)
 	UpdateClaimedCheckoutTenant(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string, tenantID uuid.UUID) error

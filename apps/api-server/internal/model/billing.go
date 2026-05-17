@@ -41,14 +41,30 @@ type CheckoutSessionStatus struct {
 
 // BillingCheckoutSession represents a row in billing_checkout_sessions.
 type BillingCheckoutSession struct {
-	ID              uuid.UUID  `json:"id"`
-	StripeSessionID string     `json:"stripe_session_id"`
-	Plan            string     `json:"plan"`
-	BillingInterval string     `json:"billing_interval"`
-	Email           *string    `json:"email,omitempty"`
-	Status          string     `json:"status"`
-	TenantID        *uuid.UUID `json:"tenant_id,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID                   uuid.UUID  `json:"id"`
+	StripeSessionID      string     `json:"stripe_session_id"`
+	Plan                 string     `json:"plan"`
+	BillingInterval      string     `json:"billing_interval"`
+	Email                *string    `json:"email,omitempty"`
+	Status               string     `json:"status"`
+	TenantID             *uuid.UUID `json:"tenant_id,omitempty"`
+	StripeCustomerID     *string    `json:"stripe_customer_id,omitempty"`
+	StripeSubscriptionID *string    `json:"stripe_subscription_id,omitempty"`
+	SubscriptionStatus   *string    `json:"subscription_status,omitempty"`
+	TrialEnd             *time.Time `json:"trial_end,omitempty"`
+	CurrentPeriodStart   *time.Time `json:"current_period_start,omitempty"`
+	CurrentPeriodEnd     *time.Time `json:"current_period_end,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+}
+
+// CheckoutSessionStripeRefs carries Stripe references captured from a Checkout Session.
+type CheckoutSessionStripeRefs struct {
+	StripeCustomerID     string
+	StripeSubscriptionID string
+	SubscriptionStatus   string
+	TrialEnd             *time.Time
+	CurrentPeriodStart   *time.Time
+	CurrentPeriodEnd     *time.Time
 }
 
 // BillingCustomer links a tenant to a Stripe customer.

@@ -48,7 +48,7 @@ func (f *fakeStripeBillingRepo) CreateCheckoutSession(context.Context, *pgxpool.
 	return nil
 }
 
-func (f *fakeStripeBillingRepo) CompleteCheckoutSession(context.Context, *pgxpool.Pool, string, string) (bool, error) {
+func (f *fakeStripeBillingRepo) CompleteCheckoutSession(context.Context, *pgxpool.Pool, string, string, model.CheckoutSessionStripeRefs) (bool, error) {
 	return false, nil
 }
 
