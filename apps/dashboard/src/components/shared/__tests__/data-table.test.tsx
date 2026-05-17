@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -106,6 +107,16 @@ describe("DataTable", () => {
 
     render(<DataTable columns={nestedColumns} data={nestedData} />);
     expect(screen.getByText("Nested User")).toBeInTheDocument();
+  });
+
+  it("keeps nested accessor lookup typed without any escapes", () => {
+    const source = readFileSync("src/components/shared/data-table.tsx", "utf8");
+
+    expect(source).not.toContain("eslint-disable-next-line @typescript-eslint/no-explicit-any");
+    expect(source).toMatch(
+      /function getNestedValue\(\s*obj: Record<string, unknown>,\s*path: string\s*\): unknown/,
+    );
+    expect(source).not.toContain("function getNestedValue(obj: any");
   });
 
   it("labels the select-all checkbox and row checkboxes", () => {
