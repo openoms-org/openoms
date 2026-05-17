@@ -52,6 +52,7 @@ func TestIsCSRFExempt_NonExemptPaths(t *testing.T) {
 	}{
 		{"/v1/orders", "orders"},
 		{"/v1/products", "products"},
+		{"/v1/auth/logout", "logout should require CSRF"},
 		{"/v1/auth/2fa/enable", "2fa enable (not exempt prefix)"},
 		{"/v1/users/me", "users me"},
 		{"/v1/settings/company", "settings"},
@@ -261,6 +262,7 @@ func TestCSRF_NonExemptPath_RequiresValidation(t *testing.T) {
 		"/v1/orders",
 		"/v1/products",
 		"/v1/shipments",
+		"/v1/auth/logout",
 		"/v1/settings/company",
 	}
 
