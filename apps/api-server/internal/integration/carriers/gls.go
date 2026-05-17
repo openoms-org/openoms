@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
 	"time"
 
 	glssdk "github.com/openoms-org/openoms/packages/gls-go-sdk"
@@ -30,11 +31,15 @@ type GLSCredentials struct {
 	Sandbox  bool   `json:"sandbox,omitempty"`
 }
 
+const maxGLSLabelCacheEntries = 16
+
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
 type GLSProvider struct {
-	client  *glssdk.Client
-	logger  *slog.Logger
-	storage storage.ObjectStorage
+	client     *glssdk.Client
+	logger     *slog.Logger
+	storage    storage.ObjectStorage
+	labelMu    sync.RWMutex
+	labelCache map[string][]byte
 }
 
 // NewGLSProvider creates a GLS CarrierProvider from encrypted credentials.
@@ -53,9 +58,10 @@ func NewGLSProvider(credentials json.RawMessage, _ json.RawMessage, storage stor
 	client := glssdk.NewClient(creds.Username, creds.Password, opts...)
 
 	return &GLSProvider{
-		client:  client,
-		logger:  slog.Default().With("provider", "gls"),
-		storage: storage,
+		client:     client,
+		logger:     slog.Default().With("provider", "gls"),
+		storage:    storage,
+		labelCache: make(map[string][]byte),
 	}, nil
 }
 
@@ -158,16 +164,24 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}
 
 	// GLS returns labels inline in the create response (no separate label API).
-	// Decode and upload the label to object storage.
+	// Cache the bytes only when storage is unavailable or upload fails; otherwise
+	// storage remains the persistence layer and the provider does not retain PDFs.
 	if externalID != "" && len(resp.PrintData) > 0 {
 		decoded, err := base64.StdEncoding.DecodeString(resp.PrintData[0])
 		if err != nil {
 			p.logger.Error("failed to decode label from create response", "externalID", externalID, "error", err)
 		} else if len(decoded) > 0 {
-			key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
-			_, err := p.storage.Upload(ctx, key, bytes.NewReader(decoded), "application/pdf")
-			if err != nil {
-				p.logger.Error("failed to upload label to storage", "externalID", externalID, "key", key, "error", err)
+			shouldCache := p.storage == nil
+			if p.storage != nil {
+				key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
+				_, err := p.storage.Upload(ctx, key, bytes.NewReader(decoded), "application/pdf")
+				if err != nil {
+					p.logger.Error("failed to upload label to storage", "externalID", externalID, "key", key, "error", err)
+					shouldCache = true
+				}
+			}
+			if shouldCache {
+				p.cacheLabel(externalID, decoded)
 			}
 		}
 	}
@@ -179,8 +193,17 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}, nil
 }
 
-// GetLabel retrieves the label from object storage.
+// GetLabel retrieves a one-time label cached from the GLS create response,
+// falling back to object storage when a caller injected it.
 func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
+	if label := p.takeCachedLabel(externalID); label != nil {
+		return label, nil
+	}
+
+	if p.storage == nil {
+		return nil, fmt.Errorf("gls: label not available for external id %q", externalID)
+	}
+
 	key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
 	reader, err := p.storage.Get(ctx, key)
 	if err != nil {
@@ -189,6 +212,32 @@ func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string)
 	defer func() { _ = reader.Close() }()
 
 	return io.ReadAll(io.LimitReader(reader, 10<<20))
+}
+
+func (p *GLSProvider) cacheLabel(externalID string, label []byte) {
+	p.labelMu.Lock()
+	defer p.labelMu.Unlock()
+	if p.labelCache == nil {
+		p.labelCache = make(map[string][]byte)
+	}
+	if len(p.labelCache) >= maxGLSLabelCacheEntries {
+		for cachedID := range p.labelCache {
+			delete(p.labelCache, cachedID)
+			break
+		}
+	}
+	p.labelCache[externalID] = bytes.Clone(label)
+}
+
+func (p *GLSProvider) takeCachedLabel(externalID string) []byte {
+	p.labelMu.Lock()
+	defer p.labelMu.Unlock()
+	label, ok := p.labelCache[externalID]
+	if !ok {
+		return nil
+	}
+	delete(p.labelCache, externalID)
+	return bytes.Clone(label)
 }
 
 // GetTracking returns tracking events for the given GLS shipment.
