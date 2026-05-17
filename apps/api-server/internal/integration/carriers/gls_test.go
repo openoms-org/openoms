@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -345,9 +346,7 @@ func TestGLS_MapStatus_DelegatesToSDK(t *testing.T) {
 	}
 }
 
-// --- GetRates ---
-
-func TestGLS_GetRates_DomesticPricing(t *testing.T) {
+func TestGLS_GetRates_NotImplemented(t *testing.T) {
 	provider := newTestGLSProvider(t, "http://unused")
 
 	rates, err := provider.GetRates(context.Background(), integration.RateRequest{
@@ -355,51 +354,10 @@ func TestGLS_GetRates_DomesticPricing(t *testing.T) {
 		ToCountry:   "PL",
 		Weight:      5.0,
 	})
-	if err != nil {
-		t.Fatalf("GetRates() error: %v", err)
+	if !errors.Is(err, integration.ErrCarrierRatesNotImplemented) {
+		t.Fatalf("GetRates() error = %v, want ErrCarrierRatesNotImplemented", err)
 	}
-	if len(rates) == 0 {
-		t.Fatal("expected at least one rate for domestic shipment")
-	}
-	if rates[0].CarrierCode != "gls" {
-		t.Errorf("CarrierCode = %q, want gls", rates[0].CarrierCode)
-	}
-	if rates[0].Currency != "PLN" {
-		t.Errorf("Currency = %q, want PLN", rates[0].Currency)
-	}
-	if rates[0].Price <= 0 {
-		t.Error("Price should be positive")
-	}
-}
-
-func TestGLS_GetRates_InternationalReturnsEmpty(t *testing.T) {
-	provider := newTestGLSProvider(t, "http://unused")
-
-	rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-		FromCountry: "PL",
-		ToCountry:   "DE",
-		Weight:      5.0,
-	})
-	if err != nil {
-		t.Fatalf("GetRates() error: %v", err)
-	}
-	if len(rates) != 0 {
-		t.Errorf("expected 0 rates for international, got %d", len(rates))
-	}
-}
-
-func TestGLS_GetRates_OverweightReturnsEmpty(t *testing.T) {
-	provider := newTestGLSProvider(t, "http://unused")
-
-	rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-		FromCountry: "PL",
-		ToCountry:   "PL",
-		Weight:      50.0, // over 31.5 kg limit
-	})
-	if err != nil {
-		t.Fatalf("GetRates() error: %v", err)
-	}
-	if len(rates) != 0 {
-		t.Errorf("expected 0 rates for overweight, got %d", len(rates))
+	if rates != nil {
+		t.Fatalf("GetRates() rates = %#v, want nil", rates)
 	}
 }

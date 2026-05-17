@@ -3,6 +3,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"time"
 )
 
@@ -105,6 +106,10 @@ type Rate struct {
 	PickupPoint   bool    `json:"pickup_point"`
 	IsEstimate    bool    `json:"is_estimate"`
 }
+
+// ErrCarrierRatesNotImplemented indicates a carrier provider does not have a
+// certified real-time or contract-backed rating implementation.
+var ErrCarrierRatesNotImplemented = errors.New("carrier rates not implemented")
 
 // CarrierProvider defines the interface for carrier/shipping integrations
 // (e.g. InPost, DHL, DPD).

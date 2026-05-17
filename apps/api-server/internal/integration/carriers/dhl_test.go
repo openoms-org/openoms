@@ -3,6 +3,7 @@ package carriers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -453,55 +454,19 @@ func TestDHL_MapStatus_DelegatesToSDK(t *testing.T) {
 	}
 }
 
-// --- GetRates ---
-
-func TestDHL_GetRates_DomesticPricing_WeightTiers(t *testing.T) {
+func TestDHL_GetRates_NotImplemented(t *testing.T) {
 	provider := newTestDHLProvider(t, "http://unused")
 
-	// Light package — should get multiple tier options
 	rates, err := provider.GetRates(context.Background(), integration.RateRequest{
 		FromCountry: "PL",
 		ToCountry:   "PL",
 		Weight:      3.0,
 	})
-	if err != nil {
-		t.Fatalf("GetRates() error: %v", err)
+	if !errors.Is(err, integration.ErrCarrierRatesNotImplemented) {
+		t.Fatalf("GetRates() error = %v, want ErrCarrierRatesNotImplemented", err)
 	}
-	if len(rates) == 0 {
-		t.Fatal("expected at least one rate")
-	}
-
-	// All rates should be DHL
-	for _, r := range rates {
-		if r.CarrierCode != "dhl" {
-			t.Errorf("CarrierCode = %q, want dhl", r.CarrierCode)
-		}
-	}
-
-	// Heavier package should have fewer tier options
-	heavyRates, _ := provider.GetRates(context.Background(), integration.RateRequest{
-		FromCountry: "PL",
-		ToCountry:   "PL",
-		Weight:      25.0,
-	})
-	if len(heavyRates) >= len(rates) {
-		t.Error("heavy package should have fewer tier options than light package")
-	}
-}
-
-func TestDHL_GetRates_InternationalReturnsEmpty(t *testing.T) {
-	provider := newTestDHLProvider(t, "http://unused")
-
-	rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-		FromCountry: "PL",
-		ToCountry:   "DE",
-		Weight:      5.0,
-	})
-	if err != nil {
-		t.Fatalf("GetRates() error: %v", err)
-	}
-	if len(rates) != 0 {
-		t.Errorf("expected 0 rates for international, got %d", len(rates))
+	if rates != nil {
+		t.Fatalf("GetRates() rates = %#v, want nil", rates)
 	}
 }
 
