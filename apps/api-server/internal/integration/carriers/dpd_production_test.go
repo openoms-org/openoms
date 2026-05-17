@@ -19,10 +19,11 @@ import (
 //   - Service type mapping: dpd_classic → STANDARD, dpd_pickup → PICKUP
 //   - Target point validation for dpd_pickup service
 //   - Shipper address mapped to DPD Sender in API request
-//   - Tracking and cancel return clear unsupported-operation errors
+//   - Tracking uses DPD InfoServices SOAP while parcel creation/labels stay on DPD Services REST
+//   - Cancel returns a clear unsupported-operation error
 //
 // Reference: dhl_production_test.go (same pattern, DHL-specific checks).
-// DPD uses JSON REST API (not SOAP), so assertions check JSON body fields.
+// DPD shipment creation uses JSON REST API; DPD tracking uses InfoServices SOAP.
 // =============================================================================
 
 // dpdOKResponse is a minimal valid DPD create-parcel response for test mocks.
@@ -246,19 +247,43 @@ func TestDPD_CreateShipment_ShipperMapsToSender(t *testing.T) {
 	}
 }
 
-// --- Tracking & Cancel (Unsupported Operations) ---
+// --- Tracking & Cancel ---
 
-func TestDPD_GetTracking_ReturnsUnsupportedError(t *testing.T) {
-	// DPD does not support tracking via REST API. The provider must return
-	// a clear error directing users to the DPD tracking portal.
-	provider := newTestDPDProvider(t, "http://unused")
+func TestDPD_GetTracking_UsesInfoServicesSOAP(t *testing.T) {
+	// DPD tracking is served by InfoServices SOAP, not by the DPD Services
+	// REST parcel endpoint used for shipment creation and labels.
+	var gotMethod, gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		body, _ := io.ReadAll(r.Body)
+		gotBody = string(body)
 
-	_, err := provider.GetTracking(context.Background(), "0000012345678")
-	if err == nil {
-		t.Fatal("GetTracking() should return error — DPD does not support tracking via REST API")
+		w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+		_, _ = w.Write([]byte(dpdInfoServicesProviderOKResponse))
+	}))
+	defer srv.Close()
+
+	provider := newTestDPDProvider(t, srv.URL)
+
+	events, err := provider.GetTracking(context.Background(), "0000012345678")
+	if err != nil {
+		t.Fatalf("GetTracking() error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "not available") {
-		t.Errorf("error should mention tracking 'not available', got: %v", err)
+	if gotMethod != http.MethodPost {
+		t.Fatalf("method = %q, want POST", gotMethod)
+	}
+	if !strings.Contains(gotBody, "getEventsForWaybillV1") {
+		t.Fatalf("expected SOAP getEventsForWaybillV1 request, got:\n%s", gotBody)
+	}
+	if len(events) != 2 {
+		t.Fatalf("len(events) = %d, want 2", len(events))
+	}
+	if events[len(events)-1].Status != "190101" {
+		t.Fatalf("newest event status = %q, want 190101", events[len(events)-1].Status)
+	}
+	omsStatus, ok := provider.MapStatus(events[len(events)-1].Status)
+	if !ok || omsStatus != "delivered" {
+		t.Fatalf("MapStatus(%q) = %q, %v; want delivered, true", events[len(events)-1].Status, omsStatus, ok)
 	}
 }
 

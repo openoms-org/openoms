@@ -44,6 +44,14 @@
       "usernamePlaceholder": "Login do DHL WebAPI"
     },
     "dpd": {
+      "infoChannel": "Kanał InfoServices",
+      "infoChannelHelp": "Kanał DPD InfoServices używany do śledzenia przesyłek. Jeśli DPD nie przydzielił osobnego kanału, zostaw puste — użyjemy Master FID.",
+      "infoChannelPlaceholder": "Opcjonalny kanał InfoServices",
+      "infoLogin": "Login InfoServices",
+      "infoLoginHelp": "Opcjonalny login do DPD InfoServices. Zostaw puste, jeśli jest taki sam jak login DPD WebAPI.",
+      "infoLoginPlaceholder": "Opcjonalny login InfoServices",
+      "infoPassword": "Hasło InfoServices",
+      "infoPasswordHelp": "Opcjonalne hasło do DPD InfoServices. Zostaw puste, jeśli jest takie samo jak hasło DPD WebAPI.",
       "login": "Login",
       "loginPlaceholder": "Login do DPD WebAPI",
       "masterFid": "Master FID",

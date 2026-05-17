@@ -44,6 +44,14 @@
       "usernamePlaceholder": "DHL WebAPI login"
     },
     "dpd": {
+      "infoChannel": "InfoServices channel",
+      "infoChannelHelp": "DPD InfoServices channel used for shipment tracking. Leave empty unless DPD assigned a separate channel; OpenOMS will use Master FID by default.",
+      "infoChannelPlaceholder": "Optional InfoServices channel",
+      "infoLogin": "InfoServices login",
+      "infoLoginHelp": "Optional DPD InfoServices login. Leave empty when it matches the DPD WebAPI login.",
+      "infoLoginPlaceholder": "Optional InfoServices login",
+      "infoPassword": "InfoServices password",
+      "infoPasswordHelp": "Optional DPD InfoServices password. Leave empty when it matches the DPD WebAPI password.",
       "login": "Login",
       "loginPlaceholder": "DPD WebAPI login",
       "masterFid": "Master FID",

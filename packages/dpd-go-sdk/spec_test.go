@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -268,32 +269,36 @@ func TestSpec_GetLabel_PostsToGenerateSpedLabels(t *testing.T) {
 
 // --- Tracking ---
 
-func TestSpec_GetTracking_ReturnsNotAvailableError(t *testing.T) {
-	// Plan: DPD REST API does not have a tracking endpoint
-	// GetTracking should return an explicit error, not fake data
+func TestSpec_GetTracking_UsesInfoServicesSOAP(t *testing.T) {
+	// Plan: DPD parcel tracking is provided by the separate InfoServices SOAP API,
+	// not by a fake DPD Services REST /tracking endpoint.
+	var gotMethod, gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/auth/login" {
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"token":"t"}`))
-			return
-		}
-		// If tracking endpoint is called, it means SDK hasn't been fixed
+		gotMethod = r.Method
+		body, _ := io.ReadAll(r.Body)
+		gotBody = string(body)
 		if r.URL.Path == "/tracking/PL123" {
-			t.Error("should NOT call /tracking/{id} — DPD REST API has no tracking endpoint")
+			t.Error("should NOT call /tracking/{id} — DPD tracking uses InfoServices SOAP")
 		}
-		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+		_, _ = w.Write([]byte(dpdInfoServicesOKResponse))
 	}))
 	defer srv.Close()
 
 	c := NewClient("user", "pass", "FID",
-		WithBaseURL(srv.URL),
+		WithInfoServicesBaseURL(srv.URL),
 		WithHTTPClient(srv.Client()),
 	)
 
 	_, err := c.Shipments.GetTracking(context.Background(), "PL123")
-	// Plan: should return error "tracking not available via DPD REST API"
-	if err == nil {
-		t.Error("GetTracking should return error — DPD REST API has no tracking endpoint")
+	if err != nil {
+		t.Fatalf("GetTracking() error: %v", err)
+	}
+	if gotMethod != http.MethodPost {
+		t.Errorf("method = %q, want POST", gotMethod)
+	}
+	if !strings.Contains(gotBody, "getEventsForWaybillV1") {
+		t.Fatalf("expected SOAP getEventsForWaybillV1 request, got:\n%s", gotBody)
 	}
 }
 
@@ -317,6 +322,18 @@ func TestSpec_StatusMapping_DPDStatuses(t *testing.T) {
 		{"REFUSED", "failed", true},
 		{"LOST", "failed", true},
 		{"DESTROYED", "failed", true},
+		{"030103", "label_ready", true},
+		{"040101", "picked_up", true},
+		{"040102", "picked_up", true},
+		{"050101", "in_transit", true},
+		{"120100", "in_transit", true},
+		{"160101", "in_transit", true},
+		{"170101", "out_for_delivery", true},
+		{"190101", "delivered", true},
+		{"190104", "delivered", true},
+		{"701901", "delivered", true},
+		{"230403", "returned", true},
+		{"230408", "returned", true},
 		{"UNKNOWN_STATUS", "", false},
 	}
 

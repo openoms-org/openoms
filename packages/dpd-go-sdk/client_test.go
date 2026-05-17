@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -203,16 +204,31 @@ func TestGetLabel(t *testing.T) {
 	}
 }
 
-func TestGetTracking_ReturnsError(t *testing.T) {
-	// DPD REST API does not have a tracking endpoint.
-	c := NewClient("user", "pass", "FID")
+func TestGetTracking_UsesInfoServicesEndpoint(t *testing.T) {
+	var gotBody string
 
-	_, err := c.Shipments.GetTracking(context.Background(), "PL1234567890")
-	if err == nil {
-		t.Fatal("expected error from GetTracking, got nil")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		gotBody = string(body)
+		w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+		_, _ = w.Write([]byte(dpdInfoServicesOKResponse))
+	}))
+	defer srv.Close()
+
+	c := NewClient("user", "pass", "FID",
+		WithInfoServicesBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+	)
+
+	resp, err := c.Shipments.GetTracking(context.Background(), "PL1234567890")
+	if err != nil {
+		t.Fatalf("GetTracking() error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "not available") {
-		t.Errorf("error message should mention 'not available', got: %v", err)
+	if len(resp.Events) == 0 {
+		t.Fatal("GetTracking() returned no events")
+	}
+	if !strings.Contains(gotBody, "getEventsForWaybillV1") {
+		t.Fatalf("expected InfoServices getEventsForWaybillV1 request, got:\n%s", gotBody)
 	}
 }
 
@@ -337,6 +353,18 @@ func TestMapStatus(t *testing.T) {
 		{"REFUSED", "failed", true},
 		{"LOST", "failed", true},
 		{"DESTROYED", "failed", true},
+		{"030103", "label_ready", true},
+		{"040101", "picked_up", true},
+		{"040102", "picked_up", true},
+		{"050101", "in_transit", true},
+		{"120100", "in_transit", true},
+		{"160101", "in_transit", true},
+		{"170101", "out_for_delivery", true},
+		{"190101", "delivered", true},
+		{"190104", "delivered", true},
+		{"701901", "delivered", true},
+		{"230403", "returned", true},
+		{"230408", "returned", true},
 		{"UNKNOWN_STATUS", "", false},
 	}
 
