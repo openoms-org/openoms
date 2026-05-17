@@ -65,12 +65,37 @@ func (s *ProductService) Get(ctx context.Context, id int64) (*Product, error) {
 	return &wrapper.Product, nil
 }
 
+// Create creates a product with arbitrary Shopify product fields.
+func (s *ProductService) Create(ctx context.Context, data map[string]any) (*Product, error) {
+	body := map[string]any{
+		"product": data,
+	}
+	var wrapper struct {
+		Product Product `json:"product"`
+	}
+	if err := s.client.do(ctx, "POST", "/products.json", body, &wrapper); err != nil {
+		return nil, err
+	}
+	return &wrapper.Product, nil
+}
+
 // Update updates a product with arbitrary fields.
 func (s *ProductService) Update(ctx context.Context, id int64, data map[string]any) error {
 	body := map[string]any{
 		"product": data,
 	}
 	return s.client.do(ctx, "PUT", fmt.Sprintf("/products/%d.json", id), body, nil)
+}
+
+// GetVariant retrieves a single product variant by ID.
+func (s *ProductService) GetVariant(ctx context.Context, variantID int64) (*Variant, error) {
+	var wrapper struct {
+		Variant Variant `json:"variant"`
+	}
+	if err := s.client.do(ctx, "GET", fmt.Sprintf("/variants/%d.json", variantID), nil, &wrapper); err != nil {
+		return nil, err
+	}
+	return &wrapper.Variant, nil
 }
 
 // UpdateVariant updates a variant with arbitrary fields.
