@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
+import { integrationQueryKeys } from "@/hooks/integration-query-keys";
 import { useOperationsDashboard } from "@/hooks/use-operations-dashboard";
 import { useAuthStore } from "@/lib/auth";
 
@@ -99,13 +100,13 @@ describe("useOperationsDashboard", () => {
 
     expect(
       queryClient.getQueryCache().find({
-        queryKey: ["integrations"],
+        queryKey: integrationQueryKeys.all,
         exact: true,
       })
     ).toBeDefined();
     expect(
       queryClient.getQueryCache().find({
-        queryKey: ["integrations", "operations-dashboard"],
+        queryKey: [...integrationQueryKeys.all, "operations-dashboard"],
         exact: true,
       })
     ).toBeUndefined();

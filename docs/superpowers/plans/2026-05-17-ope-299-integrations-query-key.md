@@ -38,6 +38,7 @@
 
 ```ts
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { integrationQueryKeys } from "@/hooks/integration-query-keys";
 ```
 
 - [ ] Extract query-client creation so the test can inspect the cache:
@@ -84,13 +85,13 @@ it("uses the canonical integrations query key for admin integration health", asy
 
   expect(
     queryClient.getQueryCache().find({
-      queryKey: ["integrations"],
+      queryKey: integrationQueryKeys.all,
       exact: true,
     })
   ).toBeDefined();
   expect(
     queryClient.getQueryCache().find({
-      queryKey: ["integrations", "operations-dashboard"],
+      queryKey: [...integrationQueryKeys.all, "operations-dashboard"],
       exact: true,
     })
   ).toBeUndefined();
