@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -424,13 +423,15 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 // Logout revokes the current session and clears auth cookies.
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	// Revoke the access token if a blacklist is configured
-	if h.tokenBlacklist != nil {
+	// Revoke the access token until its actual JWT expiry if a blacklist is configured.
+	if h.tokenBlacklist != nil && h.authService != nil {
 		if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
 			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 			if tokenStr != "" {
-				tokenHash := middleware.HashToken(tokenStr)
-				h.tokenBlacklist.Revoke(tokenHash, time.Now().Add(1*time.Hour))
+				if expiresAt, err := h.authService.AccessTokenExpiresAt(tokenStr); err == nil {
+					tokenHash := middleware.HashToken(tokenStr)
+					h.tokenBlacklist.Revoke(tokenHash, expiresAt)
+				}
 			}
 		}
 	}

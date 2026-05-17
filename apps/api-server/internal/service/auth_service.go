@@ -755,6 +755,24 @@ type RefreshTokenInfo struct {
 	TenantID uuid.UUID
 }
 
+// AccessTokenExpiresAt validates an access token and returns its JWT expiry.
+func (s *AuthService) AccessTokenExpiresAt(tokenStr string) (time.Time, error) {
+	if s == nil || s.tokenService == nil {
+		return time.Time{}, fmt.Errorf("token service not configured")
+	}
+	claims, err := s.tokenService.ValidateToken(tokenStr)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if claims.Type != "" && claims.Type != "access" {
+		return time.Time{}, fmt.Errorf("invalid token type")
+	}
+	if claims.ExpiresAt == nil {
+		return time.Time{}, fmt.Errorf("missing token expiry")
+	}
+	return claims.ExpiresAt.Time, nil
+}
+
 // ValidateRefreshToken parses and validates a JWT refresh token.
 func (s *AuthService) ValidateRefreshToken(tokenStr string) (*RefreshTokenInfo, error) {
 	claims, err := s.tokenService.ValidateToken(tokenStr)
