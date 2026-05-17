@@ -162,43 +162,9 @@ func (p *DPDProvider) MapStatus(carrierStatus string) (string, bool) {
 	return dpdsdk.MapStatus(carrierStatus)
 }
 
-// GetRates returns estimated shipping rates for DPD.
-func (p *DPDProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
-	// TODO: Implement real DPD rate API integration.
-	// For now, return realistic Polish domestic rates.
-	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
-		(req.ToCountry == "" || req.ToCountry == "PL")
-	if !domestic {
-		return nil, nil
-	}
-
-	w := req.Weight
-	var rates []integration.Rate
-
-	if w <= 31.5 {
-		price := 14.99
-		if w > 10 {
-			price = 17.99
-		}
-		if w > 20 {
-			price = 20.99
-		}
-		if req.COD > 0 {
-			price += 4.50
-		}
-		rates = append(rates, integration.Rate{
-			CarrierName:   "DPD",
-			CarrierCode:   "dpd",
-			ServiceName:   "DPD Classic",
-			Price:         price,
-			Currency:      "PLN",
-			EstimatedDays: 2,
-			PickupPoint:   false,
-			IsEstimate:    true,
-		})
-	}
-
-	return rates, nil
+// GetRates reports that DPD rate shopping is not implemented.
+func (p *DPDProvider) GetRates(_ context.Context, _ integration.RateRequest) ([]integration.Rate, error) {
+	return nil, fmt.Errorf("dpd: %w", integration.ErrCarrierRatesNotImplemented)
 }
 
 // SupportsPickupPoints returns false as DPD does not support pickup point search via REST API.

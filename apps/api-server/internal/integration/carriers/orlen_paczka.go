@@ -141,43 +141,9 @@ func (p *OrlenPaczkaProvider) MapStatus(carrierStatus string) (string, bool) {
 	return orlensdk.MapStatus(carrierStatus)
 }
 
-// GetRates returns estimated shipping rates for Orlen Paczka.
-func (p *OrlenPaczkaProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
-	// TODO: Implement real Orlen Paczka rate API integration.
-	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
-		(req.ToCountry == "" || req.ToCountry == "PL")
-	if !domestic {
-		return nil, nil
-	}
-
-	w := req.Weight
-	var rates []integration.Rate
-
-	// Orlen Paczka automat (pickup point)
-	if w <= 25 {
-		price := 8.99
-		if w > 5 {
-			price = 10.99
-		}
-		if w > 15 {
-			price = 12.99
-		}
-		if req.COD > 0 {
-			price += 3.00
-		}
-		rates = append(rates, integration.Rate{
-			CarrierName:   "Orlen Paczka",
-			CarrierCode:   "orlen_paczka",
-			ServiceName:   "Automat Orlen Paczka",
-			Price:         price,
-			Currency:      "PLN",
-			EstimatedDays: 3,
-			PickupPoint:   true,
-			IsEstimate:    true,
-		})
-	}
-
-	return rates, nil
+// GetRates reports that Orlen Paczka rate shopping is not implemented.
+func (p *OrlenPaczkaProvider) GetRates(_ context.Context, _ integration.RateRequest) ([]integration.Rate, error) {
+	return nil, fmt.Errorf("orlen_paczka: %w", integration.ErrCarrierRatesNotImplemented)
 }
 
 // SupportsPickupPoints reports that Orlen Paczka supports pickup point delivery.

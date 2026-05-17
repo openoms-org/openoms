@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sort"
 	"sync"
@@ -53,7 +54,8 @@ func (s *RateService) GetRates(ctx context.Context, tenantID uuid.UUID, req inte
 			return err
 		}
 
-		// Carrier provider names that we know support rates
+		// Carrier provider names that can be instantiated for rate shopping.
+		// Providers without real rating support return ErrCarrierRatesNotImplemented.
 		carrierProviders := map[string]bool{
 			"inpost":        true,
 			"dhl":           true,
@@ -126,6 +128,12 @@ func (s *RateService) GetRates(ctx context.Context, tenantID uuid.UUID, req inte
 
 			rates, err := carrier.GetRates(ctx, req)
 			if err != nil {
+				if errors.Is(err, integration.ErrCarrierRatesNotImplemented) {
+					slog.Debug("rate_service: carrier rates not implemented",
+						"provider", provider)
+					return
+				}
+
 				slog.Warn("rate_service: carrier GetRates failed",
 					"provider", provider, "error", err)
 				return

@@ -872,6 +872,8 @@ Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -
 |--------|---------|------|
 | POST | `/v1/shipping/rates` | Porownanie stawek przewoznikow |
 
+Rate shopping zwraca tylko stawki z providerow z zaakceptowana implementacja wyceny. DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL zwracaja `ErrCarrierRatesNotImplemented`, a endpoint pomija je zamiast pokazywac placeholderowe ceny.
+
 #### Statystyki
 
 | Metoda | Sciezka | Opis |
@@ -1744,7 +1746,8 @@ EbayImportService.ImportOffers()
 |    CancelShipment(ctx, id)                   |
 |    SupportsPickupPoints() -> bool            |
 |    SearchPickupPoints(ctx, query) -> points  |
-|    GetRates(ctx, req) -> rates               |
+|    GetRates(ctx, req) -> rates or            |
+|      ErrCarrierRatesNotImplemented           |
 |  }                                           |
 +----------------------------------------------+
 ```
@@ -1777,6 +1780,8 @@ EbayImportService.ImportOffers()
 | | Twilio/SMSAPI | SMS |
 | **AI** | OpenAI | Kategoryzacja, opisy, ulepszanie, tlumaczenie |
 | **Kursy walut** | NBP | Narodowy Bank Polski |
+
+Rate shopping dla DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL jest wylaczony do czasu realnej wyceny kontraktowej/rating API. Providerzy pozostaja dostepni dla obslugiwanych przeplywow, np. etykiet, trackingu lub punktow odbioru, ale nie zwracaja sztucznych stawek.
 
 ### Macierz interfejsow marketplace
 

@@ -3,6 +3,7 @@ package carriers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -316,45 +317,19 @@ func TestDPD_MapStatus_DelegatesToSDK(t *testing.T) {
 	}
 }
 
-// --- GetRates ---
-
-func TestDPD_GetRates_DomesticPricing(t *testing.T) {
+func TestDPD_GetRates_NotImplemented(t *testing.T) {
 	provider := newTestDPDProvider(t, "http://unused")
 
 	rates, err := provider.GetRates(context.Background(), integration.RateRequest{
 		FromCountry: "PL",
 		ToCountry:   "PL",
 		Weight:      5.0,
+		COD:         100.0,
 	})
-	if err != nil {
-		t.Fatalf("GetRates() error: %v", err)
+	if !errors.Is(err, integration.ErrCarrierRatesNotImplemented) {
+		t.Fatalf("GetRates() error = %v, want ErrCarrierRatesNotImplemented", err)
 	}
-	if len(rates) == 0 {
-		t.Fatal("expected at least one rate for domestic shipment")
-	}
-	if rates[0].CarrierCode != "dpd" {
-		t.Errorf("CarrierCode = %q, want dpd", rates[0].CarrierCode)
-	}
-	if rates[0].Currency != "PLN" {
-		t.Errorf("Currency = %q, want PLN", rates[0].Currency)
-	}
-}
-
-func TestDPD_GetRates_CODSurcharge(t *testing.T) {
-	provider := newTestDPDProvider(t, "http://unused")
-
-	ratesNoCOD, _ := provider.GetRates(context.Background(), integration.RateRequest{
-		FromCountry: "PL", ToCountry: "PL", Weight: 5.0,
-	})
-	ratesWithCOD, _ := provider.GetRates(context.Background(), integration.RateRequest{
-		FromCountry: "PL", ToCountry: "PL", Weight: 5.0, COD: 100.0,
-	})
-
-	if len(ratesNoCOD) == 0 || len(ratesWithCOD) == 0 {
-		t.Fatal("expected rates for both scenarios")
-	}
-
-	if ratesWithCOD[0].Price <= ratesNoCOD[0].Price {
-		t.Error("COD rate should be higher than non-COD rate")
+	if rates != nil {
+		t.Fatalf("GetRates() rates = %#v, want nil", rates)
 	}
 }

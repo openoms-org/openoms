@@ -149,42 +149,9 @@ func (p *PocztaPolskaProvider) MapStatus(carrierStatus string) (string, bool) {
 	return pocztasdk.MapStatus(carrierStatus)
 }
 
-// GetRates returns estimated shipping rates for Poczta Polska.
-func (p *PocztaPolskaProvider) GetRates(_ context.Context, req integration.RateRequest) ([]integration.Rate, error) {
-	// TODO: Implement real Poczta Polska eNadawca rate API integration.
-	domestic := (req.FromCountry == "" || req.FromCountry == "PL") &&
-		(req.ToCountry == "" || req.ToCountry == "PL")
-	if !domestic {
-		return nil, nil
-	}
-
-	w := req.Weight
-	var rates []integration.Rate
-
-	if w <= 20 {
-		price := 14.00
-		if w > 5 {
-			price = 16.50
-		}
-		if w > 10 {
-			price = 19.00
-		}
-		if req.COD > 0 {
-			price += 5.50
-		}
-		rates = append(rates, integration.Rate{
-			CarrierName:   "Poczta Polska",
-			CarrierCode:   "poczta_polska",
-			ServiceName:   "Pocztex Kurier 48",
-			Price:         price,
-			Currency:      "PLN",
-			EstimatedDays: 2,
-			PickupPoint:   false,
-			IsEstimate:    true,
-		})
-	}
-
-	return rates, nil
+// GetRates reports that Poczta Polska rate shopping is not implemented.
+func (p *PocztaPolskaProvider) GetRates(_ context.Context, _ integration.RateRequest) ([]integration.Rate, error) {
+	return nil, fmt.Errorf("poczta_polska: %w", integration.ErrCarrierRatesNotImplemented)
 }
 
 // SupportsPickupPoints reports that Poczta Polska does not support pickup point delivery.
