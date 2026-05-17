@@ -10,6 +10,8 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+const defaultDelayedActionPendingLimit = 100
+
 // DelayedActionRepository implements persistence for delayed automation actions.
 type DelayedActionRepository struct{}
 
@@ -51,15 +53,20 @@ func (r *DelayedActionRepository) ListPendingByTenant(ctx context.Context, tx pg
 
 // ListPending returns delayed actions that are ready to execute.
 // This is called from the worker which bypasses RLS.
-func (r *DelayedActionRepository) ListPending(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error) {
+func (r *DelayedActionRepository) ListPending(ctx context.Context, tx pgx.Tx, limit int) ([]model.DelayedAction, error) {
+	if limit <= 0 {
+		limit = defaultDelayedActionPendingLimit
+	}
+
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, rule_id, action_index, order_id, execute_at,
 		        executed, executed_at, error, attempt_count, last_attempt_at,
 		        created_at, action_data, event_data
 		 FROM automation_delayed_actions
 		 WHERE execute_at <= NOW() AND NOT executed
-		 ORDER BY execute_at ASC
-		 LIMIT 100`,
+		 ORDER BY execute_at ASC, id ASC
+		 LIMIT $1`,
+		limit,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list pending delayed actions: %w", err)

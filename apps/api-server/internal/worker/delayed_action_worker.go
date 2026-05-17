@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	delayedActionBatchLimit  = 100
 	delayedActionMaxAttempts = 5
 	delayedActionBaseBackoff = time.Minute
 )
@@ -71,7 +72,7 @@ func (w *DelayedActionWorker) Run(ctx context.Context) error {
 		}
 		defer tx.Rollback(ctx) //nolint:errcheck
 
-		pending, err = w.delayedRepo.ListPending(ctx, tx)
+		pending, err = w.delayedRepo.ListPending(ctx, tx, delayedActionBatchLimit)
 		if err != nil {
 			return err
 		}
@@ -86,6 +87,9 @@ func (w *DelayedActionWorker) Run(ctx context.Context) error {
 	}
 
 	w.logger.Info("delayed action worker: processing pending actions", "count", len(pending))
+	if len(pending) == delayedActionBatchLimit {
+		w.logger.Info("delayed action worker: processing full batch", "batch_limit", delayedActionBatchLimit)
+	}
 
 	for _, da := range pending {
 		if err := checkWorkerContext(ctx); err != nil {

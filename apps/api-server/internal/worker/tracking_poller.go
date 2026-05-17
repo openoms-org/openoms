@@ -15,6 +15,8 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
+const trackingPollerBatchLimit = 100
+
 type trackableShipment struct {
 	ID             uuid.UUID
 	TenantID       uuid.UUID
@@ -62,18 +64,28 @@ func (w *TrackingPoller) Interval() time.Duration {
 	return 10 * time.Minute
 }
 
+func trackableShipmentsQuery() string {
+	return `SELECT s.id, s.tenant_id, s.provider, s.tracking_number, s.status, s.carrier_data,
+	        i.credentials, i.settings
+	 FROM shipments s
+	 JOIN integrations i ON i.id = s.integration_id
+	   AND i.status = 'active'
+	   AND i.credentials IS NOT NULL
+	   AND i.credentials <> '""'::jsonb
+	   AND i.credentials <> '{}'::jsonb
+	   AND i.credentials <> 'null'::jsonb
+	 WHERE s.tracking_number IS NOT NULL
+	   AND s.tracking_number <> ''
+	   AND s.status NOT IN ('delivered', 'returned', 'failed', 'cancelled')
+	 ORDER BY s.updated_at ASC, s.id ASC
+	 LIMIT $1`
+}
+
 // Run polls carrier APIs for tracking status updates on active shipments.
 func (w *TrackingPoller) Run(ctx context.Context) error {
 	w.logger.Info("tracking poller: checking shipments")
 
-	rows, err := w.pool.Query(ctx,
-		`SELECT s.id, s.tenant_id, s.provider, s.tracking_number, s.status, s.carrier_data,
-		        i.credentials, i.settings
-		 FROM shipments s
-		 LEFT JOIN integrations i ON i.id = s.integration_id AND i.status = 'active'
-		 WHERE s.tracking_number IS NOT NULL
-		   AND s.status NOT IN ('delivered', 'returned', 'failed', 'cancelled')`,
-	)
+	rows, err := w.pool.Query(ctx, trackableShipmentsQuery(), trackingPollerBatchLimit)
 	if err != nil {
 		return err
 	}
