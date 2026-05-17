@@ -32,12 +32,13 @@ func (r *BillingRepository) CreateCheckoutSession(ctx context.Context, pool *pgx
 	return nil
 }
 
-// CompleteCheckoutSession marks a session as completed with the customer email (SECURITY DEFINER).
-func (r *BillingRepository) CompleteCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, email string) (bool, error) {
+// CompleteCheckoutSession marks a session as completed and stores Stripe refs (SECURITY DEFINER).
+func (r *BillingRepository) CompleteCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID, email string, refs model.CheckoutSessionStripeRefs) (bool, error) {
 	var completed bool
 	err := pool.QueryRow(ctx,
-		`SELECT billing_complete_checkout_session($1, $2)`,
-		stripeSessionID, email).Scan(&completed)
+		`SELECT billing_complete_checkout_session_with_refs($1, $2, $3, $4, $5, $6, $7, $8)`,
+		stripeSessionID, email, refs.StripeCustomerID, refs.StripeSubscriptionID, refs.SubscriptionStatus,
+		refs.TrialEnd, refs.CurrentPeriodStart, refs.CurrentPeriodEnd).Scan(&completed)
 	if err != nil {
 		return false, fmt.Errorf("complete checkout session: %w", err)
 	}
@@ -48,9 +49,13 @@ func (r *BillingRepository) CompleteCheckoutSession(ctx context.Context, pool *p
 func (r *BillingRepository) GetCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (*model.BillingCheckoutSession, error) {
 	var s model.BillingCheckoutSession
 	err := pool.QueryRow(ctx,
-		`SELECT id, stripe_session_id, plan, billing_interval, email, status, tenant_id, created_at
-		 FROM billing_get_checkout_session($1)`, stripeSessionID).
-		Scan(&s.ID, &s.StripeSessionID, &s.Plan, &s.BillingInterval, &s.Email, &s.Status, &s.TenantID, &s.CreatedAt)
+		`SELECT id, stripe_session_id, plan, billing_interval, email, status, tenant_id,
+				stripe_customer_id, stripe_subscription_id, subscription_status,
+				trial_end, current_period_start, current_period_end, created_at
+		 FROM billing_get_checkout_session_with_refs($1)`, stripeSessionID).
+		Scan(&s.ID, &s.StripeSessionID, &s.Plan, &s.BillingInterval, &s.Email, &s.Status, &s.TenantID,
+			&s.StripeCustomerID, &s.StripeSubscriptionID, &s.SubscriptionStatus,
+			&s.TrialEnd, &s.CurrentPeriodStart, &s.CurrentPeriodEnd, &s.CreatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
