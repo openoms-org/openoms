@@ -1,13 +1,20 @@
 package handler
 
 import (
+	"crypto/ed25519"
+	"crypto/sha512"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,6 +92,48 @@ func TestAuthHandler_Logout(t *testing.T) {
 	assert.True(t, found, "refresh_token cookie should be set")
 }
 
+func TestAuthHandler_Logout_BlacklistsAccessTokenUntilTokenExpiry(t *testing.T) {
+	const jwtSecret = "test-secret-with-enough-entropy-for-ed25519"
+	tokenSvc, err := service.NewTokenService(jwtSecret)
+	require.NoError(t, err)
+
+	authSvc := service.NewAuthService(nil, nil, nil, tokenSvc, nil, nil)
+	store := &captureTokenBlacklistStore{}
+	h := NewAuthHandler(authSvc, true, middleware.NewTokenBlacklistWithStore(store))
+
+	expiresAt := time.Now().Add(10 * time.Minute).Truncate(time.Second)
+	tokenStr := signedAccessToken(t, jwtSecret, expiresAt)
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenStr)
+	rr := httptest.NewRecorder()
+
+	h.Logout(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	require.Len(t, store.revocations, 1)
+	assert.Equal(t, middleware.HashToken(tokenStr), store.revocations[0].tokenHash)
+	assert.WithinDuration(t, expiresAt, store.revocations[0].expiresAt, time.Second)
+}
+
+func TestAuthHandler_Logout_DoesNotBlacklistInvalidAccessToken(t *testing.T) {
+	const jwtSecret = "test-secret-with-enough-entropy-for-ed25519"
+	tokenSvc, err := service.NewTokenService(jwtSecret)
+	require.NoError(t, err)
+
+	authSvc := service.NewAuthService(nil, nil, nil, tokenSvc, nil, nil)
+	store := &captureTokenBlacklistStore{}
+	h := NewAuthHandler(authSvc, true, middleware.NewTokenBlacklistWithStore(store))
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer not-a-valid-jwt")
+	rr := httptest.NewRecorder()
+
+	h.Logout(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Empty(t, store.revocations)
+}
+
 func TestClientIP(t *testing.T) {
 	tests := []struct {
 		remoteAddr string
@@ -101,6 +150,52 @@ func TestClientIP(t *testing.T) {
 			assert.Equal(t, tt.want, clientIP(r))
 		})
 	}
+}
+
+type capturedTokenRevocation struct {
+	tokenHash string
+	expiresAt time.Time
+}
+
+type captureTokenBlacklistStore struct {
+	revocations []capturedTokenRevocation
+}
+
+func (s *captureTokenBlacklistStore) Revoke(tokenHash string, expiresAt time.Time) {
+	s.revocations = append(s.revocations, capturedTokenRevocation{
+		tokenHash: tokenHash,
+		expiresAt: expiresAt,
+	})
+}
+
+func (s *captureTokenBlacklistStore) IsRevoked(string) bool {
+	return false
+}
+
+func signedAccessToken(t *testing.T, jwtSecret string, expiresAt time.Time) string {
+	t.Helper()
+
+	hash := sha512.Sum512([]byte(jwtSecret))
+	privateKey := ed25519.NewKeyFromSeed(hash[:ed25519.SeedSize])
+	tenantID := uuid.New()
+	userID := uuid.New()
+	claims := model.AuthClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID.String(),
+			Issuer:    "openoms",
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+		},
+		TenantID: tenantID,
+		Email:    "jan@test.pl",
+		Role:     "admin",
+		Type:     "access",
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+	tokenStr, err := token.SignedString(privateKey)
+	require.NoError(t, err)
+	return tokenStr
 }
 
 func TestAuthHandler_Register_LicenseToken_MissingBothTokens(t *testing.T) {
