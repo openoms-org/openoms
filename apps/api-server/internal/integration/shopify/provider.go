@@ -126,36 +126,67 @@ func (p *Provider) GetOrder(ctx context.Context, externalID string) (*integratio
 }
 
 // PushOffer creates a Shopify product from a product and listing data.
-func (p *Provider) PushOffer(_ context.Context, product *model.Product, listingData map[string]any) (string, error) {
+// It returns the first created Shopify variant ID, which is the ID later used for price updates.
+func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listingData map[string]any) (string, error) {
 	data := make(map[string]any)
 	maps.Copy(data, listingData)
 	if _, ok := data["title"]; !ok {
 		data["title"] = product.Name
 	}
+	if _, ok := data["body_html"]; !ok && product.DescriptionLong != "" {
+		data["body_html"] = product.DescriptionLong
+	}
+	if _, ok := data["variants"]; !ok {
+		variant := map[string]any{
+			"price":                fmt.Sprintf("%.2f", product.Price),
+			"inventory_management": "shopify",
+			"inventory_quantity":   product.StockQuantity,
+		}
+		if product.SKU != nil {
+			variant["sku"] = *product.SKU
+		}
+		if product.EAN != nil {
+			variant["barcode"] = *product.EAN
+		}
+		data["variants"] = []map[string]any{variant}
+	}
 
-	// Full Shopify product creation requires complex variant/image handling.
-	// Return a placeholder external ID; full listing support TBD.
-	return fmt.Sprintf("shopify-%s", product.ID.String()), nil
+	created, err := p.client.Products.Create(ctx, data)
+	if err != nil {
+		return "", fmt.Errorf("shopify: create product: %w", err)
+	}
+	if created == nil || len(created.Variants) == 0 || created.Variants[0].ID == 0 {
+		return "", fmt.Errorf("shopify: create product returned no variant ID")
+	}
+	return strconv.FormatInt(created.Variants[0].ID, 10), nil
 }
 
 // UpdateStock updates the stock quantity for a Shopify product variant.
-// externalOfferID should be "inventoryItemID:locationID" or just "inventoryItemID".
+// externalOfferID should be the Shopify variant ID stored by PushOffer.
 func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
-	inventoryItemID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	variantID, err := strconv.ParseInt(externalOfferID, 10, 64)
 	if err != nil {
-		return fmt.Errorf("shopify: invalid inventory item ID %q: %w", externalOfferID, err)
+		return fmt.Errorf("shopify: invalid variant ID %q: %w", externalOfferID, err)
+	}
+
+	variant, err := p.client.Products.GetVariant(ctx, variantID)
+	if err != nil {
+		return fmt.Errorf("shopify: get variant %s: %w", externalOfferID, err)
+	}
+	if variant.InventoryItemID == 0 {
+		return fmt.Errorf("shopify: variant %s has no inventory item ID", externalOfferID)
 	}
 
 	// Get first location's inventory level
-	levels, err := p.client.Inventory.GetLevels(ctx, inventoryItemID)
+	levels, err := p.client.Inventory.GetLevels(ctx, variant.InventoryItemID)
 	if err != nil {
 		return fmt.Errorf("shopify: get inventory levels: %w", err)
 	}
 	if len(levels) == 0 {
-		return fmt.Errorf("shopify: no inventory levels found for item %d", inventoryItemID)
+		return fmt.Errorf("shopify: no inventory levels found for item %d", variant.InventoryItemID)
 	}
 
-	return p.client.Inventory.SetLevel(ctx, inventoryItemID, levels[0].LocationID, quantity)
+	return p.client.Inventory.SetLevel(ctx, variant.InventoryItemID, levels[0].LocationID, quantity)
 }
 
 // UpdatePrice updates the price for a Shopify product variant.

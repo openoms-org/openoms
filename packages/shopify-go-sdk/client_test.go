@@ -152,6 +152,87 @@ func TestDoWithRequestBody(t *testing.T) {
 	}
 }
 
+func TestProductServiceCreate(t *testing.T) {
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/products.json" {
+			t.Fatalf("request = %s %s, want POST /products.json", r.Method, r.URL.Path)
+		}
+
+		var payload struct {
+			Product map[string]any `json:"product"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if payload.Product["title"] != "Created product" {
+			t.Fatalf("title = %#v, want Created product", payload.Product["title"])
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"product": {
+				"id": 123,
+				"title": "Created product",
+				"variants": [
+					{"id": 456, "product_id": 123, "inventory_item_id": 789}
+				]
+			}
+		}`))
+	})
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	product, err := c.Products.Create(context.Background(), map[string]any{
+		"title": "Created product",
+	})
+	if err != nil {
+		t.Fatalf("Create returned error: %v", err)
+	}
+	if product.ID != 123 {
+		t.Fatalf("product ID = %d, want 123", product.ID)
+	}
+	if len(product.Variants) != 1 {
+		t.Fatalf("len(Variants) = %d, want 1", len(product.Variants))
+	}
+	if product.Variants[0].ID != 456 {
+		t.Fatalf("variant ID = %d, want 456", product.Variants[0].ID)
+	}
+	if product.Variants[0].InventoryItemID != 789 {
+		t.Fatalf("inventory item ID = %d, want 789", product.Variants[0].InventoryItemID)
+	}
+}
+
+func TestProductServiceGetVariant(t *testing.T) {
+	srv := newTestServer(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/variants/456.json" {
+			t.Fatalf("request = %s %s, want GET /variants/456.json", r.Method, r.URL.Path)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"variant": {
+				"id": 456,
+				"product_id": 123,
+				"inventory_item_id": 789,
+				"sku": "SKU-123"
+			}
+		}`))
+	})
+	defer srv.Close()
+
+	c := newTestClient(t, srv)
+	variant, err := c.Products.GetVariant(context.Background(), 456)
+	if err != nil {
+		t.Fatalf("GetVariant returned error: %v", err)
+	}
+	if variant.ID != 456 {
+		t.Fatalf("variant ID = %d, want 456", variant.ID)
+	}
+	if variant.InventoryItemID != 789 {
+		t.Fatalf("inventory item ID = %d, want 789", variant.InventoryItemID)
+	}
+}
+
 func TestDoRejectsOversizedSuccessResponse(t *testing.T) {
 	largeJSON := `{"value":"` + strings.Repeat("x", 64) + `"}`
 	srv := newTestServer(func(w http.ResponseWriter, _ *http.Request) {

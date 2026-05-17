@@ -1265,7 +1265,7 @@ Standalone maszyna stanow zamowien i przesylek:
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
 | shoper-go-sdk | Shoper | REST | Zamowienia, produkty |
 | prestashop-go-sdk | PrestaShop | REST | Zamowienia, produkty |
-| shopify-go-sdk | Shopify | REST | Zamowienia, produkty; pozycje zamowien uzywaja `variant_id` jako `external_id` z fallbackiem do `product_id`; malformed monetary fields reject order import |
+| shopify-go-sdk | Shopify | REST | Zamowienia, produkty; `PushOffer` tworzy produkt i zapisuje realny Shopify `variant_id` jako listing `external_id`, a stock sync rozwiązuje go do `inventory_item_id`; pozycje zamowien uzywaja `variant_id` jako `external_id` z fallbackiem do `product_id`; malformed monetary fields reject order import |
 | btp-go-sdk | BTP.pro | Basic Auth | Katalog dostawcy, zamowienia dropship |
 
 ### Carrier SDK-i
