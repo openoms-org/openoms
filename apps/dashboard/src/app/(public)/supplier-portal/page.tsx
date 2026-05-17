@@ -462,7 +462,7 @@ function OrderDetail({
             disabled={sendingMessage || !newMessage.trim()}
             className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 px-4 py-2 text-sm font-medium text-white transition-colors"
           >
-            {sendingMessage ? "..." : t("messages.send")}
+            {sendingMessage ? t("messages.sending") : t("messages.send")}
           </button>
         </div>
       </div>

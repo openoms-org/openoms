@@ -39,6 +39,7 @@
         "fromSupplier": "Supplier",
         "placeholder": "Write a message...",
         "send": "Send",
+        "sending": "Sending...",
         "title": "Messages"
       },
       "shipDialog": {

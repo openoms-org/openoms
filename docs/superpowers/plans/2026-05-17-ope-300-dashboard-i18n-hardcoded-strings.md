@@ -41,9 +41,10 @@ Create `apps/dashboard/src/lib/__tests__/i18n-hardcoded-copy.test.ts`:
 
 ```ts
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dashboardRoot = resolve(__dirname, "../..");
+const dashboardRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const auditedFiles = [
   "components/dashboard/stat-cards.tsx",

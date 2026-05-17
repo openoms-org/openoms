@@ -45,7 +45,7 @@ function TriggerConfig({
         <Select
           value={event || "none"}
           onValueChange={(v) => {
-            const selected = TRIGGER_OPTIONS.find((t) => t.value === v);
+            const selected = TRIGGER_OPTIONS.find((option) => option.value === v);
             onUpdate({
               ...node.data,
               event: v === "none" ? "" : v,
@@ -58,9 +58,9 @@ function TriggerConfig({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">{t("selectEvent")}</SelectItem>
-            {TRIGGER_OPTIONS.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
+            {TRIGGER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>

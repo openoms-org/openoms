@@ -39,6 +39,7 @@
         "fromSupplier": "Dostawca",
         "placeholder": "Napisz wiadomość...",
         "send": "Wyślij",
+        "sending": "Wysyłanie...",
         "title": "Wiadomości"
       },
       "shipDialog": {
