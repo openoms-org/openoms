@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { RefreshCw, ArrowLeft, Copy, ShieldOff, ExternalLink, Trash2, Check, AlertCircle, Search, Save, ChevronDown } from "lucide-react";
@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 function findCategoryById(categories: ProductCategory[], id: string): ProductCategory | undefined {
   for (const cat of categories) {
@@ -91,26 +92,25 @@ export default function SupplierDetailPage() {
   const deleteMapping = useDeleteCategoryMapping(id);
   const { data: categoryTree } = useCategoryTree();
 
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [feedUrl, setFeedUrl] = useState("");
-  const [feedFormat, setFeedFormat] = useState("iof");
-  const [syncInterval, setSyncInterval] = useState("60");
-  const [status, setStatus] = useState("active");
-  const [defaultCategoryId, setDefaultCategoryId] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (supplier) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setName(supplier.name);
-      setCode(supplier.code || "");
-      setFeedUrl(supplier.feed_url || "");
-      setFeedFormat(supplier.feed_format);
-      setSyncInterval(String(supplier.sync_interval_minutes ?? 60));
-      setStatus(supplier.status);
-      setDefaultCategoryId(supplier.default_category_id || undefined);
-    }
-  }, [supplier]);
+  const supplierKey = supplier?.id ?? null;
+  const [name, setName] = useEffectSyncedState(supplier?.name ?? "", supplierKey);
+  const [code, setCode] = useEffectSyncedState(supplier?.code || "", supplierKey);
+  const [feedUrl, setFeedUrl] = useEffectSyncedState(supplier?.feed_url || "", supplierKey);
+  const [feedFormat, setFeedFormat] = useEffectSyncedState(
+    supplier?.feed_format ?? "iof",
+    supplierKey,
+  );
+  const [syncInterval, setSyncInterval] = useEffectSyncedState(
+    String(supplier?.sync_interval_minutes ?? 60),
+    supplierKey,
+  );
+  const [status, setStatus] = useEffectSyncedState(
+    supplier?.status ?? "active",
+    supplierKey,
+  );
+  const [defaultCategoryId, setDefaultCategoryId] = useEffectSyncedState<
+    string | undefined
+  >(supplier?.default_category_id || undefined, supplierKey);
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -541,7 +541,6 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedCategoryName, setSelectedCategoryName] = useState("");
-  const [mappingRows, setMappingRows] = useState<MappingRow[]>([]);
   const [expanded, setExpanded] = useState(false);
 
   const { data: searchResults } = useAllegroCategorySearch(categorySearch);
@@ -550,11 +549,11 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
   const { data: supplierAttributes } = useSupplierAttributes(supplierId);
   const { data: configuredCategories } = useAllegroMappingCategories(supplierId);
   const bulkUpsert = useBulkUpsertAllegroMappings(supplierId);
+  const mappingsReady = !selectedCategoryId || existingMappings !== undefined;
 
-  // Build mapping rows when params or existing mappings load
-  useEffect(() => {
-    if (!paramsData?.parameters?.length) return;
-
+  const sourceMappingRows = useMemo<MappingRow[]>(() => {
+    if (!mappingsReady) return [];
+    if (!paramsData?.parameters?.length) return [];
     const existingMap = new Map<string, AllegroParameterMapping>();
     if (existingMappings) {
       for (const m of existingMappings) {
@@ -562,7 +561,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
       }
     }
 
-    const rows: MappingRow[] = paramsData.parameters.map((p) => {
+    return paramsData.parameters.map((p) => {
       const existing = existingMap.get(p.id);
       return {
         allegro_param_id: p.id,
@@ -573,21 +572,26 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
         source_key: existing?.source_key ?? "",
       };
     });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMappingRows(rows);
-  }, [paramsData, existingMappings]);
+  }, [paramsData, existingMappings, mappingsReady]);
+  const [mappingRows, setMappingRows] = useEffectSyncedState(
+    sourceMappingRows,
+    JSON.stringify(sourceMappingRows),
+  );
 
-  const updateRow = useCallback((paramId: string, field: "source_type" | "source_key", value: string) => {
-    setMappingRows((prev) =>
-      prev.map((row) => {
-        if (row.allegro_param_id !== paramId) return row;
-        if (field === "source_type") {
-          return { ...row, source_type: value as MappingRow["source_type"], source_key: "" };
-        }
-        return { ...row, [field]: value };
-      })
-    );
-  }, []);
+  const updateRow = useCallback(
+    (paramId: string, field: "source_type" | "source_key", value: string) => {
+      setMappingRows((prev) =>
+        prev.map((row) => {
+          if (row.allegro_param_id !== paramId) return row;
+          if (field === "source_type") {
+            return { ...row, source_type: value as MappingRow["source_type"], source_key: "" };
+          }
+          return { ...row, [field]: value };
+        }),
+      );
+    },
+    [setMappingRows],
+  );
 
   const handleSave = () => {
     if (!selectedCategoryId) return;
@@ -701,7 +705,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
           </div>
 
           {/* Parameter mapping table */}
-          {selectedCategoryId && paramsData?.parameters && (
+          {selectedCategoryId && paramsData?.parameters && mappingsReady && (
             <>
               <Table>
                 <TableHeader>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
   Select,
@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ORDER_STATUSES, ORDER_SOURCES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS, ORDER_PRIORITIES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 interface OrderFilters {
   status?: string;
@@ -33,22 +34,16 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
 
-  const [localSearch, setLocalSearch] = useState(filters.search || "");
-  const [localTag, setLocalTag] = useState(filters.tag || "");
+  const [localSearch, setLocalSearch] = useEffectSyncedState(
+    filters.search || "",
+    filters.search || "",
+  );
+  const [localTag, setLocalTag] = useEffectSyncedState(
+    filters.tag || "",
+    filters.tag || "",
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const tagDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  // Sync local search when filters.search changes externally (e.g. reset)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLocalSearch(filters.search || "");
-  }, [filters.search]);
-
-  // Sync local tag when filters.tag changes externally (e.g. reset)
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLocalTag(filters.tag || "");
-  }, [filters.tag]);
 
   const handleSearchChange = (value: string) => {
     setLocalSearch(value);

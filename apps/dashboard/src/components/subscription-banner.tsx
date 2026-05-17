@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth";
 import { useSubscription } from "@/hooks/use-billing";
@@ -20,14 +19,10 @@ export function SubscriptionBanner() {
   const t = useTranslations("shared");
   const tenant = useAuthStore((s) => s.tenant);
   const { data: subscription } = useSubscription();
-  const [daysLeft, setDaysLeft] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (subscription?.status === "trialing" && subscription.trial_end) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDaysLeft(computeDaysLeft(subscription.trial_end));
-    }
-  }, [subscription?.status, subscription?.trial_end]);
+  const daysLeft =
+    subscription?.status === "trialing" && subscription.trial_end
+      ? computeDaysLeft(subscription.trial_end)
+      : null;
 
   if (!tenant) return null;
 

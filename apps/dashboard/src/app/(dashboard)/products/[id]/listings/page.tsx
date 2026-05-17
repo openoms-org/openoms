@@ -199,13 +199,9 @@ export default function ProductListingsPage() {
 
   // Auto-open wizard when redirected with ?listing=new
   const searchParams = useSearchParams();
-  const [showCreate, setShowCreate] = useState(false);
-  useEffect(() => {
-    if (searchParams.get("listing") === "new") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShowCreate(true);
-    }
-  }, [searchParams]);
+  const [showCreate, setShowCreate] = useState(
+    () => searchParams.get("listing") === "new",
+  );
   const deleteListing = useDeleteProductListing(params.id);
   const syncListing = useSyncProductListing(params.id);
   const updateSyncMode = useUpdateListingSyncMode(params.id);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -59,6 +59,7 @@ import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId, cn, sanitizeUrl } from "@/lib/utils";
 import { getErrorMessage, apiFetch } from "@/lib/api-client";
 import type { CreateOrderRequest } from "@/types/api";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 function CollapsibleSection({
   title,
@@ -111,12 +112,16 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const t = useTranslations("orders");
   const tc = useTranslations("common");
+  const { data: order, isLoading } = useOrder(params.id);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showSplitDialog, setShowSplitDialog] = useState(false);
   const [showCreateTicketDialog, setShowCreateTicketDialog] = useState(false);
   const [returnLinkCopied, setReturnLinkCopied] = useState(false);
-  const [internalNotes, setInternalNotes] = useState("");
+  const [internalNotes, setInternalNotes] = useEffectSyncedState(
+    order?.internal_notes || "",
+    order?.id ?? null,
+  );
   const [internalNotesDirty, setInternalNotesDirty] = useState(false);
   const [showAllegroShipmentDialog, setShowAllegroShipmentDialog] = useState(false);
   const [showAllegroFulfillmentDialog, setShowAllegroFulfillmentDialog] = useState(false);
@@ -125,7 +130,6 @@ export default function OrderDetailPage() {
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
   const { data: customFieldsConfig } = useCustomFields();
 
-  const { data: order, isLoading } = useOrder(params.id);
   const updateOrder = useUpdateOrder(params.id);
   const deleteOrder = useDeleteOrder();
   const transitionStatus = useTransitionOrderStatus(params.id);
@@ -154,13 +158,6 @@ export default function OrderDetailPage() {
     }
     return total > 0 ? Math.round(total * 1000) / 1000 : undefined;
   }, [items]);
-
-  useEffect(() => {
-    if (order && !internalNotesDirty) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setInternalNotes(order.internal_notes || "");
-    }
-  }, [order, internalNotesDirty]);
 
   const handleUpdate = async (data: CreateOrderRequest) => {
     try {
@@ -1205,18 +1202,12 @@ function CreateTicketDialog({
 }) {
   const t = useTranslations("orders");
   const tc = useTranslations("common");
-  const [subject, setSubject] = useState("");
-  const [description, setDescription] = useState("");
-  const [email, setEmail] = useState(customerEmail);
-
-  useEffect(() => {
-    if (!open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSubject("");
-      setDescription("");
-      setEmail(customerEmail);
-    }
-  }, [open, customerEmail]);
+  const [subject, setSubject] = useEffectSyncedState("", open);
+  const [description, setDescription] = useEffectSyncedState("", open);
+  const [email, setEmail] = useEffectSyncedState(
+    customerEmail,
+    `${open}:${customerEmail}`,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1396,29 +1387,16 @@ function AddPackageDialog({
   }) => void;
   isLoading: boolean;
 }) {
-  const [provider, setProvider] = useState("manual");
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [weight, setWeight] = useState("");
+  const [provider, setProvider] = useEffectSyncedState("manual", open);
+  const [trackingNumber, setTrackingNumber] = useEffectSyncedState("", open);
+  const [weight, setWeight] = useEffectSyncedState("", open);
   const t = useTranslations("orders");
   const tc = useTranslations("common");
-  const [length, setLength] = useState("");
-  const [width, setWidth] = useState("");
-  const [height, setHeight] = useState("");
-  const [notes, setNotes] = useState("");
+  const [length, setLength] = useEffectSyncedState("", open);
+  const [width, setWidth] = useEffectSyncedState("", open);
+  const [height, setHeight] = useEffectSyncedState("", open);
+  const [notes, setNotes] = useEffectSyncedState("", open);
   const selectableProviders = getSelectableShipmentProviders(SHIPMENT_PROVIDERS);
-
-  useEffect(() => {
-    if (!open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProvider("manual");
-      setTrackingNumber("");
-      setWeight("");
-      setLength("");
-      setWidth("");
-      setHeight("");
-      setNotes("");
-    }
-  }, [open]);
 
   const handleSubmit = () => {
     const data: Parameters<typeof onSubmit>[0] = { provider };
@@ -1547,24 +1525,15 @@ function AllegroFulfillmentDialog({
   onOpenChange: (open: boolean) => void;
   orderId: string;
 }) {
-  const [fulfillmentStatus, setFulfillmentStatus] = useState("SENT");
-  const [carrierId, setCarrierId] = useState("");
-  const [waybill, setWaybill] = useState("");
+  const [fulfillmentStatus, setFulfillmentStatus] = useEffectSyncedState("SENT", open);
+  const [carrierId, setCarrierId] = useEffectSyncedState("", open);
+  const [waybill, setWaybill] = useEffectSyncedState("", open);
 
   const { data: carriersData } = useAllegroCarriers();
   const t = useTranslations("orders");
   const tc = useTranslations("common");
   const fulfillmentMutation = useAllegroFulfillment(orderId);
   const trackingMutation = useAllegroTracking(orderId);
-
-  useEffect(() => {
-    if (!open) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFulfillmentStatus("SENT");
-      setCarrierId("");
-      setWaybill("");
-    }
-  }, [open]);
 
   const handleSubmit = async () => {
     try {

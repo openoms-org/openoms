@@ -113,6 +113,19 @@ export function createEmptyWorkflow(): WorkflowDefinition {
   };
 }
 
+export function isWorkflowDefinition(value: unknown): value is WorkflowDefinition {
+  if (!value || typeof value !== "object") return false;
+
+  const candidate = value as Partial<WorkflowDefinition>;
+  return (
+    Array.isArray(candidate.nodes) &&
+    Array.isArray(candidate.edges) &&
+    typeof candidate.viewport?.x === "number" &&
+    typeof candidate.viewport?.y === "number" &&
+    typeof candidate.viewport?.zoom === "number"
+  );
+}
+
 // Generate a unique ID for new nodes/edges
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;

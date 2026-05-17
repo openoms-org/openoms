@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { KeyRound, Receipt, Trash2, Loader2, Save } from "lucide-react";
@@ -52,6 +52,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/api-client";
 import type { InvoicingSettings } from "@/types/api";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 const DEFAULT_SETTINGS: InvoicingSettings = {
   provider: "",
@@ -74,18 +75,18 @@ export default function InvoicingPage() {
   const { data: settings, isLoading: settingsLoading } =
     useInvoicingSettings();
   const updateSettings = useUpdateInvoicingSettings();
-  const [form, setForm] = useState<InvoicingSettings>(DEFAULT_SETTINGS);
-
-  useEffect(() => {
-    if (settings) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({
-        ...DEFAULT_SETTINGS,
-        ...settings,
-        credentials: settings.credentials || {},
-      });
-    }
-  }, [settings]);
+  const settingsForm = useMemo(
+    () => ({
+      ...DEFAULT_SETTINGS,
+      ...settings,
+      credentials: settings?.credentials || {},
+    }),
+    [settings],
+  );
+  const [form, setForm] = useEffectSyncedState(
+    settingsForm,
+    JSON.stringify(settingsForm),
+  );
 
   const handleSave = async () => {
     try {

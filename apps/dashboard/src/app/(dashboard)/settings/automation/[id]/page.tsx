@@ -51,6 +51,7 @@ import {
 import { ArrowLeft, Save, Plus, Trash2, Loader2, Play } from "lucide-react";
 import type { AutomationCondition, AutomationAction, AutomationRuleLog } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 export default function AutomationRuleDetailPage() {
   const t = useTranslations("automation");
@@ -66,36 +67,40 @@ export default function AutomationRuleDetailPage() {
   const deleteRule = useDeleteAutomationRule();
   const testRule = useTestAutomationRule(id);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [enabled, setEnabled] = useState(true);
-  const [priority, setPriority] = useState(0);
-  const [triggerEvent, setTriggerEvent] = useState("");
-  const [conditions, setConditions] = useState<AutomationCondition[]>([]);
-  const [actions, setActions] = useState<AutomationAction[]>([]);
+  const ruleKey = rule?.id ?? null;
+  const [name, setName] = useEffectSyncedState(rule?.name ?? "", ruleKey);
+  const [description, setDescription] = useEffectSyncedState(
+    rule?.description || "",
+    ruleKey,
+  );
+  const [enabled, setEnabled] = useEffectSyncedState(
+    rule?.enabled ?? true,
+    ruleKey,
+  );
+  const [priority, setPriority] = useEffectSyncedState(
+    rule?.priority ?? 0,
+    ruleKey,
+  );
+  const [triggerEvent, setTriggerEvent] = useEffectSyncedState(
+    rule?.trigger_event ?? "",
+    ruleKey,
+  );
+  const [conditions, setConditions] = useEffectSyncedState<AutomationCondition[]>(
+    Array.isArray(rule?.conditions) ? rule.conditions : [],
+    ruleKey,
+  );
+  const [actions, setActions] = useEffectSyncedState<AutomationAction[]>(
+    Array.isArray(rule?.actions) ? rule.actions : [],
+    ruleKey,
+  );
   const [testData, setTestData] = useState("{}");
   const [testResult, setTestResult] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
       router.replace("/");
     }
   }, [authLoading, isAdmin, router]);
-
-  useEffect(() => {
-    if (rule && !initialized) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setName(rule.name);
-      setDescription(rule.description || "");
-      setEnabled(rule.enabled);
-      setPriority(rule.priority);
-      setTriggerEvent(rule.trigger_event);
-      setConditions(Array.isArray(rule.conditions) ? rule.conditions : []);
-      setActions(Array.isArray(rule.actions) ? rule.actions : []);
-      setInitialized(true);
-    }
-  }, [rule, initialized]);
 
   if (authLoading || !isAdmin) {
     return <LoadingSkeleton />;

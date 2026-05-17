@@ -28,6 +28,7 @@ import { Package } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Order, ListResponse } from "@/types/api";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 interface KanbanBoardProps {
   filters: {
@@ -82,7 +83,10 @@ function KanbanColumn({
   overColumnId: string | null;
 }) {
   const t = useTranslations("orders");
-  const [loadedPages, setLoadedPages] = useState(1);
+  const [loadedPages, setLoadedPages] = useEffectSyncedState(
+    1,
+    JSON.stringify(filters),
+  );
   const { data, isLoading } = useColumnOrders(statusKey, filters, true);
   const queryClient = useQueryClient();
 
@@ -132,13 +136,7 @@ function KanbanColumn({
     } catch {
       toast.error(t("kanban.loadError"));
     }
-  }, [loadedPages, statusKey, filters, queryClient, t]);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoadedPages(1);
-  }, [filters]);
+  }, [filters, loadedPages, queryClient, setLoadedPages, statusKey, t]);
 
   return (
     <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { Save, AlertTriangle, Info, Loader2 } from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -29,6 +29,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import type { OSSConfig } from "@/types/api";
 import { useTranslations } from "next-intl";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
 const EU_COUNTRY_CODES = [
   "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR",
@@ -57,14 +58,14 @@ export default function VATOSSSettingsPage() {
   const { data: threshold, isLoading: thresholdLoading } =
     useOSSThreshold(currentYear);
 
-  const [form, setForm] = useState<OSSConfig>(DEFAULT_CONFIG);
-
-  useEffect(() => {
-    if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm({ ...DEFAULT_CONFIG, ...config });
-    }
-  }, [config]);
+  const configForm = useMemo(
+    () => ({ ...DEFAULT_CONFIG, ...config }),
+    [config],
+  );
+  const [form, setForm] = useEffectSyncedState(
+    configForm,
+    JSON.stringify(configForm),
+  );
 
   const handleSave = useCallback(async () => {
     try {

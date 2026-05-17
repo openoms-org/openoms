@@ -15,6 +15,7 @@ import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { EditableCell, type EditableColumnConfig } from "@/components/shared/editable-cell";
 import { useTableDensity, densityConfig } from "@/lib/table-density";
 import { cn } from "@/lib/utils";
+import { useEffectComputedState } from "@/hooks/use-effect-synced-state";
 
 export type { EditableColumnConfig } from "@/components/shared/editable-cell";
 
@@ -118,20 +119,16 @@ export function DataTable<T>({
   const { density } = useTableDensity();
   const cellPx = densityConfig[density].cellPadding;
 
-  // Column resize state
-  const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const resizeRef = useRef<{
     key: string;
     startX: number;
     startWidth: number;
   } | null>(null);
   const tableRef = useRef<HTMLTableElement>(null);
-
-  // Initialize column widths from rendered table on first load
   const headersRef = useRef<HTMLTableRowElement>(null);
-  const initialized = useRef(false);
-  useEffect(() => {
-    if (!resizable || initialized.current || !headersRef.current || isLoading) return;
+  const computeColumnWidths = useCallback(() => {
+    if (!resizable || !headersRef.current || isLoading) return null;
+
     const cells = headersRef.current.querySelectorAll("th");
     const widths: Record<string, number> = {};
     let colIdx = selectable ? 1 : 0; // skip checkbox column
@@ -142,17 +139,13 @@ export function DataTable<T>({
       }
       colIdx++;
     }
-    if (Object.keys(widths).length > 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setColWidths(widths);
-      initialized.current = true;
-    }
-  }, [resizable, columns, isLoading, selectable]);
 
-  // Reset initialized flag when columns change
-  useEffect(() => {
-    initialized.current = false;
-  }, [columns.length]);
+    return Object.keys(widths).length > 0 ? widths : null;
+  }, [columns, isLoading, resizable, selectable]);
+  const [colWidths, setColWidths] = useEffectComputedState<Record<string, number>>(
+    {},
+    computeColumnWidths,
+  );
 
   useEffect(() => {
     if (!resizable) return;
