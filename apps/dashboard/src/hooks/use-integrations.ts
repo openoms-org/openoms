@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { PROVIDER_CATEGORIES } from "@/lib/constants";
+import { integrationQueryKeys } from "./integration-query-keys";
 import type {
   Integration,
   CreateIntegrationRequest,
@@ -12,14 +13,14 @@ import type {
 
 export function useIntegrations() {
   return useQuery({
-    queryKey: ["integrations"],
+    queryKey: integrationQueryKeys.all,
     queryFn: () => apiClient<Integration[]>("/v1/integrations"),
   });
 }
 
 export function useIntegration(id: string) {
   return useQuery({
-    queryKey: ["integrations", id],
+    queryKey: integrationQueryKeys.detail(id),
     queryFn: () => apiClient<Integration>(`/v1/integrations/${id}`),
     enabled: !!id,
   });
@@ -34,7 +35,7 @@ export function useCreateIntegration() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.all });
     },
   });
 }
@@ -48,8 +49,8 @@ export function useUpdateIntegration(id: string) {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
-      queryClient.invalidateQueries({ queryKey: ["integrations", id] });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.detail(id) });
     },
   });
 }
@@ -60,7 +61,7 @@ export function useDeleteIntegration() {
     mutationFn: (id: string) =>
       apiClient<void>(`/v1/integrations/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.all });
     },
   });
 }

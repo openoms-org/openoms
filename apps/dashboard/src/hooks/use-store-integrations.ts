@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { integrationQueryKeys } from "./integration-query-keys";
 import type { Integration } from "@/types/api";
 
 export interface ShoperSetupRequest {
@@ -29,7 +30,7 @@ export function useSetupShoper() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.all });
     },
   });
 }
@@ -43,7 +44,7 @@ export function useSetupPrestaShop() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.all });
     },
   });
 }
@@ -57,7 +58,7 @@ export function useSetupShopify() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["integrations"] });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.all });
     },
   });
 }
