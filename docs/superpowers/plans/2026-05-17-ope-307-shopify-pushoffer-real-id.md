@@ -50,8 +50,7 @@
 - [x] Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
-go test ./internal/integration/shopify -run 'TestPushOffer|TestUpdateStock' -count=1
+(cd apps/api-server && go test ./internal/integration/shopify -run 'TestPushOffer|TestUpdateStock' -count=1)
 ```
 
 Expected before implementation: tests fail because `PushOffer` returns `shopify-<uuid>` and `UpdateStock` treats the external ID as an inventory item ID.
@@ -63,8 +62,7 @@ Expected before implementation: tests fail because `PushOffer` returns `shopify-
 - [x] Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/packages/shopify-go-sdk
-go test ./... -run 'TestProductServiceCreate|TestProductServiceGetVariant' -count=1
+(cd packages/shopify-go-sdk && go test ./... -run 'TestProductServiceCreate|TestProductServiceGetVariant' -count=1)
 ```
 
 Expected before implementation: tests fail because SDK methods do not exist.
@@ -91,11 +89,9 @@ Expected before implementation: tests fail because SDK methods do not exist.
 - [x] Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
 git diff --check
-cd apps/api-server && go test ./internal/integration/shopify -count=1
-cd ../../packages/shopify-go-sdk && go test ./... -count=1
-cd ../..
+(cd apps/api-server && go test ./internal/integration/shopify -count=1)
+(cd packages/shopify-go-sdk && go test ./... -count=1)
 ./scripts/local-ci.sh
 ```
 

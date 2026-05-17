@@ -73,6 +73,12 @@ func TestPushOfferCreatesShopifyProductAndReturnsVariantID(t *testing.T) {
 		if variant["price"] != "123.45" {
 			t.Fatalf("variant price = %#v, want 123.45", variant["price"])
 		}
+		if variant["inventory_management"] != "shopify" {
+			t.Fatalf("variant inventory_management = %#v, want shopify", variant["inventory_management"])
+		}
+		if variant["inventory_quantity"] != float64(9) {
+			t.Fatalf("variant inventory_quantity = %#v, want 9", variant["inventory_quantity"])
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -174,6 +180,36 @@ func TestUpdateStockResolvesVariantIDToInventoryItem(t *testing.T) {
 	}
 	if !sawSetLevel {
 		t.Fatal("expected inventory level update request")
+	}
+}
+
+func TestUpdateStockRejectsLegacySyntheticExternalID(t *testing.T) {
+	provider := &Provider{}
+
+	err := provider.UpdateStock(context.Background(), "shopify-"+uuid.NewString(), 7)
+	if err == nil {
+		t.Fatal("expected legacy synthetic external ID error")
+	}
+	if !strings.Contains(err.Error(), "legacy synthetic external ID") {
+		t.Fatalf("error = %q, want legacy synthetic external ID context", err.Error())
+	}
+	if !strings.Contains(err.Error(), "recreate the Shopify listing") {
+		t.Fatalf("error = %q, want recreate guidance", err.Error())
+	}
+}
+
+func TestUpdatePriceRejectsLegacySyntheticExternalID(t *testing.T) {
+	provider := &Provider{}
+
+	err := provider.UpdatePrice(context.Background(), "shopify-"+uuid.NewString(), 12.34)
+	if err == nil {
+		t.Fatal("expected legacy synthetic external ID error")
+	}
+	if !strings.Contains(err.Error(), "legacy synthetic external ID") {
+		t.Fatalf("error = %q, want legacy synthetic external ID context", err.Error())
+	}
+	if !strings.Contains(err.Error(), "recreate the Shopify listing") {
+		t.Fatalf("error = %q, want recreate guidance", err.Error())
 	}
 }
 

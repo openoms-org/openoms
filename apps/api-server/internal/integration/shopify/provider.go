@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"maps"
 	"strconv"
+	"strings"
 	"time"
 
 	shopifysdk "github.com/openoms-org/openoms/packages/shopify-go-sdk"
@@ -164,9 +165,9 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 // UpdateStock updates the stock quantity for a Shopify product variant.
 // externalOfferID should be the Shopify variant ID stored by PushOffer.
 func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quantity int) error {
-	variantID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	variantID, err := parseShopifyVariantID("update stock", externalOfferID)
 	if err != nil {
-		return fmt.Errorf("shopify: invalid variant ID %q: %w", externalOfferID, err)
+		return err
 	}
 
 	variant, err := p.client.Products.GetVariant(ctx, variantID)
@@ -192,13 +193,24 @@ func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quan
 // UpdatePrice updates the price for a Shopify product variant.
 // externalOfferID should be the variant ID.
 func (p *Provider) UpdatePrice(ctx context.Context, externalOfferID string, price float64) error {
-	variantID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	variantID, err := parseShopifyVariantID("update price", externalOfferID)
 	if err != nil {
-		return fmt.Errorf("shopify: invalid variant ID %q: %w", externalOfferID, err)
+		return err
 	}
 	return p.client.Products.UpdateVariant(ctx, variantID, map[string]any{
 		"price": fmt.Sprintf("%.2f", price),
 	})
+}
+
+func parseShopifyVariantID(operation, externalOfferID string) (int64, error) {
+	variantID, err := strconv.ParseInt(externalOfferID, 10, 64)
+	if err == nil {
+		return variantID, nil
+	}
+	if strings.HasPrefix(externalOfferID, "shopify-") {
+		return 0, fmt.Errorf("shopify: legacy synthetic external ID %q cannot be used for %s; recreate the Shopify listing to store a real variant ID", externalOfferID, operation)
+	}
+	return 0, fmt.Errorf("shopify: invalid variant ID %q: %w", externalOfferID, err)
 }
 
 // mapShopifyOrder converts a Shopify order to the normalized MarketplaceOrder.
