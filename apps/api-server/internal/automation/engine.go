@@ -29,7 +29,7 @@ type AutomationRuleLogRepo interface { //nolint:revive
 // DelayedActionRepo is the interface needed by the engine for delayed action persistence.
 type DelayedActionRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, da *model.DelayedAction) error
-	ListPending(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
+	ListPending(ctx context.Context, tx pgx.Tx, limit int) ([]model.DelayedAction, error)
 	MarkExecuted(ctx context.Context, tx pgx.Tx, id uuid.UUID, errMsg *string) error
 	ListPendingByTenant(ctx context.Context, tx pgx.Tx) ([]model.DelayedAction, error)
 }
