@@ -56,5 +56,8 @@ BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms_app') THEN
     GRANT EXECUTE ON FUNCTION public.find_user_for_auth(text, uuid) TO openoms_app;
   END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'openoms') THEN
+    GRANT EXECUTE ON FUNCTION public.find_user_for_auth(text, uuid) TO openoms;
+  END IF;
 END;
 $$;
