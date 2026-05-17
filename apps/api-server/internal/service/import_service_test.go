@@ -1,8 +1,15 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseCSV_BasicFile(t *testing.T) {
@@ -167,3 +174,110 @@ func TestStripBOM(t *testing.T) {
 		t.Errorf("expected 'hello' (no change), got '%s'", string(result2))
 	}
 }
+
+func TestImportService_EnforceMonthlyOrderLimit_AllowsCreateThatReachesLimit(t *testing.T) {
+	tx := &importLimitTx{}
+	orderCounter := importLimitOrderCounter{count: 8}
+
+	err := EnforceMonthlyOrderLimit(context.Background(), tx, orderCounter, uuid.New(), 10, 1)
+
+	require.NoError(t, err)
+	require.True(t, tx.lockedTenantRow)
+}
+
+func TestImportService_EnforceMonthlyOrderLimit_RejectsWhenNextCreateWouldExceedLimit(t *testing.T) {
+	tx := &importLimitTx{}
+	orderCounter := importLimitOrderCounter{count: 9}
+
+	err := EnforceMonthlyOrderLimit(context.Background(), tx, orderCounter, uuid.New(), 10, 1)
+
+	require.ErrorIs(t, err, ErrOrderLimitExceeded)
+	require.True(t, tx.lockedTenantRow)
+}
+
+func TestImportService_EnforceMonthlyOrderLimit_PropagatesLockError(t *testing.T) {
+	lockErr := errors.New("lock timeout")
+	tx := &importLimitTx{execErr: lockErr}
+	orderCounter := importLimitOrderCounter{count: 5}
+
+	err := EnforceMonthlyOrderLimit(context.Background(), tx, orderCounter, uuid.New(), 10, 0)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, lockErr)
+}
+
+func TestImportService_EnforceMonthlyOrderLimit_PropagatesCountError(t *testing.T) {
+	countErr := errors.New("database timeout")
+	tx := &importLimitTx{}
+	orderCounter := importLimitOrderCounter{countErr: countErr}
+
+	err := EnforceMonthlyOrderLimit(context.Background(), tx, orderCounter, uuid.New(), 10, 0)
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, countErr)
+	require.True(t, tx.lockedTenantRow)
+}
+
+type importLimitOrderCounter struct {
+	count    int
+	countErr error
+}
+
+func (r importLimitOrderCounter) CountThisMonth(context.Context, pgx.Tx) (int, error) {
+	return r.count, r.countErr
+}
+
+type importLimitTx struct {
+	lockedTenantRow bool
+	execErr         error
+}
+
+func (tx *importLimitTx) Begin(context.Context) (pgx.Tx, error) {
+	return nil, nil
+}
+
+func (tx *importLimitTx) Commit(context.Context) error {
+	return nil
+}
+
+func (tx *importLimitTx) Rollback(context.Context) error {
+	return nil
+}
+
+func (tx *importLimitTx) CopyFrom(context.Context, pgx.Identifier, []string, pgx.CopyFromSource) (int64, error) {
+	return 0, nil
+}
+
+func (tx *importLimitTx) SendBatch(context.Context, *pgx.Batch) pgx.BatchResults {
+	return nil
+}
+
+func (tx *importLimitTx) LargeObjects() pgx.LargeObjects {
+	return pgx.LargeObjects{}
+}
+
+func (tx *importLimitTx) Prepare(context.Context, string, string) (*pgconn.StatementDescription, error) {
+	return nil, nil
+}
+
+func (tx *importLimitTx) Exec(_ context.Context, sql string, _ ...any) (pgconn.CommandTag, error) {
+	if strings.Contains(sql, "SELECT 1 FROM tenants WHERE id = $1 FOR UPDATE") {
+		tx.lockedTenantRow = true
+	}
+	return pgconn.CommandTag{}, tx.execErr
+}
+
+func (tx *importLimitTx) Query(context.Context, string, ...any) (pgx.Rows, error) {
+	return nil, nil
+}
+
+func (tx *importLimitTx) QueryRow(context.Context, string, ...any) pgx.Row {
+	return nil
+}
+
+func (tx *importLimitTx) Conn() *pgx.Conn {
+	return nil
+}
+
+var _ MonthlyOrderCounter = importLimitOrderCounter{}
+var _ pgx.Tx = (*importLimitTx)(nil)

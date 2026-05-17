@@ -72,6 +72,37 @@ func (s *OrderService) AuditRepo() repository.AuditRepo {
 	return s.auditRepo
 }
 
+// MonthlyOrderCounter provides the order count needed for plan-limit enforcement.
+type MonthlyOrderCounter interface {
+	CountThisMonth(ctx context.Context, tx pgx.Tx) (int, error)
+}
+
+// EnforceMonthlyOrderLimit serializes per-tenant monthly order limit checks inside
+// the caller's transaction. pendingCreatesBeforeCurrent is the number of creates
+// already in flight but not visible to CountThisMonth; it excludes the create
+// the caller is about to perform.
+func EnforceMonthlyOrderLimit(ctx context.Context, tx pgx.Tx, orderCounter MonthlyOrderCounter, tenantID uuid.UUID, maxOrdersMonthly, pendingCreatesBeforeCurrent int) error {
+	if maxOrdersMonthly <= 0 {
+		return nil
+	}
+	if pendingCreatesBeforeCurrent < 0 {
+		pendingCreatesBeforeCurrent = 0
+	}
+
+	if _, err := tx.Exec(ctx, "SELECT 1 FROM tenants WHERE id = $1 FOR UPDATE", tenantID); err != nil {
+		return fmt.Errorf("lock tenant for order limit check: %w", err)
+	}
+
+	count, err := orderCounter.CountThisMonth(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("count orders for limit check: %w", err)
+	}
+	if count+pendingCreatesBeforeCurrent >= maxOrdersMonthly {
+		return ErrOrderLimitExceeded
+	}
+	return nil
+}
+
 // WebhookDispatch returns the webhook dispatch service for direct access.
 func (s *OrderService) WebhookDispatch() *WebhookDispatchService {
 	return s.webhookDispatch
@@ -251,15 +282,8 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	}
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		// Atomic plan limit check — inside same transaction as insert to prevent TOCTOU race
-		if req.MaxOrdersMonthly > 0 {
-			count, err := s.orderRepo.CountThisMonth(ctx, tx)
-			if err != nil {
-				return fmt.Errorf("count orders for limit check: %w", err)
-			}
-			if count >= req.MaxOrdersMonthly {
-				return ErrOrderLimitExceeded
-			}
+		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, req.MaxOrdersMonthly, 0); err != nil {
+			return err
 		}
 
 		if err := s.orderRepo.Create(ctx, tx, order); err != nil {

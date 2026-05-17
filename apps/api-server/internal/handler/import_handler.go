@@ -1,23 +1,40 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+type csvImportService interface {
+	ParseCSV(file io.Reader) (*model.ImportPreviewResponse, error)
+	ImportOrders(
+		ctx context.Context,
+		tenantID uuid.UUID,
+		file io.Reader,
+		mappings []model.ImportColumnMapping,
+		userID uuid.UUID,
+		ip string,
+		opts service.ImportOrdersOptions,
+	) (*model.ImportResult, error)
+}
+
 // ImportHandler handles CSV import endpoints for orders.
 type ImportHandler struct {
-	importService           *service.ImportService
+	importService           csvImportService
 	baseLinkerImportService *service.BaseLinkerImportService
 }
 
 // NewImportHandler creates a new ImportHandler.
-func NewImportHandler(importService *service.ImportService, blImportService *service.BaseLinkerImportService) *ImportHandler {
+func NewImportHandler(importService csvImportService, blImportService *service.BaseLinkerImportService) *ImportHandler {
 	return &ImportHandler{
 		importService:           importService,
 		baseLinkerImportService: blImportService,
@@ -58,14 +75,9 @@ func (h *ImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	userID := middleware.UserIDFromContext(r.Context())
 
-	// Check plan limit before import
+	var opts service.ImportOrdersOptions
 	if limits := middleware.PlanLimitsFromContext(r.Context()); limits != nil && limits.MaxOrdersMonthly > 0 {
-		count, err := h.importService.CountOrdersThisMonth(r.Context(), tenantID)
-		if err == nil && count >= limits.MaxOrdersMonthly {
-			writeError(w, http.StatusForbidden, fmt.Sprintf(
-				"Monthly order limit reached for current plan (max: %d). Upgrade to increase.", limits.MaxOrdersMonthly))
-			return
-		}
+		opts.MaxOrdersMonthly = limits.MaxOrdersMonthly
 	}
 
 	// 10MB limit
@@ -97,9 +109,14 @@ func (h *ImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.importService.ImportOrders(r.Context(), tenantID, file, mappings, userID, clientIP(r))
+	result, err := h.importService.ImportOrders(r.Context(), tenantID, file, mappings, userID, clientIP(r), opts)
 	if err != nil {
-		writeServerError(w, "failed to import orders", err)
+		if errors.Is(err, service.ErrOrderLimitExceeded) {
+			writeError(w, http.StatusForbidden, fmt.Sprintf(
+				"Monthly order limit reached for current plan (max: %d). Upgrade to increase.", opts.MaxOrdersMonthly))
+		} else {
+			writeServerError(w, "failed to import orders", err)
+		}
 		return
 	}
 
