@@ -31,6 +31,8 @@ type GLSCredentials struct {
 	Sandbox  bool   `json:"sandbox,omitempty"`
 }
 
+const maxGLSLabelCacheEntries = 16
+
 // GLSProvider implements integration.CarrierProvider for GLS Poland.
 type GLSProvider struct {
 	client     *glssdk.Client
@@ -162,21 +164,24 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}
 
 	// GLS returns labels inline in the create response (no separate label API).
-	// Cache the bytes for the immediate GetLabel call; object storage is an
-	// optional persistence side effect when a caller injects it.
+	// Cache the bytes only when storage is unavailable or upload fails; otherwise
+	// storage remains the persistence layer and the provider does not retain PDFs.
 	if externalID != "" && len(resp.PrintData) > 0 {
 		decoded, err := base64.StdEncoding.DecodeString(resp.PrintData[0])
 		if err != nil {
 			p.logger.Error("failed to decode label from create response", "externalID", externalID, "error", err)
 		} else if len(decoded) > 0 {
-			p.cacheLabel(externalID, decoded)
-
+			shouldCache := p.storage == nil
 			if p.storage != nil {
 				key := fmt.Sprintf("labels/gls/%s.pdf", externalID)
 				_, err := p.storage.Upload(ctx, key, bytes.NewReader(decoded), "application/pdf")
 				if err != nil {
 					p.logger.Error("failed to upload label to storage", "externalID", externalID, "key", key, "error", err)
+					shouldCache = true
 				}
+			}
+			if shouldCache {
+				p.cacheLabel(externalID, decoded)
 			}
 		}
 	}
@@ -188,10 +193,10 @@ func (p *GLSProvider) CreateShipment(ctx context.Context, req integration.Carrie
 	}, nil
 }
 
-// GetLabel retrieves a label cached from the GLS create response, falling back
-// to object storage when a caller injected it.
+// GetLabel retrieves a one-time label cached from the GLS create response,
+// falling back to object storage when a caller injected it.
 func (p *GLSProvider) GetLabel(ctx context.Context, externalID string, _ string) ([]byte, error) {
-	if label := p.cachedLabel(externalID); label != nil {
+	if label := p.takeCachedLabel(externalID); label != nil {
 		return label, nil
 	}
 
@@ -215,16 +220,23 @@ func (p *GLSProvider) cacheLabel(externalID string, label []byte) {
 	if p.labelCache == nil {
 		p.labelCache = make(map[string][]byte)
 	}
+	if len(p.labelCache) >= maxGLSLabelCacheEntries {
+		for cachedID := range p.labelCache {
+			delete(p.labelCache, cachedID)
+			break
+		}
+	}
 	p.labelCache[externalID] = bytes.Clone(label)
 }
 
-func (p *GLSProvider) cachedLabel(externalID string) []byte {
-	p.labelMu.RLock()
-	defer p.labelMu.RUnlock()
+func (p *GLSProvider) takeCachedLabel(externalID string) []byte {
+	p.labelMu.Lock()
+	defer p.labelMu.Unlock()
 	label, ok := p.labelCache[externalID]
 	if !ok {
 		return nil
 	}
+	delete(p.labelCache, externalID)
 	return bytes.Clone(label)
 }
 

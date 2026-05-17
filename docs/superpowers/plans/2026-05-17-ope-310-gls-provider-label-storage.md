@@ -38,7 +38,7 @@
 Target command:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/integration/carriers -run TestGLS_CreateShipmentWithoutStorageCachesInlineLabel -count=1
 ```
 
@@ -58,14 +58,14 @@ go test ./internal/integration/carriers -run TestGLS_CreateShipmentWithoutStorag
 - [ ] Run all carrier integration tests:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/integration/carriers -count=1
 ```
 
 - [ ] Run relevant service tests if provider contract changes are broader:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/service ./internal/integration/carriers -run 'Label|GLS|Carrier' -count=1
 ```
 
@@ -76,7 +76,6 @@ go test ./internal/service ./internal/integration/carriers -run 'Label|GLS|Carri
 - [ ] Run full public validation:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
 ./scripts/local-ci.sh
 ```
 
@@ -90,4 +89,3 @@ cd /Users/rafs/praca/openoms-dev/public
 - Behavior improves fail-closed semantics: missing GLS labels return an error instead of panic.
 - Rollback is reverting the PR; no migration or data change is involved.
 - If CodeRabbit or tests reveal that label bytes must be persisted outside the provider instance, create a follow-up to inject `storage.ObjectStorage` into `LabelService`/carrier factory deliberately rather than doing it as a hidden broad refactor.
-

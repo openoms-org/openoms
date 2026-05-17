@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	glssdk "github.com/openoms-org/openoms/packages/gls-go-sdk"
@@ -288,11 +289,21 @@ func TestGLS_GetLabel_ReturnsErrorWhenLabelMissing(t *testing.T) {
 	// GLS ShipIT API returns labels inline during shipment creation
 	// (CreatedShipment.PrintData[].Data). A provider with no cached label must
 	// fail clearly instead of pretending to fetch one from the carrier API.
-	provider := newTestGLSProvider(t, "http://unused")
+	creds, _ := json.Marshal(map[string]any{
+		"username": "test-username",
+		"password": "test-password",
+	})
+	provider, err := NewGLSProvider(creds, nil, nil)
+	if err != nil {
+		t.Fatalf("NewGLSProvider() error: %v", err)
+	}
 
-	_, err := provider.GetLabel(context.Background(), "EXT-001", "pdf")
+	_, err = provider.GetLabel(context.Background(), "EXT-001", "pdf")
 	if err == nil {
-		t.Error("GetLabel() should return error — GLS labels are embedded in create response")
+		t.Fatal("GetLabel() should return error — GLS labels are embedded in create response")
+	}
+	if !strings.Contains(err.Error(), `label not available for external id "EXT-001"`) {
+		t.Fatalf("GetLabel() error = %q, want label not available error", err.Error())
 	}
 }
 
@@ -338,6 +349,11 @@ func TestGLS_CreateShipmentWithoutStorageCachesInlineLabel(t *testing.T) {
 	}
 	if string(label) != "%PDF-1.4\n" {
 		t.Fatalf("GetLabel() = %q, want %q", string(label), "%PDF-1.4\n")
+	}
+
+	_, err = provider.GetLabel(context.Background(), resp.ExternalID, "pdf")
+	if err == nil {
+		t.Fatal("GetLabel() should consume the one-time inline label cache")
 	}
 }
 
