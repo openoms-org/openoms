@@ -1083,8 +1083,9 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Get("/inpost/points", deps.InPostPoint.Search)
 			r.Get("/inpost/geowidget-token", deps.Integration.GetGeowidgetToken)
 
-			// Pick & Pack workflow — any authenticated user
+			// Pick & Pack workflow — requires warehouses.manage while the module is validation-gated
 			r.Route("/pick-pack/sessions", func(r chi.Router) {
+				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Post("/", deps.PickPack.CreateSession)
 				r.Get("/", deps.PickPack.ListSessions)
 				r.Get("/{id}", deps.PickPack.GetSession)
