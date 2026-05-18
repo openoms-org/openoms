@@ -183,6 +183,53 @@ func TestUpdateStockResolvesVariantIDToInventoryItem(t *testing.T) {
 	}
 }
 
+func TestUpdateStockSelectsInventoryLocationDeterministically(t *testing.T) {
+	var sawSetLevel bool
+
+	provider, closeServer := newShopifyProviderForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/variants/222.json":
+			_, _ = w.Write([]byte(`{"variant":{"id":222,"product_id":111,"inventory_item_id":333}}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/inventory_levels.json":
+			if got := r.URL.Query().Get("inventory_item_ids"); got != "333" {
+				t.Fatalf("inventory_item_ids = %q, want 333", got)
+			}
+			_, _ = w.Write([]byte(`{
+				"inventory_levels": [
+					{"inventory_item_id":333,"location_id":555,"available":3},
+					{"inventory_item_id":333,"location_id":222,"available":4},
+					{"inventory_item_id":333,"location_id":444,"available":5}
+				]
+			}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/inventory_levels/set.json":
+			var payload map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode set level body: %v", err)
+			}
+			if payload["location_id"] != float64(222) {
+				t.Fatalf("location_id = %#v, want deterministic lowest location 222", payload["location_id"])
+			}
+			if payload["available"] != float64(7) {
+				t.Fatalf("available = %#v, want 7", payload["available"])
+			}
+			sawSetLevel = true
+			_, _ = w.Write([]byte(`{}`))
+		default:
+			t.Fatalf("unexpected request = %s %s", r.Method, r.URL.String())
+		}
+	})
+	defer closeServer()
+
+	if err := provider.UpdateStock(context.Background(), "222", 7); err != nil {
+		t.Fatalf("UpdateStock returned error: %v", err)
+	}
+	if !sawSetLevel {
+		t.Fatal("expected inventory level update request")
+	}
+}
+
 func TestUpdateStockRejectsLegacySyntheticExternalID(t *testing.T) {
 	provider := &Provider{}
 
