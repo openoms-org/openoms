@@ -105,6 +105,15 @@ func TestMergeCredentialUpdate(t *testing.T) {
 			},
 		},
 		{
+			name:     "non string webhook secret keeps existing secret",
+			existing: []byte(`{"client_id":"old-id","webhook_secret":"old-webhook"}`),
+			update:   []byte(`{"webhook_secret":123}`),
+			want: map[string]any{
+				"client_id":      "old-id",
+				"webhook_secret": "old-webhook",
+			},
+		},
+		{
 			name:     "non empty webhook secret rotates only that field",
 			existing: []byte(`{"client_id":"old-id","webhook_secret":"old-webhook"}`),
 			update:   []byte(`{"webhook_secret":"new-webhook"}`),

@@ -41,7 +41,7 @@
   - Preserve unscoped legacy behavior.
 - `apps/api-server/internal/handler/allegro_webhook_handler_test.go`
   - Add scoped valid, wrong-secret and missing-secret tests.
-- `apps/api-server/internal/handler/inpost_webhook_handler_test.go`
+- `apps/api-server/internal/handler/crud_handler_c_test.go`
   - Add scoped valid, wrong-secret and missing-secret tests.
 - `apps/api-server/internal/router/router.go`
   - Register `/v1/webhooks/allegro/{integrationID}` and `/v1/webhooks/inpost/{integrationID}` next to legacy routes.

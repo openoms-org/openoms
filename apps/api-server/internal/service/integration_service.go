@@ -274,7 +274,7 @@ func mergeCredentialUpdate(existing, update []byte) ([]byte, error) {
 	for key, value := range updateValues {
 		if key == "webhook_secret" {
 			secret, ok := value.(string)
-			if ok && strings.TrimSpace(secret) == "" {
+			if !ok || strings.TrimSpace(secret) == "" {
 				continue
 			}
 		}

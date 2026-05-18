@@ -939,17 +939,22 @@ function CredentialsCard({
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
 
   const handleUpdateCredentials = () => {
-    if (!clientId.trim() || !clientSecret.trim()) {
+    const trimmedClientId = clientId.trim();
+    const trimmedClientSecret = clientSecret.trim();
+    const trimmedWebhookSecret = webhookSecret.trim();
+    const hasClientCredentials = trimmedClientId && trimmedClientSecret;
+    if (!hasClientCredentials && !trimmedWebhookSecret) {
       toast.error(t("clientIdIClientSecretSaWymagane"));
       return;
     }
 
     const credentials: Record<string, unknown> = {
-      client_id: clientId.trim(),
-      client_secret: clientSecret.trim(),
       sandbox,
     };
-    const trimmedWebhookSecret = webhookSecret.trim();
+    if (hasClientCredentials) {
+      credentials.client_id = trimmedClientId;
+      credentials.client_secret = trimmedClientSecret;
+    }
     if (trimmedWebhookSecret) {
       credentials.webhook_secret = trimmedWebhookSecret;
     }
@@ -1067,8 +1072,8 @@ function CredentialsCard({
           onClick={handleUpdateCredentials}
           disabled={
             updateIntegration.isPending ||
-            !clientId.trim() ||
-            !clientSecret.trim()
+            ((!clientId.trim() || !clientSecret.trim()) &&
+              !webhookSecret.trim())
           }
           variant="outline"
         >
