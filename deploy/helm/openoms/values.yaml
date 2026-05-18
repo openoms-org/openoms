@@ -202,6 +202,34 @@ networkPolicy:
   enabled: false  # set true in production for namespace-level isolation
   ingressNamespace: ingress-nginx
   cloudflaredNamespace: cloudflared
+  egress:
+    dns:
+      # Optional destination selectors or ipBlocks. Empty preserves broad
+      # self-hosted compatibility.
+      to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    https:
+      # Keep empty unless all required external API/S3/Sentry CIDRs are known.
+      to: []
+      ports:
+        - protocol: TCP
+          port: 443
+    database:
+      to: []
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6543
+    redis:
+      to: []
+      ports:
+        - protocol: TCP
+          port: 6379
 
 monitoring:
   enabled: false
