@@ -113,6 +113,12 @@ spec:
                   name: {{ include "openoms.secretName" . }}
                   key: SENTRY_DSN
                   optional: true
+            - name: SENTRY_RELEASE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "openoms.fullname" . }}-config
+                  key: SENTRY_RELEASE
+                  optional: true
           startupProbe:
             httpGet:
               path: /health
