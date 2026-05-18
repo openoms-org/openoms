@@ -126,4 +126,25 @@ assert_release_path_filter "scripts/check-dashboard-release-config.sh"
 assert_release_path_filter "scripts/check-dashboard-image.sh"
 assert_release_path_filter "scripts/check-dashboard-bundle-placeholders.sh"
 
+assert_sentry_release_env() {
+  local template_path="$1"
+  local label="$2"
+
+  if ! awk '
+    /- name: SENTRY_RELEASE/ { in_block = 1 }
+    in_block && /key: SENTRY_RELEASE/ { found = 1 }
+    in_block && /^            - name:/ && !/- name: SENTRY_RELEASE/ { in_block = 0 }
+    END { exit(found ? 0 : 1) }
+  ' "$repo_root/$template_path"; then
+    fail "$label must read SENTRY_RELEASE from the OpenOMS ConfigMap"
+  fi
+  echo "sentry_release_env_${label//[^[:alnum:]]/_}=pass"
+}
+
+assert_sentry_release_env "deploy/helm/openoms/templates/api-server/deployment.yaml" "api_deployment"
+assert_sentry_release_env "deploy/helm/openoms/templates/api-server/rollout.yaml" "api_rollout"
+assert_sentry_release_env "deploy/helm/openoms/templates/dashboard/deployment.yaml" "dashboard_deployment"
+assert_sentry_release_env "deploy/helm/openoms/templates/dashboard/rollout.yaml" "dashboard_rollout"
+assert_sentry_release_env "deploy/helm/openoms/templates/worker/deployment.yaml" "worker_deployment"
+
 echo "dashboard_sentry_guard_tests=pass"

@@ -79,6 +79,7 @@ type Config struct {
 	// Sentry error tracking. Empty DSN = Sentry disabled (self-hosted mode).
 	SentryDSN              string  `env:"SENTRY_DSN" envDefault:""`
 	SentryEnvironment      string  `env:"SENTRY_ENVIRONMENT" envDefault:""`
+	SentryRelease          string  `env:"SENTRY_RELEASE" envDefault:""`
 	SentryTracesSampleRate float64 `env:"SENTRY_TRACES_SAMPLE_RATE" envDefault:"0"`
 }
 
