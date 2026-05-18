@@ -55,7 +55,7 @@ Extend the `readMigrationSQL` allowlist with:
 
 ```go
 "000027_redact_find_tenant_by_slug_settings.up.sql",
-"000027_redact_find_tenant_by_slug_settings.down.sql":
+"000027_redact_find_tenant_by_slug_settings.down.sql",
 ```
 
 - [ ] **Step 2: Run RED**
@@ -63,7 +63,7 @@ Extend the `readMigrationSQL` allowlist with:
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/database -run TestFindTenantBySlugMigrationRedactsSettings -count=1
 ```
 
@@ -202,7 +202,7 @@ $$;
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/database -run TestFindTenantBySlugMigrationRedactsSettings -count=1
 ```
 
@@ -239,7 +239,7 @@ Pelne `tenants.settings` sa odczytywane tylko przez tenant-scoped sciezki repozy
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/api-server
+cd apps/api-server
 go test ./internal/database -count=1
 ```
 
@@ -250,7 +250,7 @@ Expected: PASS.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd .
 git diff --check
 ./scripts/local-ci.sh
 ```
@@ -262,7 +262,7 @@ Expected: both PASS.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd .
 git add apps/api-server/internal/database/migration_auth_grants_test.go apps/api-server/migrations/000027_redact_find_tenant_by_slug_settings.up.sql apps/api-server/migrations/000027_redact_find_tenant_by_slug_settings.down.sql docs/system-documentation.md docs/superpowers/plans/2026-05-18-ope-332-redact-tenant-settings.md
 git commit -m "OPE-332: redact tenant settings from slug lookup"
 ```
