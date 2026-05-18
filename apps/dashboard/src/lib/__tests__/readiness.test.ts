@@ -11,6 +11,42 @@ import {
   isRouteAccessible,
 } from "@/lib/readiness";
 
+const WAREHOUSE_HIDDEN_NAV_ROUTES = [
+  "/packing",
+  "/pick-pack",
+  "/settings/warehouses",
+  "/stocktakes",
+  "/settings/warehouse-documents",
+  "/stock-sync",
+  "/settings/inventory",
+] as const;
+
+const WAREHOUSE_VERIFY_ROUTES = [
+  "/packing",
+  "/pick-pack",
+  "/pick-pack/session-1",
+  "/stocktakes",
+  "/stocktakes/new",
+  "/stocktakes/stocktake-1",
+  "/settings/warehouse-documents",
+  "/settings/warehouse-documents/new",
+  "/settings/warehouse-documents/doc-1",
+  "/settings/inventory",
+] as const;
+
+const WAREHOUSE_CONTROLLED_ROUTES = [
+  "/settings/warehouses",
+  "/settings/warehouses/warehouse-1",
+] as const;
+
+const WAREHOUSE_BETA_ROUTES = ["/stock-sync", "/stock-sync/events"] as const;
+
+const WAREHOUSE_VALIDATION_ROUTES = [
+  ...WAREHOUSE_VERIFY_ROUTES,
+  ...WAREHOUSE_CONTROLLED_ROUTES,
+  ...WAREHOUSE_BETA_ROUTES,
+] as const;
+
 describe("dashboard feature readiness", () => {
   it("keeps the client-ready navigation focused on certified core flows", () => {
     const visible = getVisibleNavItems(navItems, {
@@ -39,6 +75,9 @@ describe("dashboard feature readiness", () => {
     expect(visible).not.toContain("/repricing");
     expect(visible).not.toContain("/suppliers");
     expect(visible).not.toContain("/listing-sync");
+    for (const route of WAREHOUSE_HIDDEN_NAV_ROUTES) {
+      expect(visible).not.toContain(route);
+    }
     expect(visible).not.toContain("/settings/billing");
     expect(visible).not.toContain("/settings/accounting");
     expect(visible).not.toContain("/settings/vat-oss");
@@ -87,6 +126,15 @@ describe("dashboard feature readiness", () => {
     expect(getRouteReadiness("/customers/import")).toBe("verify");
     expect(getRouteReadiness("/carriers")).toBe("ready");
     expect(getRouteReadiness("/carriers/new")).toBe("ready");
+    for (const route of WAREHOUSE_VERIFY_ROUTES) {
+      expect(getRouteReadiness(route)).toBe("verify");
+    }
+    for (const route of WAREHOUSE_CONTROLLED_ROUTES) {
+      expect(getRouteReadiness(route)).toBe("controlled");
+    }
+    for (const route of WAREHOUSE_BETA_ROUTES) {
+      expect(getRouteReadiness(route)).toBe("beta");
+    }
     expect(getRouteReadiness("/settings")).toBe("ready");
     expect(getRouteReadiness("/settings/email")).toBe("blocked");
     expect(getRouteReadiness("/settings/sms")).toBe("blocked");
@@ -105,10 +153,14 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/orders/new", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/marketplaces/allegro", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/carriers/new", { mode: "client-ready" })).toBe(true);
+    expect(isRouteAccessible("/shipments/new", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/settings", { mode: "client-ready" })).toBe(true);
     expect(isRouteAccessible("/marketplaces/allegro/offers", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/products/product-1/listings", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/customers/import", { mode: "client-ready" })).toBe(false);
+    for (const route of WAREHOUSE_VALIDATION_ROUTES) {
+      expect(isRouteAccessible(route, { mode: "client-ready" })).toBe(false);
+    }
     expect(isRouteAccessible("/reports/forecast", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/reports/vat-oss", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/invoices", { mode: "client-ready" })).toBe(false);
@@ -142,6 +194,12 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/settings/vat-oss", { mode: "full" })).toBe(true);
     expect(isRouteAccessible("/reports/vat-oss", { mode: "full" })).toBe(true);
     expect(isRouteAccessible("/settings/ksef", { mode: "full" })).toBe(false);
+  });
+
+  it("allows warehouse and fulfillment routes only in full validation mode", () => {
+    for (const route of WAREHOUSE_VALIDATION_ROUTES) {
+      expect(isRouteAccessible(route, { mode: "full" })).toBe(true);
+    }
   });
 
   it("treats unreviewed direct routes as verify-only instead of client-ready", () => {
