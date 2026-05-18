@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { createCrudHooks } from "./create-crud-hooks";
+import { useAllListItems } from "./use-all-list-items";
 import type {
   Supplier,
   ListResponse,
@@ -39,6 +40,14 @@ export const useSupplier = supplierHooks.useGet;
 export const useCreateSupplier = supplierHooks.useCreate;
 export const useUpdateSupplier = supplierHooks.useUpdate;
 export const useDeleteSupplier = supplierHooks.useDelete;
+
+export function useAllSuppliers(params: SupplierListParams = {}) {
+  return useAllListItems<Supplier, SupplierListParams>(
+    ["suppliers", "all", params],
+    "/v1/suppliers",
+    params,
+  );
+}
 
 export function useSyncSupplier() {
   const queryClient = useQueryClient();

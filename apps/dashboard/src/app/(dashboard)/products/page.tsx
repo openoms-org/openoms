@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DensityToggle } from "@/components/shared/density-toggle";
 import { useProducts, useDeleteProduct } from "@/hooks/use-products";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useSuppliers, useAllSupplierProducts } from "@/hooks/use-suppliers";
+import { useAllSuppliers, useAllSupplierProducts } from "@/hooks/use-suppliers";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -156,7 +156,7 @@ function MyProductsTab() {
   }, []);
 
   const { data: categoryTree } = useCategoryTree();
-  const { data: suppliersData } = useSuppliers({ limit: 100 });
+  const { data: suppliersData } = useAllSuppliers();
 
   const { data, isLoading, isError, refetch } = useProducts({
     ...pagination,
@@ -684,7 +684,7 @@ function SupplierCatalogTab() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: suppliersData } = useSuppliers({ limit: 100 });
+  const { data: suppliersData } = useAllSuppliers();
 
   const { data, isLoading } = useAllSupplierProducts({
     search: debouncedSearch || undefined,

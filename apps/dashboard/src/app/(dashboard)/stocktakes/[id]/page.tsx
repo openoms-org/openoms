@@ -22,7 +22,7 @@ import {
   useDeleteStocktake,
   useRecordCount,
 } from "@/hooks/use-stocktakes";
-import { useWarehouses } from "@/hooks/use-warehouses";
+import { useAllWarehouses } from "@/hooks/use-warehouses";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export default function StocktakeDetailPage() {
   const id = params.id as string;
 
   const { data: stocktake, isLoading, isError } = useStocktake(id);
-  const { data: warehousesData } = useWarehouses({ limit: 100 });
+  const { data: warehousesData } = useAllWarehouses();
   const warehouses = warehousesData?.items ?? [];
 
   const [itemFilter, setItemFilter] = useState<

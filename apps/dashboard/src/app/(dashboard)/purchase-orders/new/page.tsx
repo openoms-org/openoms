@@ -6,8 +6,8 @@ import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCreatePurchaseOrder, useSendPurchaseOrder } from "@/hooks/use-purchase-orders";
-import { useSuppliers } from "@/hooks/use-suppliers";
-import { useWarehouses } from "@/hooks/use-warehouses";
+import { useAllSuppliers } from "@/hooks/use-suppliers";
+import { useAllWarehouses } from "@/hooks/use-warehouses";
 import { useProducts } from "@/hooks/use-products";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -55,8 +55,8 @@ export default function NewPurchaseOrderPage() {
   const router = useRouter();
   const createPO = useCreatePurchaseOrder();
   const sendPO = useSendPurchaseOrder();
-  const { data: suppliersData } = useSuppliers({ limit: 100 });
-  const { data: warehousesData } = useWarehouses({ limit: 100 });
+  const { data: suppliersData } = useAllSuppliers();
+  const { data: warehousesData } = useAllWarehouses();
 
   const [supplierID, setSupplierID] = useState("");
   const [supplierName, setSupplierName] = useState("");

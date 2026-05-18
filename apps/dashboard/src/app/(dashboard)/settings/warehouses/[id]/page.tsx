@@ -11,7 +11,7 @@ import {
   useWarehouseStock,
   useUpsertWarehouseStock,
 } from "@/hooks/use-warehouses";
-import { useProducts } from "@/hooks/use-products";
+import { useAllProducts } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
@@ -66,7 +66,7 @@ export default function WarehouseDetailPage() {
     limit: 100,
   });
   const upsertStock = useUpsertWarehouseStock(id);
-  const { data: productsData } = useProducts({ limit: 100 });
+  const { data: productsData } = useAllProducts();
 
   const warehouseKey = warehouse?.id ?? null;
   const [name, setName] = useEffectSyncedState(warehouse?.name ?? "", warehouseKey);
