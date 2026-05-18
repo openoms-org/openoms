@@ -10,7 +10,7 @@
 
 ---
 
-### Files and Responsibilities
+## Files and Responsibilities
 
 - Modify: `.github/workflows/dependabot-auto-merge.yml`
   - Remove workflow-level write permissions.
@@ -19,7 +19,7 @@
   - Preserve the pinned `dependabot/fetch-metadata` action SHA.
 - No docs/context update required beyond this plan because runtime product behavior does not change.
 
-### Task 1: Split Metadata and Merge Permissions
+## Task 1: Split Metadata and Merge Permissions
 
 **Files:**
 - Modify: `.github/workflows/dependabot-auto-merge.yml`
@@ -108,7 +108,7 @@ git diff -- .github/workflows/dependabot-auto-merge.yml
 
 Expected: no whitespace errors and only the intended permissions/job split.
 
-### Task 2: Full Public Repo Validation and PR
+## Task 2: Full Public Repo Validation and PR
 
 **Files:**
 - Modify: `.github/workflows/dependabot-auto-merge.yml`
@@ -154,13 +154,13 @@ gh pr view <PR_NUMBER> --repo openoms-org/openoms --json statusCheckRollup,comme
 
 Expected: checks pass; CodeRabbit has no actionable comments or any actionable comments are fixed before merge.
 
-### Risk and Rollback
+## Risk and Rollback
 
 - Risk: if `dependabot/fetch-metadata` needs broader permissions than `pull-requests: read`, the metadata job may fail on Dependabot PRs. The workflow can be rolled back by reverting this commit or by adding the minimum missing permission to the metadata job.
 - Rollback: revert the OPE-340 PR; this restores the previous single-job permission model.
 - Operational impact: no production runtime impact; only Dependabot PR automation changes.
 
-### Self-Review Checklist
+## Self-Review Checklist
 
 - The pinned Dependabot action SHA is preserved.
 - Write permissions are not available to the metadata job.
