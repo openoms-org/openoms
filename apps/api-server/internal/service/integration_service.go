@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -198,15 +200,6 @@ func (s *IntegrationService) Update(ctx context.Context, tenantID, integrationID
 		return nil, NewValidationError(err)
 	}
 
-	var encryptedCreds *string
-	if req.Credentials != nil {
-		encrypted, err := crypto.Encrypt(*req.Credentials, s.encryptionKey)
-		if err != nil {
-			return nil, fmt.Errorf("encrypt credentials: %w", err)
-		}
-		encryptedCreds = &encrypted
-	}
-
 	var result *model.Integration
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		wc, err := s.integrationRepo.FindByID(ctx, tx, integrationID)
@@ -215,6 +208,27 @@ func (s *IntegrationService) Update(ctx context.Context, tenantID, integrationID
 		}
 		if wc == nil {
 			return ErrIntegrationNotFound
+		}
+
+		var encryptedCreds *string
+		if req.Credentials != nil {
+			existingCredentials := []byte("{}")
+			if wc.EncryptedCredentials != "" {
+				existingCredentials, err = crypto.Decrypt(wc.EncryptedCredentials, s.encryptionKey)
+				if err != nil {
+					return fmt.Errorf("decrypt existing credentials: %w", err)
+				}
+			}
+
+			mergedCredentials, err := mergeCredentialUpdate(existingCredentials, *req.Credentials)
+			if err != nil {
+				return err
+			}
+			encrypted, err := crypto.Encrypt(mergedCredentials, s.encryptionKey)
+			if err != nil {
+				return fmt.Errorf("encrypt credentials: %w", err)
+			}
+			encryptedCreds = &encrypted
 		}
 
 		if err := s.integrationRepo.Update(ctx, tx, integrationID, req, encryptedCreds); err != nil {
@@ -239,6 +253,39 @@ func (s *IntegrationService) Update(ctx context.Context, tenantID, integrationID
 		})
 	})
 	return result, err
+}
+
+func mergeCredentialUpdate(existing, update []byte) ([]byte, error) {
+	var existingValues map[string]any
+	if len(existing) == 0 {
+		existingValues = map[string]any{}
+	} else if err := json.Unmarshal(existing, &existingValues); err != nil {
+		return nil, fmt.Errorf("decode existing credentials: %w", err)
+	}
+	if existingValues == nil {
+		existingValues = map[string]any{}
+	}
+
+	var updateValues map[string]any
+	if err := json.Unmarshal(update, &updateValues); err != nil {
+		return nil, fmt.Errorf("decode credential update: %w", err)
+	}
+
+	for key, value := range updateValues {
+		if key == "webhook_secret" {
+			secret, ok := value.(string)
+			if ok && strings.TrimSpace(secret) == "" {
+				continue
+			}
+		}
+		existingValues[key] = value
+	}
+
+	merged, err := json.Marshal(existingValues)
+	if err != nil {
+		return nil, fmt.Errorf("encode merged credentials: %w", err)
+	}
+	return merged, nil
 }
 
 // UpdateCredentialsByProvider encrypts and persists new credential JSON for a given provider.

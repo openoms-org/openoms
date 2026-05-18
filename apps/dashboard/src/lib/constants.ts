@@ -311,6 +311,7 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
   allegro: [
     { key: "client_id", labelKey: "credentials.allegro.clientId", placeholderKey: "credentials.allegro.clientIdPlaceholder", helpTextKey: "credentials.allegro.clientIdHelp", type: "text", required: true },
     { key: "client_secret", labelKey: "credentials.allegro.clientSecret", placeholderKey: "credentials.allegro.clientSecretPlaceholder", type: "password", required: true },
+    { key: "webhook_secret", labelKey: "credentials.allegro.webhookSecret", placeholderKey: "credentials.allegro.webhookSecretPlaceholder", helpTextKey: "credentials.allegro.webhookSecretHelp", type: "password", required: false },
     { key: "access_token", labelKey: "credentials.allegro.accessToken", helpTextKey: "credentials.allegro.accessTokenHelp", type: "password", required: false },
     { key: "refresh_token", labelKey: "credentials.allegro.refreshToken", type: "password", required: false },
     { key: "sandbox", labelKey: "credentials.allegro.sandbox", type: "checkbox", required: false },
@@ -358,6 +359,7 @@ export const PROVIDER_CREDENTIAL_FIELDS: Record<string, CredentialField[]> = {
     { key: "api_token", labelKey: "credentials.inpost.apiToken", placeholderKey: "credentials.inpost.apiTokenPlaceholder", helpTextKey: "credentials.inpost.apiTokenHelp", type: "password", required: true },
     { key: "organization_id", labelKey: "credentials.inpost.organizationId", placeholderKey: "credentials.inpost.organizationIdPlaceholder", type: "text", required: true },
     { key: "geowidget_token", labelKey: "credentials.inpost.geowidgetToken", placeholderKey: "credentials.inpost.geowidgetTokenPlaceholder", helpTextKey: "credentials.inpost.geowidgetTokenHelp", type: "text", required: false },
+    { key: "webhook_secret", labelKey: "credentials.inpost.webhookSecret", placeholderKey: "credentials.inpost.webhookSecretPlaceholder", helpTextKey: "credentials.inpost.webhookSecretHelp", type: "password", required: false },
     { key: "sandbox", labelKey: "credentials.inpost.sandbox", type: "checkbox", required: false },
     { key: "default_sending_method", labelKey: "credentials.inpost.defaultSendingMethod", helpTextKey: "credentials.inpost.defaultSendingMethodHelp", type: "select", required: false, options: [
       { value: "dispatch_order", labelKey: "credentials.inpost.sendingMethods.dispatch_order" },

@@ -2,10 +2,13 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
@@ -16,12 +19,15 @@ import (
 type AllegroOrderSyncer interface {
 	ImportOrder(ctx context.Context, allegroOrderID string)
 	UpdateOrderStatus(ctx context.Context, allegroOrderID string)
+	ImportOrderForIntegration(ctx context.Context, tenantID, integrationID uuid.UUID, allegroOrderID string)
+	UpdateOrderStatusForIntegration(ctx context.Context, tenantID, integrationID uuid.UUID, allegroOrderID string)
 }
 
 // AllegroWebhookHandler handles incoming Allegro webhook events.
 type AllegroWebhookHandler struct {
-	webhookSecret string
-	orderSyncer   AllegroOrderSyncer
+	webhookSecret  string
+	orderSyncer    AllegroOrderSyncer
+	secretResolver providerWebhookSecretResolver
 }
 
 // NewAllegroWebhookHandler creates a new AllegroWebhookHandler.
@@ -30,6 +36,11 @@ func NewAllegroWebhookHandler(webhookSecret string, orderSyncer AllegroOrderSync
 		webhookSecret: webhookSecret,
 		orderSyncer:   orderSyncer,
 	}
+}
+
+// SetProviderWebhookSecretResolver enables tenant-scoped webhook secret lookup.
+func (h *AllegroWebhookHandler) SetProviderWebhookSecretResolver(resolver providerWebhookSecretResolver) {
+	h.secretResolver = resolver
 }
 
 // HandleWebhook processes incoming Allegro webhook requests.
@@ -45,8 +56,20 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 	}
 	defer func() { _ = r.Body.Close() }()
 
+	webhookSecret, scope, err := resolveProviderWebhookSecret(r.Context(), r, "allegro", h.webhookSecret, h.secretResolver)
+	if err != nil {
+		if errors.Is(err, errInvalidProviderWebhookIntegrationID) {
+			slog.Warn("allegro webhook: invalid integration id", "source_ip", r.RemoteAddr) //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		slog.Warn("allegro webhook: scoped secret lookup failed", "error", err, "provider", "allegro")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
+
 	// Reject requests if webhook secret is not configured
-	if h.webhookSecret == "" {
+	if webhookSecret == "" {
 		slog.Warn("allegro webhook: webhook secret not configured, rejecting request")
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
@@ -60,7 +83,7 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := allegrosdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
+	if err := allegrosdk.VerifyWebhook(webhookSecret, signature, body); err != nil {
 		slog.Warn("allegro webhook: invalid signature", "error", err, "source_ip", r.RemoteAddr, "provider", "allegro") //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
 		w.WriteHeader(http.StatusOK)
 		return
@@ -94,6 +117,10 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 			asyncutil.SafeGo(func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 				defer cancel()
+				if scope != nil {
+					h.orderSyncer.ImportOrderForIntegration(ctx, scope.TenantID, scope.IntegrationID, orderID)
+					return
+				}
 				h.orderSyncer.ImportOrder(ctx, orderID)
 			})
 		}
@@ -107,6 +134,10 @@ func (h *AllegroWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Req
 			asyncutil.SafeGo(func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 				defer cancel()
+				if scope != nil {
+					h.orderSyncer.UpdateOrderStatusForIntegration(ctx, scope.TenantID, scope.IntegrationID, orderID)
+					return
+				}
 				h.orderSyncer.UpdateOrderStatus(ctx, orderID)
 			})
 		}

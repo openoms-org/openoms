@@ -224,21 +224,25 @@ func New(deps RouterDeps) *chi.Mux {
 			Get("/v1/billing/checkout/{session_id}", deps.Checkout.GetCheckoutSessionStatus)
 	}
 
-	// Public webhook routes — no JWT, signature-verified, rate-limited (120 req/min per IP)
-	r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
-		Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
-
-	// Public Allegro webhook endpoint — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
+	// Public Allegro webhook endpoints — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
 	if deps.AllegroWebhook != nil {
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
 			Post("/v1/webhooks/allegro", deps.AllegroWebhook.HandleWebhook)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+			Post("/v1/webhooks/allegro/{integrationID}", deps.AllegroWebhook.HandleWebhook)
 	}
 
-	// Public InPost webhook endpoint — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
+	// Public InPost webhook endpoints — no JWT, HMAC-verified, rate-limited (120 req/min per IP)
 	if deps.InPostWebhook != nil {
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
 			Post("/v1/webhooks/inpost", deps.InPostWebhook.HandleWebhook)
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+			Post("/v1/webhooks/inpost/{integrationID}", deps.InPostWebhook.HandleWebhook)
 	}
+
+	// Generic public webhook route — no JWT, signature-verified, rate-limited (120 req/min per IP)
+	r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute)).
+		Post("/v1/webhooks/{provider}/{tenant_id}", deps.Webhook.Receive)
 
 	// Stripe webhook endpoint — no JWT, signature-verified, rate-limited (120 req/min per IP)
 	if deps.StripeWebhook != nil {

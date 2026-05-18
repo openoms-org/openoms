@@ -6,6 +6,7 @@ import AllegroIntegrationPage from "./page";
 
 const refetchIntegrations = vi.fn();
 const apiClientMock = vi.fn();
+const createIntegrationMutate = vi.fn();
 let integrations: unknown[] = [];
 
 vi.mock("next/navigation", () => ({
@@ -42,7 +43,8 @@ vi.mock("@/hooks/use-integrations", () => ({
   }),
   useCreateIntegration: () => ({
     isPending: false,
-    mutate: (_data: unknown, options?: { onSuccess?: () => void }) => {
+    mutate: (data: unknown, options?: { onSuccess?: () => void }) => {
+      createIntegrationMutate(data);
       options?.onSuccess?.();
     },
   }),
@@ -59,6 +61,7 @@ describe("Allegro OAuth popup monitoring", () => {
     vi.useFakeTimers();
     integrations = [];
     refetchIntegrations.mockClear();
+    createIntegrationMutate.mockClear();
     apiClientMock.mockReset();
     apiClientMock.mockResolvedValue({
       auth_url: "https://allegro.example/oauth",
@@ -112,5 +115,55 @@ describe("Allegro OAuth popup monitoring", () => {
     act(() => vi.advanceTimersByTime(500));
 
     expect(refetchIntegrations).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a tenant-scoped webhook secret when provided during setup", async () => {
+    render(<AllegroIntegrationPage />);
+
+    fireEvent.change(screen.getByLabelText("Client ID"), {
+      target: { value: "client-id" },
+    });
+    fireEvent.change(screen.getByLabelText("Client Secret"), {
+      target: { value: "client-secret" },
+    });
+    fireEvent.change(screen.getByLabelText("webhookSecret"), {
+      target: { value: "  webhook-secret  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /zapiszIPrzejdzDoAutoryzacji/i }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(createIntegrationMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        credentials: expect.objectContaining({
+          client_id: "client-id",
+          client_secret: "client-secret",
+          webhook_secret: "webhook-secret",
+        }),
+      })
+    );
+  });
+
+  it("omits a blank webhook secret during setup", async () => {
+    render(<AllegroIntegrationPage />);
+
+    fireEvent.change(screen.getByLabelText("Client ID"), {
+      target: { value: "client-id" },
+    });
+    fireEvent.change(screen.getByLabelText("Client Secret"), {
+      target: { value: "client-secret" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /zapiszIPrzejdzDoAutoryzacji/i }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const payload = createIntegrationMutate.mock.calls[0]?.[0] as {
+      credentials: Record<string, unknown>;
+    };
+    expect(payload.credentials).not.toHaveProperty("webhook_secret");
   });
 });

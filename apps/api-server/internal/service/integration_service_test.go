@@ -74,3 +74,57 @@ func TestIntegrationService_Create_BadEncryptionKey(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "encrypt")
 }
+
+func TestMergeCredentialUpdate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		existing []byte
+		update   []byte
+		want     map[string]any
+	}{
+		{
+			name:     "partial update preserves existing credentials",
+			existing: []byte(`{"client_id":"old-id","client_secret":"old-secret","refresh_token":"old-refresh"}`),
+			update:   []byte(`{"webhook_secret":"new-webhook"}`),
+			want: map[string]any{
+				"client_id":      "old-id",
+				"client_secret":  "old-secret",
+				"refresh_token":  "old-refresh",
+				"webhook_secret": "new-webhook",
+			},
+		},
+		{
+			name:     "blank webhook secret keeps existing secret",
+			existing: []byte(`{"client_id":"old-id","webhook_secret":"old-webhook"}`),
+			update:   []byte(`{"webhook_secret":"   "}`),
+			want: map[string]any{
+				"client_id":      "old-id",
+				"webhook_secret": "old-webhook",
+			},
+		},
+		{
+			name:     "non empty webhook secret rotates only that field",
+			existing: []byte(`{"client_id":"old-id","webhook_secret":"old-webhook"}`),
+			update:   []byte(`{"webhook_secret":"new-webhook"}`),
+			want: map[string]any{
+				"client_id":      "old-id",
+				"webhook_secret": "new-webhook",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			merged, err := mergeCredentialUpdate(tt.existing, tt.update)
+
+			require.NoError(t, err)
+			var got map[string]any
+			require.NoError(t, json.Unmarshal(merged, &got))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
