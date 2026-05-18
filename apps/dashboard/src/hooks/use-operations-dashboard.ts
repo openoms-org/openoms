@@ -39,8 +39,10 @@ export function useOperationsDashboard() {
   const isAdmin = user?.role === "admin" || user?.role === "owner";
 
   const statsQuery = useDashboardStats();
-  const onHoldOrdersQuery = useOrders(ON_HOLD_ORDER_PARAMS);
-  const failedShipmentsQuery = useShipments(FAILED_SHIPMENT_PARAMS);
+  const onHoldOrdersQuery = useOrders(ON_HOLD_ORDER_PARAMS, { enabled: isAdmin });
+  const failedShipmentsQuery = useShipments(FAILED_SHIPMENT_PARAMS, {
+    enabled: isAdmin,
+  });
   const integrationsQuery = useQuery<Integration[]>({
     queryKey: integrationQueryKeys.all,
     queryFn: () => apiClient<Integration[]>("/v1/integrations"),
@@ -73,23 +75,23 @@ export function useOperationsDashboard() {
     ...model,
     isLoading:
       statsQuery.isLoading ||
-      onHoldOrdersQuery.isLoading ||
-      failedShipmentsQuery.isLoading ||
+      (isAdmin && onHoldOrdersQuery.isLoading) ||
+      (isAdmin && failedShipmentsQuery.isLoading) ||
       (isAdmin && integrationsQuery.isLoading),
     isError:
       statsQuery.isError ||
-      onHoldOrdersQuery.isError ||
-      failedShipmentsQuery.isError ||
+      (isAdmin && onHoldOrdersQuery.isError) ||
+      (isAdmin && failedShipmentsQuery.isError) ||
       (isAdmin && integrationsQuery.isError),
     refetch: async () => {
-      const refetches: Promise<unknown>[] = [
-        statsQuery.refetch(),
-        onHoldOrdersQuery.refetch(),
-        failedShipmentsQuery.refetch(),
-      ];
+      const refetches: Promise<unknown>[] = [statsQuery.refetch()];
 
       if (isAdmin) {
-        refetches.push(integrationsQuery.refetch());
+        refetches.push(
+          onHoldOrdersQuery.refetch(),
+          failedShipmentsQuery.refetch(),
+          integrationsQuery.refetch()
+        );
       }
 
       await Promise.all(refetches);

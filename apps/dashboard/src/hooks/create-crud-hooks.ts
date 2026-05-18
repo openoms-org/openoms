@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { buildSearchParams } from "@/lib/search-params";
 import type { ListResponse } from "@/types/api";
@@ -11,6 +16,11 @@ interface CrudHooksOptions {
   /** HTTP method for updates, defaults to "PATCH" */
   updateMethod?: "PATCH" | "PUT";
 }
+
+type ListQueryOptions<TEntity> = Pick<
+  UseQueryOptions<ListResponse<TEntity>>,
+  "enabled"
+>;
 
 /**
  * Creates a standard set of CRUD hooks for a resource.
@@ -31,7 +41,10 @@ export function createCrudHooks<
 >(options: CrudHooksOptions) {
   const { resourceKey, basePath, updateMethod = "PATCH" } = options;
 
-  function useList(params: TParams = {} as TParams) {
+  function useList(
+    params: TParams = {} as TParams,
+    queryOptions: ListQueryOptions<TEntity> = {}
+  ) {
     const sp = buildSearchParams(params);
     const qs = sp.toString();
 
@@ -41,6 +54,7 @@ export function createCrudHooks<
         apiClient<ListResponse<TEntity>>(
           `${basePath}${qs ? `?${qs}` : ""}`
         ),
+      ...queryOptions,
     });
   }
 
