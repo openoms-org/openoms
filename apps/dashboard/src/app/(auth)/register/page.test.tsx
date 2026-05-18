@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, waitFor } from "@/test/test-utils";
+import { act, renderWithProviders as render, waitFor } from "@/test/test-utils";
 import RegisterPage from "./page";
 
 const replaceMock = vi.fn();
