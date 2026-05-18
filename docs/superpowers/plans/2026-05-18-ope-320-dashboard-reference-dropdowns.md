@@ -63,7 +63,7 @@ expect(result.items).toEqual([{ id: "1" }, { id: "2" }]);
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npx vitest run src/hooks/use-all-list-items.test.ts --reporter=dot
 ```
 
@@ -131,7 +131,7 @@ Observed before replacements: FAIL with 10 current call-sites.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npx vitest run 'src/app/(dashboard)/__tests__/reference-dropdown-limits.test.ts' --reporter=dot
 ```
 
@@ -168,7 +168,7 @@ Use `useAllPriceLists({ active: true })` for customer price-list assignment.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npx vitest run src/hooks/use-all-list-items.test.ts 'src/app/(dashboard)/__tests__/reference-dropdown-limits.test.ts' --reporter=dot
 ```
 
@@ -179,7 +179,7 @@ Observed: PASS.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npx eslint --quiet src/hooks/use-all-list-items.ts src/hooks/use-all-list-items.test.ts 'src/app/(dashboard)/__tests__/reference-dropdown-limits.test.ts'
 ```
 
@@ -190,7 +190,7 @@ Observed: PASS.
 Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd <repository-root>
 git diff --check
 ./scripts/local-ci.sh
 ```
@@ -205,7 +205,7 @@ Observed: `git diff --check` produced no output and `./scripts/local-ci.sh` pass
 - [ ] **Step 1: Commit**
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
+cd <repository-root>
 git add apps/dashboard/src/hooks/use-all-list-items.ts apps/dashboard/src/hooks/use-all-list-items.test.ts 'apps/dashboard/src/app/(dashboard)/__tests__/reference-dropdown-limits.test.ts' apps/dashboard/src/hooks/use-products.ts apps/dashboard/src/hooks/use-suppliers.ts apps/dashboard/src/hooks/use-warehouses.ts apps/dashboard/src/hooks/use-price-lists.ts docs/superpowers/plans/2026-05-18-ope-320-dashboard-reference-dropdowns.md
 git add 'apps/dashboard/src/app/(dashboard)' apps/dashboard/src/components
 git commit -m "OPE-320: load complete reference dropdown options"

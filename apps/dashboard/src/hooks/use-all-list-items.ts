@@ -66,7 +66,7 @@ export function useAllListItems<
 ) {
   return useQuery({
     queryKey,
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       fetchAllListItems<TEntity, TParams>(params, (pageParams) => {
         const searchParams = buildSearchParams(
           pageParams as Record<string, string | number | boolean | null | undefined>,
@@ -74,6 +74,7 @@ export function useAllListItems<
         const query = searchParams.toString();
         return apiClient<ListResponse<TEntity>>(
           `${basePath}${query ? `?${query}` : ""}`,
+          { signal },
         );
       }),
     ...queryOptions,

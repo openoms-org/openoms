@@ -1,7 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
+import { describe, expect, it, vi } from "vitest";
 
-import { fetchAllListItems } from "@/hooks/use-all-list-items";
+import { fetchAllListItems, useAllListItems } from "@/hooks/use-all-list-items";
 import type { ListResponse } from "@/types/api";
+
+const apiClientMock = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/api-client", () => ({
+  apiClient: apiClientMock,
+}));
 
 interface Item {
   id: string;
@@ -34,6 +43,45 @@ describe("fetchAllListItems", () => {
     });
   });
 });
+
+describe("useAllListItems", () => {
+  it("passes the React Query abort signal to every page request", async () => {
+    apiClientMock.mockResolvedValue(listResponse([{ id: "1" }], 1, 0));
+
+    renderHook(
+      () =>
+        useAllListItems<Item, { active: boolean }>(
+          ["items", "all"],
+          "/v1/items",
+          { active: true },
+        ),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(apiClientMock).toHaveBeenCalledTimes(1));
+
+    expect(apiClientMock).toHaveBeenCalledWith(
+      "/v1/items?active=true&limit=100&offset=0",
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+});
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
 
 function listResponse(
   items: Item[],
