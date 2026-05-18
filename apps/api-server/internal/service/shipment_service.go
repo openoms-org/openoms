@@ -687,7 +687,9 @@ func (s *ShipmentService) UpdateStatusByTrackingNumber(ctx context.Context, trac
 		FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.status_changed", shipmentID, eventData)
 	}
 	if s.webhookDispatch != nil {
-		s.webhookDispatch.Dispatch(ctx, tenantID, "shipment.status_changed", eventData)
+		asyncutil.SafeGo(func() {
+			s.webhookDispatch.Dispatch(context.Background(), tenantID, "shipment.status_changed", eventData)
+		})
 	}
 
 	return nil
