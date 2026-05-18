@@ -133,7 +133,7 @@ assert_sentry_release_env() {
   if ! awk '
     /- name: SENTRY_RELEASE/ { in_block = 1 }
     in_block && /key: SENTRY_RELEASE/ { found = 1 }
-    in_block && /^            - name:/ && !/- name: SENTRY_RELEASE/ { in_block = 0 }
+    in_block && /^[[:space:]]*- name:/ && !/- name: SENTRY_RELEASE/ { in_block = 0 }
     END { exit(found ? 0 : 1) }
   ' "$repo_root/$template_path"; then
     fail "$label must read SENTRY_RELEASE from the OpenOMS ConfigMap"
