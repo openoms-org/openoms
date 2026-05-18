@@ -279,7 +279,7 @@ helm upgrade --install openoms deploy/helm/openoms \
   --set migration.image.tag=latest
 ```
 
-The CI/CD pipeline (`.github/workflows/release.yml`) builds Docker images, scans them with Trivy, and deploys to k3s via Helm on push to `main`.
+The CI/CD pipeline (`.github/workflows/release.yml`) builds Docker images, scans them with Trivy, and deploys to k3s via Helm on push to `main`. A release fallback workflow also checks merged PRs that touch release-relevant paths and dispatches `release.yml` only if GitHub does not create a release run for the merge commit.
 
 ### Infrastructure Requirements
 
@@ -361,7 +361,7 @@ Please open an [issue](https://github.com/openoms-org/openoms/issues) first for 
 
 This project uses a two-repository deployment model:
 
-- **Public repo** (`openoms-org/openoms`): Builds Docker images on every push to `main`, pushes to GHCR, runs Trivy security scans
+- **Public repo** (`openoms-org/openoms`): Builds Docker images on every push to `main`, pushes to GHCR, runs Trivy security scans, and has a post-merge fallback that dispatches the release workflow if the normal `push` trigger is missing
 - **Enterprise repo** (private): Deploys to production via Helm with environment-specific values overlay
 
 Docker images are public on GHCR:
