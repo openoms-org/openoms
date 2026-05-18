@@ -398,7 +398,7 @@ OpenOMS/
 
 | Funkcja | Cel |
 |---------|-----|
-| `find_tenant_by_slug(slug)` | Login: znalezienie tenanta po slug |
+| `find_tenant_by_slug(slug)` | Login: znalezienie tenanta po slug; zwraca zredagowane `{}` w polu `settings` dla kompatybilnosci sygnatury |
 | `find_user_for_auth(email, tenant_id)` | Login: pobranie usera z haslem + TOTP |
 | `find_order_tenant_id(order_id)` | Publiczny formularz zwrotu |
 | `find_return_by_token(token)` | Status zwrotu po tokenie |
@@ -407,6 +407,8 @@ OpenOMS/
 | `get_checkout_session(...)` | Billing: pobranie statusu sesji |
 | `claim_checkout_session(...)` | Billing: przypisanie sesji do tenanta |
 | `validate_license_token(...)` | Walidacja tokena licencji |
+
+Pelne `tenants.settings` sa odczytywane tylko przez tenant-scoped sciezki repozytorium, nie przez publiczny/loginowy lookup sluga.
 
 ---
 
