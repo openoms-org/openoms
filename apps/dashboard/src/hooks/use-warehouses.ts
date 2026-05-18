@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { buildSearchParams } from "@/lib/search-params";
 import { createCrudHooks } from "./create-crud-hooks";
+import { useAllListItems } from "./use-all-list-items";
 import type {
   Warehouse,
   WarehouseStock,
@@ -28,6 +29,14 @@ export const useWarehouse = warehouseHooks.useGet;
 export const useCreateWarehouse = warehouseHooks.useCreate;
 export const useUpdateWarehouse = warehouseHooks.useUpdate;
 export const useDeleteWarehouse = warehouseHooks.useDelete;
+
+export function useAllWarehouses(params: WarehouseListParams = {}) {
+  return useAllListItems<Warehouse, WarehouseListParams>(
+    ["warehouses", "all", params],
+    "/v1/warehouses",
+    params,
+  );
+}
 
 export function useWarehouseStock(
   warehouseId: string,

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useCreateWarehouseDocument } from "@/hooks/use-warehouse-documents";
-import { useWarehouses } from "@/hooks/use-warehouses";
-import { useSuppliers } from "@/hooks/use-suppliers";
+import { useAllWarehouses } from "@/hooks/use-warehouses";
+import { useAllSuppliers } from "@/hooks/use-suppliers";
 import { useProducts } from "@/hooks/use-products";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -127,8 +127,8 @@ export default function NewWarehouseDocumentPage() {
   const t = useTranslations("warehouseDocuments");
   const router = useRouter();
   const createDocument = useCreateWarehouseDocument();
-  const { data: warehousesData } = useWarehouses({ limit: 100 });
-  const { data: suppliersData } = useSuppliers({ limit: 100 });
+  const { data: warehousesData } = useAllWarehouses();
+  const { data: suppliersData } = useAllSuppliers();
 
   const [docType, setDocType] = useState<string>("");
   const [warehouseId, setWarehouseId] = useState<string>("");

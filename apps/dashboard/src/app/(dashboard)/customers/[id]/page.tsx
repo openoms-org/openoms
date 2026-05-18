@@ -8,7 +8,7 @@ import { ArrowLeft, Pencil, ShoppingBag, Users, Award } from "lucide-react";
 import { useCustomer, useUpdateCustomer, useDeleteCustomer, useCustomerOrders } from "@/hooks/use-customers";
 import { useCustomerSegments } from "@/hooks/use-segments";
 import { useCustomerLoyaltyStatus } from "@/hooks/use-loyalty";
-import { usePriceLists } from "@/hooks/use-price-lists";
+import { useAllPriceLists } from "@/hooks/use-price-lists";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -60,7 +60,7 @@ export default function CustomerDetailPage() {
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
-  const { data: priceListsData } = usePriceLists({ limit: 100, active: true });
+  const { data: priceListsData } = useAllPriceLists({ active: true });
   const priceLists = priceListsData?.items ?? [];
   const { data: customerSegments } = useCustomerSegments(params.id);
   const { data: loyaltyStatus } = useCustomerLoyaltyStatus(params.id);

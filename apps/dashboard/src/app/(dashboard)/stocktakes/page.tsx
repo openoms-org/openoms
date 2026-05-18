@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ClipboardCheck, Plus } from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { useStocktakes } from "@/hooks/use-stocktakes";
-import { useWarehouses } from "@/hooks/use-warehouses";
+import { useAllWarehouses } from "@/hooks/use-warehouses";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { formatDate } from "@/lib/utils";
@@ -59,7 +59,7 @@ export default function StocktakesPage() {
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
-  const { data: warehousesData } = useWarehouses({ limit: 100 });
+  const { data: warehousesData } = useAllWarehouses();
   const warehouses = warehousesData?.items ?? [];
 
   const { data, isLoading, isError, refetch } = useStocktakes({

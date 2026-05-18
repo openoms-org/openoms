@@ -11,7 +11,7 @@ import {
   useCreatePriceListItem,
   useDeletePriceListItem,
 } from "@/hooks/use-price-lists";
-import { useProducts } from "@/hooks/use-products";
+import { useAllProducts } from "@/hooks/use-products";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { getErrorMessage } from "@/lib/api-client";
@@ -69,7 +69,7 @@ export default function PriceListDetailPage() {
   });
   const createItem = useCreatePriceListItem(id);
   const deleteItem = useDeletePriceListItem(id);
-  const { data: productsData } = useProducts({ limit: 100 });
+  const { data: productsData } = useAllProducts();
 
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");

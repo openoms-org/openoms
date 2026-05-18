@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useSuppliers } from "@/hooks/use-suppliers";
+import { useAllSuppliers } from "@/hooks/use-suppliers";
 import type { ProductFormValues } from "./product-form.schema";
 
 interface ProductDropshipFieldsProps {
@@ -28,7 +28,7 @@ export function ProductDropshipFields({
   onSupplierChange,
 }: ProductDropshipFieldsProps) {
   const t = useTranslations("products");
-  const { data: suppliersData } = useSuppliers({ limit: 100 });
+  const { data: suppliersData } = useAllSuppliers();
   const switchId = "dropship-product";
 
   return (

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
-import { useWarehouses } from "@/hooks/use-warehouses";
+import { useAllWarehouses } from "@/hooks/use-warehouses";
 import { useCreateStocktake } from "@/hooks/use-stocktakes";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -30,9 +30,7 @@ import { useTranslations } from "next-intl";
 export default function NewStocktakePage() {
   const t = useTranslations("stocktakes");
   const router = useRouter();
-  const { data: warehousesData, isLoading: warehousesLoading } = useWarehouses({
-    limit: 100,
-  });
+  const { data: warehousesData, isLoading: warehousesLoading } = useAllWarehouses();
   const createStocktake = useCreateStocktake();
 
   const [warehouseId, setWarehouseId] = useState("");
