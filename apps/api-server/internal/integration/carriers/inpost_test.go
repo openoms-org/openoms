@@ -3,10 +3,10 @@ package carriers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,11 +17,6 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 )
-
-// floatClose checks if two float64 values are within epsilon of each other.
-func floatClose(a, b, epsilon float64) bool {
-	return math.Abs(a-b) < epsilon
-}
 
 // newTestProvider creates an InPostProvider backed by the given httptest server
 // URL. Both the ShipX and Points APIs are routed to the same mock server.
@@ -566,197 +561,27 @@ func TestInPostSearchPickupPoints(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Test 7: GetRates — various package sizes
+// Test 7: GetRates — no estimated carrier quotes
 // ---------------------------------------------------------------------------
 
-func TestInPostGetRates(t *testing.T) {
-	provider := newTestProvider(t, "http://unused") // GetRates doesn't make API calls
+func TestInPostGetRates_NotImplemented(t *testing.T) {
+	provider := newTestProvider(t, "http://unused")
 
-	t.Run("small parcel fits all locker sizes", func(t *testing.T) {
-		rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-			FromCountry: "PL",
-			ToCountry:   "PL",
-			Weight:      2,
-			Width:       20,
-			Height:      5,
-			Length:      30,
-		})
-		if err != nil {
-			t.Fatalf("GetRates() error: %v", err)
-		}
-
-		// Small parcel: fits A, B, C + courier = 4 rates
-		if len(rates) != 4 {
-			t.Fatalf("expected 4 rates for small parcel, got %d", len(rates))
-		}
-
-		// Verify Parcel Locker A rate.
-		if rates[0].ServiceName != "Parcel Locker A (small)" {
-			t.Errorf("rates[0].ServiceName = %q, want %q", rates[0].ServiceName, "Parcel Locker A (small)")
-		}
-		if rates[0].Price != 12.99 {
-			t.Errorf("rates[0].Price = %f, want 12.99", rates[0].Price)
-		}
-		if rates[0].Currency != "PLN" {
-			t.Errorf("rates[0].Currency = %q, want PLN", rates[0].Currency)
-		}
-		if !rates[0].PickupPoint {
-			t.Error("rates[0].PickupPoint should be true")
-		}
-
-		// Verify Parcel Locker B rate.
-		if rates[1].ServiceName != "Parcel Locker B (medium)" {
-			t.Errorf("rates[1].ServiceName = %q, want %q", rates[1].ServiceName, "Parcel Locker B (medium)")
-		}
-		if rates[1].Price != 13.99 {
-			t.Errorf("rates[1].Price = %f, want 13.99", rates[1].Price)
-		}
-
-		// Verify Parcel Locker C rate.
-		if rates[2].ServiceName != "Parcel Locker C (large)" {
-			t.Errorf("rates[2].ServiceName = %q, want %q", rates[2].ServiceName, "Parcel Locker C (large)")
-		}
-		if rates[2].Price != 15.49 {
-			t.Errorf("rates[2].Price = %f, want 15.49", rates[2].Price)
-		}
-
-		// Verify Courier rate.
-		if rates[3].ServiceName != "Kurier Standard" {
-			t.Errorf("rates[3].ServiceName = %q, want %q", rates[3].ServiceName, "Kurier Standard")
-		}
-		if rates[3].Price != 16.99 {
-			t.Errorf("rates[3].Price = %f, want 16.99", rates[3].Price)
-		}
-		if rates[3].PickupPoint {
-			t.Error("courier rate PickupPoint should be false")
-		}
-		if rates[3].EstimatedDays != 1 {
-			t.Errorf("courier EstimatedDays = %d, want 1", rates[3].EstimatedDays)
-		}
+	rates, err := provider.GetRates(context.Background(), integration.RateRequest{
+		FromCountry: "PL",
+		ToCountry:   "PL",
+		Weight:      2,
+		Width:       20,
+		Height:      5,
+		Length:      30,
+		COD:         100,
 	})
-
-	t.Run("medium parcel fits B and C only", func(t *testing.T) {
-		rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-			FromCountry: "PL",
-			ToCountry:   "PL",
-			Weight:      11,
-			Width:       38,
-			Height:      15,
-			Length:      64,
-		})
-		if err != nil {
-			t.Fatalf("GetRates() error: %v", err)
-		}
-
-		// A: max 8 kg, fits 38x64x8 cm -- weight=11 > 8, so A doesn't fit.
-		// B: max 25 kg, fits 38x64x19 cm -- weight=11<=25, width=38<=38, height=15<=19, length=64<=64 -> fits
-		// C: max 25 kg, fits 41x38x64 cm -- fits
-		// Courier: weight<=25 -> fits, weight>10 -> price 19.99
-		if len(rates) != 3 {
-			t.Fatalf("expected 3 rates for medium parcel, got %d", len(rates))
-		}
-
-		if rates[0].ServiceName != "Parcel Locker B (medium)" {
-			t.Errorf("rates[0].ServiceName = %q, want Parcel Locker B", rates[0].ServiceName)
-		}
-		if rates[1].ServiceName != "Parcel Locker C (large)" {
-			t.Errorf("rates[1].ServiceName = %q, want Parcel Locker C", rates[1].ServiceName)
-		}
-		if rates[2].ServiceName != "Kurier Standard" {
-			t.Errorf("rates[2].ServiceName = %q, want Kurier Standard", rates[2].ServiceName)
-		}
-		// Weight > 10 kg -> courier price 19.99.
-		if rates[2].Price != 19.99 {
-			t.Errorf("courier price = %f, want 19.99 (>10kg)", rates[2].Price)
-		}
-	})
-
-	t.Run("oversized parcel gets only courier", func(t *testing.T) {
-		rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-			FromCountry: "PL",
-			ToCountry:   "PL",
-			Weight:      20,
-			Width:       50, // exceeds all locker width limits
-			Height:      40,
-			Length:      70,
-		})
-		if err != nil {
-			t.Fatalf("GetRates() error: %v", err)
-		}
-
-		// No locker sizes fit, only courier (weight<=25).
-		if len(rates) != 1 {
-			t.Fatalf("expected 1 rate for oversized parcel, got %d", len(rates))
-		}
-		if rates[0].ServiceName != "Kurier Standard" {
-			t.Errorf("expected Kurier Standard, got %q", rates[0].ServiceName)
-		}
-	})
-
-	t.Run("very heavy parcel gets no rates", func(t *testing.T) {
-		rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-			FromCountry: "PL",
-			ToCountry:   "PL",
-			Weight:      30, // exceeds 25 kg limit for all services
-			Width:       50,
-			Height:      50,
-			Length:      70,
-		})
-		if err != nil {
-			t.Fatalf("GetRates() error: %v", err)
-		}
-
-		if len(rates) != 0 {
-			t.Errorf("expected 0 rates for very heavy parcel, got %d", len(rates))
-		}
-	})
-
-	t.Run("COD adds surcharge", func(t *testing.T) {
-		rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-			FromCountry: "PL",
-			ToCountry:   "PL",
-			Weight:      2,
-			Width:       20,
-			Height:      5,
-			Length:      30,
-			COD:         100,
-		})
-		if err != nil {
-			t.Fatalf("GetRates() error: %v", err)
-		}
-
-		if len(rates) != 4 {
-			t.Fatalf("expected 4 rates with COD, got %d", len(rates))
-		}
-
-		// Parcel Locker A with COD: 12.99 + 3.50 = 16.49.
-		if !floatClose(rates[0].Price, 16.49, 0.001) {
-			t.Errorf("Parcel Locker A with COD: price = %f, want ~16.49", rates[0].Price)
-		}
-
-		// Courier with COD: 16.99 + 4.00 = 20.99.
-		if !floatClose(rates[3].Price, 20.99, 0.001) {
-			t.Errorf("Courier with COD: price = %f, want ~20.99", rates[3].Price)
-		}
-	})
-
-	t.Run("international shipment gets no rates", func(t *testing.T) {
-		rates, err := provider.GetRates(context.Background(), integration.RateRequest{
-			FromCountry: "PL",
-			ToCountry:   "DE",
-			Weight:      2,
-			Width:       20,
-			Height:      5,
-			Length:      30,
-		})
-		if err != nil {
-			t.Fatalf("GetRates() error: %v", err)
-		}
-
-		if len(rates) != 0 {
-			t.Errorf("expected 0 rates for international shipment, got %d", len(rates))
-		}
-	})
+	if !errors.Is(err, integration.ErrCarrierRatesNotImplemented) {
+		t.Fatalf("GetRates() error = %v, want ErrCarrierRatesNotImplemented", err)
+	}
+	if rates != nil {
+		t.Fatalf("GetRates() rates = %#v, want nil", rates)
+	}
 }
 
 // ---------------------------------------------------------------------------
