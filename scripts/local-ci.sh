@@ -174,12 +174,17 @@ run_check "dashboard-sentry-guards" bash -c '
     cd "'"$REPO_ROOT"'" && ./scripts/test-dashboard-sentry-guards.sh
 '
 
-# ── 7. GitHub Actions pinning guard ──
+# ── 7. release fallback guard tests ──
+run_check "release-fallback" bash -c '
+    cd "'"$REPO_ROOT"'" && ./scripts/test-ensure-release-run-for-sha.sh
+'
+
+# ── 8. GitHub Actions pinning guard ──
 run_check "actions-pinning" bash -c '
     cd "'"$REPO_ROOT"'" && ./scripts/validate-github-actions-pinning.sh
 '
 
-# ── 8. next build (skip in quick mode) ──
+# ── 9. next build (skip in quick mode) ──
 if ! $QUICK; then
     run_check "next-build" bash -c '
         cd "'"$REPO_ROOT"'/apps/dashboard"
@@ -195,7 +200,7 @@ if ! $QUICK; then
     '
 fi
 
-# ── 9. go test — packages without DB (skip in quick mode) ──
+# ── 10. go test — packages without DB (skip in quick mode) ──
 if ! $QUICK; then
     run_check "go-test" bash -c '
         errors=""

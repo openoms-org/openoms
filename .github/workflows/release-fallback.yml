@@ -1,0 +1,48 @@
+name: Release Fallback
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "deploy/**"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/release-fallback.yml"
+      - "scripts/check-dashboard-bundle-placeholders.sh"
+      - "scripts/check-dashboard-image.sh"
+      - "scripts/check-dashboard-release-config.sh"
+      - "scripts/check-sbom-artifacts.sh"
+      - "scripts/ensure-release-run-for-sha.sh"
+      - "scripts/install-syft.sh"
+      - "go.work"
+      - "go.work.sum"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: release-fallback-${{ github.event.pull_request.merge_commit_sha || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  ensure-release:
+    name: Ensure release after merge
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Wait for normal push release
+        run: sleep 90
+
+      - name: Ensure Release workflow exists for merge SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          RELEASE_WORKFLOW: release.yml
+          RELEASE_REF: main
+        run: ./scripts/ensure-release-run-for-sha.sh
