@@ -1416,7 +1416,7 @@ Uprawnienia np.:
 | Secrets encryption at rest | AES-CBC w k3s (EncryptionConfiguration) |
 | K8s audit logging | Audit policy z logowaniem zmian w secrets, RBAC, write ops |
 | Pod Security Standards | PSS enforce: restricted (OpenOMS app namespace). Alloy monitoring dziala jako restricted Deployment i tailuje logi przez Kubernetes API zamiast hostPath/root DaemonSet. System/storage namespaces moga miec osobne baseline/privileged profile. |
-| NetworkPolicies | Default-deny ingress na wszystkich 15 namespacach |
+| NetworkPolicies | Default-deny ingress na wszystkich 15 namespacach. Publiczny chart OpenOMS ma konfigurowalne klasy egress (`dns`, `https`, `database`, `redis`) z szerokimi domyslnymi destinationami dla self-hosted compatibility. Enterprise staging/production overlays zawężają DNS do CoreDNS w `kube-system`, PostgreSQL i Redis do podow w `apps-core`, a HTTPS pozostaje destination-unscoped na TCP/443 dla zewnetrznych API providerow, S3, Sentry i SaaS endpointow o dynamicznych zakresach. |
 | State DB permissions | chmod 600 (wylacznie root) |
 | TLS | Mutual TLS do API servera k3s, TLS 1.2+ z strong cipher suites |
 | Image scanning | Trivy CRITICAL+HIGH w CI/CD pipeline |

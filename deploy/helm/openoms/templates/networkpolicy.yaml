@@ -36,7 +36,16 @@ spec:
     - from:
         - podSelector: {}
 ---
-# Restrict egress: allow DNS, HTTPS, and database access
+{{- $egress := .Values.networkPolicy.egress | default dict }}
+{{- $dns := $egress.dns | default dict }}
+{{- $https := $egress.https | default dict }}
+{{- $database := $egress.database | default dict }}
+{{- $redis := $egress.redis | default dict }}
+{{- $dnsPorts := list (dict "protocol" "UDP" "port" 53) (dict "protocol" "TCP" "port" 53) }}
+{{- $httpsPorts := list (dict "protocol" "TCP" "port" 443) }}
+{{- $databasePorts := list (dict "protocol" "TCP" "port" 5432) (dict "protocol" "TCP" "port" 6543) }}
+{{- $redisPorts := list (dict "protocol" "TCP" "port" 6379) }}
+# Restrict egress: allow DNS, HTTPS, database, Redis, and intra-namespace access
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -51,24 +60,32 @@ spec:
   egress:
     # DNS
     - ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
+        {{- toYaml ($dns.ports | default $dnsPorts) | nindent 8 }}
+      {{- with $dns.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     # HTTPS (external APIs: Allegro, InPost, S3, etc.)
     - ports:
-        - protocol: TCP
-          port: 443
+        {{- toYaml ($https.ports | default $httpsPorts) | nindent 8 }}
+      {{- with $https.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     # PostgreSQL — in-cluster or external (e.g. Supabase managed)
     - ports:
-        - protocol: TCP
-          port: 5432
-        - protocol: TCP
-          port: 6543
+        {{- toYaml ($database.ports | default $databasePorts) | nindent 8 }}
+      {{- with $database.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     # Redis
     - ports:
-        - protocol: TCP
-          port: 6379
+        {{- toYaml ($redis.ports | default $redisPorts) | nindent 8 }}
+      {{- with $redis.to }}
+      to:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     # Intra-namespace (pod-to-pod)
     - to:
         - podSelector: {}
