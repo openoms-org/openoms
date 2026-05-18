@@ -187,7 +187,12 @@ func (p *Provider) UpdateStock(ctx context.Context, externalOfferID string, quan
 		return fmt.Errorf("shopify: no inventory levels found for item %d", variant.InventoryItemID)
 	}
 
-	return p.client.Inventory.SetLevel(ctx, variant.InventoryItemID, levels[0].LocationID, quantity)
+	locationID, err := selectInventoryLevelLocationID(levels)
+	if err != nil {
+		return fmt.Errorf("shopify: select inventory location for item %d: %w", variant.InventoryItemID, err)
+	}
+
+	return p.client.Inventory.SetLevel(ctx, variant.InventoryItemID, locationID, quantity)
 }
 
 // UpdatePrice updates the price for a Shopify product variant.
@@ -211,6 +216,24 @@ func parseShopifyVariantID(operation, externalOfferID string) (int64, error) {
 		return 0, fmt.Errorf("shopify: legacy synthetic external ID %q cannot be used for %s; recreate the Shopify listing to store a real variant ID", externalOfferID, operation)
 	}
 	return 0, fmt.Errorf("shopify: invalid variant ID %q: %w", externalOfferID, err)
+}
+
+func selectInventoryLevelLocationID(levels []shopifysdk.InventoryLevel) (int64, error) {
+	var locationID int64
+	// Shopify does not guarantee response order; use a stable fallback until
+	// OpenOMS stores an explicit preferred Shopify location per tenant.
+	for _, level := range levels {
+		if level.LocationID <= 0 {
+			continue
+		}
+		if locationID == 0 || level.LocationID < locationID {
+			locationID = level.LocationID
+		}
+	}
+	if locationID == 0 {
+		return 0, fmt.Errorf("inventory levels have no location ID")
+	}
+	return locationID, nil
 }
 
 // mapShopifyOrder converts a Shopify order to the normalized MarketplaceOrder.
