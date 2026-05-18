@@ -20,27 +20,30 @@ type OrderListParams struct {
 	Page    int
 	PerPage int
 	Order   string // "asc" or "desc"
-	OrderBy string // "date", "id", "include", "title", "slug"
+	OrderBy string // "date", "modified", "id", "include", "title", "slug"
 
 	// ModifiedAfter filters orders modified after this ISO8601 date.
 	ModifiedAfter string
+	// DatesAreGMT interprets after/before/modified date filters as GMT.
+	DatesAreGMT bool
 }
 
 // WooOrder represents a WooCommerce order.
 type WooOrder struct {
-	ID            int           `json:"id"`
-	Status        string        `json:"status"`
-	Currency      string        `json:"currency"`
-	Total         string        `json:"total"`
-	TotalTax      string        `json:"total_tax"`
-	Billing       WooAddress    `json:"billing"`
-	Shipping      WooAddress    `json:"shipping"`
-	PaymentMethod string        `json:"payment_method"`
-	PaymentTitle  string        `json:"payment_method_title"`
-	LineItems     []WooLineItem `json:"line_items"`
-	DateCreated   string        `json:"date_created"`
-	DateModified  string        `json:"date_modified"`
-	CustomerNote  string        `json:"customer_note"`
+	ID              int           `json:"id"`
+	Status          string        `json:"status"`
+	Currency        string        `json:"currency"`
+	Total           string        `json:"total"`
+	TotalTax        string        `json:"total_tax"`
+	Billing         WooAddress    `json:"billing"`
+	Shipping        WooAddress    `json:"shipping"`
+	PaymentMethod   string        `json:"payment_method"`
+	PaymentTitle    string        `json:"payment_method_title"`
+	LineItems       []WooLineItem `json:"line_items"`
+	DateCreated     string        `json:"date_created"`
+	DateModified    string        `json:"date_modified"`
+	DateModifiedGMT string        `json:"date_modified_gmt"`
+	CustomerNote    string        `json:"customer_note"`
 }
 
 // WooAddress represents a billing or shipping address.
@@ -96,6 +99,9 @@ func (s *OrderService) List(ctx context.Context, params OrderListParams) ([]WooO
 	}
 	if params.ModifiedAfter != "" {
 		v.Set("modified_after", params.ModifiedAfter)
+	}
+	if params.DatesAreGMT {
+		v.Set("dates_are_gmt", "true")
 	}
 	if encoded := v.Encode(); encoded != "" {
 		path += "?" + encoded

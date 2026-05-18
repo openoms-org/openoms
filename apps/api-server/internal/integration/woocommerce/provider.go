@@ -67,15 +67,16 @@ func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, err
 func (p *Provider) ProviderName() string { return "woocommerce" }
 
 // PollOrders polls WooCommerce for orders modified after the given cursor.
-// The cursor is the date_modified value (ISO8601 local time) of the last polled order.
+// New cursors are stored as UTC RFC3339 values based on date_modified_gmt.
 func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration.MarketplaceOrder, string, error) {
 	params := woocommercesdk.OrderListParams{
 		PerPage: 50,
-		OrderBy: "date",
+		OrderBy: "modified",
 		Order:   "asc",
 	}
 	if cursor != "" {
 		params.ModifiedAfter = cursor
+		params.DatesAreGMT = wooCursorHasExplicitZone(cursor)
 	}
 
 	wcOrders, err := p.client.Orders.List(ctx, params)
@@ -89,6 +90,12 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 
 	var orders []integration.MarketplaceOrder
 	newCursor := cursor
+	var maxModified *time.Time
+	if wooCursorHasExplicitZone(cursor) {
+		if t, ok := parseWooModifiedTime(cursor); ok {
+			maxModified = &t
+		}
+	}
 
 	for _, wco := range wcOrders {
 		mo, err := p.mapWooOrder(&wco)
@@ -97,13 +104,49 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 		}
 		orders = append(orders, mo)
 
-		// Track the latest date_modified as the new cursor
-		if wco.DateModified > newCursor {
-			newCursor = wco.DateModified
+		if modifiedAt, ok := wooOrderModifiedCursor(wco); ok {
+			if maxModified == nil || modifiedAt.After(*maxModified) {
+				t := modifiedAt
+				maxModified = &t
+				newCursor = modifiedAt.UTC().Format(time.RFC3339)
+			}
 		}
 	}
 
 	return orders, newCursor, nil
+}
+
+func wooCursorHasExplicitZone(cursor string) bool {
+	if cursor == "" {
+		return false
+	}
+	_, err := time.Parse(time.RFC3339, cursor)
+	return err == nil
+}
+
+func wooOrderModifiedCursor(o woocommercesdk.WooOrder) (time.Time, bool) {
+	if o.DateModifiedGMT != "" {
+		if t, ok := parseWooModifiedTime(o.DateModifiedGMT); ok {
+			return t, true
+		}
+	}
+	if o.DateModified != "" {
+		return parseWooModifiedTime(o.DateModified)
+	}
+	return time.Time{}, false
+}
+
+func parseWooModifiedTime(value string) (time.Time, bool) {
+	if value == "" {
+		return time.Time{}, false
+	}
+	if t, err := time.Parse(time.RFC3339, value); err == nil {
+		return t.UTC(), true
+	}
+	if t, err := time.ParseInLocation("2006-01-02T15:04:05", value, time.UTC); err == nil {
+		return t.UTC(), true
+	}
+	return time.Time{}, false
 }
 
 // GetOrder retrieves a single order from WooCommerce by external ID.
