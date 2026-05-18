@@ -79,14 +79,14 @@ Dziś readiness jest rozproszony.
 
 | Provider | Dowód | Rekomendowany status | Akcja dla klienta |
 |---|---|---|---|
-| InPost | Create shipment, label, tracking, cancel, dispatch order, punkty odbioru, webhook i Geowidget są podłączone. Rate shopping to hardcoded estimates (`apps/api-server/internal/integration/carriers/inpost.go:264-354`). | `ready` dla labels/tracking/points, `controlled` dla rates | Pokazać, jeśli credentiale są poprawne; rate shopping opisać jako szacunek albo ukryć. |
-| DHL | SOAP integration istnieje i ma production-style testy; rates są szacunkowe, brak pickup points (`apps/api-server/internal/integration/carriers/dhl.go:224-328`). | `controlled` | Włączyć po checkliście create/label/tracking na credentialach klienta. |
-| DPD | Create/label istnieje, ale tracking zwraca "not available via DPD REST API"; rates są szacunkowe (`apps/api-server/internal/integration/carriers/dpd.go:150-168`). | `controlled` z caveatem trackingu | Włączyć etykiety; nie obiecywać automatycznego trackingu DPD. |
-| GLS | Create/label ze storage/tracking/cancel istnieją; rates są szacunkowe, pickup search niezaimplementowany (`apps/api-server/internal/integration/carriers/gls.go:224-267`). | `controlled` | Włączyć po checkliście label storage + tracking. |
-| UPS | Adapter istnieje; rates są TODO/estimate i brak dowodu produkcyjnego w tym audycie. | `beta` | Ukryć domyślnie. |
-| FedEx | Adapter istnieje; rates są TODO/estimate i brak dowodu produkcyjnego w tym audycie. | `beta` | Ukryć domyślnie. |
-| Poczta Polska | Adapter istnieje; rates są TODO/estimate, pickup search unsupported. | `beta` | Ukryć domyślnie. |
-| Orlen Paczka | Adapter istnieje i ma pickup search; rates są TODO/estimate. | `beta` | Ukryć do certyfikacji. |
+| InPost | Create shipment, label, tracking, cancel, dispatch order, punkty odbioru, webhook i Geowidget są podłączone. Rate shopping jest ukryty, dopóki nie ma kontraktowego źródła wyceny. | `ready` dla labels/tracking/points, `blocked` dla rates | Pokazać labels/tracking/points, jeśli credentiale są poprawne; nie pokazywać rate-shopping jako wyceny InPost. |
+| DHL | SOAP integration istnieje i ma production-style testy; rate shopping zwraca `ErrCarrierRatesNotImplemented`, brak pickup points (`apps/api-server/internal/integration/carriers/dhl.go:224-328`). | `controlled` | Włączyć po checkliście create/label/tracking na credentialach klienta; nie pokazywać rate-shopping jako wyceny DHL. |
+| DPD | Create/label istnieje, ale tracking zwraca "not available via DPD REST API"; rate shopping zwraca `ErrCarrierRatesNotImplemented` (`apps/api-server/internal/integration/carriers/dpd.go:150-197`). | `controlled` z caveatem trackingu | Włączyć etykiety; nie obiecywać automatycznego trackingu ani wyceny DPD. |
+| GLS | Create/label ze storage/tracking/cancel istnieją; rate shopping zwraca `ErrCarrierRatesNotImplemented`, pickup search niezaimplementowany (`apps/api-server/internal/integration/carriers/gls.go:224-275`). | `controlled` | Włączyć po checkliście label storage + tracking; nie pokazywać rate-shopping jako wyceny GLS. |
+| UPS | Adapter istnieje; rate shopping zwraca `ErrCarrierRatesNotImplemented` i brak dowodu produkcyjnego w tym audycie. | `beta` | Ukryć domyślnie. |
+| FedEx | Adapter istnieje; rate shopping zwraca `ErrCarrierRatesNotImplemented` i brak dowodu produkcyjnego w tym audycie. | `beta` | Ukryć domyślnie. |
+| Poczta Polska | Adapter istnieje; rate shopping zwraca `ErrCarrierRatesNotImplemented`, pickup search unsupported. | `beta` | Ukryć domyślnie. |
+| Orlen Paczka | Adapter istnieje i ma pickup search; rate shopping zwraca `ErrCarrierRatesNotImplemented`. | `beta` | Ukryć do certyfikacji. |
 
 ### Dostawcy i dropship
 

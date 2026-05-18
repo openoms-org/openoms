@@ -70,7 +70,7 @@ Funkcja przechodzi na `ready` albo `controlled` dopiero po odhaczeniu:
 |---|---|---|---|---|
 | Przesyłki | `/shipments`, `/shipments/new`, `/shipments/[id]` | `controlled` | Pokazać po skonfigurowaniu kuriera | Create shipment, label download, tracking, cancel. |
 | Kurierzy | `/carriers`, `/carriers/new`, `/carriers/[id]` | `controlled` | Ukryć domyślnie; włączać per provider | Provider readiness, credential test, brak providerów beta. |
-| InPost | provider | `ready` dla labels/tracking/points, `controlled` dla rates | Pokazać po credentialach | Manager InPost, token, organization_id, label, tracking, paczkomat. |
+| InPost | provider | `ready` dla labels/tracking/points, `blocked` dla rates | Pokazać po credentialach; rate shopping ukryty | Manager InPost, token, organization_id, label, tracking, paczkomat; kontraktowe źródło wyceny wymagane przed pokazaniem stawek. |
 | DHL | provider | `controlled` | Włączyć po checkliście | Konto DHL, SOAP/API login, hasło, account number, label, tracking. |
 | DPD | provider | `controlled` z caveatem | Włączyć po checkliście | Konto DPD, login, hasło, master_fid; nie obiecywać REST tracking. |
 | GLS | provider | `controlled` | Włączyć po checkliście | Konto GLS/API key, label storage, tracking. |

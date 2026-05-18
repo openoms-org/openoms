@@ -874,7 +874,7 @@ Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -
 |--------|---------|------|
 | POST | `/v1/shipping/rates` | Porownanie stawek przewoznikow |
 
-Rate shopping zwraca tylko stawki z providerow z zaakceptowana implementacja wyceny. DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL zwracaja `ErrCarrierRatesNotImplemented`, a endpoint pomija je zamiast pokazywac placeholderowe ceny.
+Rate shopping zwraca tylko stawki z providerow z zaakceptowana implementacja wyceny. InPost, DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL zwracaja `ErrCarrierRatesNotImplemented`, a endpoint pomija je zamiast pokazywac placeholderowe albo szacunkowe ceny.
 
 #### Statystyki
 
