@@ -29,6 +29,31 @@ import (
 // InPostWebhookHandler tests
 // ===========================================================================
 
+type recordedShipmentStatusUpdate struct {
+	tenantID       uuid.UUID
+	trackingNumber string
+	provider       string
+	status         string
+}
+
+type recordingShipmentStatusUpdater struct {
+	updateCh chan recordedShipmentStatusUpdate
+}
+
+func (r *recordingShipmentStatusUpdater) UpdateStatusByTrackingNumber(context.Context, string, string, string) error {
+	return nil
+}
+
+func (r *recordingShipmentStatusUpdater) UpdateStatusByTrackingNumberForTenant(_ context.Context, tenantID uuid.UUID, trackingNumber, provider, newStatus string) error {
+	r.updateCh <- recordedShipmentStatusUpdate{
+		tenantID:       tenantID,
+		trackingNumber: trackingNumber,
+		provider:       provider,
+		status:         newStatus,
+	}
+	return nil
+}
+
 func TestInPostWebhookHandler_MissingWebhookSecret(t *testing.T) {
 	h := NewInPostWebhookHandler("", nil)
 
@@ -106,6 +131,91 @@ func TestInPostWebhookHandler_ValidSignature(t *testing.T) {
 	h.HandleWebhook(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestInPostWebhookHandler_ScopedWebhookUpdatesVerifiedTenant(t *testing.T) {
+	tenantID := uuid.New()
+	integrationID := uuid.New()
+	secret := "tenant-inpost-webhook-secret" //nolint:gosec // test credential
+	updater := &recordingShipmentStatusUpdater{updateCh: make(chan recordedShipmentStatusUpdate, 1)}
+	h := NewInPostWebhookHandler("legacy-secret", updater)
+	h.SetProviderWebhookSecretResolver(fakeProviderWebhookSecretResolver{
+		secret: secret,
+		scope: &service.ProviderWebhookScope{
+			TenantID:      tenantID,
+			IntegrationID: integrationID,
+			Provider:      "inpost",
+		},
+	})
+
+	body := []byte(`{"type":"shipment_status_changed","payload":{"shipment_id":123,"tracking_number":"TRACK123","status":"delivered"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/inpost/"+integrationID.String(), strings.NewReader(string(body)))
+	req = requestWithIntegrationID(req, integrationID)
+	req.Header.Set("X-InPost-Signature", computeHMAC(secret, body))
+	rr := httptest.NewRecorder()
+
+	h.HandleWebhook(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	select {
+	case got := <-updater.updateCh:
+		assert.Equal(t, tenantID, got.tenantID)
+		assert.Equal(t, "TRACK123", got.trackingNumber)
+		assert.Equal(t, "inpost", got.provider)
+		assert.Equal(t, "delivered", got.status)
+	case <-time.After(time.Second):
+		require.Fail(t, "expected scoped shipment status update")
+	}
+}
+
+func TestInPostWebhookHandler_ScopedWebhookWrongSecretDoesNotUpdate(t *testing.T) {
+	integrationID := uuid.New()
+	updater := &recordingShipmentStatusUpdater{updateCh: make(chan recordedShipmentStatusUpdate, 1)}
+	h := NewInPostWebhookHandler("legacy-secret", updater)
+	h.SetProviderWebhookSecretResolver(fakeProviderWebhookSecretResolver{
+		secret: "tenant-inpost-webhook-secret",
+		scope: &service.ProviderWebhookScope{
+			TenantID:      uuid.New(),
+			IntegrationID: integrationID,
+			Provider:      "inpost",
+		},
+	})
+
+	body := []byte(`{"type":"shipment_status_changed","payload":{"shipment_id":123,"tracking_number":"TRACK123","status":"delivered"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/inpost/"+integrationID.String(), strings.NewReader(string(body)))
+	req = requestWithIntegrationID(req, integrationID)
+	req.Header.Set("X-InPost-Signature", computeHMAC("wrong-secret", body))
+	rr := httptest.NewRecorder()
+
+	h.HandleWebhook(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	select {
+	case <-updater.updateCh:
+		require.Fail(t, "did not expect scoped shipment status update")
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func TestInPostWebhookHandler_ScopedWebhookWithoutResolverFailsClosed(t *testing.T) {
+	integrationID := uuid.New()
+	updater := &recordingShipmentStatusUpdater{updateCh: make(chan recordedShipmentStatusUpdate, 1)}
+	h := NewInPostWebhookHandler("legacy-secret", updater)
+
+	body := []byte(`{"type":"shipment_status_changed","payload":{"shipment_id":123,"tracking_number":"TRACK123","status":"delivered"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/inpost/"+integrationID.String(), strings.NewReader(string(body)))
+	req = requestWithIntegrationID(req, integrationID)
+	req.Header.Set("X-InPost-Signature", computeHMAC("legacy-secret", body))
+	rr := httptest.NewRecorder()
+
+	h.HandleWebhook(rr, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+	select {
+	case <-updater.updateCh:
+		require.Fail(t, "did not expect scoped shipment status update")
+	case <-time.After(50 * time.Millisecond):
+	}
 }
 
 // ===========================================================================

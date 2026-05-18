@@ -926,13 +926,17 @@ Rate shopping zwraca tylko stawki z providerow z zaakceptowana implementacja wyc
 | GET | `/v1/custom-fields` | Pola niestandardowe (read-only) |
 | GET | `/v1/product-categories` | Kategorie produktow (read-only) |
 | POST | `/v1/webhooks/{provider}/{tenant_id}` | Webhook przychodzacy; znani providerzy wymagaja skonfigurowanego sekretu HMAC |
-| POST | `/v1/webhooks/allegro` | Webhook Allegro (HMAC) |
-| POST | `/v1/webhooks/inpost` | Webhook InPost (HMAC-SHA256); status przesylki jest lookupowany przez jawny privileged `WORKER_DATABASE_URL`, a aktualizacja wykonywana w tenant context |
+| POST | `/v1/webhooks/allegro` | Legacy webhook Allegro (HMAC) oparty o sekret z env |
+| POST | `/v1/webhooks/allegro/{integration_id}` | Tenant-scoped webhook Allegro (HMAC); sekret `webhook_secret` jest zapisany per integracja w zaszyfrowanym `integrations.credentials` |
+| POST | `/v1/webhooks/inpost` | Legacy webhook InPost (HMAC-SHA256) oparty o sekret z env |
+| POST | `/v1/webhooks/inpost/{integration_id}` | Tenant-scoped webhook InPost (HMAC-SHA256); sekret `webhook_secret` jest zapisany per integracja w zaszyfrowanym `integrations.credentials`, lookup statusu uzywa jawnego privileged `WORKER_DATABASE_URL`, a aktualizacja jest wykonywana w tenant context |
 | POST | `/v1/webhooks/stripe` | Webhook Stripe (Stripe-Signature) |
 | GET | `/health` | Health check (no version disclosed) |
 | GET | `/metrics` | Prometheus metrics (requires Bearer token) |
 | GET | `/v1/openapi.yaml` | Specyfikacja OpenAPI |
 | GET | `/v1/docs` | Swagger UI |
+
+Allegro i InPost powinny uzywac scoped callbackow z `integration_id`, gdy klient ma wlasny sekret webhookow. Sekret jest opcjonalnym polem konfiguracji integracji w UI i nie wymaga zmiany sekretow Kubernetes ani redeployu. Legacy endpointy bez `integration_id` pozostaja jako fallback dla istniejacych callbackow skonfigurowanych przez operatora.
 
 #### Billing (publiczne, bez auth)
 
@@ -1972,7 +1976,8 @@ METRICS_TOKEN=...                    # Bearer token dla /metrics (openssl rand -
 # -- Integracje (opcjonalne) ------
 INPOST_API_TOKEN=...
 INPOST_ORG_ID=...
-ALLEGRO_WEBHOOK_SECRET=...
+ALLEGRO_WEBHOOK_SECRET=...           # Legacy fallback dla /v1/webhooks/allegro; preferowany scoped sekret per integracja
+INPOST_WEBHOOK_SECRET=...            # Legacy fallback dla /v1/webhooks/inpost; preferowany scoped sekret per integracja
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-4
 

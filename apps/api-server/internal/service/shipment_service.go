@@ -662,12 +662,32 @@ func (s *ShipmentService) UpdateStatusByTrackingNumber(ctx context.Context, trac
 		return fmt.Errorf("find shipment by tracking number %q provider %q: %w", trackingNumber, provider, err)
 	}
 
-	// Skip if status hasn't changed
+	return s.applyShipmentStatusChange(ctx, tenantID, shipmentID, oldStatus, newStatus)
+}
+
+// UpdateStatusByTrackingNumberForTenant updates a shipment status inside an already verified tenant scope.
+func (s *ShipmentService) UpdateStatusByTrackingNumberForTenant(ctx context.Context, tenantID uuid.UUID, trackingNumber, provider, newStatus string) error {
+	var shipmentID uuid.UUID
+	var oldStatus string
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx,
+			"SELECT id, status FROM shipments WHERE tracking_number = $1 AND provider = $2 LIMIT 1",
+			trackingNumber,
+			provider,
+		).Scan(&shipmentID, &oldStatus)
+	})
+	if err != nil {
+		return fmt.Errorf("find tenant shipment by tracking number %q provider %q: %w", trackingNumber, provider, err)
+	}
+
+	return s.applyShipmentStatusChange(ctx, tenantID, shipmentID, oldStatus, newStatus)
+}
+
+func (s *ShipmentService) applyShipmentStatusChange(ctx context.Context, tenantID, shipmentID uuid.UUID, oldStatus, newStatus string) error {
 	if oldStatus == newStatus {
 		return nil
 	}
 
-	// Phase 1: Update status in DB within tenant context
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			"UPDATE shipments SET status = $1, updated_at = NOW() WHERE id = $2",

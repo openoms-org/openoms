@@ -3,28 +3,43 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	inpostsdk "github.com/openoms-org/openoms/packages/inpost-go-sdk"
 )
 
+// ShipmentStatusUpdater updates shipment statuses from provider webhook callbacks.
+type ShipmentStatusUpdater interface {
+	UpdateStatusByTrackingNumber(ctx context.Context, trackingNumber, provider, newStatus string) error
+	UpdateStatusByTrackingNumberForTenant(ctx context.Context, tenantID uuid.UUID, trackingNumber, provider, newStatus string) error
+}
+
 // InPostWebhookHandler handles incoming InPost webhook events.
 type InPostWebhookHandler struct {
 	webhookSecret   string
-	shipmentService *service.ShipmentService
+	shipmentService ShipmentStatusUpdater
+	secretResolver  providerWebhookSecretResolver
 }
 
 // NewInPostWebhookHandler creates a new InPostWebhookHandler.
-func NewInPostWebhookHandler(webhookSecret string, shipmentSvc *service.ShipmentService) *InPostWebhookHandler {
+func NewInPostWebhookHandler(webhookSecret string, shipmentSvc ShipmentStatusUpdater) *InPostWebhookHandler {
 	return &InPostWebhookHandler{
 		webhookSecret:   webhookSecret,
 		shipmentService: shipmentSvc,
 	}
+}
+
+// SetProviderWebhookSecretResolver enables tenant-scoped webhook secret lookup.
+func (h *InPostWebhookHandler) SetProviderWebhookSecretResolver(resolver providerWebhookSecretResolver) {
+	h.secretResolver = resolver
 }
 
 // HandleWebhook processes incoming InPost webhook requests.
@@ -40,8 +55,20 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 	}
 	defer func() { _ = r.Body.Close() }()
 
+	webhookSecret, scope, err := resolveProviderWebhookSecret(r.Context(), r, "inpost", h.webhookSecret, h.secretResolver)
+	if err != nil {
+		if errors.Is(err, errInvalidProviderWebhookIntegrationID) {
+			slog.Warn("inpost webhook: invalid integration id", "source_ip", r.RemoteAddr) //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		slog.Warn("inpost webhook: scoped secret lookup failed", "error", err, "provider", "inpost")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
+
 	// Reject requests if webhook secret is not configured
-	if h.webhookSecret == "" {
+	if webhookSecret == "" {
 		slog.Warn("inpost webhook: webhook secret not configured, rejecting request")
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
@@ -55,7 +82,7 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := inpostsdk.VerifyWebhook(h.webhookSecret, signature, body); err != nil {
+	if err := inpostsdk.VerifyWebhook(webhookSecret, signature, body); err != nil {
 		slog.Warn("inpost webhook: invalid signature", "error", err, "source_ip", r.RemoteAddr, "provider", "inpost") //nolint:gosec // G706: RemoteAddr is set by net/http, not user input
 		w.WriteHeader(http.StatusOK)
 		return
@@ -78,7 +105,7 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 	// Dispatch by event type (async — response already sent)
 	switch event.Type {
 	case "shipment_status_changed":
-		asyncutil.SafeGo(func() { h.handleShipmentStatusChanged(event) })
+		asyncutil.SafeGo(func() { h.handleShipmentStatusChanged(event, scope) })
 	case "shipment_created":
 		slog.Info("inpost webhook: shipment created")
 	case "dispatch_order_status_changed":
@@ -89,7 +116,7 @@ func (h *InPostWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 }
 
 // handleShipmentStatusChanged processes a shipment status change event from InPost.
-func (h *InPostWebhookHandler) handleShipmentStatusChanged(event *inpostsdk.WebhookEvent) {
+func (h *InPostWebhookHandler) handleShipmentStatusChanged(event *inpostsdk.WebhookEvent, scope *service.ProviderWebhookScope) {
 	var payload struct {
 		ShipmentID     int64  `json:"shipment_id"`
 		TrackingNumber string `json:"tracking_number"`
@@ -117,11 +144,17 @@ func (h *InPostWebhookHandler) handleShipmentStatusChanged(event *inpostsdk.Webh
 	)
 
 	// Update shipment status in DB via shipment service.
-	// Uses tracking number to find shipment (cross-tenant via service).
+	// Scoped webhooks stay inside the verified tenant; legacy webhooks use the cross-tenant lookup.
 	if h.shipmentService != nil && payload.TrackingNumber != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		if err := h.shipmentService.UpdateStatusByTrackingNumber(ctx, payload.TrackingNumber, "inpost", omsStatus); err != nil {
+		var err error
+		if scope != nil {
+			err = h.shipmentService.UpdateStatusByTrackingNumberForTenant(ctx, scope.TenantID, payload.TrackingNumber, "inpost", omsStatus)
+		} else {
+			err = h.shipmentService.UpdateStatusByTrackingNumber(ctx, payload.TrackingNumber, "inpost", omsStatus)
+		}
+		if err != nil {
 			slog.Error("inpost webhook: failed to update shipment status",
 				"tracking_number", payload.TrackingNumber,
 				"oms_status", omsStatus,

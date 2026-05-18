@@ -239,8 +239,10 @@ function SetupState({
   const createIntegration = useCreateIntegration();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
   const [sandbox, setSandbox] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
 
   const redirectURI = getRedirectURI();
@@ -289,15 +291,21 @@ function SetupState({
       return;
     }
 
+    const credentials: Record<string, unknown> = {
+      client_id: clientId.trim(),
+      client_secret: clientSecret.trim(),
+      sandbox,
+    };
+    const trimmedWebhookSecret = webhookSecret.trim();
+    if (trimmedWebhookSecret) {
+      credentials.webhook_secret = trimmedWebhookSecret;
+    }
+
     createIntegration.mutate(
       {
         provider: "allegro",
         label: sandbox ? "Allegro (Sandbox)" : "Allegro",
-        credentials: {
-          client_id: clientId.trim(),
-          client_secret: clientSecret.trim(),
-          sandbox,
-        },
+        credentials,
       },
       {
         onSuccess: () => {
@@ -426,6 +434,35 @@ function SetupState({
                 )}
               </Button>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="webhook-secret">{t("webhookSecret")}</Label>
+            <div className="relative">
+              <Input
+                id="webhook-secret"
+                type={showWebhookSecret ? "text" : "password"}
+                placeholder={t("pasteAllegroWebhookSecret")}
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+              >
+                {showWebhookSecret ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t("webhookSecretHelp")}
+            </p>
           </div>
 
           <Button
@@ -896,22 +933,35 @@ function CredentialsCard({
   const updateIntegration = useUpdateIntegration(integrationId);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
   const [sandbox, setSandbox] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
 
   const handleUpdateCredentials = () => {
-    if (!clientId.trim() || !clientSecret.trim()) {
+    const trimmedClientId = clientId.trim();
+    const trimmedClientSecret = clientSecret.trim();
+    const trimmedWebhookSecret = webhookSecret.trim();
+    const hasClientCredentials = trimmedClientId && trimmedClientSecret;
+    if (!hasClientCredentials && !trimmedWebhookSecret) {
       toast.error(t("clientIdIClientSecretSaWymagane"));
       return;
     }
 
+    const credentials: Record<string, unknown> = {
+      sandbox,
+    };
+    if (hasClientCredentials) {
+      credentials.client_id = trimmedClientId;
+      credentials.client_secret = trimmedClientSecret;
+    }
+    if (trimmedWebhookSecret) {
+      credentials.webhook_secret = trimmedWebhookSecret;
+    }
+
     updateIntegration.mutate(
       {
-        credentials: {
-          client_id: clientId.trim(),
-          client_secret: clientSecret.trim(),
-          sandbox,
-        },
+        credentials,
       },
       {
         onSuccess: () => {
@@ -920,6 +970,7 @@ function CredentialsCard({
           );
           setClientId("");
           setClientSecret("");
+          setWebhookSecret("");
           onUpdated();
         },
         onError: (error) => {
@@ -977,6 +1028,35 @@ function CredentialsCard({
             </Button>
           </div>
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="edit-webhook-secret">{t("webhookSecret")}</Label>
+          <div className="relative">
+            <Input
+              id="edit-webhook-secret"
+              type={showWebhookSecret ? "text" : "password"}
+              placeholder={t("pasteAllegroWebhookSecret")}
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+              className="pr-10"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-full px-3"
+              onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+            >
+              {showWebhookSecret ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t("webhookSecretHelp")}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <Switch
             id="edit-sandbox"
@@ -992,8 +1072,8 @@ function CredentialsCard({
           onClick={handleUpdateCredentials}
           disabled={
             updateIntegration.isPending ||
-            !clientId.trim() ||
-            !clientSecret.trim()
+            ((!clientId.trim() || !clientSecret.trim()) &&
+              !webhookSecret.trim())
           }
           variant="outline"
         >

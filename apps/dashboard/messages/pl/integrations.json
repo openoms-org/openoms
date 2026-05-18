@@ -9,7 +9,10 @@
       "clientSecret": "Client Secret",
       "clientSecretPlaceholder": "Twój Client Secret",
       "refreshToken": "Refresh Token",
-      "sandbox": "Tryb testowy (Sandbox)"
+      "sandbox": "Tryb testowy (Sandbox)",
+      "webhookSecret": "Sekret webhooków",
+      "webhookSecretHelp": "Opcjonalny sekret podpisu HMAC dla callbacku tej integracji. Ustaw taki sam sekret w panelu dostawcy.",
+      "webhookSecretPlaceholder": "Sekret webhooków dla tej integracji"
     },
     "amazon": {
       "applicationId": "Application ID",
@@ -117,6 +120,9 @@
       "organizationId": "ID organizacji",
       "organizationIdPlaceholder": "Twój numer organizacji InPost",
       "sandbox": "Tryb testowy (Sandbox)",
+      "webhookSecret": "Sekret webhooków",
+      "webhookSecretHelp": "Opcjonalny sekret podpisu webhooków InPost dla tej integracji. Ustaw taki sam sekret w Managerze Paczek.",
+      "webhookSecretPlaceholder": "Sekret webhooków InPost",
       "sendingMethods": {
         "any_point": "Dowolny punkt (paczkomat/POP)",
         "branch": "Oddział InPost",
@@ -590,6 +596,7 @@
     "pageOf": "Strona z",
     "pasteAllegroClientId": "Wklej Allegro Client ID",
     "pasteAllegroClientSecret": "Wklej Allegro Client Secret",
+    "pasteAllegroWebhookSecret": "Wklej sekret webhooków Allegro",
     "pasteAllegroKeys": "Wklej klucze Allegro",
     "pasteAppId": "Wklej App ID",
     "pasteCertId": "Wklej Cert ID",
@@ -691,6 +698,8 @@
     "totalCount": "Łączna liczba",
     "typeMessageEnterToSendShiftEnterNewLine": "Napisz wiadomość... (Enter aby wysłać, Shift+Enter nowa linia)",
     "updateCredentials": "Aktualizuj dane uwierzytelniające",
+    "webhookSecret": "Sekret webhooków",
+    "webhookSecretHelp": "Wypełnij tylko, gdy chcesz ustawić lub obrócić sekret dla callbacków tej integracji. Puste pole zostawia dotychczasowy sekret bez zmian.",
     "uzytyWTrybie": "użyty w trybie",
     "wiadomosciAllegro": "Wiadomości Allegro",
     "wklejPonizszyAdres": "wklej poniższy adres:",

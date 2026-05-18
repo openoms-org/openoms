@@ -6,6 +6,8 @@ import AllegroIntegrationPage from "./page";
 
 const refetchIntegrations = vi.fn();
 const apiClientMock = vi.fn();
+const createIntegrationMutate = vi.fn();
+const updateIntegrationMutate = vi.fn();
 let integrations: unknown[] = [];
 
 vi.mock("next/navigation", () => ({
@@ -42,11 +44,18 @@ vi.mock("@/hooks/use-integrations", () => ({
   }),
   useCreateIntegration: () => ({
     isPending: false,
-    mutate: (_data: unknown, options?: { onSuccess?: () => void }) => {
+    mutate: (data: unknown, options?: { onSuccess?: () => void }) => {
+      createIntegrationMutate(data);
       options?.onSuccess?.();
     },
   }),
-  useUpdateIntegration: () => ({ isPending: false, mutate: vi.fn() }),
+  useUpdateIntegration: () => ({
+    isPending: false,
+    mutate: (data: unknown, options?: { onSuccess?: () => void }) => {
+      updateIntegrationMutate(data);
+      options?.onSuccess?.();
+    },
+  }),
   useDeleteIntegration: () => ({ isPending: false, mutate: vi.fn() }),
 }));
 
@@ -59,6 +68,8 @@ describe("Allegro OAuth popup monitoring", () => {
     vi.useFakeTimers();
     integrations = [];
     refetchIntegrations.mockClear();
+    createIntegrationMutate.mockClear();
+    updateIntegrationMutate.mockClear();
     apiClientMock.mockReset();
     apiClientMock.mockResolvedValue({
       auth_url: "https://allegro.example/oauth",
@@ -112,5 +123,87 @@ describe("Allegro OAuth popup monitoring", () => {
     act(() => vi.advanceTimersByTime(500));
 
     expect(refetchIntegrations).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a tenant-scoped webhook secret when provided during setup", async () => {
+    render(<AllegroIntegrationPage />);
+
+    fireEvent.change(screen.getByLabelText("Client ID"), {
+      target: { value: "client-id" },
+    });
+    fireEvent.change(screen.getByLabelText("Client Secret"), {
+      target: { value: "client-secret" },
+    });
+    fireEvent.change(screen.getByLabelText("webhookSecret"), {
+      target: { value: "  webhook-secret  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /zapiszIPrzejdzDoAutoryzacji/i }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(createIntegrationMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        credentials: expect.objectContaining({
+          client_id: "client-id",
+          client_secret: "client-secret",
+          webhook_secret: "webhook-secret",
+        }),
+      })
+    );
+  });
+
+  it("omits a blank webhook secret during setup", async () => {
+    render(<AllegroIntegrationPage />);
+
+    fireEvent.change(screen.getByLabelText("Client ID"), {
+      target: { value: "client-id" },
+    });
+    fireEvent.change(screen.getByLabelText("Client Secret"), {
+      target: { value: "client-secret" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /zapiszIPrzejdzDoAutoryzacji/i }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const payload = createIntegrationMutate.mock.calls[0]?.[0] as {
+      credentials: Record<string, unknown>;
+    };
+    expect(payload.credentials).not.toHaveProperty("webhook_secret");
+  });
+
+  it("rotates only the tenant-scoped webhook secret for a connected integration", async () => {
+    integrations = [
+      {
+        id: "int-allegro",
+        provider: "allegro",
+        status: "active",
+        has_credentials: true,
+        settings: {},
+        created_at: "2026-05-08T00:00:00Z",
+        updated_at: "2026-05-08T00:00:00Z",
+        last_sync_at: "2026-05-08T00:00:00Z",
+      },
+    ];
+    render(<AllegroIntegrationPage />);
+
+    fireEvent.change(screen.getByLabelText("webhookSecret"), {
+      target: { value: "  webhook-secret  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /updateCredentials/i }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(updateIntegrationMutate).toHaveBeenCalledWith({
+      credentials: {
+        sandbox: false,
+        webhook_secret: "webhook-secret",
+      },
+    });
   });
 });

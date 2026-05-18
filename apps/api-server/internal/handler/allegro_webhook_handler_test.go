@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -8,8 +9,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 const testWebhookSecret = "test-webhook-secret-key-12345" // #nosec G101
@@ -19,6 +26,41 @@ func computeHMAC(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)
 	return hex.EncodeToString(mac.Sum(nil))
+}
+
+type fakeProviderWebhookSecretResolver struct {
+	secret string
+	scope  *service.ProviderWebhookScope
+	err    error
+}
+
+func (f fakeProviderWebhookSecretResolver) Resolve(context.Context, string, uuid.UUID) (string, *service.ProviderWebhookScope, error) {
+	return f.secret, f.scope, f.err
+}
+
+type recordingAllegroSyncer struct {
+	importCh chan service.ProviderWebhookScope
+}
+
+func (r *recordingAllegroSyncer) ImportOrder(context.Context, string) {}
+
+func (r *recordingAllegroSyncer) UpdateOrderStatus(context.Context, string) {}
+
+func (r *recordingAllegroSyncer) ImportOrderForIntegration(_ context.Context, tenantID, integrationID uuid.UUID, _ string) {
+	r.importCh <- service.ProviderWebhookScope{
+		TenantID:      tenantID,
+		IntegrationID: integrationID,
+		Provider:      "allegro",
+	}
+}
+
+func (r *recordingAllegroSyncer) UpdateOrderStatusForIntegration(context.Context, uuid.UUID, uuid.UUID, string) {
+}
+
+func requestWithIntegrationID(req *http.Request, integrationID uuid.UUID) *http.Request {
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("integrationID", integrationID.String())
+	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 }
 
 // --- Valid webhook ---
@@ -68,6 +110,89 @@ func TestAllegroWebhookHandler_ValidSignature_UnknownEventType(t *testing.T) {
 
 	// Still returns 200 — unknown event types are gracefully ignored
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestAllegroWebhookHandler_ScopedWebhookDispatchesOnlyVerifiedIntegration(t *testing.T) {
+	tenantID := uuid.New()
+	integrationID := uuid.New()
+	secret := "tenant-allegro-webhook-secret" //nolint:gosec // test credential
+	syncer := &recordingAllegroSyncer{importCh: make(chan service.ProviderWebhookScope, 1)}
+	h := NewAllegroWebhookHandler(testWebhookSecret, syncer)
+	h.SetProviderWebhookSecretResolver(fakeProviderWebhookSecretResolver{
+		secret: secret,
+		scope: &service.ProviderWebhookScope{
+			TenantID:      tenantID,
+			IntegrationID: integrationID,
+			Provider:      "allegro",
+		},
+	})
+
+	body := `{"type":"ORDER_FILLED_IN","id":"evt-scoped","occurredAt":"2026-05-18T08:00:00Z","order":{"id":"ord-tenant-1"}}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/allegro/"+integrationID.String(), strings.NewReader(body))
+	req = requestWithIntegrationID(req, integrationID)
+	req.Header.Set("X-Allegro-Signature", computeHMAC(secret, []byte(body)))
+	rr := httptest.NewRecorder()
+
+	h.HandleWebhook(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	select {
+	case got := <-syncer.importCh:
+		assert.Equal(t, tenantID, got.TenantID)
+		assert.Equal(t, integrationID, got.IntegrationID)
+	case <-time.After(time.Second):
+		require.Fail(t, "expected scoped import dispatch")
+	}
+}
+
+func TestAllegroWebhookHandler_ScopedWebhookWrongSecretDoesNotDispatch(t *testing.T) {
+	integrationID := uuid.New()
+	syncer := &recordingAllegroSyncer{importCh: make(chan service.ProviderWebhookScope, 1)}
+	h := NewAllegroWebhookHandler(testWebhookSecret, syncer)
+	h.SetProviderWebhookSecretResolver(fakeProviderWebhookSecretResolver{
+		secret: "tenant-allegro-webhook-secret",
+		scope: &service.ProviderWebhookScope{
+			TenantID:      uuid.New(),
+			IntegrationID: integrationID,
+			Provider:      "allegro",
+		},
+	})
+
+	body := `{"type":"ORDER_FILLED_IN","id":"evt-scoped","occurredAt":"2026-05-18T08:00:00Z","order":{"id":"ord-tenant-1"}}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/allegro/"+integrationID.String(), strings.NewReader(body))
+	req = requestWithIntegrationID(req, integrationID)
+	req.Header.Set("X-Allegro-Signature", computeHMAC("wrong-secret", []byte(body)))
+	rr := httptest.NewRecorder()
+
+	h.HandleWebhook(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	select {
+	case <-syncer.importCh:
+		require.Fail(t, "did not expect scoped import dispatch")
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func TestAllegroWebhookHandler_ScopedWebhookWithoutResolverFailsClosed(t *testing.T) {
+	integrationID := uuid.New()
+	syncer := &recordingAllegroSyncer{importCh: make(chan service.ProviderWebhookScope, 1)}
+	h := NewAllegroWebhookHandler(testWebhookSecret, syncer)
+
+	body := `{"type":"ORDER_FILLED_IN","id":"evt-scoped","occurredAt":"2026-05-18T08:00:00Z","order":{"id":"ord-tenant-1"}}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/allegro/"+integrationID.String(), strings.NewReader(body))
+	req = requestWithIntegrationID(req, integrationID)
+	req.Header.Set("X-Allegro-Signature", computeHMAC(testWebhookSecret, []byte(body)))
+	rr := httptest.NewRecorder()
+
+	h.HandleWebhook(rr, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+	select {
+	case <-syncer.importCh:
+		require.Fail(t, "did not expect scoped import dispatch")
+	case <-time.After(50 * time.Millisecond):
+	}
 }
 
 // --- Invalid HMAC signature ---

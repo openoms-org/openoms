@@ -9,7 +9,10 @@
       "clientSecret": "Client Secret",
       "clientSecretPlaceholder": "Your Client Secret",
       "refreshToken": "Refresh Token",
-      "sandbox": "Test mode (Sandbox)"
+      "sandbox": "Test mode (Sandbox)",
+      "webhookSecret": "Webhook secret",
+      "webhookSecretHelp": "Optional HMAC signing secret for this integration callback. Configure the same secret in the provider panel.",
+      "webhookSecretPlaceholder": "Webhook secret for this integration"
     },
     "amazon": {
       "applicationId": "Application ID",
@@ -117,6 +120,9 @@
       "organizationId": "Organization ID",
       "organizationIdPlaceholder": "Your InPost organization number",
       "sandbox": "Test mode (Sandbox)",
+      "webhookSecret": "Webhook secret",
+      "webhookSecretHelp": "Optional InPost webhook signing secret for this integration. Configure the same secret in Shipment Manager.",
+      "webhookSecretPlaceholder": "InPost webhook secret",
       "sendingMethods": {
         "any_point": "Any point (locker/POP)",
         "branch": "InPost branch",
@@ -590,6 +596,7 @@
     "pageOf": "Page Of",
     "pasteAllegroClientId": "Paste Allegro Client Id",
     "pasteAllegroClientSecret": "Paste Allegro Client Secret",
+    "pasteAllegroWebhookSecret": "Paste Allegro webhook secret",
     "pasteAllegroKeys": "Paste Allegro Keys",
     "pasteAppId": "Paste App Id",
     "pasteCertId": "Paste Cert Id",
@@ -691,6 +698,8 @@
     "totalCount": "Total Count",
     "typeMessageEnterToSendShiftEnterNewLine": "Type a message... (Enter to send, Shift+Enter new line)",
     "updateCredentials": "Update Credentials",
+    "webhookSecret": "Webhook secret",
+    "webhookSecretHelp": "Fill this only when setting or rotating the callback secret for this integration. Leaving it blank keeps the current secret unchanged.",
     "uzytyWTrybie": "Used in mode",
     "wiadomosciAllegro": "Allegro messages",
     "wklejPonizszyAdres": "Paste the address below",

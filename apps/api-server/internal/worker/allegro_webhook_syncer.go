@@ -82,6 +82,27 @@ func (s *AllegroWebhookSyncer) ImportOrder(ctx context.Context, allegroOrderID s
 	)
 }
 
+// ImportOrderForIntegration imports an Allegro order only for the verified tenant integration.
+func (s *AllegroWebhookSyncer) ImportOrderForIntegration(ctx context.Context, tenantID, integrationID uuid.UUID, allegroOrderID string) {
+	ti, err := s.getActiveIntegration(ctx, tenantID, integrationID)
+	if err != nil {
+		s.logger.Error("allegro webhook syncer: failed to load scoped integration",
+			"tenant_id", tenantID,
+			"integration_id", integrationID,
+			"error", err,
+		)
+		return
+	}
+
+	if imported := s.tryImportOrder(ctx, *ti, allegroOrderID); !imported {
+		s.logger.Warn("allegro webhook syncer: scoped order import did not complete",
+			"tenant_id", tenantID,
+			"integration_id", integrationID,
+			"allegro_order_id", allegroOrderID,
+		)
+	}
+}
+
 // UpdateOrderStatus finds an existing order by external ID and updates its status
 // based on the Allegro order status. If the order is not found, it triggers a full import.
 func (s *AllegroWebhookSyncer) UpdateOrderStatus(ctx context.Context, allegroOrderID string) {
@@ -116,6 +137,51 @@ func (s *AllegroWebhookSyncer) UpdateOrderStatus(ctx context.Context, allegroOrd
 		"allegro_order_id", allegroOrderID,
 	)
 	s.ImportOrder(ctx, allegroOrderID)
+}
+
+// UpdateOrderStatusForIntegration updates an Allegro order status only for the verified tenant integration.
+func (s *AllegroWebhookSyncer) UpdateOrderStatusForIntegration(ctx context.Context, tenantID, integrationID uuid.UUID, allegroOrderID string) {
+	ti, err := s.getActiveIntegration(ctx, tenantID, integrationID)
+	if err != nil {
+		s.logger.Error("allegro webhook syncer: failed to load scoped integration for status update",
+			"tenant_id", tenantID,
+			"integration_id", integrationID,
+			"error", err,
+		)
+		return
+	}
+
+	if updated := s.tryUpdateOrderStatus(ctx, *ti, allegroOrderID); updated {
+		return
+	}
+
+	s.logger.Info("allegro webhook syncer: scoped order not found for status update, attempting scoped import",
+		"tenant_id", tenantID,
+		"integration_id", integrationID,
+		"allegro_order_id", allegroOrderID,
+	)
+	s.tryImportOrder(ctx, *ti, allegroOrderID)
+}
+
+func (s *AllegroWebhookSyncer) getActiveIntegration(ctx context.Context, tenantID, integrationID uuid.UUID) (*TenantIntegration, error) {
+	var ti TenantIntegration
+	var credsJSON json.RawMessage
+	err := s.pool.QueryRow(ctx,
+		`SELECT tenant_id, id, provider, sync_cursor, credentials, settings
+		   FROM integrations
+		  WHERE tenant_id = $1 AND id = $2 AND provider = 'allegro' AND status = 'active'`,
+		tenantID,
+		integrationID,
+	).Scan(&ti.TenantID, &ti.IntegrationID, &ti.Provider, &ti.SyncCursor, &credsJSON, &ti.Settings)
+	if err != nil {
+		return nil, err
+	}
+	credentials, err := decodeIntegrationCredentialsJSONB(credsJSON)
+	if err != nil {
+		return nil, err
+	}
+	ti.Credentials = credentials
+	return &ti, nil
 }
 
 // tryImportOrder attempts to import an order from a specific integration.

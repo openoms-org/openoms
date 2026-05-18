@@ -326,6 +326,7 @@ func run() error {
 		pool, encryptionKey, cfg.UploadDir, cfg.BaseURL,
 	)
 	webhookService := service.NewWebhookService(webhookRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
+	providerWebhookSecretResolver := service.NewProviderWebhookSecretResolver(workerPool, encryptionKey)
 	statsService := service.NewStatsService(statsRepo, pool)
 	invoiceService := service.NewInvoiceService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool, encryptionKey)
 	orderService.SetInvoiceService(invoiceService)
@@ -537,9 +538,11 @@ func run() error {
 
 	// Allegro webhook handler (public endpoint, HMAC-verified)
 	allegroWebhookHandler := handler.NewAllegroWebhookHandler(cfg.AllegroWebhookSecret, allegroWebhookSyncer)
+	allegroWebhookHandler.SetProviderWebhookSecretResolver(providerWebhookSecretResolver)
 
 	// InPost webhook handler (public endpoint, HMAC-verified)
 	inpostWebhookHandler := handler.NewInPostWebhookHandler(cfg.InPostWebhookSecret, shipmentService)
+	inpostWebhookHandler.SetProviderWebhookSecretResolver(providerWebhookSecretResolver)
 
 	// Allegro account & offers handler
 	allegroAccountHandler := handler.NewAllegroAccountHandler(integrationService, encryptionKey)
