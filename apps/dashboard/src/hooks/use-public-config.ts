@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { API_URL } from "@/lib/api-client";
 
 interface PublicConfigData {
@@ -20,36 +20,30 @@ const defaultConfig: PublicConfigData = {
   billing_enabled: false,
 };
 
-let cachedConfig: PublicConfigData | null = null;
+export const publicConfigQueryKey = ["public-config"] as const;
+
+async function fetchPublicConfig(): Promise<PublicConfigData> {
+  const response = await fetch(`${API_URL}/v1/config/public`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load public config");
+  }
+
+  return response.json() as Promise<PublicConfigData>;
+}
 
 export function usePublicConfig() {
-  const [config, setConfig] = useState<PublicConfig>(() => ({
-    ...(cachedConfig ?? defaultConfig),
-    isLoading: cachedConfig === null,
-  }));
+  const query = useQuery({
+    queryKey: publicConfigQueryKey,
+    queryFn: fetchPublicConfig,
+    retry: false,
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    if (cachedConfig) return;
-
-    let cancelled = false;
-    fetch(`${API_URL}/v1/config/public`, { credentials: "include" })
-      .then((res) => res.json())
-      .then((data: PublicConfigData) => {
-        cachedConfig = data;
-        if (!cancelled) {
-          setConfig({ ...data, isLoading: false });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setConfig({ ...defaultConfig, isLoading: false });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return config;
+  return {
+    ...(query.data ?? defaultConfig),
+    isLoading: query.isLoading,
+  } satisfies PublicConfig;
 }
