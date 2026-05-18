@@ -20,11 +20,12 @@
       "organizationPlaceholder": "my-company",
       "password": "Password",
       "register": "Register",
+      "securityNote": "Tenant-scoped access, ready for 2FA and a secure session.",
       "showPassword": "Show password",
       "submit": "Log in",
       "submitting": "Logging in...",
-      "subtitle": "Log in to the OpenOMS panel",
-      "title": "Login"
+      "subtitle": "Enter your organization and access details.",
+      "title": "Log in to the panel"
     },
     "logout": "Log out",
     "minimum8Characters": "Minimum 8 characters",
