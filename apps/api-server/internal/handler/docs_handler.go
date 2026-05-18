@@ -18,6 +18,7 @@ func NewDocsHandler(spec []byte) *DocsHandler {
 func (h *DocsHandler) ServeSpec(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("Content-Security-Policy", openAPISpecContentSecurityPolicy)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(h.spec)
 }
@@ -26,9 +27,14 @@ func (h *DocsHandler) ServeSpec(w http.ResponseWriter, _ *http.Request) {
 func (h *DocsHandler) ServeSwaggerUI(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("Content-Security-Policy", swaggerUIContentSecurityPolicy)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(swaggerHTML))
 }
+
+const openAPISpecContentSecurityPolicy = "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; object-src 'none'"
+
+const swaggerUIContentSecurityPolicy = "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'; object-src 'none'; img-src 'self' data:; font-src https://unpkg.com data:; style-src https://unpkg.com 'unsafe-inline'; script-src https://unpkg.com 'unsafe-inline'; connect-src 'self'"
 
 const swaggerHTML = `<!DOCTYPE html>
 <html lang="en">

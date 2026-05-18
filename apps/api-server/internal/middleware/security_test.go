@@ -100,7 +100,10 @@ func TestSecurity_Headers_AllPresent(t *testing.T) {
 	assert.Equal(t, "DENY", rr.Header().Get("X-Frame-Options"))
 	assert.Equal(t, "strict-origin-when-cross-origin", rr.Header().Get("Referrer-Policy"))
 	assert.Contains(t, rr.Header().Get("Permissions-Policy"), "camera=()")
-	assert.Equal(t, "frame-ancestors 'none'", rr.Header().Get("Content-Security-Policy"))
+	csp := rr.Header().Get("Content-Security-Policy")
+	assert.Contains(t, csp, "default-src 'none'")
+	assert.Contains(t, csp, "frame-ancestors 'none'")
+	assert.Contains(t, csp, "object-src 'none'")
 	assert.Contains(t, rr.Header().Get("Strict-Transport-Security"), "max-age=")
 }
 
