@@ -58,13 +58,20 @@ func TestSecurityHeaders_SetsXXSSProtectionToZero(t *testing.T) {
 	assert.Equal(t, "0", rr.Header().Get("X-XSS-Protection"))
 }
 
-func TestSecurityHeaders_SetsCSPFrameAncestorsNone(t *testing.T) {
+func TestSecurityHeaders_SetsStrictDefaultCSP(t *testing.T) {
 	handler := middleware.SecurityHeaders(okHandler())
 	req := httptest.NewRequest("GET", "/", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	assert.Equal(t, "frame-ancestors 'none'", rr.Header().Get("Content-Security-Policy"))
+	csp := rr.Header().Get("Content-Security-Policy")
+	assert.Contains(t, csp, "default-src 'none'")
+	assert.Contains(t, csp, "base-uri 'none'")
+	assert.Contains(t, csp, "frame-ancestors 'none'")
+	assert.Contains(t, csp, "form-action 'none'")
+	assert.Contains(t, csp, "object-src 'none'")
+	assert.NotContains(t, csp, "script-src")
+	assert.NotContains(t, csp, "style-src")
 }
 
 func TestSecurityHeaders_HSTS_SetWhenXForwardedProtoHTTPS(t *testing.T) {
