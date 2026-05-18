@@ -51,7 +51,7 @@
 - [x] Run:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npx vitest run src/lib/__tests__/readiness.test.ts --reporter=dot
 ```
 
@@ -91,21 +91,20 @@ Expected: readiness tests pass. If a test fails, fix the readiness rule only whe
 - [x] Run targeted dashboard tests:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npx vitest run src/lib/__tests__/readiness.test.ts --reporter=dot
 ```
 
 - [x] Run dashboard lint:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public/apps/dashboard
+cd apps/dashboard
 npm run lint:quiet
 ```
 
 - [x] Run repository diff checks:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
 git diff --check
 git diff --stat
 ```
@@ -113,7 +112,6 @@ git diff --stat
 - [x] Before push/PR, run full local CI:
 
 ```bash
-cd /Users/rafs/praca/openoms-dev/public
 ./scripts/local-ci.sh
 ```
 

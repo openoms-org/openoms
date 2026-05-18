@@ -11,6 +11,42 @@ import {
   isRouteAccessible,
 } from "@/lib/readiness";
 
+const WAREHOUSE_HIDDEN_NAV_ROUTES = [
+  "/packing",
+  "/pick-pack",
+  "/settings/warehouses",
+  "/stocktakes",
+  "/settings/warehouse-documents",
+  "/stock-sync",
+  "/settings/inventory",
+] as const;
+
+const WAREHOUSE_VERIFY_ROUTES = [
+  "/packing",
+  "/pick-pack",
+  "/pick-pack/session-1",
+  "/stocktakes",
+  "/stocktakes/new",
+  "/stocktakes/stocktake-1",
+  "/settings/warehouse-documents",
+  "/settings/warehouse-documents/new",
+  "/settings/warehouse-documents/doc-1",
+  "/settings/inventory",
+] as const;
+
+const WAREHOUSE_CONTROLLED_ROUTES = [
+  "/settings/warehouses",
+  "/settings/warehouses/warehouse-1",
+] as const;
+
+const WAREHOUSE_BETA_ROUTES = ["/stock-sync", "/stock-sync/events"] as const;
+
+const WAREHOUSE_VALIDATION_ROUTES = [
+  ...WAREHOUSE_VERIFY_ROUTES,
+  ...WAREHOUSE_CONTROLLED_ROUTES,
+  ...WAREHOUSE_BETA_ROUTES,
+] as const;
+
 describe("dashboard feature readiness", () => {
   it("keeps the client-ready navigation focused on certified core flows", () => {
     const visible = getVisibleNavItems(navItems, {
@@ -39,15 +75,11 @@ describe("dashboard feature readiness", () => {
     expect(visible).not.toContain("/repricing");
     expect(visible).not.toContain("/suppliers");
     expect(visible).not.toContain("/listing-sync");
-    expect(visible).not.toContain("/packing");
-    expect(visible).not.toContain("/pick-pack");
-    expect(visible).not.toContain("/settings/warehouses");
-    expect(visible).not.toContain("/stocktakes");
-    expect(visible).not.toContain("/settings/warehouse-documents");
-    expect(visible).not.toContain("/stock-sync");
+    for (const route of WAREHOUSE_HIDDEN_NAV_ROUTES) {
+      expect(visible).not.toContain(route);
+    }
     expect(visible).not.toContain("/settings/billing");
     expect(visible).not.toContain("/settings/accounting");
-    expect(visible).not.toContain("/settings/inventory");
     expect(visible).not.toContain("/settings/vat-oss");
     expect(visible).not.toContain("/settings/sms");
     expect(visible).not.toContain("/settings/ksef");
@@ -94,26 +126,21 @@ describe("dashboard feature readiness", () => {
     expect(getRouteReadiness("/customers/import")).toBe("verify");
     expect(getRouteReadiness("/carriers")).toBe("ready");
     expect(getRouteReadiness("/carriers/new")).toBe("ready");
-    expect(getRouteReadiness("/packing")).toBe("verify");
-    expect(getRouteReadiness("/pick-pack")).toBe("verify");
-    expect(getRouteReadiness("/pick-pack/session-1")).toBe("verify");
-    expect(getRouteReadiness("/settings/warehouses")).toBe("controlled");
-    expect(getRouteReadiness("/settings/warehouses/warehouse-1")).toBe("controlled");
-    expect(getRouteReadiness("/stocktakes")).toBe("verify");
-    expect(getRouteReadiness("/stocktakes/new")).toBe("verify");
-    expect(getRouteReadiness("/stocktakes/stocktake-1")).toBe("verify");
-    expect(getRouteReadiness("/settings/warehouse-documents")).toBe("verify");
-    expect(getRouteReadiness("/settings/warehouse-documents/new")).toBe("verify");
-    expect(getRouteReadiness("/settings/warehouse-documents/doc-1")).toBe("verify");
-    expect(getRouteReadiness("/stock-sync")).toBe("beta");
-    expect(getRouteReadiness("/stock-sync/events")).toBe("beta");
+    for (const route of WAREHOUSE_VERIFY_ROUTES) {
+      expect(getRouteReadiness(route)).toBe("verify");
+    }
+    for (const route of WAREHOUSE_CONTROLLED_ROUTES) {
+      expect(getRouteReadiness(route)).toBe("controlled");
+    }
+    for (const route of WAREHOUSE_BETA_ROUTES) {
+      expect(getRouteReadiness(route)).toBe("beta");
+    }
     expect(getRouteReadiness("/settings")).toBe("ready");
     expect(getRouteReadiness("/settings/email")).toBe("blocked");
     expect(getRouteReadiness("/settings/sms")).toBe("blocked");
     expect(getRouteReadiness("/settings/ksef")).toBe("blocked");
     expect(getRouteReadiness("/settings/billing")).toBe("controlled");
     expect(getRouteReadiness("/settings/accounting")).toBe("controlled");
-    expect(getRouteReadiness("/settings/inventory")).toBe("verify");
     expect(getRouteReadiness("/settings/vat-oss")).toBe("beta");
     expect(getRouteReadiness("/settings/marketing")).toBe("blocked");
     expect(getRouteReadiness("/settings/helpdesk")).toBe("blocked");
@@ -131,19 +158,9 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/marketplaces/allegro/offers", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/products/product-1/listings", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/customers/import", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/packing", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/pick-pack", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/pick-pack/session-1", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/settings/warehouses", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/settings/warehouses/warehouse-1", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/stocktakes", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/stocktakes/new", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/stocktakes/stocktake-1", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/settings/warehouse-documents", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/settings/warehouse-documents/new", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/settings/warehouse-documents/doc-1", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/stock-sync", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/stock-sync/events", { mode: "client-ready" })).toBe(false);
+    for (const route of WAREHOUSE_VALIDATION_ROUTES) {
+      expect(isRouteAccessible(route, { mode: "client-ready" })).toBe(false);
+    }
     expect(isRouteAccessible("/reports/forecast", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/reports/vat-oss", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/invoices", { mode: "client-ready" })).toBe(false);
@@ -151,7 +168,6 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/invoicing", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/billing", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/accounting", { mode: "client-ready" })).toBe(false);
-    expect(isRouteAccessible("/settings/inventory", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/vat-oss", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/sms", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/ksef", { mode: "client-ready" })).toBe(false);
@@ -181,24 +197,7 @@ describe("dashboard feature readiness", () => {
   });
 
   it("allows warehouse and fulfillment routes only in full validation mode", () => {
-    const validationRoutes = [
-      "/packing",
-      "/pick-pack",
-      "/pick-pack/session-1",
-      "/settings/warehouses",
-      "/settings/warehouses/warehouse-1",
-      "/stocktakes",
-      "/stocktakes/new",
-      "/stocktakes/stocktake-1",
-      "/settings/warehouse-documents",
-      "/settings/warehouse-documents/new",
-      "/settings/warehouse-documents/doc-1",
-      "/stock-sync",
-      "/stock-sync/events",
-      "/settings/inventory",
-    ];
-
-    for (const route of validationRoutes) {
+    for (const route of WAREHOUSE_VALIDATION_ROUTES) {
       expect(isRouteAccessible(route, { mode: "full" })).toBe(true);
     }
   });
