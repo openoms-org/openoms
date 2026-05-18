@@ -20,11 +20,12 @@
       "organizationPlaceholder": "moja-firma",
       "password": "Hasło",
       "register": "Zarejestruj się",
+      "securityNote": "Dostęp tenant-scoped, gotowy na 2FA i bezpieczną sesję.",
       "showPassword": "Pokaż hasło",
       "submit": "Zaloguj się",
       "submitting": "Logowanie...",
-      "subtitle": "Zaloguj się do panelu OpenOMS",
-      "title": "Logowanie"
+      "subtitle": "Wpisz organizację i dane dostępu.",
+      "title": "Zaloguj się do panelu"
     },
     "logout": "Wyloguj się",
     "minimum8Characters": "Minimum 8 znaków",
