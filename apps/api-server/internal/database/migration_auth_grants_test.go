@@ -74,6 +74,25 @@ func TestRollbackMigrationsGuardOptionalRoleRevokes(t *testing.T) {
 	}
 }
 
+func TestFindTenantBySlugMigrationRedactsSettings(t *testing.T) {
+	up := normalizedSQL(readMigrationSQL(t, "000027_redact_find_tenant_by_slug_settings.up.sql"))
+	down := normalizedSQL(readMigrationSQL(t, "000027_redact_find_tenant_by_slug_settings.down.sql"))
+
+	require.Contains(t, up, "create or replace function public.find_tenant_by_slug(p_slug text)")
+	require.NotContains(t, up, "drop function")
+	require.Contains(t, up, "security definer")
+	require.Contains(t, up, "set search_path to 'public'")
+	require.Contains(t, up, "'{}'::jsonb as settings")
+	require.NotContains(t, up, "t.settings, t.created_at")
+	require.Contains(t, up, "revoke execute on function public.find_tenant_by_slug(text) from public")
+	require.Contains(t, up, "grant execute on function public.find_tenant_by_slug(text) to openoms_app")
+	require.Contains(t, up, "grant execute on function public.find_tenant_by_slug(text) to openoms")
+
+	require.Contains(t, down, "t.settings, t.created_at")
+	require.NotContains(t, down, "drop function")
+	require.Contains(t, down, "revoke execute on function public.find_tenant_by_slug(text) from public")
+}
+
 func readMigrationSQL(t *testing.T, file string) string {
 	t.Helper()
 
@@ -83,7 +102,9 @@ func readMigrationSQL(t *testing.T, file string) string {
 		"000009_used_license_tokens.down.sql",
 		"000010_tenant_plan_guard.down.sql",
 		"000025_auth_function_openoms_grants.up.sql",
-		"000025_auth_function_openoms_grants.down.sql":
+		"000025_auth_function_openoms_grants.down.sql",
+		"000027_redact_find_tenant_by_slug_settings.up.sql",
+		"000027_redact_find_tenant_by_slug_settings.down.sql":
 	default:
 		t.Fatalf("unexpected migration file %q", file)
 	}
