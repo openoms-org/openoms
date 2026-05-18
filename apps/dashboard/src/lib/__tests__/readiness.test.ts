@@ -31,11 +31,17 @@ describe("dashboard feature readiness", () => {
     expect(visible).toContain("/marketplaces");
     expect(visible).toContain("/carriers");
 
+    expect(visible).not.toContain("/invoices");
+    expect(visible).not.toContain("/invoicing");
     expect(visible).not.toContain("/reports/forecast");
     expect(visible).not.toContain("/reports/carbon");
+    expect(visible).not.toContain("/reports/vat-oss");
     expect(visible).not.toContain("/repricing");
     expect(visible).not.toContain("/suppliers");
     expect(visible).not.toContain("/listing-sync");
+    expect(visible).not.toContain("/settings/billing");
+    expect(visible).not.toContain("/settings/accounting");
+    expect(visible).not.toContain("/settings/vat-oss");
     expect(visible).not.toContain("/settings/sms");
     expect(visible).not.toContain("/settings/ksef");
     expect(visible).not.toContain("/settings/marketing");
@@ -85,10 +91,14 @@ describe("dashboard feature readiness", () => {
     expect(getRouteReadiness("/settings/email")).toBe("blocked");
     expect(getRouteReadiness("/settings/sms")).toBe("blocked");
     expect(getRouteReadiness("/settings/ksef")).toBe("blocked");
+    expect(getRouteReadiness("/settings/billing")).toBe("controlled");
+    expect(getRouteReadiness("/settings/accounting")).toBe("controlled");
+    expect(getRouteReadiness("/settings/vat-oss")).toBe("beta");
     expect(getRouteReadiness("/settings/marketing")).toBe("blocked");
     expect(getRouteReadiness("/settings/helpdesk")).toBe("blocked");
     expect(getRouteReadiness("/settings/notifications")).toBe("blocked");
     expect(getRouteReadiness("/reports/forecast")).toBe("beta");
+    expect(getRouteReadiness("/reports/vat-oss")).toBe("beta");
   });
 
   it("blocks direct access to beta and blocked routes in client-ready mode", () => {
@@ -100,6 +110,13 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/products/product-1/listings", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/customers/import", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/reports/forecast", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/reports/vat-oss", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/invoices", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/invoices/inv-1", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/invoicing", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/settings/billing", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/settings/accounting", { mode: "client-ready" })).toBe(false);
+    expect(isRouteAccessible("/settings/vat-oss", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/sms", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/ksef", { mode: "client-ready" })).toBe(false);
     expect(isRouteAccessible("/settings/marketing", { mode: "client-ready" })).toBe(false);
@@ -114,6 +131,17 @@ describe("dashboard feature readiness", () => {
     expect(isRouteAccessible("/settings/marketing", { mode: "full" })).toBe(false);
     expect(isRouteAccessible("/settings/helpdesk", { mode: "full" })).toBe(false);
     expect(isRouteAccessible("/settings/notifications", { mode: "full" })).toBe(false);
+  });
+
+  it("allows legal and accounting routes only in full validation mode", () => {
+    expect(isRouteAccessible("/invoices", { mode: "full" })).toBe(true);
+    expect(isRouteAccessible("/invoices/inv-1", { mode: "full" })).toBe(true);
+    expect(isRouteAccessible("/invoicing", { mode: "full" })).toBe(true);
+    expect(isRouteAccessible("/settings/billing", { mode: "full" })).toBe(true);
+    expect(isRouteAccessible("/settings/accounting", { mode: "full" })).toBe(true);
+    expect(isRouteAccessible("/settings/vat-oss", { mode: "full" })).toBe(true);
+    expect(isRouteAccessible("/reports/vat-oss", { mode: "full" })).toBe(true);
+    expect(isRouteAccessible("/settings/ksef", { mode: "full" })).toBe(false);
   });
 
   it("treats unreviewed direct routes as verify-only instead of client-ready", () => {
@@ -199,6 +227,23 @@ describe("provider readiness", () => {
     }).map((provider) => provider.key);
 
     expect(providers).toEqual(["inpost"]);
+  });
+
+  it("keeps invoicing providers out of client-ready mode until certification", () => {
+    const clientReadyProviders = getVisibleProvidersByCategory("invoicing", {
+      mode: "client-ready",
+    }).map((provider) => provider.key);
+    const fullModeProviders = getVisibleProvidersByCategory("invoicing", {
+      mode: "full",
+    }).map((provider) => provider.key);
+
+    expect(clientReadyProviders).toEqual([]);
+    expect(fullModeProviders).toEqual(["fakturownia", "wfirma", "infakt"]);
+    expect(
+      getVisibleProviderKeys(["fakturownia", "wfirma", "infakt"], {
+        mode: "client-ready",
+      }),
+    ).toEqual([]);
   });
 
   it("keeps blocked providers out of full mode while allowing beta review", () => {
