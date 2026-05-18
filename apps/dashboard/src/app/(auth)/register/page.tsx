@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Check, Sparkles, ArrowRight, Loader2, Package } from "lucide-react";
-import { API_URL, apiClient, getErrorMessage } from "@/lib/api-client";
+import { apiClient, getErrorMessage } from "@/lib/api-client";
 import { usePublicConfig } from "@/hooks/use-public-config";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -44,13 +44,13 @@ function PricingContent() {
       return;
     }
 
-    fetch(`${API_URL}/v1/billing/plans`, { credentials: "include" })
-      .then((res) => res.json())
+    apiClient<PublicPlanInfo[]>("/v1/billing/plans")
       .then((data: PublicPlanInfo[]) => {
         setPlans(data);
       })
-      .catch(() => {
-        toast.error(loadPlansError);
+      .catch((error) => {
+        const message = getErrorMessage(error);
+        toast.error(message.startsWith("errors.") ? loadPlansError : message);
       })
       .finally(() => setIsLoading(false));
   }, [config.billing_enabled, config.isLoading, loadPlansError]);

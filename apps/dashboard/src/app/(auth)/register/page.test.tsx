@@ -43,7 +43,7 @@ describe("RegisterPage", () => {
 
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(
       "/v1/billing/plans",
-      { credentials: "include" }
+      expect.objectContaining({ credentials: "include" })
     ));
   });
 });
