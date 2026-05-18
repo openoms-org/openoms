@@ -21,7 +21,6 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
       if (currentCookie !== user.language) {
         document.cookie = `NEXT_LOCALE=${user.language}; path=/; max-age=31536000; SameSite=Lax`;
-        window.location.reload();
       }
     }
   }, [user?.language]);
