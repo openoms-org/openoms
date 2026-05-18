@@ -10,6 +10,8 @@ const apiClientMock = vi.hoisted(() => vi.fn());
 const statsRefetchMock = vi.hoisted(() => vi.fn());
 const onHoldOrdersRefetchMock = vi.hoisted(() => vi.fn());
 const failedShipmentsRefetchMock = vi.hoisted(() => vi.fn());
+const useOrdersMock = vi.hoisted(() => vi.fn());
+const useShipmentsMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api-client", () => ({
   apiClient: apiClientMock,
@@ -25,21 +27,11 @@ vi.mock("@/hooks/use-dashboard-stats", () => ({
 }));
 
 vi.mock("@/hooks/use-orders", () => ({
-  useOrders: () => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    refetch: onHoldOrdersRefetchMock,
-  }),
+  useOrders: useOrdersMock,
 }));
 
 vi.mock("@/hooks/use-shipments", () => ({
-  useShipments: () => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    refetch: failedShipmentsRefetchMock,
-  }),
+  useShipments: useShipmentsMock,
 }));
 
 function createTestQueryClient() {
@@ -61,6 +53,18 @@ beforeEach(() => {
   statsRefetchMock.mockResolvedValue({ data: undefined });
   onHoldOrdersRefetchMock.mockResolvedValue({ data: undefined });
   failedShipmentsRefetchMock.mockResolvedValue({ data: undefined });
+  useOrdersMock.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    refetch: onHoldOrdersRefetchMock,
+  });
+  useShipmentsMock.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    refetch: failedShipmentsRefetchMock,
+  });
   useAuthStore.setState({
     token: "test-token",
     isAuthenticated: true,
@@ -98,6 +102,12 @@ describe("useOperationsDashboard", () => {
       expect(apiClientMock).toHaveBeenCalledWith("/v1/integrations");
     });
 
+    expect(useOrdersMock).toHaveBeenCalledWith(expect.any(Object), {
+      enabled: true,
+    });
+    expect(useShipmentsMock).toHaveBeenCalledWith(expect.any(Object), {
+      enabled: true,
+    });
     expect(
       queryClient.getQueryCache().find({
         queryKey: integrationQueryKeys.all,
@@ -112,12 +122,18 @@ describe("useOperationsDashboard", () => {
     ).toBeUndefined();
   });
 
-  it("does not fetch or refetch admin-only integrations for non-admin users", async () => {
+  it("does not fetch or refetch admin-only operations queries for non-admin users", async () => {
     const { result } = renderHook(() => useOperationsDashboard(), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.isLoading).toBe(false);
+    expect(useOrdersMock).toHaveBeenCalledWith(expect.any(Object), {
+      enabled: false,
+    });
+    expect(useShipmentsMock).toHaveBeenCalledWith(expect.any(Object), {
+      enabled: false,
+    });
     expect(apiClientMock).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -125,8 +141,8 @@ describe("useOperationsDashboard", () => {
     });
 
     expect(statsRefetchMock).toHaveBeenCalledTimes(1);
-    expect(onHoldOrdersRefetchMock).toHaveBeenCalledTimes(1);
-    expect(failedShipmentsRefetchMock).toHaveBeenCalledTimes(1);
+    expect(onHoldOrdersRefetchMock).not.toHaveBeenCalled();
+    expect(failedShipmentsRefetchMock).not.toHaveBeenCalled();
     expect(apiClientMock).not.toHaveBeenCalled();
   });
 });
