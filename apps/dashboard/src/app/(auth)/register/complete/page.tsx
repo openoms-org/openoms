@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { API_URL, getErrorMessage } from "@/lib/api-client";
+import { ApiClientError, apiClient, getErrorMessage } from "@/lib/api-client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,17 +72,10 @@ function CompleteRegistrationForm() {
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         if (cancelled) return;
         try {
-          const res = await fetch(`${API_URL}/v1/billing/checkout/${sessionId}`, {
-            signal: controller.signal,
-          });
-          if (!res.ok) {
-            if (res.status === 404) {
-              setError(t("paymentSessionNotFound"));
-              return;
-            }
-            throw new Error(t("errorBoundary.serverError"));
-          }
-          const data: CheckoutSessionStatus = await res.json();
+          const data = await apiClient<CheckoutSessionStatus>(
+            `/v1/billing/checkout/${sessionId}`,
+            { signal: controller.signal },
+          );
 
           if (data.status === "registered") {
             setError(t("paymentSessionAlreadyUsed"));
@@ -100,8 +93,13 @@ function CompleteRegistrationForm() {
           }
         } catch (err) {
           if (cancelled || (err instanceof DOMException && err.name === "AbortError")) return;
+          if (err instanceof ApiClientError && err.status === 404) {
+            setError(t("paymentSessionNotFound"));
+            return;
+          }
           if (attempt === maxAttempts - 1) {
-            setError(t("paymentVerificationFailedRetry"));
+            const message = getErrorMessage(err);
+            setError(message.startsWith("errors.") ? t("paymentVerificationFailedRetry") : message);
             return;
           }
           await new Promise((r) => setTimeout(r, intervalMs));
