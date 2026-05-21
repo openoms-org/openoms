@@ -40,6 +40,15 @@ func TestConfig_Validate_RegistrationModeRejectsUnknown(t *testing.T) {
 	assert.Contains(t, err.Error(), "REGISTRATION_MODE must be one of")
 }
 
+func TestConfig_SentryReleaseIsOptional(t *testing.T) {
+	cfg := Config{}
+
+	assert.Empty(t, cfg.SentryRelease)
+
+	cfg.SentryRelease = "6ce795c5ff17d97b0ebbebd723ab93ee984ee816"
+	assert.Equal(t, "6ce795c5ff17d97b0ebbebd723ab93ee984ee816", cfg.SentryRelease)
+}
+
 func TestConfig_Validate_AllowsMissingWorkerDatabaseURLInDevelopment(t *testing.T) {
 	cfg := validConfigForValidation("open")
 	cfg.Env = "development"

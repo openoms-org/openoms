@@ -142,6 +142,7 @@ func run() error {
 		err := sentry.Init(sentry.ClientOptions{
 			Dsn:              cfg.SentryDSN,
 			Environment:      cfg.SentryEnv(),
+			Release:          cfg.SentryRelease,
 			TracesSampleRate: cfg.SentryTracesSampleRate,
 			EnableTracing:    cfg.SentryTracesSampleRate > 0,
 			SendDefaultPII:   false,
