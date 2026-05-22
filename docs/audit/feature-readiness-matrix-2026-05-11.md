@@ -146,7 +146,7 @@ Funkcja przechodzi na `ready` albo `controlled` dopiero po odhaczeniu:
 | Dziennik aktywności | `/audit` | `ready` dla admin/operator | Ukryć dla zwykłych userów | Filtrowanie, pagination, brak danych wrażliwych. |
 | KSeF | `/settings/ksef` | `beta` | Zostawić ukryte | Certyfikat/token, test env, status/UPO. |
 | Marketing | `/settings/marketing` | `beta` | Zostawić ukryte | Mailchimp account, campaign flow. |
-| Helpdesk | `/settings/helpdesk` | `beta` | Zostawić ukryte | Freshdesk account, ticket creation, order link. |
+| Helpdesk | `/settings/helpdesk` | `blocked` | Nie eksponować | Ukryty helpdesk/Freshdesk pozostaje zablokowany zgodnie z readiness registry; odblokowanie wymaga pełnego testu Freshdesk, tworzenia ticketów i linkowania z zamówieniami. |
 | Usuwanie tła | `/tools/bg-removal` | `beta` | Ukryć | Provider AI/API, koszty, limity, file handling. |
 | Subskrypcje/recurring orders | `/recurring-orders` | `beta` | Ukryć | Scheduler, generated order, cancellation. |
 | Loyalty | `/loyalty` | `beta` | Ukryć | Rules, customer rewards, order integration. |
