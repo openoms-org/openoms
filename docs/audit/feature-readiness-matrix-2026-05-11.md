@@ -38,7 +38,7 @@ Funkcja przechodzi na `ready` albo `controlled` dopiero po odhaczeniu:
 |---|---|---|---|---|
 | Pulpit | `/` | `ready` | Pokazać | Dashboard ładuje KPI, onboarding i empty states bez błędów konsoli. |
 | Onboarding pierwszych kroków | `/`, `/onboarding` | `ready` | Pokazać | Firma -> Allegro -> produkt -> zamówienie, bez martwych linków. |
-| Pomoc | `/help` | `ready` | Pokazać | Linki prowadzą do aktualnych instrukcji, bez obietnic beta funkcji. |
+| Pomoc | `/help` | `ready` | Pokazać | Strona jest klientocentryczna: oficjalny kontakt supportu jest główną akcją, materiały self-service są drugorzędne, a ukryty helpdesk/Freshdesk nie jest eksponowany. |
 | Command palette | global | `verify` | Ograniczyć | Musi respektować readiness, bo dziś odkrywa moduły ukrywane w menu. |
 
 ### Sprzedaż
