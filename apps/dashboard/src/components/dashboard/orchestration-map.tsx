@@ -58,13 +58,19 @@ export function OrchestrationMap({ stages, isLoading }: OrchestrationMapProps) {
       </CardHeader>
       <CardContent className="p-4">
         {isLoading ? (
-          <div className="grid gap-4 lg:grid-cols-4">
+          <div
+            data-orchestration-stage-grid="true"
+            className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4"
+          >
             {Array.from({ length: 4 }).map((_, index) => (
               <Skeleton key={index} className="h-36 w-full rounded-lg" />
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-4">
+          <div
+            data-orchestration-stage-grid="true"
+            className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4"
+          >
             {stages.map((stage, index) => {
               const Icon = stageIcons[stage.key];
 
@@ -73,7 +79,8 @@ export function OrchestrationMap({ stages, isLoading }: OrchestrationMapProps) {
                   {index < stages.length - 1 && (
                     <span
                       aria-hidden="true"
-                      className="absolute -right-4 top-[4.75rem] hidden w-4 items-center justify-center text-muted-foreground lg:flex"
+                      data-orchestration-stage-connector="true"
+                      className="absolute -right-4 top-[4.75rem] hidden w-4 items-center justify-center text-muted-foreground 2xl:flex"
                     >
                       <span className="absolute h-px w-full bg-border" />
                       <ChevronRight className="relative h-4 w-4 rounded-full bg-card" />
