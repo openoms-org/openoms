@@ -6,6 +6,7 @@ import { useSubscription } from "@/hooks/use-billing";
 import { AlertTriangle, Clock, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { isRouteAccessible } from "@/lib/readiness";
+import type { SubscriptionStatus } from "@/types/api";
 
 function computeDaysLeft(trialEnd: string): number {
   return Math.max(
@@ -16,11 +17,15 @@ function computeDaysLeft(trialEnd: string): number {
   );
 }
 
-function isPaymentAttentionStatus(status: string | undefined): boolean {
+function isPaymentAttentionStatus(
+  status: SubscriptionStatus["status"] | undefined,
+): boolean {
   return status === "past_due" || status === "unpaid" || status === "incomplete";
 }
 
-function isInactiveStatus(status: string | undefined): boolean {
+function isInactiveStatus(
+  status: SubscriptionStatus["status"] | undefined,
+): boolean {
   return status === "canceled" || status === "paused" || status === "incomplete_expired";
 }
 
@@ -51,7 +56,14 @@ export function SubscriptionBanner() {
     return (
       <div className="bg-orange-500 text-white px-4 py-3 text-center text-sm font-medium">
         <AlertTriangle className="mr-2 inline h-4 w-4" />
-        {t("pastDue")}
+        {t("pastDue")}{" "}
+        {canManageBilling ? (
+          <Link href="/settings/billing" className="underline hover:no-underline">
+            {t("zarzadzajSubskrypcja")}
+          </Link>
+        ) : (
+          <span className="font-medium">{t("subscriptionManagedBySupport")}</span>
+        )}
       </div>
     );
   }

@@ -23,6 +23,18 @@ const tenant = {
   plan: "plus",
 };
 
+const paymentAttentionStatuses = [
+  "past_due",
+  "unpaid",
+  "incomplete",
+] as const satisfies readonly SubscriptionStatus["status"][];
+
+const inactiveStatuses = [
+  "canceled",
+  "paused",
+  "incomplete_expired",
+] as const satisfies readonly SubscriptionStatus["status"][];
+
 function setSubscription(subscription?: SubscriptionStatus) {
   useSubscriptionMock.mockReturnValue({ data: subscription });
 }
@@ -55,7 +67,7 @@ describe("SubscriptionBanner", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("does not link to hidden billing settings in client-ready mode", () => {
+  it("does not link trial banners to hidden billing settings in client-ready mode", () => {
     setSubscription({
       plan: "plus",
       status: "trialing",
@@ -70,7 +82,25 @@ describe("SubscriptionBanner", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("links to billing settings only in full dashboard mode", () => {
+  it.each(paymentAttentionStatuses)(
+    "renders payment support copy without hidden billing links for %s",
+    (status) => {
+      setSubscription({
+        plan: "plus",
+        status,
+      });
+
+      render(<SubscriptionBanner />);
+
+      expect(screen.getByText("pastDue")).toBeInTheDocument();
+      expect(screen.getByText("subscriptionManagedBySupport")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "zarzadzajSubskrypcja" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("links trial banners to billing settings only in full dashboard mode", () => {
     vi.stubEnv("NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE", "full");
     setSubscription({
       plan: "plus",
@@ -85,18 +115,56 @@ describe("SubscriptionBanner", () => {
     ).toHaveAttribute("href", "/settings/billing");
   });
 
-  it("renders inactive subscription support copy without hidden billing links", () => {
-    setSubscription({
-      plan: "plus",
-      status: "canceled",
-      current_period_end: "2099-01-10T00:00:00Z",
-    });
+  it.each(paymentAttentionStatuses)(
+    "links payment banners to billing settings in full dashboard mode for %s",
+    (status) => {
+      vi.stubEnv("NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE", "full");
+      setSubscription({
+        plan: "plus",
+        status,
+      });
 
-    render(<SubscriptionBanner />);
+      render(<SubscriptionBanner />);
 
-    expect(screen.getByText("renewViaSupport")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "odnowSubskrypcje" }),
-    ).not.toBeInTheDocument();
-  });
+      expect(
+        screen.getByRole("link", { name: "zarzadzajSubskrypcja" }),
+      ).toHaveAttribute("href", "/settings/billing");
+    },
+  );
+
+  it.each(inactiveStatuses)(
+    "renders inactive subscription support copy without hidden billing links for %s",
+    (status) => {
+      setSubscription({
+        plan: "plus",
+        status,
+        current_period_end: "2099-01-10T00:00:00Z",
+      });
+
+      render(<SubscriptionBanner />);
+
+      expect(screen.getByText("renewViaSupport")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "odnowSubskrypcje" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(inactiveStatuses)(
+    "links inactive subscription renewal to billing settings in full mode for %s",
+    (status) => {
+      vi.stubEnv("NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE", "full");
+      setSubscription({
+        plan: "plus",
+        status,
+        current_period_end: "2099-01-10T00:00:00Z",
+      });
+
+      render(<SubscriptionBanner />);
+
+      expect(
+        screen.getByRole("link", { name: "odnowSubskrypcje" }),
+      ).toHaveAttribute("href", "/settings/billing");
+    },
+  );
 });
