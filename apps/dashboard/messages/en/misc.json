@@ -1,16 +1,22 @@
 {
   "help": {
-    "discordCommunity": "Discord community",
-    "discordDescription": "Join the community, ask questions, share ideas.",
     "faq": "FAQ",
-    "faqDescription": "Frequently asked questions by sellers.",
-    "needDirectHelp": "Need direct help?",
-    "reportBug": "Report a bug",
-    "reportBugDescription": "Found a bug? Open an issue on GitHub.",
-    "subtitle": "Resources and support for OpenOMS users",
+    "faqDescription": "Answers to common questions from sellers and operations teams.",
+    "officialSupportCta": "Contact support",
+    "officialSupportDescription": "Contact us if you need help with your account, an integration, or an order operations workflow.",
+    "officialSupportMeta": "We respond through the official OpenOMS support channel.",
+    "officialSupportTitle": "OpenOMS support",
+    "ossDescription": "For technical issues with the public repository or a self-hosted installation, use GitHub Issues.",
+    "ossTitle": "Open-source and self-hosting",
+    "prepareContext": "The module, integration, or order number related to the problem",
+    "prepareEvidence": "A short description, screenshot, or exact error message",
+    "prepareTenant": "Your company or organization name in OpenOMS",
+    "prepareTitle": "What to include",
+    "reportBug": "GitHub Issues",
+    "subtitle": "Contact OpenOMS or use verified resources for users.",
     "title": "Help",
     "userGuide": "User guide",
-    "userGuideDescription": "Step by step: from registration to your first order."
+    "userGuideDescription": "Key steps for setup and daily operations in OpenOMS."
   },
   "loyalty": {
     "award": "Award",
