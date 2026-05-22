@@ -110,7 +110,7 @@ describe("operations dashboard components", () => {
   });
 
   it("renders orchestration stages as links to existing workflow pages", () => {
-    render(<OrchestrationMap stages={stages} isLoading={false} />);
+    const { container } = render(<OrchestrationMap stages={stages} isLoading={false} />);
 
     expect(screen.getByText("operations.stages.intake")).toBeInTheDocument();
 
@@ -121,6 +121,19 @@ describe("operations dashboard components", () => {
       "/shipments",
       "/orders",
     ]);
+
+    const stageGrid = container.querySelector("[data-orchestration-stage-grid='true']");
+    expect(stageGrid).toHaveClass("md:grid-cols-2", "2xl:grid-cols-4");
+    expect(stageGrid).not.toHaveClass("lg:grid-cols-4");
+
+    const connectors = container.querySelectorAll(
+      "[data-orchestration-stage-connector='true']",
+    );
+    expect(connectors).toHaveLength(3);
+    connectors.forEach((connector) => {
+      expect(connector).toHaveClass("hidden", "2xl:flex");
+      expect(connector).not.toHaveClass("lg:flex");
+    });
   });
 
   it("renders operational exceptions through translation keys without action buttons", () => {
