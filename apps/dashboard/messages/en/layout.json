@@ -240,6 +240,8 @@
       "compact": "Compact",
       "spacious": "Spacious"
     },
+    "renewViaSupport": "Contact OpenOMS support to renew access.",
+    "subscriptionManagedBySupport": "Contact OpenOMS support to change your plan or payment.",
     "tagInput": {
       "placeholder": "Add tag..."
     },

@@ -138,7 +138,7 @@ Funkcja przechodzi na `ready` albo `controlled` dopiero po odhaczeniu:
 | Cenniki | `/settings/price-lists` | `verify` | Ukryć | Price list application in orders/products. |
 | Kontrola magazynowa | `/settings/inventory` | `verify` | Ukryć | Min stock, reservations, warehouse stock. |
 | Waluty | `/settings/currencies` | `verify` | Ukryć | NBP fetch, conversion, stale-rate handling. |
-| Subskrypcja/billing | `/settings/billing` | `controlled` | Ukryć dla pierwszego klienta jeśli nie sprzedajemy self-service | Stripe checkout/subscription/webhook E2E. |
+| Subskrypcja/billing | `/settings/billing` | `controlled` | Ukryte dla pierwszego klienta; dostęp tylko w `full`/operator validation | Stripe checkout/subscription/webhook E2E, manual/enterprise contract copy, statusy inactive/payment, brak linków do ukrytego route z bannerów. |
 | SMS | `/settings/sms`, `/settings/notifications` | `blocked` | Ukryć | Naprawić redirect/copy `Tytuł`/`Hasło DHL`; SMSAPI credential test. |
 | Webhooki | `/settings/webhooks` | `controlled` | Ukryć domyślnie | Signing, SSRF guard, delivery retry, test endpoint. |
 | Dostawy webhooków | `/settings/webhooks/deliveries` | `controlled` | Ukryć domyślnie | Retry, response logging, redaction. |
