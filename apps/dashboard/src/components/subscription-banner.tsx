@@ -5,6 +5,8 @@ import { useAuthStore } from "@/lib/auth";
 import { useSubscription } from "@/hooks/use-billing";
 import { AlertTriangle, Clock, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { isRouteAccessible } from "@/lib/readiness";
+import type { SubscriptionStatus } from "@/types/api";
 
 function computeDaysLeft(trialEnd: string): number {
   return Math.max(
@@ -13,6 +15,18 @@ function computeDaysLeft(trialEnd: string): number {
       (new Date(trialEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     )
   );
+}
+
+function isPaymentAttentionStatus(
+  status: SubscriptionStatus["status"] | undefined,
+): boolean {
+  return status === "past_due" || status === "unpaid" || status === "incomplete";
+}
+
+function isInactiveStatus(
+  status: SubscriptionStatus["status"] | undefined,
+): boolean {
+  return status === "canceled" || status === "paused" || status === "incomplete_expired";
 }
 
 export function SubscriptionBanner() {
@@ -27,6 +41,7 @@ export function SubscriptionBanner() {
   if (!tenant) return null;
 
   const status = subscription?.status;
+  const canManageBilling = isRouteAccessible("/settings/billing");
 
   if (status === "suspended") {
     return (
@@ -37,11 +52,18 @@ export function SubscriptionBanner() {
     );
   }
 
-  if (status === "past_due") {
+  if (isPaymentAttentionStatus(status)) {
     return (
       <div className="bg-orange-500 text-white px-4 py-3 text-center text-sm font-medium">
         <AlertTriangle className="mr-2 inline h-4 w-4" />
-        {t("pastDue")}
+        {t("pastDue")}{" "}
+        {canManageBilling ? (
+          <Link href="/settings/billing" className="underline hover:no-underline">
+            {t("zarzadzajSubskrypcja")}
+          </Link>
+        ) : (
+          <span className="font-medium">{t("subscriptionManagedBySupport")}</span>
+        )}
       </div>
     );
   }
@@ -51,22 +73,30 @@ export function SubscriptionBanner() {
       <div className="bg-blue-500 text-white px-4 py-3 text-center text-sm font-medium">
         <Clock className="mr-2 inline h-4 w-4" />
         {t("trialDaysLeft", { days: daysLeft })}{" "}
-        <Link href="/settings/billing" className="underline hover:no-underline">
-          {t("zarzadzajSubskrypcja")}
-        </Link>
+        {canManageBilling ? (
+          <Link href="/settings/billing" className="underline hover:no-underline">
+            {t("zarzadzajSubskrypcja")}
+          </Link>
+        ) : (
+          <span className="font-medium">{t("subscriptionManagedBySupport")}</span>
+        )}
       </div>
     );
   }
 
-  if (status === "canceled" && subscription?.current_period_end) {
+  if (isInactiveStatus(status) && subscription?.current_period_end) {
     const expiresAt = new Date(subscription.current_period_end).toLocaleDateString("pl-PL");
     return (
       <div className="bg-orange-500 text-white px-4 py-3 text-center text-sm font-medium">
         <AlertTriangle className="mr-2 inline h-4 w-4" />
         {t("subscriptionCancelled", { date: expiresAt })}{" "}
-        <Link href="/settings/billing" className="underline hover:no-underline">
-          {t("odnowSubskrypcje")}
-        </Link>
+        {canManageBilling ? (
+          <Link href="/settings/billing" className="underline hover:no-underline">
+            {t("odnowSubskrypcje")}
+          </Link>
+        ) : (
+          <span className="font-medium">{t("renewViaSupport")}</span>
+        )}
       </div>
     );
   }
