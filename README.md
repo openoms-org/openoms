@@ -124,7 +124,7 @@ Carrier rate shopping across all providers.
 |---|---|
 | Go source files | 345 (121 test files) |
 | TypeScript / TSX files | 308 |
-| SQL migrations | 27 (54 up/down files) |
+| SQL migrations | 28 (56 up/down files) |
 | API endpoints | 463 |
 | Dashboard pages | 141 |
 | React components | 96 |
@@ -198,7 +198,7 @@ openoms/
 │   ├── api-server/              # Go backend (ELv2)
 │   │   ├── cmd/server/          # Entrypoint
 │   │   ├── internal/            # Handlers, services, repositories, workers
-│   │   └── migrations/          # 27 migrations (54 SQL files)
+│   │   └── migrations/          # 28 migrations (56 SQL files)
 │   └── dashboard/               # Next.js frontend (ELv2)
 │       └── src/
 ├── packages/                    # 27 standalone SDK libraries (MIT)
