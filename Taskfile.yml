@@ -5,17 +5,17 @@ dotenv: ['.env']
 
 vars:
   COMPOSE_FILE: docker-compose.dev.yml
-  POSTGRES_CONTAINER: openoms-postgres
+  COMPOSE: docker compose -f docker-compose.dev.yml
   MIGRATE_DSN: "postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable"
 
 tasks:
   up:
     desc: Start development containers
     cmds:
-      - docker-compose -f {{.COMPOSE_FILE}} up -d
+      - "{{.COMPOSE}} up -d"
       - echo "Waiting for PostgreSQL to be ready..."
       - >
-        until docker exec {{.POSTGRES_CONTAINER}} pg_isready -U openoms > /dev/null 2>&1; do
+        until {{.COMPOSE}} exec -T postgres pg_isready -U openoms > /dev/null 2>&1; do
           sleep 1;
         done
       - echo "PostgreSQL is ready."
@@ -23,12 +23,12 @@ tasks:
   down:
     desc: Stop development containers
     cmds:
-      - docker-compose -f {{.COMPOSE_FILE}} down
+      - "{{.COMPOSE}} down"
 
   clean:
     desc: Stop containers and remove volumes
     cmds:
-      - docker-compose -f {{.COMPOSE_FILE}} down -v
+      - "{{.COMPOSE}} down -v"
 
   migrate:
     desc: Run database migrations up
@@ -43,8 +43,7 @@ tasks:
   seed:
     desc: Load seed data (1 tenant + 1 admin)
     cmds:
-      - docker cp scripts/seed.sql {{.POSTGRES_CONTAINER}}:/tmp/seed.sql
-      - docker exec {{.POSTGRES_CONTAINER}} psql -U openoms -d openoms -f /tmp/seed.sql
+      - "{{.COMPOSE}} exec -T postgres psql -U openoms -d openoms < scripts/seed.sql"
 
   reset:
     desc: Drop and re-create database
@@ -108,13 +107,20 @@ tasks:
     cmds:
       - npm run dev
 
+  dashboard:install:
+    desc: Install dashboard dependencies
+    dir: apps/dashboard
+    cmds:
+      - npm ci
+
   dev:
     desc: Start API server + dashboard in parallel
     deps: [run, dashboard]
 
   setup:
-    desc: Full development setup (containers + migrations + seed)
+    desc: Full development setup (dependencies + containers + migrations + seed)
     cmds:
+      - task: dashboard:install
       - task: up
       - task: migrate
       - task: seed
