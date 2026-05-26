@@ -159,16 +159,18 @@ Verify the API and dashboard are running:
 
 ```bash
 curl http://localhost:8080/health
-# Open http://localhost:3000
+# Open http://localhost:3000/login
 ```
 
-Seed login:
+Seed login for local development:
 
 | Field | Value |
 |---|---|
 | Organization | `dev` |
 | Email | `admin@dev.local` |
 | Password | `password123` |
+
+This account is created only by `task setup` or `task seed`. Production and other self-hosted deployments should create their own administrator account or use the configured registration/invite flow; no default production password is provided.
 
 ### Development Commands
 

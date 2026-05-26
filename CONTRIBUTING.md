@@ -20,7 +20,7 @@ task setup   # Install dashboard deps, start containers, run migrations, seed da
 task dev     # Start API + dashboard in parallel
 ```
 
-The API server runs on `http://localhost:8080` and the dashboard on `http://localhost:3000` by default.
+The API server runs on `http://localhost:8080` and the dashboard login page on `http://localhost:3000/login` by default.
 
 Seed login for local development:
 
@@ -29,6 +29,8 @@ Seed login for local development:
 | Organization | `dev` |
 | Email | `admin@dev.local` |
 | Password | `password123` |
+
+This seeded account exists only after `task setup` or `task seed`. Production deployments do not include default credentials.
 
 ## Project Structure
 
