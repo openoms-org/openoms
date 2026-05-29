@@ -7,7 +7,7 @@ import (
 )
 
 func TestRequireFeature_BlocksNonReadyInClientReady(t *testing.T) {
-	h := RequireFeature("repricing", "client-ready")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := RequireFeature("repricing", "client-ready")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	rr := httptest.NewRecorder()
@@ -22,7 +22,7 @@ func TestRequireFeature_BlocksNonReadyInClientReady(t *testing.T) {
 
 func TestRequireFeature_AllowsInFullMode(t *testing.T) {
 	called := false
-	h := RequireFeature("repricing", "full")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true }))
+	h := RequireFeature("repricing", "full")(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) { called = true }))
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/v1/repricing", nil))
 	if !called {

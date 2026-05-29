@@ -9,8 +9,10 @@ import (
 //go:embed readiness.json
 var registryJSON []byte
 
+// State is a feature/provider readiness level, matching the dashboard registry.
 type State string
 
+// Readiness states, mirroring the dashboard FeatureReadiness vocabulary.
 const (
 	Ready      State = "ready"
 	Controlled State = "controlled"
@@ -19,6 +21,8 @@ const (
 	Blocked    State = "blocked"
 )
 
+// Feature is a gated capability: its readiness state plus the dashboard routes
+// and API endpoint prefixes it covers.
 type Feature struct {
 	State     State    `json:"state"`
 	Routes    []string `json:"routes"`
