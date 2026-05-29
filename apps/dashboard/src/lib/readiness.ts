@@ -1,5 +1,9 @@
 import type { NavItem } from "@/lib/nav-items";
 import { getProvidersByCategory, type ProviderInfo } from "@/lib/provider-info";
+// Canonical feature-readiness registry, synced from the api-server source of
+// truth (apps/api-server/internal/readiness/readiness.json) by
+// scripts/sync-readiness.mjs. See that script for why a committed copy is used.
+import registry from "@/lib/readiness.generated.json";
 
 export type FeatureReadiness = "ready" | "controlled" | "verify" | "beta" | "blocked";
 export type DashboardSurfaceMode = "client-ready" | "full";
@@ -20,32 +24,37 @@ export function getDashboardSurfaceMode(): DashboardSurfaceMode {
     : DEFAULT_SURFACE_MODE;
 }
 
-const NAV_ROUTE_READINESS: Record<string, FeatureReadiness> = {
+type Registry = {
+  providers: Record<string, FeatureReadiness>;
+  features: Record<
+    string,
+    { state: FeatureReadiness; routes: string[]; endpoints: string[] }
+  >;
+};
+
+const reg = registry as Registry;
+
+// Dashboard-only route readiness. The canonical registry covers only the routes
+// that are gated server-side (one feature entry per gated /v1 route group). The
+// dashboard navigation also has routes that are either always `ready` (core
+// flows that are never gated) or whose readiness is purely a UI concern with no
+// backend gate (e.g. settings sub-pages, import flows, marketplace sub-views).
+// These are declared here and take precedence over the derived registry values.
+const ROUTE_READINESS_OVERRIDES: Record<string, FeatureReadiness> = {
   "/": "ready",
   "/help": "ready",
   "/orders": "ready",
   "/orders/import": "verify",
   "/customers": "ready",
   "/customers/import": "verify",
-  "/customers/segments": "beta",
   "/returns": "ready",
-  "/invoices": "controlled",
-  "/invoicing": "controlled",
   "/products": "ready",
   "/products/import": "verify",
-  "/products/[id]/listings": "controlled",
-  "/products/[id]/variants": "verify",
   "/settings/product-categories": "ready",
   "/settings/print-templates": "verify",
   "/shipments": "ready",
   "/carriers": "ready",
   "/carriers/new": "ready",
-  "/packing": "verify",
-  "/pick-pack": "verify",
-  "/settings/warehouses": "controlled",
-  "/stocktakes": "verify",
-  "/settings/warehouse-documents": "verify",
-  "/stock-sync": "beta",
   "/marketplaces": "ready",
   "/marketplaces/new": "ready",
   "/marketplaces/allegro": "ready",
@@ -69,25 +78,16 @@ const NAV_ROUTE_READINESS: Record<string, FeatureReadiness> = {
   "/marketplaces/prestashop": "blocked",
   "/marketplaces/shoper": "blocked",
   "/integrations": "controlled",
+  // Feed configuration UI gates on its own (beta) regardless of the suppliers
+  // backend feature, which is "controlled".
   "/settings/feeds": "beta",
-  "/listing-sync": "beta",
   "/reports": "verify",
   "/reports/forecast": "beta",
   "/reports/carbon": "beta",
   "/reports/vat-oss": "beta",
-  "/reconciliation": "beta",
-  "/repricing": "beta",
-  "/suppliers": "controlled",
-  "/purchase-orders": "verify",
-  "/dropship-orders": "beta",
-  "/settings/automation": "controlled",
-  "/workflows": "beta",
   "/tools/bg-removal": "beta",
   "/settings/marketing": "blocked",
   "/settings/helpdesk": "blocked",
-  "/settings/currencies": "verify",
-  "/recurring-orders": "beta",
-  "/loyalty": "beta",
   "/settings/billing": "controlled",
   "/settings": "ready",
   "/settings/company": "ready",
@@ -96,10 +96,8 @@ const NAV_ROUTE_READINESS: Record<string, FeatureReadiness> = {
   "/settings/security": "ready",
   "/settings/order-statuses": "controlled",
   "/settings/custom-fields": "controlled",
-  "/settings/price-lists": "verify",
   "/settings/accounting": "controlled",
   "/settings/email": "blocked",
-  "/settings/message-templates": "controlled",
   "/settings/ksef": "blocked",
   "/settings/vat-oss": "beta",
   "/settings/inventory": "verify",
@@ -107,36 +105,22 @@ const NAV_ROUTE_READINESS: Record<string, FeatureReadiness> = {
   "/settings/sms": "blocked",
   "/settings/webhooks": "controlled",
   "/settings/webhooks/deliveries": "controlled",
-  "/settings/sync-jobs": "controlled",
   "/audit": "ready",
 };
 
-const PROVIDER_READINESS: Record<string, FeatureReadiness> = {
-  allegro: "ready",
-  olx: "controlled",
-  amazon: "beta",
-  ebay: "beta",
-  woocommerce: "beta",
-  erli: "beta",
-  kaufland: "blocked",
-  empik: "blocked",
-  mirakl: "blocked",
-  shopify: "blocked",
-  prestashop: "blocked",
-  shoper: "blocked",
-  inpost: "ready",
-  dhl: "controlled",
-  dpd: "controlled",
-  gls: "controlled",
-  ups: "beta",
-  fedex: "beta",
-  poczta_polska: "beta",
-  orlen_paczka: "beta",
-  fakturownia: "controlled",
-  wfirma: "beta",
-  infakt: "beta",
-  btp: "controlled",
-};
+// Derive route -> readiness from the canonical registry, then layer the
+// dashboard-only overrides on top.
+const NAV_ROUTE_READINESS: Record<string, FeatureReadiness> = (() => {
+  const map: Record<string, FeatureReadiness> = {};
+  for (const feature of Object.values(reg.features)) {
+    for (const route of feature.routes) {
+      map[route] = feature.state;
+    }
+  }
+  return { ...map, ...ROUTE_READINESS_OVERRIDES };
+})();
+
+const PROVIDER_READINESS: Record<string, FeatureReadiness> = reg.providers;
 
 export function isReadinessVisible(
   readiness: FeatureReadiness,
