@@ -33,8 +33,11 @@ spec:
                       - |
                         echo "Waiting for dashboard preview pods to become ready..."
                         for i in $(seq 1 30); do
-                          # curl -sf accepts 200 and 3xx (e.g. Next.js 307); fails on >=400
-                          if curl -sf --max-time 5 http://{{ include "openoms.fullname" . }}-dashboard-preview:{{ .Values.dashboard.service.port | default 3000 }}/ >/dev/null 2>&1; then
+                          # -fsSL: follow redirects (Next.js may 307→/login) and fail on >=400,
+                          # so we confirm the final response is healthy, not a dangling 3xx.
+                          # This is a minimal liveness gate; the authenticated UI smoke (enterprise
+                          # deploy, when secrets are configured) is the correctness gate.
+                          if curl -fsSL --max-time 5 http://{{ include "openoms.fullname" . }}-dashboard-preview:{{ .Values.dashboard.service.port | default 3000 }}/ >/dev/null 2>&1; then
                             echo "Dashboard ready (attempt $i)"
                             exit 0
                           fi
