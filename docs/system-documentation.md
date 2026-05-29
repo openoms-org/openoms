@@ -34,7 +34,7 @@
 - **RBAC** -- role z granularnymi uprawnieniami
 - **2FA/TOTP** -- dwuskladnikowe uwierzytelnianie (Google Authenticator)
 - **API REST** -- 500 endpointow z OpenAPI 3.1
-- **Dashboard** -- Next.js 16 + React 19, 141 stron, dark mode, PWA
+- **Dashboard** -- Next.js 16 + React 19, 136 stron, dark mode, PWA
 - **AI** -- auto-kategoryzacja, opis, ulepszanie i tlumaczenie produktow (OpenAI)
 - **Inwentaryzacja** -- pelny cykl zycia stocktake z liczeniem pozycji
 - **Rate shopping** -- porownywanie stawek przewoznikow
@@ -233,9 +233,9 @@ OpenOMS/
 |   |   +-- internal/        <- logika aplikacji (95 handlerow, 78 serwisow, 48 repozytoriow)
 |   |   +-- migrations/      <- 28 migracji SQL
 |   +-- dashboard/           <- Next.js frontend (ELv2)
-|       +-- src/app/         <- 141 stron (App Router)
-|       +-- src/components/  <- 93 komponenty React
-|       +-- src/hooks/       <- 77 custom hooks
+|       +-- src/app/         <- 136 stron (App Router)
+|       +-- src/components/  <- 98 komponentow React
+|       +-- src/hooks/       <- 79 custom hooks
 |       +-- src/lib/         <- utils, API client, auth
 |       +-- e2e/             <- 22 specow E2E Playwright (124 testow)
 +-- packages/                <- SDK-i (MIT)
@@ -973,7 +973,7 @@ Plan guard egzekwuje status subskrypcji Stripe po stronie backendu: `past_due`/`
 
 ## 6. Frontend Dashboard
 
-### Mapa stron (141 stron)
+### Mapa stron (136 stron)
 
 #### Publiczne (bez logowania)
 
@@ -1164,7 +1164,7 @@ Pulpit (Dashboard)
   Dziennik aktywnosci
 ```
 
-### Kluczowe komponenty (93)
+### Kluczowe komponenty (98)
 
 | Komponent | Opis |
 |-----------|------|
@@ -1204,7 +1204,7 @@ Pulpit (Dashboard)
 | token        |     | useOrders()  |---->| GET /orders  |
 | user         |     | useProducts()|---->| GET /products|
 | tenant       |     | useDashboard |---->| GET /stats   |
-| isAuth       |     | ...77 hooks  |     |              |
+| isAuth       |     | ...79 hooks  |     |              |
 +-------------+     +--------------+     +------+-------+
                                                  |
                                           Auto-refresh
