@@ -70,6 +70,7 @@ import type { CreateProductRequest, AISuggestion, AIDescribeRequest } from "@/ty
 import { normalizeProductImages } from "@/types/api";
 import { useBGRemovalStatus, useRemoveProductImageBackground } from "@/hooks/use-bg-removal";
 import { useRepricingLog } from "@/hooks/use-repricing";
+import { isFeatureVisible } from "@/lib/readiness";
 import { useTranslations } from "next-intl";
 
 export default function ProductDetailPage() {
@@ -94,9 +95,14 @@ export default function ProductDetailPage() {
   const suggestCategories = useSuggestCategories();
   const generateDescription = useGenerateDescription();
 
+  // Gate non-ready feature fetches behind surface visibility so ready pages do not
+  // call gated endpoints (which return feature_not_available 404 in client-ready).
+  const aiVisible = isFeatureVisible("ai");
+  const repricingVisible = isFeatureVisible("repricing");
+
   const { data: product, isLoading } = useProduct(params.id);
   const { data: categoriesConfig } = useProductCategories();
-  const { data: bgStatus } = useBGRemovalStatus();
+  const { data: bgStatus } = useBGRemovalStatus({ enabled: aiVisible });
   const removeProductBg = useRemoveProductImageBackground(params.id);
   const updateProduct = useUpdateProduct(params.id);
   const deleteProduct = useDeleteProduct();
@@ -105,7 +111,10 @@ export default function ProductDetailPage() {
   const { data: bundleStockData } = useBundleStock(params.id, (bundleComponents?.length ?? 0) > 0);
   const addComponent = useAddBundleComponent(params.id);
   const removeComponent = useRemoveBundleComponent(params.id);
-  const { data: priceHistory } = useRepricingLog({ product_id: params.id, limit: 10 });
+  const { data: priceHistory } = useRepricingLog(
+    { product_id: params.id, limit: 10 },
+    { enabled: repricingVisible }
+  );
 
   const handleUpdate = (data: CreateProductRequest) => {
     updateProduct.mutate(

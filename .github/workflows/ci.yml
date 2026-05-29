@@ -532,6 +532,13 @@ jobs:
         working-directory: apps/dashboard
         run: npm ci
 
+      - name: Check readiness registry is in sync
+        working-directory: apps/dashboard
+        run: |
+          npm run sync:readiness
+          git diff --exit-code -- src/lib/readiness.generated.json \
+            || (echo "::error::readiness.generated.json is stale; run 'npm run sync:readiness' in apps/dashboard and commit the result" && exit 1)
+
       - name: Lint
         working-directory: apps/dashboard
         run: npx eslint src/

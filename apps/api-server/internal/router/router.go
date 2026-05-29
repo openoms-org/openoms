@@ -125,6 +125,9 @@ type RouterDeps struct { //nolint:revive
 func New(deps RouterDeps) *chi.Mux {
 	r := chi.NewRouter()
 	requirePermission := middleware.RequirePermission
+	requireFeature := func(featureID string) func(http.Handler) http.Handler {
+		return middleware.RequireFeature(featureID, deps.Config.APISurfaceMode)
+	}
 
 	// Global middleware
 	r.Use(chimw.RequestID)
@@ -308,10 +311,11 @@ func New(deps RouterDeps) *chi.Mux {
 		// Upload endpoint — has its own body size limit, no global MaxBodySize
 		r.Post("/uploads", deps.Upload.Upload)
 
-		// Background removal — has its own body size limit (accepts image uploads)
+		// Background removal — has its own body size limit (accepts image uploads).
+		// Gated by the "ai" feature (readiness.json lists these endpoints under "ai").
 		if deps.BGRemoval != nil {
-			r.Post("/images/remove-background", deps.BGRemoval.RemoveBackground)
-			r.Get("/images/remove-background/status", deps.BGRemoval.Status)
+			r.With(requireFeature("ai")).Post("/images/remove-background", deps.BGRemoval.RemoveBackground)
+			r.With(requireFeature("ai")).Get("/images/remove-background/status", deps.BGRemoval.Status)
 		}
 
 		// All other authenticated routes get a 1MB body size limit
@@ -397,6 +401,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Sync jobs — requires integrations.manage
 			r.Route("/sync-jobs", func(r chi.Router) {
+				r.Use(requireFeature("sync_jobs"))
 				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Get("/", deps.SyncJob.List)
 				r.Get("/{id}", deps.SyncJob.Get)
@@ -464,6 +469,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Invoices
 			r.Route("/invoices", func(r chi.Router) {
+				r.Use(requireFeature("invoicing"))
 				r.With(requirePermission(model.PermInvoicesView)).Get("/", deps.Invoice.List)
 				r.With(requirePermission(model.PermInvoicesCreate)).Post("/", deps.Invoice.Create)
 				r.Route("/{id}", func(r chi.Router) {
@@ -523,7 +529,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 				// Background removal for product images
 				if deps.BGRemoval != nil {
-					r.With(requirePermission(model.PermProductsEdit)).Post("/{id}/images/{index}/remove-background", deps.BGRemoval.RemoveProductImageBackground)
+					r.With(requireFeature("ai"), requirePermission(model.PermProductsEdit)).Post("/{id}/images/{index}/remove-background", deps.BGRemoval.RemoveProductImageBackground)
 				}
 
 				// Bundles
@@ -537,6 +543,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 				// Variants
 				r.Route("/{productId}/variants", func(r chi.Router) {
+					r.Use(requireFeature("product_variants"))
 					r.With(requirePermission(model.PermProductsView)).Get("/", deps.Variant.List)
 					r.With(requirePermission(model.PermProductsCreate)).Post("/", deps.Variant.Create)
 					r.With(requirePermission(model.PermProductsView)).Get("/{id}", deps.Variant.Get)
@@ -546,6 +553,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 				// Marketplace listings
 				r.Route("/{productId}/listings", func(r chi.Router) {
+					r.Use(requireFeature("product_listings"))
 					r.Use(requirePermission(model.PermIntegrationsManage))
 					if deps.AllegroListings != nil {
 						r.Get("/", deps.AllegroListings.ListByProduct)
@@ -761,6 +769,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Suppliers — requires integrations.manage
 			r.Route("/suppliers", func(r chi.Router) {
+				r.Use(requireFeature("suppliers"))
 				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Get("/", deps.Supplier.List)
 				r.Post("/", deps.Supplier.Create)
@@ -800,7 +809,7 @@ func New(deps RouterDeps) *chi.Mux {
 			})
 
 			// Cross-supplier product listing
-			r.With(requirePermission(model.PermIntegrationsManage)).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
+			r.With(requireFeature("suppliers"), requirePermission(model.PermIntegrationsManage)).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
 
 			// Product Categories — requires settings.manage
 			if deps.Category != nil {
@@ -817,6 +826,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Purchase Orders
 			r.Route("/purchase-orders", func(r chi.Router) {
+				r.Use(requireFeature("purchase_orders"))
 				r.With(requirePermission(model.PermProductsView)).Get("/", deps.PurchaseOrder.List)
 				r.With(requirePermission(model.PermProductsView)).Get("/{id}", deps.PurchaseOrder.Get)
 				r.With(requirePermission(model.PermProductsCreate)).Post("/", deps.PurchaseOrder.Create)
@@ -829,6 +839,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Dropship Orders
 			r.Route("/dropship-orders", func(r chi.Router) {
+				r.Use(requireFeature("dropship"))
 				r.With(requirePermission(model.PermOrdersView)).Get("/", deps.Dropship.List)
 				r.With(requirePermission(model.PermOrdersView)).Get("/{id}", deps.Dropship.Get)
 				r.With(requirePermission(model.PermOrdersCreate)).Post("/", deps.Dropship.Create)
@@ -837,13 +848,14 @@ func New(deps RouterDeps) *chi.Mux {
 			})
 
 			// Order dropship auto-route
-			r.With(requirePermission(model.PermOrdersEdit)).
+			r.With(requireFeature("dropship"), requirePermission(model.PermOrdersEdit)).
 				Post("/orders/{order_id}/dropship", deps.Dropship.AutoRoute)
-			r.With(requirePermission(model.PermOrdersView)).
+			r.With(requireFeature("dropship"), requirePermission(model.PermOrdersView)).
 				Get("/orders/{order_id}/dropship-orders", deps.Dropship.GetByOrderID)
 
 			// Warehouses — requires warehouses.manage
 			r.Route("/warehouses", func(r chi.Router) {
+				r.Use(requireFeature("warehouses"))
 				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Get("/", deps.Warehouse.List)
 				r.Post("/", deps.Warehouse.Create)
@@ -869,6 +881,7 @@ func New(deps RouterDeps) *chi.Mux {
 			// Customer segments
 			if deps.Segment != nil {
 				r.Route("/segments", func(r chi.Router) {
+					r.Use(requireFeature("segments"))
 					r.With(requirePermission(model.PermCustomersView)).Get("/", deps.Segment.List)
 					r.With(requirePermission(model.PermCustomersView)).Get("/customer/{customer_id}", deps.Segment.GetCustomerSegments)
 					r.With(requirePermission(model.PermCustomersView)).Get("/{id}", deps.Segment.Get)
@@ -885,6 +898,7 @@ func New(deps RouterDeps) *chi.Mux {
 			// Loyalty programs
 			if deps.Loyalty != nil {
 				r.Route("/loyalty", func(r chi.Router) {
+					r.Use(requireFeature("loyalty"))
 					r.Route("/programs", func(r chi.Router) {
 						r.With(requirePermission(model.PermCustomersView)).Get("/", deps.Loyalty.ListPrograms)
 						r.With(requirePermission(model.PermCustomersView)).Get("/{id}", deps.Loyalty.GetProgram)
@@ -901,6 +915,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Recurring orders (subscriptions)
 			r.Route("/recurring-orders", func(r chi.Router) {
+				r.Use(requireFeature("recurring_orders"))
 				r.With(requirePermission(model.PermOrdersView)).Get("/", deps.RecurringOrder.List)
 				r.With(requirePermission(model.PermOrdersView)).Get("/{id}", deps.RecurringOrder.Get)
 				r.With(requirePermission(model.PermOrdersCreate)).Post("/", deps.RecurringOrder.Create)
@@ -913,6 +928,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Automation rules — requires automation.manage
 			r.Route("/automation", func(r chi.Router) {
+				r.Use(requireFeature("automation"))
 				r.Use(requirePermission(model.PermAutomationManage))
 				r.Get("/delayed", deps.Automation.ListDelayed)
 				r.Route("/rules", func(r chi.Router) {
@@ -928,6 +944,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Workflow builder — requires automation.manage
 			r.Route("/workflows", func(r chi.Router) {
+				r.Use(requireFeature("workflows"))
 				r.Use(requirePermission(model.PermAutomationManage))
 				r.Get("/templates", deps.Workflow.ListTemplates)
 				r.Post("/validate", deps.Workflow.Validate)
@@ -948,6 +965,7 @@ func New(deps RouterDeps) *chi.Mux {
 			// Demand forecast — requires reports.view; config update requires settings.manage
 			if deps.Forecast != nil {
 				r.Route("/forecast", func(r chi.Router) {
+					r.Use(requireFeature("forecast"))
 					r.With(requirePermission(model.PermReportsView)).Get("/products", deps.Forecast.ListForecasts)
 					r.With(requirePermission(model.PermReportsView)).Get("/products/{id}", deps.Forecast.GetForecast)
 					r.With(requirePermission(model.PermReportsView)).Get("/reorder", deps.Forecast.GetReorderRecommendations)
@@ -961,6 +979,7 @@ func New(deps RouterDeps) *chi.Mux {
 			// Carbon footprint — requires reports.view
 			if deps.Carbon != nil {
 				r.Route("/carbon", func(r chi.Router) {
+					r.Use(requireFeature("carbon"))
 					r.Use(requirePermission(model.PermReportsView))
 					r.Get("/stats", deps.Carbon.GetStats)
 					r.Get("/report", deps.Carbon.GetReport)
@@ -969,6 +988,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// VAT OSS — requires reports.view
 			r.Route("/vat-oss", func(r chi.Router) {
+				r.Use(requireFeature("vat_oss"))
 				r.Use(requirePermission(model.PermReportsView))
 				r.Get("/rates", deps.VATOSS.GetAllRates)
 				r.Get("/rates/{country}", deps.VATOSS.GetCountryRates)
@@ -986,6 +1006,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Price lists — requires settings.manage
 			r.Route("/price-lists", func(r chi.Router) {
+				r.Use(requireFeature("price_lists"))
 				r.Use(requirePermission(model.PermSettingsManage))
 				r.Get("/", deps.PriceList.List)
 				r.Post("/", deps.PriceList.Create)
@@ -1000,6 +1021,7 @@ func New(deps RouterDeps) *chi.Mux {
 			// Message templates
 			if deps.MessageTemplate != nil {
 				r.Route("/message-templates", func(r chi.Router) {
+					r.Use(requireFeature("message_templates"))
 					r.With(requirePermission(model.PermSettingsManage)).Get("/", deps.MessageTemplate.List)
 					r.With(requirePermission(model.PermSettingsManage)).Get("/{id}", deps.MessageTemplate.Get)
 					r.With(requirePermission(model.PermSettingsManage)).Post("/", deps.MessageTemplate.Create)
@@ -1010,6 +1032,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Warehouse documents — requires warehouses.manage
 			r.Route("/warehouse-documents", func(r chi.Router) {
+				r.Use(requireFeature("warehouse_documents"))
 				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Get("/", deps.WarehouseDocument.List)
 				r.Post("/", deps.WarehouseDocument.Create)
@@ -1022,6 +1045,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Stocktakes (inventory counting) — requires warehouses.manage
 			r.Route("/stocktakes", func(r chi.Router) {
+				r.Use(requireFeature("stocktakes"))
 				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Get("/", deps.Stocktake.List)
 				r.Post("/", deps.Stocktake.Create)
@@ -1036,6 +1060,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// AI auto-categorization — requires settings.manage, rate limited (calls external APIs)
 			r.Route("/ai", func(r chi.Router) {
+				r.Use(requireFeature("ai"))
 				r.Use(requirePermission(model.PermSettingsManage))
 				r.Use(middleware.RateLimitWith(deps.RateLimiter, 20, 1*time.Minute))
 				r.Post("/categorize", deps.AI.Categorize)
@@ -1047,6 +1072,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Marketing (Mailchimp) — requires integrations.manage
 			r.Route("/marketing", func(r chi.Router) {
+				r.Use(requireFeature("marketing"))
 				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Post("/sync", deps.Marketing.Sync)
 				r.Get("/status", deps.Marketing.Status)
@@ -1058,6 +1084,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Exchange rates — requires settings.manage
 			r.Route("/exchange-rates", func(r chi.Router) {
+				r.Use(requireFeature("exchange_rates"))
 				r.Use(requirePermission(model.PermSettingsManage))
 				r.Get("/", deps.ExchangeRate.List)
 				r.Post("/", deps.ExchangeRate.Create)
@@ -1085,6 +1112,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Pick & Pack workflow — requires warehouses.manage while the module is validation-gated
 			r.Route("/pick-pack/sessions", func(r chi.Router) {
+				r.Use(requireFeature("pick_pack"))
 				r.Use(requirePermission(model.PermWarehousesManage))
 				r.Post("/", deps.PickPack.CreateSession)
 				r.Get("/", deps.PickPack.ListSessions)
@@ -1101,6 +1129,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Repricing engine — requires integrations.manage
 			r.Route("/repricing", func(r chi.Router) {
+				r.Use(requireFeature("repricing"))
 				r.Use(requirePermission(model.PermIntegrationsManage))
 				r.Get("/rules", deps.Repricing.ListRules)
 				r.Post("/rules", deps.Repricing.CreateRule)
@@ -1116,6 +1145,7 @@ func New(deps RouterDeps) *chi.Mux {
 			// Stock sync — requires integrations.manage
 			if deps.StockSync != nil {
 				r.Route("/stock-sync", func(r chi.Router) {
+					r.Use(requireFeature("stock_sync"))
 					r.Use(requirePermission(model.PermIntegrationsManage))
 					r.Get("/channels", deps.StockSync.ListChannels)
 					r.Post("/channels", deps.StockSync.CreateChannel)
@@ -1136,6 +1166,7 @@ func New(deps RouterDeps) *chi.Mux {
 			// Listing sync — requires integrations.manage
 			if deps.ListingSync != nil {
 				r.Route("/listing-sync/configs", func(r chi.Router) {
+					r.Use(requireFeature("listing_sync"))
 					r.Use(requirePermission(model.PermIntegrationsManage))
 					r.Get("/", deps.ListingSync.ListConfigs)
 					r.Post("/", deps.ListingSync.CreateConfig)
@@ -1151,6 +1182,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 			// Payment reconciliation — requires reports.view
 			r.Route("/reconciliation", func(r chi.Router) {
+				r.Use(requireFeature("reconciliation"))
 				r.Use(requirePermission(model.PermReportsView))
 				r.Post("/settlements", deps.Reconciliation.CreateSettlement)
 				r.Get("/settlements", deps.Reconciliation.ListSettlements)
@@ -1165,7 +1197,7 @@ func New(deps RouterDeps) *chi.Mux {
 		})
 
 		// CSV import for reconciliation — outside MaxBodySize group (uses its own 10MB limit)
-		r.With(requirePermission(model.PermReportsView)).Post("/reconciliation/import-csv", deps.Reconciliation.ImportCSV)
+		r.With(requireFeature("reconciliation")).With(requirePermission(model.PermReportsView)).Post("/reconciliation/import-csv", deps.Reconciliation.ImportCSV)
 	})
 
 	return r

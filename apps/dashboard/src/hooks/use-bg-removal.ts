@@ -3,12 +3,13 @@ import { apiClient, apiFetch } from "@/lib/api-client";
 import type { BGRemovalResult, BGRemovalStatus } from "@/types/api";
 
 /** Check if background removal is configured on the server. */
-export function useBGRemovalStatus() {
+export function useBGRemovalStatus(options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["bg-removal-status"],
     queryFn: () =>
       apiClient<BGRemovalStatus>("/v1/images/remove-background/status"),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: options.enabled ?? true,
   });
 }
 

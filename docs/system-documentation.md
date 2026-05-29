@@ -1413,6 +1413,7 @@ Uprawnienia np.:
 | HSTS | Strict-Transport-Security w produkcji |
 | Supply chain | Swagger UI CDN pinned do dokladnej wersji (5.18.2) |
 | Observability PII | Sentry `SendDefaultPII=false`, request scrubber + `BeforeSend` backstop; failed-login audit payload bez plaintext emaila |
+| Ekspozycja niegotowych funkcji | Serwerowy gate gotowosci (`OPENOMS_API_SURFACE`, domyslnie `client-ready`): grupy tras niegotowych funkcji zwracaja `404 feature_not_available`, a tworzenie integracji/przesylek z niegotowym providerem `422 provider_not_available`. Rejestr `internal/readiness/readiness.json` jest jedynym zrodlem prawdy wspoldzielonym z dashboardem; `OPENOMS_API_SURFACE=full` wylacza gating. |
 
 ### Bezpieczenstwo infrastruktury (Kubernetes)
 

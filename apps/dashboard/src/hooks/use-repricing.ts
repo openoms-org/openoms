@@ -121,12 +121,15 @@ export function useApplyRepricingRules() {
   });
 }
 
-export function useRepricingLog(params: {
-  limit?: number;
-  offset?: number;
-  rule_id?: string;
-  product_id?: string;
-} = {}) {
+export function useRepricingLog(
+  params: {
+    limit?: number;
+    offset?: number;
+    rule_id?: string;
+    product_id?: string;
+  } = {},
+  options: { enabled?: boolean } = {}
+) {
   const query = new URLSearchParams();
   if (params.limit != null) query.set("limit", String(params.limit));
   if (params.offset != null) query.set("offset", String(params.offset));
@@ -141,6 +144,7 @@ export function useRepricingLog(params: {
       apiClient<ListResponse<RepricingLog>>(
         `/v1/repricing/log${qs ? `?${qs}` : ""}`
       ),
+    enabled: options.enabled ?? true,
   });
 }
 
