@@ -529,7 +529,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 				// Background removal for product images
 				if deps.BGRemoval != nil {
-					r.With(requirePermission(model.PermProductsEdit)).Post("/{id}/images/{index}/remove-background", deps.BGRemoval.RemoveProductImageBackground)
+					r.With(requireFeature("ai"), requirePermission(model.PermProductsEdit)).Post("/{id}/images/{index}/remove-background", deps.BGRemoval.RemoveProductImageBackground)
 				}
 
 				// Bundles
@@ -809,7 +809,7 @@ func New(deps RouterDeps) *chi.Mux {
 			})
 
 			// Cross-supplier product listing
-			r.With(requirePermission(model.PermIntegrationsManage)).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
+			r.With(requireFeature("suppliers"), requirePermission(model.PermIntegrationsManage)).Get("/supplier-products", deps.Supplier.ListAllSupplierProducts)
 
 			// Product Categories — requires settings.manage
 			if deps.Category != nil {
@@ -848,9 +848,9 @@ func New(deps RouterDeps) *chi.Mux {
 			})
 
 			// Order dropship auto-route
-			r.With(requirePermission(model.PermOrdersEdit)).
+			r.With(requireFeature("dropship"), requirePermission(model.PermOrdersEdit)).
 				Post("/orders/{order_id}/dropship", deps.Dropship.AutoRoute)
-			r.With(requirePermission(model.PermOrdersView)).
+			r.With(requireFeature("dropship"), requirePermission(model.PermOrdersView)).
 				Get("/orders/{order_id}/dropship-orders", deps.Dropship.GetByOrderID)
 
 			// Warehouses — requires warehouses.manage
