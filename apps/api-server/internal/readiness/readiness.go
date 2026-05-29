@@ -71,6 +71,9 @@ func IsProviderEnabled(providerKey, mode string) bool {
 	return isVisible(s, mode)
 }
 
+// LookupFeature returns the feature entry and whether it exists.
+func LookupFeature(id string) (Feature, bool) { f, ok := reg.Features[id]; return f, ok }
+
 // NonReadyFeatures exposes the endpoint prefixes per non-ready feature for the
 // coverage drift guard.
 func NonReadyFeatures() map[string]Feature {
