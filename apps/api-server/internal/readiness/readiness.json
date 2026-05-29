@@ -49,7 +49,6 @@
     "ai": { "state": "beta", "routes": ["/tools"], "endpoints": ["/v1/ai", "/v1/images/remove-background"] },
     "price_lists": { "state": "verify", "routes": ["/settings/price-lists"], "endpoints": ["/v1/price-lists"] },
     "exchange_rates": { "state": "verify", "routes": ["/settings/currencies"], "endpoints": ["/v1/exchange-rates"] },
-    "price_lists_b2b": { "state": "verify", "routes": ["/settings/price-lists"], "endpoints": ["/v1/price-lists"] },
     "marketing": { "state": "blocked", "routes": ["/settings/marketing"], "endpoints": ["/v1/marketing"] }
   }
 }
