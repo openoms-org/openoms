@@ -37,12 +37,15 @@ export function useDropshipOrder(id: string) {
   });
 }
 
-export function useOrderDropshipOrders(orderId: string) {
+export function useOrderDropshipOrders(
+  orderId: string,
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: ["dropship-orders", "by-order", orderId],
     queryFn: () =>
       apiClient<DropshipOrder[]>(`/v1/orders/${orderId}/dropship-orders`),
-    enabled: !!orderId,
+    enabled: !!orderId && (options.enabled ?? true),
   });
 }
 

@@ -41,11 +41,15 @@ export const useCreateSupplier = supplierHooks.useCreate;
 export const useUpdateSupplier = supplierHooks.useUpdate;
 export const useDeleteSupplier = supplierHooks.useDelete;
 
-export function useAllSuppliers(params: SupplierListParams = {}) {
+export function useAllSuppliers(
+  params: SupplierListParams = {},
+  options: { enabled?: boolean } = {},
+) {
   return useAllListItems<Supplier, SupplierListParams>(
     ["suppliers", "all", params],
     "/v1/suppliers",
     params,
+    { enabled: options.enabled ?? true },
   );
 }
 
@@ -461,7 +465,10 @@ export function useImportSingleProduct(supplierId: string) {
   });
 }
 
-export function useAllSupplierProducts(params: SupplierProductListAllParams) {
+export function useAllSupplierProducts(
+  params: SupplierProductListAllParams,
+  options: { enabled?: boolean } = {},
+) {
   const searchParams = new URLSearchParams();
   if (params.search) searchParams.set("search", params.search);
   if (params.supplier_id) searchParams.set("supplier_id", params.supplier_id);
@@ -478,5 +485,6 @@ export function useAllSupplierProducts(params: SupplierProductListAllParams) {
       apiClient<ListResponse<SupplierProductWithSupplier>>(
         `/v1/supplier-products?${searchParams.toString()}`
       ),
+    enabled: options.enabled ?? true,
   });
 }

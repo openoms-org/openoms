@@ -139,6 +139,21 @@ export function isReadinessVisible(
   return readiness === "ready";
 }
 
+export function getFeatureReadiness(featureId: string): FeatureReadiness {
+  return reg.features[featureId]?.state ?? "verify";
+}
+
+// isFeatureVisible reports whether a canonical-registry feature is reachable under
+// the active (or supplied) surface mode. Ready pages use this to avoid firing
+// requests to gated (non-ready) endpoints, which return feature_not_available 404
+// server-side in client-ready mode. Mirrors the server gate (IsFeatureEnabled).
+export function isFeatureVisible(
+  featureId: string,
+  options: VisibilityOptions = {},
+): boolean {
+  return isReadinessVisible(getFeatureReadiness(featureId), options);
+}
+
 export function getRouteReadiness(pathname: string): FeatureReadiness {
   const normalized = normalizePathname(pathname);
   const match = Object.keys(NAV_ROUTE_READINESS)

@@ -42,6 +42,7 @@ import { ORDER_SOURCE_LABELS } from "@/lib/constants";
 import { apiClient } from "@/lib/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Product, ProductCategory, SupplierProductWithSupplier } from "@/types/api";
+import { isFeatureVisible } from "@/lib/readiness";
 import { useTranslations } from "next-intl";
 
 const DEFAULT_LIMIT = 20;
@@ -155,8 +156,12 @@ function MyProductsTab() {
     };
   }, []);
 
+  // Suppliers is a controlled feature; only fetch when it is visible in the active
+  // surface, otherwise the gated /v1/suppliers endpoint returns 404 in client-ready.
+  const suppliersVisible = isFeatureVisible("suppliers");
+
   const { data: categoryTree } = useCategoryTree();
-  const { data: suppliersData } = useAllSuppliers();
+  const { data: suppliersData } = useAllSuppliers({}, { enabled: suppliersVisible });
 
   const { data, isLoading, isError, refetch } = useProducts({
     ...pagination,
@@ -684,16 +689,23 @@ function SupplierCatalogTab() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: suppliersData } = useAllSuppliers();
+  // Supplier products view depends on the controlled "suppliers" feature; skip both
+  // gated fetches when the feature is not visible in the active surface.
+  const suppliersVisible = isFeatureVisible("suppliers");
 
-  const { data, isLoading } = useAllSupplierProducts({
-    search: debouncedSearch || undefined,
-    supplier_id: supplierFilter || undefined,
-    sort_by: sortBy,
-    sort_order: sortOrder,
-    limit: pagination.limit,
-    offset: pagination.offset,
-  });
+  const { data: suppliersData } = useAllSuppliers({}, { enabled: suppliersVisible });
+
+  const { data, isLoading } = useAllSupplierProducts(
+    {
+      search: debouncedSearch || undefined,
+      supplier_id: supplierFilter || undefined,
+      sort_by: sortBy,
+      sort_order: sortOrder,
+      limit: pagination.limit,
+      offset: pagination.offset,
+    },
+    { enabled: suppliersVisible }
+  );
 
   const items = data?.items ?? [];
 
