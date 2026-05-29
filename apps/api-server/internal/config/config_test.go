@@ -20,6 +20,7 @@ func validConfigForValidation(registrationMode string) *Config {
 		EncryptionKey:      strings.Repeat("a", 64),
 		JWTSecret:          strings.Repeat("b", 32),
 		RegistrationMode:   registrationMode,
+		APISurfaceMode:     "client-ready",
 		AllowInMemoryState: false,
 	}
 }
@@ -38,6 +39,29 @@ func TestConfig_Validate_RegistrationModeRejectsUnknown(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "REGISTRATION_MODE must be one of")
+}
+
+func TestConfig_Validate_APISurfaceModes(t *testing.T) {
+	for _, mode := range []string{"client-ready", "full"} {
+		t.Run(mode, func(t *testing.T) {
+			cfg := validConfigForValidation("invite")
+			cfg.APISurfaceMode = mode
+			require.NoError(t, cfg.Validate())
+		})
+	}
+}
+
+func TestConfig_Validate_APISurfaceModeRejectsUnknown(t *testing.T) {
+	for _, mode := range []string{"full_mode", "production", ""} {
+		t.Run(mode, func(t *testing.T) {
+			cfg := validConfigForValidation("invite")
+			cfg.APISurfaceMode = mode
+			err := cfg.Validate()
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "OPENOMS_API_SURFACE must be one of")
+		})
+	}
 }
 
 func TestConfig_SentryReleaseIsOptional(t *testing.T) {

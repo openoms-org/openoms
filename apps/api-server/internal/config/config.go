@@ -184,6 +184,16 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("REGISTRATION_MODE must be one of: open, invite, closed, disabled (got %q)", c.RegistrationMode)
 	}
 
+	// APISurfaceMode must be one of the allowed values. Unrecognised values fall
+	// through to client-ready behaviour in readiness.isVisible (fail-secure), which
+	// silently disables the "full" escape hatch — reject them explicitly instead.
+	switch c.APISurfaceMode {
+	case "client-ready", "full":
+		// valid
+	default:
+		return fmt.Errorf("OPENOMS_API_SURFACE must be one of: client-ready, full (got %q)", c.APISurfaceMode)
+	}
+
 	// Warn if registration is open in non-development environments.
 	if c.RegistrationMode == "open" && !c.IsDevelopment() {
 		slog.Warn("REGISTRATION_MODE is 'open' in non-development environment — consider using 'invite' or 'closed'", "env", c.Env)

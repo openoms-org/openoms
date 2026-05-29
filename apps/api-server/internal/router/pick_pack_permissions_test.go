@@ -110,6 +110,9 @@ func newPickPackPermissionRequest(t *testing.T, method, path, body string, user 
 			Env:         "development",
 			FrontendURL: "http://localhost:3000",
 			UploadDir:   t.TempDir(),
+			// "full" surface disables the readiness feature gate so these tests
+			// exercise only the pick-pack permission gate.
+			APISurfaceMode: "full",
 		},
 		TokenSvc: tokenSvc,
 		PickPack: handler.NewPickPackHandler(nil),
