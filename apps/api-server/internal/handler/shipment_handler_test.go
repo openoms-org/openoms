@@ -21,7 +21,7 @@ import (
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_Create_InvalidJSON(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments", strings.NewReader("bad json"))
 	rr := httptest.NewRecorder()
@@ -36,7 +36,7 @@ func TestShipmentHandler_Create_InvalidJSON(t *testing.T) {
 }
 
 func TestShipmentHandler_Get_InvalidID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -55,7 +55,7 @@ func TestShipmentHandler_Get_InvalidID(t *testing.T) {
 }
 
 func TestShipmentHandler_Update_InvalidID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -70,7 +70,7 @@ func TestShipmentHandler_Update_InvalidID(t *testing.T) {
 }
 
 func TestShipmentHandler_Update_InvalidJSON(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -86,7 +86,7 @@ func TestShipmentHandler_Update_InvalidJSON(t *testing.T) {
 }
 
 func TestShipmentHandler_Delete_InvalidID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -101,7 +101,7 @@ func TestShipmentHandler_Delete_InvalidID(t *testing.T) {
 }
 
 func TestShipmentHandler_TransitionStatus_InvalidID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -116,7 +116,7 @@ func TestShipmentHandler_TransitionStatus_InvalidID(t *testing.T) {
 }
 
 func TestShipmentHandler_TransitionStatus_InvalidJSON(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -132,7 +132,7 @@ func TestShipmentHandler_TransitionStatus_InvalidJSON(t *testing.T) {
 }
 
 func TestShipmentHandler_GenerateLabel_InvalidID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -147,7 +147,7 @@ func TestShipmentHandler_GenerateLabel_InvalidID(t *testing.T) {
 }
 
 func TestShipmentHandler_GenerateLabel_InvalidJSON(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -163,7 +163,7 @@ func TestShipmentHandler_GenerateLabel_InvalidJSON(t *testing.T) {
 }
 
 func TestShipmentHandler_List_InvalidOrderIDFilter(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/shipments?order_id=not-uuid", nil)
 	rr := httptest.NewRecorder()
@@ -179,7 +179,7 @@ func TestShipmentHandler_List_InvalidOrderIDFilter(t *testing.T) {
 
 func TestShipmentHandler_Create_ValidationError(t *testing.T) {
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -201,7 +201,7 @@ func TestShipmentHandler_Create_ValidationError(t *testing.T) {
 
 func TestShipmentHandler_TransitionStatus_ValidationError(t *testing.T) {
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -224,7 +224,7 @@ func TestShipmentHandler_TransitionStatus_ValidationError(t *testing.T) {
 
 func TestShipmentHandler_Update_ValidationError(t *testing.T) {
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -260,7 +260,7 @@ func TestShipmentHandler_GenerateLabel_MissingServiceType(t *testing.T) {
 	// We verify the handler correctly parses the JSON and passes it on.
 	// With a nil labelService, the request with a valid UUID and valid JSON
 	// would panic. So we test the parsing boundary only.
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -285,7 +285,7 @@ func TestShipmentHandler_GenerateLabel_MissingServiceType(t *testing.T) {
 }
 
 func TestShipmentHandler_GenerateLabel_EmptyBody(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -313,7 +313,7 @@ func TestShipmentHandler_GenerateLabel_InvalidLabelFormat(t *testing.T) {
 	// We only test that the handler correctly rejects invalid UUIDs and malformed JSON
 	// (tested above), so this test documents the expected flow.
 
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	// Valid UUID with totally invalid ID text
 	rctx := chi.NewRouteContext()
@@ -334,7 +334,7 @@ func TestShipmentHandler_GenerateLabel_InvalidLabelFormat(t *testing.T) {
 }
 
 func TestShipmentHandler_GenerateLabel_ValidUUIDFormats(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	// UUID with hyphens - valid
 	id := uuid.New()
@@ -361,7 +361,7 @@ func TestShipmentHandler_GenerateLabel_ValidUUIDFormats(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_GetTracking_InvalidID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad-id")
@@ -380,7 +380,7 @@ func TestShipmentHandler_GetTracking_InvalidID(t *testing.T) {
 }
 
 func TestShipmentHandler_GetTracking_EmptyID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "")
@@ -395,7 +395,7 @@ func TestShipmentHandler_GetTracking_EmptyID(t *testing.T) {
 }
 
 func TestShipmentHandler_GetTracking_NumericID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "12345")
@@ -414,7 +414,7 @@ func TestShipmentHandler_GetTracking_NumericID(t *testing.T) {
 }
 
 func TestShipmentHandler_GetTracking_ValidUUIDReachesService(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -440,7 +440,7 @@ func TestShipmentHandler_GetTracking_ValidUUIDReachesService(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_CreateDispatchOrder_InvalidJSON(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/dispatch", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -455,7 +455,7 @@ func TestShipmentHandler_CreateDispatchOrder_InvalidJSON(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_EmptyShipmentIDs(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{"shipment_ids":[]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/dispatch", strings.NewReader(body))
@@ -471,7 +471,7 @@ func TestShipmentHandler_CreateDispatchOrder_EmptyShipmentIDs(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_MissingShipmentIDs(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	// JSON body without shipment_ids field at all
 	body := `{"name":"Test","phone":"123456789"}`
@@ -488,7 +488,7 @@ func TestShipmentHandler_CreateDispatchOrder_MissingShipmentIDs(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_NullShipmentIDs(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{"shipment_ids":null}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/dispatch", strings.NewReader(body))
@@ -504,7 +504,7 @@ func TestShipmentHandler_CreateDispatchOrder_NullShipmentIDs(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_ValidPayloadReachesService(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	sid := uuid.New()
 	body := `{"shipment_ids":["` + sid.String() + `"],"name":"Jan Kowalski","phone":"500600700"}`
@@ -522,7 +522,7 @@ func TestShipmentHandler_CreateDispatchOrder_ValidPayloadReachesService(t *testi
 }
 
 func TestShipmentHandler_CreateDispatchOrder_SingleShipmentID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	sid := uuid.New()
 	body := `{"shipment_ids":["` + sid.String() + `"]}`
@@ -539,7 +539,7 @@ func TestShipmentHandler_CreateDispatchOrder_SingleShipmentID(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_MultipleShipmentIDs(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	ids := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
 	body := `{"shipment_ids":["` + ids[0].String() + `","` + ids[1].String() + `","` + ids[2].String() + `"]}`
@@ -556,7 +556,7 @@ func TestShipmentHandler_CreateDispatchOrder_MultipleShipmentIDs(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_EmptyBody(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/dispatch", strings.NewReader(""))
 	rr := httptest.NewRecorder()
@@ -571,7 +571,7 @@ func TestShipmentHandler_CreateDispatchOrder_EmptyBody(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_WithOptionalFields(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	sid := uuid.New()
 	body := `{
@@ -602,7 +602,7 @@ func TestShipmentHandler_CreateDispatchOrder_WithOptionalFields(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_BatchLabels_InvalidJSON(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/batch-labels", strings.NewReader("not json"))
 	rr := httptest.NewRecorder()
@@ -617,7 +617,7 @@ func TestShipmentHandler_BatchLabels_InvalidJSON(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_EmptyShipmentIDs(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{"shipment_ids":[]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/batch-labels", strings.NewReader(body))
@@ -633,7 +633,7 @@ func TestShipmentHandler_BatchLabels_EmptyShipmentIDs(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_NullShipmentIDs(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{"shipment_ids":null}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/batch-labels", strings.NewReader(body))
@@ -649,7 +649,7 @@ func TestShipmentHandler_BatchLabels_NullShipmentIDs(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_MissingShipmentIDs(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/batch-labels", strings.NewReader(body))
@@ -665,7 +665,7 @@ func TestShipmentHandler_BatchLabels_MissingShipmentIDs(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_ExceedsMaximum(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	// Build a list of 101 UUIDs
 	ids := make([]string, 101)
@@ -687,7 +687,7 @@ func TestShipmentHandler_BatchLabels_ExceedsMaximum(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_ExactlyMaximum(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	// 100 UUIDs should pass the limit check and reach the service
 	ids := make([]string, 100)
@@ -710,7 +710,7 @@ func TestShipmentHandler_BatchLabels_ExactlyMaximum(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_SingleShipmentID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{"shipment_ids":["` + uuid.New().String() + `"]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/batch-labels", strings.NewReader(body))
@@ -726,7 +726,7 @@ func TestShipmentHandler_BatchLabels_SingleShipmentID(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_EmptyBody(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/batch-labels", strings.NewReader(""))
 	rr := httptest.NewRecorder()
@@ -742,7 +742,7 @@ func TestShipmentHandler_BatchLabels_EmptyBody(t *testing.T) {
 
 func TestShipmentHandler_Create_MissingOrderID(t *testing.T) {
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -763,7 +763,7 @@ func TestShipmentHandler_Create_MissingOrderID(t *testing.T) {
 
 func TestShipmentHandler_Create_InPostProviderMissingOrderID(t *testing.T) {
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -786,7 +786,7 @@ func TestShipmentHandler_Create_InPostProviderValidPayload(t *testing.T) {
 	// With a nil pool, the service will panic at the database layer, not at validation.
 	// We catch the panic to confirm the handler got past validation.
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -809,7 +809,7 @@ func TestShipmentHandler_Create_InPostProviderValidPayload(t *testing.T) {
 
 func TestShipmentHandler_Create_InPostWithCarrierData(t *testing.T) {
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()
@@ -841,7 +841,7 @@ func TestShipmentHandler_Create_InPostWithCarrierData(t *testing.T) {
 func TestShipmentHandler_List_ValidOrderIDFilter(t *testing.T) {
 	// With nil shipmentService, a valid order_id filter should pass the UUID parse
 	// and then panic (nil service). This proves the handler accepted the filter.
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	orderID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet, "/v1/shipments?order_id="+orderID.String(), nil)
@@ -857,7 +857,7 @@ func TestShipmentHandler_List_ValidOrderIDFilter(t *testing.T) {
 }
 
 func TestShipmentHandler_List_StatusFilter(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	// Status filter does not require UUID parsing, goes straight to service
 	req := httptest.NewRequest(http.MethodGet, "/v1/shipments?status=label_ready", nil)
@@ -873,7 +873,7 @@ func TestShipmentHandler_List_StatusFilter(t *testing.T) {
 }
 
 func TestShipmentHandler_List_ProviderFilter(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/shipments?provider=inpost", nil)
 	rr := httptest.NewRecorder()
@@ -888,7 +888,7 @@ func TestShipmentHandler_List_ProviderFilter(t *testing.T) {
 }
 
 func TestShipmentHandler_List_CombinedFilters(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	orderID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet,
@@ -905,7 +905,7 @@ func TestShipmentHandler_List_CombinedFilters(t *testing.T) {
 }
 
 func TestShipmentHandler_List_NoFilters(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/shipments", nil)
 	rr := httptest.NewRecorder()
@@ -924,7 +924,7 @@ func TestShipmentHandler_List_NoFilters(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_GenerateLabel_ErrorResponseFormat(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "bad")
@@ -946,7 +946,7 @@ func TestShipmentHandler_GenerateLabel_ErrorResponseFormat(t *testing.T) {
 }
 
 func TestShipmentHandler_GetTracking_ErrorResponseFormat(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("id", "invalid")
@@ -967,7 +967,7 @@ func TestShipmentHandler_GetTracking_ErrorResponseFormat(t *testing.T) {
 }
 
 func TestShipmentHandler_CreateDispatchOrder_ErrorResponseFormat(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{"shipment_ids":[]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/dispatch", strings.NewReader(body))
@@ -986,7 +986,7 @@ func TestShipmentHandler_CreateDispatchOrder_ErrorResponseFormat(t *testing.T) {
 }
 
 func TestShipmentHandler_BatchLabels_ErrorResponseFormat(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	body := `{"shipment_ids":[]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/shipments/batch-labels", strings.NewReader(body))
@@ -1014,7 +1014,7 @@ func TestShipmentHandler_GenerateLabel_InPostLockerRequiresTargetPoint(t *testin
 	// loads the shipment from DB before validation. With nil pool, it panics.
 	// We catch the panic to confirm the handler correctly passed the request to the service.
 	labelSvc := service.NewLabelService(nil, nil, nil, nil, nil, nil, nil, nil, "", "")
-	h := NewShipmentHandler(nil, labelSvc)
+	h := NewShipmentHandler(nil, labelSvc, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -1042,7 +1042,7 @@ func TestShipmentHandler_GenerateLabel_InPostLockerRequiresTargetPoint(t *testin
 }
 
 func TestShipmentHandler_GenerateLabel_InvalidSendingMethod(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -1070,7 +1070,7 @@ func TestShipmentHandler_GenerateLabel_InvalidSendingMethod(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_Delete_ValidUUID(t *testing.T) {
-	h := NewShipmentHandler(nil, nil)
+	h := NewShipmentHandler(nil, nil, "client-ready")
 
 	id := uuid.New()
 	rctx := chi.NewRouteContext()
@@ -1096,7 +1096,7 @@ func TestShipmentHandler_Delete_ValidUUID(t *testing.T) {
 
 func TestShipmentHandler_TransitionStatus_WhitespaceOnlyStatus(t *testing.T) {
 	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
-	h := NewShipmentHandler(svc, nil)
+	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
 	userID := uuid.New()

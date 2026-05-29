@@ -15,6 +15,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/readiness"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -22,11 +23,14 @@ import (
 type ShipmentHandler struct {
 	shipmentService *service.ShipmentService
 	labelService    *service.LabelService
+	surfaceMode     string
 }
 
-// NewShipmentHandler creates a new ShipmentHandler.
-func NewShipmentHandler(shipmentService *service.ShipmentService, labelService *service.LabelService) *ShipmentHandler {
-	return &ShipmentHandler{shipmentService: shipmentService, labelService: labelService}
+// NewShipmentHandler creates a new ShipmentHandler. surfaceMode is the API
+// surface readiness mode (config.APISurfaceMode) used to gate carrier provider
+// selection on create.
+func NewShipmentHandler(shipmentService *service.ShipmentService, labelService *service.LabelService, surfaceMode string) *ShipmentHandler {
+	return &ShipmentHandler{shipmentService: shipmentService, labelService: labelService, surfaceMode: surfaceMode}
 }
 
 // ListByOrder returns all shipments for a given order, sorted by package_number.
@@ -66,6 +70,14 @@ func (h *ShipmentHandler) CreateForOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	req.OrderID = orderID
+
+	// Gate carrier provider by API surface readiness mode. "manual" shipments
+	// (no carrier integration) are always allowed. An empty provider falls
+	// through to the service's required-field validation (400).
+	if req.Provider != "" && req.Provider != "manual" && !readiness.IsProviderEnabled(req.Provider, h.surfaceMode) {
+		writeError(w, http.StatusUnprocessableEntity, "provider_not_available")
+		return
+	}
 
 	shipment, err := h.shipmentService.Create(r.Context(), tenantID, req, actorID, clientIP(r))
 	if err != nil {
@@ -159,6 +171,14 @@ func (h *ShipmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateShipmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Gate carrier provider by API surface readiness mode. "manual" shipments
+	// (no carrier integration) are always allowed. An empty provider falls
+	// through to the service's required-field validation (400).
+	if req.Provider != "" && req.Provider != "manual" && !readiness.IsProviderEnabled(req.Provider, h.surfaceMode) {
+		writeError(w, http.StatusUnprocessableEntity, "provider_not_available")
 		return
 	}
 
