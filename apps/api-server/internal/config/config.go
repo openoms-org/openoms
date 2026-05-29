@@ -21,6 +21,11 @@ type Config struct {
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:3000"`
 
+	// APISurfaceMode gates non-ready features over the API. "client-ready" (default)
+	// exposes only "ready" features; "full" exposes all except "blocked". Keep this in
+	// sync with the dashboard's NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE.
+	APISurfaceMode string `env:"OPENOMS_API_SURFACE" envDefault:"client-ready"`
+
 	// TrustedProxyCIDRs is a comma-separated list of immediate proxy CIDRs
 	// whose X-Forwarded-For / X-Real-IP headers may update r.RemoteAddr.
 	TrustedProxyCIDRs string `env:"TRUSTED_PROXY_CIDRS" envDefault:""`
