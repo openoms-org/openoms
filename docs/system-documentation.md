@@ -1810,20 +1810,25 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 
 ---
 
-## 11. Background Workers (19 plikow)
+## 11. Background Workers (25 plikow)
 
-### Workery (16 zarejestrowanych)
+### Workery (21 zarejestrowanych)
 
 | Worker | Interwal | Cel |
 |--------|----------|-----|
 | AllegroOrderPoller | 45s | Polling zamowien z Allegro |
 | AmazonOrderPoller | 45s | Polling zamowien z Amazon |
+| AmazonFeedStatusWorker | 2min | Sprawdzanie statusu feedow Amazon SP-API |
 | WooCommerceOrderPoller | 45s | Polling zamowien z WooCommerce |
 | ShoperOrderPoller | 45s | Polling zamowien z Shoper |
 | PrestaShopOrderPoller | 45s | Polling zamowien z PrestaShop |
 | ShopifyOrderPoller | 45s | Polling zamowien z Shopify |
+| OLXOrderPoller | 45s | Polling zamowien z OLX |
+| EbayOrderPoller | 45s | Polling zamowien z eBay |
+| ErliOrderPoller | 45s | Polling zamowien z Erli |
 | TrackingPoller | 5min | Aktualizacja statusu przesylek |
 | StockSyncWorker | konfigurowalny | Sync stanow magazynowych do marketplace'ow (BulkStockUpdater: batch 100, AsyncStockUpdater: feeds) |
+| PriceSyncWorker | 5min | Sync cen do marketplace'ow |
 | SupplierSyncWorker | konfigurowalny | Sync katalogow dostawcow (XML/IOF/CSV/API) |
 | ExchangeRateWorker | 1/dzien | Pobranie kursow z NBP |
 | OAuthRefresher | 30min | Odswiezenie tokenow OAuth (Allegro, OLX, Amazon, eBay); credentials sa czytane z JSONB jako zaszyfrowany string i odszyfrowywane AES-256-GCM |
@@ -1833,6 +1838,8 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 | RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
 | ListingSyncWorker | konfigurowalny | Synchronizacja listingow marketplace |
 
+Workery zarejestrowane w managerze: 21. Liczba plikow zrodlowych w `internal/worker/`: 25. `AllegroWebhookSyncer` jest podpiety do handlera webhookow Allegro (wyzwalany eventem), a nie rejestrowany w managerze workerow -- dlatego nie liczy sie do 21 cyklicznych workerow.
+
 ### Infrastruktura workerow
 
 | Plik | Cel |
@@ -1841,6 +1848,7 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 | `marketplace_order_poller.go` | Bazowy poller zamowien (wspolna logika dla Allegro/Amazon/WooCommerce/eBay/Shoper/PrestaShop/Shopify) |
 | `tenant_iterator.go` | Iterator tenantow -- wykonuje logike per-tenant |
 | `distributed_lock.go` | Odnawialne lease Redis (`SET NX`) dla multi-instance: UUID ownership, Lua renewal podczas aktywnego runu i Lua release |
+| `integration_error.go` | Wspolna obsluga bledow integracji (np. oznaczanie integracji jako wymagajacej ponownej autoryzacji) |
 
 ### Cechy
 
@@ -2005,14 +2013,14 @@ Haslo testowe: `password123`
 | **Tabele DB** | 64 |
 | **Migracje SQL** | 28 plikow |
 | **Endpointy API** | 500 |
-| **Strony frontend** | 141 |
-| **Komponenty React** | 93 |
-| **Custom hooks** | 77 |
-| **Handlery Go** | 95 plikow |
-| **Serwisy Go** | 78 plikow |
+| **Strony frontend** | 136 |
+| **Komponenty React** | 98 (bez testów i prymitywów shadcn `ui/`) |
+| **Custom hooks** | 79 (`use-*`) |
+| **Handlery Go** | 97 plikow |
+| **Serwisy Go** | 79 plikow |
 | **Repozytoria Go** | 48 plikow |
-| **Background workers** | 16 zarejestrowanych (23 pliki) |
-| **Middleware** | 19 plikow |
+| **Background workers** | 21 zarejestrowanych (25 plikow) |
+| **Middleware** | 21 plikow |
 | **Pakiety SDK** | 27 |
 | **Jezyki** | Go, TypeScript, SQL |
 | **Licencja** | Elastic License 2.0 (apps) + MIT (packages) |
