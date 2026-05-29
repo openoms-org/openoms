@@ -7,6 +7,14 @@ info:
     Multi-tenant REST API for managing orders, shipments, returns, products,
     invoices, customers, integrations, and more.
 
+    Feature-readiness gating (OPENOMS_API_SURFACE): in the default `client-ready`
+    surface mode only feature-complete capabilities are reachable. Route groups
+    backing not-yet-ready features return `404 {"error":"feature_not_available"}`
+    (the capability is hidden), and create endpoints that accept a provider key
+    (integrations, shipments) reject not-ready providers with
+    `422 {"error":"provider_not_available"}`. Setting `OPENOMS_API_SURFACE=full`
+    exposes every non-blocked capability and disables this gating.
+
 servers:
   - url: http://localhost:8080
     description: Local development server
