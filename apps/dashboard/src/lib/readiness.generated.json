@@ -1,5 +1,5 @@
 {
-  "_comment": "OPE-463 canonical feature-readiness registry. Single source of truth for dashboard + API gating. Canonical source; dashboard sync: option B (dashboard build context is apps/dashboard, so it cannot relative-import this file at Docker build time; a sync script copies it to apps/dashboard/src/lib/readiness.generated.json with a CI freshness check). Go embeds this api-server copy directly. The features map is completed in Task 6 (every non-ready /v1 r.Route group MUST have an entry).",
+  "_comment": "OPE-463 canonical feature-readiness registry: single source of truth for dashboard nav visibility and API readiness gating. Go embeds this file directly; the dashboard receives a synced copy via a CI freshness check.",
   "providers": {
     "allegro": "ready",
     "inpost": "ready",
@@ -108,7 +108,8 @@
         "/settings/feeds"
       ],
       "endpoints": [
-        "/v1/suppliers"
+        "/v1/suppliers",
+        "/v1/supplier-products"
       ]
     },
     "dropship": {
@@ -117,7 +118,9 @@
         "/dropship-orders"
       ],
       "endpoints": [
-        "/v1/dropship-orders"
+        "/v1/dropship-orders",
+        "/v1/orders/{order_id}/dropship",
+        "/v1/orders/{order_id}/dropship-orders"
       ]
     },
     "loyalty": {
@@ -171,7 +174,7 @@
         "/listing-sync"
       ],
       "endpoints": [
-        "/v1/listing-sync"
+        "/v1/listing-sync/configs"
       ]
     },
     "segments": {
@@ -253,7 +256,8 @@
       ],
       "endpoints": [
         "/v1/ai",
-        "/v1/images/remove-background"
+        "/v1/images/remove-background",
+        "/v1/products/{id}/images/{index}/remove-background"
       ]
     },
     "price_lists": {

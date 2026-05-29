@@ -1,5 +1,5 @@
 {
-  "_comment": "OPE-463 canonical feature-readiness registry. Single source of truth for dashboard + API gating. Canonical source; dashboard sync: option B (dashboard build context is apps/dashboard, so it cannot relative-import this file at Docker build time; a sync script copies it to apps/dashboard/src/lib/readiness.generated.json with a CI freshness check). Go embeds this api-server copy directly. The features map is completed in Task 6 (every non-ready /v1 r.Route group MUST have an entry).",
+  "_comment": "OPE-463 canonical feature-readiness registry: single source of truth for dashboard nav visibility and API readiness gating. Go embeds this file directly; the dashboard receives a synced copy via a CI freshness check.",
   "providers": {
     "allegro": "ready",
     "inpost": "ready",
@@ -35,14 +35,14 @@
     "stocktakes": { "state": "verify", "routes": ["/stocktakes"], "endpoints": ["/v1/stocktakes"] },
     "pick_pack": { "state": "verify", "routes": ["/pick-pack", "/packing"], "endpoints": ["/v1/pick-pack/sessions"] },
     "purchase_orders": { "state": "verify", "routes": ["/purchase-orders"], "endpoints": ["/v1/purchase-orders"] },
-    "suppliers": { "state": "controlled", "routes": ["/suppliers", "/settings/feeds"], "endpoints": ["/v1/suppliers"] },
-    "dropship": { "state": "beta", "routes": ["/dropship-orders"], "endpoints": ["/v1/dropship-orders"] },
+    "suppliers": { "state": "controlled", "routes": ["/suppliers", "/settings/feeds"], "endpoints": ["/v1/suppliers", "/v1/supplier-products"] },
+    "dropship": { "state": "beta", "routes": ["/dropship-orders"], "endpoints": ["/v1/dropship-orders", "/v1/orders/{order_id}/dropship", "/v1/orders/{order_id}/dropship-orders"] },
     "loyalty": { "state": "beta", "routes": ["/loyalty"], "endpoints": ["/v1/loyalty"] },
     "recurring_orders": { "state": "beta", "routes": ["/recurring-orders"], "endpoints": ["/v1/recurring-orders"] },
     "repricing": { "state": "beta", "routes": ["/repricing"], "endpoints": ["/v1/repricing"] },
     "reconciliation": { "state": "beta", "routes": ["/reconciliation"], "endpoints": ["/v1/reconciliation"] },
     "stock_sync": { "state": "beta", "routes": ["/stock-sync"], "endpoints": ["/v1/stock-sync"] },
-    "listing_sync": { "state": "beta", "routes": ["/listing-sync"], "endpoints": ["/v1/listing-sync"] },
+    "listing_sync": { "state": "beta", "routes": ["/listing-sync"], "endpoints": ["/v1/listing-sync/configs"] },
     "segments": { "state": "beta", "routes": ["/customers/segments"], "endpoints": ["/v1/segments"] },
     "forecast": { "state": "beta", "routes": ["/forecast"], "endpoints": ["/v1/forecast"] },
     "carbon": { "state": "beta", "routes": ["/carbon"], "endpoints": ["/v1/carbon"] },
@@ -51,7 +51,7 @@
     "automation": { "state": "controlled", "routes": ["/settings/automation"], "endpoints": ["/v1/automation"] },
     "sync_jobs": { "state": "controlled", "routes": ["/settings/sync-jobs"], "endpoints": ["/v1/sync-jobs"] },
     "message_templates": { "state": "controlled", "routes": ["/settings/message-templates"], "endpoints": ["/v1/message-templates"] },
-    "ai": { "state": "beta", "routes": ["/tools"], "endpoints": ["/v1/ai", "/v1/images/remove-background"] },
+    "ai": { "state": "beta", "routes": ["/tools"], "endpoints": ["/v1/ai", "/v1/images/remove-background", "/v1/products/{id}/images/{index}/remove-background"] },
     "price_lists": { "state": "verify", "routes": ["/settings/price-lists"], "endpoints": ["/v1/price-lists"] },
     "exchange_rates": { "state": "verify", "routes": ["/settings/currencies"], "endpoints": ["/v1/exchange-rates"] },
     "marketing": { "state": "blocked", "routes": ["/settings/marketing"], "endpoints": ["/v1/marketing"] }
