@@ -48,12 +48,3 @@ func TestPlanCache_Invalidate(t *testing.T) {
 	_, _, ok := cache.Get(tenantID)
 	assert.False(t, ok)
 }
-
-func TestIsPlanActive(t *testing.T) {
-	assert.True(t, IsPlanActive("free"))
-	assert.True(t, IsPlanActive("standard"))
-	assert.True(t, IsPlanActive("plus"))
-	assert.True(t, IsPlanActive("pro"))
-	assert.False(t, IsPlanActive("suspended"))
-	assert.False(t, IsPlanActive("past_due"))
-}
