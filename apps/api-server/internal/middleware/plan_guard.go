@@ -29,7 +29,14 @@ type PlanLimits struct {
 //   - "past_due": 402 on mutations (POST/PUT/PATCH/DELETE), allows GET/HEAD/OPTIONS
 //   - active plans: pass through
 //
-// pool can be nil (for testing) — if nil and cache misses, request passes through.
+// When plan data cannot be resolved (DB/cache lookup fails or returns no plan),
+// the guard fails CLOSED: state-changing requests (POST/PUT/PATCH/DELETE) are
+// blocked while safe reads (GET/HEAD/OPTIONS) are still allowed. The short-TTL
+// PlanCache absorbs brief DB blips so a transient outage does not block writes
+// for tenants whose plan was recently resolved.
+//
+// pool can be nil (for testing) — if nil and the cache misses, the request
+// passes through unguarded (test-only path; production always supplies a pool).
 func TenantPlanGuard(cache *service.PlanCache, pool *pgxpool.Pool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,16 +50,23 @@ func TenantPlanGuard(cache *service.PlanCache, pool *pgxpool.Pool) func(http.Han
 			var settings json.RawMessage
 			var err error
 
-			if pool != nil {
-				plan, settings, err = cache.GetOrLoad(r.Context(), pool, tenantID)
-			} else {
+			if pool == nil {
+				// Test-only path: no DB available. Only the cache can answer.
 				plan, settings, _ = cache.Get(tenantID)
-			}
-
-			if err != nil || plan == "" {
-				// Can't determine plan — fail open (allow request)
-				next.ServeHTTP(w, r)
-				return
+				if plan == "" {
+					next.ServeHTTP(w, r)
+					return
+				}
+			} else {
+				plan, settings, err = cache.GetOrLoad(r.Context(), pool, tenantID)
+				if err != nil || plan == "" {
+					// Can't resolve plan from cache or DB — fail CLOSED.
+					if failClosedOnUnavailablePlan(w, r) {
+						return
+					}
+					next.ServeHTTP(w, r)
+					return
+				}
 			}
 
 			var ps PlanSettings
@@ -128,6 +142,24 @@ func isMutation(method string) bool {
 	default:
 		return false
 	}
+}
+
+// failClosedOnUnavailablePlan blocks state-changing requests when the tenant's
+// plan/subscription state cannot be resolved (cache miss AND DB lookup failed),
+// so a suspended/past_due tenant cannot gain full write access during an outage.
+// Safe reads (GET/HEAD/OPTIONS) are still allowed so the app degrades gracefully.
+// Returns true if the request was blocked (caller must stop), false to proceed.
+func failClosedOnUnavailablePlan(w http.ResponseWriter, r *http.Request) bool {
+	if !isMutation(r.Method) {
+		return false
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"error":   "plan_check_unavailable",
+		"message": "unable to verify subscription status, write operations are temporarily blocked",
+	})
+	return true
 }
 
 type planContextKey string
