@@ -272,9 +272,19 @@ func mergeCredentialUpdate(existing, update []byte) ([]byte, error) {
 	}
 
 	for key, value := range updateValues {
+		// An explicit JSON null clears/removes a credential field. This is the
+		// supported path to rotate a secret to empty or drop a field entirely —
+		// distinct from an omitted/empty field, which preserves the stored value.
+		if value == nil {
+			delete(existingValues, key)
+			continue
+		}
 		if key == "webhook_secret" {
 			secret, ok := value.(string)
 			if !ok || strings.TrimSpace(secret) == "" {
+				// Empty (not null) webhook_secret means "unchanged": the UI does
+				// not echo the stored secret back, so an empty value must not wipe
+				// it. Send JSON null to explicitly clear, or a new value to rotate.
 				continue
 			}
 		}
