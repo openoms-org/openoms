@@ -61,24 +61,31 @@ func TestRedisTokenBlacklist_Revoke_ZeroTTLIsNoOp(t *testing.T) {
 	})
 }
 
-func TestRedisTokenBlacklist_IsRevoked_FailsOpenOnError(t *testing.T) {
-	// With an unreachable Redis, IsRevoked should return false (fail open).
+func TestRedisTokenBlacklist_IsRevoked_FailsClosedOnError(t *testing.T) {
+	// With an unreachable Redis, IsRevoked must fail CLOSED (return true / deny)
+	// within the circuit-breaker window, so a token revoked on another instance is
+	// never accepted during a transient Redis outage (OPE-465).
 	client := redis.NewClient(unreachableRedisOpts())
 	defer func() { _ = client.Close() }()
 
 	bl := middleware.NewRedisTokenBlacklist(client)
 	result := bl.IsRevoked("any-token")
-	assert.False(t, result, "should fail open (return false) when Redis is unreachable")
+	assert.True(t, result, "should fail closed (return true / deny) when Redis is unreachable")
 }
 
-func TestRedisTokenBlacklist_IsRevoked_NonExistentTokenReturnsFalse(t *testing.T) {
-	// Even if we could connect, a token that was never added should return false.
-	// With unreachable Redis, the error path also returns false.
+func TestRedisTokenBlacklist_Composite_FailsClosedForUnknownTokenWhenRedisDown(t *testing.T) {
+	// Composite with an unreachable Redis primary and an empty in-memory fallback:
+	// a token that was never revoked is still DENIED while Redis is down, because
+	// the primary read fails closed within the breaker window (OPE-465).
 	client := redis.NewClient(unreachableRedisOpts())
 	defer func() { _ = client.Close() }()
 
-	bl := middleware.NewRedisTokenBlacklist(client)
-	assert.False(t, bl.IsRevoked("never-added-token"))
+	composite := middleware.NewCompositeTokenBlacklist(
+		middleware.NewRedisTokenBlacklist(client),
+		middleware.NewMemoryTokenBlacklist(),
+	)
+	assert.True(t, composite.IsRevoked("never-revoked-token"),
+		"composite must fail closed when Redis is unreachable and the token is unknown")
 }
 
 func TestRedisTokenBlacklist_UsableInComposite(t *testing.T) {
