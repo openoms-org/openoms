@@ -56,8 +56,10 @@ func validateSlug(slug string) error {
 	return nil
 }
 
-// validatePassword enforces minimum security requirements.
-func validatePassword(password string) error {
+// ValidatePassword enforces the single shared password strength policy
+// (length, uppercase, lowercase, digit). It is the one source of truth for
+// password rules — both request validation and PasswordService use it.
+func ValidatePassword(password string) error {
 	if len(password) < MinPasswordLen {
 		return fmt.Errorf("password must be at least %d characters", MinPasswordLen)
 	}
