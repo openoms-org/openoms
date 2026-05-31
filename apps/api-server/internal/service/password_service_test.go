@@ -53,7 +53,25 @@ func TestPasswordService_ValidateStrength_NoLetter(t *testing.T) {
 
 	err := svc.ValidateStrength("12345678")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "letter")
+	assert.Contains(t, err.Error(), "uppercase, lowercase, and digit")
+}
+
+// OPE-488: ValidateStrength now shares the stronger request validator, so a
+// password lacking an uppercase letter (previously accepted by the weaker
+// service-level rule) is rejected — matching registration/create/change.
+func TestPasswordService_ValidateStrength_NoUppercaseRejected(t *testing.T) {
+	svc := NewPasswordService()
+
+	err := svc.ValidateStrength("password123")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "uppercase, lowercase, and digit")
+}
+
+func TestPasswordService_ValidateStrength_NoLowercaseRejected(t *testing.T) {
+	svc := NewPasswordService()
+
+	err := svc.ValidateStrength("PASSWORD123")
+	require.Error(t, err)
 }
 
 func TestPasswordService_ValidateStrength_NoDigit(t *testing.T) {
