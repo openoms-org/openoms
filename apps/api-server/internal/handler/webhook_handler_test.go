@@ -36,7 +36,7 @@ func TestWebhookHandler_Receive_InvalidTenantID(t *testing.T) {
 }
 
 func TestWebhookHandler_Receive_RejectsMissingProviderSecret(t *testing.T) {
-	webhookService := service.NewWebhookService(nil, nil, "", "inpost-secret")
+	webhookService := service.NewWebhookService(nil, nil, nil, "", "inpost-secret")
 	h := NewWebhookHandler(webhookService)
 	tenantID := uuid.New()
 

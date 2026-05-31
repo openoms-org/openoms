@@ -327,7 +327,7 @@ func run() error {
 		pool, encryptionKey, cfg.UploadDir, cfg.BaseURL,
 		objectStorage,
 	)
-	webhookService := service.NewWebhookService(webhookRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
+	webhookService := service.NewWebhookService(webhookRepo, tenantRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
 	providerWebhookSecretResolver := service.NewProviderWebhookSecretResolver(workerPool, encryptionKey)
 	statsService := service.NewStatsService(statsRepo, pool)
 	invoiceService := service.NewInvoiceService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool, encryptionKey)
