@@ -40,6 +40,13 @@ func (h *StripeWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 			writeError(w, http.StatusBadRequest, "invalid webhook signature")
 			return
 		}
+		// Permanent processing failures (e.g. malformed payload) are also client
+		// errors (400) so Stripe stops retrying them. Transient failures fall
+		// through to 500, which Stripe retries.
+		if errors.Is(err, service.ErrWebhookUnprocessable) {
+			writeError(w, http.StatusBadRequest, "unprocessable webhook payload")
+			return
+		}
 		writeServerError(w, "webhook processing failed", err)
 		return
 	}
