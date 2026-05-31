@@ -59,27 +59,27 @@ func TestExtractEventType_Missing_Type_Field(t *testing.T) {
 }
 
 func TestSecretForProvider_Allegro(t *testing.T) {
-	svc := NewWebhookService(nil, nil, "allegro-secret", "inpost-secret")
+	svc := NewWebhookService(nil, nil, nil, "allegro-secret", "inpost-secret")
 	secret, err := svc.secretForProvider("allegro")
 	assert.NoError(t, err)
 	assert.Equal(t, "allegro-secret", secret)
 }
 
 func TestSecretForProvider_InPost(t *testing.T) {
-	svc := NewWebhookService(nil, nil, "allegro-secret", "inpost-secret")
+	svc := NewWebhookService(nil, nil, nil, "allegro-secret", "inpost-secret")
 	secret, err := svc.secretForProvider("inpost")
 	assert.NoError(t, err)
 	assert.Equal(t, "inpost-secret", secret)
 }
 
 func TestSecretForProvider_Unknown(t *testing.T) {
-	svc := NewWebhookService(nil, nil, "a", "b")
+	svc := NewWebhookService(nil, nil, nil, "a", "b")
 	_, err := svc.secretForProvider("unknown")
 	assert.ErrorIs(t, err, ErrUnknownProvider)
 }
 
 func TestWebhookService_Receive_RejectsEmptyProviderSecret(t *testing.T) {
-	svc := NewWebhookService(nil, nil, "", "inpost-secret")
+	svc := NewWebhookService(nil, nil, nil, "", "inpost-secret")
 
 	event, err := svc.Receive(context.Background(), uuid.New(), "allegro", "", []byte(`{"type":"ORDER_CREATED"}`))
 
