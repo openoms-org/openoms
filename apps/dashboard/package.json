@@ -29,7 +29,7 @@
     "@tiptap/extension-placeholder": "^3.23.6",
     "@tiptap/pm": "^3.23.6",
     "@tiptap/react": "^3.23.6",
-    "@tiptap/starter-kit": "^3.23.6",
+    "@tiptap/starter-kit": "^3.24.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
