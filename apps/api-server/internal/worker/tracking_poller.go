@@ -15,7 +15,13 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
-const trackingPollerBatchLimit = 100
+const (
+	// trackingPollerPageSize is the keyset page size for fetching trackable shipments.
+	trackingPollerPageSize = 100
+	// trackingPollerMaxShipments caps how many shipments a single run processes so a
+	// huge backlog can't run unbounded; the remainder is picked up on the next run.
+	trackingPollerMaxShipments = 5000
+)
 
 type trackableShipment struct {
 	ID             uuid.UUID
@@ -24,6 +30,7 @@ type trackableShipment struct {
 	TrackingNumber string
 	Status         string
 	CarrierData    json.RawMessage
+	UpdatedAt      time.Time
 	Credentials    *string
 	Settings       json.RawMessage
 }
@@ -40,18 +47,23 @@ type TrackingPoller struct {
 	encryptionKey   []byte
 	shipmentService ShipmentStatusTransitioner
 	logger          *slog.Logger
+	// fetchPage loads one keyset page; defaults to queryTrackablePage and is
+	// overridable in tests to exercise the pagination loop without a database.
+	fetchPage func(ctx context.Context, cursorTime time.Time, cursorID uuid.UUID) ([]trackableShipment, error)
 }
 
 // NewTrackingPoller creates a new TrackingPoller worker.
 func NewTrackingPoller(pool *pgxpool.Pool, encryptionKey []byte, _ repository.ShipmentRepo, shipmentService ShipmentStatusTransitioner, logger *slog.Logger) *TrackingPoller {
 	// Note: shipmentRepo is accepted for backward compatibility but status transitions
 	// now go through shipmentService to ensure webhooks, audit, and order sync fire.
-	return &TrackingPoller{
+	w := &TrackingPoller{
 		pool:            pool,
 		encryptionKey:   encryptionKey,
 		shipmentService: shipmentService,
 		logger:          logger,
 	}
+	w.fetchPage = w.queryTrackablePage
+	return w
 }
 
 // Name returns the worker identifier.
@@ -65,7 +77,7 @@ func (w *TrackingPoller) Interval() time.Duration {
 }
 
 func trackableShipmentsQuery() string {
-	return `SELECT s.id, s.tenant_id, s.provider, s.tracking_number, s.status, s.carrier_data,
+	return `SELECT s.id, s.tenant_id, s.provider, s.tracking_number, s.status, s.carrier_data, s.updated_at,
 	        i.credentials, i.settings
 	 FROM shipments s
 	 JOIN integrations i ON i.id = s.integration_id
@@ -77,35 +89,74 @@ func trackableShipmentsQuery() string {
 	 WHERE s.tracking_number IS NOT NULL
 	   AND s.tracking_number <> ''
 	   AND s.status NOT IN ('delivered', 'returned', 'failed', 'cancelled')
+	   AND (s.updated_at, s.id) > ($2, $3)
 	 ORDER BY s.updated_at ASC, s.id ASC
 	 LIMIT $1`
+}
+
+// collectTrackableShipments loads trackable shipments using keyset pagination on
+// (updated_at, id). Previously a single LIMIT 100 query meant tenants with more
+// than one page of active shipments were permanently capped at the oldest 100 and
+// lagged on tracking updates (OPE-487). A per-run cap bounds the work; the rest is
+// picked up on the next run.
+func (w *TrackingPoller) collectTrackableShipments(ctx context.Context) ([]trackableShipment, error) {
+	var shipments []trackableShipment
+	var cursorTime time.Time
+	var cursorID uuid.UUID
+
+	for {
+		page, err := w.fetchPage(ctx, cursorTime, cursorID)
+		if err != nil {
+			return nil, err
+		}
+		shipments = append(shipments, page...)
+		if len(page) < trackingPollerPageSize {
+			break
+		}
+		if len(shipments) >= trackingPollerMaxShipments {
+			w.logger.Warn("tracking poller: hit per-run shipment cap; remainder will be processed next run",
+				"cap", trackingPollerMaxShipments)
+			break
+		}
+		last := page[len(page)-1]
+		cursorTime, cursorID = last.UpdatedAt, last.ID
+	}
+	return shipments, nil
+}
+
+func (w *TrackingPoller) queryTrackablePage(ctx context.Context, cursorTime time.Time, cursorID uuid.UUID) ([]trackableShipment, error) {
+	rows, err := w.pool.Query(ctx, trackableShipmentsQuery(), trackingPollerPageSize, cursorTime, cursorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var page []trackableShipment
+	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return nil, err
+		}
+		var ts trackableShipment
+		if err := rows.Scan(
+			&ts.ID, &ts.TenantID, &ts.Provider, &ts.TrackingNumber,
+			&ts.Status, &ts.CarrierData, &ts.UpdatedAt, &ts.Credentials, &ts.Settings,
+		); err != nil {
+			return nil, err
+		}
+		page = append(page, ts)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return page, nil
 }
 
 // Run polls carrier APIs for tracking status updates on active shipments.
 func (w *TrackingPoller) Run(ctx context.Context) error {
 	w.logger.Info("tracking poller: checking shipments")
 
-	rows, err := w.pool.Query(ctx, trackableShipmentsQuery(), trackingPollerBatchLimit)
+	shipments, err := w.collectTrackableShipments(ctx)
 	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var shipments []trackableShipment
-	for rows.Next() {
-		if err := checkWorkerContext(ctx); err != nil {
-			return err
-		}
-		var ts trackableShipment
-		if err := rows.Scan(
-			&ts.ID, &ts.TenantID, &ts.Provider, &ts.TrackingNumber,
-			&ts.Status, &ts.CarrierData, &ts.Credentials, &ts.Settings,
-		); err != nil {
-			return err
-		}
-		shipments = append(shipments, ts)
-	}
-	if err := rows.Err(); err != nil {
 		return err
 	}
 
