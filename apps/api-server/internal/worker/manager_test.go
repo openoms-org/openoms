@@ -32,11 +32,12 @@ func (w *stubWorker) Run(ctx context.Context) error {
 }
 
 type fakeWorkerLock struct {
-	acquireToken string
-	acquireErr   error
-	extendOK     atomic.Bool
-	extendErr    atomic.Value
-	released     atomic.Bool
+	acquireToken    string
+	acquireErr      error
+	extendOK        atomic.Bool
+	extendErr       atomic.Value
+	extendFailFirst atomic.Int32
+	released        atomic.Bool
 }
 
 func newFakeWorkerLock(token string) *fakeWorkerLock {
@@ -50,6 +51,10 @@ func (f *fakeWorkerLock) Acquire(_ context.Context, _ string, _ time.Duration) (
 }
 
 func (f *fakeWorkerLock) Extend(_ context.Context, _ string, _ string, _ time.Duration) (bool, error) {
+	if f.extendFailFirst.Load() > 0 {
+		f.extendFailFirst.Add(-1)
+		return false, errors.New("transient redis error")
+	}
 	if err, ok := f.extendErr.Load().(error); ok && err != nil {
 		return false, err
 	}
@@ -391,6 +396,62 @@ func TestGuardedRun_CancelsWorkerWhenDistributedLockRenewalErrors(t *testing.T) 
 			return false
 		}
 	}, time.Second, 5*time.Millisecond)
+}
+
+func TestGuardedRun_ToleratesTransientRenewalHiccup(t *testing.T) {
+	var running atomic.Bool
+	workerStarted := make(chan struct{})
+	workerStopped := make(chan struct{})
+
+	w := &stubWorker{
+		name:     "renewal-hiccup-worker",
+		interval: 15 * time.Millisecond,
+		runFn: func(ctx context.Context) error {
+			close(workerStarted)
+			<-ctx.Done()
+			close(workerStopped)
+			return ctx.Err()
+		},
+	}
+
+	lock := newFakeWorkerLock("lease-token")
+	lock.extendFailFirst.Store(1) // a single transient renewal failure, then recovery
+	m := NewManager(nil, slog.Default())
+	m.lock = lock
+	m.lockRenewIntervalFn = func(time.Duration) time.Duration { return 10 * time.Millisecond }
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go m.guardedRun(ctx, w, &running)
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-workerStarted:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 5*time.Millisecond)
+
+	// A single failed renewal must NOT cancel the worker — it rides out the blip.
+	time.Sleep(150 * time.Millisecond) // ~15 renewal intervals; recovery happens after the first
+	select {
+	case <-workerStopped:
+		t.Fatal("worker was cancelled after a single transient renewal failure; it should be tolerated")
+	default:
+	}
+
+	// Context cancellation still stops it cleanly, and the lease is released.
+	cancel()
+	require.Eventually(t, func() bool {
+		select {
+		case <-workerStopped:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 5*time.Millisecond)
+	require.Eventually(t, func() bool { return lock.released.Load() }, time.Second, 5*time.Millisecond)
 }
 
 // ---------------------------------------------------------------------------
